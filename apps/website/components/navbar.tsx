@@ -212,7 +212,7 @@ export default function Navbar({
 			}
 			ref={containerRef}
 		>
-			<div className="absolute pointer-events-none left-0 border-t border-[#292929] w-screen z-50" />
+			<div className="absolute pointer-events-none left-0 border-t border-[#292929] w-full z-50" />
 			{scrolled && !recoilHidden && (
 				<div className="h-[56px] md:h-[44px] w-fit" />
 			)}

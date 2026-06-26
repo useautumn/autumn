@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	billingControlsFromColumns,
 	type CreateFreeTrial,
 	type FreeTrial,
 	type FullProduct,
@@ -7,6 +8,7 @@ import {
 	type Organization,
 	type Product,
 	type ProductItem,
+	pickBillingControlColumns,
 	RecaseError,
 	type RewardProgram,
 	type UpdateProduct,
@@ -52,6 +54,14 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 	if (
 		notNullish(prod2.config) &&
 		JSON.stringify(prod1.config ?? {}) !== JSON.stringify(prod2.config)
+	) {
+		return false;
+	}
+
+	if (
+		notNullish(prod2.billing_controls) &&
+		JSON.stringify(billingControlsFromColumns(prod1)) !==
+			JSON.stringify(prod2.billing_controls)
 	) {
 		return false;
 	}
@@ -253,6 +263,7 @@ export const handleUpdateProductDetails = async ({
 			is_default: newProduct.is_default,
 			archived: newProduct.archived,
 			config: mergedConfig,
+			...pickBillingControlColumns(newProduct.billing_controls),
 		},
 	});
 
@@ -276,4 +287,5 @@ export const handleUpdateProductDetails = async ({
 	curProduct.is_default = newProduct.is_default ?? curProduct.is_default;
 	curProduct.archived = newProduct.archived ?? curProduct.archived;
 	curProduct.config = mergedConfig ?? curProduct.config;
+	Object.assign(curProduct, pickBillingControlColumns(newProduct.billing_controls));
 };

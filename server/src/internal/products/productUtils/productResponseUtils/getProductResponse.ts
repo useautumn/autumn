@@ -6,6 +6,7 @@ import {
 	ApiProductSchema,
 	AttachScenario,
 	BillingInterval,
+	billingControlsFromColumns,
 	type Feature,
 	type FeatureOptions,
 	type FullCustomer,
@@ -213,6 +214,7 @@ export const getProductResponse = async ({
 		group: product.group || null,
 		items: items,
 		free_trial: freeTrial || null,
+		billing_controls: billingControlsFromColumns(product),
 		scenario: attachScenario,
 		properties: getProductProperties({ product, freeTrial }),
 	});

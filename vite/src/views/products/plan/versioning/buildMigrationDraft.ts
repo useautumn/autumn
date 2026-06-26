@@ -78,6 +78,7 @@ export function frontendProductToApiPlanV1(
 		archived: product.archived ?? false,
 		base_variant_id: null,
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: product.billing_controls,
 	} satisfies ApiPlanV1;
 }
 
@@ -129,6 +130,7 @@ export function buildInPlaceUpdatePlanParams({
 		items: planItemsToUpdateParams(plan.items),
 		free_trial: plan.free_trial ?? null,
 		config: plan.config,
+		billing_controls: plan.billing_controls,
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
 }

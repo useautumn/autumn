@@ -1,4 +1,4 @@
-import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,

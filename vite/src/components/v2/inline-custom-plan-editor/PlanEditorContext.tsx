@@ -11,7 +11,9 @@ import {
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useMemo,
+	useRef,
 } from "react";
 import {
 	disabledItemDraftController,
@@ -22,11 +24,13 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { getItemId } from "@/utils/product/productItemUtils";
 
+type SetProduct = (
+	product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
+) => void;
+
 interface ProductContextValue {
 	product: FrontendProduct;
-	setProduct: (
-		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
-	) => void;
+	setProduct: SetProduct;
 	initialProduct?: FrontendProduct;
 	sheetType: string | null;
 	itemId: string | null;
@@ -41,57 +45,49 @@ interface ProductContextValue {
 const ProductContext = createContext<ProductContextValue | null>(null);
 
 /**
+ * Returns the index of the feature item matching `itemId`, or -1 if none.
+ * Base-price and other non-feature items are skipped so indexes line up with
+ * the ids produced by getItemId().
+ */
+function findFeatureItemIndex(
+	product: FrontendProduct,
+	itemId: string,
+): number {
+	const items = product.items;
+	if (!items) return -1;
+
+	const featureItems = productV2ToFeatureItems({ items });
+
+	return items.findIndex((item, index) => {
+		if (!item || !featureItems.includes(item)) return false;
+		return getItemId({ item, itemIndex: index }) === itemId;
+	});
+}
+
+/** Compares two products field-by-field, hiding the V2 casts at a single site. */
+function compareProducts(
+	product: FrontendProduct,
+	other: FrontendProduct,
+	features: Parameters<typeof productsAreSame>[0]["features"],
+) {
+	return productsAreSame({
+		newProductV2: product as unknown as ProductV2,
+		curProductV2: other as unknown as ProductV2,
+		features,
+	});
+}
+
+/**
  * Provider that allows overriding the product and sheet state source.
  * When wrapped with this provider, child components will use the provided
  * values instead of the Zustand stores.
  */
 export function ProductProvider({
 	children,
-	product,
-	setProduct,
-	initialProduct,
-	sheetType,
-	itemId,
-	initialItem,
-	setSheet,
-	setInitialItem,
-	updateItemId,
-	closeSheet,
-	itemDraft,
-}: {
-	children: ReactNode;
-	product: FrontendProduct;
-	setProduct: (
-		product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
-	) => void;
-	initialProduct?: FrontendProduct;
-	sheetType: string | null;
-	itemId: string | null;
-	initialItem: ProductItem | null;
-	setSheet: (params: { type: string | null; itemId?: string | null }) => void;
-	setInitialItem: (item: ProductItem | null) => void;
-	updateItemId: (itemId: string) => void;
-	closeSheet: () => void;
-	itemDraft: ItemDraftController;
-}) {
+	...value
+}: ProductContextValue & { children: ReactNode }) {
 	return (
-		<ProductContext.Provider
-			value={{
-				product,
-				setProduct,
-				initialProduct,
-				sheetType,
-				itemId,
-				initialItem,
-				setSheet,
-				setInitialItem,
-				updateItemId,
-				closeSheet,
-				itemDraft,
-			}}
-		>
-			{children}
-		</ProductContext.Provider>
+		<ProductContext.Provider value={value}>{children}</ProductContext.Provider>
 	);
 }
 
@@ -119,14 +115,13 @@ export function useProduct() {
 /** Hook to get sheet state and actions. Uses context if available, otherwise Zustand. */
 export function useSheet() {
 	const context = useContext(ProductContext);
-	const storeSheetType = useSheetStore((s) => s.type);
-	const storeItemId = useSheetStore((s) => s.itemId);
-	const storeInitialItem = useSheetStore((s) => s.initialItem);
-	const storeSetSheet = useSheetStore((s) => s.setSheet);
-	const storeSetInitialItem = useSheetStore((s) => s.setInitialItem);
-	const storeCloseSheet = useSheetStore((s) => s.closeSheet);
-
-	const storeUpdateItemId = useSheetStore((s) => s.updateItemId);
+	const sheetType = useSheetStore((s) => s.type);
+	const itemId = useSheetStore((s) => s.itemId);
+	const initialItem = useSheetStore((s) => s.initialItem);
+	const setSheet = useSheetStore((s) => s.setSheet);
+	const setInitialItem = useSheetStore((s) => s.setInitialItem);
+	const updateItemId = useSheetStore((s) => s.updateItemId);
+	const closeSheet = useSheetStore((s) => s.closeSheet);
 
 	if (context) {
 		return {
@@ -142,13 +137,13 @@ export function useSheet() {
 	}
 
 	return {
-		sheetType: storeSheetType,
-		itemId: storeItemId,
-		initialItem: storeInitialItem,
-		setSheet: storeSetSheet,
-		setInitialItem: storeSetInitialItem,
-		updateItemId: storeUpdateItemId,
-		closeSheet: storeCloseSheet,
+		sheetType,
+		itemId,
+		initialItem,
+		setSheet,
+		setInitialItem,
+		updateItemId,
+		closeSheet,
 		itemDraft: disabledItemDraftController,
 	};
 }
@@ -158,33 +153,15 @@ export function useCurrentItem() {
 	const context = useContext(ProductContext);
 	const { product } = useProduct();
 	const { itemId } = useSheet();
+	const draftSession = context?.itemDraft.session;
 
 	return useMemo(() => {
 		if (!itemId || !product?.items) return null;
-		if (
-			context?.itemDraft.session &&
-			context.itemDraft.session.itemId === itemId
-		) {
-			return context.itemDraft.session.draftItem;
-		}
+		if (draftSession?.itemId === itemId) return draftSession.draftItem;
 
-		const featureItems = productV2ToFeatureItems({ items: product.items });
-
-		for (let i = 0; i < product.items.length; i++) {
-			const item = product.items[i];
-			if (!item) continue;
-
-			const isFeatureItem = featureItems.some((fi) => fi === item);
-			if (!isFeatureItem) continue;
-
-			const currentItemId = getItemId({ item, itemIndex: i });
-			if (currentItemId === itemId) {
-				return item;
-			}
-		}
-
-		return null;
-	}, [context?.itemDraft.session, product, itemId]);
+		const index = findFeatureItemIndex(product, itemId);
+		return index === -1 ? null : (product.items[index] ?? null);
+	}, [draftSession, product, itemId]);
 }
 
 /** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
@@ -199,32 +176,16 @@ export function useSetCurrentItem() {
 				return;
 			}
 
-			if (!product || !product.items || !itemId) return;
+			if (!product?.items || !itemId) return;
 
-			let originalIndex = -1;
-			for (let i = 0; i < product.items.length; i++) {
-				const item = product.items[i];
-				if (!item) continue;
+			const index = findFeatureItemIndex(product, itemId);
+			if (index === -1) return;
 
-				const currentItemId = getItemId({ item, itemIndex: i });
-				if (currentItemId === itemId) {
-					originalIndex = i;
-					break;
-				}
-			}
-
-			if (originalIndex === -1) return;
-
-			const newItemId = getItemId({
-				item: updatedItem,
-				itemIndex: originalIndex,
-			});
-			if (newItemId !== itemId) {
-				updateItemId(newItemId);
-			}
+			const newItemId = getItemId({ item: updatedItem, itemIndex: index });
+			if (newItemId !== itemId) updateItemId(newItemId);
 
 			const updatedItems = [...product.items];
-			updatedItems[originalIndex] = updatedItem;
+			updatedItems[index] = updatedItem;
 			setProduct({ ...product, items: updatedItems });
 		},
 		[itemDraft, itemId, product, setProduct, updateItemId],
@@ -238,47 +199,71 @@ export function useHasItemChanges() {
 	const { features = [] } = useFeaturesQuery();
 
 	return useMemo(() => {
-		if (itemDraft.session) {
-			const { same } = itemsAreSame({
-				item1: itemDraft.session.draftItem,
-				item2: itemDraft.session.initialItem,
-				features,
-			});
+		const session = itemDraft.session;
+		const item1 = session ? session.draftItem : item;
+		const item2 = session ? session.initialItem : initialItem;
 
-			return !same;
-		}
+		if (!item1 || !item2) return false;
 
-		if (!item || !initialItem) {
-			return false;
-		}
-
-		const { same } = itemsAreSame({
-			item1: item,
-			item2: initialItem,
-			features,
-		});
-
+		const { same } = itemsAreSame({ item1, item2, features });
 		return !same;
 	}, [itemDraft.session, item, initialItem, features]);
 }
 
-/** Hook to discard item changes (restore to initial state) and close the sheet. Uses context if available, otherwise Zustand. */
-export function useDiscardItemAndClose() {
-	const setCurrentItem = useSetCurrentItem();
-	const { initialItem, closeSheet, itemDraft } = useSheet();
+interface PlanSheetState {
+	hasChanges: boolean;
+	discard: () => void;
+}
 
-	return useCallback(() => {
-		if (itemDraft.session) {
-			itemDraft.discardItem();
-			closeSheet();
-			return;
-		}
+/**
+ * Drives a plan-level sheet's change tracking: snapshots the product when the
+ * sheet opens (keyed to its type, so it re-snapshots per sheet and clears on
+ * close), reports whether it has been edited since, and reverts to the snapshot
+ * on discard. Host agnostic across the Zustand and context editor flows.
+ */
+export function usePlanSheet(sheetType: string | null): PlanSheetState {
+	const { product, setProduct } = useProduct();
+	const initialProduct = useSheetStore((s) => s.initialProduct);
+	const setInitialProduct = useSheetStore((s) => s.setInitialProduct);
+	const { features = [] } = useFeaturesQuery();
 
-		if (initialItem) {
-			setCurrentItem(initialItem);
-		}
-		closeSheet();
-	}, [itemDraft, initialItem, setCurrentItem, closeSheet]);
+	const productRef = useRef(product);
+	productRef.current = product;
+
+	useEffect(() => {
+		if (!sheetType) return;
+		setInitialProduct(structuredClone(productRef.current));
+		return () => setInitialProduct(null);
+	}, [sheetType, setInitialProduct]);
+
+	const hasChanges = useMemo(() => {
+		if (!initialProduct) return false;
+
+		const {
+			itemsSame,
+			freeTrialsSame,
+			detailsSame,
+			configSame,
+			optionsSame,
+			billingControlsSame,
+		} = compareProducts(product, initialProduct, features);
+
+		return !(
+			itemsSame &&
+			freeTrialsSame &&
+			detailsSame &&
+			configSame &&
+			optionsSame &&
+			billingControlsSame
+		);
+	}, [product, initialProduct, features]);
+
+	const discard = useCallback(() => {
+		if (!initialProduct) return;
+		setProduct(structuredClone(initialProduct));
+	}, [initialProduct, setProduct]);
+
+	return { hasChanges, discard };
 }
 
 /** Hook to check if the product has unsaved changes compared to initial state. Only works in context mode. */
@@ -294,14 +279,14 @@ export function useHasPlanChanges() {
 
 		if (!initialProduct) return false;
 
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: product as unknown as ProductV2,
-			curProductV2: initialProduct as unknown as ProductV2,
+		const { itemsSame, freeTrialsSame, billingControlsSame } = compareProducts(
+			product,
+			initialProduct,
 			features,
-		});
+		);
 
 		const versionsSame = product.version === initialProduct.version;
 
-		return !(itemsSame && freeTrialsSame && versionsSame);
+		return !(itemsSame && freeTrialsSame && billingControlsSame && versionsSame);
 	}, [context?.itemDraft, product, initialProduct, features]);
 }

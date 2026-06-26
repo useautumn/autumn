@@ -1,3 +1,10 @@
+-- ALTER TABLE "customer_products" DROP COLUMN "auto_topups";--> statement-breakpoint
+-- ALTER TABLE "customer_products" DROP COLUMN "spend_limits";--> statement-breakpoint
+-- ALTER TABLE "customer_products" DROP COLUMN "usage_limits";--> statement-breakpoint
+-- ALTER TABLE "customer_products" DROP COLUMN "usage_alerts";--> statement-breakpoint
+-- ALTER TABLE "customer_products" DROP COLUMN "overage_allowed";--> statement-breakpoint
+
+
 ALTER TABLE "chat_oauth_credentials" DROP CONSTRAINT "chat_oauth_credentials_installation_org_env_key";--> statement-breakpoint
 ALTER TABLE "leaf"."cma_vaults" DROP CONSTRAINT "cma_vaults_chat_installation_id_org_id_env_pk";--> statement-breakpoint
 ALTER TABLE "chat_oauth_credentials" ADD COLUMN "user_id" text;--> statement-breakpoint

@@ -1,6 +1,6 @@
 import {
-	addCusProductToCusEnt,
 	AllowanceType,
+	addCusProductToCusEnt,
 	EntInterval,
 	getStartingBalance,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
@@ -194,10 +194,16 @@ const resetCustomerEntitlementInDb = async ({
 		});
 
 		if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+			// The cron loader hands us cusEnt.rollovers as [], so load the live
+			// set before insert lets clearExcessRollovers enforce the cap.
+			const existingRollovers = await RolloverService.getCurrentRollovers({
+				ctx: repoContext,
+				cusEntID: cusEnt.id,
+			});
 			await RolloverService.insert({
 				ctx: repoContext,
 				rows: rolloverUpdate.toInsert,
-				fullCusEnt: cusEnt,
+				fullCusEnt: { ...cusEnt, rollovers: existingRollovers },
 			});
 		}
 

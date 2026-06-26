@@ -92,10 +92,10 @@ export default function RootLayout({ children }: LayoutProps) {
 			className={cn(
 				geistSans.variable,
 				geistMono.variable,
-				"h-full bg-black antialiased",
+				"h-full max-w-full overflow-x-clip overscroll-x-none bg-black antialiased",
 			)}
 		>
-			<body className="min-h-full flex flex-col">{children}</body>
+			<body className="min-h-full max-w-full overflow-x-clip overscroll-x-none flex flex-col">{children}</body>
 		</html>
 	);
 }

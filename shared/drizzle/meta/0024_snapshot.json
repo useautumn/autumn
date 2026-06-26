@@ -1,5 +1,5 @@
 {
-  "id": "5ef3f802-27bc-4532-b573-eb54bb652260",
+  "id": "55539f3b-a3c0-4588-8419-e52b4f9d2ce6",
   "prevId": "dee3c58a-0a39-4e6c-8f4f-f64d3a1ee49c",
   "version": "7",
   "dialect": "postgresql",
@@ -947,12 +947,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "env": {
           "name": "env",
           "type": "text",
@@ -988,12 +982,6 @@
           "type": "numeric",
           "primaryKey": false,
           "notNull": true
-        },
-        "refresh_token_expires_at": {
-          "name": "refresh_token_expires_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
         },
         "scopes": {
           "name": "scopes",
@@ -1047,14 +1035,13 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "chat_oauth_credentials_installation_org_env_user_key": {
-          "name": "chat_oauth_credentials_installation_org_env_user_key",
+        "chat_oauth_credentials_installation_org_env_key": {
+          "name": "chat_oauth_credentials_installation_org_env_key",
           "nullsNotDistinct": false,
           "columns": [
             "chat_installation_id",
             "org_id",
-            "env",
-            "user_id"
+            "env"
           ]
         }
       },
@@ -1433,12 +1420,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "vault_id": {
           "name": "vault_id",
           "type": "text",
@@ -1461,19 +1442,17 @@
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "cma_vaults_installation_org_env_user_key": {
-          "name": "cma_vaults_installation_org_env_user_key",
-          "nullsNotDistinct": false,
+      "compositePrimaryKeys": {
+        "cma_vaults_chat_installation_id_org_id_env_pk": {
+          "name": "cma_vaults_chat_installation_id_org_id_env_pk",
           "columns": [
             "chat_installation_id",
             "org_id",
-            "env",
-            "user_id"
+            "env"
           ]
         }
       },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -7229,7 +7208,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_rewards_org_id_env": {
+          "name": "idx_rewards_org_id_env",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "coupons_org_id_fkey": {
           "name": "coupons_org_id_fkey",

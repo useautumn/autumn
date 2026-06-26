@@ -1,13 +1,16 @@
 import {
+	type ApiCustomerV5,
 	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
+	fullSubjectToCustomerEntitlements,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
 	mergeCustomerBillingControlsForCheck,
+	mergePlanBillingControlsForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -19,6 +22,7 @@ import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/ge
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
+import { resolveCheckSpendLimits } from "./resolveCheckSpendLimits.js";
 
 const getFeatureAndCreditSystems = ({
 	features,
@@ -103,8 +107,24 @@ export const getCheckDataV2 = async ({
 		evaluationApiSubject = mergeCustomerBillingControlsForCheck({
 			entityApiSubject: evaluationApiSubject as ApiEntityV2,
 			customerApiSubject: apiCustomer,
+			planCustomerProducts: fullSubject.customer_products,
+		});
+	} else {
+		evaluationApiSubject = mergePlanBillingControlsForCheck({
+			customerApiSubject: evaluationApiSubject as ApiCustomerV5,
+			planCustomerProducts: fullSubject.customer_products,
 		});
 	}
+
+	evaluationApiSubject = resolveCheckSpendLimits({
+		subject: evaluationApiSubject,
+		cusEntsForFeature: (featureId) =>
+			fullSubjectToCustomerEntitlements({
+				fullSubject,
+				featureIds: [featureId],
+			}),
+		entityId: entity_id,
+	});
 
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,

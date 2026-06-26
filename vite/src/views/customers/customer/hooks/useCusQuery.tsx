@@ -61,9 +61,11 @@ export const useCusQuery = ({
 
 	const fetcher = async () => {
 		try {
-			const params = effectiveEntityId ? `?entity_id=${effectiveEntityId}` : "";
+			const searchParams = new URLSearchParams();
+			if (effectiveEntityId) searchParams.set("entity_id", effectiveEntityId);
+			const query = searchParams.toString();
 			const { data } = await axiosInstance.get(
-				`/customers/${customer_id}${params}`,
+				`/customers/${customer_id}${query ? `?${query}` : ""}`,
 			);
 			return data;
 		} catch (error) {

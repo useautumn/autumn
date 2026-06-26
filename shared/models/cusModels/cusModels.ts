@@ -2,11 +2,7 @@ import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
 import {
-	AutoTopupSchema,
-	DbOverageAllowedSchema,
-	DbSpendLimitSchema,
-	DbUsageAlertSchema,
-	DbUsageLimitSchema,
+	DbBillingControlsSchema,
 } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
@@ -24,11 +20,7 @@ export const CustomerSchema = z.object({
 	processors: ExternalProcessorsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).nullish().default({}),
 	send_email_receipts: z.boolean().default(false),
-	auto_topups: z.array(AutoTopupSchema).nullish(),
-	spend_limits: z.array(DbSpendLimitSchema).nullish(),
-	usage_limits: z.array(DbUsageLimitSchema).nullish(),
-	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
-	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
+	...DbBillingControlsSchema.shape,
 	config: z
 		.object({
 			disable_pooled_balance: z.boolean().optional(),

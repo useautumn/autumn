@@ -11,11 +11,15 @@ import {
 } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
+import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
 import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedViews";
-import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
+import {
+	hasActiveCustomerFilters,
+	useCustomerFilters,
+} from "@/views/customers/hooks/useCustomerFilters";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 interface CustomerListFilterButtonProps {
@@ -37,18 +41,20 @@ export function CustomerListFilterButton({
 	const [open, setOpen] = useState(false);
 
 	const hasActiveFilters =
-		hasActiveExtraFilters ||
-		queryStates.status.length > 0 ||
-		queryStates.version.length > 0 ||
-		queryStates.none ||
-		queryStates.processor.length > 0;
+		hasActiveExtraFilters || hasActiveCustomerFilters(queryStates);
 
 	const { data, refetch: refetchSavedViews } = useSavedViewsQuery();
 
 	const views = data?.views || [];
 
 	const clearFilters = () => {
-		setFilters({ status: [], version: [], none: false, processor: [] });
+		setFilters({
+			status: [],
+			version: [],
+			none: false,
+			processor: [],
+			interval: [],
+		});
 		onFilterChange?.();
 		onClearExtra?.();
 	};
@@ -84,6 +90,7 @@ export function CustomerListFilterButton({
 					{extraMenuItems}
 					<FilterStatusSubMenu onChange={onFilterChange} />
 					<ProductsSubMenu onChange={onFilterChange} />
+					<IntervalSubMenu onChange={onFilterChange} />
 					<ProcessorSubMenu onChange={onFilterChange} />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />

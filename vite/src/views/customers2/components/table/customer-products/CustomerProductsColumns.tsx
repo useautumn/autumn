@@ -1,15 +1,19 @@
 import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import {
+	DropdownMenuItem,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
-import { TableDropdownMenuCell } from "@/components/general/table";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
 	statusSkeleton,
+	TableDropdownMenuCell,
 } from "@/components/general/table";
-import { DropdownMenuItem } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";

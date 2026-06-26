@@ -140,6 +140,7 @@ const product = () =>
 		base_variant_id: null,
 		archived: false,
 		config: { ignore_past_due: false },
+		metadata: {},
 	}) satisfies Product;
 
 const customerProduct = ({

@@ -151,6 +151,12 @@ const buildProduct = ({
 	base_variant_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	auto_topups: null,
+	spend_limits: null,
+	usage_limits: null,
+	usage_alerts: null,
+	overage_allowed: null,
+	metadata: {},
 });
 
 const buildEntitlement = ({

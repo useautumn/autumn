@@ -101,6 +101,7 @@ export const productV2ToApiPlanV1 = ({
 			...product.config,
 			ignore_past_due: product.config?.ignore_past_due ?? false,
 		},
+		metadata: product.metadata ?? {},
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);
 };
