@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { useEnv } from "@/utils/envUtils";
 import { useOrg } from "./useOrg";
@@ -15,6 +16,6 @@ export const useQueryKeyFactory = () => {
 		...key,
 		env,
 		org?.id,
-		activeSandbox?.id ?? null,
+		env === AppEnv.Sandbox ? (activeSandbox?.id ?? null) : null,
 	];
 };
