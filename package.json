@@ -13,7 +13,7 @@
 			"apps/website",
 			"apps/leaf",
 			"apps/sdk-test",
-		"apps/testbench",
+			"apps/testbench",
 			"packages/atmn",
 			"packages/atmn-tests",
 			"packages/auth",
