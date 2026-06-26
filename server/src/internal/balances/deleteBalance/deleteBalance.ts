@@ -7,11 +7,15 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
 import { reapplyFeatureUsageDeduction } from "../utils/reapplyFeatureUsageDeduction";
+import {
+	findOverageCusEnt,
+	markCusProductCustom,
+	preserveBalanceAsOverage,
+} from "./deleteBalanceUtils";
 
 export const deleteBalance = async ({
 	ctx,
@@ -68,22 +72,35 @@ export const deleteBalance = async ({
 				entityId: fullCustomer.entity?.id ?? undefined,
 			})
 		: 0;
+	const sameFeatureCusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
+		featureId: feature_id,
+		entity: fullCustomer.entity,
+	});
+	const overageCusEnt = findOverageCusEnt({
+		recalculateBalances: recalculate_balances,
+		usageToRecalculate,
+		customerEntitlements,
+		sameFeatureCusEnts,
+	});
 
 	for (const cusEnt of customerEntitlements) {
+		if (cusEnt.id === overageCusEnt?.id) {
+			await preserveBalanceAsOverage({
+				ctx,
+				cusEnt,
+				fullCustomer,
+				usageToRecalculate,
+			});
+			continue;
+		}
+
 		await CusEntService.delete({
 			db: ctx.db,
 			id: cusEnt.id,
 		});
 
-		if (cusEnt.customer_product_id) {
-			await CusProductService.update({
-				ctx,
-				cusProductId: cusEnt.customer_product_id,
-				updates: {
-					is_custom: true,
-				},
-			});
-		}
+		await markCusProductCustom({ ctx, cusEnt });
 	}
 
 	await deleteCachedFullCustomer({
@@ -92,6 +109,10 @@ export const deleteBalance = async ({
 	});
 
 	if (!recalculate_balances || usageToRecalculate === 0) {
+		return;
+	}
+
+	if (overageCusEnt) {
 		return;
 	}
 

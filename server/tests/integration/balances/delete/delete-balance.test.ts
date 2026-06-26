@@ -1,11 +1,16 @@
 import { expect, test } from "bun:test";
-import type { CheckResponseV2 } from "@autumn/shared";
+import {
+	customerEntitlements,
+	type CheckResponseV2,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-1: Basic delete of a loose balance removes it from
@@ -345,6 +350,164 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances d
 	expect(checkDb.balance?.current_balance).toBe(70);
 	expect(checkDb.balance?.granted_balance).toBe(200);
 	expect(checkDb.balance?.usage).toBe(130);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2E: if there are no surviving balances to receive the
+// deleted balance's usage, recalculate_balances converts the balance to
+// overage instead of dropping the usage.
+//
+// Contract under test:
+// - No new fields/endpoints.
+// - Deleting the only partially-used balance with recalculate_balances=true
+//   preserves the deleted usage as overage: grant 0, balance -usage.
+// - The converted overage is visible from cache and skip_cache=true.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2e: recalculate_balances converts only balance to overage")}`, async () => {
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "del-bal-2e",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "balance-a",
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-a");
+	expect(check.balance?.current_balance).toBe(-40);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.usage).toBe(40);
+
+	const checkDb = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(checkDb.balance?.breakdown).toHaveLength(1);
+	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-a");
+	expect(checkDb.balance?.current_balance).toBe(-40);
+	expect(checkDb.balance?.granted_balance).toBe(0);
+	expect(checkDb.balance?.usage).toBe(40);
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2f: converted overage balance does not reset")}`, async () => {
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "del-bal-2f",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2f-balance",
+		reset: { interval: ResetInterval.Month },
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "del-bal-2f-balance",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2f-balance",
+		recalculate_balances: true,
+	});
+
+	const rows = await ctx.db
+		.select({
+			next_reset_at: customerEntitlements.next_reset_at,
+			reset_cycle_anchor: customerEntitlements.reset_cycle_anchor,
+		})
+		.from(customerEntitlements)
+		.where(eq(customerEntitlements.external_id, "del-bal-2f-balance"))
+		.limit(1);
+
+	expect(rows[0]?.next_reset_at).toBeNull();
+	expect(rows[0]?.reset_cycle_anchor).toBeNull();
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.current_balance).toBe(-40);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.usage).toBe(40);
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2g: recalculate_balances converts entity balance to overage")}`, async () => {
+	const messagesItem = items.monthlyMessages({
+		includedUsage: 100,
+		entityFeatureId: TestFeature.Users,
+	});
+	const free = products.base({
+		id: "del-bal-2g-free",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2, entities } = await initScenario({
+		customerId: "del-bal-2g",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.current_balance).toBe(-40);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.usage).toBe(40);
 });
 
 // ═══════════════════════════════════════════════════════════════════

@@ -100,7 +100,8 @@ export function BalanceDeleteSheet() {
 		const customerId = customer.id || customer.internal_id;
 		if (!customerId) return;
 		const recalculateBalances =
-			canDeductFromOtherBalances && deleteMode === "deduct";
+			deletedUsage > 0 &&
+			(!canDeductFromOtherBalances || deleteMode === "deduct");
 
 		setIsDeleting(true);
 		try {
@@ -157,7 +158,8 @@ export function BalanceDeleteSheet() {
 									{numberWithCommas(remainingBalance)} remaining, but there are
 									no other balances with remaining{" "}
 									{balance.entitlement.feature.name} to deduct{" "}
-									{numberWithCommas(deletedUsage)} from.
+									{numberWithCommas(deletedUsage)} from. The used amount will be
+									kept as overage.
 								</>
 							)}
 						</p>
