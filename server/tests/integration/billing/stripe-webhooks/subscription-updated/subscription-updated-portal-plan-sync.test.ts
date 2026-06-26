@@ -1,14 +1,3 @@
-/**
- * TDD test for Stripe Billing Portal plan changes.
- *
- * Red-failure mode (current behavior):
- *  - Stripe's customer.subscription.updated webhook changes the subscription
- *    item price from Ultra to Pro, but Autumn keeps Ultra active.
- *
- * Green-success criteria (after fix):
- *  - The webhook backsync expires Ultra and activates Pro.
- */
-
 import { test } from "bun:test";
 import type { ApiCustomerV3, ProductItem } from "@autumn/shared";
 import {
@@ -98,14 +87,25 @@ const expectProSynced = async ({
 	proId: string;
 	ultraId: string;
 }) => {
-	await timeout(10000);
+	const deadline = Date.now() + 30000;
+	let lastError: unknown;
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectCustomerProducts({
-		customer,
-		active: [proId],
-		notPresent: [ultraId],
-	});
+	while (Date.now() < deadline) {
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		try {
+			await expectCustomerProducts({
+				customer,
+				active: [proId],
+				notPresent: [ultraId],
+			});
+			return;
+		} catch (error) {
+			lastError = error;
+			await timeout(2000);
+		}
+	}
+
+	throw lastError ?? new Error("Timed out waiting for Stripe portal sync");
 };
 
 test.concurrent(
@@ -129,7 +129,7 @@ test.concurrent(
 			ultraId: ultra.id,
 		});
 	},
-	30000,
+	60000,
 );
 
 test.concurrent(
@@ -169,5 +169,5 @@ test.concurrent(
 			ultraId: ultra.id,
 		});
 	},
-	30000,
+	60000,
 );

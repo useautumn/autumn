@@ -59,13 +59,15 @@ const shouldSyncPlanChange = ({
 }) => {
 	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
 	const matchedPlan = currentPhase?.plans[0];
+	const matchedProductGroup = matchedPlan?.product.group;
 
 	return (
 		currentPhase?.plans.length === 1 &&
 		params.phases?.length === 1 &&
 		params.phases[0].plans.length === 1 &&
 		matchedPlan?.product.id !== linkedProduct.product.id &&
-		matchedPlan?.product.group === linkedProduct.product.group
+		matchedProductGroup != null &&
+		matchedProductGroup === linkedProduct.product.group
 	);
 };
 
