@@ -34,11 +34,11 @@ const priceOrProductChanged = ({
 	const currentItems = new Map(
 		stripeSubscription.items.data.map((item) => [item.id, item]),
 	);
-	if (currentItems.size !== previousAttributes.items.data.length) return false;
+	if (currentItems.size !== previousAttributes.items.data.length) return true;
 
 	return previousAttributes.items.data.some((previousItem) => {
 		const currentItem = currentItems.get(previousItem.id);
-		if (!currentItem) return false;
+		if (!currentItem) return true;
 
 		return (
 			currentItem.price.id !== previousItem.price.id ||
