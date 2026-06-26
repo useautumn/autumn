@@ -27,10 +27,13 @@ export const getInstallationOAuthAccessToken = async ({
 	installation,
 	env,
 	orgId = installation.org_id,
+	userId,
 }: {
 	installation: ChatInstallation;
 	env: AppEnv;
 	orgId?: string;
+	// Web chat resolves a per-user credential; Slack omits it.
+	userId?: string;
 }) => {
 	if (isSlackAdminProvider({ provider: installation.provider })) {
 		const access = validateSlackAdminAccess({
@@ -46,6 +49,7 @@ export const getInstallationOAuthAccessToken = async ({
 		chatInstallationId: installation.id,
 		env,
 		orgId,
+		userId,
 	});
 
 	if (

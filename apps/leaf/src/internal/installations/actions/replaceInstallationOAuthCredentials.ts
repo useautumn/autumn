@@ -276,12 +276,14 @@ const createCredentialForEnv = async ({
 		id: `chat_oauth_${crypto.randomUUID().replace(/-/g, "")}`,
 		chat_installation_id: installation.id,
 		org_id: orgId,
+		user_id: userId,
 		env,
 		oauth_client_id: config.clientId,
 		oauth_consent_id: consentId,
 		access_token: encrypt(prefixOAuthToken({ token: rawAccessToken })),
 		refresh_token: encrypt(rawRefreshToken),
 		access_token_expires_at: accessTokenExpiresAt,
+		refresh_token_expires_at: refreshTokenExpiresAt,
 		scopes,
 		created_at: now,
 		updated_at: now,
@@ -295,6 +297,7 @@ const createCredentialForEnv = async ({
 				chatOAuthCredentials.chat_installation_id,
 				chatOAuthCredentials.org_id,
 				chatOAuthCredentials.env,
+				chatOAuthCredentials.user_id,
 			],
 			set: {
 				org_id: credential.org_id,
@@ -303,6 +306,7 @@ const createCredentialForEnv = async ({
 				access_token: credential.access_token,
 				refresh_token: credential.refresh_token,
 				access_token_expires_at: credential.access_token_expires_at,
+				refresh_token_expires_at: credential.refresh_token_expires_at,
 				scopes: credential.scopes,
 				updated_at: credential.updated_at,
 			},
@@ -314,7 +318,7 @@ const defaultOAuthResourceScopeSet = new Set<string>(
 );
 
 // Bound the requested scopes to the app's max; empty = full default set.
-const resolveAgentScopes = (agentScopes?: string[]) => {
+export const resolveAgentScopes = (agentScopes?: string[]) => {
 	if (!agentScopes || agentScopes.length === 0) {
 		return [...DEFAULT_OAUTH_RESOURCE_SCOPES];
 	}

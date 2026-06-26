@@ -21,10 +21,10 @@ describe("Harness message text", () => {
 			params: { text: "attach pro" },
 		});
 
-		expect(text).toContain("Org context:");
-		expect(text).toContain("already-run Autumn tool results");
+		expect(text).toContain("Org context");
+		expect(text).toContain("Autumn tool results you already ran this session");
 		expect(text).toContain(
-			"Do not call getAgentRules, listPlans, or listFeatures again unless the needed record is absent or the user asks to refresh",
+			"Do NOT call getAgentRules, listPlans, or listFeatures again",
 		);
 		expect(text).toContain("- pro | Pro");
 		expect(extractUserMessageText(text)).toBe("attach pro");

@@ -77,7 +77,7 @@ export const streamWebChat = async ({
 	origin,
 	request,
 }: {
-	auth: { orgId: string; userId: string };
+	auth: { orgId: string; userId: string; scopes: string[] };
 	origin?: string;
 	request: Request;
 }): Promise<Response> => {
@@ -90,7 +90,7 @@ export const streamWebChat = async ({
 		return new Response("Missing conversation id", { status: 400 });
 	}
 
-	const { orgId, userId } = auth;
+	const { orgId, userId, scopes } = auth;
 	const env = AppEnv.Sandbox;
 	const logger = rootLogger;
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
@@ -98,12 +98,13 @@ export const streamWebChat = async ({
 
 	const stream = createUIMessageStream<LeafUiMessage>({
 		execute: async ({ writer }) => {
-			await ensureWebChatAuth({ orgId, userId });
+			await ensureWebChatAuth({ orgId, userId, userScopes: scopes });
 			const { accessToken } = await getOrgInstallationToken({
 				env,
 				orgId,
 				provider: WEB_CHAT_PROVIDER as ChatProvider,
 				workspaceId: orgId,
+				userId,
 			});
 
 			let lastStep: { id: string; label: string } | undefined;
@@ -149,7 +150,10 @@ export const streamWebChat = async ({
 						type: "data-step",
 					});
 				},
-				onThinking: () => {},
+				// The managed-agent API exposes thinking only as a progress ping (no
+				// text). Use it to close the last tool step once inference resumes, so
+				// it stops showing a running clock while the model reasons.
+				onThinking: () => finishLastStep(),
 				onTurnComplete: (turnText) => {
 					finishLastStep();
 					writeText(turnText);

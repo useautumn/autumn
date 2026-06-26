@@ -30,6 +30,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 ## Rules
 
 - **A mutating billing action requires approval before it takes effect — obtain it via your client's approval mechanism.**
+- **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.

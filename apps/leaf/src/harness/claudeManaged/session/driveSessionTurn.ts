@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { logger as rootLogger } from "../../../lib/logger.js";
 import type { SessionTurnOutcome } from "../../common/types.js";
 
 export type {
@@ -21,6 +22,7 @@ export const driveSessionTurn = async ({
 	onThinking,
 	onToolError,
 	onTurnEnd,
+	perfLabel,
 	sessionId,
 }: {
 	autumnMcpServerName: string;
@@ -29,6 +31,8 @@ export const driveSessionTurn = async ({
 	 * being resumed) — seed its id+name so this turn captures its result. */
 	expectedToolResult?: { toolName: string; toolUseId: string };
 	kickoff: () => Promise<unknown>;
+	/** Label for the turn-latency log (e.g. "first", "resume"). */
+	perfLabel?: string;
 	onAutumnTool?: (input: {
 		id: string;
 		input: Record<string, unknown>;
@@ -79,10 +83,54 @@ export const driveSessionTurn = async ({
 		);
 	}
 
-	const stream = await client.beta.sessions.events.stream(sessionId);
-	await kickoff();
+	// Time-to-first milestones, relative to turn kickoff — surfaces where the
+	// first-response latency goes (stream open, inference start, first text/tool,
+	// the serial skill-read round-trips).
+	const turnStart = performance.now();
+	const milestones: Record<string, number> = {};
+	const mark = (name: string) => {
+		milestones[name] ??= Math.round(performance.now() - turnStart);
+	};
+	// Counters to split the turn: is the time many inference cycles, serial
+	// skill reads, or one long think?
+	let inferenceCount = 0;
+	let sandboxReadCount = 0;
+	let inferenceMs = 0;
+	let inferenceStart = 0;
 
+	const stream = await client.beta.sessions.events.stream(sessionId);
+	mark("stream_open");
+	await kickoff();
+	mark("kickoff_sent");
+
+	const verbose = Boolean(process.env.LEAF_PERF_VERBOSE);
+	let lastEventAt = performance.now();
 	for await (const event of stream) {
+		if (verbose) {
+			const now = performance.now();
+			process.stderr.write(
+				`[perf-ev] +${Math.round(now - turnStart)}ms (gap ${Math.round(
+					now - lastEventAt,
+				)}ms) ${event.type}\n`,
+			);
+			lastEventAt = now;
+		}
+		mark("first_event");
+		if (
+			event.type === "agent.message" &&
+			event.content.some((b) => b.type === "text" && b.text)
+		) {
+			mark("first_text");
+		} else if (event.type === "agent.mcp_tool_use") {
+			mark("first_mcp_tool");
+		} else if (event.type === "agent.tool_use") {
+			mark("first_sandbox_tool");
+		} else if (
+			event.type === "agent.thinking" ||
+			event.type === "span.model_request_start"
+		) {
+			mark("first_inference");
+		}
 		if (event.type === "agent.message") {
 			for (const block of event.content) {
 				if (block.type === "text" && block.text) {
@@ -132,12 +180,16 @@ export const driveSessionTurn = async ({
 				});
 			}
 		} else if (event.type === "agent.tool_use") {
+			sandboxReadCount += 1;
 			await onSandboxTool?.({ input: event.input, name: event.name });
 		} else if (event.type === "agent.thinking") {
 			onThinking?.();
 		} else if (event.type === "span.model_request_start") {
+			inferenceCount += 1;
+			inferenceStart = performance.now();
 			onThinking?.();
 		} else if (event.type === "span.model_request_end") {
+			inferenceMs += performance.now() - inferenceStart;
 			const usage = event.model_usage;
 			outcome.usage.inputTokens += usage.input_tokens;
 			outcome.usage.outputTokens += usage.output_tokens;
@@ -188,6 +240,27 @@ export const driveSessionTurn = async ({
 			// end_turn and retries_exhausted are turn-terminal.
 			break;
 		}
+	}
+	const turnPerf = {
+		label: perfLabel ?? "turn",
+		total_ms: Math.round(performance.now() - turnStart),
+		milestones_ms: milestones,
+		inference_count: inferenceCount,
+		inference_ms: Math.round(inferenceMs),
+		sandbox_reads: sandboxReadCount,
+		autumn_tool_calls: outcome.toolResults?.length ?? 0,
+		input_tokens: outcome.usage.inputTokens,
+		cache_read_tokens: outcome.usage.cacheReadInputTokens,
+		suspended: Boolean(outcome.suspendedQueue?.length),
+	};
+	rootLogger.info("[perf] session turn", {
+		event: "leaf.session_turn_latency",
+		data: turnPerf,
+	});
+	// The app logger is silenced in eval/bench processes; mirror to stderr when
+	// profiling so the standalone latency bench can read the breakdown.
+	if (process.env.LEAF_PERF) {
+		process.stderr.write(`[perf] session_turn ${JSON.stringify(turnPerf)}\n`);
 	}
 	return outcome;
 };

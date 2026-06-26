@@ -88,17 +88,21 @@ export const cmaRepo = {
 		db,
 		env,
 		orgId,
+		userId = "",
 	}: {
 		chatInstallationId: string;
 		db: ChatDb;
 		env: AppEnv;
 		orgId: string;
+		// Per-user for web chat; "" for installation-scoped (Slack) vaults.
+		userId?: string;
 	}) => {
 		const row = await db.query.cmaVaults.findFirst({
 			where: and(
 				eq(cmaVaults.chat_installation_id, chatInstallationId),
 				eq(cmaVaults.org_id, orgId),
 				eq(cmaVaults.env, env),
+				eq(cmaVaults.user_id, userId),
 			),
 		});
 		return row?.vault_id;
@@ -109,17 +113,20 @@ export const cmaRepo = {
 		db,
 		env,
 		orgId,
+		userId = "",
 	}: {
 		chatInstallationId: string;
 		db: ChatDb;
 		env: AppEnv;
 		orgId: string;
+		userId?: string;
 	}) => {
 		const row = await db.query.cmaVaults.findFirst({
 			where: and(
 				eq(cmaVaults.chat_installation_id, chatInstallationId),
 				eq(cmaVaults.org_id, orgId),
 				eq(cmaVaults.env, env),
+				eq(cmaVaults.user_id, userId),
 			),
 		});
 		return row;
@@ -131,11 +138,13 @@ export const cmaRepo = {
 		db,
 		env,
 		orgId,
+		userId = "",
 	}: {
 		chatInstallationId: string;
 		db: ChatDb;
 		env: AppEnv;
 		orgId: string;
+		userId?: string;
 	}) => {
 		await db
 			.update(cmaVaults)
@@ -145,6 +154,7 @@ export const cmaRepo = {
 					eq(cmaVaults.chat_installation_id, chatInstallationId),
 					eq(cmaVaults.org_id, orgId),
 					eq(cmaVaults.env, env),
+					eq(cmaVaults.user_id, userId),
 				),
 			);
 	},
@@ -155,6 +165,7 @@ export const cmaRepo = {
 		db,
 		env,
 		orgId,
+		userId = "",
 		vaultId,
 	}: {
 		chatInstallationId: string;
@@ -162,6 +173,7 @@ export const cmaRepo = {
 		db: ChatDb;
 		env: AppEnv;
 		orgId: string;
+		userId?: string;
 		vaultId: string;
 	}) => {
 		await db
@@ -170,6 +182,7 @@ export const cmaRepo = {
 				chat_installation_id: chatInstallationId,
 				org_id: orgId,
 				env,
+				user_id: userId,
 				vault_id: vaultId,
 				credential_id: credentialId,
 			})
@@ -178,6 +191,7 @@ export const cmaRepo = {
 					cmaVaults.chat_installation_id,
 					cmaVaults.org_id,
 					cmaVaults.env,
+					cmaVaults.user_id,
 				],
 				set: {
 					vault_id: vaultId,

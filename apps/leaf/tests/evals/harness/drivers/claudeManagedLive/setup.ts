@@ -1,8 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import { leafSkillsText, leafSystemPrompt } from "@autumn/agent-docs/agent";
+import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { claudeManagedConfig } from "../../../../../src/harness/claudeManaged/config.js";
+import { ensureLeafSkills } from "../../../../../src/harness/claudeManaged/skills.js";
 import type { EvalDriverMessage } from "../types.js";
 
 // Read tool defs (for the always_ask destructive set) from the LOCAL mock — the
@@ -43,29 +44,39 @@ const ensureEvalEnvironment = async (client: Anthropic) => {
 	return created.id;
 };
 
-const buildAgentConfig = ({
+// Mirror prod: a small surface system prompt + skills ATTACHED (read on demand),
+// not the full skills text inlined. Inlining all skills exceeds Anthropic's 100k
+// system-prompt limit and isn't what prod does, so it can't measure prod latency.
+const buildAgentConfig = async ({
+	client,
 	destructiveTools,
 	env,
 	mcpUrl,
 	model,
 	today,
 }: {
+	client: Anthropic;
 	destructiveTools: Set<string>;
 	env: AppEnv;
 	mcpUrl: string;
 	model: string;
 	today?: Date;
 }) => ({
-	model: model.replace(/^anthropic\//, ""),
+	// `speed: fast` = same model, faster output-token generation (premium price).
+	// Opt-in (LEAF_FAST_MODE) so correctness evals stay on standard pricing/limits.
+	model: {
+		id: model.replace(/^anthropic\//, ""),
+		speed: process.env.LEAF_FAST_MODE ? ("fast" as const) : ("standard" as const),
+	},
 	name: "Autumn Leaf (eval)",
 	system: [
 		leafSystemPrompt("slack"),
 		`Current Autumn environment: ${env}.`,
 		today ? `Current date: ${today.toISOString()}.` : null,
-		leafSkillsText(),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n"),
+	skills: await ensureLeafSkills(client),
 	mcp_servers: [
 		{
 			name: claudeManagedConfig.autumnMcpServerName,
@@ -109,7 +120,7 @@ export const ensureEvalAgent = async ({
 	today?: Date;
 }) => {
 	evalAgentPromise ??= (async () => {
-		const agentConfig = buildAgentConfig(config);
+		const agentConfig = await buildAgentConfig({ client, ...config });
 		const environmentId = await ensureEvalEnvironment(client);
 
 		let existing: { id: string; version: number } | undefined;

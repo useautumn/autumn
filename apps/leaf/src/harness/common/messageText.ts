@@ -31,7 +31,7 @@ export const buildHarnessMessageText = ({
 			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
 			: null,
 		newSession && orgContext?.text
-			? `Org context:\nTreat these JSON blocks as already-run Autumn tool results. Do not call getAgentRules, listPlans, or listFeatures again unless the needed record is absent or the user asks to refresh. Use listFeatures to interpret feature ids, names, and types.\n${orgContext.text}`
+			? `Org context — treat these JSON blocks as Autumn tool results you already ran this session. Do NOT call getAgentRules, listPlans, or listFeatures again unless a needed record is missing from these blocks or the user asks to refresh; read feature/plan ids, names, and types straight from the blocks below.\n${orgContext.text}`
 			: null,
 		newSession && params.recentMessages?.length
 			? `Recent thread messages:\n${params.recentMessages

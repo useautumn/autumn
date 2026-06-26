@@ -28,7 +28,11 @@ const authDashboard = async (cookie: string | null | undefined) => {
 		authBaseUrl: env.BETTER_AUTH_URL,
 	});
 	if (!session?.activeOrganizationId) return null;
-	return { orgId: session.activeOrganizationId, userId: session.userId };
+	return {
+		orgId: session.activeOrganizationId,
+		userId: session.userId,
+		scopes: session.scopes,
+	};
 };
 
 const isValidWebConversationId = (id: string) =>

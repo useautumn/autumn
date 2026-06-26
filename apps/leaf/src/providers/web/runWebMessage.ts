@@ -4,10 +4,7 @@ import type { Message, Thread } from "chat";
 import { agentEngines } from "../../agent/runMessage/engines/engines.js";
 import type { MessageContext } from "../../agent/runMessage/types.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
-import {
-	ensureWebChatAuth,
-	WEB_CHAT_PROVIDER,
-} from "../../internal/installations/actions/ensureWebChatAuth.js";
+import { WEB_CHAT_PROVIDER } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
@@ -30,13 +27,15 @@ export const runWebMessage = async ({
 	const env = AppEnv.Sandbox;
 	const logger = rootLogger;
 
-	await ensureWebChatAuth({ orgId, userId });
+	// The per-user credential is minted at the cookie boundary (bot.ts getUser);
+	// here we only read this user's scoped token.
 	const harness = chatEnv.WEB_AGENT_HARNESS;
 	const { accessToken } = await getOrgInstallationToken({
 		env,
 		orgId,
 		provider: WEB_CHAT_PROVIDER,
 		workspaceId: orgId,
+		userId,
 	});
 
 	const ctx: MessageContext = {

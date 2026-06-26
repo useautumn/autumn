@@ -1,6 +1,9 @@
 export type DashboardSession = {
 	userId: string;
 	activeOrganizationId: string | null;
+	// The user's current scopes for the active org (customSession plugin). Used
+	// to bound the dashboard chat's MCP OAuth token to this user's privileges.
+	scopes: string[];
 };
 
 /**
@@ -28,6 +31,7 @@ export const verifyDashboardSession = async ({
 	const data = (await response.json()) as {
 		user?: { id?: string };
 		session?: { activeOrganizationId?: string | null };
+		scopes?: string[];
 	} | null;
 	if (!data?.user?.id) {
 		return null;
@@ -35,5 +39,6 @@ export const verifyDashboardSession = async ({
 	return {
 		userId: data.user.id,
 		activeOrganizationId: data.session?.activeOrganizationId ?? null,
+		scopes: Array.isArray(data.scopes) ? data.scopes : [],
 	};
 };

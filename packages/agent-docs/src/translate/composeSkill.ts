@@ -94,9 +94,15 @@ export const composeSkill = ({
 	);
 
 	const withParts = withReferences.replace(PART_TAG, (_match, raw: string) => {
-		const { file, when } = parseAttrs(raw);
+		const { file, when, inline } = parseAttrs(raw);
 		if (!file) {
 			throw new Error(`<part> in ${path} is missing a file`);
+		}
+		const contents = resolveContentFile(file).trim();
+		// `inline="true"` keeps the part top-level in SKILL.md (always loaded)
+		// instead of splitting it into a progressively-disclosed references/ file.
+		if (inline === "true") {
+			return contents;
 		}
 		if (!when) {
 			throw new Error(`<part file="${file}"> in ${path} is missing "when"`);
@@ -108,10 +114,7 @@ export const composeSkill = ({
 			.pop()
 			?.replace(/\.[^.]+$/, "");
 		const referencePath = `references/${slug}.md`;
-		references.push({
-			path: referencePath,
-			contents: resolveContentFile(file).trim(),
-		});
+		references.push({ path: referencePath, contents });
 		return `For ${when}, read \`${referencePath}\`.`;
 	});
 

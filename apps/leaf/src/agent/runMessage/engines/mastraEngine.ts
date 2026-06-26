@@ -88,6 +88,11 @@ export const mastraEngine: AgentEngine = {
 
 			const output = await chatAgent.generate(toMessageListInput(params), {
 				maxSteps: leafChatAgentDefaults.maxSteps,
+				providerOptions: {
+					openai: {
+						reasoningEffort: "low",
+					},
+				},
 				context: [
 					{
 						role: "system",

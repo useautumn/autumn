@@ -35,6 +35,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 ## Rules
 
 - **A mutating billing action requires approval before it takes effect — obtain it via your client's approval mechanism.**
+- **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
@@ -59,7 +60,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If an ID had to be inferred from a name or description, confirm the match with the user before moving on.
 - If the found customer has no email, remember that and ask for it before any invoice or checkout step.
 
-<part file="references/actions.md" when="choosing which billing action to run (attach, updateSubscription, createSchedule)" />
+<part file="references/actions.md" inline="true" />
 
 ## Param checklist
 
@@ -80,11 +81,11 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
   - Each phase needs timing (`starts_at` or `starting_after`) and at least one `plans[]` entry.
 - If a missing value changes billing impact, ask before previewing.
 
-<part file="references/customize.md" when="applying customer-specific plan terms or price overrides" />
+<part file="references/customize.md" inline="true" />
 
-<part file="references/timing-schedules.md" when="resolving when a billing change takes effect or building schedule phases" />
+<part file="references/timing-schedules.md" inline="true" />
 
-<part file="references/billing-behavior.md" when="resolving invoice, checkout, and proration behavior" />
+<part file="references/billing-behavior.md" inline="true" />
 
 ## Preview and approval
 

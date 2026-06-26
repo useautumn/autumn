@@ -32,7 +32,10 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false }), s.products({ list: [prod] })],
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [prod] }),
+			],
 			actions: [s.attach({ productId: prod.id })],
 		});
 

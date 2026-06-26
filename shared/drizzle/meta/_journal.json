@@ -169,6 +169,13 @@
       "when": 1782294963052,
       "tag": "0023_flaky_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782416667290,
+      "tag": "0024_neat_venus",
+      "breakpoints": true
     }
   ]
 }

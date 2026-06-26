@@ -51,7 +51,7 @@ test.concurrent(
 		const { autumnV2_2 } = await initScenario({
 			customerId,
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ testClock: false, paymentMethod: "success" }),
 				s.products({ list: [planWithCustomer, planNoCustomer] }),
 			],
 			actions: [s.attach({ productId: planWithCustomer.id })],
@@ -98,7 +98,7 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			setup: [s.customer({ testClock: false, paymentMethod: "success" }), s.products({ list: [plan] })],
 			actions: [s.attach({ productId: plan.id })],
 		});
 
@@ -159,7 +159,7 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			setup: [s.customer({ testClock: false, paymentMethod: "success" }), s.products({ list: [plan] })],
 			// Attaching messages creates a customer entitlement for it.
 			actions: [s.attach({ productId: plan.id })],
 		});
@@ -211,7 +211,7 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false })],
+			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
 			actions: [],
 		});
 

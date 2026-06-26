@@ -1,5 +1,6 @@
-// export const DEFAULT_CHAT_MODEL = "anthropic/claude-opus-4-6";
-export const DEFAULT_CHAT_MODEL = "anthropic/claude-opus-4-6";
+export const DEFAULT_CLAUDE_MANAGED_MODEL = "anthropic/claude-sonnet-4-6";
+export const DEFAULT_MASTRA_CHAT_MODEL = "anthropic/claude-sonnet-4-6";
+export const DEFAULT_CHAT_MODEL = DEFAULT_MASTRA_CHAT_MODEL;
 
 // Cheap/fast model for the throwaway env classifier (sandbox vs live) — it doesn't
 // need a frontier model.
@@ -8,7 +9,7 @@ export const DEFAULT_CHAT_ORG_MODEL = "anthropic/claude-sonnet-4-6";
 
 export const leafChatAgentDefaults = {
 	maxSteps: 8,
-	model: DEFAULT_CHAT_MODEL,
+	model: DEFAULT_MASTRA_CHAT_MODEL,
 } as const;
 
 // Keep this file env-free: evals import it, and lib/env.ts requires secrets at parse time.

@@ -16,11 +16,14 @@ export const getOrgInstallationToken = async ({
 	orgId,
 	provider,
 	workspaceId,
+	userId,
 }: {
 	env: AppEnv;
 	orgId: string;
 	provider: string;
 	workspaceId: string;
+	// Web chat resolves a per-user OAuth credential; Slack omits it.
+	userId?: string;
 }): Promise<{ accessToken: string; installation: ChatInstallation }> => {
 	const installation = await db.query.chatInstallations.findFirst({
 		where: isSlackAdminProvider({ provider })
@@ -41,6 +44,7 @@ export const getOrgInstallationToken = async ({
 		env,
 		installation,
 		orgId,
+		userId,
 	});
 	return { accessToken, installation };
 };

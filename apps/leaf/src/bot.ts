@@ -6,6 +6,7 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
+import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
 import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
@@ -126,6 +127,13 @@ export const bot = new Chat({
 				if (!session?.activeOrganizationId) {
 					return null;
 				}
+				// Mint/refresh this user's scope-bound MCP OAuth credential at the
+				// cookie boundary, so downstream reads never run unauthenticated.
+				await ensureWebChatAuth({
+					orgId: session.activeOrganizationId,
+					userId: session.userId,
+					userScopes: session.scopes,
+				});
 				// Encode the server-resolved org into the user id (WebUser carries no
 				// org field); runWebMessage decodes it. `~` avoids the `:` used in
 				// chat-sdk thread ids.
