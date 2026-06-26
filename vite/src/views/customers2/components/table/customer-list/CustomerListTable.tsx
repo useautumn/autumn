@@ -57,6 +57,7 @@ export function CustomerListTable({
 			queryStates.version,
 			queryStates.none,
 			queryStates.processor,
+			queryStates.interval,
 			queryStates.q,
 		]),
 		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
