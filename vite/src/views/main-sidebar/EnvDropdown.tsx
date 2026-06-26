@@ -19,6 +19,7 @@ import {
 	useSandboxesQuery,
 } from "@/hooks/queries/useSandboxesQuery";
 import { sandboxColorClass } from "@/hooks/sandbox/sandboxDisplay";
+import { sandboxBasePath } from "@/hooks/sandbox/sandboxUrl";
 import {
 	type ActiveSandbox,
 	setActiveSandbox,
@@ -37,18 +38,18 @@ export const useEnvChange = () => {
 	const navigate = useNavigate();
 
 	const handleEnvChange = (targetEnv: AppEnv, reset?: boolean) => {
-		const newPath = envToPath(targetEnv, location.pathname);
-
-		if (newPath && !reset) {
-			const params = new URLSearchParams(location.search);
-			const tab = params.get("tab");
-			const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
-			navigate(url);
-		} else {
+		if (reset) {
 			navigate(
-				targetEnv === AppEnv.Sandbox ? "/sandbox/products" : "/products",
+				targetEnv === AppEnv.Sandbox
+					? `${sandboxBasePath()}/products`
+					: "/products",
 			);
+			return;
 		}
+		const newPath = envToPath(targetEnv, location.pathname);
+		const params = new URLSearchParams(location.search);
+		const tab = params.get("tab");
+		navigate(tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath);
 	};
 
 	return handleEnvChange;

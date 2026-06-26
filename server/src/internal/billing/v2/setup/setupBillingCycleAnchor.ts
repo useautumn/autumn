@@ -24,6 +24,7 @@ export const setupBillingCycleAnchor = ({
 	currentEpochMs,
 	requestedBillingCycleAnchor,
 	billingStartsAt,
+	billingStartsAtToleranceMs,
 }: {
 	stripeSubscription?: Stripe.Subscription;
 	customerProduct?: FullCusProduct;
@@ -32,6 +33,7 @@ export const setupBillingCycleAnchor = ({
 	currentEpochMs: number;
 	requestedBillingCycleAnchor?: number | "now";
 	billingStartsAt?: number;
+	billingStartsAtToleranceMs?: number;
 }): number | "now" => {
 	if (requestedBillingCycleAnchor !== undefined) {
 		return requestedBillingCycleAnchor;
@@ -43,7 +45,11 @@ export const setupBillingCycleAnchor = ({
 	// free/one-off products have no recurring cycle to anchor.
 	if (
 		billingStartsAt !== undefined &&
-		isPastStartDate(billingStartsAt, currentEpochMs) &&
+		isPastStartDate(
+			billingStartsAt,
+			currentEpochMs,
+			billingStartsAtToleranceMs,
+		) &&
 		!customerProduct &&
 		isProductPaidAndRecurring(newFullProduct)
 	) {

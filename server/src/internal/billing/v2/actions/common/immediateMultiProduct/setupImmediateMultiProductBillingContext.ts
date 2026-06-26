@@ -109,11 +109,13 @@ export const setupImmediateMultiProductBillingContext = async ({
 	params,
 	preview = false,
 	billingStartsAt,
+	billingStartsAtToleranceMs,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
 	preview?: boolean;
 	billingStartsAt?: number;
+	billingStartsAtToleranceMs?: number;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -207,6 +209,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		trialContext,
 		currentEpochMs,
 		billingStartsAt,
+		billingStartsAtToleranceMs,
 	});
 
 	if (trialContext?.trialEndsAt) {
