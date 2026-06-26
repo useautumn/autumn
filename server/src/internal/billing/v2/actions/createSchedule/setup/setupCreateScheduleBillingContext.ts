@@ -13,6 +13,7 @@ import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorR
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
+import { FIRST_PHASE_TOLERANCE_MS } from "../errors/handleFirstPhaseStartDateErrors";
 import {
 	getInitialCreateSchedulePhase,
 	normalizeCreateSchedulePhases,
@@ -111,6 +112,7 @@ export const setupCreateScheduleBillingContext = async ({
 		billingStartsAt: phaseHasNumericStart(initialPhase)
 			? initialPhase.starts_at
 			: undefined,
+		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
 	});
 
 	validateCreateSchedulePhasePlans({
@@ -176,6 +178,7 @@ export const setupCreateScheduleBillingContext = async ({
 		subscriptionBackdateStartMs: isPastStartDate(
 			immediatePhase.starts_at,
 			billingContext.currentEpochMs,
+			FIRST_PHASE_TOLERANCE_MS,
 		)
 			? immediatePhase.starts_at
 			: undefined,

@@ -1,11 +1,11 @@
-/* Reuse the MAIN vite app's stylesheet verbatim — identical tokens, @theme,
-   fonts, presets, scrollbars. */
-@import "../../../vite/src/index.css";
+/* Reuse the shared UI stylesheet verbatim — identical tokens, @theme, fonts,
+   presets, scrollbars (same entrypoint the main vite app loads). */
+@import "../../../packages/ui/src/styles/index.css";
 
 /* Tailwind v4 must scan both testbench's own files and the reused vite
    components for class names. */
 @source "./**/*.tsx";
-@source "../../../vite/src/components/**/*.tsx";
+@source "../../../packages/ui/src/components/**/*.tsx";
 
 /* Single-screen shell: the app is h-dvh and scrolls only inside its panels (the
    vite app's convention — `w-screen h-screen overflow-hidden`). The page itself

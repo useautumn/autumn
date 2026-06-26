@@ -97,7 +97,7 @@ const requestBody = {
 	input_tokens: 100,
 	output_tokens: 50,
 };
-const timestamp = Date.UTC(2024, 0, 15, 12, 30, 0);
+const timestamp = Date.now() - 10_000;
 
 const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 	const app = new Hono<HonoEnv>();

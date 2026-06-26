@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
@@ -50,6 +50,11 @@ const envRoutes = (
 		path={`/sandbox/${path}`}
 		element={sandboxElement}
 	/>,
+	<Route
+		key={`sandbox-named-${path}`}
+		path={`/sandbox/:sandboxSlug/${path}`}
+		element={sandboxElement}
+	/>,
 ];
 
 export default function App() {
@@ -88,6 +93,11 @@ export default function App() {
 				<Route path="/consent" element={<Consent />} />
 				<Route path="/accept" element={<AcceptInvitation />} />
 				<Route path="/close" element={<CloseScreen />} />
+
+				<Route
+					path="/sandbox/:sandboxSlug"
+					element={<Navigate replace to="products" />}
+				/>
 
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>

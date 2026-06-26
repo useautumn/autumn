@@ -61,6 +61,7 @@ export const useSandboxesQuery = ({
 		sandboxes,
 		isLoading,
 		isFetching,
+		isSuccess,
 		error,
 		refetch,
 	};

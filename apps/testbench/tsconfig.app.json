@@ -2,7 +2,8 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@/*": ["../../vite/src/*"],
+			"@/*": ["../../packages/ui/src/*"],
+			"@autumn/ui/*": ["../../packages/ui/src/*"],
 			"@api/*": ["../../shared/api/*"],
 			"@models/*": ["../../shared/models/*"],
 			"@utils/*": ["../../shared/utils/*"]

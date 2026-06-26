@@ -4,6 +4,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 const state = {
 	target: null as null | Record<string, unknown>,
 	updateCalls: [] as Array<Record<string, unknown>>,
+	existing: [] as Array<Record<string, unknown>>,
 };
 
 mock.module("@/db/initDrizzle.js", () => ({
@@ -25,6 +26,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		update: async (args: Record<string, unknown>) => {
 			state.updateCalls.push(args);
 		},
+		listSandboxes: async () => state.existing,
 	},
 }));
 
@@ -54,9 +56,34 @@ const call = (
 beforeEach(() => {
 	state.target = null;
 	state.updateCalls = [];
+	state.existing = [];
 });
 
 describe("updateSandboxForOrg (ownership-guarded)", () => {
+	test("rejects a rename to a name already used by another sandbox", async () => {
+		state.target = sandbox();
+		state.existing = [{ id: "org_other", name: "Taken" }];
+		await expect(call("org_sandbox", { name: "Taken" })).rejects.toMatchObject({
+			code: ErrCode.InvalidRequest,
+		});
+	});
+
+	test("rejects a rename to a reserved-slug name, no update", async () => {
+		state.target = sandbox();
+		await expect(
+			call("org_sandbox", { name: "Products" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.updateCalls.length).toBe(0);
+	});
+
+	test("rejects a rename to a name that slugifies to empty, no update", async () => {
+		state.target = sandbox();
+		await expect(call("org_sandbox", { name: "🚀🎉" })).rejects.toMatchObject({
+			code: ErrCode.InvalidRequest,
+		});
+		expect(state.updateCalls.length).toBe(0);
+	});
+
 	test("updates an owned sandbox, mapping tokens to columns", async () => {
 		state.target = sandbox();
 		await call("org_sandbox", {
