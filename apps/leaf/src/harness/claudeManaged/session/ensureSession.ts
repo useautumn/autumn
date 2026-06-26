@@ -3,7 +3,6 @@ import { AppEnv } from "@autumn/shared";
 import { all } from "better-all";
 import type { ThreadRef } from "../../../agent/runMessage/types.js";
 import type { ChatDb } from "../../../lib/db.js";
-import { orgMemoryInstructions } from "../../common/instructions/index.js";
 import { buildThreadKey } from "../../common/threadKey.js";
 import { cmaRepo } from "../repos/claudeManagedRepo.js";
 
@@ -101,7 +100,8 @@ export const createClaudeManagedSession = async ({
 					resources: [
 						{
 							access: "read_write" as const,
-							instructions: orgMemoryInstructions,
+							instructions:
+								"Org context across threads. Use and inspect this memory autonomously when it is relevant. Save durable facts like customers, preferences, and decisions.",
 							memory_store_id: memoryStoreId,
 							type: "memory_store" as const,
 						},

@@ -8,6 +8,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
+			"@autumn/ui": ["../packages/ui/src/index.ts"],
+			"@autumn/ui/*": ["../packages/ui/src/*"],
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
 			"autumn-js/react": ["../packages/autumn-js/src/react/index.ts"],
 			"atmn/skills": ["../packages/atmn/src/prompts/skills/index.ts"]

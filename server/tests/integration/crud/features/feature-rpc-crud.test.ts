@@ -13,7 +13,7 @@ test.concurrent(`${chalk.yellowBright("feature-rpc: crud + list")}`, async () =>
 	const updatedName = "Feature RPC CRUD Updated";
 
 	const created = await autumn.post("/features.create", {
-		id: featureId,
+		feature_id: featureId,
 		name: featureName,
 		type: FeatureType.Boolean,
 	});

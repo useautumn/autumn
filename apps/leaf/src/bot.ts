@@ -1,13 +1,16 @@
+import { verifyDashboardSession } from "@autumn/auth";
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { verifySlackSignature } from "@chat-adapter/slack/webhook";
 import { createPostgresState } from "@chat-adapter/state-pg";
+import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
-import { editSupersededApprovalCards } from "./internal/approvals/actions/editSupersededApprovalCards.js";
-import { handleApprovalAction } from "./internal/approvals/actions/handleApprovalAction.js";
-import { handleViewPayloadAction } from "./internal/approvals/actions/handleViewPayloadAction.js";
-import { postApprovalRequest } from "./internal/approvals/actions/postApprovalRequest.js";
+import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
+import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
+import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
+import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
+import { presentApproval } from "./internal/approvals/surfaces/slack/present.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { dispatchThreadMessage } from "./internal/runs/runCoordinator.js";
 import {
@@ -35,6 +38,7 @@ import {
 } from "./providers/slack/files.js";
 import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
+import { runWebMessage } from "./providers/web/runWebMessage.js";
 import type { ChatContextMessage } from "./types.js";
 import {
 	finishLoading,
@@ -44,7 +48,7 @@ import {
 } from "./ui/progress.js";
 import { createStatusTicker } from "./ui/statusTicker.js";
 
-export const chatAdapterNames = ["slack"];
+export const chatAdapterNames = ["slack", "web"];
 
 const getSlackAdminProvider = () =>
 	`slack_admin:${env.SLACK_CLIENT_ID}` as const;
@@ -104,6 +108,37 @@ export const bot = new Chat({
 				});
 			},
 			userName: env.CHAT_NAME,
+		}),
+		web: createWebAdapter({
+			userName: env.CHAT_NAME,
+			getUser: async (request) => {
+				const session = await verifyDashboardSession({
+					cookie: request.headers.get("cookie"),
+					authBaseUrl: env.BETTER_AUTH_URL,
+				});
+				rootLogger.info("Web chat getUser", {
+					event: "leaf.web_chat_get_user",
+					data: {
+						hasCookie: Boolean(request.headers.get("cookie")),
+						authenticated: Boolean(session?.userId),
+						hasOrg: Boolean(session?.activeOrganizationId),
+					},
+				});
+				if (!session?.activeOrganizationId) {
+					return null;
+				}
+				// Mint/refresh this user's scope-bound MCP OAuth credential at the
+				// cookie boundary, so downstream reads never run unauthenticated.
+				await ensureWebChatAuth({
+					orgId: session.activeOrganizationId,
+					userId: session.userId,
+					userScopes: session.scopes,
+				});
+				// Encode the server-resolved org into the user id (WebUser carries no
+				// org field); runWebMessage decodes it. `~` avoids the `:` used in
+				// chat-sdk thread ids.
+				return { id: `${session.userId}~${session.activeOrganizationId}` };
+			},
 		}),
 	},
 	state: createPostgresState({
@@ -273,7 +308,7 @@ const runAndReply = async ({
 		}
 
 		const outputInstallation = output.installation ?? installation;
-		const postedApproval = await postApprovalRequest({
+		const postedApproval = await presentApproval({
 			channelId,
 			installation: outputInstallation,
 			loading,
@@ -317,6 +352,12 @@ const handleMessage = async (thread: Thread, message: Message) => {
 			event: "leaf.slack_message_skipped",
 			data: { reason: "bot_author" },
 		});
+		return;
+	}
+	// Web (dashboard) messages run Leaf's core without a Slack installation.
+	// Web thread ids follow the `web:{userId}:{conversationId}` pattern.
+	if (thread.id.startsWith("web:")) {
+		await runWebMessage({ message, thread });
 		return;
 	}
 	const runKey = slackRunKey({

@@ -63,12 +63,16 @@ const buildCredentialAuth = ({
 	},
 });
 
+const vaultScope = ({ orgId, userId }: { orgId: string; userId: string }) =>
+	userId ? `${orgId}/${userId}` : orgId;
+
 const createVaultCredential = ({
 	accessToken,
 	credential,
 	env,
 	mcpServerUrl,
 	orgId,
+	userId,
 	vaultId,
 	client,
 }: {
@@ -79,11 +83,12 @@ const createVaultCredential = ({
 	env: AppEnv;
 	mcpServerUrl: string;
 	orgId: string;
+	userId: string;
 	vaultId: string;
 	client: Anthropic;
 }) =>
 	client.beta.vaults.credentials.create(vaultId, {
-		display_name: `autumn-mcp/${orgId}/${env}`,
+		display_name: `autumn-mcp/${vaultScope({ orgId, userId })}/${env}`,
 		auth: buildCredentialAuth({ accessToken, credential, mcpServerUrl }),
 		metadata: {
 			credential_updated_at: String(credential.updated_at),
@@ -121,24 +126,30 @@ export const ensureAutumnVault = async ({
 	orgId,
 	provider,
 	workspaceId,
+	userId,
 }: {
 	client: Anthropic;
 	env: AppEnv;
 	orgId: string;
 	provider: string;
 	workspaceId: string;
+	// Web chat scopes the vault + credential per user; Slack omits it ("").
+	userId?: string;
 }): Promise<string> => {
+	const vaultUserId = userId ?? "";
 	const { accessToken, installation } = await getOrgInstallationToken({
 		env,
 		orgId,
 		provider,
 		workspaceId,
+		userId,
 	});
 	const credential = await getChatOAuthCredentialByInstallationEnv({
 		db,
 		chatInstallationId: installation.id,
 		env,
 		orgId,
+		userId,
 	});
 	if (!credential) {
 		throw new Error(`Missing ${env} Autumn OAuth credential for vault`);
@@ -150,6 +161,7 @@ export const ensureAutumnVault = async ({
 		db,
 		env,
 		orgId,
+		userId: vaultUserId,
 	});
 	const storedMcpServerUrl = existing
 		? await getVaultCredentialMcpServerUrl({
@@ -183,6 +195,7 @@ export const ensureAutumnVault = async ({
 				env,
 				mcpServerUrl,
 				orgId,
+				userId: vaultUserId,
 				vaultId: existing.vault_id,
 			});
 			await cmaRepo.upsertVault({
@@ -191,6 +204,7 @@ export const ensureAutumnVault = async ({
 				db,
 				env,
 				orgId,
+				userId: vaultUserId,
 				vaultId: existing.vault_id,
 			});
 			return existing.vault_id;
@@ -218,14 +232,15 @@ export const ensureAutumnVault = async ({
 			db,
 			env,
 			orgId,
+			userId: vaultUserId,
 			vaultId: existing.vault_id,
 		});
 		return existing.vault_id;
 	}
 
 	const vault = await client.beta.vaults.create({
-		display_name: `autumn/${orgId}/${env}`,
-		metadata: { app: "leaf", env, orgId },
+		display_name: `autumn/${vaultScope({ orgId, userId: vaultUserId })}/${env}`,
+		metadata: { app: "leaf", env, orgId, userId: vaultUserId },
 	});
 	const created = await createVaultCredential({
 		accessToken,
@@ -234,6 +249,7 @@ export const ensureAutumnVault = async ({
 		env,
 		mcpServerUrl,
 		orgId,
+		userId: vaultUserId,
 		vaultId: vault.id,
 	});
 	await cmaRepo.upsertVault({
@@ -242,6 +258,7 @@ export const ensureAutumnVault = async ({
 		db,
 		env,
 		orgId,
+		userId: vaultUserId,
 		vaultId: vault.id,
 	});
 	return vault.id;

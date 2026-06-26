@@ -19,7 +19,17 @@ import {
 	products,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, gt, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
+import {
+	and,
+	eq,
+	gt,
+	inArray,
+	isNull,
+	lt,
+	notExists,
+	or,
+	sql,
+} from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
@@ -132,10 +142,10 @@ export class CusEntService {
 			.where(
 				internalCustomerId
 					? and(
-							eq(customerEntitlements.internal_feature_id, internalFeatureId),
+							sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
 							eq(customerEntitlements.internal_customer_id, internalCustomerId),
 						)
-					: eq(customerEntitlements.internal_feature_id, internalFeatureId),
+					: sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
 			)
 			.limit(10);
 

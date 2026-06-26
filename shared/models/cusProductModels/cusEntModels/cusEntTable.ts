@@ -87,6 +87,9 @@ export const customerEntitlements = pgTable(
 			table.internal_customer_id,
 		),
 		index("idx_customer_entitlements_entitlement_id").on(table.entitlement_id),
+		index("idx_customer_entitlements_internal_feature_id_c")
+			.on(sql`${table.internal_feature_id} COLLATE "C"`)
+			.concurrently(),
 		index("idx_customer_entitlements_internal_entity_id").using(
 			"hash",
 			table.internal_entity_id,
@@ -109,7 +112,6 @@ collatePgColumn(customerEntitlements.internal_customer_id, "C");
 
 export type InsertCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;
-export type DbCustomerEntitlement =
-	typeof customerEntitlements.$inferSelect;
+export type DbCustomerEntitlement = typeof customerEntitlements.$inferSelect;
 export type InsertDbCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;

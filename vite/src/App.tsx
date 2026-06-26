@@ -17,6 +17,7 @@ import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
+import ChatView from "./views/chat/ChatView";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
@@ -127,6 +128,8 @@ export default function App() {
 							</SquircleProvider>,
 						)}
 
+						{envRoutes("chat", <ChatView />)}
+						{envRoutes("chat/:threadId", <ChatView />)}
 						{envRoutes("customers", <CustomersPage />)}
 						{envRoutes("customers/:customer_id", <CustomerView2 />)}
 						{envRoutes(

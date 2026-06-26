@@ -1,11 +1,12 @@
 import type {
-	AppEnv,
 	CustomerEntitlement,
 	EntitlementWithFeature,
 	Feature,
+	FullProduct,
 	Price,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { priceOnFeature } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getCreditSystemsFromFeature } from "../../creditSystemUtils.js";
@@ -19,35 +20,29 @@ export type ObjectsUsingFeature = {
 };
 
 export const getObjectsUsingFeature = async ({
-	db,
-	orgId,
-	env,
-	allFeatures,
+	ctx,
 	feature,
+	products,
 }: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	allFeatures: Feature[];
+	ctx: AutumnContext;
 	feature: Feature;
+	// Pre-fetched catalog; skips the listFull when the caller already has it.
+	products?: FullProduct[];
 }): Promise<ObjectsUsingFeature> => {
-	const [products, cusEnts] = await Promise.all([
-		ProductService.listFull({
-			db,
-			orgId,
-			env,
-		}),
+	const { db, org, env } = ctx;
+	const [allProducts, cusEnts] = await Promise.all([
+		products ?? ProductService.listFull({ db, orgId: org.id, env }),
 		CusEntService.getByFeature({
 			db,
 			internalFeatureId: feature.internal_id!,
 		}),
 	]);
 
-	const allPrices = products.flatMap((p) => p.prices);
-	const allEnts = products.flatMap((p) => p.entitlements);
+	const allPrices = allProducts.flatMap((p) => p.prices);
+	const allEnts = allProducts.flatMap((p) => p.entitlements);
 	const creditSystems = getCreditSystemsFromFeature({
 		featureId: feature.id,
-		features: allFeatures,
+		features: ctx.features,
 	});
 
 	const entitlements = allEnts.filter(
@@ -57,9 +52,8 @@ export const getObjectsUsingFeature = async ({
 		(entitlement) => entitlement.entity_feature_id === feature.id,
 	);
 
-	const prices = allPrices.filter(
-		(price) =>
-			(price.config as any).internal_feature_id === feature.internal_id,
+	const prices = allPrices.filter((price) =>
+		priceOnFeature({ price, feature }),
 	);
 
 	return { entitlements, prices, creditSystems, linkedEntitlements, cusEnts };

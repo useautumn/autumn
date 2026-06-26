@@ -17,6 +17,7 @@ import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	AUTUMN_SLACK_OAUTH_CLIENT_ID,
+	AUTUMN_WEB_OAUTH_CLIENT_ID,
 } from "./upsertInstallationOAuthCredential.js";
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -24,6 +25,9 @@ type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 const SLACK_ADMIN_CONSENT_KIND = "slack_admin";
+const SLACK_OAUTH_REDIRECT_URI = "slack://autumn-chat";
+// Programmatic provisioning never redirects, so this is only a stored value.
+const WEB_OAUTH_REDIRECT_URI = "https://app.useautumn.com/chat";
 
 type OAuthConsentMetadata =
 	| {
@@ -39,31 +43,42 @@ const isSlackAdminInstallation = ({
 	installation: ChatInstallation;
 }) => isSlackAdminProvider({ provider: installation.provider });
 
-const getSlackMcpOAuthClientId = ({
-	installation,
-}: {
-	installation: ChatInstallation;
-}) =>
-	isSlackAdminInstallation({ installation })
-		? AUTUMN_ADMIN_OAUTH_CLIENT_ID
-		: AUTUMN_SLACK_OAUTH_CLIENT_ID;
+type ProviderOAuthConfig = {
+	clientId: string;
+	name: string;
+	mcpClientType: string;
+	redirectUri: string;
+};
 
-const getSlackMcpOAuthClientName = ({
+/** MCP OAuth client config per chat provider (Slack scheme vs web origin). */
+const getProviderOAuthConfig = ({
 	installation,
 }: {
 	installation: ChatInstallation;
-}) => (isSlackAdminInstallation({ installation }) ? "Slack Admin" : "Slack");
-
-const getOAuthClientMetadata = ({
-	installation,
-}: {
-	installation: ChatInstallation;
-}) => ({
-	kind: "mcp_client",
-	mcpClientType: isSlackAdminInstallation({ installation })
-		? "slack_admin"
-		: "slack",
-});
+}): ProviderOAuthConfig => {
+	if (isSlackAdminInstallation({ installation })) {
+		return {
+			clientId: AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+			name: "Slack Admin",
+			mcpClientType: "slack_admin",
+			redirectUri: SLACK_OAUTH_REDIRECT_URI,
+		};
+	}
+	if (installation.provider === "web") {
+		return {
+			clientId: AUTUMN_WEB_OAUTH_CLIENT_ID,
+			name: "Dashboard",
+			mcpClientType: "web",
+			redirectUri: WEB_OAUTH_REDIRECT_URI,
+		};
+	}
+	return {
+		clientId: AUTUMN_SLACK_OAUTH_CLIENT_ID,
+		name: "Slack",
+		mcpClientType: "slack",
+		redirectUri: SLACK_OAUTH_REDIRECT_URI,
+	};
+};
 
 const getOAuthConsentMetadata = ({
 	installation,
@@ -91,25 +106,23 @@ const tokenHash = ({ token }: { token: string }) => {
 
 const generateToken = () => crypto.randomBytes(48).toString("base64url");
 
-const ensureSlackMcpOAuthClient = async ({
+const ensureMcpOAuthClient = async ({
 	tx,
-	installation,
+	config,
 }: {
 	tx: ChatTransaction;
-	installation: ChatInstallation;
+	config: ProviderOAuthConfig;
 }) => {
 	const now = new Date();
-	const clientId = getSlackMcpOAuthClientId({ installation });
-	const name = getSlackMcpOAuthClientName({ installation });
-	const metadata = getOAuthClientMetadata({ installation });
+	const metadata = { kind: "mcp_client", mcpClientType: config.mcpClientType };
 
 	await tx
 		.insert(oauthClient)
 		.values({
 			id: `oauth_client_${crypto.randomUUID().replace(/-/g, "")}`,
-			clientId,
-			name,
-			redirectUris: ["slack://autumn-chat"],
+			clientId: config.clientId,
+			name: config.name,
+			redirectUris: [config.redirectUri],
 			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 			tokenEndpointAuthMethod: "none",
 			grantTypes: ["authorization_code", "refresh_token"],
@@ -123,7 +136,7 @@ const ensureSlackMcpOAuthClient = async ({
 		.onConflictDoUpdate({
 			target: oauthClient.clientId,
 			set: {
-				name,
+				name: config.name,
 				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 				tokenEndpointAuthMethod: "none",
 				grantTypes: ["authorization_code", "refresh_token"],
@@ -141,7 +154,7 @@ const upsertOAuthConsent = async ({
 	env,
 	orgId,
 	userId,
-	clientId,
+	config,
 	metadata,
 	scopes,
 }: {
@@ -149,7 +162,7 @@ const upsertOAuthConsent = async ({
 	env: AppEnv;
 	orgId: string;
 	userId: string;
-	clientId: string;
+	config: ProviderOAuthConfig;
 	metadata: OAuthConsentMetadata;
 	scopes: string[];
 }) => {
@@ -159,7 +172,7 @@ const upsertOAuthConsent = async ({
 		.from(oauthConsent)
 		.where(
 			and(
-				eq(oauthConsent.clientId, clientId),
+				eq(oauthConsent.clientId, config.clientId),
 				eq(oauthConsent.userId, userId),
 				eq(oauthConsent.referenceId, orgId),
 				eq(oauthConsent.env, env),
@@ -185,12 +198,12 @@ const upsertOAuthConsent = async ({
 	const consentId = `oauth_consent_${crypto.randomUUID().replace(/-/g, "")}`;
 	await tx.insert(oauthConsent).values({
 		id: consentId,
-		clientId,
+		clientId: config.clientId,
 		userId,
 		referenceId: orgId,
 		scopes,
 		env,
-		redirectUri: "slack://autumn-chat",
+		redirectUri: config.redirectUri,
 		metadata,
 		createdAt: now,
 		updatedAt: now,
@@ -202,6 +215,7 @@ const upsertOAuthConsent = async ({
 const createCredentialForEnv = async ({
 	tx,
 	installation,
+	config,
 	env,
 	orgId,
 	userId,
@@ -209,6 +223,7 @@ const createCredentialForEnv = async ({
 }: {
 	tx: ChatTransaction;
 	installation: ChatInstallation;
+	config: ProviderOAuthConfig;
 	env: AppEnv;
 	orgId: string;
 	userId: string;
@@ -222,14 +237,13 @@ const createCredentialForEnv = async ({
 	const refreshTokenExpiresAt = now + REFRESH_TOKEN_TTL_MS;
 	const refreshTokenId = `oauth_refresh_${crypto.randomUUID().replace(/-/g, "")}`;
 	const accessTokenId = `oauth_access_${crypto.randomUUID().replace(/-/g, "")}`;
-	const clientId = getSlackMcpOAuthClientId({ installation });
 	const metadata = getOAuthConsentMetadata({ installation, userId });
 	const consentId = await upsertOAuthConsent({
 		tx,
 		env,
 		orgId,
 		userId,
-		clientId,
+		config,
 		metadata,
 		scopes,
 	});
@@ -237,7 +251,7 @@ const createCredentialForEnv = async ({
 	await tx.insert(oauthRefreshToken).values({
 		id: refreshTokenId,
 		token: tokenHash({ token: rawRefreshToken }),
-		clientId,
+		clientId: config.clientId,
 		userId,
 		referenceId: orgId,
 		oauthConsentId: consentId,
@@ -249,7 +263,7 @@ const createCredentialForEnv = async ({
 	await tx.insert(oauthAccessToken).values({
 		id: accessTokenId,
 		token: tokenHash({ token: rawAccessToken }),
-		clientId,
+		clientId: config.clientId,
 		userId,
 		referenceId: orgId,
 		oauthConsentId: consentId,
@@ -262,12 +276,14 @@ const createCredentialForEnv = async ({
 		id: `chat_oauth_${crypto.randomUUID().replace(/-/g, "")}`,
 		chat_installation_id: installation.id,
 		org_id: orgId,
+		user_id: userId,
 		env,
-		oauth_client_id: clientId,
+		oauth_client_id: config.clientId,
 		oauth_consent_id: consentId,
 		access_token: encrypt(prefixOAuthToken({ token: rawAccessToken })),
 		refresh_token: encrypt(rawRefreshToken),
 		access_token_expires_at: accessTokenExpiresAt,
+		refresh_token_expires_at: refreshTokenExpiresAt,
 		scopes,
 		created_at: now,
 		updated_at: now,
@@ -281,6 +297,7 @@ const createCredentialForEnv = async ({
 				chatOAuthCredentials.chat_installation_id,
 				chatOAuthCredentials.org_id,
 				chatOAuthCredentials.env,
+				chatOAuthCredentials.user_id,
 			],
 			set: {
 				org_id: credential.org_id,
@@ -289,18 +306,22 @@ const createCredentialForEnv = async ({
 				access_token: credential.access_token,
 				refresh_token: credential.refresh_token,
 				access_token_expires_at: credential.access_token_expires_at,
+				refresh_token_expires_at: credential.refresh_token_expires_at,
 				scopes: credential.scopes,
 				updated_at: credential.updated_at,
 			},
 		});
 };
 
-const defaultOAuthResourceScopeSet = new Set<string>(DEFAULT_OAUTH_RESOURCE_SCOPES);
+const defaultOAuthResourceScopeSet = new Set<string>(
+	DEFAULT_OAUTH_RESOURCE_SCOPES,
+);
 
 // Bound the requested scopes to the app's max; empty = full default set.
-const resolveAgentScopes = (agentScopes?: string[]) => {
-	if (!agentScopes || agentScopes.length === 0)
+export const resolveAgentScopes = (agentScopes?: string[]) => {
+	if (!agentScopes || agentScopes.length === 0) {
 		return [...DEFAULT_OAUTH_RESOURCE_SCOPES];
+	}
 	const bounded = agentScopes.filter((scope) =>
 		defaultOAuthResourceScopeSet.has(scope),
 	);
@@ -321,15 +342,17 @@ export const replaceInstallationOAuthCredentials = async ({
 	orgId?: string;
 }) => {
 	if (!userId) {
-		throw new Error("Missing user id for Slack MCP OAuth credentials");
+		throw new Error("Missing user id for chat MCP OAuth credentials");
 	}
 
 	const scopes = resolveAgentScopes(agentScopes);
+	const config = getProviderOAuthConfig({ installation });
 
-	await ensureSlackMcpOAuthClient({ tx, installation });
+	await ensureMcpOAuthClient({ tx, config });
 	await createCredentialForEnv({
 		tx,
 		installation,
+		config,
 		env: AppEnv.Sandbox,
 		orgId,
 		userId,
@@ -338,6 +361,7 @@ export const replaceInstallationOAuthCredentials = async ({
 	await createCredentialForEnv({
 		tx,
 		installation,
+		config,
 		env: AppEnv.Live,
 		orgId,
 		userId,

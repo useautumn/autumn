@@ -48,13 +48,32 @@ const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
 	return out;
 };
 
-const composeMatchKey = (item: ApiPlanItem): string => {
+/** Structural minimum for keying an item — satisfied by both ApiPlanItemV1
+ * (resolved plan) and CreatePlanItemParamsV1 (diff add_items). */
+type MatchKeyItem = {
+	feature_id: string;
+	price?: {
+		billing_method?: string | null;
+		interval?: string | null;
+		interval_count?: number | null;
+	} | null;
+	reset?: { interval?: string | null; interval_count?: number | null } | null;
+};
+
+/** The identity an item is matched on across from/to (and against remove
+ * filters): feature + billing method + interval + interval count. */
+export const composeMatchKey = (item: MatchKeyItem): string => {
 	const billingMethod = item.price?.billing_method ?? "";
 	const interval = item.price?.interval ?? item.reset?.interval ?? "";
 	const intervalCount =
 		item.price?.interval_count ?? item.reset?.interval_count ?? "";
 	return `${item.feature_id}|${billingMethod}|${interval}|${intervalCount}`;
 };
+
+/** Match key for a remove_items filter, in the same format as composeMatchKey
+ * (buildRemoveFilter already flattens the matched item's fields onto it). */
+export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
+	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${filter.interval_count ?? ""}`;
 
 const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 	const filter: PlanItemFilter = { feature_id: item.feature_id };
