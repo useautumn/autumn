@@ -510,6 +510,114 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2g: recalculate_balances c
 	expect(check.balance?.usage).toBe(40);
 });
 
+test.concurrent(`${chalk.yellowBright("delete-balance-2h: recalculate_balances converts multiple balances to one overage")}`, async () => {
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "del-bal-2h",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2h-a",
+	});
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 200,
+		balance_id: "del-bal-2h-b",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2h-a",
+		remaining: 60,
+	});
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2h-b",
+		remaining: 170,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.current_balance).toBe(-70);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.usage).toBe(70);
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2i: recalculate_balances converts multiple entity balances to overage")}`, async () => {
+	const freeA = products.base({
+		id: "del-bal-2i-free-a",
+		items: [
+			items.monthlyMessages({
+				includedUsage: 100,
+				entityFeatureId: TestFeature.Users,
+			}),
+		],
+	});
+	const freeB = products.base({
+		id: "del-bal-2i-free-b",
+		items: [
+			items.monthlyMessages({
+				includedUsage: 100,
+				entityFeatureId: TestFeature.Users,
+			}),
+		],
+	});
+
+	const { customerId, autumnV2, entities } = await initScenario({
+		customerId: "del-bal-2i",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [freeA, freeB] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.attach({ productId: freeA.id }),
+			s.attach({ productId: freeB.id }),
+		],
+	});
+
+	await autumnV2.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 130,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.current_balance).toBe(-130);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.usage).toBe(130);
+});
+
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-3: Cannot delete a paid balance (one attached to a
 // paid product with a price). Should return an error.

@@ -32,10 +32,12 @@ export const findOverageCusEnt = ({
 
 const getOverageCusEntUpdates = ({
 	cusEnt,
+	customerEntitlements,
 	fullCustomer,
 	usageToRecalculate,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
 	fullCustomer: FullCustomer;
 	usageToRecalculate: number;
 }) => {
@@ -43,14 +45,16 @@ const getOverageCusEntUpdates = ({
 		next_reset_at: null,
 		reset_cycle_anchor: null,
 	};
-	const grantAdjustment = -cusEntToStartingBalance({ cusEnt });
+	const carrierGrantAdjustment = -cusEntToStartingBalance({ cusEnt });
 
+	// The preserved row is only an overage carrier: cancel its own allowance so
+	// granted_balance stays 0 while balance stores total deleted usage.
 	if (!isEntityScopedCusEnt(cusEnt) || cusEnt.internal_entity_id) {
 		return {
 			...resetlessUpdates,
 			balance: -usageToRecalculate,
 			additional_balance: 0,
-			adjustment: grantAdjustment,
+			adjustment: carrierGrantAdjustment,
 		};
 	}
 
@@ -64,9 +68,9 @@ const getOverageCusEntUpdates = ({
 
 		entities[entityId] = {
 			...entity,
-			balance: -cusEntsToUsage({ cusEnts: [cusEnt], entityId }),
+			balance: -cusEntsToUsage({ cusEnts: customerEntitlements, entityId }),
 			additional_balance: 0,
-			adjustment: grantAdjustment,
+			adjustment: carrierGrantAdjustment,
 		};
 	}
 
@@ -97,11 +101,13 @@ export const markCusProductCustom = async ({
 export const preserveBalanceAsOverage = async ({
 	ctx,
 	cusEnt,
+	customerEntitlements,
 	fullCustomer,
 	usageToRecalculate,
 }: {
 	ctx: AutumnContext;
 	cusEnt: FullCusEntWithFullCusProduct;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
 	fullCustomer: FullCustomer;
 	usageToRecalculate: number;
 }) => {
@@ -110,6 +116,7 @@ export const preserveBalanceAsOverage = async ({
 		id: cusEnt.id,
 		updates: getOverageCusEntUpdates({
 			cusEnt,
+			customerEntitlements,
 			fullCustomer,
 			usageToRecalculate,
 		}),

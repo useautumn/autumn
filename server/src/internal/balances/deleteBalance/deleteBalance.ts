@@ -89,6 +89,7 @@ export const deleteBalance = async ({
 			await preserveBalanceAsOverage({
 				ctx,
 				cusEnt,
+				customerEntitlements,
 				fullCustomer,
 				usageToRecalculate,
 			});
