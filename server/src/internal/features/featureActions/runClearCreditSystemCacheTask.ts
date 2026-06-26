@@ -6,7 +6,7 @@ import {
 	orgToFeaturesByOrgEnv,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
-import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
@@ -78,7 +78,7 @@ export const runClearCreditSystemCacheTask = async ({
 		)
 		.where(
 			and(
-				eq(customerEntitlements.internal_feature_id, internalFeatureId),
+				sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
 				inArray(customerProducts.status, RELEVANT_STATUSES),
 				eq(customers.org_id, orgId),
 				eq(customers.env, env),
@@ -121,7 +121,7 @@ export const runClearCreditSystemCacheTask = async ({
 				)
 				.where(
 					and(
-						eq(customerEntitlements.internal_feature_id, internalFeatureId),
+						sql`${customerEntitlements.internal_feature_id} COLLATE "C" = ${internalFeatureId}`,
 						inArray(customerProducts.status, RELEVANT_STATUSES),
 						eq(customers.org_id, orgId),
 						eq(customers.env, env),

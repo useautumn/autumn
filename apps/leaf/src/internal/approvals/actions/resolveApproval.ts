@@ -23,12 +23,20 @@ export const resolveApproval = async ({
 		(approval.harness as AgentHarnessName | null) ??
 		chatEnv.SLACK_AGENT_HARNESS;
 	const resume = approvalRuntimes[harness];
+	if (!resume) {
+		// Config error, not transient — fail terminally so it doesn't retry forever.
+		logger.error("[chat] No approval resumer for harness", undefined, {
+			event: "leaf.approval_no_resumer",
+			approval_id: approval.id,
+			data: { harness },
+		});
+		return approvalErrorResult(
+			new Error(`No approval resumer for harness "${harness}"`),
+		);
+	}
 
 	let result: ApprovalRunResult;
 	try {
-		if (!resume) {
-			throw new Error(`No approval resumer for harness "${harness}"`);
-		}
 		result = await resume({ approval, onProgress, providerUserId });
 	} catch (error) {
 		// A thrown resumer error means the write never ran — keep the approval

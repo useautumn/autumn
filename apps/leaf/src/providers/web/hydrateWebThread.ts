@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ChatProvider } from "@autumn/shared";
+import type { AppEnv, ChatProvider } from "@autumn/shared";
 import {
 	type LeafApprovalStatus,
 	type LeafUiMessage,
@@ -28,6 +28,7 @@ const toApprovalStatus = (status: string): LeafApprovalStatus => {
 export const buildWebHistory = async ({
 	channelId,
 	db,
+	env,
 	orgId,
 	provider,
 	sessionId,
@@ -35,6 +36,7 @@ export const buildWebHistory = async ({
 }: {
 	channelId: string;
 	db: ChatDb;
+	env: AppEnv;
 	orgId: string;
 	provider: ChatProvider;
 	sessionId: string;
@@ -45,6 +47,7 @@ export const buildWebHistory = async ({
 		chatApprovalRepo.listForChannel({
 			channelId,
 			db,
+			env,
 			orgId,
 			provider,
 			workspaceId,

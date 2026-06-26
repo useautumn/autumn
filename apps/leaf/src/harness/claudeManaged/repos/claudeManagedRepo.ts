@@ -1,6 +1,11 @@
 import { type AppEnv, cmaMemory, cmaSessions, cmaVaults } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
+
+// Vaults are scoped per-user for web chat; installation-scoped (Slack) rows use
+// a NULL user_id. Match NULL with `IS NULL`, not `= ''` (which never matches).
+const vaultUserIdWhere = (userId?: string | null) =>
+	userId ? eq(cmaVaults.user_id, userId) : isNull(cmaVaults.user_id);
 
 // CMA runtime state in the `leaf` schema, scoped by (org_id, env) so one tenant's
 // sessions/vaults/memory never collide. The shared agent is a single global resource —
@@ -102,7 +107,7 @@ export const cmaRepo = {
 				eq(cmaVaults.chat_installation_id, chatInstallationId),
 				eq(cmaVaults.org_id, orgId),
 				eq(cmaVaults.env, env),
-				eq(cmaVaults.user_id, userId),
+				vaultUserIdWhere(userId),
 			),
 		});
 		return row?.vault_id;
@@ -126,7 +131,7 @@ export const cmaRepo = {
 				eq(cmaVaults.chat_installation_id, chatInstallationId),
 				eq(cmaVaults.org_id, orgId),
 				eq(cmaVaults.env, env),
-				eq(cmaVaults.user_id, userId),
+				vaultUserIdWhere(userId),
 			),
 		});
 		return row;
@@ -154,7 +159,7 @@ export const cmaRepo = {
 					eq(cmaVaults.chat_installation_id, chatInstallationId),
 					eq(cmaVaults.org_id, orgId),
 					eq(cmaVaults.env, env),
-					eq(cmaVaults.user_id, userId),
+					vaultUserIdWhere(userId),
 				),
 			);
 	},
@@ -182,7 +187,7 @@ export const cmaRepo = {
 				chat_installation_id: chatInstallationId,
 				org_id: orgId,
 				env,
-				user_id: userId,
+				user_id: userId || null,
 				vault_id: vaultId,
 				credential_id: credentialId,
 			})

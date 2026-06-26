@@ -57,9 +57,12 @@ export const resumeClaudeManagedApproval = async ({
 		sessionId,
 	});
 	const text = outcome.textParts.join("\n\n");
-	let writeResult =
-		outcome.toolResults?.find((result) => result.id === toolUseId) ??
-		outcome.toolResults?.at(-1);
+	// Only the confirmed tool's own result counts — never another tool's (a bare
+	// `.at(-1)` could bind the wrong output). If it's absent, history recovery
+	// below looks it up by toolUseId.
+	let writeResult = outcome.toolResults?.find(
+		(result) => result.id === toolUseId,
+	);
 
 	// The live stream can crash after the MCP write ran but before we captured its
 	// result. Recover the result from session history so a lost result isn't

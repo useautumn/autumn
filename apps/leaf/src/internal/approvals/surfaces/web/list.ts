@@ -1,4 +1,4 @@
-import type { ChatProvider } from "@autumn/shared";
+import type { AppEnv, ChatProvider } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
 import { parsePreviewPayload } from "../../../../ui/previewContent.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -15,11 +15,13 @@ export type WebApproval = {
 /** Pending approvals for a web chat thread, newest first. */
 export const listWebApprovals = async ({
 	channelId,
+	env,
 	orgId,
 	provider,
 	workspaceId,
 }: {
 	channelId?: string;
+	env: AppEnv;
 	orgId: string;
 	provider: ChatProvider;
 	workspaceId: string;
@@ -27,6 +29,7 @@ export const listWebApprovals = async ({
 	const approvals = await chatApprovalRepo.listPendingForOrg({
 		channelId,
 		db,
+		env,
 		orgId,
 		provider,
 		workspaceId,

@@ -1,4 +1,5 @@
-import Anthropic, { toFile } from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
+import { toFile } from "@anthropic-ai/sdk";
 import { leafSkills, type Skill } from "@autumn/agent-docs/agent";
 
 /** A custom-skill attachment ref. `version: "latest"` means the agent always uses
@@ -14,7 +15,10 @@ const skillFiles = (skill: Skill) =>
 	Promise.all([
 		toFile(Buffer.from(skill.markdown), `${skill.name}/SKILL.md`),
 		...skill.references.map((reference) =>
-			toFile(Buffer.from(reference.contents), `${skill.name}/${reference.path}`),
+			toFile(
+				Buffer.from(reference.contents),
+				`${skill.name}/${reference.path}`,
+			),
 		),
 	]);
 
@@ -55,7 +59,11 @@ export const ensureLeafSkills = async (
 			refs.push({ type: "custom", skill_id: skillId, version: "latest" });
 		}
 		return refs;
-	})();
+	})().catch((error) => {
+		// Don't cache a failed sync — let the next call retry.
+		skillRefsPromise = undefined;
+		throw error;
+	});
 	return skillRefsPromise;
 };
 

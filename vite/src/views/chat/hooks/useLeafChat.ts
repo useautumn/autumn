@@ -2,6 +2,7 @@ import { useChat } from "@ai-sdk/react";
 import type { PromptInputMessage } from "@autumn/ui/ai-elements";
 import { DefaultChatTransport } from "ai";
 import { useCallback, useEffect, useState } from "react";
+import { useEnv } from "@/utils/envUtils";
 import type {
 	ApprovalStatus,
 	DecidingState,
@@ -67,6 +68,7 @@ export function useLeafChat({
 }) {
 	const [input, setInput] = useState("");
 	const [hydrationDone, setHydrationDone] = useState(!shouldHydrate);
+	const env = useEnv();
 
 	const { messages, sendMessage, status, setMessages } = useChat<LeafUIMessage>(
 		{
@@ -74,7 +76,10 @@ export function useLeafChat({
 			transport: new DefaultChatTransport({
 				api: `${BACKEND}/agent/chat`,
 				credentials: "include",
-				headers: { "x-client-type": "dashboard" },
+				// Forward the dashboard's active env so leaf scopes the CMA session +
+				// vault/OAuth credential to sandbox vs live (axios sends this on the
+				// other chat calls; the stream transport must too).
+				headers: { "x-client-type": "dashboard", app_env: env },
 			}),
 		},
 	);

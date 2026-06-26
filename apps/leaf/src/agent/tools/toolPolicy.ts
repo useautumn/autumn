@@ -71,7 +71,7 @@ export const sandboxToolLabel = (
 		const skill = (segments.at(-2) ?? "").replace(/^autumn-/, "");
 		return `Reading the ${skill || "Autumn"} skill`;
 	}
-	return `${verb} ${basename}`;
+	return basename ? `${verb} ${basename}` : verb;
 };
 
 export const isToolErrorResult = (output: unknown) => {

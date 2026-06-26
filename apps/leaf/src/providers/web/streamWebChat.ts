@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { AppEnv, type ChatProvider } from "@autumn/shared";
+import type { ChatProvider } from "@autumn/shared";
 import {
 	createUIMessageStream,
 	createUIMessageStreamResponse,
@@ -19,6 +19,7 @@ import {
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
+import { resolveDashboardEnv } from "./dashboardEnv.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
 
 const HARNESS = "claude-managed" as const;
@@ -91,7 +92,9 @@ export const streamWebChat = async ({
 	}
 
 	const { orgId, userId, scopes } = auth;
-	const env = AppEnv.Sandbox;
+	// Scope the session + vault + OAuth credential to the dashboard's active env,
+	// forwarded as the `app_env` header (server chat proxy passes it through).
+	const env = resolveDashboardEnv(request.headers.get("app_env"));
 	const logger = rootLogger;
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
 	const thread = webThreadRef({ chatThreadId, orgId });

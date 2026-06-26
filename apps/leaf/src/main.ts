@@ -1,5 +1,5 @@
 import { verifyDashboardSession } from "@autumn/auth";
-import { AppEnv, type ChatProvider } from "@autumn/shared";
+import type { ChatProvider } from "@autumn/shared";
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import type { UIMessage } from "ai";
@@ -15,6 +15,7 @@ import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { createMcpRouter } from "./mcp/mcpRouter.js";
 import { slackRoutes } from "./providers/slack/routes.js";
+import { resolveDashboardEnv } from "./providers/web/dashboardEnv.js";
 import { buildWebHistory } from "./providers/web/hydrateWebThread.js";
 import { streamWebChat } from "./providers/web/streamWebChat.js";
 import {
@@ -143,7 +144,7 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 	// The CMA session is the transcript — replay it (text + tool steps) merged
 	// with historical approval cards. Falls back to chat-sdk text history for
 	// mastra/legacy threads with no CMA session.
-	const cmaEnv = AppEnv.Sandbox;
+	const cmaEnv = resolveDashboardEnv(c.req.header("app_env"));
 	const session = await getClaudeManagedSession({
 		db,
 		env: cmaEnv,
@@ -154,6 +155,7 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 		const messages = await buildWebHistory({
 			channelId: chatThreadId,
 			db,
+			env: cmaEnv,
 			orgId: auth.orgId,
 			provider: WEB_CHAT_PROVIDER as ChatProvider,
 			sessionId: session.sessionId,
@@ -189,6 +191,9 @@ app.get("/agent/interactions", async (c) => {
 			: undefined;
 	const approvals = await listWebApprovals({
 		channelId,
+		// Scope to the dashboard's active env (forwarded as app_env) so a sandbox
+		// dashboard never surfaces live pending approvals (or vice versa).
+		env: resolveDashboardEnv(c.req.header("app_env")),
 		orgId: auth.orgId,
 		provider: WEB_CHAT_PROVIDER as ChatProvider,
 		workspaceId: auth.orgId,

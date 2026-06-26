@@ -81,6 +81,8 @@ export const driveSessionTurn = async ({
 			expectedToolResult.toolUseId,
 			expectedToolResult.toolName,
 		);
+		// Also seed mcpToolNames so a resumed tool's error keeps its name.
+		mcpToolNames.set(expectedToolResult.toolUseId, expectedToolResult.toolName);
 	}
 
 	// Time-to-first milestones, relative to turn kickoff — surfaces where the
@@ -189,7 +191,12 @@ export const driveSessionTurn = async ({
 			inferenceStart = performance.now();
 			onThinking?.();
 		} else if (event.type === "span.model_request_end") {
-			inferenceMs += performance.now() - inferenceStart;
+			// Only count a request we saw start, so an unpaired end can't add a
+			// bogus (turn-start-relative) duration.
+			if (inferenceStart) {
+				inferenceMs += performance.now() - inferenceStart;
+				inferenceStart = 0;
+			}
 			const usage = event.model_usage;
 			outcome.usage.inputTokens += usage.input_tokens;
 			outcome.usage.outputTokens += usage.output_tokens;
