@@ -1,15 +1,15 @@
 import type { Feature } from "@autumn/shared";
-import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import type React from "react";
-import { useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
-import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
+import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
+import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 
 export function FeatureSearchDropdown({
 	features,
@@ -21,6 +21,9 @@ export function FeatureSearchDropdown({
 	renderExtra,
 	footer,
 	triggerClassName,
+	itemClassName,
+	listClassName,
+	iconSize = 16,
 }: {
 	features: Feature[];
 	value: string | null;
@@ -31,6 +34,9 @@ export function FeatureSearchDropdown({
 	renderExtra?: (feature: Feature) => React.ReactNode;
 	footer?: React.ReactNode;
 	triggerClassName?: string;
+	itemClassName?: string;
+	listClassName?: string;
+	iconSize?: number;
 }) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [search, setSearch] = useState("");
@@ -66,7 +72,7 @@ export function FeatureSearchDropdown({
 					{selectedFeature ? (
 						<div className="flex items-center gap-2">
 							<div className="shrink-0">
-								{getFeatureIcon({ feature: selectedFeature })}
+								{getFeatureIcon({ feature: selectedFeature, size: iconSize })}
 							</div>
 							<span className="truncate">{selectedFeature.name}</span>
 						</div>
@@ -88,7 +94,7 @@ export function FeatureSearchDropdown({
 						className="flex-1 bg-transparent text-xs outline-none placeholder:text-subtle"
 					/>
 				</div>
-				<div className="max-h-56 overflow-y-auto p-1">
+				<div className={cn("max-h-56 overflow-y-auto p-1", listClassName)}>
 					{filteredFeatures.length === 0 ? (
 						<div className="py-3 text-center text-xs text-subtle">
 							No features found.
@@ -101,9 +107,11 @@ export function FeatureSearchDropdown({
 									onSelect(feature.id);
 									setIsOpen(false);
 								}}
-								className="py-1.5 px-2"
+								className={cn("py-1.5 px-2", itemClassName)}
 							>
-								<div className="shrink-0">{getFeatureIcon({ feature })}</div>
+								<div className="shrink-0">
+									{getFeatureIcon({ feature, size: iconSize })}
+								</div>
 								<span className="truncate flex-1">{feature.name}</span>
 								{renderExtra?.(feature)}
 							</DropdownMenuItem>

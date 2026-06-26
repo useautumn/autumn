@@ -38,14 +38,6 @@ export function useHasSubscriptionChanges({
 
 		if (formValues.discounts?.length > 0) return true;
 
-		const hasOneOffPrepaidWithQty = prepaidItems.some(
-			(item) =>
-				item.interval == null &&
-				item.feature_id &&
-				(formValues.prepaidOptions[item.feature_id] ?? 0) > 0,
-		);
-		if (hasOneOffPrepaidWithQty) return true;
-
 		const trialChanges = generateTrialChanges({
 			customerProduct,
 			removeTrial: formValues.removeTrial,
@@ -85,7 +77,13 @@ export function useHasSubscriptionChanges({
 			originalOptions: initialPrepaidOptions,
 		}).filter((change) => {
 			const featureId = change.id.replace("prepaid-", "");
-			return !newlyAddedFeatureIds.has(featureId);
+			if (newlyAddedFeatureIds.has(featureId)) return false;
+			const item = prepaidItems.find((it) => it.feature_id === featureId);
+			if (item?.interval == null) {
+				const initial = initialPrepaidOptions[featureId] ?? 0;
+				return (formValues.prepaidOptions[featureId] ?? 0) > initial;
+			}
+			return true;
 		});
 
 		return prepaidChanges.length > 0;

@@ -279,7 +279,7 @@ export function useHasPlanChanges() {
 
 		if (!initialProduct) return false;
 
-		const { itemsSame, freeTrialsSame } = compareProducts(
+		const { itemsSame, freeTrialsSame, billingControlsSame } = compareProducts(
 			product,
 			initialProduct,
 			features,
@@ -287,6 +287,6 @@ export function useHasPlanChanges() {
 
 		const versionsSame = product.version === initialProduct.version;
 
-		return !(itemsSame && freeTrialsSame && versionsSame);
+		return !(itemsSame && freeTrialsSame && billingControlsSame && versionsSame);
 	}, [context?.itemDraft, product, initialProduct, features]);
 }

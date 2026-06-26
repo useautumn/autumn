@@ -31,7 +31,7 @@ export function EventDetailsDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="max-w-xl">
+			<DialogContent className="max-w-xl [&>*]:min-w-0">
 				<DialogHeader>
 					<DialogTitle>Event Details</DialogTitle>
 				</DialogHeader>

@@ -30,7 +30,8 @@ export const apiSubjectToUsageLimitHeadroom = ({
 	const headrooms: Decimal[] = [];
 
 	const capOnEvaluated = usageLimits.find(
-		(usageLimit) => usageLimit.feature_id === feature.id,
+		(usageLimit) =>
+			usageLimit.feature_id === feature.id && usageLimit.enabled !== false,
 	);
 	if (capOnEvaluated) {
 		headrooms.push(
@@ -43,7 +44,9 @@ export const apiSubjectToUsageLimitHeadroom = ({
 
 	if (originalFeature && originalFeature.id !== feature.id) {
 		const capOnOriginal = usageLimits.find(
-			(usageLimit) => usageLimit.feature_id === originalFeature.id,
+			(usageLimit) =>
+				usageLimit.feature_id === originalFeature.id &&
+				usageLimit.enabled !== false,
 		);
 		const schemaItem = feature.config?.schema?.find(
 			(item: { metered_feature_id: string }) =>

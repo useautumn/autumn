@@ -1,5 +1,6 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { idRegex } from "@utils/utils.js";
@@ -46,6 +47,9 @@ export const CreatePlanParamsV1Schema = z.object({
 	}),
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous plan-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
 	}),
 
 	metadata: ProductMetadataSchema.optional().meta({

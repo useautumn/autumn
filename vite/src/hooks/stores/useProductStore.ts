@@ -83,6 +83,7 @@ export const useHasChanges = () => {
 			!comparison.detailsSame ||
 			!comparison.freeTrialsSame ||
 			!comparison.configSame ||
+			!comparison.billingControlsSame ||
 			!comparison.metadataSame;
 
 		return hasChanges;
@@ -157,7 +158,8 @@ export const useWillVersion = () => {
 		return (
 			!comparison.optionsSame ||
 			!comparison.itemsSame ||
-			!comparison.freeTrialsSame
+			!comparison.freeTrialsSame ||
+			!comparison.billingControlsSame
 		);
 	}, [product, baseProduct, features]);
 };

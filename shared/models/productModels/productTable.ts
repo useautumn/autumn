@@ -10,6 +10,7 @@ import {
 	unique,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils";
+import { billingControlColumns } from "../cusModels/billingControls/billingControlTableColumns";
 import { organizations } from "../orgModels/orgTable";
 import type { ProductConfig } from "./productConfig/productConfig";
 import type { ProductMetadata } from "./productMetadata";
@@ -41,6 +42,7 @@ export const products = pgTable(
 			.$type<ProductMetadata>()
 			.notNull()
 			.default(sql`'{}'::jsonb`),
+		...billingControlColumns(),
 	},
 	(table) => [
 		foreignKey({

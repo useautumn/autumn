@@ -93,7 +93,8 @@ export const isFutureStartDate = (
 export const isPastStartDate = (
 	startDate: number,
 	currentEpochMs: number,
-): boolean => startDate < currentEpochMs - START_DATE_TOLERANCE_MS;
+	toleranceMs = START_DATE_TOLERANCE_MS,
+): boolean => startDate < currentEpochMs - toleranceMs;
 
 export const stripePhaseStartsInFuture = (
 	startDate: number | "now" | undefined,

@@ -2,6 +2,7 @@ import {
 	type FreeTrial,
 	type FullProduct,
 	mapToProductV2,
+	mergeBillingControls,
 	notNullish,
 	ProductNotFoundError,
 	type ProductV2,
@@ -98,8 +99,12 @@ export const updateProduct = async ({
 		...curProductV2,
 		...updates,
 		group: updates.group || curProductV2.group || "",
-		items: updates.items || [],
+		items: updates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
+		billing_controls: mergeBillingControls(
+			curProductV2.billing_controls,
+			updates.billing_controls,
+		),
 	};
 
 	await validateDefaultFlag({
@@ -107,6 +112,50 @@ export const updateProduct = async ({
 		body: updates,
 		curProduct: fullProduct,
 	});
+
+	const itemsExist = notNullish(updates.items);
+	const cusProductExists = cusProductsCurVersion.length > 0;
+	const freeTrialProvided = "free_trial" in updates;
+	const billingControlsProvided = "billing_controls" in updates;
+
+	if (cusProductExists && !disable_version && billingControlsProvided) {
+		const {
+			billingControlsSame,
+			itemsSame,
+			freeTrialsSame,
+			detailsSame,
+			configSame,
+			optionsSame,
+			metadataSame,
+		} = productsAreSame({
+			newProductV2: newProductV2,
+			curProductV2,
+			features,
+		});
+
+		// Only take the billing-controls-only shortcut when nothing else changed;
+		// otherwise fall through so detail/default guards run on other fields.
+		const onlyBillingControlsChanged =
+			!billingControlsSame &&
+			itemsSame &&
+			freeTrialsSame &&
+			detailsSame &&
+			configSame &&
+			optionsSame &&
+			metadataSame;
+
+		if (onlyBillingControlsChanged) {
+			const newProduct = await handleVersionProductV2({
+				ctx,
+				newProductV2: newProductV2,
+				latestProduct: fullProduct,
+				org,
+				env,
+			});
+
+			return newProduct;
+		}
+	}
 
 	await handleUpdateProductDetails({
 		db,
@@ -130,24 +179,19 @@ export const updateProduct = async ({
 		fullProduct.metadata = updates.metadata;
 	}
 
-	const itemsExist = notNullish(updates.items);
-
-	const cusProductExists = cusProductsCurVersion.length > 0;
-
 	// Check if versioning is needed (customers exist AND items or free trial changed)
-	const freeTrialProvided = "free_trial" in updates;
 	if (
 		cusProductExists &&
 		!disable_version &&
 		(itemsExist || freeTrialProvided)
 	) {
-		const { itemsSame, freeTrialsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
 			features,
 		});
 
-		const productSame = itemsSame && freeTrialsSame;
+		const productSame = itemsSame && freeTrialsSame && billingControlsSame;
 
 		if (!productSame) {
 			const newProduct = await handleVersionProductV2({

@@ -7,11 +7,66 @@ import {
 import {
 	type DbOverageAllowed,
 	DbOverageAllowedSchema,
+	pickStricterOverageAllowed,
 } from "./overageAllowed.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
-import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
+import {
+	type DbSpendLimit,
+	DbSpendLimitSchema,
+	pickStricterSpendLimit,
+} from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
-import { type DbUsageLimit, DbUsageLimitSchema } from "./usageLimit.js";
+import {
+	type DbUsageLimit,
+	DbUsageLimitSchema,
+	pickStricterUsageLimit,
+} from "./usageLimit.js";
+
+export const BILLING_CONTROL_KEYS = [
+	"auto_topups",
+	"spend_limits",
+	"usage_limits",
+	"usage_alerts",
+	"overage_allowed",
+] as const;
+
+export type BillingControlKey = (typeof BILLING_CONTROL_KEYS)[number];
+
+export const pickBillingControlColumns = (
+	source: Partial<DbBillingControls> | null | undefined,
+): Partial<DbBillingControls> => {
+	if (!source) return {};
+
+	return Object.fromEntries(
+		BILLING_CONTROL_KEYS.flatMap((key) =>
+			source[key] === undefined ? [] : [[key, source[key]]],
+		),
+	) as Partial<DbBillingControls>;
+};
+
+export const billingControlsFromColumns = (
+	source: Partial<DbBillingControls> | null | undefined,
+): CustomerBillingControls => {
+	if (!source) return {};
+
+	return Object.fromEntries(
+		BILLING_CONTROL_KEYS.flatMap((key) =>
+			source[key] == null ? [] : [[key, source[key]]],
+		),
+	) as CustomerBillingControls;
+};
+
+export const mergeBillingControls = (
+	current: CustomerBillingControls | null | undefined,
+	patch: CustomerBillingControls | null | undefined,
+): CustomerBillingControls | undefined => {
+	if (!patch) return current ?? undefined;
+
+	return billingControlsFromColumns({
+		...(current ?? {}),
+		...pickBillingControlColumns(patch),
+	});
+};
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -117,6 +172,14 @@ export const CustomerBillingControlsSchema = z.object({
 	}),
 });
 
+export const DbBillingControlsSchema = z.object({
+	auto_topups: z.array(AutoTopupSchema).nullish(),
+	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_limits: z.array(DbUsageLimitSchema).nullish(),
+	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
+	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
+});
+
 export const CustomerBillingControlsParamsSchema =
 	CustomerBillingControlsSchema.check((ctx) => {
 		const billingControls = ctx.value;
@@ -188,6 +251,7 @@ export type AutoTopupResponse = z.infer<typeof AutoTopupResponseSchema>;
 export type CustomerBillingControls = z.infer<
 	typeof CustomerBillingControlsSchema
 >;
+export type DbBillingControls = z.infer<typeof DbBillingControlsSchema>;
 
 export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema
@@ -207,4 +271,7 @@ export {
 	DbUsageAlertSchema,
 	DbUsageLimitSchema,
 	EntityBillingControlsSchema,
+	pickStricterOverageAllowed,
+	pickStricterSpendLimit,
+	pickStricterUsageLimit,
 };

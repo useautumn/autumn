@@ -1,258 +1,45 @@
-import type {
-	ApiUsageLimit,
-	AutoTopupResponse,
-	DbOverageAllowed,
-	DbSpendLimit,
-	DbUsageAlert,
-	DbUsageLimit,
-	Entity,
-	Feature,
-	FullCustomer,
-} from "@autumn/shared";
-import { Button, SectionTag } from "@autumn/ui";
-import { GavelIcon, PlusIcon } from "@phosphor-icons/react";
-import { format } from "date-fns";
-import { type ReactNode, useMemo } from "react";
-import { Table } from "@/components/general/table";
 import {
+	BILLING_CONTROL_KEYS,
+	type BillingControlKey,
+	billingControlsFromColumns,
+	type CustomerBillingControls,
+	type Entity,
+	type Feature,
+	type FullCustomer,
+	getPlanBillingControlProducts,
+} from "@autumn/shared";
+import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
+import { CubeIcon, GavelIcon, PlusIcon } from "@phosphor-icons/react";
+import { useMemo } from "react";
+import {
+	BillingControlsList,
+	hasBillingControls,
+} from "@/components/billing-controls/BillingControlsDisplay";
+import { Table } from "@/components/general/table";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
 import { EmptyState } from "./table/EmptyState";
 
-const pillClassName =
-	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
-const rowClassName =
-	"flex items-center gap-2 rounded-lg border h-12 px-3 min-w-0 cursor-pointer transition-none bg-interactive-secondary hover:bg-interactive-secondary-hover";
-
-const getFeatureLabel = ({
-	featureId,
-	featureNameById,
-}: {
-	featureId?: string;
-	featureNameById: Map<string, string>;
-}) => {
-	if (!featureId) return "All features";
-	return featureNameById.get(featureId) ?? featureId;
-};
-
-const StatusPill = ({ enabled }: { enabled: boolean }) => (
-	<span
-		className={cn(
-			"shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
-			enabled
-				? "bg-green-500/10 text-green-600"
-				: "bg-muted text-tertiary-foreground",
-		)}
-	>
-		{enabled ? "Enabled" : "Disabled"}
-	</span>
-);
-
-const Pill = ({
-	children,
-	className,
-}: {
-	children: ReactNode;
-	className?: string;
-}) => <span className={cn(pillClassName, className)}>{children}</span>;
-
-const BillingControlsGroup = ({
-	title,
-	children,
-	emptyText,
-	hasItems,
-}: {
-	title: string;
-	children: ReactNode;
-	emptyText: string;
-	hasItems: boolean;
-}) => (
-	<div className="flex flex-col">
-		<SectionTag>{title}</SectionTag>
-		{hasItems ? (
-			children
-		) : (
-			<EmptyState className="h-12 min-h-0" text={emptyText} />
-		)}
-	</div>
-);
-
-const AutoTopupRow = ({
-	autoTopup,
-	featureNameById,
-	onClick,
-}: {
-	autoTopup: AutoTopupResponse;
-	featureNameById: Map<string, string>;
-	onClick: () => void;
-}) => {
-	const purchaseLimit = autoTopup.purchase_limit;
-	const hasExpandedLimit = purchaseLimit && "count" in purchaseLimit;
-
-	return (
-		<button type="button" className={rowClassName} onClick={onClick}>
-			<StatusPill enabled={autoTopup.enabled} />
-			<span className="truncate text-sm text-foreground font-medium">
-				{getFeatureLabel({
-					featureId: autoTopup.feature_id,
-					featureNameById,
-				})}
+const PlanBadge = ({ planName }: { planName: string }) => (
+	<Tooltip>
+		<TooltipTrigger asChild>
+			<span className="flex max-w-[10rem] shrink-0 items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs font-medium text-tertiary-foreground">
+				<CubeIcon className="size-3 shrink-0 text-violet-500" weight="duotone" />
+				<span className="truncate">{planName}</span>
 			</span>
-			<div className="ml-auto flex items-center gap-1.5 shrink-0">
-				<Pill>Threshold: {autoTopup.threshold.toLocaleString()}</Pill>
-				<Pill>Qty: {autoTopup.quantity.toLocaleString()}</Pill>
-				{purchaseLimit &&
-					purchaseLimit.limit != null &&
-					purchaseLimit.interval != null && (
-						<Pill className="hidden lg:inline">
-							{hasExpandedLimit
-								? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
-								: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
-						</Pill>
-					)}
-				{hasExpandedLimit && purchaseLimit.next_reset_at && (
-					<Pill className="hidden xl:inline">
-						Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
-					</Pill>
-				)}
-			</div>
-		</button>
-	);
-};
-
-const SpendLimitRow = ({
-	spendLimit,
-	featureNameById,
-	onClick,
-}: {
-	spendLimit: DbSpendLimit;
-	featureNameById: Map<string, string>;
-	onClick: () => void;
-}) => (
-	<button type="button" className={rowClassName} onClick={onClick}>
-		<StatusPill enabled={spendLimit.enabled} />
-		<span className="truncate text-sm text-foreground font-medium">
-			{getFeatureLabel({
-				featureId: spendLimit.feature_id,
-				featureNameById,
-			})}
-		</span>
-		<div className="ml-auto flex items-center gap-1.5 shrink-0">
-			<Pill>
-				Overage limit:{" "}
-				{spendLimit.overage_limit === undefined
-					? "none"
-					: spendLimit.overage_limit.toLocaleString()}
-			</Pill>
-		</div>
-	</button>
-);
-
-const UsageLimitRow = ({
-	usageLimit,
-	featureNameById,
-	onClick,
-}: {
-	usageLimit: ApiUsageLimit;
-	featureNameById: Map<string, string>;
-	onClick: () => void;
-}) => {
-	const { usage, limit, interval } = usageLimit;
-	return (
-		<button type="button" className={rowClassName} onClick={onClick}>
-			{/* A usage_limits entry's presence arms the cap. */}
-			<StatusPill enabled />
-			<span className="truncate text-sm text-foreground font-medium">
-				{getFeatureLabel({
-					featureId: usageLimit.feature_id,
-					featureNameById,
-				})}
-			</span>
-			<div className="ml-auto flex items-center gap-1.5 shrink-0">
-				{usage != null && (
-					<Pill>
-						{`${usage.toLocaleString()} / ${limit.toLocaleString()} this ${interval}`}
-					</Pill>
-				)}
-				<Pill>Usage limit: {`${limit.toLocaleString()} / ${interval}`}</Pill>
-			</div>
-		</button>
-	);
-};
-
-const UsageAlertRow = ({
-	usageAlert,
-	featureNameById,
-	onClick,
-}: {
-	usageAlert: DbUsageAlert;
-	featureNameById: Map<string, string>;
-	onClick: () => void;
-}) => {
-	const isPercentageType =
-		usageAlert.threshold_type === "usage_percentage" ||
-		usageAlert.threshold_type === "remaining_percentage";
-
-	const thresholdLabel = isPercentageType
-		? `${usageAlert.threshold}%`
-		: usageAlert.threshold.toLocaleString();
-
-	const thresholdTypeLabel: Record<string, string> = {
-		usage: "absolute usage",
-		usage_percentage: "% used of allowance",
-		remaining: "absolute remaining",
-		remaining_percentage: "% remaining of allowance",
-	};
-
-	return (
-		<button type="button" className={rowClassName} onClick={onClick}>
-			<StatusPill enabled={usageAlert.enabled} />
-			<span className="truncate text-sm text-foreground font-medium">
-				{getFeatureLabel({
-					featureId: usageAlert.feature_id,
-					featureNameById,
-				})}
-			</span>
-			{usageAlert.name && (
-				<span className="truncate text-xs text-tertiary-foreground font-mono ml-4">
-					{usageAlert.name}
-				</span>
-			)}
-			<div className="ml-auto flex items-center gap-1.5 shrink-0">
-				<Pill>At: {thresholdLabel}</Pill>
-				<Pill className="hidden sm:inline">
-					{thresholdTypeLabel[usageAlert.threshold_type]}
-				</Pill>
-			</div>
-		</button>
-	);
-};
-
-const OverageAllowedRow = ({
-	overageAllowed,
-	featureNameById,
-	onClick,
-}: {
-	overageAllowed: DbOverageAllowed;
-	featureNameById: Map<string, string>;
-	onClick: () => void;
-}) => (
-	<button type="button" className={rowClassName} onClick={onClick}>
-		<StatusPill enabled={overageAllowed.enabled} />
-		<span className="truncate text-sm text-foreground font-medium">
-			{getFeatureLabel({
-				featureId: overageAllowed.feature_id,
-				featureNameById,
-			})}
-		</span>
-	</button>
+		</TooltipTrigger>
+		<TooltipContent>Inherited from {planName}</TooltipContent>
+	</Tooltip>
 );
 
 export function CustomerBillingControlsSection() {
@@ -264,7 +51,6 @@ export function CustomerBillingControlsSection() {
 
 	const selectedEntity = useMemo(() => {
 		if (!entityId) return null;
-
 		return (
 			fullCustomer?.entities.find(
 				(entity: Entity) =>
@@ -273,38 +59,17 @@ export function CustomerBillingControlsSection() {
 		);
 	}, [entityId, fullCustomer?.entities]);
 
-	const featureNameById = useMemo(() => {
-		return new Map(
-			(features ?? []).map((feature: Feature) => [feature.id, feature.name]),
-		);
-	}, [features]);
+	const featureNameById = useMemo(
+		() =>
+			new Map(
+				(features ?? []).map((feature: Feature) => [feature.id, feature.name]),
+			),
+		[features],
+	);
 
-	const autoTopups = selectedEntity ? [] : (fullCustomer?.auto_topups ?? []);
-	const allSpendLimits = selectedEntity
-		? (selectedEntity.spend_limits ?? [])
-		: (fullCustomer?.spend_limits ?? []);
-	const spendLimits = allSpendLimits.map((item, index) => ({
-		item,
-		index,
-	}));
-	const usageLimits = (
-		selectedEntity
-			? (selectedEntity.usage_limits ?? [])
-			: (fullCustomer?.usage_limits ?? [])
-	).map((item: DbUsageLimit, index: number) => ({ item, index }));
-	const usageAlerts = selectedEntity
-		? (selectedEntity.usage_alerts ?? [])
-		: (fullCustomer?.usage_alerts ?? []);
-	const overageAllowed = selectedEntity
-		? (selectedEntity.overage_allowed ?? [])
-		: (fullCustomer?.overage_allowed ?? []);
-
-	const hasAnyControls =
-		autoTopups.length > 0 ||
-		spendLimits.length > 0 ||
-		usageLimits.length > 0 ||
-		usageAlerts.length > 0 ||
-		overageAllowed.length > 0;
+	const billingControls = billingControlsFromColumns(
+		selectedEntity ?? fullCustomer,
+	);
 
 	const entitiesWithControlsCount =
 		fullCustomer?.entities?.filter(
@@ -314,10 +79,115 @@ export function CustomerBillingControlsSection() {
 				(entity.usage_alerts?.length ?? 0) > 0 ||
 				(entity.overage_allowed?.length ?? 0) > 0,
 		).length ?? 0;
-
 	const isEntityView = !!selectedEntity;
 
-	if (!isLoading && !hasAnyControls && !isEntityView) {
+	const planControlSource = useMemo(() => {
+		const source = new Map<
+			string,
+			{ customerProductId: string; planName: string }
+		>();
+		if (isEntityView) return source;
+
+		const planProducts = getPlanBillingControlProducts({
+			customerProducts: fullCustomer?.customer_products ?? [],
+		});
+		for (const planProduct of planProducts) {
+			for (const key of BILLING_CONTROL_KEYS) {
+				for (const control of planProduct.product[key] ?? []) {
+					const overridden = (billingControls[key] ?? []).some(
+						(editable) => editable.feature_id === control.feature_id,
+					);
+					const sourceKey = `${key}:${control.feature_id ?? ""}`;
+					if (!overridden && !source.has(sourceKey)) {
+						source.set(sourceKey, {
+							customerProductId: planProduct.id,
+							planName: planProduct.product.name,
+						});
+					}
+				}
+			}
+		}
+		return source;
+	}, [fullCustomer?.customer_products, billingControls, isEntityView]);
+
+	const mergedControls = useMemo((): CustomerBillingControls => {
+		const merged: CustomerBillingControls = {};
+		const planProducts = getPlanBillingControlProducts({
+			customerProducts: fullCustomer?.customer_products ?? [],
+		});
+		for (const key of BILLING_CONTROL_KEYS) {
+			const customerItems = billingControls[key] ?? [];
+			const planItems = isEntityView
+				? []
+				: planProducts
+						.flatMap((planProduct) => planProduct.product[key] ?? [])
+						.filter((control) =>
+							planControlSource.has(`${key}:${control.feature_id ?? ""}`),
+						);
+			const items = [...customerItems, ...planItems];
+			if (items.length) {
+				merged[key] = items as CustomerBillingControls[typeof key];
+			}
+		}
+		return merged;
+	}, [
+		billingControls,
+		fullCustomer?.customer_products,
+		isEntityView,
+		planControlSource,
+	]);
+
+	const hasAnyMergedControls = hasBillingControls(mergedControls);
+
+	const planSourceFor = ({
+		key,
+		item,
+	}: {
+		key: BillingControlKey;
+		item: { feature_id?: string };
+	}) => planControlSource.get(`${key}:${item.feature_id ?? ""}`);
+
+	const addControlMenu = (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="secondary" size="mini" className="gap-2 font-medium">
+					<PlusIcon className="size-3.5" />
+					Add Control
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end">
+				{!selectedEntity && (
+					<DropdownMenuItem
+						onClick={() => setSheet({ type: "billing-auto-topup-add" })}
+					>
+						Auto top-up
+					</DropdownMenuItem>
+				)}
+				<DropdownMenuItem
+					onClick={() => setSheet({ type: "billing-spend-limit-add" })}
+				>
+					Spend limit
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => setSheet({ type: "billing-usage-limit-add" })}
+				>
+					Usage limit
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => setSheet({ type: "billing-usage-alert-add" })}
+				>
+					Usage alert
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					onClick={() => setSheet({ type: "billing-overage-allowed-add" })}
+				>
+					Overage allowed
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+
+	if (!isLoading && !hasAnyMergedControls && !isEntityView) {
 		const customerEmptyText =
 			entitiesWithControlsCount > 0
 				? `No customer-level billing controls — billing controls exist on ${entitiesWithControlsCount} ${entitiesWithControlsCount === 1 ? "entity" : "entities"}`
@@ -330,49 +200,7 @@ export function CustomerBillingControlsSection() {
 						<GavelIcon size={16} weight="fill" className="text-subtle" />
 						Billing controls
 					</Table.Heading>
-					<Table.Actions>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="secondary"
-									size="mini"
-									className="gap-2 font-medium"
-								>
-									<PlusIcon className="size-3.5" />
-									Add Control
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end">
-								<DropdownMenuItem
-									onClick={() => setSheet({ type: "billing-auto-topup-add" })}
-								>
-									Auto top-up
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() => setSheet({ type: "billing-spend-limit-add" })}
-								>
-									Spend limit
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() => setSheet({ type: "billing-usage-limit-add" })}
-								>
-									Usage limit
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() => setSheet({ type: "billing-usage-alert-add" })}
-								>
-									Usage alert
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() =>
-										setSheet({ type: "billing-overage-allowed-add" })
-									}
-								>
-									Overage allowed
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</Table.Actions>
+					<Table.Actions>{addControlMenu}</Table.Actions>
 				</Table.Toolbar>
 				<EmptyState text={customerEmptyText} />
 			</Table.Container>
@@ -386,165 +214,45 @@ export function CustomerBillingControlsSection() {
 					<GavelIcon size={16} weight="fill" className="text-subtle" />
 					Billing controls
 				</Table.Heading>
-				<Table.Actions>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								variant="secondary"
-								size="mini"
-								className="gap-2 font-medium"
-							>
-								<PlusIcon className="size-3.5" />
-								Add Control
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end">
-							{!selectedEntity && (
-								<DropdownMenuItem
-									onClick={() => setSheet({ type: "billing-auto-topup-add" })}
-								>
-									Auto top-up
-								</DropdownMenuItem>
-							)}
-							<DropdownMenuItem
-								onClick={() => setSheet({ type: "billing-spend-limit-add" })}
-							>
-								Spend limit
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								onClick={() => setSheet({ type: "billing-usage-limit-add" })}
-							>
-								Usage limit
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								onClick={() => setSheet({ type: "billing-usage-alert-add" })}
-							>
-								Usage alert
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								onClick={() =>
-									setSheet({ type: "billing-overage-allowed-add" })
-								}
-							>
-								Overage allowed
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</Table.Actions>
+				<Table.Actions>{addControlMenu}</Table.Actions>
 			</Table.Toolbar>
 
 			{isLoading ? (
 				<EmptyState text="Loading billing controls" />
-			) : !hasAnyControls ? (
-				<EmptyState
-					text={
+			) : (
+				<BillingControlsList
+					billingControls={mergedControls}
+					featureNameById={featureNameById}
+					emptyText={
 						isEntityView
 							? "No billing controls set on this entity"
 							: "No billing controls configured"
 					}
+					getRowBadge={({ key, item }) => {
+						const planSource = planSourceFor({ key, item });
+						return planSource ? (
+							<PlanBadge planName={planSource.planName} />
+						) : null;
+					}}
+					onEdit={({ key, index, item }) => {
+						const planSource = planSourceFor({ key, item });
+						if (planSource) {
+							setSheet({
+								type: "subscription-detail",
+								itemId: planSource.customerProductId,
+							});
+							return;
+						}
+						const sheetType = {
+							auto_topups: "billing-auto-topup-edit",
+							spend_limits: "billing-spend-limit-edit",
+							usage_limits: "billing-usage-limit-edit",
+							usage_alerts: "billing-usage-alert-edit",
+							overage_allowed: "billing-overage-allowed-edit",
+						}[key] as Parameters<typeof setSheet>[0]["type"];
+						setSheet({ type: sheetType, data: { index, item } });
+					}}
 				/>
-			) : (
-				<div className="flex flex-col gap-4">
-					{autoTopups.length > 0 && (
-						<BillingControlsGroup title="Auto top-ups" emptyText="" hasItems>
-							<div className="flex flex-col gap-1.5 rounded-lg">
-								{autoTopups.map((autoTopup, index) => (
-									<AutoTopupRow
-										key={`auto-topup-${autoTopup.feature_id}`}
-										autoTopup={autoTopup}
-										featureNameById={featureNameById}
-										onClick={() =>
-											setSheet({
-												type: "billing-auto-topup-edit",
-												data: { index, item: autoTopup },
-											})
-										}
-									/>
-								))}
-							</div>
-						</BillingControlsGroup>
-					)}
-
-					{spendLimits.length > 0 && (
-						<BillingControlsGroup title="Spend limits" emptyText="" hasItems>
-							<div className="flex flex-col gap-1.5 rounded-lg">
-								{spendLimits.map(({ item: spendLimit, index }) => (
-									<SpendLimitRow
-										key={`spend-limit-${spendLimit.feature_id ?? "global"}-${index}`}
-										spendLimit={spendLimit}
-										featureNameById={featureNameById}
-										onClick={() =>
-											setSheet({
-												type: "billing-spend-limit-edit",
-												data: { index, item: spendLimit },
-											})
-										}
-									/>
-								))}
-							</div>
-						</BillingControlsGroup>
-					)}
-
-					{usageLimits.length > 0 && (
-						<BillingControlsGroup title="Usage limits" emptyText="" hasItems>
-							<div className="flex flex-col gap-1.5 rounded-lg">
-								{usageLimits.map(({ item: usageLimit, index }) => (
-									<UsageLimitRow
-										key={`usage-limit-${usageLimit.feature_id ?? "global"}-${index}`}
-										usageLimit={usageLimit}
-										featureNameById={featureNameById}
-										onClick={() =>
-											setSheet({
-												type: "billing-usage-limit-edit",
-												data: { index, item: usageLimit },
-											})
-										}
-									/>
-								))}
-							</div>
-						</BillingControlsGroup>
-					)}
-
-					{usageAlerts.length > 0 && (
-						<BillingControlsGroup title="Usage alerts" emptyText="" hasItems>
-							<div className="flex flex-col gap-1.5 rounded-lg">
-								{usageAlerts.map((usageAlert, index) => (
-									<UsageAlertRow
-										key={`usage-alert-${usageAlert.feature_id ?? "global"}-${usageAlert.name ?? index}`}
-										usageAlert={usageAlert}
-										featureNameById={featureNameById}
-										onClick={() =>
-											setSheet({
-												type: "billing-usage-alert-edit",
-												data: { index, item: usageAlert },
-											})
-										}
-									/>
-								))}
-							</div>
-						</BillingControlsGroup>
-					)}
-
-					{overageAllowed.length > 0 && (
-						<BillingControlsGroup title="Overage allowed" emptyText="" hasItems>
-							<div className="flex flex-col gap-1.5 rounded-lg">
-								{overageAllowed.map((item, index) => (
-									<OverageAllowedRow
-										key={`overage-allowed-${item.feature_id}`}
-										overageAllowed={item}
-										featureNameById={featureNameById}
-										onClick={() =>
-											setSheet({
-												type: "billing-overage-allowed-edit",
-												data: { index, item },
-											})
-										}
-									/>
-								))}
-							</div>
-						</BillingControlsGroup>
-					)}
-				</div>
 			)}
 		</Table.Container>
 	);

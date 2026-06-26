@@ -43,6 +43,10 @@ export function planParamsV1ToProductV2({
 		"config" in params && params.config !== undefined
 			? params.config
 			: undefined;
+	const billingControls =
+		"billing_controls" in params && params.billing_controls !== undefined
+			? params.billing_controls
+			: undefined;
 
 	const metadata =
 		"metadata" in params && params.metadata !== undefined
@@ -73,6 +77,9 @@ export function planParamsV1ToProductV2({
 			: params.free_trial,
 		...(archived !== undefined && { archived }),
 		...(config !== undefined && { config }),
+		...(billingControls !== undefined && {
+			billing_controls: billingControls,
+		}),
 		...(metadata !== undefined && { metadata }),
 		...(createInStripe !== undefined && { create_in_stripe: createInStripe }),
 	};

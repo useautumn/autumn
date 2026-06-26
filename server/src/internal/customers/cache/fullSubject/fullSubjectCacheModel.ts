@@ -38,6 +38,31 @@ export type CachedFullSubject = Omit<
 
 export const FULL_SUBJECT_CACHE_SCHEMA_VERSION = 2;
 
+export const normalizedToUsageWindowFeatureIds = ({
+	normalized,
+}: {
+	normalized: NormalizedFullSubject;
+}) => {
+	const productById = new Map(
+		normalized.products.map((product) => [product.internal_id, product]),
+	);
+	const planUsageLimits = (customerProduct: { internal_product_id: string }) =>
+		productById.get(customerProduct.internal_product_id)?.usage_limits ?? [];
+
+	return [
+		...new Set(
+			[
+				...(normalized.customer.usage_limits ?? []),
+				...(normalized.entity?.usage_limits ?? []),
+				...normalized.customer_products.flatMap(planUsageLimits),
+				...(
+					normalized.entity_aggregations?.aggregated_customer_products ?? []
+				).flatMap(planUsageLimits),
+			].map((usageLimit) => usageLimit.feature_id),
+		),
+	];
+};
+
 /**
  * Schema mirror of `CachedFullSubject` used by the cache-hole-filling walker
  * ({@link normalizeFromSchema}) to locate nullable positions in cached
@@ -117,14 +142,9 @@ export const normalizedToCachedFullSubject = ({
 
 	const meteredFeatures = [...meteredFeatureSet];
 
-	const usageWindowFeatureIds = [
-		...new Set(
-			[
-				...(normalized.customer.usage_limits ?? []),
-				...(normalized.entity?.usage_limits ?? []),
-			].map((usageLimit) => usageLimit.feature_id),
-		),
-	];
+	const usageWindowFeatureIds = normalizedToUsageWindowFeatureIds({
+		normalized,
+	});
 
 	return {
 		subjectType: normalized.subjectType,

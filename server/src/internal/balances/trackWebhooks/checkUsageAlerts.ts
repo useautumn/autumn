@@ -5,15 +5,67 @@ import {
 	type Feature,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToPlanProducts,
 	fullCustomerToTags,
 	getApiBalance,
+	getPlanBillingControlProducts,
 	WebhookEventType,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-type AlertScope = "customer" | "entity" | "org";
+export type AlertScope = "customer" | "entity" | "org" | "plan";
+
+const usageAlertsForFeature = ({
+	alerts,
+	feature,
+}: {
+	alerts: DbUsageAlert[];
+	feature: Feature;
+}) =>
+	alerts.filter(
+		(alert) => alert.feature_id === feature.id || !alert.feature_id,
+	);
+
+/**
+ * Customer-level alerts use the aggregate customer balance (no entity scope).
+ * Plan-level alerts are a fallback at the same scope, applied only when the
+ * customer has no own alert for the feature.
+ */
+export const resolveCustomerScopeAlerts = ({
+	fullCustomer,
+	feature,
+}: {
+	fullCustomer: FullCustomer;
+	feature: Feature;
+}): { alerts: DbUsageAlert[]; scope: AlertScope } => {
+	const customerAlerts = usageAlertsForFeature({
+		alerts: fullCustomer.usage_alerts ?? [],
+		feature,
+	});
+	if (customerAlerts.length > 0) {
+		return { alerts: customerAlerts, scope: "customer" };
+	}
+
+	const planProduct = getPlanBillingControlProducts({
+		customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+	}).find(
+		(customerProduct) =>
+			usageAlertsForFeature({
+				alerts: customerProduct.product?.usage_alerts ?? [],
+				feature,
+			}).length > 0,
+	);
+
+	return {
+		alerts: usageAlertsForFeature({
+			alerts: planProduct?.product?.usage_alerts ?? [],
+			feature,
+		}),
+		scope: "plan",
+	};
+};
 
 export const wasThresholdCrossed = ({
 	alert,
@@ -98,9 +150,8 @@ const processAlerts = async ({
 }) => {
 	if (!alerts || alerts.length === 0) return;
 
-	const matchingAlerts = alerts.filter(
-		(alert) =>
-			alert.enabled && (alert.feature_id === feature.id || !alert.feature_id),
+	const matchingAlerts = usageAlertsForFeature({ alerts, feature }).filter(
+		(alert) => alert.enabled,
 	);
 
 	if (matchingAlerts.length === 0) return;
@@ -197,17 +248,39 @@ export const checkUsageAlerts = async ({
 	feature: Feature;
 	entityId?: string;
 }) => {
-	// 1. Customer-level alerts (always checked, no entity scoping)
+	// 1. Customer-level alerts (aggregate balance, no entity scope), falling
+	// back to plan-level alerts when the customer has none for this feature.
+	const customerScope = resolveCustomerScopeAlerts({
+		fullCustomer: newFullCus,
+		feature,
+	});
 	await processAlerts({
 		ctx,
 		oldFullCus,
 		newFullCus,
 		feature,
-		alerts: newFullCus.usage_alerts ?? [],
-		scope: "customer",
+		alerts: customerScope.alerts,
+		scope: customerScope.scope,
 	});
 
-	// 2. Org-level alerts apply to all customers and use the tracked subject.
+	// 2. Entity-level alerts fire additionally, scoped to the entity's balance.
+	if (entityId) {
+		const entity = newFullCus.entities?.find((e) => e.id === entityId);
+		await processAlerts({
+			ctx,
+			oldFullCus,
+			newFullCus,
+			feature,
+			entityId,
+			alerts: usageAlertsForFeature({
+				alerts: entity?.usage_alerts ?? [],
+				feature,
+			}),
+			scope: "entity",
+		});
+	}
+
+	// 3. Org-level alerts apply to all customers and use the tracked subject.
 	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
 	const orgAlerts =
 		ctx.env === AppEnv.Sandbox
@@ -224,17 +297,4 @@ export const checkUsageAlerts = async ({
 			scope: "org",
 		});
 	}
-
-	// 3. Entity-level alerts (only when entityId is provided)
-	if (!entityId) return;
-	const entity = newFullCus.entities?.find((e) => e.id === entityId);
-	await processAlerts({
-		ctx,
-		oldFullCus,
-		newFullCus,
-		feature,
-		entityId,
-		alerts: entity?.usage_alerts ?? [],
-		scope: "entity",
-	});
 };

@@ -1,51 +1,33 @@
 import { useLocation } from "react-router";
+import { stripSandboxPrefix } from "@/hooks/sandbox/sandboxUrl";
 
 export const useTab = () => {
 	const { pathname } = useLocation();
-	if (
-		pathname.startsWith("/settings") ||
-		pathname.startsWith("/sandbox/settings")
-	) {
+	const path = stripSandboxPrefix(pathname);
+
+	if (path.startsWith("/settings")) {
 		return "settings";
 	}
-
-	if (pathname.startsWith("/admin") || pathname.startsWith("/sandbox/admin")) {
+	if (path.startsWith("/admin")) {
 		return "admin";
 	}
-
-	if (
-		pathname.startsWith("/analytics") ||
-		pathname.startsWith("/sandbox/analytics")
-	) {
+	if (path.startsWith("/analytics")) {
 		return "analytics";
 	}
-
-	if (
-		pathname.startsWith("/features") ||
-		pathname.startsWith("/sandbox/features")
-	) {
+	if (path.startsWith("/features")) {
 		return "features";
-	} else if (
-		pathname.startsWith("/products") ||
-		pathname.startsWith("/sandbox/products")
-	) {
-		return "products";
-	} else if (
-		pathname.startsWith("/migrations") ||
-		pathname.startsWith("/sandbox/migrations")
-	) {
-		return "migrations";
-	} else if (
-		pathname.startsWith("/customers") ||
-		pathname.startsWith("/sandbox/customers")
-	) {
-		return "customers";
-	} else if (
-		pathname.startsWith("/dev") ||
-		pathname.startsWith("/sandbox/dev")
-	) {
-		return "dev";
-	} else {
-		return "";
 	}
+	if (path.startsWith("/products")) {
+		return "products";
+	}
+	if (path.startsWith("/migrations")) {
+		return "migrations";
+	}
+	if (path.startsWith("/customers")) {
+		return "customers";
+	}
+	if (path.startsWith("/dev")) {
+		return "dev";
+	}
+	return "";
 };

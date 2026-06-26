@@ -39,7 +39,7 @@ export const useSwitchActiveOrg = () => {
 
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const currentEnv = useEnv();
-	const axiosInstance = useAxiosInstance({ env: params?.env });
+	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox: true });
 	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
 	const { data: session } = useSession();
 	const activeOrgId = session?.session.activeOrganizationId;

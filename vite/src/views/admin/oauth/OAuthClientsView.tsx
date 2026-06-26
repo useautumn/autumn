@@ -1,4 +1,3 @@
-import { AppEnv } from "@autumn/shared";
 import { Badge, CopyButton, IconButton } from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -18,7 +17,7 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
@@ -48,7 +47,7 @@ export const OAuthClientsView = () => {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
-	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
+	const adminBasePath = getRedirectUrl("/admin", env);
 
 	const axiosInstance = useAxiosInstance();
 

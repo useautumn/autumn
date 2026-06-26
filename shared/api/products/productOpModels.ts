@@ -1,4 +1,5 @@
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
@@ -102,6 +103,9 @@ export const CreateProductV2ParamsSchema = z
 		config: ProductConfigParamsSchema.optional().meta({
 			description: "Miscellaneous product-level configuration flags.",
 		}),
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+			description: "Plan-level billing controls used as customer defaults.",
+		}),
 
 		metadata: ProductMetadataSchema.optional().meta({
 			description: descriptions.metadata,
@@ -156,6 +160,9 @@ export const UpdateProductV2ParamsSchema = z.object({
 
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous product-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
 	}),
 
 	metadata: ProductMetadataSchema.optional().meta({

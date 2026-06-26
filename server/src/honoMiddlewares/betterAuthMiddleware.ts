@@ -1,8 +1,9 @@
-import { type AppEnv, AuthType, ErrCode, RecaseError } from "@autumn/shared";
+import { AppEnv, AuthType, ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { auth } from "@/utils/auth.js";
+import { assertSandboxAccess, SANDBOX_ORG_HEADER } from "./sandboxAccess.js";
 
 /**
  * Better Auth middleware for dashboard/session authentication
@@ -53,48 +54,61 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Step 4: Fetch org and features from database
-	const appEnvHeader = c.req.header("app_env") as AppEnv;
-	if (appEnvHeader) {
-		ctx.env = appEnvHeader;
-	}
-	const data = await OrgService.getWithFeatures({
-		db: ctx.db,
-		orgId: orgId,
-		env: ctx.env,
-	});
+	// biome-ignore lint/suspicious/noExplicitAny: getSession doesn't infer customSession scopes
+	const sessionScopes: string[] = (session as any).scopes ?? [];
 
-	if (!data) {
-		throw new RecaseError({
-			message: "Org not found",
-			code: ErrCode.OrgNotFound,
-			statusCode: 500,
+	// Step 4: Resolve target org + env (a sandbox sub-org when x-sandbox-org-id set)
+	const appEnvHeader = c.req.header("app_env") as AppEnv | undefined;
+	const sandboxOrgId = c.req.header(SANDBOX_ORG_HEADER);
+
+	type OrgWithFeatures = NonNullable<
+		Awaited<ReturnType<typeof OrgService.getWithFeatures>>
+	>;
+	let resolved: OrgWithFeatures;
+
+	if (sandboxOrgId) {
+		const candidate = await OrgService.getWithFeatures({
+			db: ctx.db,
+			orgId: sandboxOrgId,
+			env: AppEnv.Sandbox,
+			allowNotFound: true,
 		});
+		assertSandboxAccess({
+			sessionOrgId: orgId,
+			sandboxOrgId,
+			candidate: candidate?.org ?? null,
+			appEnv: appEnvHeader,
+			scopes: sessionScopes,
+		});
+		// Non-null: assertSandboxAccess throws on a missing candidate.
+		resolved = candidate as OrgWithFeatures;
+		ctx.env = AppEnv.Sandbox;
+	} else {
+		if (appEnvHeader) {
+			ctx.env = appEnvHeader;
+		}
+		const data = await OrgService.getWithFeatures({
+			db: ctx.db,
+			orgId,
+			env: ctx.env,
+		});
+		if (!data) {
+			throw new RecaseError({
+				message: "Org not found",
+				code: ErrCode.OrgNotFound,
+				statusCode: 500,
+			});
+		}
+		resolved = data;
 	}
-
-	const { org, features } = data;
 
 	// Step 5: Store in context
-	ctx.org = org;
-	ctx.features = features;
+	ctx.org = resolved.org;
+	ctx.features = resolved.features;
 	ctx.userId = userId;
 	ctx.authType = AuthType.Dashboard;
 	ctx.user = user;
-
-	/**
-	 * Pull scopes injected by the `customSession` better-auth plugin
-	 * (see `server/src/utils/auth.ts`). The plugin augments the session
-	 * response with top-level `role` and `scopes` fields derived from the
-	 * user's membership row in the active organisation.
-	 *
-	 * `as any` is used deliberately: better-auth's `getSession` return
-	 * type does not auto-infer `customSession` additions in all TS
-	 * setups, and the better-auth docs recommend this cast as the
-	 * workaround. The fallback `?? []` preserves the "no scopes = legacy
-	 * unrestricted" convention documented on `RequestContext.scopes`.
-	 */
-	// biome-ignore lint/suspicious/noExplicitAny: documented better-auth workaround
-	ctx.scopes = (session as any).scopes ?? [];
+	ctx.scopes = sessionScopes;
 
 	await next();
 };

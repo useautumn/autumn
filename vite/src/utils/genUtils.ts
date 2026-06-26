@@ -2,6 +2,10 @@ import { AppEnv } from "@autumn/shared";
 import { AxiosError } from "axios";
 import type { NavigateFunction } from "react-router-dom";
 import { ZodError } from "zod/v3";
+import {
+	sandboxBasePath,
+	stripSandboxPrefix,
+} from "@/hooks/sandbox/sandboxUrl";
 
 const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
@@ -42,7 +46,7 @@ const getBackendErrObj = (error: AxiosError) => {
 };
 
 export const getEnvFromPath = (path: string) => {
-	if (path.includes("/sandbox")) {
+	if (path === "/sandbox" || path.startsWith("/sandbox/")) {
 		return AppEnv.Sandbox;
 	}
 	return AppEnv.Live;
@@ -90,31 +94,13 @@ export const getOrgRouteRedirect = ({
 };
 
 export const envToPath = (env: AppEnv, currentPath: string) => {
-	// Check if we're on a customer detail page
-	const customerDetailPattern = /^(\/sandbox)?\/customers\/[^/]+/;
-	const isCustomerDetailPage = customerDetailPattern.test(currentPath);
-
-	if (isCustomerDetailPage) {
-		// Redirect to customers list instead of trying to preserve customer ID
-		return env === AppEnv.Sandbox ? "/sandbox/customers" : "/customers";
+	let bare = stripSandboxPrefix(currentPath);
+	// Detail routes carry an env-scoped id that does not exist in the other env;
+	// collapse to the list so the switch never lands on a 404.
+	if (/^\/(customers|products|migrations)\/[^/]+/.test(bare)) {
+		bare = `/${bare.split("/")[1]}`;
 	}
-
-	// Check if we're on a product detail page
-	const productDetailPattern = /^(\/sandbox)?\/products\/[^/]+/;
-	const isProductDetailPage = productDetailPattern.test(currentPath);
-
-	if (isProductDetailPage) {
-		// Redirect to products list instead of trying to preserve product ID
-		return env === AppEnv.Sandbox ? "/sandbox/products" : "/products";
-	}
-
-	if (env === AppEnv.Sandbox && !currentPath.includes("/sandbox")) {
-		return `/sandbox${currentPath}`;
-	} else if (env === AppEnv.Live && currentPath.includes("/sandbox")) {
-		return currentPath.replace("/sandbox", "");
-	}
-
-	return null;
+	return env === AppEnv.Sandbox ? `${sandboxBasePath()}${bare}` : bare;
 };
 
 export const navigateTo = (
@@ -127,7 +113,7 @@ export const navigateTo = (
 
 	path = path.replace("@", "%40");
 	if (curEnv === AppEnv.Sandbox) {
-		navigate(`/sandbox${path}`);
+		navigate(`${sandboxBasePath()}${path}`);
 	} else {
 		navigate(path);
 	}
@@ -175,7 +161,7 @@ export const pushPage = ({
 	}
 
 	if (curEnv === AppEnv.Sandbox) {
-		path = `/sandbox${path}`;
+		path = `${sandboxBasePath()}${path}`;
 	}
 
 	if (navigate) {
@@ -189,7 +175,7 @@ export const getRedirectUrl = (path: string, env: AppEnv) => {
 	// Replace @ with %40
 	path = path.replace("@", "%40");
 	if (env === AppEnv.Sandbox) {
-		return `/sandbox${path}`;
+		return `${sandboxBasePath()}${path}`;
 	} else {
 		return path;
 	}

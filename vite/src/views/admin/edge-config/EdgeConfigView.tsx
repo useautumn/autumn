@@ -1,4 +1,3 @@
-import { AppEnv } from "@autumn/shared";
 import {
 	Badge,
 	Button,
@@ -23,7 +22,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
@@ -325,7 +324,7 @@ export const EdgeConfigView = () => {
 	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
 	const axiosInstance = useAxiosInstance();
-	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
+	const adminBasePath = getRedirectUrl("/admin", env);
 	const [addOrgRolloutId, setAddOrgRolloutId] = useState<string>();
 	const [createRolloutOpen, setCreateRolloutOpen] = useState(false);
 
