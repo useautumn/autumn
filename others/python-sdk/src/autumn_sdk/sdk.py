@@ -466,6 +466,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -483,6 +484,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
@@ -507,6 +509,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            timestamp=timestamp,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -581,6 +584,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -598,6 +602,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
@@ -622,6 +627,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            timestamp=timestamp,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -702,6 +708,7 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
         async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -724,6 +731,7 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -753,6 +761,7 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            timestamp=timestamp,
             async_=async_,
         )
 
@@ -832,6 +841,7 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
         async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -854,6 +864,7 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -883,6 +894,7 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            timestamp=timestamp,
             async_=async_,
         )
 

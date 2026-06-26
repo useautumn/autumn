@@ -4,6 +4,70 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="June 26th 2026">
+  ## Multiple sandbox environments per org
+
+  Organizations can now spin up **multiple sandboxes** alongside production — each with its own API keys, teams, color, and icon — so you can isolate staging, QA, demo, and per-engineer environments without juggling accounts. Provision, switch, edit, and tear down sandboxes directly from the dashboard.
+
+  ## Per-customer JWT credentials
+
+  Issue and rotate **per-customer JWT credentials** for the frontend SDK. State is now persisted in Postgres, so credentials survive restarts and can be managed cleanly per customer.
+
+  ## Percentage-based spend limits
+
+  [Spend limits](/documentation/modelling-pricing/spend-limits) now support a `usage_percentage` mode, letting you cap overage as a percentage of included usage instead of an absolute number — useful for plans where the included quota changes between tiers.
+
+  ## Plan metadata
+
+  Attach arbitrary **metadata to plans** and read it back through the API. Use it to tag plans with internal flags, feature gates, or marketing copy without forking your pricing model.
+
+  ## List rewards endpoint
+
+  New [rewards endpoint](/api-reference/rewards/redeemRewardCode) returns both coupons and feature grants in a single paginated response, making it easier to render available rewards in your own UI.
+
+  ## Track events with custom timestamps
+
+  The `track` endpoint now accepts an explicit `timestamp` field, so you can backfill events or record usage that happened earlier without losing chronological accuracy.
+
+  ## Plan billing controls
+
+  Custom plans get a refreshed **billing controls** panel — clearer toggles, keyboard-focusable tooltips, simplified auto top-up resolution, and improved copy throughout. See [custom plans](/documentation/customers/custom-plans).
+
+  ## Dual-auth Stripe keys
+
+  You can now connect Stripe using **either** OAuth or a restricted API key, and switch between them per organization. The Stripe Keys UI has been redesigned around the new dual-auth flow, with cleaner copy and a smoother delete experience.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Add interval filter to the customers list page — [#2038](https://github.com/useautumn/autumn/pull/2038)
+      - "Create more" mode in the create-entity dialog for bulk entity setup — [#1988](https://github.com/useautumn/autumn/pull/1988)
+      - Plan editor: cleaner update logic and feature-creation flow — [#2035](https://github.com/useautumn/autumn/pull/2035)
+      - Net payment terms UI refreshed inside the invoice settings accordion — [#2034](https://github.com/useautumn/autumn/pull/2034)
+      - Customizable buttons in transactional emails — [#1991](https://github.com/useautumn/autumn/pull/1991)
+      - Customer IDs now accept colons for namespaced identifiers — [#1995](https://github.com/useautumn/autumn/pull/1995)
+      - Mobile dashboard cleanup, including card-style tables on small screens — [#2013](https://github.com/useautumn/autumn/pull/2013)
+      - [RevenueCat import](/documentation/external-providers/revenuecat): paginated product list and raw-mapping escape hatch for custom field mapping — [#2040](https://github.com/useautumn/autumn/pull/2040)
+      - MCP OAuth now grants Leaf scopes when only OIDC scopes are requested — [#2012](https://github.com/useautumn/autumn/pull/2012), [#2023](https://github.com/useautumn/autumn/pull/2023)
+      - Website content negotiation: canonical URLs serve markdown to clients that ask for it — [#2004](https://github.com/useautumn/autumn/pull/2004), [#2007](https://github.com/useautumn/autumn/pull/2007), [#2009](https://github.com/useautumn/autumn/pull/2009)
+      - Cleaner Stripe connect dialog and improved Stripe-related copy across the dashboard — [#2020](https://github.com/useautumn/autumn/pull/2020), [#2047](https://github.com/useautumn/autumn/pull/2047)
+      - Customer portal now has rate limiting to protect against abuse — [#2033](https://github.com/useautumn/autumn/pull/2033)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Auto top-ups now charge the most recently attached plan's one-off price — [#2049](https://github.com/useautumn/autumn/pull/2049)
+      - Event table filtering corrected so filters apply to the right columns — [#2005](https://github.com/useautumn/autumn/pull/2005)
+      - Long event values no longer overflow the events table — [#2048](https://github.com/useautumn/autumn/pull/2048)
+      - Trialing customers downgrading to Free are correctly anchored to trial end — [#2000](https://github.com/useautumn/autumn/pull/2000)
+      - Sync no longer adds phantom allowance for imported prepaid Stripe items, and carries prepaid usage correctly when expiring a plan — [#1978](https://github.com/useautumn/autumn/pull/1978)
+      - Hourly rollovers now enforce the configured max cap on the reset cron — [#2022](https://github.com/useautumn/autumn/pull/2022)
+      - Rewards: reject duplicate reward IDs and promo codes, and clean up promos on delete — [#2031](https://github.com/useautumn/autumn/pull/2031)
+      - Event ranking window aligned with the chart for accurate top-events lists — [#2003](https://github.com/useautumn/autumn/pull/2003)
+      - Separate billing intervals render correctly in the plan editor — [#2001](https://github.com/useautumn/autumn/pull/2001), [#2042](https://github.com/useautumn/autumn/pull/2042), [#2043](https://github.com/useautumn/autumn/pull/2043)
+      - Prevent horizontal overscroll on the marketing site — [#2019](https://github.com/useautumn/autumn/pull/2019)
+      - MCP and Leaf auth edge cases resolved — [#2026](https://github.com/useautumn/autumn/pull/2026)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="June 19th 2026">
   ## Autumn Lakehouse
 

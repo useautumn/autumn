@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
+import { TrackTimestampSchema } from "./trackTimestamp";
 
 export const TrackTokensParamsSchema = z.object({
 	customer_id: z.string().meta({
@@ -46,9 +47,7 @@ export const TrackTokensParamsSchema = z.object({
 	idempotency_key: z.string().optional().meta({
 		internal: true,
 	}),
-	timestamp: z.number().optional().meta({
-		internal: true,
-	}),
+	timestamp: TrackTimestampSchema.optional(),
 	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
 		internal: true,
 	}),
