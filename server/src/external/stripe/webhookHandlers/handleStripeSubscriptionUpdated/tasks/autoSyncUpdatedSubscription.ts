@@ -146,7 +146,12 @@ export const autoSyncUpdatedSubscription = async ({
 		customerProducts,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
-	if (linkedProducts.length !== 1) return;
+	if (linkedProducts.length !== 1) {
+		logger.info(
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: expected 1 linked product, found ${linkedProducts.length}`,
+		);
+		return;
+	}
 
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 	const { match, params } = await subscriptionToSyncParams({
@@ -165,7 +170,12 @@ export const autoSyncUpdatedSubscription = async ({
 	}
 
 	const linkedProduct = linkedProducts[0];
-	if (!shouldSyncPlanChange({ match, params, linkedProduct })) return;
+	if (!shouldSyncPlanChange({ match, params, linkedProduct })) {
+		logger.info(
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: not a single same-group plan change`,
+		);
+		return;
+	}
 
 	const result = await billingActions.syncV2({ ctx, params });
 	await trackSyncResult({
@@ -174,4 +184,7 @@ export const autoSyncUpdatedSubscription = async ({
 		result,
 		linkedProducts,
 	});
+	logger.info(
+		`sub.updated auto-sync applied ${stripeSubscription.id}: expired=${result.expired_cus_product_ids.length}, inserted=${result.inserted_cus_product_ids.length}`,
+	);
 };
