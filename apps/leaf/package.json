@@ -28,6 +28,7 @@
 		"@mastra/mcp": "^1.8.0",
 		"@mastra/observability": "^1.14.1",
 		"@mendable/firecrawl-js": "^4.25.1",
+		"ai": "6.0.205",
 		"autoevals": "^0.0.132",
 		"better-all": "0.0.7",
 		"braintrust": "^3.14.0",
