@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { toast } from "sonner";
 import {
 	Dialog,
 	DialogContent,
@@ -8,10 +6,13 @@ import {
 	DialogTitle,
 	ShortcutButton,
 } from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	type SandboxSummary,
 	useUpdateSandbox,
 } from "@/hooks/queries/useSandboxesQuery";
+import { validateSandboxName } from "@/hooks/sandbox/sandboxUrl";
 import { getBackendErr } from "@/utils/genUtils";
 import { SandboxFormFields } from "./SandboxFormFields";
 
@@ -32,6 +33,11 @@ export const EditSandboxDialog = ({
 	const handleSave = async () => {
 		const trimmed = name.trim();
 		if (!trimmed) {
+			return;
+		}
+		const nameError = validateSandboxName(trimmed);
+		if (nameError) {
+			toast.error(nameError);
 			return;
 		}
 

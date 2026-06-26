@@ -1,7 +1,4 @@
 import { DEFAULT_SANDBOX_COLOR, DEFAULT_SANDBOX_ICON } from "@autumn/shared";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import {
 	Dialog,
 	DialogContent,
@@ -11,7 +8,11 @@ import {
 	DialogTitle,
 	ShortcutButton,
 } from "@autumn/ui";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useCreateSandbox } from "@/hooks/queries/useSandboxesQuery";
+import { sandboxSlug, validateSandboxName } from "@/hooks/sandbox/sandboxUrl";
 import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { getBackendErr } from "@/utils/genUtils";
 import { SandboxFormFields } from "./SandboxFormFields";
@@ -47,6 +48,11 @@ export const CreateSandboxDialog = ({
 		if (!trimmed) {
 			return;
 		}
+		const nameError = validateSandboxName(trimmed);
+		if (nameError) {
+			toast.error(nameError);
+			return;
+		}
 
 		try {
 			const sandbox = await createSandbox.mutateAsync({
@@ -63,7 +69,7 @@ export const CreateSandboxDialog = ({
 			toast.success("Sandbox created");
 			resetSelections();
 			onOpenChange(false);
-			navigate("/sandbox/products");
+			navigate(`/sandbox/${sandboxSlug(sandbox.name)}/products`);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to create sandbox"));
 		}

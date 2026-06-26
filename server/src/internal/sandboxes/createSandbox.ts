@@ -109,6 +109,32 @@ export const assertSandboxCapacity = async ({
 	}
 };
 
+export const assertSandboxNameUnique = async ({
+	db,
+	masterOrgId,
+	name,
+	excludeOrgId,
+}: {
+	db: DrizzleCli;
+	masterOrgId: string;
+	name: string;
+	excludeOrgId?: string;
+}): Promise<void> => {
+	const slug = slugify(name, "dash");
+	const existing = await OrgService.listSandboxes({ db, masterOrgId });
+	const taken = existing.some(
+		(sandbox) =>
+			sandbox.id !== excludeOrgId && slugify(sandbox.name, "dash") === slug,
+	);
+	if (taken) {
+		throw new RecaseError({
+			message: `A sandbox named "${name}" already exists`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
 export const createSandboxForOrg = async ({
 	db,
 	masterOrg,
@@ -125,6 +151,7 @@ export const createSandboxForOrg = async ({
 	icon?: SandboxIcon;
 }): Promise<{ org: Organization; secret_key: string }> => {
 	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id });
+	await assertSandboxNameUnique({ db, masterOrgId: masterOrg.id, name });
 
 	const slug = `${slugify(name, "dash")}-${generateId()}|${masterOrg.id}`;
 

@@ -60,7 +60,10 @@ const actorUser = { id: "u1", email: "a@b.c" } as never;
 const db = {} as never;
 
 const seedSandboxes = (n: number) => {
-	state.existing = Array.from({ length: n }, (_, i) => ({ id: `s${i}` }));
+	state.existing = Array.from({ length: n }, (_, i) => ({
+		id: `s${i}`,
+		name: `Seed Sandbox ${i}`,
+	}));
 };
 
 beforeEach(() => {
@@ -151,5 +154,14 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 		expect(state.provisionCalled).toBe(true);
 		expect(res.secret_key).toBe("am_sk_test_generated");
 		expect(res.org.id).toBe("org_sandbox");
+	});
+
+	test("rejects a duplicate name and never provisions", async () => {
+		state.autumn = { allowed: true };
+		state.existing = [{ id: "s0", name: "My Sandbox" }];
+		await expect(
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.provisionCalled).toBe(false);
 	});
 });
