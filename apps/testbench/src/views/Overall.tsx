@@ -2,10 +2,10 @@ import { Activity, FileText, Zap } from "lucide-react";
 import type { ReactNode } from "react";
 // Light section primitives imported DIRECTLY (not via the barrel, which pulls in
 // motion/react-router/ErrorScreen) — these only depend on `cn`.
-import { TableActions } from "@/components/general/table/table-actions";
-import { TableContainer } from "@/components/general/table/table-container";
-import { TableHeading } from "@/components/general/table/table-heading";
-import { TableToolbar } from "@/components/general/table/table-toolbar";
+import { TableActions } from "@/components/table/table-actions";
+import { TableContainer } from "@/components/table/table-container";
+import { TableHeading } from "@/components/table/table-heading";
+import { TableToolbar } from "@/components/table/table-toolbar";
 import {
 	TableBody,
 	TableCell,
@@ -14,7 +14,7 @@ import {
 	TableRow,
 	Table as UiTable,
 } from "@/components/ui/table";
-import { InfoRow } from "@/components/v2/InfoRow";
+import { InfoRow } from "@/components/general/info-row";
 import type { Phase, Snapshot } from "../types";
 import {
 	Elapsed,

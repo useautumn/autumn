@@ -6,7 +6,7 @@
 	],
 	"compilerOptions": {
 		"paths": {
-			"@/*": ["../../vite/src/*"]
+			"@/*": ["../../packages/ui/src/*"]
 		}
 	}
 }
