@@ -24,6 +24,7 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
@@ -91,7 +92,8 @@ export const MainSidebar = ({
 	const env = useEnv();
 
 	const flags = useAutumnFlags();
-	const { has, isAdmin } = useScopes();
+	const { has } = useScopes();
+	const { isAdmin } = useAdmin();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
 	const canSeeMigrations = has(Scopes.Migrations.Read);
 
