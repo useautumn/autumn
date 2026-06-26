@@ -91,8 +91,8 @@ const expectProSynced = async ({
 	let lastError: unknown;
 
 	while (Date.now() < deadline) {
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		try {
+			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 			await expectCustomerProducts({
 				customer,
 				active: [proId],
