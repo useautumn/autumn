@@ -2,13 +2,41 @@ import { sh, fatal, log } from "./shell.ts";
 import {
 	NEON_PROJECT_ID,
 	NEON_TEMPLATE_BRANCH,
-	NEON_PARENT_BRANCH,
 	BRANCH_NAME_RE,
 } from "../constants.ts";
 import type { NeonBranch } from "../types.ts";
+import {
+	neonProjectId,
+	neonTemplateParent,
+	withNeonContextSync,
+} from "./neonContext.ts";
+
+let neonCmd: string | undefined;
+
+function resolveNeonCmd(): string {
+	if (neonCmd) return neonCmd;
+	for (const candidate of ["neon", "neonctl"]) {
+		const res = sh("sh", ["-c", `command -v ${candidate}`]);
+		if (res.code === 0 && res.stdout) {
+			neonCmd = candidate;
+			return neonCmd;
+		}
+	}
+	fatal(
+		"neon CLI not found. Install with: bun install -g neonctl\nThen authenticate: neonctl auth",
+	);
+}
 
 function neon(args: string[]): { stdout: string; stderr: string; code: number } {
-	return sh("neon", args);
+	return sh(resolveNeonCmd(), args);
+}
+
+export function runNeon(args: string[]): {
+	stdout: string;
+	stderr: string;
+	code: number;
+} {
+	return neon(args);
 }
 
 export function listBranches(): NeonBranch[] {
@@ -16,7 +44,7 @@ export function listBranches(): NeonBranch[] {
 		"branches",
 		"list",
 		"--project-id",
-		NEON_PROJECT_ID,
+		neonProjectId(),
 		"--output",
 		"json",
 	]);
@@ -43,7 +71,7 @@ export function createBranch(name: string, parent: string): NeonBranch {
 		"branches",
 		"create",
 		"--project-id",
-		NEON_PROJECT_ID,
+		neonProjectId(),
 		"--name",
 		name,
 		"--parent",
@@ -64,21 +92,31 @@ export function createBranch(name: string, parent: string): NeonBranch {
 	}
 }
 
-export function deleteBranch(idOrName: string): void {
-	const res = neon([
-		"branches",
-		"delete",
-		idOrName,
-		"--project-id",
-		NEON_PROJECT_ID,
-	]);
-	if (res.code !== 0) {
-		console.error(
-			`[dw] neon branches delete ${idOrName} failed: ${res.stderr || res.stdout}`,
-		);
-	} else {
-		log(`deleted neon branch ${idOrName}`);
-	}
+export function deleteBranch(
+	idOrName: string,
+	opts: { projectId?: string } = {},
+): void {
+	withNeonContextSync(
+		opts.projectId && opts.projectId !== NEON_PROJECT_ID
+			? { projectId: opts.projectId, templateParent: neonTemplateParent() }
+			: undefined,
+		() => {
+			const res = neon([
+				"branches",
+				"delete",
+				idOrName,
+				"--project-id",
+				neonProjectId(),
+			]);
+			if (res.code !== 0) {
+				console.error(
+					`[dw] neon branches delete ${idOrName} failed: ${res.stderr || res.stdout}`,
+				);
+			} else {
+				log(`deleted neon branch ${idOrName}`);
+			}
+		},
+	);
 }
 
 export function connectionString(
@@ -89,7 +127,7 @@ export function connectionString(
 		"connection-string",
 		branchName,
 		"--project-id",
-		NEON_PROJECT_ID,
+		neonProjectId(),
 		// Once we create the leaf `chat` DB on the same branch (see
 		// ensureChatDatabase) `neonctl` refuses to pick a default and errors
 		// with "Multiple databases found". Default to `neondb` here so the
@@ -117,7 +155,7 @@ export function ensureChatDatabase(branchName: string): void {
 		"databases",
 		"list",
 		"--project-id",
-		NEON_PROJECT_ID,
+		neonProjectId(),
 		"--branch",
 		branchName,
 		"--output",
@@ -152,7 +190,7 @@ export function ensureChatDatabase(branchName: string): void {
 		"databases",
 		"create",
 		"--project-id",
-		NEON_PROJECT_ID,
+		neonProjectId(),
 		"--branch",
 		branchName,
 		"--name",
@@ -173,7 +211,7 @@ export function ensureTemplateBranch(): void {
 	const branch = findBranchByName(NEON_TEMPLATE_BRANCH);
 	if (branch) return;
 	log(`bootstrap: ${NEON_TEMPLATE_BRANCH} missing, creating empty parent`);
-	createBranch(NEON_TEMPLATE_BRANCH, NEON_PARENT_BRANCH);
+	createBranch(NEON_TEMPLATE_BRANCH, neonTemplateParent());
 	// Wipe the inherited schema so children start truly empty.
 	const url = connectionString(NEON_TEMPLATE_BRANCH);
 	const reset = sh("psql", [url, "-v", "ON_ERROR_STOP=1"], {

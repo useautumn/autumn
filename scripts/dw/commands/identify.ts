@@ -1,5 +1,6 @@
 import { loadRegistry } from "../helpers/registry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
+import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
 import { aliasesFor } from "../helpers/ports.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
 
@@ -13,31 +14,43 @@ export function cmdIdentify(): void {
 		process.exit(1);
 	}
 
-	const { worktreeNum, branchName } = entry;
+	const { worktreeNum, branchName, gitBranch } = entry;
 	const offset = (worktreeNum - 1) * 100;
 	const serverPort = 8080 + offset;
 	const vitePort = 3000 + offset;
 
 	let serverUrl: string;
 	let viteUrl: string;
-	let tmux: string;
-	if (worktreeNum === 1) {
-		serverUrl = `http://localhost:${serverPort}`;
-		viteUrl = `http://localhost:${vitePort}`;
-		tmux = "";
-	} else {
+	let tmux = "";
+	if (isProvisioned(entry)) {
 		const aliases = aliasesFor(worktreeNum);
 		serverUrl = aliases.apiUrl;
 		viteUrl = aliases.viteUrl;
-		tmux = tmuxSessionName(worktreeNum);
+		if (worktreeNum > 1) tmux = tmuxSessionName(worktreeNum);
+	} else {
+		serverUrl = `http://localhost:${serverPort}`;
+		viteUrl = `http://localhost:${vitePort}`;
 	}
 
-	const tmuxHuman = tmux || "(canonical worktree — not in tmux)";
+	const tmuxHuman =
+		tmux ||
+		(isPlainCanonical(entry)
+			? "(canonical worktree — not in tmux)"
+			: "(inline dev)");
 	const ngrokUrl = entry.ngrokUrl ?? "";
-	const ngrokHuman = ngrokUrl || "(no public tunnel — run 'bun dw setup')";
+	const ngrokHuman =
+		ngrokUrl ||
+		(isProvisioned(entry)
+			? "(no public tunnel — run 'bun dw setup')"
+			: "(canonical — no ngrok)");
+
+	const branchLabel =
+		gitBranch && worktreeNum === 1
+			? `${gitBranch} (neon: ${branchName})`
+			: (branchName ?? "(canonical)");
 
 	console.log(`Worktree #${worktreeNum}  (${entry.path})`);
-	console.log(`  Branch:        ${branchName ?? "(canonical)"}`);
+	console.log(`  Branch:        ${branchLabel}`);
 	console.log(`  Server URL:    ${serverUrl}`);
 	console.log(`  Vite URL:      ${viteUrl}`);
 	console.log(`  Ngrok URL:     ${ngrokHuman}`);
