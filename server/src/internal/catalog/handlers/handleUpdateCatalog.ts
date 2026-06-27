@@ -21,6 +21,7 @@ import { updateFeature } from "@/internal/features/featureActions/updateFeature.
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
+import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -71,8 +72,15 @@ export const handleUpdateCatalog = createRoute({
 		// 2. Upsert plans; create migration drafts for in-place customer changes.
 		const migrations: MigrationDraft[] = [];
 		for (const planParams of plans) {
-			const { plan_id, new_plan_id, disable_version, version, ...rest } =
-				planParams;
+			const {
+				plan_id,
+				new_plan_id,
+				disable_version,
+				force_version,
+				propagate_to_variants,
+				version,
+				...rest
+			} = planParams;
 			const current = await ProductService.getFull({
 				db,
 				idOrInternalId: plan_id,
@@ -113,15 +121,32 @@ export const handleUpdateCatalog = createRoute({
 			await updateProduct({
 				ctx,
 				productId: plan_id,
-				query: { version, disable_version },
+				query: { version, disable_version, force_version },
 				updates: updateParams,
 				initialFullProduct: current,
 			});
 
+			const latestPlanId = new_plan_id ?? plan_id;
+			const latestFullProduct = await ProductService.getFull({
+				db,
+				idOrInternalId: latestPlanId,
+				orgId: org.id,
+				env,
+			});
+			const propagateToVariants = propagate_to_variants ?? [];
+			if (propagateToVariants.length > 0) {
+				await updateVariants({
+					ctx,
+					oldBase: current,
+					newBase: latestFullProduct,
+					propagateToVariants,
+				});
+			}
+
 			if (fromPlan) {
 				const after = await ProductService.getFull({
 					db,
-					idOrInternalId: new_plan_id ?? plan_id,
+					idOrInternalId: latestPlanId,
 					orgId: org.id,
 					env,
 					version: current.version,

@@ -16,13 +16,11 @@ export const previewAffectedVariants = async ({
 	base,
 	diff,
 	data,
-	previewCtx,
 }: {
 	ctx: AutumnContext;
 	base: FullProduct;
 	diff: DiffedCustomizePlanV1;
 	data: PreviewUpdatePlanParamsV2;
-	previewCtx: { expand: string[] };
 }): Promise<PlanUpdatePreviewVariant[]> => {
 	const { db, org, env, features } = ctx;
 
@@ -64,7 +62,7 @@ export const previewAffectedVariants = async ({
 
 			return {
 				...buildCorePlanUpdatePreview({
-					ctx: previewCtx,
+					ctx,
 					planId: variant.id,
 					current: currentPlan,
 					preview: previewPlan,

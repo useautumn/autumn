@@ -2,9 +2,10 @@ import type {
 	CatalogPreviewUpdateResponse,
 	CatalogUpdateParams,
 } from "@autumn/shared";
+import { scopeExpandForCtx } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { previewFeature } from "./previewFeature.js";
-import { previewPlan } from "./previewPlan.js";
+import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
 
 /**
@@ -24,13 +25,17 @@ export const previewUpdateCatalog = async ({
 
 	const { products, currents, withCustomers, proposedFeatures, planCtx } =
 		await setupPreviewCatalogContext({ ctx, params });
+	const planChangesCtx = scopeExpandForCtx({
+		ctx: { ...planCtx, expand: params.expand ?? [] },
+		prefix: "plan_changes",
+	});
 
 	const [planResults, featureResults] = await Promise.all([
 		Promise.all(
 			plans.map((planParams, index) => {
 				const current = currents[index];
-				return previewPlan({
-					ctx: planCtx,
+				return previewCatalogPlanUpdate({
+					ctx: planChangesCtx,
 					planParams,
 					current,
 					hasCustomers: current

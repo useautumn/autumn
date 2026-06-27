@@ -11,31 +11,46 @@ import {
 	runAtmnWorkspaceCli,
 } from "./utils/atmnTestWorkspace.js";
 
-const customerId = "atmn_version_customer";
-const planId = "atmn_version_pro";
+const proCustomerId = "atmn_pro_customer";
+const premiumCustomerId = "atmn_premium_customer";
+const proPlanId = "atmn_pro";
+const premiumPlanId = "atmn_premium";
 
 test.concurrent(
-	`${chalk.yellowBright("atmn versioning: pushing an attached pro plan update creates v2")}`,
+	`${chalk.yellowBright("atmn scratch: pulls pro and premium with one customer each")}`,
 	async () => {
 		const pro = products.pro({
-			id: planId,
+			id: proPlanId,
 			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+		const premium = products.premium({
+			id: premiumPlanId,
+			items: [items.monthlyMessages({ includedUsage: 5000 })],
 		});
 		const ctx = await createCleanAtmnIntegrationContext();
 
 		const { autumnV2_2 } = await initScenario({
 			ctx,
-			customerId,
+			customerId: proCustomerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro], prefix: "" }),
+				s.products({ list: [pro, premium], prefix: "" }),
 			],
 			actions: [],
 		});
 
+		await autumnV2_2.customers.create({
+			id: premiumCustomerId,
+			name: "Atmn Premium Customer",
+		});
+
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
+			customer_id: proCustomerId,
 			plan_id: pro.id,
+		});
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: premiumCustomerId,
+			plan_id: premium.id,
 		});
 		await timeout(5000);
 
