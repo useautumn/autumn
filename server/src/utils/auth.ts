@@ -24,6 +24,7 @@ import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
 import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
+import { beforeSessionUpdated } from "./authUtils/beforeSessionUpdated.js";
 import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
@@ -200,6 +201,9 @@ const options = {
 				before: beforeSessionCreated,
 				after: afterSessionCreated,
 			},
+			update: {
+				before: beforeSessionUpdated,
+			},
 			delete: {
 				after: afterSessionDeleted,
 			},
@@ -262,6 +266,14 @@ const options = {
 					email,
 					otp,
 				});
+			},
+			// Allows /email-otp/request-email-change + /email-otp/change-email.
+			// The OAuth `account` row is keyed by (providerId, accountId), not
+			// user.email, so updating user.email does NOT break Google sign-in:
+			// the account stays linked to the original Google identity. See
+			// better-auth/oauth2/link-account.ts → findOAuthUser().
+			changeEmail: {
+				enabled: true,
 			},
 		}),
 		admin({

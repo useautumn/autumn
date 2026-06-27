@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
+import { toast } from "sonner";
+import { useHasPasskey } from "@/hooks/common/useHasPasskey";
 import {
 	clearLastSwitchedOrgId,
 	getLastSwitchedOrgId,
@@ -15,18 +17,46 @@ export const DashboardGate = () => {
 	const { data: orgList } = useListOrganizations();
 	const switchActiveOrg = useSwitchActiveOrg();
 	const { org, isLoading: orgLoading, error: orgError } = useOrg();
+	const { hasPasskey } = useHasPasskey();
 	const [switchingToLastOrg, setSwitchingToLastOrg] = useState(false);
 	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
 	const activeOrgId = session?.session.activeOrganizationId;
 	const onImpersonateRoute = pathname.includes("impersonate-redirect");
+
+	// The hand-rolled /api/auth/organization/list response includes
+	// requirePasskey per org; better-auth's plugin type doesn't know
+	// about it. See handleListAuthOrganizations.ts.
+	const typedOrgList = orgList as
+		| Array<{ id: string; requirePasskey?: boolean }>
+		| undefined;
+	const lastOrgEntry = typedOrgList?.find((o) => o.id === lastOrgId);
+	const lastOrgGated =
+		lastOrgEntry?.requirePasskey === true && !hasPasskey;
+
 	const shouldSwitchToLastOrg =
 		!onImpersonateRoute &&
 		!!lastOrgId &&
 		lastOrgId !== ignoredLastOrgId &&
 		!!activeOrgId &&
 		lastOrgId !== activeOrgId &&
-		!!orgList?.some((org) => org.id === lastOrgId);
+		!!typedOrgList?.some((o) => o.id === lastOrgId) &&
+		// Skip the auto-switch when the remembered org requires a passkey
+		// the user doesn't have. The server hook would silently rewrite
+		// the active org back to a non-gated one, creating an infinite
+		// switch loop here.
+		!lastOrgGated;
+
+	useEffect(() => {
+		if (!lastOrgId) return;
+		if (lastOrgGated && lastOrgId !== ignoredLastOrgId) {
+			toast.error(
+				"You need a passkey to access that organization. Add one from account settings.",
+			);
+			clearLastSwitchedOrgId(lastOrgId);
+			setIgnoredLastOrgId(lastOrgId);
+		}
+	}, [lastOrgId, lastOrgGated, ignoredLastOrgId]);
 
 	useEffect(() => {
 		if (!lastOrgId || !shouldSwitchToLastOrg || switchingToLastOrg) return;
