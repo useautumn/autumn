@@ -1,6 +1,10 @@
 import type {
 	CreateVariantParamsV2Input,
+	DiffedCustomizePlanV1,
+	PlanUpdatePreviewItemChange,
+	PlanUpdatePreviewPriceChange,
 	ProductItem,
+	ProductV2,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
@@ -104,4 +108,8 @@ export interface PlanVariant {
 	name: string;
 	latest_version: number;
 	items: ProductItem[];
+	product?: ProductV2;
+	customize?: DiffedCustomizePlanV1 | null;
+	price_change?: PlanUpdatePreviewPriceChange;
+	item_changes?: PlanUpdatePreviewItemChange[];
 }

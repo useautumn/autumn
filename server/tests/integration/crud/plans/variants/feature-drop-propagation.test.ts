@@ -35,8 +35,9 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 
-const suffix = () => Math.random().toString(36).slice(2, 8);
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
 const catchErr = async (fn: () => Promise<unknown>) => {
@@ -172,7 +173,12 @@ const createVariant = async (
 	baseId: string,
 	variantId: string,
 	name = "Variant",
-) => rpc.post("/plans.create_variant", { base_plan_id: baseId, variant_plan_id: variantId, name }) as Promise<ApiPlanV1>;
+) =>
+	rpc.post("/plans.create_variant", {
+		base_plan_id: baseId,
+		variant_plan_id: variantId,
+		name,
+	}) as Promise<ApiPlanV1>;
 
 // ═════════════════════════════════════════════════════════════════
 // 1. create_variant copies all 7 items
@@ -180,7 +186,7 @@ const createVariant = async (
 test.concurrent(
 	`${chalk.yellowBright("feature-drop create_variant: copies all 7 items (6 features + base price)")}`,
 	async () => {
-		const cid = `fd1_${suffix()}`;
+		const cid = readableVariantTestId("fd_copy");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -189,9 +195,7 @@ test.concurrent(
 		const baseFull = await getFull(ctx, baseId);
 		const variantFull = await getFull(ctx, variantId);
 
-		expect(variantFull.base_internal_product_id).toBe(baseFull.internal_id);
-		expect(variantFull.version).toBe(1);
-		expect(variantFull.is_default).toBe(false);
+		expectVariantProductCorrect({ base: baseFull, variant: variantFull });
 
 		expect(variantFull.entitlements.length).toBe(baseFull.entitlements.length);
 		expect(variantFull.prices.length).toBe(baseFull.prices.length);
@@ -209,7 +213,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop strip: variant drops Dashboard → 6 items, base keeps 7")}`,
 	async () => {
-		const cid = `fd2_${suffix()}`;
+		const cid = readableVariantTestId("fd_strip");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -227,8 +231,12 @@ test.concurrent(
 		expect(basePlan.items.length).toBe(6);
 		expect(variantPlan.items.length).toBe(5);
 
-		const baseDash = basePlan.items.find((i) => i.feature_id === TestFeature.Dashboard);
-		const variantDash = variantPlan.items.find((i) => i.feature_id === TestFeature.Dashboard);
+		const baseDash = basePlan.items.find(
+			(i) => i.feature_id === TestFeature.Dashboard,
+		);
+		const variantDash = variantPlan.items.find(
+			(i) => i.feature_id === TestFeature.Dashboard,
+		);
 		expect(baseDash).toBeDefined();
 		expect(variantDash).toBeUndefined();
 	},
@@ -240,7 +248,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop preview: feature-add diff shows add_items, affected_variants lists stripped variant")}`,
 	async () => {
-		const cid = `fd3_${suffix()}`;
+		const cid = readableVariantTestId("fd_preview_add");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -259,12 +267,19 @@ test.concurrent(
 			will_version: boolean;
 			current_version: number;
 			diff: any;
-			affected_variants: Array<{ id: string; name: string; latest_version: number; would_version: boolean }>;
+			affected_variants: Array<{
+				id: string;
+				name: string;
+				latest_version: number;
+				would_version: boolean;
+			}>;
 		};
 
 		expect(res.diff.add_items).toBeDefined();
 		expect(res.diff.add_items.length).toBeGreaterThanOrEqual(1);
-		const added = res.diff.add_items.find((i: any) => i.feature_id === TestFeature.AdminRights);
+		const added = res.diff.add_items.find(
+			(i: any) => i.feature_id === TestFeature.AdminRights,
+		);
 		expect(added).toBeDefined();
 
 		expect(res.affected_variants.length).toBe(1);
@@ -278,7 +293,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop propagate: feature-add to base → variant gets new feature, Dashboard still absent")}`,
 	async () => {
-		const cid = `fd4_${suffix()}`;
+		const cid = readableVariantTestId("fd_prop_add");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -298,10 +313,14 @@ test.concurrent(
 
 		const variantPlan = await rpc.plans.get<ApiPlanV1>(variantId);
 
-		const dash = variantPlan.items.find((i) => i.feature_id === TestFeature.Dashboard);
+		const dash = variantPlan.items.find(
+			(i) => i.feature_id === TestFeature.Dashboard,
+		);
 		expect(dash).toBeUndefined();
 
-		const admin = variantPlan.items.find((i) => i.feature_id === TestFeature.AdminRights);
+		const admin = variantPlan.items.find(
+			(i) => i.feature_id === TestFeature.AdminRights,
+		);
 		expect(admin).toBeDefined();
 
 		expect(variantPlan.items.length).toBe(6);
@@ -314,7 +333,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop OOTO-IWTN: base changes Users 5→10, propagate re-adds stripped Users at 10")}`,
 	async () => {
-		const cid = `fd5_${suffix()}`;
+		const cid = readableVariantTestId("fd_readd_stripped");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -327,7 +346,11 @@ test.concurrent(
 		});
 
 		const beforeVariant = await rpc.plans.get<ApiPlanV1>(variantId);
-		expect(beforeVariant.items.find((i) => i.feature_id === TestFeature.Users && !i.price)).toBeUndefined();
+		expect(
+			beforeVariant.items.find(
+				(i) => i.feature_id === TestFeature.Users && !i.price,
+			),
+		).toBeUndefined();
 
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [
@@ -358,7 +381,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop opt-out: propagate=[] preserves strip, propagate=[variant] re-adds")}`,
 	async () => {
-		const cid = `fd6_${suffix()}`;
+		const cid = readableVariantTestId("fd_opt_in_out");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId1 = `fd_var1_${cid}`;
 		const variantId2 = `fd_var2_${cid}`;
@@ -389,7 +412,11 @@ test.concurrent(
 		});
 
 		const optOutPlan = await rpc.plans.get<ApiPlanV1>(variantId1);
-		expect(optOutPlan.items.find((i) => i.feature_id === TestFeature.Users && !i.price)).toBeUndefined();
+		expect(
+			optOutPlan.items.find(
+				(i) => i.feature_id === TestFeature.Users && !i.price,
+			),
+		).toBeUndefined();
 
 		// Second update: Users 10→15 to produce a non-empty diff for propagation
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
@@ -421,7 +448,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop one-off: variant with one_off price preserves interval after propagation")}`,
 	async () => {
-		const cid = `fd7_${suffix()}`;
+		const cid = readableVariantTestId("fd_one_off");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -458,7 +485,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop multi-version skip: variant gets only v2→v3 diff, not v1→v2")}`,
 	async () => {
-		const cid = `fd8_${suffix()}`;
+		const cid = readableVariantTestId("fd_multi_version");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId1 = `fd_var1_${cid}`;
 		const variantId2 = `fd_var2_${cid}`;
@@ -486,13 +513,21 @@ test.concurrent(
 		const v2Plan = await rpc.plans.get<ApiPlanV1>(variantId2);
 
 		// Both get Storage (v2→v3 diff) but NOT AdminRights (v1→v2 diff)
-		const storage1 = v1Plan.items.find((i) => i.feature_id === TestFeature.Storage);
-		const storage2 = v2Plan.items.find((i) => i.feature_id === TestFeature.Storage);
+		const storage1 = v1Plan.items.find(
+			(i) => i.feature_id === TestFeature.Storage,
+		);
+		const storage2 = v2Plan.items.find(
+			(i) => i.feature_id === TestFeature.Storage,
+		);
 		expect(storage1).toBeDefined();
 		expect(storage2).toBeDefined();
 
-		const admin1 = v1Plan.items.find((i) => i.feature_id === TestFeature.AdminRights);
-		const admin2 = v2Plan.items.find((i) => i.feature_id === TestFeature.AdminRights);
+		const admin1 = v1Plan.items.find(
+			(i) => i.feature_id === TestFeature.AdminRights,
+		);
+		const admin2 = v2Plan.items.find(
+			(i) => i.feature_id === TestFeature.AdminRights,
+		);
 		expect(admin1).toBeUndefined();
 		expect(admin2).toBeUndefined();
 	},
@@ -504,7 +539,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop preview: read-only — no version change, same internal_id")}`,
 	async () => {
-		const cid = `fd9_${suffix()}`;
+		const cid = readableVariantTestId("fd_preview_readonly");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -534,7 +569,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop errors: nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
-		const cid = `fd10_${suffix()}`;
+		const cid = readableVariantTestId("fd_nested_err");
 		const { rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 		const nestedId = `fd_nested_${cid}`;
@@ -553,7 +588,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop errors: is_default=true on variant → 400 variant_cannot_be_default")}`,
 	async () => {
-		const cid = `fd11_${suffix()}`;
+		const cid = readableVariantTestId("fd_default_err");
 		const { rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -573,7 +608,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("feature-drop stripe: variant v2 existing prices retain stripe_price_id, new feature gets fresh")}`,
 	async () => {
-		const cid = `fd12_${suffix()}`;
+		const cid = readableVariantTestId("fd_stripe_carry");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
 		const variantId = `fd_var_${cid}`;
 
@@ -614,7 +649,9 @@ test.concurrent(
 		expect(carriedForward).toBeGreaterThan(0);
 
 		const storagePrice = variantV2.prices.find(
-			(p) => p.config?.stripe_price_id && !v1PriceIds.has(p.entitlement_id ?? "base"),
+			(p) =>
+				p.config?.stripe_price_id &&
+				!v1PriceIds.has(p.entitlement_id ?? "base"),
 		);
 		expect(storagePrice).toBeDefined();
 		expect(storagePrice?.config?.stripe_price_id).toBeDefined();

@@ -39,11 +39,12 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const { db, org, env } = ctx;
-const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
 const cleanup = async (id: string) => {
 	try { await autumnRpc.plans.delete(id, { allVersions: true }); } catch {}
@@ -84,7 +85,7 @@ const getPlanRpc = async (planId: string) =>
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: force_version + disable_version both true → conflicting_version_flags")}`, async () => {
-	const id = `vc_flags_${getSuffix()}`;
+	const id = readableVariantTestId("cc_flags_err");
 	await createBase(id);
 
 	await expectAutumnError({
@@ -104,7 +105,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: force_version + disabl
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: force_version=true versions even with no customers")}`, async () => {
-	const id = `vc_fv_${getSuffix()}`;
+	const id = readableVariantTestId("cc_force_version");
 	const base = await createBase(id);
 	expect(base.version).toBe(1);
 
@@ -122,7 +123,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: force_version=true ver
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: disable_version=true does in-place edit when customers exist")}`, async () => {
-	const customerId = `vc_dv_${getSuffix()}`;
+	const customerId = readableVariantTestId("cc_disable_version");
 	const prod = products.base({ id: "base", items: [items.monthlyMessages({ includedUsage: 100 })] });
 
 	const { autumnV2_2 } = await initScenario({
@@ -152,14 +153,14 @@ test.concurrent(`${chalk.yellowBright("variants contract: disable_version=true d
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: base_internal_product_id set on create_variant")}`, async () => {
-	const baseId = `vc_bipi_${getSuffix()}`;
-	const variantId = `vc_bipi_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_base_link");
+	const variantId = `${baseId}_variant`;
 	const base = await createBase(baseId);
 
 	await createVariantRpc(baseId, variantId, "Variant 1");
 
 	const variant = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
-	expect(variant.base_internal_product_id).toBe(base.internal_id);
+	expectVariantProductCorrect({ base, variant });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -167,8 +168,8 @@ test.concurrent(`${chalk.yellowBright("variants contract: base_internal_product_
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: base_internal_product_id never mutated on existing rows")}`, async () => {
-	const baseId = `vc_immut_${getSuffix()}`;
-	const variantId = `vc_immut_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_immutable_link");
+	const variantId = `${baseId}_variant`;
 	const base = await createBase(baseId);
 
 	await createVariantRpc(baseId, variantId, "Variant Immutable");
@@ -198,8 +199,8 @@ test.concurrent(`${chalk.yellowBright("variants contract: base_internal_product_
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: create_variant returns ApiPlanV1 shape")}`, async () => {
-	const baseId = `vc_shape_${getSuffix()}`;
-	const variantId = `vc_shape_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_shape");
+	const variantId = `${baseId}_variant`;
 	await createBase(baseId);
 
 	const variant = await createVariantRpc(baseId, variantId, "Variant Shape");
@@ -212,7 +213,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: create_variant returns
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: preview_update is idempotent")}`, async () => {
-	const baseId = `vc_idem_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_idempotent");
 	await createBase(baseId);
 
 	const body = { items: [msgItem(333)] };
@@ -231,8 +232,8 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview_update is idem
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: archived variant silently filtered from propagate")}`, async () => {
-	const baseId = `vc_arch_${getSuffix()}`;
-	const variantId = `vc_arch_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_archived_filter");
+	const variantId = `${baseId}_variant`;
 	await createBase(baseId);
 	await createVariantRpc(baseId, variantId, "Variant Archived");
 
@@ -255,7 +256,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: archived variant silen
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: preview will_version matches actual update outcome")}`, async () => {
-	const customerId = `vc_wv_${getSuffix()}`;
+	const customerId = readableVariantTestId("cc_will_version");
 	const prod = products.base({ id: "base", items: [items.monthlyMessages({ includedUsage: 100 })] });
 
 	await initScenario({
@@ -294,7 +295,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview will_version m
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: preview diff matches manual diffPlanV1")}`, async () => {
-	const baseId = `vc_diff_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_manual_diff");
 	await createBase(baseId, 100);
 
 	const oldPlan = await getPlanRpc(baseId);
@@ -329,8 +330,8 @@ test.skip(`${chalk.yellowBright("variants contract: throw-on-first-failure (cont
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: propagate_to_variants empty array identical to omitted")}`, async () => {
-	const idA = `vc_empty_a_${getSuffix()}`;
-	const idB = `vc_empty_b_${getSuffix()}`;
+	const idA = readableVariantTestId("cc_empty_prop_a");
+	const idB = readableVariantTestId("cc_empty_prop_b");
 	await createBase(idA, 100);
 	await createBase(idB, 100);
 
@@ -353,7 +354,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: propagate_to_variants 
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: update rejects base's own id in propagate")}`, async () => {
-	const baseId = `vc_self_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_self_target");
 	await createBase(baseId);
 
 	await expectAutumnError({
@@ -372,7 +373,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: update rejects base's 
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: update rejects non-existent id in propagate")}`, async () => {
-	const baseId = `vc_nonexist_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_missing_target");
 	await createBase(baseId);
 
 	await expectAutumnError({
@@ -380,7 +381,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: update rejects non-exi
 		func: async () => {
 			await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 				items: [msgItem(200)],
-				propagate_to_variants: [`does_not_exist_${getSuffix()}`],
+				propagate_to_variants: [readableVariantTestId("missing_variant")],
 			});
 		},
 	});
@@ -391,7 +392,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: update rejects non-exi
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: create_variant rejects id === plan_id")}`, async () => {
-	const baseId = `vc_collision_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_collision");
 	await createBase(baseId);
 
 	await expectAutumnError({
@@ -407,8 +408,8 @@ test.concurrent(`${chalk.yellowBright("variants contract: create_variant rejects
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: variant appears in plans.list")}`, async () => {
-	const baseId = `vc_list_${getSuffix()}`;
-	const variantId = `vc_list_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_list_variant");
+	const variantId = `${baseId}_variant`;
 	await createBase(baseId);
 	await createVariantRpc(baseId, variantId, "Variant List");
 
@@ -422,7 +423,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: variant appears in pla
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: preview_update with zero variants → affected_variants empty")}`, async () => {
-	const baseId = `vc_zero_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_zero_variants");
 	await createBase(baseId);
 
 	const preview = await previewUpdateRpc(baseId, {
@@ -437,8 +438,8 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview_update with ze
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: free_trial propagation overwrites variant override")}`, async () => {
-	const baseId = `vc_ft_${getSuffix()}`;
-	const variantId = `vc_ft_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("cc_free_trial");
+	const variantId = `${baseId}_variant`;
 
 	await cleanup(baseId);
 	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
@@ -473,7 +474,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: free_trial propagation
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(`${chalk.yellowBright("variants contract: force_version versions with no customers (standalone)")}`, async () => {
-	const id = `vc_fv_standalone_${getSuffix()}`;
+	const id = readableVariantTestId("cc_force_standalone");
 	await createBase(id);
 
 	await autumnRpc.plans.update<ApiPlanV1>(id, {

@@ -39,12 +39,16 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import {
+	expectStripeResourcesCarriedToVariant,
+	expectVariantProductCorrect,
+} from "./utils/expectVariantProductCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 
 const { db, org, env } = ctx;
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
-const getSuffix = () => Math.random().toString(36).slice(2, 9);
 const cleanup = async (...ids: string[]) => {
 	for (const id of ids) {
 		try {
@@ -184,9 +188,9 @@ const getAllVersions = async (planId: string) => {
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: copies items including rollover config")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_rollover_${suffix}`;
-		const variantId = `rv_rollover_var_${suffix}`;
+			const rid = readableVariantTestId("rv_copy_rollover");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -218,9 +222,9 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_dups_${suffix}`;
-		const variantId = `rv_dups_var_${suffix}`;
+		const rid = readableVariantTestId("rv_dups_stripe");
+		const baseId = `base_${rid}`;
+		const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
 		const base = await createBase(baseId, rolloverBaseItemsPriced(200));
@@ -233,17 +237,11 @@ test.concurrent(
 		expect(variantCreditsPrices.length).toBe(baseCreditsPrices.length);
 		expect(variantCreditsPrices.length).toBeGreaterThanOrEqual(2);
 
-		for (const vPrice of variantCreditsPrices) {
-			const matchingBase = baseCreditsPrices.find(
-				(bPrice: any) =>
-					bPrice.config?.feature_id === vPrice.config?.feature_id &&
-					bPrice.config?.interval === vPrice.config?.interval &&
-					(bPrice.config as any)?.bill_when === (vPrice.config as any)?.bill_when,
-			);
-			expect(matchingBase).toBeDefined();
-			expect(vPrice.config?.stripe_product_id).toBe(matchingBase!.config?.stripe_product_id);
-			expect(vPrice.config?.stripe_product_id).toBeTruthy();
-		}
+		expectStripeResourcesCarriedToVariant({
+			base,
+			variant: variantFull,
+			requireMeter: true,
+		});
 
 		await cleanup(baseId, variantId);
 	},
@@ -255,8 +253,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover preview_update: diff on rollover change produces remove + add")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_diff_${suffix}`;
+		const baseId = readableVariantTestId("rv_preview_diff");
 		await cleanup(baseId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -288,10 +285,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: rollover change to variant (versioning, v1 untouched)")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_prop_${suffix}`;
-		const variantId = `rv_prop_var_${suffix}`;
-		const customerId = `rv_prop_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_prop_rollover");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const customerId = `cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -340,10 +337,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover propagate: variant strip preserved across propagation")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_strip_${suffix}`;
-		const variantId = `rv_strip_var_${suffix}`;
-		const customerId = `rv_strip_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_strip_preserve");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const customerId = `cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -403,10 +400,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover filter precision: same feature_id different interval, only targeted item changes")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_filter_${suffix}`;
-		const variantId = `rv_filter_var_${suffix}`;
-		const customerId = `rv_filter_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_filter_precision");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const customerId = `cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -472,10 +469,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover base+variant version: customer on base triggers both versioning")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_bothver_${suffix}`;
-		const variantId = `rv_bothver_var_${suffix}`;
-		const customerId = `rv_bothver_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_base_variant_version");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const customerId = `cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -504,7 +501,11 @@ test.concurrent(
 
 		const newBase = baseVersions.find((v: any) => v.version === 2)!;
 		const newVariant = variantVersions.find((v: any) => v.version === 2)!;
-		expect(newVariant.base_internal_product_id).toBe(newBase.internal_id);
+		expectVariantProductCorrect({
+			base: newBase,
+			variant: newVariant,
+			version: 2,
+		});
 
 		await cleanup(baseId, variantId);
 	},
@@ -516,8 +517,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover preview_update: 0 writes when nothing changes")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_zero_${suffix}`;
+			const baseId = readableVariantTestId("rv_preview_zero_writes");
 		await cleanup(baseId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -547,10 +547,10 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover versioning: stripe_prepaid_price_v2_id carried forward to variant v2")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_prepaid_${suffix}`;
-		const variantId = `rv_prepaid_var_${suffix}`;
-		const customerId = `rv_prepaid_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_prepaid_carry");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const customerId = `cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverPrepaidItems(200));
@@ -598,9 +598,9 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover create_variant: rejects archived base with cannot_fork_archived_base")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_arch_${suffix}`;
-		const variantId = `rv_arch_var_${suffix}`;
+			const rid = readableVariantTestId("rv_archived_err");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -627,11 +627,11 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("rollover both customers: base+variant both version, variant pins to new base")}`,
 	async () => {
-		const suffix = getSuffix();
-		const baseId = `rv_bothcus_${suffix}`;
-		const variantId = `rv_bothcus_var_${suffix}`;
-		const baseCusId = `rv_bothcus_base_cus_${suffix}`;
-		const varCusId = `rv_bothcus_var_cus_${suffix}`;
+			const rid = readableVariantTestId("rv_both_customers");
+			const baseId = `base_${rid}`;
+			const variantId = `${baseId}_variant`;
+			const baseCusId = `base_cus_${rid}`;
+			const varCusId = `variant_cus_${rid}`;
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -666,7 +666,11 @@ test.concurrent(
 
 		const newBase = baseVersions.find((v: any) => v.version === 2)!;
 		const newVariant = variantVersions.find((v: any) => v.version === 2)!;
-		expect(newVariant.base_internal_product_id).toBe(newBase.internal_id);
+		expectVariantProductCorrect({
+			base: newBase,
+			variant: newVariant,
+			version: 2,
+		});
 
 		const oldVariant = variantVersions.find((v: any) => v.version === 1)!;
 		expect(oldVariant.base_internal_product_id).not.toBe(newBase.internal_id);

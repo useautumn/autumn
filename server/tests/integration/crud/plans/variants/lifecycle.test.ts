@@ -35,8 +35,12 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-
-const suffix = () => Math.random().toString(36).slice(2, 8);
+import {
+	expectEntitlementAllowanceMatches,
+	expectStripeResourcesCarriedToVariant,
+	expectVariantProductCorrect,
+} from "./utils/expectVariantProductCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
@@ -82,7 +86,7 @@ const monthlyPrice = { amount: 20, interval: BillingInterval.Month };
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: happy path — base_internal_product_id set, version=1, is_default=false")}`,
 	async () => {
-		const cid = `pv1_${suffix()}`;
+		const cid = readableVariantTestId("lc_happy");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -106,19 +110,12 @@ test.concurrent(
 		const baseFull = await getFull(ctx, base.id);
 		const variantFull = await getFull(ctx, variantId);
 
-		expect(variantFull.version).toBe(1);
-		expect(variantFull.is_default).toBe(false);
-		expect(variantFull.base_internal_product_id).toBe(
-			baseFull.internal_id,
-		);
-
-		const baseEnt = baseFull.entitlements.find(
-			(e) => e.feature_id === TestFeature.Messages,
-		);
-		const variantEnt = variantFull.entitlements.find(
-			(e) => e.feature_id === TestFeature.Messages,
-		);
-		expect(variantEnt?.allowance).toBe(baseEnt?.allowance);
+		expectVariantProductCorrect({ base: baseFull, variant: variantFull });
+		expectEntitlementAllowanceMatches({
+			base: baseFull,
+			variant: variantFull,
+			featureId: TestFeature.Messages,
+		});
 	},
 );
 
@@ -128,7 +125,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
-		const cid = `pv2_${suffix()}`;
+		const cid = readableVariantTestId("lc_nested_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -169,7 +166,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects archived base → 400 cannot_fork_archived_base")}`,
 	async () => {
-		const cid = `pv3_${suffix()}`;
+		const cid = readableVariantTestId("lc_archived_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -204,7 +201,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects id collision → 409 product_id_already_exists")}`,
 	async () => {
-		const cid = `pv4_${suffix()}`;
+		const cid = readableVariantTestId("lc_collision_err");
 		const base = baseProduct(`lc_base_${cid}`);
 		const other = baseProduct(`collide_${cid}`);
 
@@ -238,7 +235,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants preview_update: happy path — response shape correct, no DB writes")}`,
 	async () => {
-		const cid = `pv5_${suffix()}`;
+		const cid = readableVariantTestId("lc_preview");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -283,7 +280,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants preview_update: rejects on variant → 400 cannot_preview_on_variant")}`,
 	async () => {
-		const cid = `pv6_${suffix()}`;
+		const cid = readableVariantTestId("lc_preview_variant_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -322,7 +319,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: omit propagate_to_variants → variant unchanged")}`,
 	async () => {
-		const cid = `pv7_${suffix()}`;
+		const cid = readableVariantTestId("lc_no_propagate");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -368,7 +365,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: patches variant in place when no customers")}`,
 	async () => {
-		const cid = `pv8_${suffix()}`;
+		const cid = readableVariantTestId("lc_prop_no_cus");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -418,7 +415,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: base patches in place → variant patches in place even with customers (unified version choice)")}`,
 	async () => {
-		const cid = `pv9_${suffix()}`;
+		const cid = readableVariantTestId("lc_prop_base_in_place");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { autumnV2_2, ctx } = await initScenario({
@@ -464,11 +461,8 @@ test.concurrent(
 
 		// Variant ALSO patched in place — follows the base's choice, no forced
 		// version bump despite having customers. Customers are updated via migration.
-		expect(variantAfter.version).toBe(1);
 		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
-		expect(variantAfter.base_internal_product_id).toBe(
-			baseAfter.internal_id,
-		);
+		expectVariantProductCorrect({ base: baseAfter, variant: variantAfter });
 
 		const variantEnt = variantAfter.entitlements.find(
 			(e) => e.feature_id === TestFeature.Messages,
@@ -483,7 +477,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants propagate: both version when base has customers — variant v2 base_internal_product_id = base v2 internal_id")}`,
 	async () => {
-		const cid = `pv10_${suffix()}`;
+		const cid = readableVariantTestId("lc_prop_versions");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -517,10 +511,11 @@ test.concurrent(
 		const variantV2 = await getFull(ctx, variantId);
 
 		expect(baseV2.version).toBe(2);
-		expect(variantV2.version).toBe(2);
-		expect(variantV2.base_internal_product_id).toBe(
-			baseV2.internal_id,
-		);
+		expectVariantProductCorrect({
+			base: baseV2,
+			variant: variantV2,
+			version: 2,
+		});
 
 		const variantEnt = variantV2.entitlements.find(
 			(e) => e.feature_id === TestFeature.Messages,
@@ -535,7 +530,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants opt-out: omit propagate → base versions, variant stays at v1 pinned to old base")}`,
 	async () => {
-		const cid = `pv11_${suffix()}`;
+		const cid = readableVariantTestId("lc_opt_out");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -586,7 +581,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects unrelated id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
-		const cid = `pv12_${suffix()}`;
+		const cid = readableVariantTestId("lc_unrelated_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -627,7 +622,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects base's own id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
-		const cid = `pv13_${suffix()}`;
+		const cid = readableVariantTestId("lc_self_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -668,7 +663,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: rejects > 20 ids in propagate → 400 too_many_variants")}`,
 	async () => {
-		const cid = `pv14_${suffix()}`;
+		const cid = readableVariantTestId("lc_too_many_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -711,7 +706,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: force_version + disable_version both true → 400 conflicting_version_flags")}`,
 	async () => {
-		const cid = `pv15_${suffix()}`;
+		const cid = readableVariantTestId("lc_flags_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -745,7 +740,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants create_variant: variant shares stripe_product_id with base")}`,
 	async () => {
-		const cid = `pv16_${suffix()}`;
+		const cid = readableVariantTestId("lc_stripe_reuse");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -769,19 +764,10 @@ test.concurrent(
 		const baseFull = await getFull(ctx, base.id);
 		const variantFull = await getFull(ctx, variantId);
 
-		const basePrice = baseFull.prices.find(
-			(p) => p.config?.type === "fixed",
-		);
-		const variantPrice = variantFull.prices.find(
-			(p) => p.config?.type === "fixed",
-		);
-
-		expect(basePrice).toBeDefined();
-		expect(variantPrice).toBeDefined();
-		expect(variantPrice?.config?.stripe_product_id).toBeDefined();
-		expect(variantPrice?.config?.stripe_product_id).toBe(
-			basePrice?.config?.stripe_product_id,
-		);
+		expectStripeResourcesCarriedToVariant({
+			base: baseFull,
+			variant: variantFull,
+		});
 	},
 );
 
@@ -791,7 +777,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("variants update: is_default=true on variant → 400 variant_cannot_be_default")}`,
 	async () => {
-		const cid = `pv17_${suffix()}`;
+		const cid = readableVariantTestId("lc_default_err");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({

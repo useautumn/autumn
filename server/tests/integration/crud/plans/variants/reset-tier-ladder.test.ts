@@ -39,11 +39,11 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const { db, org, env } = ctx;
-const getSuffix = () => Math.random().toString(36).slice(2, 9);
 
 const cleanup = async (...ids: string[]) => {
 	for (const id of ids) {
@@ -95,8 +95,8 @@ const createBaseWithItems = async (id: string, itemDefs: Record<string, unknown>
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: create_variant copies BOTH same-feature_id day+month items")}`, async () => {
-	const baseId = `rt_copy_${getSuffix()}`;
-	const variantId = `rt_copy_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_copy");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [
 		creditsItem(100, ResetInterval.Month),
 		creditsItem(50, ResetInterval.Day),
@@ -121,7 +121,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: create_variant copies BOTH sa
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: preview_update diff targets only day-reset item, month sibling untouched")}`, async () => {
-	const baseId = `rt_diff_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_diff_day_month");
 	await createBaseWithItems(baseId, [
 		creditsItem(100, ResetInterval.Month),
 		creditsItem(50, ResetInterval.Day),
@@ -154,8 +154,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: preview_update diff targets o
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: propagate day-only change, month sibling byte-identical")}`, async () => {
-	const baseId = `rt_prop_${getSuffix()}`;
-	const variantId = `rt_prop_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_prop_day");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [
 		creditsItem(100, ResetInterval.Month),
 		creditsItem(50, ResetInterval.Day),
@@ -192,13 +192,13 @@ test.concurrent(`${chalk.yellowBright("reset-tier: propagate day-only change, mo
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: tier ladder — 4 priced variants retain own price, Dashboard added")}`, async () => {
-	const baseId = `rt_ladder_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_ladder");
 	await createBaseWithItems(baseId, [prepaidCreditsItem(10)]);
 
 	const variantIds: string[] = [];
 	const prices = [10, 20, 30, 40];
 	for (let i = 0; i < 4; i++) {
-		const vid = `${baseId}_v${i + 1}_${getSuffix()}`;
+		const vid = `${baseId}_tier_${i + 1}`;
 		await createVariantRpc(baseId, vid, `Tier ${i + 1}`);
 		await autumnRpc.plans.update<ApiPlanV1>(vid, {
 			items: [prepaidCreditsItem(prices[i])],
@@ -228,12 +228,12 @@ test.concurrent(`${chalk.yellowBright("reset-tier: tier ladder — 4 priced vari
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: 21 variants in propagate → too_many_variants")}`, async () => {
-	const baseId = `rt_21_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_limit_21");
 	await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 
 	const variantIds: string[] = [];
 	for (let i = 0; i < 21; i++) {
-		const vid = `${baseId}_v${i}_${getSuffix()}`;
+		const vid = `${baseId}_variant_${i}`;
 		await createVariantRpc(baseId, vid, `V${i}`);
 		variantIds.push(vid);
 	}
@@ -256,12 +256,12 @@ test.concurrent(`${chalk.yellowBright("reset-tier: 21 variants in propagate → 
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: 20 variants in propagate succeeds (boundary)")}`, async () => {
-	const baseId = `rt_20_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_limit_20");
 	await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 
 	const variantIds: string[] = [];
 	for (let i = 0; i < 20; i++) {
-		const vid = `${baseId}_v${i}_${getSuffix()}`;
+		const vid = `${baseId}_variant_${i}`;
 		await createVariantRpc(baseId, vid, `V${i}`);
 		variantIds.push(vid);
 	}
@@ -285,7 +285,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: 20 variants in propagate succ
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning of both base and variant")}`, async () => {
-	const customerId = `rt_ver_${getSuffix()}`;
+	const customerId = readableVariantTestId("rt_version_day");
 	const baseProd = products.base({
 		id: "base",
 		items: [
@@ -309,10 +309,10 @@ test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning
 	});
 
 	const prefixedBaseId = `base_${customerId}`;
-	const variantId = `${prefixedBaseId}_v_${getSuffix()}`;
+	const variantId = `${prefixedBaseId}_variant`;
 	await createVariantRpc(prefixedBaseId, variantId, "Variant Versioned");
 
-	const cust2 = `rt_ver_c2_${getSuffix()}`;
+	const cust2 = readableVariantTestId("rt_version_day_c2");
 	await autumnV1_2.createCustomer({ id: cust2, email: `${cust2}@test.com`, name: "C2" });
 	await autumnV1_2.attach({ customer_id: cust2, product_id: variantId } as any);
 
@@ -352,8 +352,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: hour-reset propagates to variant")}`, async () => {
-	const baseId = `rt_hour_${getSuffix()}`;
-	const variantId = `rt_hour_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_hour");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [
 		creditsItem(50, ResetInterval.Hour),
 	]);
@@ -387,8 +387,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: hour-reset propagates to vari
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: Stripe price_id retained on variant version-up")}`, async () => {
-	const baseId = `rt_stripe_${getSuffix()}`;
-	const variantId = `rt_stripe_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_stripe_price");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [prepaidCreditsItem(10)]);
 	await createVariantRpc(baseId, variantId, "Variant Stripe");
 
@@ -423,8 +423,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: Stripe price_id retained on v
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: create_variant rejects archived base → cannot_fork_archived_base")}`, async () => {
-	const baseId = `rt_arch_${getSuffix()}`;
-	const variantId = `rt_arch_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_archived_err");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, { archived: true });
@@ -444,7 +444,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: create_variant rejects archiv
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: create_variant rejects id collision → product_id_already_exists")}`, async () => {
-	const baseId = `rt_coll_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_collision_err");
 	await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 
 	await expectAutumnError({
@@ -462,8 +462,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: create_variant rejects id col
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("reset-tier: preview_update rejects variant id → cannot_preview_on_variant")}`, async () => {
-	const baseId = `rt_pv_${getSuffix()}`;
-	const variantId = `rt_pv_v_${getSuffix()}`;
+	const baseId = readableVariantTestId("rt_preview_variant_err");
+	const variantId = `${baseId}_variant`;
 	await createBaseWithItems(baseId, [creditsItem(100, ResetInterval.Month)]);
 	await createVariantRpc(baseId, variantId, "Variant Preview");
 
