@@ -4,6 +4,7 @@ import {
 	type CreateVariantParamsV2,
 	ErrCode,
 	type FullProduct,
+	ProcessorType,
 	RecaseError,
 	copyStripeResourcesToMatchingPrice,
 } from "@autumn/shared";
@@ -78,6 +79,19 @@ const copyBaseStripeResourcesToVariant = async ({
 	base: FullProduct;
 	variant: FullProduct;
 }) => {
+	if (
+		base.processor?.type === ProcessorType.Stripe &&
+		base.processor.id &&
+		variant.processor?.id !== base.processor.id
+	) {
+		variant.processor = base.processor;
+		await ProductService.updateByInternalId({
+			db: ctx.db,
+			internalId: variant.internal_id,
+			update: { processor: base.processor },
+		});
+	}
+
 	for (const targetPrice of variant.prices) {
 		const { copiedFields } = copyStripeResourcesToMatchingPrice({
 			targetPrice,
