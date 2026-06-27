@@ -63,6 +63,10 @@ export const entities = pgTable(
 			table.id,
 		),
 		index("idx_entities_internal_customer_id").on(table.internal_customer_id),
+		index("idx_entities_internal_feature_id_c")
+			.on(sql`${table.internal_feature_id} COLLATE "C"`)
+			.where(sql`${table.internal_feature_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_entities_customer_internal_desc").on(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,

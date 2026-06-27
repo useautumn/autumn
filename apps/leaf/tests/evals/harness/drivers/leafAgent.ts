@@ -5,7 +5,6 @@ import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
-import { agentDocUris } from "../../../../src/agent/prompts/readDocs.js";
 import { createAutumnChatAgent } from "../../../../src/agent/runMessage/engines/autumnChatAgent.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
 import { createMastraBraintrustObservability } from "../../../../src/providers/braintrust/index.js";
@@ -64,21 +63,6 @@ const instrumentToolCalls = ({
 	}
 };
 
-const readDocs = async (mcpClient: MCPClient) => {
-	const resources = await Promise.allSettled(
-		agentDocUris.map((uri) => mcpClient.resources.read("autumn", uri)),
-	);
-	return resources
-		.flatMap((result) =>
-			result.status === "fulfilled"
-				? result.value.contents.flatMap((content) =>
-						"text" in content ? [content.text] : [],
-					)
-				: [],
-		)
-		.join("\n\n");
-};
-
 const appendUserMessage = ({
 	input,
 	messages,
@@ -109,10 +93,7 @@ export const createLeafAgentDriver = ({
 				},
 			},
 		});
-		const [{ toolsets, errors }, docsText] = await Promise.all([
-			mcpClient.listToolsetsWithErrors(),
-			readDocs(mcpClient),
-		]);
+		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
 		if (Object.keys(errors).length) {
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
@@ -124,7 +105,6 @@ export const createLeafAgentDriver = ({
 		instrumentToolCalls({ toolCalls, tools, trace });
 
 		const agent = createAutumnChatAgent({
-			docsText,
 			env,
 			model,
 			tools: tools as ToolsInput,
@@ -163,13 +143,13 @@ export const createLeafAgentDriver = ({
 		const rememberApproval = (output: {
 			finishReason?: string;
 			runId?: string;
-			suspendPayload?: { toolCallId?: string };
+			suspension?: { toolCallId?: string };
 		}) => {
 			pendingApproval =
 				output.finishReason === "suspended" && output.runId
 					? {
 							runId: output.runId,
-							toolCallId: output.suspendPayload?.toolCallId,
+							toolCallId: output.suspension?.toolCallId,
 						}
 					: null;
 			if (pendingApproval) trace.event({ type: "approval_pending" });

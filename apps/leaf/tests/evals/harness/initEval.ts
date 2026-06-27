@@ -25,7 +25,6 @@ import type { EvalTraceLevel } from "./tracing/types.js";
 // Single toggle: default lives in chatAgentConfig (DEFAULT_EVAL_DRIVER);
 // EVAL_DRIVER=mastra|claude-managed overrides per run. Explicit `driver` on
 // initEval always wins (e.g. generic-mcp policy evals).
-// The "vercel" harness has no eval driver yet; evals run through claude-managed/mastra.
 const evalDrivers: Partial<Record<AgentHarnessName, () => EvalAgentDriver>> = {
 	"claude-managed": createClaudeManagedLiveDriver,
 	mastra: createLeafAgentDriver,

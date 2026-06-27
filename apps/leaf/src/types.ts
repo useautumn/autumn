@@ -18,10 +18,7 @@ export const agentOutputSchema = z.preprocess(
 			value && typeof value === "object"
 				? (value as Record<string, unknown>)
 				: {};
-		const suspendPayload = payload.suspendPayload as
-			| Record<string, unknown>
-			| undefined;
-		const previewApproval = payload.previewApproval as
+		const suspension = payload.suspension as
 			| Record<string, unknown>
 			| undefined;
 		return {
@@ -30,15 +27,11 @@ export const agentOutputSchema = z.preprocess(
 			finishReason: payload.finishReason,
 			stopReason: payload.stopReason,
 			runId: payload.runId,
-			suspendPayload: suspendPayload && {
-				toolCallId: suspendPayload.toolCallId,
-				toolName: suspendPayload.toolName,
-				args: suspendPayload.args,
-			},
-			previewApproval: previewApproval && {
-				toolName: previewApproval.toolName,
-				toolArgs: previewApproval.toolArgs,
-				preview: previewApproval.preview,
+			suspension: suspension && {
+				toolCallId: suspension.toolCallId,
+				toolName: suspension.toolName,
+				toolArgs: suspension.toolArgs,
+				preview: suspension.preview,
 			},
 		};
 	},
@@ -48,15 +41,10 @@ export const agentOutputSchema = z.preprocess(
 		finishReason: z.string().optional(),
 		stopReason: z.enum(["timeout", "user"]).optional(),
 		runId: z.string().optional(),
-		suspendPayload: z
+		// Set when the agent paused on a destructive write awaiting approval.
+		suspension: z
 			.strictObject({
 				toolCallId: z.string().optional(),
-				toolName: z.string(),
-				args: z.record(z.string(), z.unknown()).optional(),
-			})
-			.optional(),
-		previewApproval: z
-			.strictObject({
 				toolName: z.string(),
 				toolArgs: z.record(z.string(), z.unknown()),
 				preview: z.unknown(),
@@ -64,6 +52,10 @@ export const agentOutputSchema = z.preprocess(
 			.optional(),
 	}),
 );
+
+export type Suspension = NonNullable<
+	z.infer<typeof agentOutputSchema>["suspension"]
+>;
 
 export type AgentOutput = z.infer<typeof agentOutputSchema>;
 

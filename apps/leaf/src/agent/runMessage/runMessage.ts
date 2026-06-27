@@ -1,8 +1,6 @@
 import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
-import type { VercelHarnessSessionRef } from "../../harness/vercelHarness/session/ensureSession.js";
-import { findVercelHarnessSessionForThread } from "../../harness/vercelHarness/session/ensureSession.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
@@ -55,10 +53,11 @@ export const runMessage = async ({
 }: BotMessage): Promise<RunMessageOutput> => {
 	// The engine interrupts the session at the deadline; the wider outer
 	// timeout only fires if the stream itself wedges.
-	const deadlineAt = Date.now() + messageTimeoutMs[chatEnv.AGENT_HARNESS];
+	const harness = chatEnv.SLACK_AGENT_HARNESS;
+	const deadlineAt = Date.now() + messageTimeoutMs[harness];
 	return withTimeout(
 		(async () => {
-			const engine = agentEngines[chatEnv.AGENT_HARNESS];
+			const engine = agentEngines[harness];
 			const thread = {
 				channelId,
 				provider: installation.provider,
@@ -95,13 +94,6 @@ export const runMessage = async ({
 			const existingSessionPromise = (() => {
 				if (engine.name === "claude-managed") {
 					return findClaudeManagedSessionForThread({
-						db,
-						orgId: org.id,
-						thread: effectiveThread,
-					});
-				}
-				if (engine.name === "vercel") {
-					return findVercelHarnessSessionForThread({
 						db,
 						orgId: org.id,
 						thread: effectiveThread,
@@ -151,7 +143,7 @@ export const runMessage = async ({
 
 			const agentTools =
 				engine.name === "claude-managed"
-					? { destructiveTools: new Set<string>(), docsText: "" }
+					? { destructiveTools: new Set<string>() }
 					: await setupAgentToolContext({ env, logger, token });
 
 			const ctx: MessageContext = {
@@ -159,10 +151,6 @@ export const runMessage = async ({
 				claudeManagedSession:
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
-						: undefined,
-				vercelHarnessSession:
-					engine.name === "vercel"
-						? (existingHarnessSession as VercelHarnessSessionRef | undefined)
 						: undefined,
 				deadlineAt,
 				env,

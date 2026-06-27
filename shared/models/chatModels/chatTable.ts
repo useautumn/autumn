@@ -14,7 +14,8 @@ export type ChatProvider =
 	| "slack"
 	| "slack_admin"
 	| `slack_admin:${string}`
-	| "discord";
+	| "discord"
+	| "web";
 
 export const chatInstallations = pgTable(
 	"chat_installations",
@@ -93,6 +94,9 @@ export const chatOAuthCredentials = pgTable(
 		id: text().primaryKey().notNull(),
 		chat_installation_id: text("chat_installation_id").notNull(),
 		org_id: text("org_id").notNull(),
+		// The dashboard user this credential is scoped to (web chat). Null on
+		// legacy/Slack rows, which are installation-scoped rather than per-user.
+		user_id: text("user_id"),
 		env: text("env").$type<AppEnv>().notNull(),
 		oauth_client_id: text("oauth_client_id").notNull(),
 		oauth_consent_id: text("oauth_consent_id"),
@@ -101,6 +105,11 @@ export const chatOAuthCredentials = pgTable(
 		access_token_expires_at: numeric("access_token_expires_at", {
 			mode: "number",
 		}).notNull(),
+		// When the refresh token dies; past this, a new mint must come from the
+		// user's better-auth cookie. Null on legacy rows (treated as expired).
+		refresh_token_expires_at: numeric("refresh_token_expires_at", {
+			mode: "number",
+		}),
 		scopes: jsonb().$type<string[]>().notNull(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -116,10 +125,11 @@ export const chatOAuthCredentials = pgTable(
 			foreignColumns: [organizations.id],
 			name: "chat_oauth_credentials_org_id_fkey",
 		}).onDelete("cascade"),
-		unique("chat_oauth_credentials_installation_org_env_key").on(
+		unique("chat_oauth_credentials_installation_org_env_user_key").on(
 			table.chat_installation_id,
 			table.org_id,
 			table.env,
+			table.user_id,
 		),
 	],
 );

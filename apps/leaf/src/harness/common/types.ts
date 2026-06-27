@@ -9,6 +9,8 @@ export type SuspendedToolCall = {
 	args: Record<string, unknown>;
 	toolCallId: string;
 	toolName: string;
+	/** Cost facts captured from the agent's preview call this turn, if any. */
+	preview?: unknown;
 };
 
 /** Harness-agnostic outcome of one driven agent turn. */

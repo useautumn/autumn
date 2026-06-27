@@ -55,7 +55,7 @@ export const createAutumnMcpClient = ({
 		id: `autumn-${token.slice(0, 14)}`,
 		servers: {
 			autumn: {
-				url: new URL("/mcp", env.MCP_SERVER_URL),
+				url: new URL("/mcp", env.LOCAL_MCP_URL),
 				requestInit: { headers },
 				eventSourceInit: { fetch: fetchWithAuth },
 				fetch: fetchWithAuth,

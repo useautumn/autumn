@@ -3,10 +3,6 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
-import {
-	createPreviewCapture,
-	isToolErrorResult,
-} from "../../../src/agent/tools/toolPolicy.js";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
 import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
 import type { AgentOutput } from "../../../src/types.js";
@@ -30,17 +26,13 @@ const testLogger = {
 } as unknown as AutumnLogger;
 
 describe("approval flow", () => {
-	test("maps suspended destructive tool output to a pending approval request", () => {
+	test("maps a suspended write to a pending approval request", () => {
 		const request = approvalRequestFromOutput({
 			env: AppEnv.Sandbox,
 			finishReason: "suspended",
 			runId: "run_1",
-			suspendPayload: {
+			suspension: {
 				toolCallId: "call_1",
-				toolName: "attach",
-				args: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			},
-			previewApproval: {
 				toolName: "attach",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 				preview: { total: 20 },
@@ -58,102 +50,35 @@ describe("approval flow", () => {
 		});
 	});
 
-	test("backfills suspended tool metadata from the preview capture", () => {
-		const request = approvalRequestFromOutput({
-			env: AppEnv.Sandbox,
-			finishReason: "suspended",
-			runId: "run_1",
-			suspendPayload: {
-				toolCallId: "call_1",
-				toolName: "unknown",
-				args: {},
-			},
-			previewApproval: {
-				toolName: "attach",
-				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-				preview: { total: 20 },
-			},
-		} satisfies AgentOutput);
-
-		expect(request).toEqual({
-			env: AppEnv.Sandbox,
-			runId: "run_1",
-			toolCallId: "call_1",
-			toolName: "attach",
-			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 20 },
-		});
-	});
-
-	test("maps preview output to the matching write approval request", () => {
+	test("maps a suspended write whose preview wasn't captured (card backfills later)", () => {
 		const request = approvalRequestFromOutput({
 			env: AppEnv.Live,
-			previewApproval: {
+			finishReason: "suspended",
+			runId: "run_2",
+			suspension: {
+				toolCallId: "call_2",
 				toolName: "updateSubscription",
 				toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-				preview: { total: 100 },
 			},
 		} satisfies AgentOutput);
 
 		expect(request).toEqual({
 			env: AppEnv.Live,
-			runId: undefined,
-			toolCallId: undefined,
+			runId: "run_2",
+			toolCallId: "call_2",
 			toolName: "updateSubscription",
 			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
-			preview: { total: 100 },
+			preview: undefined,
 		});
 	});
 
-	test("reset clears captured previews so superseded turns cannot nudge", () => {
-		const previewCapture = createPreviewCapture();
-		previewCapture.onToolCall({
-			name: "previewAttach",
-			input: { request: { customer_id: "cus_1", plan_id: "pro" } },
-		});
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: { content: [{ type: "text", text: "{}" }], isError: false },
-		});
-		expect(previewCapture.captured).toBeDefined();
-
-		previewCapture.reset();
-		expect(previewCapture.captured).toBeUndefined();
-
-		// Pending args recorded before the reset must not capture afterwards.
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: { content: [{ type: "text", text: "{}" }], isError: false },
-		});
-		expect(previewCapture.captured).toBeUndefined();
-	});
-
-	test("does not capture failed previews as approval candidates", () => {
-		const previewCapture = createPreviewCapture();
-		const failedPreview = {
-			isError: true,
-			content: [
-				{
-					type: "text",
-					text: JSON.stringify({
-						id: "TOOL_EXECUTION_FAILED",
-						details: { errorMessage: "plan_already_attached" },
-					}),
-				},
-			],
-		};
-
-		expect(isToolErrorResult(failedPreview)).toBe(true);
-		previewCapture.onToolCall({
-			name: "previewAttach",
-			input: { customer_id: "cus_1", product_id: "enterprise" },
-		});
-		previewCapture.onToolResult({
-			name: "previewAttach",
-			output: failedPreview,
-		});
-
-		expect(previewCapture.captured).toBeUndefined();
+	test("returns nothing when the turn did not suspend", () => {
+		expect(
+			approvalRequestFromOutput({
+				env: AppEnv.Sandbox,
+				text: "Done.",
+			} satisfies AgentOutput),
+		).toBeUndefined();
 	});
 
 	test("formats Autumn API errors for Slack approval cards", () => {
@@ -225,7 +150,7 @@ describe("approval flow", () => {
 	test("edits the approval message to failed when the approved tool fails", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const replies: string[] = [];
@@ -252,7 +177,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => ({
+				resolveApproval: async () => ({
 					error: true,
 					message: "Missing email.",
 				}),
@@ -283,7 +208,7 @@ describe("approval flow", () => {
 	test("claims before acknowledging and posts the outcome to the thread", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const calls: string[] = [];
 		const edits: unknown[] = [];
@@ -306,7 +231,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					calls.push("run");
 					return { result: { status: "active" }, text: "All done!" };
 				},
@@ -336,7 +261,7 @@ describe("approval flow", () => {
 	test("shows the current state when a claim is rejected", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const approval = {
@@ -358,7 +283,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					throw new Error("should not run");
 				},
 				cancelApproval: async () => undefined,
@@ -380,7 +305,7 @@ describe("approval flow", () => {
 	test("shows the expired state when a stale pending approval is clicked", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/internal/approvals/actions/handleApprovalAction.js"
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const edits: unknown[] = [];
 		const approval = {
@@ -401,7 +326,7 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				approveAndRun: async () => {
+				resolveApproval: async () => {
 					throw new Error("should not run");
 				},
 				cancelApproval: async () => undefined,

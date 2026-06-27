@@ -6,6 +6,7 @@ import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { agent } from "./agent.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
+import { catalog } from "./catalog.js";
 import { customers } from "./customers.js";
 import { entities } from "./entities.js";
 import { features } from "./features.js";
@@ -41,6 +42,7 @@ export const endpointByTool = {
 	...entities.endpoints,
 	...features.endpoints,
 	...plans.endpoints,
+	...catalog.endpoints,
 	...billing.endpoints,
 	...balances.endpoints,
 	...logs.endpoints,
@@ -53,6 +55,7 @@ export const schemaByTool = {
 	...entities.schemas,
 	...features.schemas,
 	...plans.schemas,
+	...catalog.schemas,
 	...billing.schemas,
 	...balances.schemas,
 	...logs.schemas,
@@ -67,6 +70,7 @@ const domains: ToolDomain[] = [
 	entities.domain,
 	features.domain,
 	plans.domain,
+	catalog.domain,
 	billing.domain,
 	balances.domain,
 	logs.domain,
@@ -86,8 +90,12 @@ type ToolRecord = Record<string, ReturnType<typeof createTool>>;
  * Public MCP toolset: previews call Autumn's preview endpoints directly and
  * writes apply immediately (external clients gate destructive calls themselves).
  */
-const createRawAutumnOperationToolset = (): ToolRecord => ({
-	...requireIntentOnTools({
+const createRawAutumnOperationToolset = ({
+	requireIntent,
+}: {
+	requireIntent: boolean;
+}): ToolRecord => {
+	const operationTools: ToolRecord = {
 		...toTools(operations, operationTool),
 		...toTools(billingPreviews, (config) =>
 			operationTool({ ...config, endpoint: config.previewEndpoint }),
@@ -95,16 +103,26 @@ const createRawAutumnOperationToolset = (): ToolRecord => ({
 		...toTools(localPreviews, rawLocalPreviewTool),
 		...toTools(confirmedWrites, operationTool),
 		...orgTools,
-	} as ToolRecord),
-	dateToEpochMilliseconds: dateToEpochMillisecondsTool,
-	epochMillisecondsToDate: epochMillisecondsToDateTool,
-});
+	};
+	return {
+		...(requireIntent ? requireIntentOnTools(operationTools) : operationTools),
+		dateToEpochMilliseconds: dateToEpochMillisecondsTool,
+		epochMillisecondsToDate: epochMillisecondsToDateTool,
+	};
+};
 
-export const createRawAutumnOperationTools = () =>
+/**
+ * Build the Autumn MCP toolset. `requireIntent` (default true) forces a
+ * one-sentence `intent` on every external tool call for analytics — disable it
+ * for our own internal agent, which would otherwise fail when it omits it.
+ */
+export const createRawAutumnOperationTools = ({
+	requireIntent = true,
+}: {
+	requireIntent?: boolean;
+} = {}) =>
 	instrumentToolsWithAnalytics({
-		// Require a one-sentence `intent` on every external tool call so we can
-		// see what clients are actually trying to do (captured in analytics).
-		tools: createRawAutumnOperationToolset(),
+		tools: createRawAutumnOperationToolset({ requireIntent }),
 		surface: "mcp",
 	});
 

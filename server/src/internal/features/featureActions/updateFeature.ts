@@ -3,7 +3,9 @@ import {
 	type CreditSystemConfig,
 	ErrCode,
 	type Feature,
+	FeatureAlreadyExistsError,
 	FeatureType,
+	type FeatureUpdateBlocker,
 	isAiCreditSystem,
 	isAnyCreditSystem,
 	type ModelMarkups,
@@ -20,6 +22,7 @@ import {
 	validateCreditSystemSchemaReferences,
 	validateMeteredConfig,
 } from "../featureUtils.js";
+import { detectFeatureUpdateBlockers } from "../utils/updateFeatureUtils/detectFeatureUpdateBlockers.js";
 import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUsingFeature.js";
 import { handleFeatureIdChanged } from "../utils/updateFeatureUtils/handleFeatureIdChanged.js";
 import { handleFeatureTypeChanged } from "../utils/updateFeatureUtils/handleFeatureTypeChanged.js";
@@ -135,6 +138,27 @@ const hasAiMarkupConfigChanged = ({
 	});
 };
 
+/** Reproduce the exact error `updateFeature` historically threw for a blocker. */
+const throwFeatureUpdateBlocker = ({
+	blocker,
+	newId,
+}: {
+	blocker: FeatureUpdateBlocker;
+	newId?: string;
+}): never => {
+	if (blocker.code === "id_already_exists" && newId) {
+		throw new FeatureAlreadyExistsError({ featureId: newId });
+	}
+	throw new RecaseError({
+		message: blocker.message,
+		code:
+			blocker.code === "type_switch_credit_system"
+				? undefined
+				: ErrCode.InvalidFeature,
+		statusCode: 400,
+	});
+};
+
 /**
  * Updates an existing feature with full validation logic
  */
@@ -175,12 +199,20 @@ export const updateFeature = async ({
 
 	if (isChangingType || isChangingId || isChangingUsageType) {
 		const objectsUsingFeature = await getObjectsUsingFeature({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			allFeatures,
+			ctx,
 			feature,
 		});
+
+		// Validate the whole change before any mutation so it stays atomic.
+		const [blocker] = detectFeatureUpdateBlockers({
+			feature,
+			updates,
+			objectsUsingFeature,
+			allFeatures,
+		});
+		if (blocker) {
+			throwFeatureUpdateBlocker({ blocker, newId: updates.id });
+		}
 
 		// Handle type change
 		if (isChangingType && updates.type) {

@@ -4,17 +4,12 @@ import {
 	roundUsageToNearestBillingUnit,
 	UsageModel,
 } from "@autumn/shared";
-import {
-	ConditionalTooltip,
-	IconButton,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { ConditionalTooltip, IconButton } from "@autumn/ui";
 import { CheckIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
+import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -180,23 +175,6 @@ function PrepaidQuantityControl({
 				)}
 			</AnimatePresence>
 		</motion.div>
-	);
-}
-
-const ITEM_STATE_CONFIG = {
-	new: { color: "bg-green-500", label: "New feature" },
-	removed: { color: "bg-red-500", label: "Removed" },
-} as const;
-
-function ItemStatusDot({ state }: { state: keyof typeof ITEM_STATE_CONFIG }) {
-	const { color, label } = ITEM_STATE_CONFIG[state];
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className={cn("size-2 rounded-full shrink-0", color)} />
-			</TooltipTrigger>
-			<TooltipContent side="top">{label}</TooltipContent>
-		</Tooltip>
 	);
 }
 

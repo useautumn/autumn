@@ -26,6 +26,7 @@ COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
 COPY apps/testbench/package.json apps/testbench/
 COPY apps/website/package.json apps/website/
+COPY packages/agent-docs/package.json packages/agent-docs/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/

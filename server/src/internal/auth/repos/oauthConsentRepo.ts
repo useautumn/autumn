@@ -20,8 +20,12 @@ export const listOAuthConsentsByReferenceId = async ({
 	referenceId: string;
 	env?: AppEnv;
 	includeInternal?: boolean;
-}) =>
-	db
+}) => {
+	// The dashboard/CMA reaches the Autumn MCP through this first-party client;
+	// hide it from a user's authorized apps alongside admin/slack-admin consents.
+	const internalMcpClientId = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
+
+	return db
 		.select({
 			id: oauthConsent.id,
 			clientId: oauthConsent.clientId,
@@ -42,10 +46,14 @@ export const listOAuthConsentsByReferenceId = async ({
 					? undefined
 					: and(
 							ne(oauthConsent.clientId, AUTUMN_ADMIN_OAUTH_CLIENT_ID),
+							internalMcpClientId
+								? ne(oauthConsent.clientId, internalMcpClientId)
+								: undefined,
 							sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != 'slack_admin'`,
 						),
 			),
 		);
+};
 
 export const getOAuthConsentOwner = async ({
 	db,
