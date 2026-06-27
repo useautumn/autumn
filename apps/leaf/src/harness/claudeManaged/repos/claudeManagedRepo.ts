@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { type AppEnv, cmaMemory, cmaSessions, cmaVaults } from "@autumn/shared";
 import { and, eq, isNull } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
@@ -7,9 +8,8 @@ import type { ChatDb } from "../../../lib/db.js";
 const vaultUserIdWhere = (userId?: string | null) =>
 	userId ? eq(cmaVaults.user_id, userId) : isNull(cmaVaults.user_id);
 
-// CMA runtime state in the `leaf` schema, scoped by (org_id, env) so one tenant's
-// sessions/vaults/memory never collide. The shared agent is a single global resource —
-// cached in-memory (ensureLeafResources), not persisted here.
+// CMA runtime state is tenant-scoped; the shared agent resource is cached
+// in-memory by ensureLeafResources, not persisted here.
 export const cmaRepo = {
 	getSession: async ({
 		db,
@@ -184,6 +184,7 @@ export const cmaRepo = {
 		await db
 			.insert(cmaVaults)
 			.values({
+				id: `cma_vault_${crypto.randomUUID().replace(/-/g, "")}`,
 				chat_installation_id: chatInstallationId,
 				org_id: orgId,
 				env,

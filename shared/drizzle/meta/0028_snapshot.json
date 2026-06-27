@@ -1415,6 +1415,12 @@
       "name": "cma_vaults",
       "schema": "leaf",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
         "chat_installation_id": {
           "name": "chat_installation_id",
           "type": "text",

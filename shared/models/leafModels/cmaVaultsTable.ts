@@ -5,6 +5,7 @@ import { leafSchema } from "./leafSchema.js";
 export const cmaVaults = leafSchema.table(
 	"cma_vaults",
 	{
+		id: text("id").primaryKey().notNull(),
 		chat_installation_id: text("chat_installation_id").notNull(),
 		org_id: text("org_id").notNull(),
 		env: text("env").notNull(),
