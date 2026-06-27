@@ -38,16 +38,18 @@ export const isAutumnManagedSubscriptionMetadata = ({
 	windowMs = RECENT_AUTUMN_ACTION_WINDOW_MS,
 	now = Date.now(),
 	requireRecent = true,
+	ignoreManagedSource = false,
 }: {
 	metadata: Stripe.Metadata | null | undefined;
 	windowMs?: number;
 	now?: number;
 	requireRecent?: boolean;
+	ignoreManagedSource?: boolean;
 }): { skip: boolean; reason?: string } => {
 	if (!metadata) return { skip: false };
 
 	const source = metadata[AUTUMN_STRIPE_METADATA_KEYS.managedSource];
-	if (source) {
+	if (source && !ignoreManagedSource) {
 		return {
 			skip: true,
 			reason: `autumn_managed_source=${source}`,

@@ -9,16 +9,6 @@ const labels: Record<string, string> = {
 	createPlan: "Create plan",
 };
 
-const previewWriteTools: Record<string, string> = {
-	previewAttach: "attach",
-	previewUpdateSubscription: "updateSubscription",
-	previewCreateSchedule: "createSchedule",
-	previewCreateBalance: "createBalance",
-};
-
-export const getWriteToolForPreview = (toolName: string) =>
-	previewWriteTools[toolName.replace(/^autumn_/, "")];
-
 // Pure utility tools the agent calls constantly — not worth a progress line.
 const silentTools = new Set([
 	"dateToEpochMilliseconds",
@@ -65,10 +55,23 @@ const gerunds: Record<string, string> = {
 export const toolGerund = (toolName: string) =>
 	gerunds[normalizeToolName(toolName)] ?? toolLabel(toolName);
 
-export type PreviewApproval = {
-	preview: unknown;
-	toolArgs: Record<string, unknown>;
-	toolName: string;
+/** Label for a sandbox builtin tool (e.g. `read` loading a skill). A skill is
+ * read as `<skill-name>/SKILL.md`, so name it by the skill, not "SKILL.md". */
+export const sandboxToolLabel = (
+	name: string,
+	input: Record<string, unknown>,
+) => {
+	const verb = name.charAt(0).toUpperCase() + name.slice(1);
+	const path = input.file_path ?? input.path;
+	if (typeof path !== "string") return verb;
+
+	const segments = path.split("/").filter(Boolean);
+	const basename = segments.at(-1);
+	if (basename?.toUpperCase() === "SKILL.MD" && segments.length >= 2) {
+		const skill = (segments.at(-2) ?? "").replace(/^autumn-/, "");
+		return `Reading the ${skill || "Autumn"} skill`;
+	}
+	return basename ? `${verb} ${basename}` : verb;
 };
 
 export const isToolErrorResult = (output: unknown) => {
@@ -86,53 +89,3 @@ export const isToolErrorResult = (output: unknown) => {
 		) ?? false
 	);
 };
-
-/** Captures the latest preview-tool result as a write-tool approval candidate. */
-export const createPreviewCapture = () => {
-	const previewArgsByTool = new Map<string, Record<string, unknown>>();
-	let captured: PreviewApproval | undefined;
-
-	const capture = ({
-		args,
-		preview,
-		toolName,
-	}: {
-		args: Record<string, unknown>;
-		preview: unknown;
-		toolName: string;
-	}) => {
-		const writeTool = getWriteToolForPreview(toolName);
-		if (!writeTool) return;
-		if (isToolErrorResult(preview)) return;
-		captured = { preview, toolArgs: args, toolName: writeTool };
-	};
-
-	return {
-		get captured() {
-			return captured;
-		},
-		/** Mastra hook style: call + result available together. */
-		captureFromExecution: capture,
-		/** Event-stream style: record args on tool_call, capture on tool_result. */
-		onToolCall: ({
-			input,
-			name,
-		}: {
-			input: Record<string, unknown>;
-			name: string;
-		}) => {
-			if (getWriteToolForPreview(name)) previewArgsByTool.set(name, input);
-		},
-		onToolResult: ({ name, output }: { name: string; output: unknown }) => {
-			const args = previewArgsByTool.get(name);
-			if (args) capture({ args, preview: output, toolName: name });
-		},
-		/** A follow-up supersedes the turn's intent — its preview must not arm the write nudge. */
-		reset: () => {
-			captured = undefined;
-			previewArgsByTool.clear();
-		},
-	};
-};
-
-export type PreviewCapture = ReturnType<typeof createPreviewCapture>;

@@ -4,6 +4,7 @@ import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handle
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
+import { autoSyncUpdatedSubscription } from "./tasks/autoSyncUpdatedSubscription.js";
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleIgnorePastDue } from "./tasks/handleIgnorePastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
@@ -74,6 +75,11 @@ export const handleStripeSubscriptionUpdated = async ({
 
 	// 6. Detect trial-end transition (tags only — no DB writes)
 	handleStripeSubscriptionTrialEnded({
+		ctx,
+		subscriptionUpdatedContext,
+	});
+
+	await autoSyncUpdatedSubscription({
 		ctx,
 		subscriptionUpdatedContext,
 	});

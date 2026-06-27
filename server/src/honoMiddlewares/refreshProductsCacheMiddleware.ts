@@ -24,6 +24,9 @@ const productRoutes = [
 	{ method: "POST", url: "/plans.create" },
 	{ method: "POST", url: "/plans.update" },
 	{ method: "POST", url: "/plans.delete" },
+
+	// Batch catalog write (features + plans upsert)
+	{ method: "POST", url: "/catalog.update" },
 ];
 
 /**

@@ -9,7 +9,10 @@ process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
-const { agentDocUris } = await import("../../../src/agent/prompts/readDocs.js");
+const { leafSystemPrompt, leafSkills } = await import(
+	"@autumn/agent-docs/agent"
+);
+const autumnChatInstructions = leafSystemPrompt("slack");
 const { getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
@@ -21,12 +24,6 @@ const {
 	shouldUseSlackAdminInstallationForWorkspace,
 	validateSlackAdminAccessConfig,
 } = await import("../../../src/internal/slackAdmin/access.js");
-const { autumnChatInstructions } = await import(
-	"../../../src/harness/common/instructions/index.js"
-);
-const { orgMemoryInstructions } = await import(
-	"../../../src/harness/common/instructions/index.js"
-);
 const { createFirecrawlTools } = await import(
 	"../../../src/agent/tools/firecrawl.js"
 );
@@ -59,29 +56,21 @@ afterEach(() => {
 });
 
 describe("chat environment selection", () => {
-	test("loads MCP guidance", () => {
-		expect(agentDocUris).toEqual([
-			"autumn://docs/concepts",
-			"autumn://docs/plan-management",
-			"autumn://docs/billing",
-			"autumn://docs/logs",
+	test("exposes the leaf knowledge skills", () => {
+		expect(leafSkills.map((skill) => skill.name).sort()).toEqual([
+			"autumn-billing",
+			"autumn-catalog",
+			"autumn-concepts",
+			"autumn-investigate",
 		]);
 	});
 
-	test("includes Autumn MCP instructions in the managed agent prompt", () => {
-		expect(autumnChatInstructions).toContain("# Autumn MCP Instructions");
+	test("includes the Autumn rules in the managed agent prompt", () => {
 		expect(autumnChatInstructions).toContain(
-			"Always read the relevant Autumn MCP resources",
+			"Use Autumn MCP tools for Autumn customer",
 		);
 		expect(autumnChatInstructions).toContain(
-			"call the tool directly, never through Bash",
-		);
-	});
-
-	test("allows managed-agent memory to be used autonomously", () => {
-		expect(orgMemoryInstructions).toContain("Use and inspect this memory");
-		expect(orgMemoryInstructions).not.toContain(
-			"do not inspect memory files with Bash",
+			"If the relevant Autumn skill is loaded",
 		);
 	});
 
@@ -91,15 +80,17 @@ describe("chat environment selection", () => {
 		);
 		expect(autumnChatInstructions).toContain("goes in bullets");
 		expect(autumnChatInstructions).toContain("Ask one direct question");
-		expect(autumnChatInstructions).toContain("do not expose internal modeling");
+		expect(autumnChatInstructions).toContain(
+			"do not expose internal modelling",
+		);
 	});
 
 	test("points billing actions to the Billing MCP resource", () => {
 		expect(autumnChatInstructions).toContain("autumn://docs/billing");
 	});
 
-	test("points plan management to MCP resources", () => {
-		expect(autumnChatInstructions).toContain("autumn://docs/plan-management");
+	test("points the dashboard to the catalog knowledge", () => {
+		expect(leafSystemPrompt("dashboard")).toContain("autumn-catalog");
 	});
 
 	test("detects raw tool-call markup before posting output", () => {
@@ -337,14 +328,14 @@ describe("Slack admin access gate", () => {
 
 describe("Claude Managed vault sync", () => {
 	test("builds managed agent system from current Autumn instructions", () => {
-		const system = buildAgentSystem({ docsText: "Autumn docs" });
+		const system = buildAgentSystem({ surface: "slack" });
 
 		expect(system).toContain("One fact answers in one short sentence");
 		expect(system).toContain("goes in bullets");
-		expect(system).toContain("# Autumn MCP Instructions");
-		expect(system).toContain("call the tool directly, never through Bash");
-		expect(system).toContain("Use preview tools before billing writes.");
-		expect(system).toContain("Autumn docs");
+		expect(system).toContain("Use Autumn MCP tools for Autumn customer");
+		expect(system).toContain("Preview before every write.");
+		// The slack surface points at the billing knowledge.
+		expect(system).toContain("autumn-billing");
 	});
 
 	test("treats the vault as stale when local OAuth credentials are newer", () => {

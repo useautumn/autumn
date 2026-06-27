@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
@@ -17,6 +17,7 @@ import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 import { SignIn } from "./views/auth/SignIn";
+import ChatView from "./views/chat/ChatView";
 import { Otp } from "./views/cli/Otp";
 import CustomersPage from "./views/customers/CustomersPage";
 import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
@@ -47,6 +48,11 @@ const envRoutes = (
 	<Route
 		key={`sandbox-${path}`}
 		path={`/sandbox/${path}`}
+		element={sandboxElement}
+	/>,
+	<Route
+		key={`sandbox-named-${path}`}
+		path={`/sandbox/:sandboxSlug/${path}`}
 		element={sandboxElement}
 	/>,
 ];
@@ -88,6 +94,11 @@ export default function App() {
 				<Route path="/accept" element={<AcceptInvitation />} />
 				<Route path="/close" element={<CloseScreen />} />
 
+				<Route
+					path="/sandbox/:sandboxSlug"
+					element={<Navigate replace to="products" />}
+				/>
+
 				{/* Onboarding routes without sidebar */}
 				<Route element={<OnboardingLayout />}>
 					<Route path="/sandbox/quickstart" element={<QuickstartView />} />
@@ -117,6 +128,8 @@ export default function App() {
 							</SquircleProvider>,
 						)}
 
+						{envRoutes("chat", <ChatView />)}
+						{envRoutes("chat/:threadId", <ChatView />)}
 						{envRoutes("customers", <CustomersPage />)}
 						{envRoutes("customers/:customer_id", <CustomerView2 />)}
 						{envRoutes(

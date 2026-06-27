@@ -1,7 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv, ChatApproval, ChatProvider } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
-import type { VercelHarnessSessionRef } from "../../harness/vercelHarness/session/ensureSession.js";
 import type { ActiveRun } from "../../internal/runs/runRegistry.js";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { AgentOutput, ChatContextMessage } from "../../types.js";
@@ -10,7 +9,6 @@ import type { KeyedActionLogger } from "../../ui/progress.js";
 /** Leaf's ctx.features analog: what the agent may do, loaded once per message. */
 export type AgentToolContext = {
 	destructiveTools: Set<string>;
-	docsText: string;
 };
 
 export type MessageAttachment = {
@@ -30,7 +28,6 @@ export type ThreadRef = {
 export type MessageContext = {
 	agentTools: AgentToolContext;
 	claudeManagedSession?: ClaudeManagedSessionRef;
-	vercelHarnessSession?: VercelHarnessSessionRef;
 	/** Epoch ms after which the engine should interrupt the run instead of letting the outer timeout abandon it. */
 	deadlineAt?: number;
 	env: AppEnv;

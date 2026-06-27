@@ -1,14 +1,10 @@
-import { AppEnv } from "@autumn/shared";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@autumn/ui";
 import { LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-} from "@autumn/ui";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { getBackendErr, getRedirectUrl, notNullish } from "@/utils/genUtils";
 import { AdminOnly } from "@/views/admin/components/AdminOnly";
 
 export const AdminDropdownItems = () => {
@@ -18,7 +14,7 @@ export const AdminDropdownItems = () => {
 	const [stopImpersonatingLoading, setStopImpersonatingLoading] =
 		useState(false);
 	const isImpersonating = notNullish(data?.session?.impersonatedBy);
-	const adminPath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
+	const adminPath = getRedirectUrl("/admin", env);
 
 	if (isPending) return null;
 	return (

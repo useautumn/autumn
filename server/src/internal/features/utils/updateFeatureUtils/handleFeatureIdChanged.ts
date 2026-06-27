@@ -1,14 +1,10 @@
-import {
-	type Entitlement,
-	ErrCode,
-	type Feature,
-	FeatureAlreadyExistsError,
-	type Price,
-	RecaseError,
-	type UsagePriceConfig,
+import type {
+	Entitlement,
+	Feature,
+	Price,
+	UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { FeatureService } from "../../FeatureService.js";
@@ -31,27 +27,9 @@ export const handleFeatureIdChanged = async ({
 	newId: string;
 }) => {
 	const { db, org, env } = ctx;
-	const curFeature = ctx.features.find((f) => f.id === newId);
 
-	if (curFeature) {
-		throw new FeatureAlreadyExistsError({ featureId: newId });
-	}
-
-	// 1. Check if any customer entitlement linked to this feature
-	const cusEnts = await CusEntService.getByFeature({
-		db,
-		internalFeatureId: feature.internal_id,
-	});
-
-	if (cusEnts.length > 0) {
-		throw new RecaseError({
-			message: `Cannot change id of feature ${feature.id} because a customer is using it or has used it before`,
-			code: ErrCode.InvalidFeature,
-			statusCode: 400,
-		});
-	}
-
-	// 2. Update all linked objects
+	// Propagate the new id to every linked object. Blocking conditions are
+	// validated upstream by detectFeatureUpdateBlockers.
 	const batchUpdate = [];
 
 	for (const entitlement of linkedEntitlements) {

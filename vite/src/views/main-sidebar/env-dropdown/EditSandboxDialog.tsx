@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { toast } from "sonner";
+import { validateSandboxName } from "@autumn/shared";
 import {
 	Dialog,
 	DialogContent,
@@ -8,6 +7,8 @@ import {
 	DialogTitle,
 	ShortcutButton,
 } from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
 import {
 	type SandboxSummary,
 	useUpdateSandbox,
@@ -33,6 +34,13 @@ export const EditSandboxDialog = ({
 		const trimmed = name.trim();
 		if (!trimmed) {
 			return;
+		}
+		if (trimmed !== sandbox.name) {
+			const nameError = validateSandboxName(trimmed);
+			if (nameError) {
+				toast.error(nameError);
+				return;
+			}
 		}
 
 		try {

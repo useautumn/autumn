@@ -9,6 +9,7 @@ const state = {
 	autumnArgs: null as null | Record<string, unknown>,
 	provisionCalled: false,
 	teardownCalled: false,
+	listSandboxesCalls: 0,
 };
 
 mock.module("@/db/initDrizzle.js", () => ({
@@ -32,7 +33,10 @@ mock.module("autumn-js", () => ({
 }));
 mock.module("@/internal/orgs/OrgService.js", () => ({
 	OrgService: {
-		listSandboxes: async () => state.existing,
+		listSandboxes: async () => {
+			state.listSandboxesCalls++;
+			return state.existing;
+		},
 	},
 }));
 mock.module("@/internal/orgs/orgUtils/provisionSubOrg.js", () => ({
@@ -60,7 +64,10 @@ const actorUser = { id: "u1", email: "a@b.c" } as never;
 const db = {} as never;
 
 const seedSandboxes = (n: number) => {
-	state.existing = Array.from({ length: n }, (_, i) => ({ id: `s${i}` }));
+	state.existing = Array.from({ length: n }, (_, i) => ({
+		id: `s${i}`,
+		name: `Seed Sandbox ${i}`,
+	}));
 };
 
 beforeEach(() => {
@@ -71,6 +78,7 @@ beforeEach(() => {
 	state.autumnArgs = null;
 	state.provisionCalled = false;
 	state.teardownCalled = false;
+	state.listSandboxesCalls = 0;
 	process.env.AUTUMN_SECRET_KEY = "test_key";
 });
 
@@ -151,5 +159,37 @@ describe("createSandboxForOrg enforces the cap before provisioning", () => {
 		expect(state.provisionCalled).toBe(true);
 		expect(res.secret_key).toBe("am_sk_test_generated");
 		expect(res.org.id).toBe("org_sandbox");
+	});
+
+	test("rejects a duplicate name and never provisions", async () => {
+		state.autumn = { allowed: true };
+		state.existing = [{ id: "s0", name: "My Sandbox" }];
+		await expect(
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.provisionCalled).toBe(false);
+	});
+
+	test("rejects a reserved-slug name and never provisions", async () => {
+		state.autumn = { allowed: true };
+		await expect(
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "Products" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.provisionCalled).toBe(false);
+	});
+
+	test("rejects a name that slugifies to empty and never provisions", async () => {
+		state.autumn = { allowed: true };
+		await expect(
+			createSandboxForOrg({ db, masterOrg, actorUser, name: "🚀🎉" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.provisionCalled).toBe(false);
+	});
+
+	test("fetches the sandbox list once per create", async () => {
+		seedSandboxes(1);
+		state.autumn = { allowed: true };
+		await createSandboxForOrg({ db, masterOrg, actorUser, name: "My Sandbox" });
+		expect(state.listSandboxesCalls).toBe(1);
 	});
 });

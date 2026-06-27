@@ -162,6 +162,7 @@ export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
 export * from "./models/orgModels/sandboxDisplay";
+export * from "./models/orgModels/sandboxName";
 export * from "./models/otherModels/metadataTable";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType";
@@ -228,6 +229,8 @@ export * from "./models/subModels/subTable";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
+export * from "./utils/auth/autumnOAuthScopes";
+export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";
 // Checkout Utils
@@ -245,8 +248,6 @@ export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";
 export * from "./utils/invoices/index";
-export * from "./utils/auth/autumnOAuthScopes";
-export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/planFeatureUtils/planToDbFreeTrial";
 export * from "./utils/productDisplayUtils";
 export * from "./utils/productDisplayUtils/sortProductItems";

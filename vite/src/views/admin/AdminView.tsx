@@ -1,4 +1,3 @@
-import { AppEnv } from "@autumn/shared";
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@autumn/ui";
 import { Globe, Sliders } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -6,6 +5,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
+import { getRedirectUrl } from "@/utils/genUtils";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
@@ -19,7 +19,7 @@ export const AdminView = () => {
 	const navigate = useNavigate();
 	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
-	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
+	const adminBasePath = getRedirectUrl("/admin", env);
 	const [activeTab, setActiveTab] = useState("orgs");
 
 	if (isPending) {
