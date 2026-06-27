@@ -39,6 +39,8 @@ import {
 	type MigrationRun,
 	type Operations,
 	type OrgConfig,
+	type PlanUpdatePreview,
+	type PreviewUpdatePlanParamsV2Input,
 	type ProductItem,
 	type RecalculateBalanceParamsV0,
 	type RecalculateBalancePreview,
@@ -778,6 +780,27 @@ export class AutumnInt {
 		delete: async (productId: string) => {
 			const data = await this.delete(`/products/${productId}`);
 			return data;
+		},
+	};
+
+	plans = {
+		previewUpdate: async <
+			TResponse = PlanUpdatePreview,
+			TInput = PreviewUpdatePlanParamsV2Input,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/plans.preview_update`, params);
+			return data as TResponse;
+		},
+
+		createVariant: async <TResponse = any>(params: {
+			base_plan_id: string;
+			variant_plan_id: string;
+			name: string;
+		}): Promise<TResponse> => {
+			const data = await this.post(`/plans.create_variant`, params);
+			return data as TResponse;
 		},
 	};
 

@@ -1,9 +1,5 @@
 import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { z } from "zod/v4";
-import { UpdatePlanParamsV2Schema } from "./updatePlanParamsV1.js";
-
-// Omit propagate_to_variants once it's added to UpdatePlanParamsV2Schema.
-export const PreviewUpdatePlanParamsV2Schema = UpdatePlanParamsV2Schema;
 
 export const PreviewUpdatePlanResponseV2Schema = z.object({
 	will_version: z.boolean().meta({
@@ -28,12 +24,6 @@ export const PreviewUpdatePlanResponseV2Schema = z.object({
 		}),
 });
 
-export type PreviewUpdatePlanParamsV2 = z.infer<
-	typeof PreviewUpdatePlanParamsV2Schema
->;
-export type PreviewUpdatePlanParamsV2Input = z.input<
-	typeof PreviewUpdatePlanParamsV2Schema
->;
 export type PreviewUpdatePlanResponseV2 = z.infer<
 	typeof PreviewUpdatePlanResponseV2Schema
 >;

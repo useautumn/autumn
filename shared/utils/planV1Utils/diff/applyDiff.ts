@@ -56,7 +56,13 @@ const removeItems = (
 };
 
 const toApiPlanItem = (params: CreatePlanItemParamsV1): ApiPlanItem => {
-	return { ...params } as ApiPlanItem;
+	return {
+		...params,
+		included: params.included ?? 0,
+		unlimited: params.unlimited ?? false,
+		reset: params.reset ?? null,
+		price: params.price ?? null,
+	} as ApiPlanItem;
 };
 
 const applyItems = (

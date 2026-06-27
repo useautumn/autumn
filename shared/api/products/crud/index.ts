@@ -3,5 +3,5 @@ export * from "./createVariantParamsV2.js";
 export * from "./deletePlanParamsV2.js";
 export * from "./getPlanParamsV0.js";
 export * from "./listPlanParams.js";
-export * from "./previewUpdatePlanV2.js";
+export * from "../previewUpdatePlan/index.js";
 export * from "./updatePlanParamsV1.js";
