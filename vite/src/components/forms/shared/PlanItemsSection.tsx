@@ -64,6 +64,7 @@ export interface PlanItemsSectionProps {
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
 	readOnly?: boolean;
+	disableBooleanCollapse?: boolean;
 
 	adminIds?: AdminPlanIds;
 }
@@ -154,6 +155,7 @@ export function PlanItemsSection({
 	gateDeletedItemsByDiff = false,
 	changesOnly = false,
 	readOnly = false,
+	disableBooleanCollapse = false,
 	adminIds,
 }: PlanItemsSectionProps) {
 	const {
@@ -173,10 +175,16 @@ export function PlanItemsSection({
 			}),
 		[product, originalItems, showDiff, gateDeletedItemsByDiff],
 	);
-	const visibleItems = changesOnly ? diffVisibleItems : allVisibleItems;
-	const collapsedBooleanItems = changesOnly
+	const visibleItemsRaw = changesOnly ? diffVisibleItems : allVisibleItems;
+	const collapsedBooleanItemsRaw = changesOnly
 		? diffCollapsedBooleanItems
 		: allCollapsedBooleanItems;
+	const visibleItems = disableBooleanCollapse
+		? [...visibleItemsRaw, ...collapsedBooleanItemsRaw]
+		: visibleItemsRaw;
+	const collapsedBooleanItems = disableBooleanCollapse
+		? []
+		: collapsedBooleanItemsRaw;
 
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;
 
@@ -206,12 +214,14 @@ export function PlanItemsSection({
 
 	return (
 		<div>
-			<PlanPriceHeader
-				priceChange={priceChange}
-				product={product}
-				currency={currency}
-				adminIds={adminIds}
-			/>
+			{(!changesOnly || priceChange) && (
+				<PlanPriceHeader
+					priceChange={priceChange}
+					product={product}
+					currency={currency}
+					adminIds={adminIds}
+				/>
+			)}
 			<LayoutGroup>
 				<motion.div
 					className="flex flex-col gap-0"

@@ -193,6 +193,16 @@ export const ErrCode = {
 	// Products
 	ProductNotFound: "product_not_found",
 
+	// Variants
+	NestedVariantNotAllowed: "nested_variant_not_allowed",
+	CannotForkArchivedBase: "cannot_fork_archived_base",
+	ProductIdAlreadyExists: "product_id_already_exists",
+	CannotPreviewOnVariant: "cannot_preview_on_variant",
+	InvalidPropagationTarget: "invalid_propagation_target",
+	TooManyVariants: "too_many_variants",
+	ConflictingVersionFlags: "conflicting_version_flags",
+	VariantCannotBeDefault: "variant_cannot_be_default",
+
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
 };

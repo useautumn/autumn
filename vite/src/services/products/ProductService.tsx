@@ -1,4 +1,4 @@
-import type { UpdatePlanParamsV2Input } from "@autumn/shared";
+import type { ProductItem, UpdatePlanParamsV2Input } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { notNullish } from "@/utils/genUtils";
 
@@ -66,4 +66,38 @@ export class ProductService {
 		);
 		return response.data;
 	}
+
+	static async createVariant(
+		axiosInstance: AxiosInstance,
+		data: { plan_id: string; id: string; name: string },
+	) {
+		const response = await axiosInstance.post(
+			"/v1/plans.create_variant",
+			data,
+		);
+		return response.data;
+	}
+
+	static async previewUpdate(
+		axiosInstance: AxiosInstance,
+		data: UpdatePlanParamsV2Input,
+	) {
+		const response = await axiosInstance.post(
+			"/v1/plans.preview_update",
+			data,
+		);
+		return response.data;
+	}
+
+	static async listVariants(axiosInstance: AxiosInstance, planId: string) {
+		const response = await axiosInstance.get(`/products/${planId}/variants`);
+		return response.data as { variants: PlanVariant[] };
+	}
+}
+
+export interface PlanVariant {
+	id: string;
+	name: string;
+	latest_version: number;
+	items: ProductItem[];
 }

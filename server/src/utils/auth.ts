@@ -11,6 +11,7 @@ import {
 	jwt,
 	type Organization,
 	organization,
+	testUtils,
 } from "better-auth/plugins";
 import type { AccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
@@ -366,6 +367,8 @@ export const auth = betterAuth({
 	...options,
 	plugins: [
 		...options.plugins,
+		// Test-only: exposes privileged ctx.test helpers (no HTTP routes). Off in prod.
+		...(process.env.NODE_ENV !== "production" ? [testUtils()] : []),
 		/**
 		 * Attach `role` and `scopes` to every session response.
 		 *

@@ -14,7 +14,34 @@ import { ProductListCreateButton } from "./ProductListCreateButton";
 
 type ProductWithCounts = ProductV2 & {
 	active_count?: number;
+	subRows?: ProductWithCounts[];
 };
+
+/**
+ * Nest variants (base_id set) under their base plan as subRows. Variants whose
+ * base isn't in the list fall back to top-level rows.
+ */
+function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
+	const byId = new Map(plans.map((p) => [p.id, p]));
+	const bases: ProductWithCounts[] = [];
+	const childrenByBase = new Map<string, ProductWithCounts[]>();
+
+	for (const plan of plans) {
+		const baseId = plan.base_id;
+		if (baseId && byId.has(baseId)) {
+			const siblings = childrenByBase.get(baseId) ?? [];
+			siblings.push(plan);
+			childrenByBase.set(baseId, siblings);
+		} else {
+			bases.push(plan);
+		}
+	}
+
+	return bases.map((base) => {
+		const subRows = childrenByBase.get(base.id);
+		return subRows && subRows.length > 0 ? { ...base, subRows } : base;
+	});
+}
 
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
@@ -86,7 +113,9 @@ export function ProductListTable() {
 				) || [];
 
 			// Then split recurring by add-on status
-			const recurringBasePlans = recurringPlans.filter((p) => !p.is_add_on);
+			const recurringBasePlans = nestVariants(
+				recurringPlans.filter((p) => !p.is_add_on),
+			);
 			const recurringAddOnPlans = recurringPlans.filter((p) => p.is_add_on);
 
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
@@ -119,6 +148,10 @@ export function ProductListTable() {
 			enableSorting: true,
 			state: { sorting },
 			onSortingChange: setSorting,
+			getSubRows: (row: ProductWithCounts) => row.subRows,
+			getRowId: (row: ProductWithCounts) => row.id,
+			autoResetExpanded: false,
+			initialState: { expanded: true },
 		},
 	});
 

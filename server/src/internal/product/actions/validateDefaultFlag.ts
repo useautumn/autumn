@@ -1,5 +1,6 @@
 import {
 	type CreateProductV2Params,
+	ErrCode,
 	type FullProduct,
 	isDefaultTrial,
 	isDefaultTrialV2,
@@ -87,6 +88,14 @@ export const validateDefaultFlag = async ({
 	body: CreateProductV2Params | UpdateProductV2Params;
 	curProduct?: FullProduct;
 }) => {
+	if (body.is_default === true && curProduct?.base_internal_product_id != null) {
+		throw new RecaseError({
+			message: "Variants cannot be the default plan.",
+			code: ErrCode.VariantCannotBeDefault,
+			statusCode: 400,
+		});
+	}
+
 	const validate = (): { type: "free" | "default_trial" | undefined } => {
 		const isDefault =
 			body.is_default !== undefined

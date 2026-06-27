@@ -9,6 +9,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
+import { handleUpdateVariants } from "../handleUpdateVariants.js";
 
 export const handleUpdatePlanV2 = createRoute({
 	scopes: [Scopes.Plans.Write],
@@ -17,8 +18,15 @@ export const handleUpdatePlanV2 = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 
-		const { plan_id, new_plan_id, disable_version, version, ...planParams } =
-			body;
+		const {
+			plan_id,
+			new_plan_id,
+			force_version,
+			disable_version,
+			version,
+			propagate_to_variants,
+			...planParams
+		} = body;
 		const ctx = c.get("ctx");
 
 		const initialFullProduct = await ProductService.getFull({
@@ -41,19 +49,30 @@ export const handleUpdatePlanV2 = createRoute({
 		await updateProduct({
 			ctx,
 			productId: plan_id,
-			query: { version, disable_version },
+			query: { force_version, disable_version },
 			updates: updateProductV2Params,
 			initialFullProduct,
 		});
 
 		const latestPlanId = new_plan_id || plan_id;
+		// Fetch the latest version (no `version` pin): when a new version was
+		// created, newBase must be it — not the version that was edited.
 		const latestFullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: latestPlanId,
 			orgId: ctx.org.id,
 			env: ctx.env,
-			version,
 		});
+
+		const propagateToVariants = propagate_to_variants ?? [];
+		if (propagateToVariants.length > 0) {
+			await handleUpdateVariants({
+				ctx,
+				oldBase: initialFullProduct,
+				newBase: latestFullProduct,
+				propagateToVariants,
+			});
+		}
 
 		const latestPlan = await getPlanResponse({
 			product: latestFullProduct,

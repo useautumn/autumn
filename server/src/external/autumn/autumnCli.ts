@@ -60,11 +60,21 @@ import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 export default class AutumnError extends Error {
 	message: string;
 	code: string;
+	statusCode?: number;
 
-	constructor({ message, code }: { message: string; code: string }) {
+	constructor({
+		message,
+		code,
+		statusCode,
+	}: {
+		message: string;
+		code: string;
+		statusCode?: number;
+	}) {
 		super(message);
 		this.message = message;
 		this.code = code;
+		this.statusCode = statusCode;
 	}
 
 	toString(): string {

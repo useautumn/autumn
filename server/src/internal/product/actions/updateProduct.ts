@@ -8,6 +8,7 @@ import {
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
+	ErrCode,
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
@@ -38,9 +39,11 @@ interface UpdateProductParams {
 		upsert?: boolean;
 		version?: number;
 		disable_version?: boolean;
+		force_version?: boolean;
 	};
 	updates: UpdateProductV2Params;
 	initialFullProduct?: FullProduct;
+	baseInternalProductId?: string;
 }
 export const updateProduct = async ({
 	ctx,
@@ -48,9 +51,18 @@ export const updateProduct = async ({
 	productId,
 	updates,
 	initialFullProduct,
+	baseInternalProductId,
 }: UpdateProductParams) => {
 	const { db, org, env, features, logger } = ctx;
-	const { version, upsert, disable_version } = query;
+	const { version, upsert, disable_version, force_version } = query;
+
+	if (force_version && disable_version) {
+		throw new RecaseError({
+			message: "Cannot use both force_version and disable_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
 
 	const getFullProduct = async () => {
 		if (initialFullProduct) return initialFullProduct;
@@ -118,7 +130,7 @@ export const updateProduct = async ({
 	const freeTrialProvided = "free_trial" in updates;
 	const billingControlsProvided = "billing_controls" in updates;
 
-	if (cusProductExists && !disable_version && billingControlsProvided) {
+	if (cusProductExists && !disable_version && !force_version && billingControlsProvided) {
 		const {
 			billingControlsSame,
 			itemsSame,
@@ -151,6 +163,7 @@ export const updateProduct = async ({
 				latestProduct: fullProduct,
 				org,
 				env,
+				baseInternalProductId,
 			});
 
 			return newProduct;
@@ -180,6 +193,18 @@ export const updateProduct = async ({
 	}
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
+	if (force_version) {
+		const newProduct = await handleVersionProductV2({
+			ctx,
+			newProductV2: newProductV2,
+			latestProduct: fullProduct,
+			org,
+			env,
+			baseInternalProductId,
+		});
+		return newProduct;
+	}
+
 	if (
 		cusProductExists &&
 		!disable_version &&
@@ -200,6 +225,7 @@ export const updateProduct = async ({
 				latestProduct: fullProduct,
 				org,
 				env,
+				baseInternalProductId,
 			});
 
 			return newProduct;

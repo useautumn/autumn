@@ -62,6 +62,18 @@ export const UpdatePlanParamsV2Schema = z
 		disable_version: z.boolean().optional().meta({
 			internal: true,
 		}),
+		force_version: z.boolean().optional().meta({
+			description:
+				"Force versioning even when no customers exist. Mutually exclusive with disable_version.",
+		}),
+		propagate_to_variants: z.array(z.string()).optional().meta({
+			description:
+				"Variant plan IDs to propagate this update to. Empty or omitted means no propagation.",
+		}),
+		is_default: z.boolean().optional().meta({
+			description:
+				"Whether this is the org's default plan. Cannot be true on a variant.",
+		}),
 	});
 
 export const UpdatePlanQuerySchema = z.object({

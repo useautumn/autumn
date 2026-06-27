@@ -288,3 +288,57 @@ export function buildMigrationDraft({
 		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
 	};
 }
+
+export interface CombinedVariantTarget {
+	id: string;
+	version: number;
+}
+
+/**
+ * One migration moving every target plan's customers to that plan's current
+ * (post-propagation) version via a version reset. Targets can be the base plan
+ * and/or its variants — each is a distinct plan_id, so the filter matches
+ * customers on any of them and each gets its own update_plan op. Works for both
+ * versioned and patched-in-place plans because a numeric `version` triggers
+ * resetToCatalogVersion, re-materializing cus_ents from the updated catalog.
+ */
+export function buildCombinedVariantMigrationDraft({
+	variants,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	variants: CombinedVariantTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	if (variants.length === 0) return null;
+
+	const planIds = variants.map((v) => v.id);
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+
+	const basePlanFilter = { plan_id: planMatcher };
+	const planFilter = includeCustom
+		? basePlanFilter
+		: { ...basePlanFilter, custom: false };
+
+	const versionOps = (custom: boolean): UpdatePlanOp[] =>
+		variants.map((v) => ({
+			type: "update_plan",
+			plan_filter: { plan_id: v.id, custom },
+			version: v.version,
+		}));
+
+	const operations: Operations = {
+		customer: includeCustom
+			? [...versionOps(false), ...versionOps(true)]
+			: versionOps(false),
+	};
+
+	return {
+		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
+		filter: { customer: { plan: planFilter } },
+		operations,
+		no_billing_changes: !hasPricingChange,
+	};
+}
+

@@ -2,6 +2,7 @@ import { isFeaturePriceItem } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
@@ -10,6 +11,7 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
@@ -47,6 +49,11 @@ export const SaveChangesBar = ({
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
 	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
 
+	const { data: variants = [] } = usePlanVariants(
+		product.id,
+		hasChanges && !isOnboarding,
+	);
+
 	useProductChangedAlert({
 		hasChanges,
 		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
@@ -68,7 +75,8 @@ export const SaveChangesBar = ({
 				toast.error("Plan counts are loading");
 				return;
 			}
-			if ((counts?.all ?? 0) > 0 && !isMetadataOnlyChange) {
+			const hasCustomers = (counts?.all ?? 0) > 0 && !isMetadataOnlyChange;
+			if (hasCustomers || variants.length > 0) {
 				setShowNewVersionDialog(true);
 				return;
 			}

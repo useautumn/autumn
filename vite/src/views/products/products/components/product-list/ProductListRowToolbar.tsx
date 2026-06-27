@@ -4,6 +4,7 @@ import {
 	ArchiveIcon,
 	ArrowCounterClockwiseIcon,
 	CopyIcon,
+	GitForkIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -16,7 +17,13 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@autumn/ui";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { pushPage } from "@/utils/genUtils";
+import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
 
 export const ProductListRowToolbar = ({
@@ -29,7 +36,15 @@ export const ProductListRowToolbar = ({
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
 	const [copyToEnv, setCopyToEnv] = useState<AppEnv>(AppEnv.Sandbox);
-	const { counts } = useProductsQuery();
+	const [createVariantOpen, setCreateVariantOpen] = useState(false);
+	const [isCreatingVariant, setIsCreatingVariant] = useState(false);
+	const [variantId, setVariantId] = useState("");
+	const [variantName, setVariantName] = useState("");
+	const { counts, invalidate: invalidateProducts } = useProductsQuery();
+	const navigate = useNavigate();
+	const axiosInstance = useAxiosInstance();
+
+	const isVariant = !!product.base_internal_product_id;
 
 	const productCounts = counts[product.id];
 	const allCount = productCounts?.all || 0;
@@ -41,6 +56,37 @@ export const ProductListRowToolbar = ({
 		DeleteIcon = ArrowCounterClockwiseIcon;
 	}
 
+	const handleCreateVariant = async () => {
+		if (!variantId.trim() || !variantName.trim()) {
+			toast.error("Variant ID and name are required");
+			return;
+		}
+		setIsCreatingVariant(true);
+		try {
+			await ProductService.createVariant(axiosInstance, {
+				plan_id: product.id,
+				id: variantId.trim(),
+				name: variantName.trim(),
+			});
+			toast.success("Variant created");
+			setCreateVariantOpen(false);
+			setVariantId("");
+			setVariantName("");
+			await invalidateProducts();
+			pushPage({
+				navigate,
+				path: `/products/${variantId.trim()}`,
+				preserveParams: true,
+			});
+		} catch (error) {
+			const message = (error as { response?: { data?: { message?: string } } })
+				?.response?.data?.message;
+			toast.error(message ?? "Failed to create variant");
+		} finally {
+			setIsCreatingVariant(false);
+		}
+	};
+
 	return (
 		<>
 			<CopyProductDialog
@@ -49,6 +95,18 @@ export const ProductListRowToolbar = ({
 				product={product}
 				targetEnv={copyToEnv}
 			/>
+			{createVariantOpen && (
+				<CreateVariantDialog
+					open={createVariantOpen}
+					setOpen={setCreateVariantOpen}
+					variantId={variantId}
+					setVariantId={setVariantId}
+					variantName={variantName}
+					setVariantName={setVariantName}
+					isLoading={isCreatingVariant}
+					onCreate={handleCreateVariant}
+				/>
+			)}
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<div
@@ -98,6 +156,20 @@ export const ProductListRowToolbar = ({
 							</DropdownMenuItem>
 						</DropdownMenuSubContent>
 					</DropdownMenuSub>
+					{!isVariant && !product.archived && (
+						<DropdownMenuItem
+							className="flex gap-2"
+							onClick={(e) => {
+								e.stopPropagation();
+								e.preventDefault();
+								setDropdownOpen(false);
+								setCreateVariantOpen(true);
+							}}
+						>
+							<GitForkIcon />
+							Create variant
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuItem
 						className="flex gap-2"
 						onClick={(e) => {

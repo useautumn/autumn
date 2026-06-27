@@ -475,6 +475,82 @@ export class ProductService {
 		return result;
 	}
 
+	static async listVariantsByParent({
+		db,
+		baseInternalProductIds,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		baseInternalProductIds: string[];
+		orgId: string;
+		env: AppEnv;
+	}): Promise<FullProduct[]> {
+		if (baseInternalProductIds.length === 0) return [];
+
+		const latestVersionsSubquery = db
+			.select({
+				id: products.id,
+				maxVersion: sql<number>`MAX(${products.version})`.as(
+					"max_version",
+				),
+			})
+			.from(products)
+			.where(
+				and(
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+					inArray(
+						products.base_internal_product_id,
+						baseInternalProductIds,
+					),
+					ne(products.archived, true),
+				),
+			)
+			.groupBy(products.id)
+			.as("latest_versions");
+
+		const data = (await db.query.products.findMany({
+			where: and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				ne(products.archived, true),
+				inArray(
+					products.base_internal_product_id,
+					baseInternalProductIds,
+				),
+				exists(
+					db
+						.select()
+						.from(latestVersionsSubquery)
+						.where(
+							and(
+								eq(latestVersionsSubquery.id, products.id),
+								eq(
+									latestVersionsSubquery.maxVersion,
+									products.version,
+								),
+							),
+						),
+				),
+			),
+			with: {
+				entitlements: {
+					with: {
+						feature: true,
+					},
+					where: eq(entitlements.is_custom, false),
+				},
+				prices: { where: eq(prices.is_custom, false) },
+				free_trials: { where: eq(freeTrials.is_custom, false) },
+			},
+		})) as FullProduct[];
+
+		parseFreeTrials({ products: data });
+
+		return getLatestProducts(data);
+	}
+
 	static async getFull({
 		db,
 		idOrInternalId,

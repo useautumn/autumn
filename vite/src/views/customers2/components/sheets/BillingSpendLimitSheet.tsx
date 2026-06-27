@@ -16,7 +16,7 @@ import {
 	SelectValue,
 	Switch,
 } from "@autumn/ui";
-import { useState } from "react";
+import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
@@ -212,7 +212,7 @@ export function BillingSpendLimitSheet() {
 							<FormLabel>Limit type</FormLabel>
 							<Select
 								value={limitType}
-								onValueChange={(value) => {
+								onValueChange={(value: string) => {
 									// Clear the amount: units and percent aren't interchangeable.
 									setLimitType(value as SpendLimitType);
 									setOverageLimit("");
@@ -245,7 +245,9 @@ export function BillingSpendLimitSheet() {
 								}
 								type="number"
 								value={overageLimit}
-								onChange={(e) => setOverageLimit(e.target.value)}
+								onChange={(e: ChangeEvent<HTMLInputElement>) =>
+									setOverageLimit(e.target.value)
+								}
 							/>
 						</div>
 					</div>

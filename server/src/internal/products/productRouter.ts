@@ -5,6 +5,7 @@ import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePla
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
 import { handleCreatePlan } from "./handlers/handleCreateProduct/handleCreatePlan.js";
 import { handleCreatePlanV2 } from "./handlers/handleCreateProduct/handleCreatePlanV2.js";
+import { handleCreateVariantV2 } from "./handlers/handleCreateVariant/handleCreateVariantV2.js";
 import { handleDeletePlanV1 } from "./handlers/handleDeletePlan/handleDeletePlanV1.js";
 import { handleDeletePlanV2 } from "./handlers/handleDeletePlan/handleDeletePlanV2.js";
 import { handleGetPlanV1 } from "./handlers/handleGetPlan/handleGetPlanV1.js";
@@ -13,6 +14,7 @@ import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlansV2 } from "./handlers/handleListPlans/handleListPlansV2.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
 import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
+import { handlePreviewUpdatePlanV2 } from "./handlers/handlePreviewUpdatePlan/handlePreviewUpdatePlanV2.js";
 import { handleUpdatePlanV1 } from "./handlers/handleUpdatePlan/handleUpdatePlanV1.js";
 import { handleUpdatePlanV2 } from "./handlers/handleUpdatePlan/handleUpdatePlanV2.js";
 
@@ -60,3 +62,5 @@ plansRpcRouter.post(
 	...handleListRevenueCatMappings,
 );
 plansRpcRouter.post("/plans.has_customers", ...handlePlanHasCustomersV2);
+plansRpcRouter.post("/plans.create_variant", ...handleCreateVariantV2);
+plansRpcRouter.post("/plans.preview_update", ...handlePreviewUpdatePlanV2);

@@ -28,7 +28,9 @@ export const createProduct = async ({
 	data,
 }: {
 	ctx: AutumnContext;
-	data: CreateProductV2Params;
+	data: CreateProductV2Params & {
+		base_internal_product_id?: string | null;
+	};
 }) => {
 	const { logger, org, features, env, db } = ctx;
 
@@ -53,6 +55,7 @@ export const createProduct = async ({
 			productData: data,
 			orgId: org.id,
 			env,
+			baseInternalProductId: data.base_internal_product_id,
 		}),
 	});
 

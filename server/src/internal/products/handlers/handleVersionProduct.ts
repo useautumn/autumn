@@ -27,17 +27,15 @@ export const handleVersionProductV2 = async ({
 	org,
 	env,
 	skipStripeInit = false,
-	// items,
-	// freeTrial,
+	baseInternalProductId,
 }: {
 	ctx: AutumnContext;
 	newProductV2: ProductV2;
 	latestProduct: FullProduct;
 	org: Organization;
 	env: AppEnv;
-	// items: ProductItem[];
-	// freeTrial: FreeTrial;
 	skipStripeInit?: boolean;
+	baseInternalProductId?: string;
 }) => {
 	const { db, features } = ctx;
 
@@ -65,6 +63,11 @@ export const handleVersionProductV2 = async ({
 			? { ...latestProduct.config, ...newProductV2.config }
 			: latestProduct.config;
 
+	const effectiveBaseInternalProductId =
+		baseInternalProductId !== undefined
+			? baseInternalProductId
+			: (latestProduct.base_internal_product_id ?? null);
+
 	const newProduct = constructProduct({
 		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
@@ -75,6 +78,7 @@ export const handleVersionProductV2 = async ({
 		orgId: org.id,
 		env: latestProduct.env as AppEnv,
 		processor: latestProduct.processor || undefined,
+		baseInternalProductId: effectiveBaseInternalProductId,
 	});
 
 	// Validate product items...
