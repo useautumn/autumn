@@ -15,6 +15,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AdditionalOptions } from "../../plan/components/edit-plan-details/AdditionalOptions";
 import { BasePriceSection } from "../../plan/components/edit-plan-details/BasePriceSection";
+import { MoreSettingsSection } from "../../plan/components/edit-plan-details/MoreSettingsSection";
 import { PlanTypeSection } from "../../plan/components/edit-plan-details/PlanTypeSection";
 import { DEFAULT_PRODUCT } from "../../plan/utils/defaultProduct";
 import { CreateProductMainDetails } from "./CreateProductMainDetails";
@@ -113,8 +114,9 @@ function CreateProductSheet({
 				<div className="flex-1 overflow-y-auto">
 					<CreateProductMainDetails />
 					<PlanTypeSection />
-					<BasePriceSection />
+					<BasePriceSection className="pb-1" />
 					<AdditionalOptions withSeparator={false} />
+					<MoreSettingsSection />
 				</div>
 
 				<SheetFooter>
