@@ -20,14 +20,8 @@
  * Post-impl green: all matching Stripe resource IDs are present on the variant.
  */
 
-import { expect, test } from "bun:test";
-import {
-	ApiVersion,
-	type FullProduct,
-	type Price,
-	ProcessorType,
-	ProductItemInterval,
-} from "@autumn/shared";
+import { test } from "bun:test";
+import { ApiVersion, ProductItemInterval } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -35,40 +29,14 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-
-const suffix = () => Math.random().toString(36).slice(2, 8);
-
-const stripeResourceFields = new Set([
-	"stripe_product_id",
-	"stripe_price_id",
-	"stripe_empty_price_id",
-	"stripe_placeholder_price_id",
-	"stripe_prepaid_price_v2_id",
-	"stripe_meter_id",
-	"stripe_event_name",
-]);
-
-const priceMatchKey = (price: Price) => {
-	const config = Object.entries(price.config ?? {})
-		.filter(([key]) => !stripeResourceFields.has(key))
-		.sort(([a], [b]) => a.localeCompare(b));
-
-	return JSON.stringify({
-		entitlement_id: price.entitlement_id ? "feature-price" : "base-price",
-		config,
-	});
-};
-
-const indexPricesByMatchKey = (product: FullProduct) =>
-	new Map(product.prices.map((price) => [priceMatchKey(price), price]));
-
-const stripeConfigValue = (price: Price | undefined, field: string) =>
-	(price?.config as Record<string, string | undefined> | undefined)?.[field];
+import { expectStripeResourcesCarriedToVariant } from "./utils/expectVariantProductCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("variants stripe resources: create_variant carries product, price product, and meter IDs")}`,
 	async () => {
-		const cid = `pvstripe_${suffix()}`;
+		const cid = readableVariantTestId("stripe_carryover");
 		const base = products.base({
 			id: `stripe_base_${cid}`,
 			items: [
@@ -107,9 +75,10 @@ test.concurrent(
 		});
 		const variantId = `stripe_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
-			base_plan_id: base.id,
-			variant_plan_id: variantId,
+		await createVariantPlan({
+			rpc,
+			basePlanId: base.id,
+			variantPlanId: variantId,
 			name: "Stripe Resource Variant",
 		});
 
@@ -126,40 +95,10 @@ test.concurrent(
 			env: ctx.env,
 		});
 
-		expect(baseFull.processor?.type).toBe(ProcessorType.Stripe);
-		expect(baseFull.processor?.id).toBeTruthy();
-		expect(variantFull.processor?.type).toBe(ProcessorType.Stripe);
-		expect(variantFull.processor?.id).toBe(baseFull.processor?.id);
-
-		const variantPricesByKey = indexPricesByMatchKey(variantFull);
-		let productIdAssertions = 0;
-		let meterIdAssertions = 0;
-
-		for (const basePrice of baseFull.prices) {
-			const variantPrice = variantPricesByKey.get(priceMatchKey(basePrice));
-			expect(variantPrice).toBeDefined();
-
-			const baseStripeProductId = stripeConfigValue(
-				basePrice,
-				"stripe_product_id",
-			);
-			if (baseStripeProductId) {
-				expect(stripeConfigValue(variantPrice, "stripe_product_id")).toBe(
-					baseStripeProductId,
-				);
-				productIdAssertions++;
-			}
-
-			const baseStripeMeterId = stripeConfigValue(basePrice, "stripe_meter_id");
-			if (baseStripeMeterId) {
-				expect(stripeConfigValue(variantPrice, "stripe_meter_id")).toBe(
-					baseStripeMeterId,
-				);
-				meterIdAssertions++;
-			}
-		}
-
-		expect(productIdAssertions).toBe(baseFull.prices.length);
-		expect(meterIdAssertions).toBeGreaterThan(0);
+		expectStripeResourcesCarriedToVariant({
+			base: baseFull,
+			variant: variantFull,
+			requireMeter: true,
+		});
 	},
 );

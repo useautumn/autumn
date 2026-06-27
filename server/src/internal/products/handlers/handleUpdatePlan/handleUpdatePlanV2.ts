@@ -7,9 +7,9 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
+import { updateVariants } from "../../../product/actions/updateVariants/updateVariants.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
-import { handleUpdateVariants } from "../handleUpdateVariants.js";
 
 export const handleUpdatePlanV2 = createRoute({
 	scopes: [Scopes.Plans.Write],
@@ -66,7 +66,7 @@ export const handleUpdatePlanV2 = createRoute({
 
 		const propagateToVariants = propagate_to_variants ?? [];
 		if (propagateToVariants.length > 0) {
-			await handleUpdateVariants({
+			await updateVariants({
 				ctx,
 				oldBase: initialFullProduct,
 				newBase: latestFullProduct,

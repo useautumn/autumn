@@ -11,6 +11,7 @@ import { SHEET_ANIMATION } from "../planAnimations";
 import { EditPlanHeader } from "./EditPlanHeader";
 import PlanCard from "./plan-card/PlanCard";
 import { SaveChangesBar } from "./SaveChangesBar";
+import { VariantPlanCards } from "./VariantPlanCards";
 
 export const PlanEditor = () => {
 	const isMobile = useIsMobile();
@@ -36,6 +37,7 @@ export const PlanEditor = () => {
 					<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-4 sm:px-10 gap-4">
 						{useIsCusPlanEditor() && <CustomerPlanInfoBox />}
 						<PlanCard />
+						<VariantPlanCards />
 					</div>
 					<div onClick={(e) => e.stopPropagation()}>
 						{useIsCusPlanEditor() ? (

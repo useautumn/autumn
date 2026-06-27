@@ -7,7 +7,7 @@
  *
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   - create_variant: copies base items, sets base_internal_product_id, version=1
- *   - preview_update: returns affected_variants, read-only, rejects on variant
+ *   - preview_update: returns variants, read-only, rejects on variant
  *   - propagate: patches in-place (no customers) or versions (β rule)
  *   - β rule: variant versions iff baseWasVersioned || variantHasCustomers
  *   - multi-version skip: opted-out variant gets only latest diff, not cumulative
@@ -31,8 +31,14 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import {
+	expectStripeResourcesCarriedToVariant,
+	expectVariantProductCorrect,
+} from "./utils/expectVariantProductCorrect.js";
+import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
+import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
-const suffix = () => Math.random().toString(36).slice(2, 8);
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
 const catchErr = async (fn: () => Promise<unknown>) => {
@@ -142,11 +148,12 @@ const createVariant = (
 	variantId: string,
 	name = "Variant",
 ) =>
-	rpc.post("/plans.create_variant", {
-		base_plan_id: baseId,
-		variant_plan_id: variantId,
+	createVariantPlan({
+		rpc,
+		basePlanId: baseId,
+		variantPlanId: variantId,
 		name,
-	}) as Promise<ApiPlanV1>;
+	});
 
 const create5Variants = async (
 	rpc: AutumnRpcCli,
@@ -197,7 +204,7 @@ const getStripePriceId = (full: any) =>
 test.concurrent(
 	`${chalk.yellowBright("interval-family create: 5 variants — all get base_internal_product_id, version=1, share stripe_product_id")}`,
 	async () => {
-		const cid = `iv1_${suffix()}`;
+		const cid = readableVariantTestId("if_create_family");
 		const { ctx, rpc, baseId } = await setupBase(
 			cid,
 			`iv_base_${cid}`,
@@ -205,24 +212,24 @@ test.concurrent(
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const baseFull = await getFull(ctx, baseId);
-		const baseStripeProductId = getStripeProductId(baseFull);
 
 		for (const vid of variantIds) {
 			const v = await getFull(ctx, vid);
-			expect(v.base_internal_product_id).toBe(baseFull.internal_id);
-			expect(v.version).toBe(1);
-			expect(getStripeProductId(v)).toBe(baseStripeProductId);
+			expectStripeResourcesCarriedToVariant({
+				base: baseFull,
+				variant: v,
+			});
 		}
 	},
 );
 
 // ═════════════════════════════════════════════════════════════════
-// 2. preview_update returns all 5, would_version=false (no customers)
+// 2. preview_update returns all 5, versionable=false (no customers)
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("interval-family preview: returns all 5 variants, would_version=false")}`,
+	`${chalk.yellowBright("interval-family preview: returns all 5 variants, versionable=false")}`,
 	async () => {
-		const cid = `iv2_${suffix()}`;
+		const cid = readableVariantTestId("if_preview_family");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -232,12 +239,15 @@ test.concurrent(
 			items: [monthlyItem(200)],
 		});
 
-		expect(res.affected_variants).toHaveLength(5);
-		for (const av of res.affected_variants) {
-			expect(av.would_version).toBe(false);
-		}
-		expect(res.will_version).toBe(false);
-		expect(res.current_version).toBe(1);
+		expectPreviewVariantsCorrect({
+			preview: res,
+			variants: variantIds.map((planId) => ({
+				plan_id: planId,
+				versionable: false,
+			})),
+		});
+		expect(res.versionable).toBe(false);
+		expect((await getFull(ctx, baseId)).version).toBe(1);
 	},
 );
 
@@ -247,14 +257,13 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family propagate: all 5 patch in place when no customers")}`,
 	async () => {
-		const cid = `iv3_${suffix()}`;
+		const cid = readableVariantTestId("if_prop_all_no_cus");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
-			disable_version: true,
 			propagate_to_variants: variantIds,
 		});
 
@@ -275,7 +284,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family propagate: subset of 2 patched, other 3 untouched")}`,
 	async () => {
-		const cid = `iv4_${suffix()}`;
+		const cid = readableVariantTestId("if_prop_subset");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -306,7 +315,7 @@ test.concurrent(
 	test.concurrent(
 	`${chalk.yellowBright("interval-family propagate: customer on one variant — that one versions, other 4 patch in place")}`,
 	async () => {
-		const cid = `iv5_${suffix()}`;
+		const cid = readableVariantTestId("if_variant_customer");
 		const { autumnV2_2, ctx, rpc, baseId } = await setupBaseWithPM(
 			cid,
 			`iv_base_${cid}`,
@@ -346,7 +355,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family propagate: customer on base — base v2 + all 5 variants v2, pin to new base v2 internal_id")}`,
 	async () => {
-		const cid = `iv6_${suffix()}`;
+		const cid = readableVariantTestId("if_base_customer");
 		const { ctx, rpc, baseId } = await setupBaseWithCustomer(
 			cid,
 			`iv_base_${cid}`,
@@ -364,8 +373,7 @@ test.concurrent(
 
 		for (const vid of variantIds) {
 			const v = await getFull(ctx, vid);
-			expect(v.version).toBe(2);
-			expect(v.base_internal_product_id).toBe(baseV2.internal_id);
+			expectVariantProductCorrect({ base: baseV2, variant: v, version: 2 });
 			expect(getMsgAllowance(v)).toBe(200);
 		}
 	},
@@ -378,7 +386,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family multi-version skip: opted-out variant gets only latest diff, not cumulative")}`,
 	async () => {
-		const cid = `iv7_${suffix()}`;
+		const cid = readableVariantTestId("if_multi_version_skip");
 		const { ctx, rpc, baseId } = await setupBaseWithCustomer(
 			cid,
 			`iv_base_${cid}`,
@@ -415,10 +423,9 @@ test.concurrent(
 		// Selected variants: version 2, Messages still 100, Users added at 5
 		for (const vid of selected) {
 			const v = await getFull(ctx, vid);
-			expect(v.version).toBe(2);
+			expectVariantProductCorrect({ base: baseV3, variant: v, version: 2 });
 			expect(getMsgAllowance(v)).toBe(100);
 			expect(getUsersAllowance(v)).toBe(5);
-			expect(v.base_internal_product_id).toBe(baseV3.internal_id);
 		}
 
 		// Unselected variants: still v1, Messages 100, no Users
@@ -437,7 +444,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family intervals: different intervals don't merge — diff targets only matching items")}`,
 	async () => {
-		const cid = `iv8_${suffix()}`;
+		const cid = readableVariantTestId("if_interval_precision");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -469,7 +476,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family preview: read-only — no DB writes, internal_id unchanged")}`,
 	async () => {
-		const cid = `iv9_${suffix()}`;
+		const cid = readableVariantTestId("if_preview_readonly");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -498,7 +505,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("interval-family create_variant: on a variant id → 400 nested_variant_not_allowed")}`,
 	async () => {
-		const cid = `iv10_${suffix()}`;
+		const cid = readableVariantTestId("if_nested_err");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -523,7 +530,7 @@ test.concurrent(
 	test.concurrent(
 	`${chalk.yellowBright("interval-family stripe: carry-forward — variant v2 retains stripe_price_id from v1 for unchanged prices")}`,
 	async () => {
-		const cid = `iv11_${suffix()}`;
+		const cid = readableVariantTestId("if_stripe_price");
 		const { autumnV2_2, ctx, rpc, baseId } = await setupBaseWithPM(
 			cid,
 			`iv_base_${cid}`,
