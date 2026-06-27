@@ -181,8 +181,8 @@ describe("Autumn MCP server", () => {
 		expect(catalogText).toContain("# Catalog");
 		expect(catalogText).toContain("features");
 		expect(catalogText).toContain("plans");
-		expect(catalogText).toContain("previewUpdateCatalog");
-		expect(catalogText).toContain("updateCatalog");
+		expect(catalogText).toContain("Pricing patterns");
+		expect(catalogText).toContain("Usage-Based Pricing");
 
 		const billing = await server.readResource("autumn://docs/billing");
 		const billingText = String(billing.contents[0]?.text ?? "");

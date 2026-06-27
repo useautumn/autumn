@@ -1,2 +1,2 @@
-ALTER TABLE "leaf"."cma_vaults" DROP IF EXISTS CONSTRAINT "cma_vaults_installation_org_env_user_key";--> statement-breakpoint
+ALTER TABLE "leaf"."cma_vaults" DROP CONSTRAINT IF EXISTS "cma_vaults_installation_org_env_user_key";--> statement-breakpoint
 ALTER TABLE "leaf"."cma_vaults" ADD CONSTRAINT "cma_vaults_installation_org_env_user_key" UNIQUE NULLS NOT DISTINCT("chat_installation_id","org_id","env","user_id");
