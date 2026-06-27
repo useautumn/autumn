@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { useScopes } from "@/hooks/useScopes";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { DefaultView } from "../DefaultView";
 import { LeafChatPanel } from "./components/LeafChatPanel";
 import { useLeafChat } from "./hooks/useLeafChat";
@@ -9,7 +9,7 @@ export default function ChatView() {
 	const { threadId: routeThreadId } = useParams<{ threadId?: string }>();
 	const navigate = useNavigate();
 	const location = useLocation();
-	const { isAdmin } = useScopes();
+	const { isAdmin } = useAdmin();
 	const draftThreadId = useMemo(() => crypto.randomUUID(), []);
 	const threadId = routeThreadId ?? draftThreadId;
 	const chatBasePath = location.pathname.startsWith("/sandbox/")
