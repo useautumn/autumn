@@ -1,5 +1,5 @@
 /**
- * Plan variants — oneprep (multi-variant interval family).
+ * Plan variants — interval family.
  *
  * 1 base + 5 sibling variants with different billing intervals
  * (week, quarter, semi_annual, year, one_off). Messages feature
@@ -155,7 +155,7 @@ const create5Variants = async (
 ) => {
 	const ids: string[] = [];
 	for (let i = 0; i < 5; i++) {
-		const vid = `op_v${i}_${cid}`;
+		const vid = `iv_v${i}_${cid}`;
 		await createVariant(rpc, baseId, vid, `Variant ${i}`);
 		ids.push(vid);
 	}
@@ -195,12 +195,12 @@ const getStripePriceId = (full: any) =>
 // 1. Create 5 variants — base_internal_product_id, version=1, shared stripe_product_id
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep create: 5 variants — all get base_internal_product_id, version=1, share stripe_product_id")}`,
+	`${chalk.yellowBright("interval-family create: 5 variants — all get base_internal_product_id, version=1, share stripe_product_id")}`,
 	async () => {
-		const cid = `op1_${suffix()}`;
+		const cid = `iv1_${suffix()}`;
 		const { ctx, rpc, baseId } = await setupBase(
 			cid,
-			`op_base_${cid}`,
+			`iv_base_${cid}`,
 		);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -220,10 +220,10 @@ test.concurrent(
 // 2. preview_update returns all 5, would_version=false (no customers)
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep preview: returns all 5 variants, would_version=false")}`,
+	`${chalk.yellowBright("interval-family preview: returns all 5 variants, would_version=false")}`,
 	async () => {
-		const cid = `op2_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv2_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
@@ -245,10 +245,10 @@ test.concurrent(
 // 3. propagate to all 5, no customers — all patch in place
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep propagate: all 5 patch in place when no customers")}`,
+	`${chalk.yellowBright("interval-family propagate: all 5 patch in place when no customers")}`,
 	async () => {
-		const cid = `op3_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv3_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
@@ -273,10 +273,10 @@ test.concurrent(
 // 4. propagate to subset of 2 — selected patched, other 3 untouched
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep propagate: subset of 2 patched, other 3 untouched")}`,
+	`${chalk.yellowBright("interval-family propagate: subset of 2 patched, other 3 untouched")}`,
 	async () => {
-		const cid = `op4_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv4_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const selected = variantIds.slice(0, 2);
@@ -304,12 +304,12 @@ test.concurrent(
 // 5. customer on one variant — that one versions, other 4 patch in place
 // ═════════════════════════════════════════════════════════════════
 	test.concurrent(
-	`${chalk.yellowBright("oneprep propagate: customer on one variant — that one versions, other 4 patch in place")}`,
+	`${chalk.yellowBright("interval-family propagate: customer on one variant — that one versions, other 4 patch in place")}`,
 	async () => {
-		const cid = `op5_${suffix()}`;
+		const cid = `iv5_${suffix()}`;
 		const { autumnV2_2, ctx, rpc, baseId } = await setupBaseWithPM(
 			cid,
-			`op_base_${cid}`,
+			`iv_base_${cid}`,
 		);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -344,12 +344,12 @@ test.concurrent(
 // 6. customer on base — base v2 + all 5 variants v2, pin to new base v2
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep propagate: customer on base — base v2 + all 5 variants v2, pin to new base v2 internal_id")}`,
+	`${chalk.yellowBright("interval-family propagate: customer on base — base v2 + all 5 variants v2, pin to new base v2 internal_id")}`,
 	async () => {
-		const cid = `op6_${suffix()}`;
+		const cid = `iv6_${suffix()}`;
 		const { ctx, rpc, baseId } = await setupBaseWithCustomer(
 			cid,
-			`op_base_${cid}`,
+			`iv_base_${cid}`,
 		);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -376,12 +376,12 @@ test.concurrent(
 //     Selected variants get v3's diff only, NOT the qty change
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep multi-version skip: opted-out variant gets only latest diff, not cumulative")}`,
+	`${chalk.yellowBright("interval-family multi-version skip: opted-out variant gets only latest diff, not cumulative")}`,
 	async () => {
-		const cid = `op7_${suffix()}`;
+		const cid = `iv7_${suffix()}`;
 		const { ctx, rpc, baseId } = await setupBaseWithCustomer(
 			cid,
-			`op_base_${cid}`,
+			`iv_base_${cid}`,
 		);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
@@ -435,10 +435,10 @@ test.concurrent(
 // 8. different intervals don't merge — diff targets only base items
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep intervals: different intervals don't merge — diff targets only matching items")}`,
+	`${chalk.yellowBright("interval-family intervals: different intervals don't merge — diff targets only matching items")}`,
 	async () => {
-		const cid = `op8_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv8_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
@@ -467,10 +467,10 @@ test.concurrent(
 // 9. preview_update is read-only — no DB writes
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep preview: read-only — no DB writes, internal_id unchanged")}`,
+	`${chalk.yellowBright("interval-family preview: read-only — no DB writes, internal_id unchanged")}`,
 	async () => {
-		const cid = `op9_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv9_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const before = await getFull(ctx, baseId);
@@ -496,10 +496,10 @@ test.concurrent(
 // 10. nested_variant_not_allowed — create_variant on a variant → 400
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("oneprep create_variant: on a variant id → 400 nested_variant_not_allowed")}`,
+	`${chalk.yellowBright("interval-family create_variant: on a variant id → 400 nested_variant_not_allowed")}`,
 	async () => {
-		const cid = `op10_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupBase(cid, `op_base_${cid}`);
+		const cid = `iv10_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
@@ -507,7 +507,7 @@ test.concurrent(
 			createVariant(
 				rpc,
 				variantIds[0],
-				`op_nested_${cid}`,
+				`iv_nested_${cid}`,
 				"Nested",
 			),
 		);
@@ -521,12 +521,12 @@ test.concurrent(
 // 11. Stripe carry-forward — variant v2 retains stripe_price_id from v1
 // ═════════════════════════════════════════════════════════════════
 	test.concurrent(
-	`${chalk.yellowBright("oneprep stripe: carry-forward — variant v2 retains stripe_price_id from v1 for unchanged prices")}`,
+	`${chalk.yellowBright("interval-family stripe: carry-forward — variant v2 retains stripe_price_id from v1 for unchanged prices")}`,
 	async () => {
-		const cid = `op11_${suffix()}`;
+		const cid = `iv11_${suffix()}`;
 		const { autumnV2_2, ctx, rpc, baseId } = await setupBaseWithPM(
 			cid,
-			`op_base_${cid}`,
+			`iv_base_${cid}`,
 		);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);

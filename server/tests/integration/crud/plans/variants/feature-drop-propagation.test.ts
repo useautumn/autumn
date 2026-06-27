@@ -1,5 +1,5 @@
 /**
- * Plan variants — revisiondojo pattern (feature-drop variants).
+ * Plan variants — feature-drop propagation.
  *
  * Base has 7 items (6 feature items + 1 base price). Variants drop 1-2 items.
  * Tests OOTO-IWTN ("out with old, in with new") propagation semantics.
@@ -178,11 +178,11 @@ const createVariant = async (
 // 1. create_variant copies all 7 items
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo create_variant: copies all 7 items (6 features + base price)")}`,
+	`${chalk.yellowBright("feature-drop create_variant: copies all 7 items (6 features + base price)")}`,
 	async () => {
-		const cid = `rdj1_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd1_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -207,11 +207,11 @@ test.concurrent(
 // 2. create variant + manually strip Dashboard → variant has 6, base has 7
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo strip: variant drops Dashboard → 6 items, base keeps 7")}`,
+	`${chalk.yellowBright("feature-drop strip: variant drops Dashboard → 6 items, base keeps 7")}`,
 	async () => {
-		const cid = `rdj2_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd2_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -238,11 +238,11 @@ test.concurrent(
 // 3. preview_update with feature-add against stripped variant
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo preview: feature-add diff shows add_items, affected_variants lists stripped variant")}`,
+	`${chalk.yellowBright("feature-drop preview: feature-add diff shows add_items, affected_variants lists stripped variant")}`,
 	async () => {
-		const cid = `rdj3_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd3_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, {
@@ -276,11 +276,11 @@ test.concurrent(
 // 4. propagate feature-add preserves strip
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo propagate: feature-add to base → variant gets new feature, Dashboard still absent")}`,
+	`${chalk.yellowBright("feature-drop propagate: feature-add to base → variant gets new feature, Dashboard still absent")}`,
 	async () => {
-		const cid = `rdj4_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd4_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, {
@@ -312,11 +312,11 @@ test.concurrent(
 // 5. propagate item modification re-adds stripped item (OOTO-IWTN)
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo OOTO-IWTN: base changes Users 5→10, propagate re-adds stripped Users at 10")}`,
+	`${chalk.yellowBright("feature-drop OOTO-IWTN: base changes Users 5→10, propagate re-adds stripped Users at 10")}`,
 	async () => {
-		const cid = `rdj5_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd5_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -356,12 +356,12 @@ test.concurrent(
 // 6. opt-out preserves strip vs opt-in re-adds
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo opt-out: propagate=[] preserves strip, propagate=[variant] re-adds")}`,
+	`${chalk.yellowBright("feature-drop opt-out: propagate=[] preserves strip, propagate=[variant] re-adds")}`,
 	async () => {
-		const cid = `rdj6_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId1 = `rdj_var1_${cid}`;
-		const variantId2 = `rdj_var2_${cid}`;
+		const cid = `fd6_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId1 = `fd_var1_${cid}`;
+		const variantId2 = `fd_var2_${cid}`;
 
 		await createVariant(rpc, baseId, variantId1, "OptOut");
 		await createVariant(rpc, baseId, variantId2, "OptIn");
@@ -419,11 +419,11 @@ test.concurrent(
 // 7. one-off variant preserves interval
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo one-off: variant with one_off price preserves interval after propagation")}`,
+	`${chalk.yellowBright("feature-drop one-off: variant with one_off price preserves interval after propagation")}`,
 	async () => {
-		const cid = `rdj7_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd7_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -456,12 +456,12 @@ test.concurrent(
 // 8. multi-version skip
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo multi-version skip: variant gets only v2→v3 diff, not v1→v2")}`,
+	`${chalk.yellowBright("feature-drop multi-version skip: variant gets only v2→v3 diff, not v1→v2")}`,
 	async () => {
-		const cid = `rdj8_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId1 = `rdj_var1_${cid}`;
-		const variantId2 = `rdj_var2_${cid}`;
+		const cid = `fd8_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId1 = `fd_var1_${cid}`;
+		const variantId2 = `fd_var2_${cid}`;
 
 		await createVariant(rpc, baseId, variantId1, "V1");
 		await createVariant(rpc, baseId, variantId2, "V2");
@@ -502,11 +502,11 @@ test.concurrent(
 // 9. preview_update is read-only
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo preview: read-only — no version change, same internal_id")}`,
+	`${chalk.yellowBright("feature-drop preview: read-only — no version change, same internal_id")}`,
 	async () => {
-		const cid = `rdj9_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd9_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -532,12 +532,12 @@ test.concurrent(
 // 10. nested_variant_not_allowed
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo errors: nested variant → 400 nested_variant_not_allowed")}`,
+	`${chalk.yellowBright("feature-drop errors: nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
-		const cid = `rdj10_${suffix()}`;
-		const { rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
-		const nestedId = `rdj_nested_${cid}`;
+		const cid = `fd10_${suffix()}`;
+		const { rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
+		const nestedId = `fd_nested_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -551,11 +551,11 @@ test.concurrent(
 // 11. is_default on variant rejects
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo errors: is_default=true on variant → 400 variant_cannot_be_default")}`,
+	`${chalk.yellowBright("feature-drop errors: is_default=true on variant → 400 variant_cannot_be_default")}`,
 	async () => {
-		const cid = `rdj11_${suffix()}`;
-		const { rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd11_${suffix()}`;
+		const { rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 
@@ -571,11 +571,11 @@ test.concurrent(
 // 12. Stripe carry-forward across feature-add
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("revisiondojo stripe: variant v2 existing prices retain stripe_price_id, new feature gets fresh")}`,
+	`${chalk.yellowBright("feature-drop stripe: variant v2 existing prices retain stripe_price_id, new feature gets fresh")}`,
 	async () => {
-		const cid = `rdj12_${suffix()}`;
-		const { ctx, rpc, baseId } = await setupScenario(cid, `rdj_base_${cid}`);
-		const variantId = `rdj_var_${cid}`;
+		const cid = `fd12_${suffix()}`;
+		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
+		const variantId = `fd_var_${cid}`;
 
 		await createVariant(rpc, baseId, variantId);
 

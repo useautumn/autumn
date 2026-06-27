@@ -1,5 +1,5 @@
 /**
- * TDD test for plan variants — firecrawl pattern (rollover + same-feature_id disambiguation).
+ * TDD test for plan variants — rollover disambiguation.
  *
  * Contract under test:
  *   New endpoints:
@@ -71,7 +71,7 @@ type PreviewResponse = {
 };
 
 // CREDITS with rollover (monthly, free metered) + CREDITS daily (same feature_id, different interval) + Messages
-const fcBaseItems = (rolloverMax = 200) => [
+const rolloverBaseItems = (rolloverMax = 200) => [
 	{
 		feature_id: TestFeature.Credits,
 		included: 500,
@@ -94,7 +94,7 @@ const fcBaseItems = (rolloverMax = 200) => [
 	},
 ];
 
-const fcPrepaidItems = (rolloverMax = 200) => [
+const rolloverPrepaidItems = (rolloverMax = 200) => [
 	{
 		feature_id: TestFeature.Credits,
 		included: 0,
@@ -118,7 +118,7 @@ const fcPrepaidItems = (rolloverMax = 200) => [
 	},
 ];
 
-const fcBaseItemsPriced = (rolloverMax = 200) => [
+const rolloverBaseItemsPriced = (rolloverMax = 200) => [
 	{
 		feature_id: TestFeature.Credits,
 		included: 500,
@@ -153,11 +153,11 @@ const fcBaseItemsPriced = (rolloverMax = 200) => [
 	},
 ];
 
-const createBase = async (id: string, items: ReturnType<typeof fcBaseItems> | ReturnType<typeof fcPrepaidItems> | ReturnType<typeof fcBaseItemsPriced>) => {
+const createBase = async (id: string, items: ReturnType<typeof rolloverBaseItems> | ReturnType<typeof rolloverPrepaidItems> | ReturnType<typeof rolloverBaseItemsPriced>) => {
 	await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
 		plan_id: id,
-		name: `FC Base ${id}`,
-		group: `fc_${id}`,
+		name: `Rollover Base ${id}`,
+		group: `rv_${id}`,
 		items,
 	});
 	return await ProductService.getFull({ db, idOrInternalId: id, orgId: org.id, env });
@@ -166,7 +166,7 @@ const createBase = async (id: string, items: ReturnType<typeof fcBaseItems> | Re
 const createVariant = async (baseId: string, variantId: string) => {
 	return await autumnRpc.rpc.call<ApiPlanV1>({
 		method: "/plans.create_variant",
-		body: { plan_id: baseId, id: variantId, name: `FC Variant ${variantId}` },
+		body: { plan_id: baseId, id: variantId, name: `Rollover Variant ${variantId}` },
 	});
 };
 
@@ -182,14 +182,14 @@ const getAllVersions = async (planId: string) => {
 // 1. create_variant copies items including rollover
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl create_variant: copies items including rollover config")}`,
+	`${chalk.yellowBright("rollover create_variant: copies items including rollover config")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_rollover_${suffix}`;
-		const variantId = `fc_rollover_var_${suffix}`;
+		const baseId = `rv_rollover_${suffix}`;
+		const variantId = `rv_rollover_var_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		const variant = await createVariant(baseId, variantId);
 
 		const creditsMonthly = variant.items.find(
@@ -216,14 +216,14 @@ test.concurrent(
 // 2. create_variant preserves duplicate feature_id items + Stripe reuse
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
+	`${chalk.yellowBright("rollover create_variant: preserves duplicate feature_id items + Stripe reuse")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_dups_${suffix}`;
-		const variantId = `fc_dups_var_${suffix}`;
+		const baseId = `rv_dups_${suffix}`;
+		const variantId = `rv_dups_var_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		const base = await createBase(baseId, fcBaseItemsPriced(200));
+		const base = await createBase(baseId, rolloverBaseItemsPriced(200));
 		await createVariant(baseId, variantId);
 		const variantFull = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
 
@@ -253,15 +253,15 @@ test.concurrent(
 // 3. preview_update diff on rollover change
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl preview_update: diff on rollover change produces remove + add")}`,
+	`${chalk.yellowBright("rollover preview_update: diff on rollover change produces remove + add")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_diff_${suffix}`;
+		const baseId = `rv_diff_${suffix}`;
 		await cleanup(baseId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 
-		const modifiedItems = fcBaseItems(500);
+		const modifiedItems = rolloverBaseItems(500);
 		const preview = await autumnRpc.rpc.call<PreviewResponse>({
 			method: "/plans.preview_update",
 			body: { plan_id: baseId, items: modifiedItems },
@@ -286,15 +286,15 @@ test.concurrent(
 // 4. propagate rollover change to variant
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl propagate: rollover change to variant (versioning, v1 untouched)")}`,
+	`${chalk.yellowBright("rollover propagate: rollover change to variant (versioning, v1 untouched)")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_prop_${suffix}`;
-		const variantId = `fc_prop_var_${suffix}`;
-		const customerId = `fc_prop_cus_${suffix}`;
+		const baseId = `rv_prop_${suffix}`;
+		const variantId = `rv_prop_var_${suffix}`;
+		const customerId = `rv_prop_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		await createVariant(baseId, variantId);
 
 		const { autumnV1 } = await initScenario({
@@ -306,7 +306,7 @@ test.concurrent(
 		await wait(3000);
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
-			items: fcBaseItems(500),
+			items: rolloverBaseItems(500),
 			propagate_to_variants: [variantId],
 		});
 
@@ -338,15 +338,15 @@ test.concurrent(
 // 5. variant strips an item, subsequent propagation preserves strip
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl propagate: variant strip preserved across propagation")}`,
+	`${chalk.yellowBright("rollover propagate: variant strip preserved across propagation")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_strip_${suffix}`;
-		const variantId = `fc_strip_var_${suffix}`;
-		const customerId = `fc_strip_cus_${suffix}`;
+		const baseId = `rv_strip_${suffix}`;
+		const variantId = `rv_strip_var_${suffix}`;
+		const customerId = `rv_strip_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		await createVariant(baseId, variantId);
 
 		await autumnRpc.plans.update<ApiPlanV1>(variantId, {
@@ -378,7 +378,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: [
-				...fcBaseItems(200),
+				...rolloverBaseItems(200),
 				{ feature_id: TestFeature.Dashboard },
 			],
 			propagate_to_variants: [variantId],
@@ -401,15 +401,15 @@ test.concurrent(
 // 6. filter precision: same feature_id, different reset.interval
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl filter precision: same feature_id different interval, only targeted item changes")}`,
+	`${chalk.yellowBright("rollover filter precision: same feature_id different interval, only targeted item changes")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_filter_${suffix}`;
-		const variantId = `fc_filter_var_${suffix}`;
-		const customerId = `fc_filter_cus_${suffix}`;
+		const baseId = `rv_filter_${suffix}`;
+		const variantId = `rv_filter_var_${suffix}`;
+		const customerId = `rv_filter_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		await createVariant(baseId, variantId);
 
 		const { autumnV1 } = await initScenario({
@@ -470,15 +470,15 @@ test.concurrent(
 // 7. base versions on rollover change with customer
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl base+variant version: customer on base triggers both versioning")}`,
+	`${chalk.yellowBright("rollover base+variant version: customer on base triggers both versioning")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_bothver_${suffix}`;
-		const variantId = `fc_bothver_var_${suffix}`;
-		const customerId = `fc_bothver_cus_${suffix}`;
+		const baseId = `rv_bothver_${suffix}`;
+		const variantId = `rv_bothver_var_${suffix}`;
+		const customerId = `rv_bothver_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		await createVariant(baseId, variantId);
 
 		const { autumnV1 } = await initScenario({
@@ -490,7 +490,7 @@ test.concurrent(
 		await wait(3000);
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
-			items: fcBaseItems(500),
+			items: rolloverBaseItems(500),
 			propagate_to_variants: [variantId],
 		});
 
@@ -514,19 +514,19 @@ test.concurrent(
 // 8. preview_update returns 0 writes
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl preview_update: 0 writes when nothing changes")}`,
+	`${chalk.yellowBright("rollover preview_update: 0 writes when nothing changes")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_zero_${suffix}`;
+		const baseId = `rv_zero_${suffix}`;
 		await cleanup(baseId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 
 		const before = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
 
 		const preview = await autumnRpc.rpc.call<PreviewResponse>({
 			method: "/plans.preview_update",
-			body: { plan_id: baseId, items: fcBaseItems(200) },
+			body: { plan_id: baseId, items: rolloverBaseItems(200) },
 		});
 
 		expect(preview.will_version).toBe(false);
@@ -545,15 +545,15 @@ test.concurrent(
 // 9. stripe_prepaid_price_v2_id carried forward on versioning
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl versioning: stripe_prepaid_price_v2_id carried forward to variant v2")}`,
+	`${chalk.yellowBright("rollover versioning: stripe_prepaid_price_v2_id carried forward to variant v2")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_prepaid_${suffix}`;
-		const variantId = `fc_prepaid_var_${suffix}`;
-		const customerId = `fc_prepaid_cus_${suffix}`;
+		const baseId = `rv_prepaid_${suffix}`;
+		const variantId = `rv_prepaid_var_${suffix}`;
+		const customerId = `rv_prepaid_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcPrepaidItems(200));
+		await createBase(baseId, rolloverPrepaidItems(200));
 		await createVariant(baseId, variantId);
 
 		const variantV1 = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
@@ -573,7 +573,7 @@ test.concurrent(
 		await wait(4000);
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
-			items: fcPrepaidItems(500),
+			items: rolloverPrepaidItems(500),
 			propagate_to_variants: [variantId],
 		});
 
@@ -596,14 +596,14 @@ test.concurrent(
 // 10. create_variant rejects archived base
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl create_variant: rejects archived base with cannot_fork_archived_base")}`,
+	`${chalk.yellowBright("rollover create_variant: rejects archived base with cannot_fork_archived_base")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_arch_${suffix}`;
-		const variantId = `fc_arch_var_${suffix}`;
+		const baseId = `rv_arch_${suffix}`;
+		const variantId = `rv_arch_var_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, { archived: true });
 		const archived = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
@@ -625,16 +625,16 @@ test.concurrent(
 // 11. base+variant both have customers → both version
 // ═══════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("firecrawl both customers: base+variant both version, variant pins to new base")}`,
+	`${chalk.yellowBright("rollover both customers: base+variant both version, variant pins to new base")}`,
 	async () => {
 		const suffix = getSuffix();
-		const baseId = `fc_bothcus_${suffix}`;
-		const variantId = `fc_bothcus_var_${suffix}`;
-		const baseCusId = `fc_bothcus_base_cus_${suffix}`;
-		const varCusId = `fc_bothcus_var_cus_${suffix}`;
+		const baseId = `rv_bothcus_${suffix}`;
+		const variantId = `rv_bothcus_var_${suffix}`;
+		const baseCusId = `rv_bothcus_base_cus_${suffix}`;
+		const varCusId = `rv_bothcus_var_cus_${suffix}`;
 		await cleanup(baseId, variantId);
 
-		await createBase(baseId, fcBaseItems(200));
+		await createBase(baseId, rolloverBaseItems(200));
 		await createVariant(baseId, variantId);
 
 		const { autumnV1 } = await initScenario({
@@ -654,7 +654,7 @@ test.concurrent(
 		await wait(3000);
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
-			items: fcBaseItems(500),
+			items: rolloverBaseItems(500),
 			propagate_to_variants: [variantId],
 		});
 

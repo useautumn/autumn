@@ -1,5 +1,5 @@
 /**
- * Plan variants — popfly lifecycle (base + variant, interval/price delta).
+ * Plan variants — lifecycle (base + variant, interval/price delta).
  *
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   New endpoints:
@@ -83,7 +83,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants create_variant: happy path — base_internal_product_id set, version=1, is_default=false")}`,
 	async () => {
 		const cid = `pv1_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -95,7 +95,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		const res = await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -129,7 +129,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects nested variant → 400 nested_variant_not_allowed")}`,
 	async () => {
 		const cid = `pv2_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -141,8 +141,8 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
-		const nestedId = `popfly_nested_${cid}`;
+		const variantId = `lc_var_${cid}`;
+		const nestedId = `lc_nested_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -170,7 +170,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects archived base → 400 cannot_fork_archived_base")}`,
 	async () => {
 		const cid = `pv3_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -188,7 +188,7 @@ test.concurrent(
 		const err = await catchErr(() =>
 			rpc.post("/plans.create_variant", {
 				plan_id: base.id,
-				id: `popfly_var_${cid}`,
+				id: `lc_var_${cid}`,
 				name: "Variant",
 			}),
 		);
@@ -205,7 +205,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants create_variant: rejects id collision → 409 product_id_already_exists")}`,
 	async () => {
 		const cid = `pv4_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 		const other = baseProduct(`collide_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -239,7 +239,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants preview_update: happy path — response shape correct, no DB writes")}`,
 	async () => {
 		const cid = `pv5_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -251,7 +251,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -284,7 +284,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants preview_update: rejects on variant → 400 cannot_preview_on_variant")}`,
 	async () => {
 		const cid = `pv6_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -296,7 +296,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -323,7 +323,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: omit propagate_to_variants → variant unchanged")}`,
 	async () => {
 		const cid = `pv7_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -335,7 +335,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -369,7 +369,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants propagate: patches variant in place when no customers")}`,
 	async () => {
 		const cid = `pv8_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -381,7 +381,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -419,7 +419,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants propagate: base patches in place → variant patches in place even with customers (unified version choice)")}`,
 	async () => {
 		const cid = `pv9_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId: cid,
@@ -431,7 +431,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -484,7 +484,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants propagate: both version when base has customers — variant v2 base_internal_product_id = base v2 internal_id")}`,
 	async () => {
 		const cid = `pv10_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -499,7 +499,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -536,7 +536,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants opt-out: omit propagate → base versions, variant stays at v1 pinned to old base")}`,
 	async () => {
 		const cid = `pv11_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -551,7 +551,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -587,7 +587,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: rejects unrelated id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
 		const cid = `pv12_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -599,7 +599,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -628,7 +628,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: rejects base's own id in propagate → 400 invalid_propagation_target")}`,
 	async () => {
 		const cid = `pv13_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -640,7 +640,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -669,7 +669,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: rejects > 20 ids in propagate → 400 too_many_variants")}`,
 	async () => {
 		const cid = `pv14_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -681,7 +681,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -712,7 +712,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: force_version + disable_version both true → 400 conflicting_version_flags")}`,
 	async () => {
 		const cid = `pv15_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -746,7 +746,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants create_variant: variant shares stripe_product_id with base")}`,
 	async () => {
 		const cid = `pv16_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -758,7 +758,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
@@ -792,7 +792,7 @@ test.concurrent(
 	`${chalk.yellowBright("variants update: is_default=true on variant → 400 variant_cannot_be_default")}`,
 	async () => {
 		const cid = `pv17_${suffix()}`;
-		const base = baseProduct(`popfly_base_${cid}`);
+		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
 			customerId: cid,
@@ -804,7 +804,7 @@ test.concurrent(
 			secretKey: ctx.orgSecretKey,
 			version: ApiVersion.V2_1,
 		});
-		const variantId = `popfly_var_${cid}`;
+		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
 			plan_id: base.id,
