@@ -1,13 +1,13 @@
-import {
-	applyDiff,
-	type DiffedCustomizePlanV1,
-	type FullProduct,
-	type PlanUpdatePreviewVariant,
-	type PreviewUpdatePlanParamsV2,
+import type {
+	DiffedCustomizePlanV1,
+	FullProduct,
+	PlanUpdatePreviewVariant,
+	PreviewUpdatePlanParamsV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { applyDiffToVariantPlan } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
 
@@ -48,14 +48,10 @@ export const previewAffectedVariants = async ({
 				product: variant,
 				features,
 			});
-			const reconstructed = applyDiff({
-				base: currentPlan,
+			const previewPlan = applyDiffToVariantPlan({
+				plan: currentPlan,
 				diff,
 			});
-			const previewPlan = {
-				...currentPlan,
-				...reconstructed,
-			};
 			const hasCustomers = await hasPlanCustomers({ ctx, product: variant });
 			const versionable =
 				data.force_version ||

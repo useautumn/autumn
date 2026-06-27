@@ -31,6 +31,7 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { expectStripeResourcesCarriedToVariant } from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("variants stripe resources: create_variant carries product, price product, and meter IDs")}`,
@@ -74,9 +75,10 @@ test.concurrent(
 		});
 		const variantId = `stripe_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
-			base_plan_id: base.id,
-			variant_plan_id: variantId,
+		await createVariantPlan({
+			rpc,
+			basePlanId: base.id,
+			variantPlanId: variantId,
 			name: "Stripe Resource Variant",
 		});
 

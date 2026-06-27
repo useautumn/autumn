@@ -4,7 +4,7 @@
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   New endpoints:
  *     - POST /v1/plans.create_variant { base_plan_id, variant_plan_id, name } → getPlanResponse
- *     - POST /v1/plans.preview_update (UpdatePlanParams omit propagate) → { will_version, current_version, diff, affected_variants }
+ *     - POST /v1/plans.preview_update (UpdatePlanParams omit propagate) → PlanUpdatePreview
  *     - POST /v1/plans.update (extended: propagate_to_variants, force_version, is_default)
  *   New DB column:
  *     - products.base_internal_product_id — set on variant insert, immutable
@@ -21,6 +21,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { expectPreviewUpdatePlanCorrect } from "../previewUpdate/utils/expectPreviewUpdatePlanCorrect.js";
 import {
 	type ApiPlanV1,
 	ApiVersion,
@@ -41,6 +42,7 @@ import {
 	expectVariantProductCorrect,
 } from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
@@ -80,6 +82,23 @@ const monthlyItem = (included: number) => ({
 
 const monthlyPrice = { amount: 20, interval: BillingInterval.Month };
 
+const createVariant = async <T = ApiPlanV1>(
+	rpc: AutumnRpcCli,
+	params: {
+		base_plan_id: string;
+		variant_plan_id: string;
+		name: string;
+		resetVariant?: boolean;
+	},
+) =>
+	createVariantPlan<T>({
+		rpc,
+		basePlanId: params.base_plan_id,
+		variantPlanId: params.variant_plan_id,
+		name: params.name,
+		resetVariant: params.resetVariant,
+	});
+
 // ───────────────────────────────────────────────────────────────────
 // 1. create_variant happy path
 // ───────────────────────────────────────────────────────────────────
@@ -101,7 +120,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		const res = await rpc.post("/plans.create_variant", {
+		const res = await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Yearly Variant",
@@ -141,14 +160,14 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 		const nestedId = `lc_nested_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
 		const err = await catchErr(() =>
-			rpc.post("/plans.create_variant", {
+			createVariant(rpc, {
 				base_plan_id: variantId,
 				variant_plan_id: nestedId,
 				name: "Nested",
@@ -183,7 +202,7 @@ test.concurrent(
 		await rpc.plans.update(base.id, { archived: true } as RpcUpdate);
 
 		const err = await catchErr(() =>
-			rpc.post("/plans.create_variant", {
+			createVariant(rpc, {
 				base_plan_id: base.id,
 				variant_plan_id: `lc_var_${cid}`,
 				name: "Variant",
@@ -217,10 +236,11 @@ test.concurrent(
 		});
 
 		const err = await catchErr(() =>
-			rpc.post("/plans.create_variant", {
+			createVariant(rpc, {
 				base_plan_id: base.id,
 				variant_plan_id: other.id,
 				name: "Colliding Variant",
+				resetVariant: false,
 			}),
 		);
 
@@ -250,7 +270,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -264,10 +284,14 @@ test.concurrent(
 			price: { amount: 30, interval: BillingInterval.Month },
 		});
 
-		expect(res.will_version).toBeDefined();
-		expect(res.current_version).toBe(1);
-		expect(res.diff).toBeDefined();
-		expect(Array.isArray(res.affected_variants)).toBe(true);
+		expectPreviewUpdatePlanCorrect({
+			preview: res,
+			expected: {
+				versionable: false,
+				variants: [{ plan_id: variantId, versionable: false }],
+			},
+			logPreview: false,
+		});
 
 		const afterFull = await getFull(ctx, base.id);
 		expect(afterFull.internal_id).toBe(beforeFull.internal_id);
@@ -295,7 +319,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -334,7 +358,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -380,7 +404,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -410,10 +434,10 @@ test.concurrent(
 );
 
 // ───────────────────────────────────────────────────────────────────
-// 9. base patch in place → variant patches in place (even with customers)
+// 9. base patch in place → customer-bearing variant versions
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants propagate: base patches in place → variant patches in place even with customers (unified version choice)")}`,
+	`${chalk.yellowBright("variants propagate: base patches in place → customer-bearing variant versions")}`,
 	async () => {
 		const cid = readableVariantTestId("lc_prop_base_in_place");
 		const base = baseProduct(`lc_base_${cid}`);
@@ -430,7 +454,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -459,10 +483,12 @@ test.concurrent(
 		expect(baseAfter.internal_id).toBe(baseBefore.internal_id);
 		expect(baseAfter.version).toBe(1);
 
-		// Variant ALSO patched in place — follows the base's choice, no forced
-		// version bump despite having customers. Customers are updated via migration.
-		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
-		expectVariantProductCorrect({ base: baseAfter, variant: variantAfter });
+		expect(variantAfter.internal_id).not.toBe(variantBefore.internal_id);
+		expectVariantProductCorrect({
+			base: baseAfter,
+			variant: variantAfter,
+			version: 2,
+		});
 
 		const variantEnt = variantAfter.entitlements.find(
 			(e) => e.feature_id === TestFeature.Messages,
@@ -495,7 +521,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -548,7 +574,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -596,7 +622,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -637,7 +663,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -678,7 +704,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -755,7 +781,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",
@@ -792,7 +818,7 @@ test.concurrent(
 		});
 		const variantId = `lc_var_${cid}`;
 
-		await rpc.post("/plans.create_variant", {
+		await createVariant(rpc, {
 			base_plan_id: base.id,
 			variant_plan_id: variantId,
 			name: "Variant",

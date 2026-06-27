@@ -7,7 +7,7 @@
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   - create_variant copies all base items
  *   - variant can be updated to strip items
- *   - preview_update shows diff + affected_variants (read-only)
+ *   - preview_update shows item changes + affected variants (read-only)
  *   - propagate feature-add preserves strip
  *   - propagate item modification re-adds stripped item (OOTO-IWTN, contract #16)
  *   - opt-out (propagate=[]) preserves strip; opt-in re-adds
@@ -25,6 +25,7 @@ import {
 	ApiVersion,
 	BillingInterval,
 	BillingMethod,
+	type PlanUpdatePreview,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -36,7 +37,12 @@ import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
+import {
+	expectPreviewItemChangeCorrect,
+	expectPreviewVariantsCorrect,
+} from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
@@ -174,11 +180,12 @@ const createVariant = async (
 	variantId: string,
 	name = "Variant",
 ) =>
-	rpc.post("/plans.create_variant", {
-		base_plan_id: baseId,
-		variant_plan_id: variantId,
+	createVariantPlan({
+		rpc,
+		basePlanId: baseId,
+		variantPlanId: variantId,
 		name,
-	}) as Promise<ApiPlanV1>;
+	});
 
 // ═════════════════════════════════════════════════════════════════
 // 1. create_variant copies all 7 items
@@ -246,7 +253,7 @@ test.concurrent(
 // 3. preview_update with feature-add against stripped variant
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("feature-drop preview: feature-add diff shows add_items, affected_variants lists stripped variant")}`,
+	`${chalk.yellowBright("feature-drop preview: feature-add item changes list stripped variant")}`,
 	async () => {
 		const cid = readableVariantTestId("fd_preview_add");
 		const { ctx, rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
@@ -263,27 +270,17 @@ test.concurrent(
 			plan_id: baseId,
 			items: [...allItems(), v1.adminRights()],
 			price: monthlyPrice,
-		})) as {
-			will_version: boolean;
-			current_version: number;
-			diff: any;
-			affected_variants: Array<{
-				id: string;
-				name: string;
-				latest_version: number;
-				would_version: boolean;
-			}>;
-		};
+		})) as PlanUpdatePreview;
 
-		expect(res.diff.add_items).toBeDefined();
-		expect(res.diff.add_items.length).toBeGreaterThanOrEqual(1);
-		const added = res.diff.add_items.find(
-			(i: any) => i.feature_id === TestFeature.AdminRights,
-		);
-		expect(added).toBeDefined();
-
-		expect(res.affected_variants.length).toBe(1);
-		expect(res.affected_variants[0].id).toBe(variantId);
+		expectPreviewVariantsCorrect({
+			preview: res,
+			variants: [{ plan_id: variantId }],
+		});
+		expectPreviewItemChangeCorrect({
+			preview: res,
+			action: "created",
+			featureId: TestFeature.AdminRights,
+		});
 	},
 );
 

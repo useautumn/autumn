@@ -1,22 +1,30 @@
 import { test } from "bun:test";
 import {
+	type ApiCustomerV5,
 	type ApiPlanV1,
 	ApiVersion,
+	type AttachParamsV1Input,
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanItemParamsV1Input,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { timeout } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { expectVariantProductCorrect } from "../variants/utils/expectVariantProductCorrect.js";
+import { createVariantPlan } from "../variants/utils/variantTestPlanUtils.js";
 import {
 	expectPlanItemsCorrect,
 	expectPlanPriceCorrect,
@@ -155,6 +163,61 @@ const cleanupPlan = async ({
 	} catch {}
 };
 
+const attachAndExpectLadderCustomer = async ({
+	autumnV2_2,
+	ctx,
+	customerId,
+	variantId,
+	included,
+}: {
+	autumnV2_2: {
+		billing: {
+			previewAttach: <TInput>(params: TInput) => Promise<unknown>;
+			attach: <TInput>(params: TInput) => Promise<unknown>;
+		};
+		customers: {
+			get: <TResponse>(customerId: string) => Promise<TResponse>;
+		};
+	};
+	ctx: any;
+	customerId: string;
+	variantId: string;
+	included: number;
+}) => {
+	const attachParams: AttachParamsV1Input = {
+		customer_id: customerId,
+		plan_id: variantId,
+	};
+
+	await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(attachParams);
+	await autumnV2_2.billing.attach<AttachParamsV1Input>(attachParams);
+	await timeout(5000);
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [variantId],
+	});
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		planId: variantId,
+		granted: included,
+		remaining: included,
+	});
+	expectFlagCorrect({
+		customer,
+		featureId: TestFeature.Dashboard,
+		planId: variantId,
+	});
+	expectFlagCorrect({
+		customer,
+		featureId: TestFeature.AdminRights,
+		planId: variantId,
+	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+};
+
 const expectProLadderPlanCorrect = ({
 	plan,
 	included,
@@ -251,9 +314,10 @@ test.concurrent(
 		for (const ladderPlan of ladderPlans) {
 			const variantId = `${pro1500.id}_${ladderPlan.idSuffix}`;
 
-			await rpc.post("/plans.create_variant", {
-				base_plan_id: pro1500.id,
-				variant_plan_id: variantId,
+			await createVariantPlan({
+				rpc,
+				basePlanId: pro1500.id,
+				variantPlanId: variantId,
 				name: ladderPlan.name,
 			});
 			await rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, {
@@ -281,5 +345,99 @@ test.concurrent(
 			});
 		}
 	},
-	20_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("plan versioning: pro usage ladder variants with customers on three variants")}`,
+	async () => {
+		const customerId = "pro_usage_ladder_variant_customers";
+		const customer3k = customerId;
+		const customer6k = `${customerId}_6k`;
+		const customer120k = `${customerId}_120k`;
+		const pro1500 = products.base({
+			id: "pro_1500",
+			items: [
+				items.monthlyPrice({ price: 49 }),
+				...productItems({ included: 1_500, overagePrice: 0.09 }),
+			],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.otherCustomers([
+					{ id: customer6k, paymentMethod: "success" },
+					{ id: customer120k, paymentMethod: "success" },
+				]),
+				s.products({ list: [pro1500] }),
+			],
+			actions: [],
+		});
+		const rpc = new AutumnRpcCli({
+			secretKey: ctx.orgSecretKey,
+			version: ApiVersion.V2_1,
+		});
+
+		for (const ladderPlan of ladderPlans) {
+			await cleanupPlan({
+				rpc,
+				planId: `${pro1500.id}_${ladderPlan.idSuffix}`,
+			});
+		}
+
+		const baseProduct = await getFullProduct({ ctx, planId: pro1500.id });
+		for (const ladderPlan of ladderPlans) {
+			const variantId = `${pro1500.id}_${ladderPlan.idSuffix}`;
+
+			await createVariantPlan({
+				rpc,
+				basePlanId: pro1500.id,
+				variantPlanId: variantId,
+				name: ladderPlan.name,
+			});
+			await rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, {
+				price: {
+					amount: ladderPlan.basePrice,
+					interval: BillingInterval.Month,
+				},
+				items: apiPlanItems({
+					included: ladderPlan.included,
+					overagePrice: ladderPlan.overagePrice,
+				}),
+				disable_version: true,
+			});
+
+			const variantProduct = await getFullProduct({ ctx, planId: variantId });
+			expectVariantProductCorrect({
+				base: baseProduct,
+				variant: variantProduct,
+			});
+			expectProLadderPlanCorrect({
+				plan: await getApiPlan({ ctx, planId: variantId }),
+				included: ladderPlan.included,
+				basePrice: ladderPlan.basePrice,
+				overagePrice: ladderPlan.overagePrice,
+			});
+		}
+
+		const selectedPlans = [
+			{ customerId: customer3k, ladderPlan: ladderPlans[0] },
+			{ customerId: customer6k, ladderPlan: ladderPlans[2] },
+			{ customerId: customer120k, ladderPlan: ladderPlans[4] },
+		];
+
+		for (const {
+			customerId: selectedCustomerId,
+			ladderPlan,
+		} of selectedPlans) {
+			await attachAndExpectLadderCustomer({
+				autumnV2_2,
+				ctx,
+				customerId: selectedCustomerId,
+				variantId: `${pro1500.id}_${ladderPlan.idSuffix}`,
+				included: ladderPlan.included,
+			});
+		}
+	},
 );

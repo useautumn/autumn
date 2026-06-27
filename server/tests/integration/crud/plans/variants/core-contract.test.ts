@@ -8,13 +8,13 @@
  *   - create_variant returns ApiPlanV1 shape
  *   - preview_update is idempotent, no writes
  *   - archived variants silently filtered from propagate
- *   - preview_update.will_version matches actual update
+ *   - preview_update.versionable matches actual update
  *   - preview_update.diff matches manual diffPlanV1
  *   - propagate_to_variants:[] ≡ omitted
  *   - invalid propagation targets rejected
  *   - create_variant id collision → 409
  *   - variant visible in plans.list
- *   - preview_update affected_variants always present
+ *   - preview_update variants always present
  *   - free_trial propagation overwrites variant override
  */
 
@@ -26,7 +26,7 @@ import {
 	type CreatePlanParamsV2Input,
 	diffPlanV1,
 	FreeTrialDuration,
-	type PreviewUpdatePlanResponseV2,
+	type PlanUpdatePreview,
 	ResetInterval,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -39,15 +39,20 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import { expectVariantProductCorrect } from "./utils/expectVariantProductCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import {
+	createVariantPlan,
+	deleteVariantTestPlans,
+} from "./utils/variantTestPlanUtils.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const { db, org, env } = ctx;
 
 const cleanup = async (id: string) => {
-	try { await autumnRpc.plans.delete(id, { allVersions: true }); } catch {}
+	await deleteVariantTestPlans({ rpc: autumnRpc, planIds: [id] });
 };
 
 const msgItem = (included: number) => ({
@@ -68,10 +73,21 @@ const createBase = async (id: string, includedUsage = 100) => {
 	return await ProductService.getFull({ db, idOrInternalId: id, orgId: org.id, env });
 };
 
-const createVariantRpc = async <T = ApiPlanV1>(planId: string, variantId: string, name: string) =>
-	autumnRpc.rpc.call<T>({ method: "/plans.create_variant", body: { base_plan_id: planId, variant_plan_id: variantId, name } });
+const createVariantRpc = async <T = ApiPlanV1>(
+	planId: string,
+	variantId: string,
+	name: string,
+	resetVariant = true,
+) =>
+	createVariantPlan<T>({
+		rpc: autumnRpc,
+		basePlanId: planId,
+		variantPlanId: variantId,
+		name,
+		resetVariant,
+	});
 
-const previewUpdateRpc = async <T = PreviewUpdatePlanResponseV2>(planId: string, updates: Record<string, unknown>) =>
+const previewUpdateRpc = async <T = PlanUpdatePreview>(planId: string, updates: Record<string, unknown>) =>
 	autumnRpc.rpc.call<T>({ method: "/plans.preview_update", body: { plan_id: planId, ...updates } });
 
 const listPlansRpc = async <T = { list: ApiPlanV1[] }>() =>
@@ -252,11 +268,11 @@ test.concurrent(`${chalk.yellowBright("variants contract: archived variant silen
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9. preview_update.will_version matches actual update outcome
+// 9. preview_update.versionable matches actual update outcome
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("variants contract: preview will_version matches actual update outcome")}`, async () => {
-	const customerId = readableVariantTestId("cc_will_version");
+test.concurrent(`${chalk.yellowBright("variants contract: preview versionable matches actual update outcome")}`, async () => {
+	const customerId = readableVariantTestId("cc_versionable");
 	const prod = products.base({ id: "base", items: [items.monthlyMessages({ includedUsage: 100 })] });
 
 	await initScenario({
@@ -282,7 +298,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview will_version m
 
 	const afterUpdate = await ProductService.getFull({ db, idOrInternalId: prefixedId, orgId: org.id, env });
 
-	if (preview.will_version) {
+	if (preview.versionable) {
 		expect(afterUpdate.version).toBe(beforeUpdate.version + 1);
 		expect(afterUpdate.internal_id).not.toBe(beforeUpdate.internal_id);
 	} else {
@@ -311,7 +327,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview diff matches m
 	const newPlan = await getPlanRpc(baseId);
 	const manualDiff = diffPlanV1({ from: oldPlan, to: newPlan });
 
-	expect(preview.diff).toEqual(manualDiff);
+	expect(preview.customize).toEqual(manualDiff);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -319,7 +335,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview diff matches m
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.skip(`${chalk.yellowBright("variants contract: throw-on-first-failure (contract #18)")}`, async () => {
-	// TODO: contract #18 — handleUpdateVariants throws on first failure.
+	// TODO: contract #18 — updateVariants throws on first failure.
 	// Requires a Stripe injection hook to simulate a mid-propagation failure
 	// (e.g., variant 2 of 3 throws) so we can assert base update is committed
 	// and variants before the throw are done while variants after are not.
@@ -398,7 +414,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: create_variant rejects
 	await expectAutumnError({
 		errCode: "product_id_already_exists",
 		func: async () => {
-			await createVariantRpc(baseId, baseId, "Self collision");
+			await createVariantRpc(baseId, baseId, "Self collision", false);
 		},
 	});
 });
@@ -419,10 +435,10 @@ test.concurrent(`${chalk.yellowBright("variants contract: variant appears in pla
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 17. preview_update on base with zero variants → affected_variants: []
+// 17. preview_update on base with zero variants → variants: []
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("variants contract: preview_update with zero variants → affected_variants empty")}`, async () => {
+test.concurrent(`${chalk.yellowBright("variants contract: preview_update with zero variants → variants empty")}`, async () => {
 	const baseId = readableVariantTestId("cc_zero_variants");
 	await createBase(baseId);
 
@@ -430,7 +446,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: preview_update with ze
 		items: [msgItem(444)],
 	});
 
-	expect(preview.affected_variants).toEqual([]);
+	expectPreviewVariantsCorrect({ preview, variants: [] });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

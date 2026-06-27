@@ -21,6 +21,7 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { expectVariantProductCorrect } from "../variants/utils/expectVariantProductCorrect.js";
+import { createVariantPlan } from "../variants/utils/variantTestPlanUtils.js";
 import { expectPlanItemsCorrect } from "./utils/expectPlanItemsCorrect.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
@@ -29,6 +30,10 @@ const monthlyMessagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
 	included,
 	reset: { interval: ResetInterval.Month },
+});
+
+const dashboardItem = () => ({
+	feature_id: TestFeature.Dashboard,
 });
 
 const basePrice = (amount: number, interval: BillingInterval) => ({
@@ -66,6 +71,18 @@ const getApiPlan = ({
 		features: ctx.features,
 	});
 
+const cleanupPlan = async ({
+	rpc,
+	planId,
+}: {
+	rpc: AutumnRpcCli;
+	planId: string;
+}) => {
+	try {
+		await rpc.plans.delete(planId, { allVersions: true });
+	} catch {}
+};
+
 test.concurrent(
 	`${chalk.yellowBright("plan versioning: pro annual variant attached, base force-version propagates annual v2")}`,
 	async () => {
@@ -87,10 +104,12 @@ test.concurrent(
 			version: ApiVersion.V2_1,
 		});
 		const annualPlanId = `${pro.id}_annual`;
+		await cleanupPlan({ rpc, planId: annualPlanId });
 
-		await rpc.post("/plans.create_variant", {
-			base_plan_id: pro.id,
-			variant_plan_id: annualPlanId,
+		await createVariantPlan({
+			rpc,
+			basePlanId: pro.id,
+			variantPlanId: annualPlanId,
 			name: "Pro Annual",
 		});
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(annualPlanId, {
@@ -220,5 +239,89 @@ test.concurrent(
 			granted: 100,
 			remaining: 100,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("plan versioning: propagated existing Dashboard is a no-op on variant")}`,
+	async () => {
+		const customerId = "pro_dashboard_variant_noop";
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+		const rpc = new AutumnRpcCli({
+			secretKey: ctx.orgSecretKey,
+			version: ApiVersion.V2_1,
+		});
+		const variantPlanId = `${pro.id}_dashboard`;
+		await cleanupPlan({ rpc, planId: variantPlanId });
+
+		await createVariantPlan({
+			rpc,
+			basePlanId: pro.id,
+			variantPlanId: variantPlanId,
+			name: "Pro Dashboard",
+		});
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(variantPlanId, {
+			items: [monthlyMessagesItem(100), dashboardItem()],
+			disable_version: true,
+		});
+
+		const variantBefore = await getFullProduct({ ctx, planId: variantPlanId });
+		expectPlanItemsCorrect({
+			plan: await getApiPlan({ ctx, product: variantBefore }),
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included: 100,
+					reset: { interval: ResetInterval.Month },
+				},
+				{ feature_id: TestFeature.Dashboard },
+			],
+			exact: true,
+		});
+
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(pro.id, {
+			items: [monthlyMessagesItem(100), dashboardItem()],
+			price: basePrice(20, BillingInterval.Month),
+			force_version: true,
+			propagate_to_variants: [variantPlanId],
+		});
+
+		const proV2 = await getFullProduct({ ctx, planId: pro.id });
+		const variantV2 = await getFullProduct({ ctx, planId: variantPlanId });
+		expectVariantProductCorrect({
+			base: proV2,
+			variant: variantV2,
+			version: 2,
+		});
+
+		const variantPlanV2 = await getApiPlan({ ctx, product: variantV2 });
+		expectPlanItemsCorrect({
+			plan: variantPlanV2,
+			items: [
+				{
+					feature_id: TestFeature.Messages,
+					included: 100,
+					reset: { interval: ResetInterval.Month },
+				},
+				{ feature_id: TestFeature.Dashboard },
+			],
+			exact: true,
+		});
+		expect(
+			variantPlanV2.items.filter(
+				(item) => item.feature_id === TestFeature.Dashboard,
+			),
+		).toHaveLength(1);
 	},
 );

@@ -4,7 +4,7 @@
  * Contract under test:
  *   New endpoints:
  *     - POST /plans.create_variant -> ApiPlanV1
- *     - POST /plans.preview_update -> PreviewUpdatePlanResponseV2
+ *     - POST /plans.preview_update -> PlanUpdatePreview
  *   New behaviors:
  *     - create_variant copies BOTH same-feature_id items (day + month not collapsed)
  *     - preview_update diff disambiguates by reset.interval (day vs month)
@@ -25,7 +25,7 @@ import {
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
-	type PreviewUpdatePlanResponseV2,
+	type PlanUpdatePreview,
 	ProductItemInterval,
 	ResetInterval,
 } from "@autumn/shared";
@@ -39,22 +39,37 @@ import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectPreviewItemChangeCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import {
+	createVariantPlan,
+	deleteVariantTestCustomers,
+	deleteVariantTestPlans,
+} from "./utils/variantTestPlanUtils.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 const { db, org, env } = ctx;
 
 const cleanup = async (...ids: string[]) => {
-	for (const id of ids) {
-		try { await autumnRpc.plans.delete(id, { allVersions: true }); } catch {}
-	}
+	await deleteVariantTestPlans({ rpc: autumnRpc, planIds: ids });
 };
 
-const createVariantRpc = async <T = ApiPlanV1>(planId: string, variantId: string, name: string) =>
-	autumnRpc.rpc.call<T>({ method: "/plans.create_variant", body: { base_plan_id: planId, variant_plan_id: variantId, name } });
+const createVariantRpc = async <T = ApiPlanV1>(
+	planId: string,
+	variantId: string,
+	name: string,
+	resetVariant = true,
+) =>
+	createVariantPlan<T>({
+		rpc: autumnRpc,
+		basePlanId: planId,
+		variantPlanId: variantId,
+		name,
+		resetVariant,
+	});
 
-const previewUpdateRpc = async <T = PreviewUpdatePlanResponseV2>(planId: string, updates: Record<string, unknown>) =>
+const previewUpdateRpc = async <T = PlanUpdatePreview>(planId: string, updates: Record<string, unknown>) =>
 	autumnRpc.rpc.call<T>({ method: "/plans.preview_update", body: { plan_id: planId, ...updates } });
 
 const getPlanRpc = async (planId: string) =>
@@ -134,19 +149,26 @@ test.concurrent(`${chalk.yellowBright("reset-tier: preview_update diff targets o
 		],
 	});
 
-	expect(preview.diff.remove_items).toBeDefined();
-	expect(preview.diff.remove_items!.length).toBe(1);
-	expect(preview.diff.remove_items![0].feature_id).toBe(TestFeature.Credits);
-	expect(preview.diff.remove_items![0].interval).toBe(ResetInterval.Day);
+	expect(preview.item_changes).toHaveLength(2);
+	expectPreviewItemChangeCorrect({
+		preview,
+		action: "deleted",
+		featureId: TestFeature.Credits,
+		item: { reset: { interval: ResetInterval.Day } },
+	});
+	expectPreviewItemChangeCorrect({
+		preview,
+		action: "created",
+		featureId: TestFeature.Credits,
+		item: { reset: { interval: ResetInterval.Day } },
+	});
 
-	expect(preview.diff.add_items).toBeDefined();
-	expect(preview.diff.add_items!.length).toBe(1);
-	expect(preview.diff.add_items![0].feature_id).toBe(TestFeature.Credits);
-
-	const hasMonthInRemove = preview.diff.remove_items?.some(
-		(r) => r.interval === ResetInterval.Month,
+	const removedMonth = preview.item_changes.some(
+		(change) =>
+			change.action === "deleted" &&
+			change.item.reset?.interval === ResetInterval.Month,
 	);
-	expect(hasMonthInRemove).toBeFalsy();
+	expect(removedMonth).toBe(false);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -286,6 +308,15 @@ test.concurrent(`${chalk.yellowBright("reset-tier: 20 variants in propagate succ
 
 test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning of both base and variant")}`, async () => {
 	const customerId = readableVariantTestId("rt_version_day");
+	const cust2 = readableVariantTestId("rt_version_day_c2");
+	const prefixedBaseId = `base_${customerId}`;
+	const variantId = `${prefixedBaseId}_variant`;
+	await deleteVariantTestCustomers({
+		client: autumnV1_2,
+		customerIds: [customerId, cust2],
+	});
+	await cleanup(variantId, prefixedBaseId);
+
 	const baseProd = products.base({
 		id: "base",
 		items: [
@@ -308,11 +339,8 @@ test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning
 		actions: [s.attach({ productId: "base" })],
 	});
 
-	const prefixedBaseId = `base_${customerId}`;
-	const variantId = `${prefixedBaseId}_variant`;
 	await createVariantRpc(prefixedBaseId, variantId, "Variant Versioned");
 
-	const cust2 = readableVariantTestId("rt_version_day_c2");
 	await autumnV1_2.createCustomer({ id: cust2, email: `${cust2}@test.com`, name: "C2" });
 	await autumnV1_2.attach({ customer_id: cust2, product_id: variantId } as any);
 
@@ -362,8 +390,12 @@ test.concurrent(`${chalk.yellowBright("reset-tier: hour-reset propagates to vari
 		items: [creditsItem(200, ResetInterval.Hour)],
 	});
 
-	expect(preview.diff.remove_items).toBeDefined();
-	expect(preview.diff.remove_items![0].interval).toBe(ResetInterval.Hour);
+	expectPreviewItemChangeCorrect({
+		preview,
+		action: "deleted",
+		featureId: TestFeature.Credits,
+		item: { reset: { interval: ResetInterval.Hour } },
+	});
 
 	await createVariantRpc(baseId, variantId, "Variant Hour");
 
@@ -450,7 +482,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: create_variant rejects id col
 	await expectAutumnError({
 		errCode: "product_id_already_exists",
 		func: async () => {
-			await createVariantRpc(baseId, baseId, "Self Collision");
+			await createVariantRpc(baseId, baseId, "Self Collision", false);
 		},
 	});
 

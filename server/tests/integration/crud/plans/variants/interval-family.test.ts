@@ -7,7 +7,7 @@
  *
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   - create_variant: copies base items, sets base_internal_product_id, version=1
- *   - preview_update: returns affected_variants, read-only, rejects on variant
+ *   - preview_update: returns variants, read-only, rejects on variant
  *   - propagate: patches in-place (no customers) or versions (β rule)
  *   - β rule: variant versions iff baseWasVersioned || variantHasCustomers
  *   - multi-version skip: opted-out variant gets only latest diff, not cumulative
@@ -35,7 +35,9 @@ import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
 } from "./utils/expectVariantProductCorrect.js";
+import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
@@ -146,11 +148,12 @@ const createVariant = (
 	variantId: string,
 	name = "Variant",
 ) =>
-	rpc.post("/plans.create_variant", {
-		base_plan_id: baseId,
-		variant_plan_id: variantId,
+	createVariantPlan({
+		rpc,
+		basePlanId: baseId,
+		variantPlanId: variantId,
 		name,
-	}) as Promise<ApiPlanV1>;
+	});
 
 const create5Variants = async (
 	rpc: AutumnRpcCli,
@@ -221,10 +224,10 @@ test.concurrent(
 );
 
 // ═════════════════════════════════════════════════════════════════
-// 2. preview_update returns all 5, would_version=false (no customers)
+// 2. preview_update returns all 5, versionable=false (no customers)
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("interval-family preview: returns all 5 variants, would_version=false")}`,
+	`${chalk.yellowBright("interval-family preview: returns all 5 variants, versionable=false")}`,
 	async () => {
 		const cid = readableVariantTestId("if_preview_family");
 		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
@@ -236,12 +239,15 @@ test.concurrent(
 			items: [monthlyItem(200)],
 		});
 
-		expect(res.affected_variants).toHaveLength(5);
-		for (const av of res.affected_variants) {
-			expect(av.would_version).toBe(false);
-		}
-		expect(res.will_version).toBe(false);
-		expect(res.current_version).toBe(1);
+		expectPreviewVariantsCorrect({
+			preview: res,
+			variants: variantIds.map((planId) => ({
+				plan_id: planId,
+				versionable: false,
+			})),
+		});
+		expect(res.versionable).toBe(false);
+		expect((await getFull(ctx, baseId)).version).toBe(1);
 	},
 );
 
@@ -258,7 +264,6 @@ test.concurrent(
 
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
-			disable_version: true,
 			propagate_to_variants: variantIds,
 		});
 

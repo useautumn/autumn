@@ -4,7 +4,7 @@
  * Contract under test:
  *   New endpoints:
  *     - POST /v1/plans.create_variant -> ApiPlanV1
- *     - POST /v1/plans.preview_update -> { will_version, current_version, diff, affected_variants }
+ *     - POST /v1/plans.preview_update -> PlanUpdatePreview
  *     - POST /v1/plans.update (extended with propagate_to_variants)
  *   New behaviors:
  *     - create_variant copies items including rollover config
@@ -29,6 +29,7 @@ import {
 	BillingInterval,
 	BillingMethod,
 	type CreatePlanParamsV2Input,
+	type PlanUpdatePreview,
 	ResetInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
@@ -43,36 +44,28 @@ import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
 } from "./utils/expectVariantProductCorrect.js";
+import {
+	expectPreviewItemChangeCorrect,
+	expectPreviewVariantsCorrect,
+} from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
+import {
+	createVariantPlan,
+	deleteVariantTestCustomers,
+	deleteVariantTestPlans,
+} from "./utils/variantTestPlanUtils.js";
 
 const { db, org, env } = ctx;
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const autumnV1_2 = new AutumnInt({ version: ApiVersion.V1_2 });
 
 const cleanup = async (...ids: string[]) => {
-	for (const id of ids) {
-		try {
-			await autumnRpc.plans.delete(id, { allVersions: true });
-		} catch {}
-	}
+	await deleteVariantTestPlans({ rpc: autumnRpc, planIds: ids });
+};
+const cleanupCustomers = async (...customerIds: string[]) => {
+	await deleteVariantTestCustomers({ client: autumnV1_2, customerIds });
 };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-type PreviewResponse = {
-	will_version: boolean;
-	current_version: number;
-	diff: {
-		add_items?: Array<{ feature_id: string }>;
-		remove_items?: Array<{ feature_id: string; billing_method?: string; interval?: string }>;
-		[key: string]: unknown;
-	};
-	affected_variants: Array<{
-		id: string;
-		name: string;
-		latest_version: number;
-		would_version: boolean;
-	}>;
-};
 
 // CREDITS with rollover (monthly, free metered) + CREDITS daily (same feature_id, different interval) + Messages
 const rolloverBaseItems = (rolloverMax = 200) => [
@@ -168,9 +161,11 @@ const createBase = async (id: string, items: ReturnType<typeof rolloverBaseItems
 };
 
 const createVariant = async (baseId: string, variantId: string) => {
-	return await autumnRpc.rpc.call<ApiPlanV1>({
-		method: "/plans.create_variant",
-		body: { base_plan_id: baseId, variant_plan_id: variantId, name: `Rollover Variant ${variantId}` },
+	return await createVariantPlan<ApiPlanV1>({
+		rpc: autumnRpc,
+		basePlanId: baseId,
+		variantPlanId: variantId,
+		name: `Rollover Variant ${variantId}`,
 	});
 };
 
@@ -259,21 +254,23 @@ test.concurrent(
 		await createBase(baseId, rolloverBaseItems(200));
 
 		const modifiedItems = rolloverBaseItems(500);
-		const preview = await autumnRpc.rpc.call<PreviewResponse>({
+		const preview = await autumnRpc.rpc.call<PlanUpdatePreview>({
 			method: "/plans.preview_update",
 			body: { plan_id: baseId, items: modifiedItems },
 		});
 
-		expect(preview.will_version).toBe(false);
-		expect(preview.diff.remove_items).toBeDefined();
-		expect(preview.diff.remove_items!.length).toBeGreaterThan(0);
-		expect(preview.diff.remove_items!.some((r) => r.feature_id === TestFeature.Credits)).toBe(true);
-
-		expect(preview.diff.add_items).toBeDefined();
-		expect(preview.diff.add_items!.length).toBeGreaterThan(0);
-		expect(preview.diff.add_items!.some((a) => a.feature_id === TestFeature.Credits)).toBe(true);
-
-		expect(preview.affected_variants).toEqual([]);
+		expect(preview.versionable).toBe(false);
+		expectPreviewItemChangeCorrect({
+			preview,
+			action: "deleted",
+			featureId: TestFeature.Credits,
+		});
+		expectPreviewItemChangeCorrect({
+			preview,
+			action: "created",
+			featureId: TestFeature.Credits,
+		});
+		expectPreviewVariantsCorrect({ preview, variants: [] });
 
 		await cleanup(baseId);
 	},
@@ -289,6 +286,7 @@ test.concurrent(
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
+		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -341,6 +339,7 @@ test.concurrent(
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
+		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -404,6 +403,7 @@ test.concurrent(
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
+		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -473,6 +473,7 @@ test.concurrent(
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
+		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
@@ -524,14 +525,14 @@ test.concurrent(
 
 		const before = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
 
-		const preview = await autumnRpc.rpc.call<PreviewResponse>({
+		const preview = await autumnRpc.rpc.call<PlanUpdatePreview>({
 			method: "/plans.preview_update",
 			body: { plan_id: baseId, items: rolloverBaseItems(200) },
 		});
 
-		expect(preview.will_version).toBe(false);
-		expect(preview.diff.add_items ?? []).toHaveLength(0);
-		expect(preview.diff.remove_items ?? []).toHaveLength(0);
+		expect(preview.versionable).toBe(false);
+		expect(preview.customize?.add_items ?? []).toHaveLength(0);
+		expect(preview.customize?.remove_items ?? []).toHaveLength(0);
 
 		const after = await ProductService.getFull({ db, idOrInternalId: baseId, orgId: org.id, env });
 		expect(after.version).toBe(before.version);
@@ -551,6 +552,7 @@ test.concurrent(
 			const baseId = `base_${rid}`;
 			const variantId = `${baseId}_variant`;
 			const customerId = `cus_${rid}`;
+		await cleanupCustomers(customerId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverPrepaidItems(200));
@@ -632,6 +634,7 @@ test.concurrent(
 			const variantId = `${baseId}_variant`;
 			const baseCusId = `base_cus_${rid}`;
 			const varCusId = `variant_cus_${rid}`;
+		await cleanupCustomers(baseCusId, varCusId);
 		await cleanup(baseId, variantId);
 
 		await createBase(baseId, rolloverBaseItems(200));
