@@ -52,7 +52,7 @@ const cleanup = async (...ids: string[]) => {
 };
 
 const createVariantRpc = async <T = ApiPlanV1>(planId: string, variantId: string, name: string) =>
-	autumnRpc.rpc.call<T>({ method: "/plans.create_variant", body: { plan_id: planId, id: variantId, name } });
+	autumnRpc.rpc.call<T>({ method: "/plans.create_variant", body: { base_plan_id: planId, variant_plan_id: variantId, name } });
 
 const previewUpdateRpc = async <T = PreviewUpdatePlanResponseV2>(planId: string, updates: Record<string, unknown>) =>
 	autumnRpc.rpc.call<T>({ method: "/plans.preview_update", body: { plan_id: planId, ...updates } });

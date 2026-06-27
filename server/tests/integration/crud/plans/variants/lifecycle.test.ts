@@ -3,7 +3,7 @@
  *
  * Contract under test (from tests/_temp/variants/CONTRACT.md):
  *   New endpoints:
- *     - POST /v1/plans.create_variant { plan_id, id, name } → getPlanResponse
+ *     - POST /v1/plans.create_variant { base_plan_id, variant_plan_id, name } → getPlanResponse
  *     - POST /v1/plans.preview_update (UpdatePlanParams omit propagate) → { will_version, current_version, diff, affected_variants }
  *     - POST /v1/plans.update (extended: propagate_to_variants, force_version, is_default)
  *   New DB column:
@@ -98,8 +98,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		const res = await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Yearly Variant",
 		});
 
@@ -145,15 +145,15 @@ test.concurrent(
 		const nestedId = `lc_nested_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
 		const err = await catchErr(() =>
 			rpc.post("/plans.create_variant", {
-				plan_id: variantId,
-				id: nestedId,
+				base_plan_id: variantId,
+				variant_plan_id: nestedId,
 				name: "Nested",
 			}),
 		);
@@ -187,8 +187,8 @@ test.concurrent(
 
 		const err = await catchErr(() =>
 			rpc.post("/plans.create_variant", {
-				plan_id: base.id,
-				id: `lc_var_${cid}`,
+				base_plan_id: base.id,
+				variant_plan_id: `lc_var_${cid}`,
 				name: "Variant",
 			}),
 		);
@@ -221,8 +221,8 @@ test.concurrent(
 
 		const err = await catchErr(() =>
 			rpc.post("/plans.create_variant", {
-				plan_id: base.id,
-				id: other.id,
+				base_plan_id: base.id,
+				variant_plan_id: other.id,
 				name: "Colliding Variant",
 			}),
 		);
@@ -254,8 +254,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -299,8 +299,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -338,8 +338,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -384,8 +384,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -434,8 +434,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -502,8 +502,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -554,8 +554,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -602,8 +602,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -643,8 +643,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -684,8 +684,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -761,8 +761,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 
@@ -807,8 +807,8 @@ test.concurrent(
 		const variantId = `lc_var_${cid}`;
 
 		await rpc.post("/plans.create_variant", {
-			plan_id: base.id,
-			id: variantId,
+			base_plan_id: base.id,
+			variant_plan_id: variantId,
 			name: "Variant",
 		});
 

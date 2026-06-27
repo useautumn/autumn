@@ -8,11 +8,12 @@ import {
 	DialogTitle,
 	Input,
 } from "@autumn/ui";
-import { useProductStore } from "@/hooks/stores/useProductStore";
+import type { ProductV2 } from "@autumn/shared";
 
 interface CreateVariantDialogProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	product: ProductV2;
 	variantId: string;
 	setVariantId: (id: string) => void;
 	variantName: string;
@@ -24,6 +25,7 @@ interface CreateVariantDialogProps {
 export function CreateVariantDialog({
 	open,
 	setOpen,
+	product,
 	variantId,
 	setVariantId,
 	variantName,
@@ -31,8 +33,6 @@ export function CreateVariantDialog({
 	isLoading,
 	onCreate,
 }: CreateVariantDialogProps) {
-	const product = useProductStore((s) => s.product);
-
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="max-w-md">

@@ -172,7 +172,7 @@ const createVariant = async (
 	baseId: string,
 	variantId: string,
 	name = "Variant",
-) => rpc.post("/plans.create_variant", { plan_id: baseId, id: variantId, name }) as Promise<ApiPlanV1>;
+) => rpc.post("/plans.create_variant", { base_plan_id: baseId, variant_plan_id: variantId, name }) as Promise<ApiPlanV1>;
 
 // ═════════════════════════════════════════════════════════════════
 // 1. create_variant copies all 7 items

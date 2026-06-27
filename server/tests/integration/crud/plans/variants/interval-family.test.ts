@@ -143,8 +143,8 @@ const createVariant = (
 	name = "Variant",
 ) =>
 	rpc.post("/plans.create_variant", {
-		plan_id: baseId,
-		id: variantId,
+		base_plan_id: baseId,
+		variant_plan_id: variantId,
 		name,
 	}) as Promise<ApiPlanV1>;
 

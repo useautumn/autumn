@@ -166,7 +166,7 @@ const createBase = async (id: string, items: ReturnType<typeof rolloverBaseItems
 const createVariant = async (baseId: string, variantId: string) => {
 	return await autumnRpc.rpc.call<ApiPlanV1>({
 		method: "/plans.create_variant",
-		body: { plan_id: baseId, id: variantId, name: `Rollover Variant ${variantId}` },
+		body: { base_plan_id: baseId, variant_plan_id: variantId, name: `Rollover Variant ${variantId}` },
 	});
 };
 

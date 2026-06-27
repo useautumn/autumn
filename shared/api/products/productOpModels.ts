@@ -114,6 +114,10 @@ export const CreateProductV2ParamsSchema = z
 		create_in_stripe: z.boolean().optional().meta({
 			internal: true,
 		}),
+
+		base_internal_product_id: z.string().nullable().optional().meta({
+			internal: true,
+		}),
 	})
 	.meta({
 		examples: [CREATE_PRODUCT_EXAMPLE],

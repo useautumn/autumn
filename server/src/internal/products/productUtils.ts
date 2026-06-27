@@ -102,7 +102,8 @@ export const constructProduct = ({
 		created_at: Date.now(),
 		processor,
 		base_variant_id: null,
-		base_internal_product_id: baseInternalProductId ?? null,
+		base_internal_product_id:
+			baseInternalProductId ?? productData.base_internal_product_id ?? null,
 		archived: false,
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,

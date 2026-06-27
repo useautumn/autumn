@@ -1,4 +1,8 @@
-import type { ProductItem, UpdatePlanParamsV2Input } from "@autumn/shared";
+import type {
+	CreateVariantParamsV2Input,
+	ProductItem,
+	UpdatePlanParamsV2Input,
+} from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { notNullish } from "@/utils/genUtils";
 
@@ -69,7 +73,7 @@ export class ProductService {
 
 	static async createVariant(
 		axiosInstance: AxiosInstance,
-		data: { plan_id: string; id: string; name: string },
+		data: CreateVariantParamsV2Input,
 	) {
 		const response = await axiosInstance.post(
 			"/v1/plans.create_variant",

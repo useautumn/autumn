@@ -64,8 +64,8 @@ export const ProductListRowToolbar = ({
 		setIsCreatingVariant(true);
 		try {
 			await ProductService.createVariant(axiosInstance, {
-				plan_id: product.id,
-				id: variantId.trim(),
+				base_plan_id: product.id,
+				variant_plan_id: variantId.trim(),
 				name: variantName.trim(),
 			});
 			toast.success("Variant created");
@@ -99,6 +99,7 @@ export const ProductListRowToolbar = ({
 				<CreateVariantDialog
 					open={createVariantOpen}
 					setOpen={setCreateVariantOpen}
+					product={product}
 					variantId={variantId}
 					setVariantId={setVariantId}
 					variantName={variantName}
