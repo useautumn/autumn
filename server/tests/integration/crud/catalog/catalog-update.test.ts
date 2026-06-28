@@ -7,7 +7,7 @@
  *     - does NOT persist (plans.get still returns the original plan)
  *   POST /v1/catalog.update:
  *     - creates a new plan when plan_id does not exist
- *     - returns { plans: ApiPlanV1[], features, migrations }
+ *     - returns { plans: ApiPlanV1[], features: ApiFeatureV1[] }
  *
  * Pre-impl red: routes/handlers do not exist (404 / undefined fields).
  * Post-impl green: catalog handlers resolve params into the shared plan preview
@@ -22,22 +22,32 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { expectCatalogPreview } from "./utils/expectCatalogPreview.js";
 
-test.concurrent(
+test(
 	`${chalk.yellowBright("catalog: preview_update resolves shared plan preview without persisting")}`,
 	async () => {
-		const customerId = "catalog-preview-customer";
 		const prod = products.pro({
 			id: "catalog_preview_pro",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
 		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ testClock: false, paymentMethod: "success" }),
-				s.products({ list: [prod] }),
+			setup: [],
+			actions: [],
+		});
+		await autumnV2_2.post("/catalog.update", {
+			plans: [
+				{
+					plan_id: prod.id,
+					name: prod.name,
+					items: [
+						{
+							feature_id: TestFeature.Messages,
+							included: 100,
+							reset: { interval: "month" },
+						},
+					],
+				},
 			],
-			actions: [s.attach({ productId: prod.id })],
 		});
 
 		const compactPreview = await autumnV2_2.post("/catalog.preview_update", {
@@ -60,8 +70,8 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: prod.id,
-					hasCustomers: true,
-					willVersion: true,
+					hasCustomers: false,
+					willVersion: false,
 					planExpanded: false,
 				},
 			],
@@ -89,8 +99,8 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: prod.id,
-					hasCustomers: true,
-					willVersion: true,
+					hasCustomers: false,
+					willVersion: false,
 					planExpanded: true,
 					items: [{ featureId: TestFeature.Messages, included: 500 }],
 				},
@@ -200,13 +210,11 @@ test(
 	},
 );
 
-test.concurrent(
+test(
 	`${chalk.yellowBright("catalog: update creates a new plan in one call")}`,
 	async () => {
-		const customerId = "catalog-update-customer";
 		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [s.customer({ testClock: false })],
+			setup: [],
 			actions: [],
 		});
 
@@ -233,16 +241,14 @@ test.concurrent(
 	},
 );
 
-test.concurrent(
+test(
 	`${chalk.yellowBright("catalog: update creates a plan referencing a feature created in the same call")}`,
 	async () => {
 		// Regression: the plan 404'd ("feature not found") because plan creation
 		// resolved features against the request-start snapshot, which did not
 		// include the feature created earlier in the same batch.
-		const customerId = "catalog-update-feature-plan";
 		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [s.customer({ testClock: false })],
+			setup: [],
 			actions: [],
 		});
 

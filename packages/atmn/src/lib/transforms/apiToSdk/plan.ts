@@ -7,7 +7,7 @@ import { createTransformer } from "./Transformer.js";
  * Declarative plan transformer - replaces 57 lines with ~20 lines of config
  */
 export const planTransformer = createTransformer<ApiPlan, Plan>({
-	copy: ["id", "name", "description", "group"],
+	copy: ["id", "name", "description", "group", "archived"],
 
 	// Rename snake_case API fields → camelCase SDK fields
 	rename: {

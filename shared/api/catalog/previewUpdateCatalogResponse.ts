@@ -12,7 +12,18 @@ export const MigrationDraftSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
+export const CatalogPlanPreviewActionSchema = z.enum([
+	"created",
+	"updated",
+	"deleted",
+	"skipped",
+	"none",
+]);
+
 export const CatalogPlanPreviewSchema = PlanUpdatePreviewSchema.extend({
+	action: CatalogPlanPreviewActionSchema.meta({
+		description: "Whether the plan would be created, updated, deleted, or unchanged.",
+	}),
 	will_archive: z.boolean().optional().default(false).meta({
 		description:
 			"Whether applying this derived plan removal archives the plan instead of deleting it.",

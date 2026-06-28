@@ -1,5 +1,6 @@
 import type {
 	CatalogPreviewUpdateResponse,
+	CatalogPlanPreview,
 	CatalogUpdateParams,
 	FullProduct,
 	PlanUpdatePreview,
@@ -13,7 +14,11 @@ import {
 	deriveReplacePlanIds,
 } from "../deriveReplaceRemovals.js";
 import { sortRemoveFeatureIds } from "../featureRemovalOrder.js";
-import { previewFeature, previewRemoveFeature } from "./previewFeature.js";
+import {
+	previewFeature,
+	previewRemoveFeature,
+	previewSkippedFeature,
+} from "./previewFeature.js";
 import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
 
@@ -71,7 +76,7 @@ const previewRemovePlan = ({
 }: {
 	product: FullProduct;
 	hasCustomers: boolean;
-}): PlanUpdatePreview & { will_archive: boolean } => ({
+}): CatalogPlanPreview => ({
 	...PlanUpdatePreviewSchema.parse({
 		plan_id: product.id,
 		has_customers: hasCustomers,
@@ -84,8 +89,47 @@ const previewRemovePlan = ({
 		item_changes: [],
 		variants: [],
 	}),
+	action: "deleted",
 	will_archive: hasCustomers,
 });
+
+const previewSkippedPlan = ({
+	planId,
+}: {
+	planId: string;
+}): CatalogPlanPreview => ({
+	...PlanUpdatePreviewSchema.parse({
+		plan_id: planId,
+		has_customers: false,
+		versionable: false,
+		customize: null,
+		previous_attributes: null,
+		item_changes: [],
+		variants: [],
+	}),
+	action: "skipped",
+	will_archive: false,
+});
+
+const planPreviewAction = ({
+	current,
+	preview,
+}: {
+	current: FullProduct | null;
+	preview: PlanUpdatePreview;
+}): CatalogPlanPreview["action"] => {
+	if (!current) return "created";
+	if (
+		preview.customize ||
+		preview.previous_attributes ||
+		preview.price_change ||
+		preview.item_changes.length > 0 ||
+		preview.variants.length > 0
+	) {
+		return "updated";
+	}
+	return "none";
+};
 
 /**
  * Resolve a proposed catalog change (features + plans) WITHOUT persisting, so a
@@ -101,9 +145,22 @@ export const previewUpdateCatalog = async ({
 }): Promise<CatalogPreviewUpdateResponse> => {
 	const { plans, features, skip_deletions } = params;
 	const currency = ctx.org.default_currency ?? "usd";
+	const skipFeatureIds = new Set(params.skip_feature_ids);
+	const skipPlanIds = new Set(params.skip_plan_ids);
+	const activePlans = plans.filter(
+		(plan) =>
+			!skipPlanIds.has(plan.plan_id) &&
+			(!plan.new_plan_id || !skipPlanIds.has(plan.new_plan_id)),
+	);
+	const activeFeatures = features.filter(
+		(feature) => !skipFeatureIds.has(feature.feature_id),
+	);
 
 	const { products, currents, withCustomers, proposedFeatures, planCtx } =
-		await setupPreviewCatalogContext({ ctx, params });
+		await setupPreviewCatalogContext({
+			ctx,
+			params: { ...params, plans: activePlans, features: activeFeatures },
+		});
 	const planChangesCtx = scopeExpandForCtx({
 		ctx: { ...planCtx, expand: params.expand ?? [] },
 		prefix: "plan_changes",
@@ -115,13 +172,15 @@ export const previewUpdateCatalog = async ({
 
 	const missingPlanIds = skip_deletions
 		? []
-		: deriveReplacePlanIds({ products, plans });
+		: deriveReplacePlanIds({ products, plans }).filter(
+				(planId) => !skipPlanIds.has(planId),
+			);
 	const missingFeatureIds = skip_deletions
 		? []
 		: deriveReplaceFeatureIds({
 				features: ctx.features,
 				desiredFeatures: features,
-			});
+			}).filter((featureId) => !skipFeatureIds.has(featureId));
 	const missingProducts = products.filter((product) =>
 		missingPlanIds.includes(product.id),
 	);
@@ -143,7 +202,7 @@ export const previewUpdateCatalog = async ({
 
 	const [planResults, featureResults] = await Promise.all([
 		Promise.all(
-			plans.map((planParams, index) => {
+			activePlans.map((planParams, index) => {
 				const current = currents[index];
 				return previewCatalogPlanUpdate({
 					ctx: planChangesCtx,
@@ -174,10 +233,32 @@ export const previewUpdateCatalog = async ({
 			hasCustomers: missingPlanCustomers.has(product.id),
 		}),
 	);
-	const planChanges = planResults.map((planResult) => ({
+	const planChanges = planResults.map((planResult, index) => ({
 		...planResult,
+		action: planPreviewAction({
+			current: currents[index],
+			preview: planResult,
+		}),
 		will_archive: false,
 	}));
+	const skippedPlanResults = [
+		...plans
+			.filter(
+				(plan) =>
+					skipPlanIds.has(plan.plan_id) ||
+					(Boolean(plan.new_plan_id) && skipPlanIds.has(plan.new_plan_id!)),
+			)
+			.map((plan) => previewSkippedPlan({ planId: plan.plan_id })),
+		...products
+			.filter(
+				(product) =>
+					skipPlanIds.has(product.id) &&
+					!plans.some(
+						(plan) => plan.plan_id === product.id || plan.new_plan_id === product.id,
+					),
+			)
+			.map((product) => previewSkippedPlan({ planId: product.id })),
+	];
 
 	const removeFeatureResults = [];
 	const removedFeatureIds = new Set<string>();
@@ -198,7 +279,7 @@ export const previewUpdateCatalog = async ({
 				products: productsForFeatureRemovalPreview({
 					featureId,
 					products,
-					plans,
+					plans: activePlans,
 					planResults: [...planChanges, ...removePlanResults],
 					removePlanIds: new Set(missingPlanIds),
 				}),
@@ -206,9 +287,39 @@ export const previewUpdateCatalog = async ({
 		);
 		removedFeatureIds.add(featureId);
 	}
+	const skippedFeatureResults = [
+		...features
+			.filter((feature) => skipFeatureIds.has(feature.feature_id))
+			.map((feature) =>
+				previewSkippedFeature({
+					ctx: featureChangesCtx,
+					featureId: feature.feature_id,
+					existing:
+						ctx.features.find((candidate) => candidate.id === feature.feature_id) ??
+						null,
+				}),
+			),
+		...ctx.features
+			.filter(
+				(feature) =>
+					skipFeatureIds.has(feature.id) &&
+					!features.some((incoming) => incoming.feature_id === feature.id),
+			)
+			.map((feature) =>
+				previewSkippedFeature({
+					ctx: featureChangesCtx,
+					featureId: feature.id,
+					existing: feature,
+				}),
+			),
+	];
 
 	return {
-		plan_changes: [...planChanges, ...removePlanResults],
-		feature_changes: [...featureResults, ...removeFeatureResults],
+		plan_changes: [...planChanges, ...removePlanResults, ...skippedPlanResults],
+		feature_changes: [
+			...featureResults,
+			...removeFeatureResults,
+			...skippedFeatureResults,
+		],
 	};
 };

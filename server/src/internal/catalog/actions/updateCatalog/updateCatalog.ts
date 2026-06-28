@@ -8,7 +8,6 @@ import {
 	dbToApiFeatureV1,
 	diffPlanV1,
 	featureV1ToDbFeature,
-	type MigrationDraft,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -67,8 +66,11 @@ const upsertFeatures = async ({
 }) => {
 	const { db, org, env } = ctx;
 	let changed = false;
+	const skipFeatureIds = new Set(params.skip_feature_ids);
 
 	for (const feature of params.features) {
+		if (skipFeatureIds.has(feature.feature_id)) continue;
+
 		const existing = await FeatureService.get({
 			db,
 			orgId: org.id,
@@ -114,7 +116,7 @@ const upsertPlans = async ({
 	params: CatalogUpdateParams;
 }) => {
 	const { db, org, env } = ctx;
-	const migrations: MigrationDraft[] = [];
+	const skipPlanIds = new Set(params.skip_plan_ids);
 
 	for (const planParams of params.plans) {
 		const {
@@ -126,6 +128,13 @@ const upsertPlans = async ({
 			version,
 			...rest
 		} = planParams;
+		if (
+			skipPlanIds.has(plan_id) ||
+			(new_plan_id !== undefined && skipPlanIds.has(new_plan_id))
+		) {
+			continue;
+		}
+
 		const current = await ProductService.getFull({
 			db,
 			idOrInternalId: plan_id,
@@ -235,11 +244,8 @@ const upsertPlans = async ({
 				scope: "all_customers",
 			});
 			await migrationRepo.insert({ ctx, insert: draft });
-			migrations.push(draft);
 		}
 	}
-
-	return migrations;
 };
 
 const applyMissingPlanRemovals = async ({
@@ -340,11 +346,9 @@ const applyMissingFeatureRemovals = async ({
 const resolveCatalogUpdateResponse = async ({
 	ctx,
 	params,
-	migrations,
 }: {
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
-	migrations: MigrationDraft[];
 }) => {
 	const { db, org, env } = ctx;
 	const resolvedPlans = await Promise.all(
@@ -383,7 +387,6 @@ const resolveCatalogUpdateResponse = async ({
 	return {
 		plans: resolvedPlans.filter((plan) => plan !== null),
 		features: resolvedFeatures.filter((feature) => feature !== null),
-		migrations,
 	};
 };
 
@@ -402,10 +405,13 @@ export const updateCatalog = async ({
 	});
 	const replacePlanIds = params.skip_deletions
 		? []
-		: deriveReplacePlanIds({ products: productsBeforeUpdate, plans: params.plans });
+		: deriveReplacePlanIds({
+				products: productsBeforeUpdate,
+				plans: params.plans,
+			}).filter((planId) => !params.skip_plan_ids.includes(planId));
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
-	const migrations = await upsertPlans({ ctx, params });
+	await upsertPlans({ ctx, params });
 	await applyMissingPlanRemovals({ ctx, planIds: replacePlanIds });
 
 	const replaceFeatureIds = params.skip_deletions
@@ -413,8 +419,8 @@ export const updateCatalog = async ({
 		: deriveReplaceFeatureIds({
 				features: ctx.features,
 				desiredFeatures: params.features,
-			});
+			}).filter((featureId) => !params.skip_feature_ids.includes(featureId));
 	await applyMissingFeatureRemovals({ ctx, featureIds: replaceFeatureIds });
 
-	return resolveCatalogUpdateResponse({ ctx, params, migrations });
+	return resolveCatalogUpdateResponse({ ctx, params });
 };

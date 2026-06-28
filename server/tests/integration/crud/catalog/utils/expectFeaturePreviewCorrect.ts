@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import type { CatalogPreviewUpdateResponse, FeatureType } from "@autumn/shared";
 
-type FeatureChangeAction = "create" | "update" | "remove" | "none";
+type FeatureChangeAction = "create" | "update" | "remove" | "skipped" | "none";
 type FeatureChangeReason =
 	| "has_customers"
 	| "used_in_products"

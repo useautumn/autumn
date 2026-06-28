@@ -1,10 +1,6 @@
 import type { Feature, Plan } from "../../compose/models/index.js";
 import { AppEnv } from "../../lib/env/index.js";
-import type {
-	FeatureDeleteInfo,
-	PlanDeleteInfo,
-	PlanUpdateInfo,
-} from "./types.js";
+import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
 /**
  * Types for push prompts
@@ -36,6 +32,12 @@ export interface PushPrompt {
 	options: PromptOption[];
 }
 
+interface PlanVersioningPromptInfo {
+	plan: Pick<Plan, "id" | "name">;
+	willVersion: boolean;
+	isArchived: boolean;
+}
+
 // Counter for unique prompt IDs
 let promptCounter = 0;
 
@@ -64,7 +66,7 @@ export function createProdConfirmationPrompt(): PushPrompt {
  * Create plan versioning prompt
  */
 export function createPlanVersioningPrompt(
-	info: PlanUpdateInfo,
+	info: PlanVersioningPromptInfo,
 	env?: AppEnv,
 ): PushPrompt {
 	const isSandbox = !env || env === AppEnv.Sandbox;
@@ -136,7 +138,6 @@ export function createPlanDeleteNoCustomersPrompt(
 		},
 		options: [
 			{ label: "Delete permanently", value: "delete", isDefault: true },
-			{ label: "Archive instead", value: "archive", isDefault: false },
 			{ label: "Skip (keep as is)", value: "skip", isDefault: false },
 		],
 	};
@@ -230,7 +231,6 @@ export function createFeatureDeleteNoDepsPrompt(
 		},
 		options: [
 			{ label: "Delete permanently", value: "delete", isDefault: true },
-			{ label: "Archive instead", value: "archive", isDefault: false },
 			{ label: "Skip (keep as is)", value: "skip", isDefault: false },
 		],
 	};

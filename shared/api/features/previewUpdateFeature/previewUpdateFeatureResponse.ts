@@ -17,6 +17,7 @@ export const PreviewUpdateFeatureActionSchema = z.enum([
 	"create",
 	"update",
 	"remove",
+	"skipped",
 	"none",
 ]);
 

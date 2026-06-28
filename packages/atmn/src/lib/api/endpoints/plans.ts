@@ -20,10 +20,10 @@ export async function fetchPlans(
 	const { secretKey, includeArchived = true } = options;
 
 	const response = await request<FetchPlansResponse>({
-		method: "GET",
-		path: "/v1/products",
+		method: "POST",
+		path: "/v1/plans.list",
 		secretKey,
-		queryParams: {
+		body: {
 			include_archived: includeArchived,
 		},
 	});

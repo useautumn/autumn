@@ -11,8 +11,11 @@ import {
 	getFeatureDeletionInfo,
 	getPlanDeletionInfo,
 	getPlanHasCustomers,
+	migrateProduct,
+	previewUpdateCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
+	updateCatalog,
 	updateFeature,
 	updatePlan,
 	upsertFeature,
@@ -28,10 +31,15 @@ import {
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
 import type {
+	CatalogPreviewUpdateResponse,
+	CatalogUpdateParams,
+} from "../../lib/api/endpoints/index.js";
+import type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
 	PushAnalysis,
+	PushResult,
 	RemoteData,
 } from "./types.js";
 
@@ -506,6 +514,206 @@ function planContainsFeature(plan: Plan, featureId: string): boolean {
 	return getPlanFeatureIds(plan).some((id) => id === featureId);
 }
 
+function toCatalogFeatureParams(feature: Feature): Record<string, unknown> {
+	const apiFeature = transformFeatureToApi(feature) as Record<string, unknown>;
+	const { id, archived, ...rest } = apiFeature;
+
+	return {
+		feature_id: id,
+		...rest,
+	};
+}
+
+function toCatalogPlanParams(plan: Plan): Record<string, unknown> {
+	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
+	const { description, id, ...rest } = apiPlan;
+
+	return {
+		plan_id: id,
+		...rest,
+		...(description != null ? { description } : {}),
+		group: apiPlan.group ?? "",
+		add_on: apiPlan.add_on ?? false,
+		auto_enable: apiPlan.auto_enable ?? false,
+		price: apiPlan.price ?? null,
+		items: apiPlan.items ?? [],
+		free_trial: apiPlan.free_trial ?? null,
+	};
+}
+
+export function buildCatalogUpdateParams({
+	features,
+	plans,
+	skipFeatureIds = [],
+	skipPlanIds = [],
+}: {
+	features: Feature[];
+	plans: Plan[];
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+}): CatalogUpdateParams {
+	const sortedFeatures = [...features].sort((a, b) => {
+		if (a.type === "credit_system" && b.type !== "credit_system") return 1;
+		if (a.type !== "credit_system" && b.type === "credit_system") return -1;
+		return 0;
+	});
+
+	return {
+		features: sortedFeatures.map(toCatalogFeatureParams),
+		plans: plans.map(toCatalogPlanParams),
+		skip_deletions: false,
+		skip_feature_ids: skipFeatureIds,
+		skip_plan_ids: skipPlanIds,
+	};
+}
+
+export const catalogPreviewHasChanges = (
+	preview: CatalogPreviewUpdateResponse,
+): boolean =>
+	preview.feature_changes.some((change) => change.action !== "none") ||
+	preview.plan_changes.some((change) => change.action !== "none");
+
+export function catalogPreviewToPushResult(
+	preview: CatalogPreviewUpdateResponse,
+): PushResult {
+	const result: PushResult = {
+		featuresCreated: [],
+		featuresUpdated: [],
+		featuresDeleted: [],
+		featuresArchived: [],
+		featuresSkipped: [],
+		plansCreated: [],
+		plansUpdated: [],
+		plansVersioned: [],
+		plansDeleted: [],
+		plansArchived: [],
+		plansSkipped: [],
+	};
+
+	for (const change of preview.feature_changes) {
+		if (change.blocked) {
+			result.featuresSkipped.push(change.feature_id);
+			continue;
+		}
+
+		if (change.action === "create") {
+			result.featuresCreated.push(change.feature_id);
+		} else if (change.action === "update") {
+			result.featuresUpdated.push(change.feature_id);
+		} else if (change.action === "remove") {
+			if (change.will_archive) {
+				result.featuresArchived.push(change.feature_id);
+			} else {
+				result.featuresDeleted.push(change.feature_id);
+			}
+		} else if (change.action === "skipped") {
+			result.featuresSkipped.push(change.feature_id);
+		}
+	}
+
+	for (const change of preview.plan_changes) {
+		if (change.action === "created") {
+			result.plansCreated.push(change.plan_id);
+		} else if (change.action === "updated") {
+			if (change.versionable) {
+				result.plansVersioned.push(change.plan_id);
+			} else {
+				result.plansUpdated.push(change.plan_id);
+			}
+		} else if (change.action === "deleted") {
+			if (change.will_archive) {
+				result.plansArchived.push(change.plan_id);
+			} else {
+				result.plansDeleted.push(change.plan_id);
+			}
+		} else if (change.action === "skipped") {
+			result.plansSkipped.push(change.plan_id);
+		}
+	}
+
+	return result;
+}
+
+export async function previewCatalogPush({
+	features,
+	plans,
+	skipFeatureIds,
+	skipPlanIds,
+}: {
+	features: Feature[];
+	plans: Plan[];
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+}): Promise<{
+	params: CatalogUpdateParams;
+	preview: CatalogPreviewUpdateResponse;
+}> {
+	const secretKey = getSecretKey();
+	const params = buildCatalogUpdateParams({
+		features,
+		plans,
+		skipFeatureIds,
+		skipPlanIds,
+	});
+	const preview = await previewUpdateCatalog({ secretKey, params });
+
+	return { params, preview };
+}
+
+export async function pushCatalog({
+	features,
+	migratePlanIds,
+	migrateVersioned = false,
+	plans,
+	preview,
+	skipFeatureIds,
+	skipPlanIds,
+}: {
+	features: Feature[];
+	migratePlanIds?: string[];
+	migrateVersioned?: boolean;
+	plans: Plan[];
+	preview?: CatalogPreviewUpdateResponse;
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+}): Promise<PushResult> {
+	const secretKey = getSecretKey();
+	const params = buildCatalogUpdateParams({
+		features,
+		plans,
+		skipFeatureIds,
+		skipPlanIds,
+	});
+	const resolvedPreview =
+		preview ?? (await previewUpdateCatalog({ secretKey, params }));
+
+	await updateCatalog({ secretKey, params });
+	const result = catalogPreviewToPushResult(resolvedPreview);
+
+	const plansToMigrate = migratePlanIds ?? (migrateVersioned ? result.plansVersioned : []);
+	if (plansToMigrate.length > 0) {
+		const updatedPlans = await fetchPlans({
+			secretKey,
+			includeArchived: false,
+		});
+
+		for (const planId of plansToMigrate) {
+			const updatedPlan = updatedPlans.find((plan) => plan.id === planId);
+			if (updatedPlan && updatedPlan.version > 1) {
+				await migrateProduct({
+					secretKey,
+					fromProductId: planId,
+					fromVersion: updatedPlan.version - 1,
+					toProductId: planId,
+					toVersion: updatedPlan.version,
+				});
+			}
+		}
+	}
+
+	return result;
+}
+
 /**
  * Analyze what changes need to be pushed
  */
@@ -535,9 +743,8 @@ export async function analyzePush(
 	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedFeatures = localFeatures.filter((f) => {
 		const remote = remoteFeaturesById.get(f.id);
-		const localArchived = (f as Feature & { archived?: boolean }).archived;
-		const remoteArchived =
-			remote && (remote as Feature & { archived?: boolean }).archived;
+		const localArchived = f.archived;
+		const remoteArchived = remote?.archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
@@ -567,7 +774,7 @@ export async function analyzePush(
 		.filter(
 			(p) =>
 				!localPlanIds.has(p.id) &&
-				!(p as Plan & { archived?: boolean }).archived,
+				!p.archived,
 		)
 		.map((p) => p.id);
 
@@ -581,9 +788,8 @@ export async function analyzePush(
 	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedPlans = localPlans.filter((p) => {
 		const remote = remotePlansById.get(p.id);
-		const localArchived = (p as Plan & { archived?: boolean }).archived;
-		const remoteArchived =
-			remote && (remote as Plan & { archived?: boolean }).archived;
+		const localArchived = p.archived;
+		const remoteArchived = remote?.archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
@@ -632,7 +838,7 @@ export async function analyzePush(
 		.filter(
 			(f) =>
 				!localFeatureIds.has(f.id) &&
-				!(f as Feature & { archived?: boolean }).archived,
+				!f.archived,
 		)
 		.map((f) => f.id);
 
