@@ -7,6 +7,7 @@ import type {
 	PlanUpdatePreview,
 } from "@autumn/shared";
 import {
+	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	PlanUpdatePreviewSchema,
 	planDiffHasBillingChanges,
@@ -149,15 +150,68 @@ const planPreviewAction = ({
 };
 
 const previewMigrationForInPlaceUpdate = async ({
+	allVersions = false,
 	ctx,
 	current,
 	preview,
 }: {
+	allVersions?: boolean;
 	ctx: AutumnContext;
 	current: FullProduct | null;
 	preview: PlanUpdatePreview;
 }): Promise<CatalogMigrationPreview | undefined> => {
 	if (!current || !preview.customize) return undefined;
+
+	const fromPlan = await getPlanResponse({
+		ctx,
+		product: current,
+		features: ctx.features,
+	});
+
+	if (allVersions) {
+		const latestVariantById = new Map<
+			string,
+			PlanUpdatePreview["variants"][number]
+		>();
+		for (const variant of preview.variants) {
+			const latest = latestVariantById.get(variant.plan_id);
+			if (!latest || variant.version > latest.version) {
+				latestVariantById.set(variant.plan_id, variant);
+			}
+		}
+		const targets = [
+			...(preview.has_customers ||
+			preview.other_versions.some((version) => version.has_customers)
+				? [{ id: current.id, customize: preview.customize }]
+				: []),
+			...[...latestVariantById.values()]
+				.filter(
+					(variant) =>
+						preview.variants.some(
+							(row) => row.plan_id === variant.plan_id && row.will_apply,
+						) &&
+						preview.variants.some(
+							(row) => row.plan_id === variant.plan_id && row.has_customers,
+						),
+				)
+				.map((variant) => ({
+					id: variant.plan_id,
+					customize: variant.customize,
+				})),
+		];
+		const draft = buildAllVersionsUpdateMigrationDraft({
+			targets,
+			hasBillingChanges: planDiffHasBillingChanges(preview.customize, fromPlan),
+		});
+		if (!draft) return undefined;
+
+		return {
+			draft,
+			plan_ids: targets.map((target) => target.id),
+			include_custom: false,
+			has_billing_changes: !draft.no_billing_changes,
+		};
+	}
 
 	const targets = [
 		...(preview.versionable
@@ -167,14 +221,9 @@ const previewMigrationForInPlaceUpdate = async ({
 			.filter((variant) => variant.will_apply && variant.has_customers)
 			.map((variant) => ({
 				id: variant.plan_id,
-				version: variant.plan?.version ?? current.version,
+				version: variant.version,
 			})),
 	];
-	const fromPlan = await getPlanResponse({
-		ctx,
-		product: current,
-		features: ctx.features,
-	});
 	const draft = buildCombinedVariantMigrationDraft({
 		targets,
 		hasBillingChanges: planDiffHasBillingChanges(preview.customize, fromPlan),
@@ -308,6 +357,7 @@ export const previewUpdateCatalog = async ({
 			const migration =
 				action === "updated"
 					? await previewMigrationForInPlaceUpdate({
+							allVersions: activePlans[index]?.all_versions,
 							ctx: planChangesCtx,
 							current: currents[index],
 							preview: planResult,

@@ -2,26 +2,25 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	apiPlan,
-	buildCombinedVariantMigrationDraft,
 	type CatalogUpdateParams,
 	type CreateProductV2Params,
 	dbToApiFeatureV1,
-	diffPlanV1,
 	featureV1ToDbFeature,
-	planDiffHasBillingChanges,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
-import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
 import { getObjectsUsingFeature } from "@/internal/features/utils/updateFeatureUtils/getObjectsUsingFeature.js";
-import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { deleteProduct } from "@/internal/product/actions/deleteProduct.js";
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
+import {
+	createPlanMigrationDraft,
+	getVariantMigrationSnapshots,
+} from "@/internal/product/actions/updateProduct/createPlanMigrationDraft.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
@@ -113,66 +112,6 @@ const upsertFeatures = async ({
 	if (changed) {
 		ctx.features = await FeatureService.list({ db, orgId: org.id, env });
 	}
-};
-
-const createPlanMigrationDraft = async ({
-	ctx,
-	current,
-	fromPlan,
-	planId,
-	selectedVariantIds,
-	toPlan,
-}: {
-	ctx: AutumnContext;
-	current: Awaited<ReturnType<typeof ProductService.getFull>>;
-	fromPlan: Awaited<ReturnType<typeof getPlanResponse>>;
-	planId: string;
-	selectedVariantIds: string[];
-	toPlan: Awaited<ReturnType<typeof getPlanResponse>>;
-}) => {
-	if (!current) return;
-
-	const diff = diffPlanV1({ from: fromPlan, to: toPlan });
-	if (Object.keys(diff).length === 0) return;
-
-	const variants = selectedVariantIds.length
-		? await ProductService.listFull({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				inIds: selectedVariantIds,
-			})
-		: [];
-	const usageByProduct = await customerProductRepo.getVersioningUsage({
-		db: ctx.db,
-		internalProductIds: [
-			current.internal_id,
-			...variants.map((variant) => variant.internal_id),
-		],
-	});
-	const baseUsage = usageByProduct.get(current.internal_id);
-	const targets = [
-		...(baseUsage?.hasVersionableCustomerProducts
-			? [{ id: planId, version: current.version }]
-			: []),
-		...variants
-			.filter(
-				(variant) =>
-					usageByProduct.get(variant.internal_id)
-						?.hasVersionableCustomerProducts,
-			)
-			.map((variant) => ({
-				id: variant.id,
-				version: variant.version,
-			})),
-	];
-	const draft = buildCombinedVariantMigrationDraft({
-		targets,
-		hasBillingChanges: planDiffHasBillingChanges(diff, fromPlan),
-	});
-	if (!draft) return;
-
-	await migrationRepo.insert({ ctx, insert: draft });
 };
 
 const upsertPlans = async ({
@@ -268,7 +207,7 @@ const upsertPlans = async ({
 		const fromPlan =
 			hasPlanUpdate &&
 			(create_migration ?? params.create_migration) &&
-			disable_version
+			(disable_version || all_versions)
 				? await getPlanResponse({
 						ctx,
 						product: current,
@@ -277,6 +216,19 @@ const upsertPlans = async ({
 				: null;
 
 		const latestPlanId = new_plan_id ?? plan_id;
+		const selectedVariantIds = [
+			...new Set([
+				...(update_variant_ids ?? []),
+				...variantUpdates.map((variant) => variant.variant_plan_id),
+			]),
+		];
+		const variantsBefore =
+			fromPlan && all_versions
+				? await getVariantMigrationSnapshots({
+						ctx,
+						variantIds: selectedVariantIds,
+					})
+				: [];
 		const updateParams = hasPlanUpdate
 			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,
@@ -313,14 +265,11 @@ const upsertPlans = async ({
 			ctx,
 			current,
 			fromPlan,
+			mode: all_versions ? "all_versions" : "version",
 			planId: plan_id,
-			selectedVariantIds: [
-				...new Set([
-					...(update_variant_ids ?? []),
-					...variantUpdates.map((variant) => variant.variant_plan_id),
-				]),
-			],
+			selectedVariantIds,
 			toPlan,
+			variantsBefore,
 		});
 	}
 };

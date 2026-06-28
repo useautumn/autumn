@@ -22,6 +22,11 @@ export interface CombinedVariantMigrationTarget {
 	version: number;
 }
 
+export interface AllVersionsUpdateMigrationTarget {
+	id: string;
+	customize: DiffedCustomizePlanV1 | null;
+}
+
 /** True when the diff changes what a customer is billed (price or any priced item). */
 export const planDiffHasBillingChanges = (
 	diff: DiffedCustomizePlanV1,
@@ -142,6 +147,48 @@ export const buildCombinedVariantMigrationDraft = ({
 				? [...versionOps(false), ...versionOps(true)]
 				: versionOps(false),
 		},
+		no_billing_changes: !hasBillingChanges,
+	};
+};
+
+export const buildAllVersionsUpdateMigrationDraft = ({
+	targets,
+	hasBillingChanges,
+	includeCustom = false,
+}: {
+	targets: AllVersionsUpdateMigrationTarget[];
+	hasBillingChanges: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null => {
+	const ops = targets.flatMap((target): UpdatePlanOp[] => {
+		if (!target.customize) return [];
+		const customize = migratablePlanDiff(target.customize);
+		if (Object.keys(customize).length === 0) return [];
+
+		const op = (custom: boolean): UpdatePlanOp => ({
+			type: "update_plan",
+			plan_filter: { plan_id: target.id, custom },
+			customize,
+		});
+
+		return includeCustom ? [op(false), op(true)] : [op(false)];
+	});
+	if (ops.length === 0) return null;
+
+	const planIds = [...new Set(targets.map((target) => target.id))];
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+	const basePlanFilter = { plan_id: planMatcher };
+
+	return {
+		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
+		filter: {
+			customer: {
+				plan: includeCustom
+					? basePlanFilter
+					: { ...basePlanFilter, custom: false },
+			},
+		},
+		operations: { customer: ops },
 		no_billing_changes: !hasBillingChanges,
 	};
 };

@@ -15,6 +15,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
+import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { createVariantPlan } from "../variants/utils/variantTestPlanUtils.js";
@@ -112,6 +113,11 @@ const getOptionalProduct = (params: {
 		version: params.version,
 		allowNotFound: true,
 	});
+
+const migrationMentionsPlan = (
+	migration: { filter: unknown },
+	planId: string,
+) => JSON.stringify(migration.filter).includes(planId);
 
 const setupVariantVersioning = async ({
 	testId,
@@ -411,6 +417,99 @@ test.concurrent(
 			customerId: variantCustomerIds[0],
 			planId: variantId,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("plans update: disable_version with create_migration creates combined migration draft")}`,
+	async () => {
+		const { baseId, ctx, rpc, variantIds } = await setupVariantVersioning({
+			testId: "update_create_migration",
+			attachBaseCustomer: true,
+			variants: [{ key: "annual", attachCustomer: true }],
+		});
+		const variantId = variantIds.annual;
+
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
+			items: [monthlyMessagesItem(500)],
+			update_variant_ids: [variantId],
+			disable_version: true,
+			create_migration: true,
+		});
+
+		const migrations = (await migrationRepo.get({ ctx })).filter((migration) =>
+			migrationMentionsPlan(migration, baseId),
+		);
+		const migration = migrations.find((candidate) =>
+			candidate.id.startsWith("plan-migrate-2-"),
+		);
+		const [operation] = migration?.operations?.customer ?? [];
+
+		expect(operation).toMatchObject({
+			type: "update_plan",
+			version: 1,
+			plan_filter: {
+				plan_id: { $in: [baseId, variantId] },
+				custom: false,
+			},
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("plans update: all_versions with create_migration creates diff migration draft")}`,
+	async () => {
+		const { baseId, ctx, rpc, variantIds } = await setupVariantVersioning({
+			testId: "all_versions_create_migration",
+			attachBaseCustomer: true,
+			variants: [{ key: "annual", attachCustomer: true }],
+		});
+		const variantId = variantIds.annual;
+
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
+			items: [monthlyMessagesItem(500)],
+			update_variant_ids: [variantId],
+			all_versions: true,
+			create_migration: true,
+		});
+
+		const migrations = (await migrationRepo.get({ ctx })).filter((migration) =>
+			migrationMentionsPlan(migration, baseId),
+		);
+		const migration = migrations.find((candidate) =>
+			candidate.id.startsWith("plan-update-all-2-"),
+		);
+		const operations = migration?.operations?.customer ?? [];
+
+		expect(migration?.filter).toMatchObject({
+			customer: {
+				plan: {
+					plan_id: { $in: [baseId, variantId] },
+					custom: false,
+				},
+			},
+		});
+		expect(operations).toHaveLength(2);
+		expect(operations[0]).toMatchObject({
+			type: "update_plan",
+			plan_filter: { plan_id: baseId, custom: false },
+			customize: expect.objectContaining({
+				add_items: [
+					expect.objectContaining({ feature_id: TestFeature.Messages }),
+				],
+			}),
+		});
+		expect(operations[0]).not.toHaveProperty("version");
+		expect(operations[1]).toMatchObject({
+			type: "update_plan",
+			plan_filter: { plan_id: variantId, custom: false },
+			customize: expect.objectContaining({
+				add_items: [
+					expect.objectContaining({ feature_id: TestFeature.Messages }),
+				],
+			}),
+		});
+		expect(operations[1]).not.toHaveProperty("version");
 	},
 );
 
