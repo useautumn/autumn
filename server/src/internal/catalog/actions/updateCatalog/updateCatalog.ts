@@ -12,8 +12,8 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
@@ -122,7 +122,7 @@ const upsertPlans = async ({
 			new_plan_id,
 			disable_version,
 			force_version,
-			propagate_to_variants,
+			update_variant_ids,
 			version,
 			...rest
 		} = planParams;
@@ -196,13 +196,15 @@ const upsertPlans = async ({
 			orgId: org.id,
 			env,
 		});
-		const propagateToVariants = propagate_to_variants ?? [];
+		const propagateToVariants = update_variant_ids ?? [];
 		if (propagateToVariants.length > 0) {
 			await updateVariants({
 				ctx,
 				oldBase: current,
 				newBase: latestFullProduct,
 				propagateToVariants,
+				disableVersion: disable_version,
+				forceVersion: force_version,
 			});
 		}
 
@@ -289,7 +291,9 @@ const applyMissingFeatureRemovals = async ({
 		features: ctx.features,
 		featureIds,
 	})) {
-		const feature = ctx.features.find((candidate) => candidate.id === featureId);
+		const feature = ctx.features.find(
+			(candidate) => candidate.id === featureId,
+		);
 		if (!feature) continue;
 
 		const objectsUsingFeature = await getObjectsUsingFeature({
@@ -402,7 +406,10 @@ export const updateCatalog = async ({
 	});
 	const replacePlanIds = params.skip_deletions
 		? []
-		: deriveReplacePlanIds({ products: productsBeforeUpdate, plans: params.plans });
+		: deriveReplacePlanIds({
+				products: productsBeforeUpdate,
+				plans: params.plans,
+			});
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	const migrations = await upsertPlans({ ctx, params });

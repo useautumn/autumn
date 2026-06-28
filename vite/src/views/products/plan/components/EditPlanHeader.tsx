@@ -360,8 +360,8 @@ const VariantSelect = () => {
 				[SHOW_ALL_VARIANTS]: "All variants",
 			}}
 		>
-			<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-				<SelectValue placeholder="Variant" />
+			<SelectTrigger className="w-fit min-w-28 max-w-48 !h-6" size="sm">
+				<SelectValue placeholder="Variant" className="min-w-0 truncate" />
 			</SelectTrigger>
 			<SelectContent>
 				{variantOptions.map((variant) => (

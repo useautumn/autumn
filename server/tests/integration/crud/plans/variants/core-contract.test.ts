@@ -10,7 +10,7 @@
  *   - archived variants silently filtered from propagate
  *   - preview_update.versionable matches actual update
  *   - preview_update.diff matches manual diffPlanV1
- *   - propagate_to_variants:[] ≡ omitted
+ *   - update_variant_ids:[] ≡ omitted
  *   - invalid propagation targets rejected
  *   - create_variant id collision → 409
  *   - variant visible in plans.list
@@ -260,7 +260,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: archived variant silen
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		items: [msgItem(777)],
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 	});
 
 	const variantAfter = await ProductService.getFull({ db, idOrInternalId: variantId, orgId: org.id, env });
@@ -342,10 +342,10 @@ test.skip(`${chalk.yellowBright("variants contract: throw-on-first-failure (cont
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 12. propagate_to_variants:[] identical to omitted
+// 12. update_variant_ids:[] identical to omitted
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(`${chalk.yellowBright("variants contract: propagate_to_variants empty array identical to omitted")}`, async () => {
+test.concurrent(`${chalk.yellowBright("variants contract: update_variant_ids empty array identical to omitted")}`, async () => {
 	const idA = readableVariantTestId("cc_empty_prop_a");
 	const idB = readableVariantTestId("cc_empty_prop_b");
 	await createBase(idA, 100);
@@ -353,7 +353,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: propagate_to_variants 
 
 	await autumnRpc.plans.update<ApiPlanV1>(idA, {
 		items: [msgItem(200)],
-		propagate_to_variants: [],
+		update_variant_ids: [],
 	});
 
 	await autumnRpc.plans.update<ApiPlanV1>(idB, {
@@ -378,7 +378,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: update rejects base's 
 		func: async () => {
 			await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 				items: [msgItem(200)],
-				propagate_to_variants: [baseId],
+				update_variant_ids: [baseId],
 			});
 		},
 	});
@@ -397,7 +397,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: update rejects non-exi
 		func: async () => {
 			await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 				items: [msgItem(200)],
-				propagate_to_variants: [readableVariantTestId("missing_variant")],
+				update_variant_ids: [readableVariantTestId("missing_variant")],
 			});
 		},
 	});
@@ -478,7 +478,7 @@ test.concurrent(`${chalk.yellowBright("variants contract: free_trial propagation
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		free_trial: { duration_length: 30, duration_type: FreeTrialDuration.Day },
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 	});
 
 	const variantAfter = await getPlanRpc(variantId);

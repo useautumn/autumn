@@ -5,7 +5,7 @@
  *   New endpoints:
  *     - POST /v1/plans.create_variant -> ApiPlanV1
  *     - POST /v1/plans.preview_update -> PlanUpdatePreview
- *     - POST /v1/plans.update (extended with propagate_to_variants)
+ *     - POST /v1/plans.update (extended with update_variant_ids)
  *   New behaviors:
  *     - create_variant copies items including rollover config
  *     - create_variant preserves duplicate feature_id items + Stripe product reuse
@@ -302,7 +302,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverBaseItems(500),
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantVersions = await getAllVersions(variantId);
@@ -377,7 +377,7 @@ test.concurrent(
 				...rolloverBaseItems(200),
 				{ feature_id: TestFeature.Dashboard },
 			],
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantVersions = await getAllVersions(variantId);
@@ -438,7 +438,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: modifiedItems,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantVersions = await getAllVersions(variantId);
@@ -489,7 +489,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverBaseItems(500),
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const baseVersions = await getAllVersions(baseId);
@@ -576,7 +576,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverPrepaidItems(500),
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantVersions = await getAllVersions(variantId);
@@ -658,7 +658,7 @@ test.concurrent(
 
 		await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 			items: rolloverBaseItems(500),
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const baseVersions = await getAllVersions(baseId);

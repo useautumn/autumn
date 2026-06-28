@@ -137,7 +137,7 @@ export const PlanFeatureRow = ({
 			data-pressed={isPressed}
 			className={cn(
 				"flex items-center w-full group group/row select-none rounded-xl hover:relative hover:z-95",
-				!readOnly && "h-10! input-base input-state-open-tiny",
+				!readOnly && "h-10! input-base input-state-open-tiny cursor-pointer",
 				readOnly && "py-1",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
