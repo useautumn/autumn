@@ -38,7 +38,13 @@ const usage = (
 		},
 	}) as ApiPlanItemV1;
 
-const plan = (items: ApiPlanItemV1[]): ApiPlanV1 => ({ items }) as ApiPlanV1;
+const basePrice = (amount: number, interval: BillingInterval) =>
+	({ amount, interval }) as ApiPlanV1["price"];
+
+const plan = (
+	items: ApiPlanItemV1[],
+	price: ApiPlanV1["price"] = null,
+): ApiPlanV1 => ({ items, price }) as ApiPlanV1;
 
 const features = [
 	{ id: "messages", name: "Messages" },
@@ -51,10 +57,9 @@ const YEAR = ResetInterval.Year as ResetInterval & BillingInterval;
 describe("detectVariantConflicts", () => {
 	test("removing a boolean feature from the base is not a conflict", () => {
 		const conflicts = detectVariantConflicts({
-			// dashboard removed from the edited base
+			currentBasePlan: plan([bool("dashboard"), usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH)]),
 			diff: { remove_items: [{ feature_id: "dashboard" }] } as DiffedCustomizePlanV1,
-			// variant still holds the boolean
 			variantPlan: plan([bool("dashboard"), usage("messages", MONTH)]),
 			features,
 		});
@@ -64,6 +69,7 @@ describe("detectVariantConflicts", () => {
 
 	test("adding a feature the variant lacks is a clean add, not a conflict", () => {
 		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH), bool("dashboard")]),
 			diff: { add_items: [{ feature_id: "dashboard" }] } as DiffedCustomizePlanV1,
 			variantPlan: plan([usage("messages", MONTH)]),
@@ -73,14 +79,16 @@ describe("detectVariantConflicts", () => {
 		expect(conflicts).toHaveLength(0);
 	});
 
-	test("modifying a feature the variant shares the interval of is not a conflict", () => {
+	test("variant tracking the base value (same interval) is not a conflict", () => {
 		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([usage("messages", MONTH, 1000)]),
 			editedBasePlan: plan([usage("messages", MONTH, 2000)]),
 			diff: {
 				add_items: [{ feature_id: "messages" }],
 				remove_items: [{ feature_id: "messages", interval: MONTH }],
 			} as DiffedCustomizePlanV1,
-			variantPlan: plan([usage("messages", MONTH, 5000)]),
+			// variant matches the base it forked from → propagation just updates it
+			variantPlan: plan([usage("messages", MONTH, 1000)]),
 			features,
 		});
 
@@ -89,6 +97,7 @@ describe("detectVariantConflicts", () => {
 
 	test("variant on a different interval than the edit is a different_interval conflict", () => {
 		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH)]),
 			diff: { add_items: [{ feature_id: "messages" }] } as DiffedCustomizePlanV1,
 			variantPlan: plan([usage("messages", YEAR)]),
@@ -101,5 +110,55 @@ describe("detectVariantConflicts", () => {
 			feature_name: "Messages",
 			item_filter: { feature_id: "messages" },
 		});
+	});
+
+	test("variant with a customized value (same interval) is a value_divergence conflict", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([usage("messages", MONTH, 1000)]),
+			editedBasePlan: plan([usage("messages", MONTH, 2000)]),
+			diff: {
+				add_items: [{ feature_id: "messages" }],
+				remove_items: [{ feature_id: "messages", interval: MONTH }],
+			} as DiffedCustomizePlanV1,
+			// variant diverged from the base (5000 vs base's 1000)
+			variantPlan: plan([usage("messages", MONTH, 5000)]),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toMatchObject({
+			reason: "value_divergence",
+			feature_name: "Messages",
+			item_filter: { feature_id: "messages" },
+		});
+	});
+
+	test("editing the base price when the variant has a different price is a base_price_divergence conflict", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([], basePrice(20, BillingInterval.Month)),
+			editedBasePlan: plan([], basePrice(25, BillingInterval.Month)),
+			diff: {
+				price: { amount: 25, interval: BillingInterval.Month },
+			} as DiffedCustomizePlanV1,
+			variantPlan: plan([], basePrice(200, BillingInterval.Year)),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toMatchObject({ reason: "base_price_divergence" });
+	});
+
+	test("editing the base price when the variant tracks it is not a conflict", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([], basePrice(20, BillingInterval.Month)),
+			editedBasePlan: plan([], basePrice(25, BillingInterval.Month)),
+			diff: {
+				price: { amount: 25, interval: BillingInterval.Month },
+			} as DiffedCustomizePlanV1,
+			variantPlan: plan([], basePrice(20, BillingInterval.Month)),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(0);
 	});
 });

@@ -36,6 +36,7 @@ import {
 import {
 	buildCombinedVariantMigrationDraft,
 	buildInPlaceUpdatePlanParams,
+	buildPreviewUpdatePlanParams,
 	type CombinedVariantTarget,
 	planHasPricingChange,
 } from "./buildMigrationDraft";
@@ -117,6 +118,10 @@ export default function PlanChangeDialog({
 	const [appliedVariantTargets, setAppliedVariantTargets] = useState<
 		CombinedVariantTarget[]
 	>([]);
+	// Snapshotted at apply time: markSaved overwrites baseProduct, which zeroes
+	// out the live preview these would otherwise derive from.
+	const [appliedBaseTarget, setAppliedBaseTarget] =
+		useState<CombinedVariantTarget | null>(null);
 	const [baseChangedPricing, setBaseChangedPricing] = useState(false);
 
 	const confirmed = confirmText === product.id;
@@ -128,17 +133,16 @@ export default function PlanChangeDialog({
 	);
 
 	// Preview the in-place update so versioning, customer impact, item changes
-	// and variant conflicts come from the backend. disable_version is dropped so
-	// `versionable` reflects whether applying in place would version.
-	const previewParams = useMemo(() => {
-		const params = buildInPlaceUpdatePlanParams({
-			baseProduct: baseProduct ?? product,
-			editedProduct: product,
-			features,
-		});
-		delete params.disable_version;
-		return params;
-	}, [baseProduct, product, features]);
+	// and variant conflicts come from the backend.
+	const previewParams = useMemo(
+		() =>
+			buildPreviewUpdatePlanParams({
+				baseProduct,
+				editedProduct: product,
+				features,
+			}),
+		[baseProduct, product, features],
+	);
 
 	const { data: preview } = usePlanUpdatePreview({
 		planId: product.id,
@@ -173,12 +177,7 @@ export default function PlanChangeDialog({
 				);
 				return {
 					variant,
-					conflictFeatureNames: (previewVariant?.conflicts ?? []).map(
-						(conflict) =>
-							conflict.feature_name ??
-							conflict.item_filter.feature_id ??
-							variant.id,
-					),
+					conflicts: previewVariant?.conflicts ?? [],
 					itemChanges: previewVariant?.item_changes ?? [],
 				};
 			}),
@@ -196,7 +195,7 @@ export default function PlanChangeDialog({
 		if (!variantSelectionInit.current && variants.length > 0 && preview) {
 			setSelectedVariantIds(
 				variantConflicts
-					.filter((v) => v.conflictFeatureNames.length === 0)
+					.filter((v) => v.conflicts.length === 0)
 					.map((v) => v.variant.id),
 			);
 			variantSelectionInit.current = true;
@@ -204,15 +203,21 @@ export default function PlanChangeDialog({
 	}, [open, variants, preview, variantConflicts]);
 
 	const hasVariants = variants.length > 0;
-	const migrateNeeded = baseNeedsMigration || selectedVariantIds.length > 0;
+	// New-version grandfathers the base and every propagated variant, so migration
+	// only applies to the in-place update path.
+	const migrateNeeded =
+		versionChoice === "update" &&
+		(baseNeedsMigration || selectedVariantIds.length > 0);
 
 	const steps: StepperStep[] = useMemo(
 		() => [
 			{ key: "review", label: "Review" },
 			...(hasVariants ? [{ key: "variants", label: "Variants" }] : []),
-			...(migrateNeeded ? [{ key: "migrate", label: "Migrate" }] : []),
+			...(migrateNeeded || step === "migrate"
+				? [{ key: "migrate", label: "Migrate" }]
+				: []),
 		],
-		[hasVariants, migrateNeeded],
+		[hasVariants, migrateNeeded, step],
 	);
 
 	const resetState = () => {
@@ -222,6 +227,7 @@ export default function PlanChangeDialog({
 		setConfirmText("");
 		setSelectedVariantIds([]);
 		setAppliedVariantTargets([]);
+		setAppliedBaseTarget(null);
 		setBaseChangedPricing(false);
 	};
 
@@ -269,11 +275,15 @@ export default function PlanChangeDialog({
 			await ProductService.updatePlan(axiosInstance, updateParams);
 		}
 
-		// Capture pricing-change before markSaved overwrites baseProduct.
+		// Capture pricing-change and the base migration target before markSaved
+		// overwrites baseProduct (which collapses the live preview these derive from).
 		setBaseChangedPricing(
 			baseProduct
 				? planHasPricingChange({ baseProduct, product, features })
 				: false,
+		);
+		setAppliedBaseTarget(
+			baseNeedsMigration ? { id: product.id, version: product.version } : null,
 		);
 		markSaved();
 
@@ -323,9 +333,7 @@ export default function PlanChangeDialog({
 	// version reset from the patched catalog.
 	const combinedMigrationDraft = () => {
 		const targets: CombinedVariantTarget[] = [
-			...(baseNeedsMigration
-				? [{ id: product.id, version: product.version }]
-				: []),
+			...(appliedBaseTarget ? [appliedBaseTarget] : []),
 			...appliedVariantTargets,
 		];
 		return buildCombinedVariantMigrationDraft({
@@ -406,7 +414,7 @@ export default function PlanChangeDialog({
 
 	const migrateTargetLabel = useMemo(() => {
 		const parts: string[] = [];
-		if (baseNeedsMigration) parts.push("the base plan");
+		if (appliedBaseTarget) parts.push("the base plan");
 		if (appliedVariantTargets.length > 0) {
 			parts.push(
 				`${appliedVariantTargets.length} variant${appliedVariantTargets.length !== 1 ? "s" : ""}`,
@@ -417,7 +425,7 @@ export default function PlanChangeDialog({
 				? `${parts[0]} and ${parts[1]}`
 				: (parts[0] ?? "this plan");
 		return `Existing customers on ${joined}`;
-	}, [baseNeedsMigration, appliedVariantTargets]);
+	}, [appliedBaseTarget, appliedVariantTargets]);
 
 	const primaryText = useMemo(() => {
 		if (step === "review") return hasVariants ? "Next" : "Apply changes";

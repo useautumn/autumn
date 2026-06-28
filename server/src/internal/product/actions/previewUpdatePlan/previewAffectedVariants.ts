@@ -21,6 +21,7 @@ export const previewAffectedVariants = async ({
 	ctx,
 	base,
 	diff,
+	currentBasePlan,
 	settingsPatch,
 	editedBasePlan,
 	data,
@@ -29,6 +30,7 @@ export const previewAffectedVariants = async ({
 	ctx: AutumnContext;
 	base: FullProduct;
 	diff: DiffedCustomizePlanV1;
+	currentBasePlan: ApiPlanV1;
 	settingsPatch?: VariantSettingsPatch;
 	editedBasePlan: ApiPlanV1;
 	data: PreviewUpdatePlanParamsV2;
@@ -105,6 +107,7 @@ export const previewAffectedVariants = async ({
 				name: variant.name,
 				will_apply: selectedVariantIds.has(variant.id),
 				conflicts: detectVariantConflicts({
+					currentBasePlan,
 					editedBasePlan,
 					diff,
 					variantPlan: currentPlan,

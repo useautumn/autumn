@@ -1,3 +1,4 @@
+import type { PlanUpdatePreviewVariantConflict } from "@autumn/shared";
 import {
 	Badge,
 	Checkbox,
@@ -5,7 +6,7 @@ import {
 	HoverCardContent,
 	HoverCardTrigger,
 } from "@autumn/ui";
-import { WarningIcon } from "@phosphor-icons/react";
+import { EyeIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { cn } from "@/lib/utils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -17,6 +18,33 @@ interface PropagateVariantsStepProps {
 	onToggle: (id: string) => void;
 }
 
+const REASON_LABEL: Record<PlanUpdatePreviewVariantConflict["reason"], string> =
+	{
+		different_interval: "Different interval",
+		value_divergence: "Value override",
+		base_price_divergence: "Price override",
+	};
+
+const conflictFeature = (conflict: PlanUpdatePreviewVariantConflict) =>
+	conflict.feature_name ?? conflict.item_filter?.feature_id ?? "This feature";
+
+const conflictSentence = (
+	conflict: PlanUpdatePreviewVariantConflict,
+): string => {
+	if (conflict.reason === "base_price_divergence") {
+		return "This variant's base price would be overwritten.";
+	}
+	if (conflict.reason === "different_interval") {
+		return `${conflictFeature(conflict)} is on a different interval here — propagating would add a duplicate item.`;
+	}
+	return `${conflictFeature(conflict)} has a customized value that propagating would overwrite.`;
+};
+
+const badgeLabel = (conflicts: PlanUpdatePreviewVariantConflict[]): string => {
+	const reasons = new Set(conflicts.map((c) => c.reason));
+	return reasons.size === 1 ? REASON_LABEL[[...reasons][0]] : "Conflicts";
+};
+
 export function PropagateVariantsStep({
 	variants,
 	selectedIds,
@@ -24,7 +52,7 @@ export function PropagateVariantsStep({
 }: PropagateVariantsStepProps) {
 	if (variants.length === 0) return null;
 
-	const hasConflicts = variants.some((v) => v.conflictFeatureNames.length > 0);
+	const hasConflicts = variants.some((v) => v.conflicts.length > 0);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -46,63 +74,84 @@ export function PropagateVariantsStep({
 			)}
 
 			<div className="flex flex-col gap-2">
-				{variants.map(({ variant, conflictFeatureNames, itemChanges }) => {
+				{variants.map(({ variant, conflicts, itemChanges }) => {
 					const checked = selectedIds.includes(variant.id);
-					const hasConflict = conflictFeatureNames.length > 0;
-					const conflictLabel = `${conflictFeatureNames.join(", ")} ${conflictFeatureNames.length === 1 ? "is" : "are"} on a different interval here.`;
+					const hasConflict = conflicts.length > 0;
 					return (
 						<button
-							key={variant.id}
-							type="button"
-							onClick={() => onToggle(variant.id)}
 							className={cn(
 								"flex items-center gap-3 rounded-lg border p-3 text-left transition-colors",
 								checked
 									? "border-primary bg-primary/5"
 									: "border-border hover:bg-muted/50",
 							)}
+							key={variant.id}
+							onClick={() => onToggle(variant.id)}
+							type="button"
 						>
 							<Checkbox checked={checked} />
-							<div className="flex flex-col gap-0.5 min-w-0 flex-1">
+							<div className="flex min-w-0 flex-1 flex-col gap-0.5">
 								<span className="text-sm font-medium text-foreground">
 									{variant.name}
 								</span>
-								<span className="text-xs text-muted-foreground truncate">
+								<span className="truncate text-xs text-muted-foreground">
 									{variant.id}
 								</span>
 							</div>
-							{hasConflict && (
-								<HoverCard delay={0}>
-									<HoverCardTrigger asChild>
-										<span
-											className="cursor-help"
-											onClick={(e) => e.stopPropagation()}
-										>
+							<HoverCard>
+								<HoverCardTrigger asChild closeDelay={0} delay={0}>
+									<span
+										className="cursor-help"
+										onClick={(e) => e.stopPropagation()}
+									>
+										{hasConflict ? (
 											<Badge
 												className="shrink-0 gap-1 bg-amber-500/10 text-[11px] text-amber-600 dark:text-amber-500"
 												variant="secondary"
 											>
 												<WarningIcon size={11} weight="fill" />
-												Different interval
+												{badgeLabel(conflicts)}
 											</Badge>
-										</span>
-									</HoverCardTrigger>
-									<HoverCardContent align="end" className="w-80 p-3">
-										<div className="flex flex-col gap-2">
-											<span className="text-xs text-muted-foreground">
-												{conflictLabel} Propagating would make these changes:
-											</span>
-											{itemChanges.length > 0 ? (
-												<ItemChangeList itemChanges={itemChanges} />
-											) : (
+										) : (
+											<Badge
+												className="shrink-0 gap-1 text-[11px] text-muted-foreground"
+												variant="secondary"
+											>
+												<EyeIcon size={11} />
+												Preview update
+											</Badge>
+										)}
+									</span>
+								</HoverCardTrigger>
+								<HoverCardContent align="end" className="w-80 p-3">
+									<div className="flex flex-col gap-2">
+										{hasConflict && (
+											<div className="flex flex-col gap-1">
+												{conflicts.map((conflict, index) => (
+													<span
+														className="text-amber-600 text-xs dark:text-amber-500"
+														key={`${conflict.reason}-${index}`}
+													>
+														{conflictSentence(conflict)}
+													</span>
+												))}
+											</div>
+										)}
+										{itemChanges.length > 0 ? (
+											<>
 												<span className="text-xs text-muted-foreground">
-													No item changes.
+													Propagating would make these changes:
 												</span>
-											)}
-										</div>
-									</HoverCardContent>
-								</HoverCard>
-							)}
+												<ItemChangeList itemChanges={itemChanges} />
+											</>
+										) : (
+											<span className="text-xs text-muted-foreground">
+												No changes from this update.
+											</span>
+										)}
+									</div>
+								</HoverCardContent>
+							</HoverCard>
 						</button>
 					);
 				})}

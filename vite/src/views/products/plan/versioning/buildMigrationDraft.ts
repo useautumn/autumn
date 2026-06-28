@@ -135,6 +135,26 @@ export function buildInPlaceUpdatePlanParams({
 	} satisfies UpdatePlanParamsV2Input;
 }
 
+// Preview params mirror the in-place update but drop disable_version so the
+// backend reports whether applying in place would version.
+export function buildPreviewUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+}: {
+	baseProduct: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct: baseProduct ?? editedProduct,
+		editedProduct,
+		features,
+	});
+	delete params.disable_version;
+	return params;
+}
+
 function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	if (diff.price !== undefined) return true;
 	if (diff.add_items?.some((i) => i.price != null)) return true;
@@ -332,7 +352,10 @@ export function buildCombinedVariantMigrationDraft({
 	const versionOps = (custom: boolean): UpdatePlanOp[] =>
 		Array.from(byVersion.entries()).map(([version, ids]) => ({
 			type: "update_plan",
-			plan_filter: { plan_id: ids.length === 1 ? ids[0] : { $in: ids }, custom },
+			plan_filter: {
+				plan_id: ids.length === 1 ? ids[0] : { $in: ids },
+				custom,
+			},
 			version,
 		}));
 
@@ -349,4 +372,3 @@ export function buildCombinedVariantMigrationDraft({
 		no_billing_changes: !hasPricingChange,
 	};
 }
-
