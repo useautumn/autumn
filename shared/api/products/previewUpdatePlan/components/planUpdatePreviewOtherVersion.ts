@@ -5,7 +5,8 @@ import { PlanUpdatePreviewVariantConflictSchema } from "./planUpdatePreviewVaria
 export const PlanUpdatePreviewOtherVersionSchema =
 	CorePlanUpdatePreviewSchema.extend({
 		version: z.number().meta({
-			description: "The historical plan version being previewed.",
+			description:
+				"The historical plan version being previewed with the same diff fields as the primary preview.",
 		}),
 		conflicts: z
 			.array(PlanUpdatePreviewVariantConflictSchema)

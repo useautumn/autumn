@@ -1,12 +1,14 @@
 import { z } from "zod/v4";
 import { CorePlanUpdatePreviewSchema } from "./corePlanUpdatePreview.js";
-import { PlanUpdatePreviewOtherVersionSchema } from "./planUpdatePreviewOtherVersion.js";
 import { PlanUpdatePreviewVariantConflictSchema } from "./planUpdatePreviewVariantConflict.js";
 
 export const PlanUpdatePreviewVariantSchema =
 	CorePlanUpdatePreviewSchema.extend({
 		plan_id: z.string().meta({
 			description: "The ID of the variant plan being previewed.",
+		}),
+		version: z.number().meta({
+			description: "The version of the variant plan being previewed.",
 		}),
 		name: z.string().meta({
 			description: "The display name of the variant plan being previewed.",
@@ -25,13 +27,6 @@ export const PlanUpdatePreviewVariantSchema =
 			.meta({
 				description:
 					"Potential conflicts that make automatic propagation ambiguous for this variant. Empty when no conflicts are detected.",
-			}),
-		other_versions: z
-			.array(PlanUpdatePreviewOtherVersionSchema)
-			.default([])
-			.meta({
-				description:
-					"Historical versions of this variant that can receive the same update diff.",
 			}),
 	});
 

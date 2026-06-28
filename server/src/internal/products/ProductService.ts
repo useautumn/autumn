@@ -309,7 +309,9 @@ export class ProductService {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
-	}): Promise<Array<{ internal_id: string; id: string; name: string; version: number }>> {
+	}): Promise<
+		Array<{ internal_id: string; id: string; name: string; version: number }>
+	> {
 		return queryWithCache({
 			key: buildAllVersionsProductsCacheKey({ orgId, env }),
 			ttl: PRODUCTS_CACHE_TTL,
@@ -480,30 +482,27 @@ export class ProductService {
 		baseInternalProductIds,
 		orgId,
 		env,
+		returnAll = false,
 	}: {
 		db: DrizzleCli;
 		baseInternalProductIds: string[];
 		orgId: string;
 		env: AppEnv;
+		returnAll?: boolean;
 	}): Promise<FullProduct[]> {
 		if (baseInternalProductIds.length === 0) return [];
 
 		const latestVersionsSubquery = db
 			.select({
 				id: products.id,
-				maxVersion: sql<number>`MAX(${products.version})`.as(
-					"max_version",
-				),
+				maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
 			})
 			.from(products)
 			.where(
 				and(
 					eq(products.org_id, orgId),
 					eq(products.env, env),
-					inArray(
-						products.base_internal_product_id,
-						baseInternalProductIds,
-					),
+					inArray(products.base_internal_product_id, baseInternalProductIds),
 					ne(products.archived, true),
 				),
 			)
@@ -515,24 +514,20 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				ne(products.archived, true),
-				inArray(
-					products.base_internal_product_id,
-					baseInternalProductIds,
-				),
-				exists(
-					db
-						.select()
-						.from(latestVersionsSubquery)
-						.where(
-							and(
-								eq(latestVersionsSubquery.id, products.id),
-								eq(
-									latestVersionsSubquery.maxVersion,
-									products.version,
+				inArray(products.base_internal_product_id, baseInternalProductIds),
+				returnAll
+					? undefined
+					: exists(
+							db
+								.select()
+								.from(latestVersionsSubquery)
+								.where(
+									and(
+										eq(latestVersionsSubquery.id, products.id),
+										eq(latestVersionsSubquery.maxVersion, products.version),
+									),
 								),
-							),
 						),
-				),
 			),
 			with: {
 				entitlements: {
@@ -548,7 +543,7 @@ export class ProductService {
 
 		parseFreeTrials({ products: data });
 
-		return getLatestProducts(data);
+		return returnAll ? data : getLatestProducts(data);
 	}
 
 	static async getFull({

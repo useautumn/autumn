@@ -18,6 +18,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
 	ApiVersion,
+	BillingInterval,
 	ErrCode,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
@@ -187,7 +188,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("plans preview_update: exposes historical versions affected by all_versions")}`,
 	async () => {
-		const { autumnV2_3, baseId } =
+		const { autumnV2_3, baseId, variantId } =
 			await setupVersionedBaseAndVariant("preview");
 
 		const preview = await autumnV2_3.plans.previewUpdate<{
@@ -195,12 +196,24 @@ test.concurrent(
 				plan_id: string;
 				version: number;
 				customize: unknown;
+				price_change?: unknown;
+				previous_attributes: Record<string, unknown> | null;
 				item_changes: unknown[];
 				conflicts: unknown[];
 			}>;
+			variants: Array<{
+				plan_id: string;
+				version: number;
+				will_apply: boolean;
+				item_changes: unknown[];
+				other_versions?: unknown[];
+			}>;
 		}>({
 			plan_id: baseId,
+			name: "All Versions Preview Updated",
+			price: { amount: 20, interval: BillingInterval.Month },
 			items: [monthlyMessagesItem(800)],
+			update_variant_ids: [variantId],
 			all_versions: true,
 		});
 
@@ -213,7 +226,29 @@ test.concurrent(
 			expect.objectContaining({ reason: "value_divergence" }),
 		);
 		expect(preview.other_versions[0]?.customize).toBeTruthy();
+		expect(preview.other_versions[0]?.price_change).toMatchObject({
+			previous: null,
+			current: {
+				amount: 20,
+				interval: BillingInterval.Month,
+			},
+		});
+		expect(preview.other_versions[0]?.previous_attributes).toMatchObject({
+			name: expect.any(String),
+		});
 		expect(preview.other_versions[0]?.item_changes.length).toBeGreaterThan(0);
+
+		const variantRows = preview.variants.filter(
+			(variant) => variant.plan_id === variantId,
+		);
+		expect(variantRows.map((variant) => variant.version)).toEqual([2, 1]);
+		expect(variantRows.every((variant) => variant.will_apply)).toBe(true);
+		expect(
+			variantRows.every((variant) => variant.item_changes.length > 0),
+		).toBe(true);
+		expect(
+			variantRows.every((variant) => variant.other_versions === undefined),
+		).toBe(true);
 	},
 );
 

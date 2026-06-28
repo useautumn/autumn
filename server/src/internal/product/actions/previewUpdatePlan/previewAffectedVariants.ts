@@ -16,7 +16,6 @@ import {
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "./detectVariantConflicts.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
-import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const previewAffectedVariants = async ({
 	ctx,
@@ -62,10 +61,21 @@ export const previewAffectedVariants = async ({
 		baseInternalProductIds: family.map((p) => p.internal_id),
 		orgId: org.id,
 		env,
+		returnAll: true,
 	});
+	variants.sort((a, b) => a.id.localeCompare(b.id) || b.version - a.version);
+	const latestVersionById = new Map<string, number>();
+	for (const variant of variants) {
+		latestVersionById.set(
+			variant.id,
+			Math.max(latestVersionById.get(variant.id) ?? 0, variant.version),
+		);
+	}
 
 	return Promise.all(
 		variants.map(async (variant) => {
+			const isLatestVersion =
+				variant.version === latestVersionById.get(variant.id);
 			const currentPlan = await getPlanResponse({
 				ctx,
 				product: variant,
@@ -88,8 +98,9 @@ export const previewAffectedVariants = async ({
 					});
 			const hasCustomers = await hasPlanCustomers({ ctx, product: variant });
 			const versionable =
-				data.force_version ||
-				(!data.disable_version &&
+				(isLatestVersion && data.force_version) ||
+				(isLatestVersion &&
+					!data.disable_version &&
 					!data.all_versions &&
 					hasCustomers &&
 					(diff.price !== undefined ||
@@ -103,15 +114,6 @@ export const previewAffectedVariants = async ({
 				variantPlan: currentPlan,
 				features,
 			});
-			const otherVersions = await previewOtherProductVersions({
-				ctx,
-				product: variant,
-				currentPlan,
-				editedPlan: previewPlan,
-				diff,
-				settingsPatch,
-			});
-
 			return {
 				...buildCorePlanUpdatePreview({
 					ctx,
@@ -122,9 +124,11 @@ export const previewAffectedVariants = async ({
 					versionable,
 				}),
 				name: variant.name,
-				will_apply: selectedVariantIds.has(variant.id),
+				version: variant.version,
+				will_apply:
+					selectedVariantIds.has(variant.id) &&
+					(data.all_versions || isLatestVersion),
 				conflicts,
-				other_versions: otherVersions,
 			};
 		}),
 	);

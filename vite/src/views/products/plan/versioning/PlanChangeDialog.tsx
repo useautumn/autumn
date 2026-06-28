@@ -111,12 +111,13 @@ const collectAllVersionMigrationTargets = ({
 	}
 
 	for (const variantId of selectedVariantIds) {
-		const variantPreview = preview.variants.find(
+		const variantRows = preview.variants.filter(
 			(variant) => variant.plan_id === variantId,
 		);
+		const variantPreview = variantRows[0];
 		if (
 			variantPreview?.customize &&
-			previewHasCustomersAcrossVersions({ preview: variantPreview })
+			variantRows.some((row) => row.has_customers)
 		) {
 			targets.push({
 				id: variantPreview.plan_id,
@@ -126,6 +127,22 @@ const collectAllVersionMigrationTargets = ({
 	}
 
 	return targets;
+};
+
+const hasHistoricalVariantVersions = (preview?: PlanUpdatePreview) => {
+	if (!preview) return false;
+
+	const latestById = new Map<string, number>();
+	for (const variant of preview.variants) {
+		latestById.set(
+			variant.plan_id,
+			Math.max(latestById.get(variant.plan_id) ?? 0, variant.version),
+		);
+	}
+
+	return preview.variants.some(
+		(variant) => variant.version < (latestById.get(variant.plan_id) ?? 0),
+	);
 };
 
 export default function PlanChangeDialog({
@@ -197,9 +214,7 @@ export default function PlanChangeDialog({
 	});
 	const hasHistoricalVersions =
 		(preview?.other_versions?.length ?? 0) > 0 ||
-		(preview?.variants ?? []).some(
-			(variant) => (variant.other_versions?.length ?? 0) > 0,
-		);
+		hasHistoricalVariantVersions(preview);
 
 	const customCount = useMemo(
 		() =>
@@ -233,15 +248,7 @@ export default function PlanChangeDialog({
 		);
 		const variantConflicts = preview.variants
 			.filter((variant) => selectedVariantIds.includes(variant.plan_id))
-			.reduce(
-				(sum, variant) =>
-					sum +
-					(variant.other_versions ?? []).reduce(
-						(inner, version) => inner + version.conflicts.length,
-						0,
-					),
-				0,
-			);
+			.reduce((sum, variant) => sum + variant.conflicts.length, 0);
 
 		return baseConflicts + variantConflicts;
 	}, [preview, selectedVariantIds, versionChoice]);
@@ -254,9 +261,11 @@ export default function PlanChangeDialog({
 	const variantConflicts = useMemo<VariantConflictInfo[]>(
 		() =>
 			variants.map((variant) => {
-				const previewVariant = preview?.variants.find(
-					(v) => v.plan_id === variant.id,
-				);
+				const previewVariant =
+					preview?.variants.find(
+						(v) =>
+							v.plan_id === variant.id && v.version === variant.latest_version,
+					) ?? preview?.variants.find((v) => v.plan_id === variant.id);
 				return {
 					variant,
 					conflicts: previewVariant?.conflicts ?? [],
