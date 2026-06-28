@@ -106,6 +106,9 @@ export function indentCode(code: string, tabs: number): string {
 		.join("\n");
 }
 
+const formatObjectKey = (key: string): string =>
+	/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(key) ? key : `'${escapeString(key)}'`;
+
 /**
  * Format a value for TypeScript code
  */
@@ -130,7 +133,8 @@ export function formatValue(value: unknown): string {
 	}
 	if (typeof value === "object") {
 		const entries = Object.entries(value)
-			.map(([k, v]) => `${k}: ${formatValue(v)}`)
+			.filter(([, v]) => v !== undefined)
+			.map(([k, v]) => `${formatObjectKey(k)}: ${formatValue(v)}`)
 			.join(", ");
 		return `{ ${entries} }`;
 	}

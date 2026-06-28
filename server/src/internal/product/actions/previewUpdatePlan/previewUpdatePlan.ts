@@ -1,8 +1,10 @@
 import {
 	diffPlanV1,
+	type FullProduct,
 	type PlanUpdatePreview,
 	PlanUpdatePreviewSchema,
 	type PreviewUpdatePlanParamsV2,
+	type ProductV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
@@ -13,6 +15,70 @@ import { getBaseFullProduct } from "./getBaseFullProduct.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
+
+export const buildPlanUpdatePreview = async ({
+	ctx,
+	currentFullProduct,
+	incomingProductV2,
+	data,
+	hasCustomers,
+	currency = "usd",
+}: {
+	ctx: AutumnContext;
+	currentFullProduct: FullProduct;
+	incomingProductV2: ProductV2;
+	data: PreviewUpdatePlanParamsV2;
+	hasCustomers: boolean;
+	currency?: string;
+}): Promise<PlanUpdatePreview> => {
+	const incomingFullProduct = buildIncomingFullProduct({
+		ctx,
+		base: currentFullProduct,
+		product: incomingProductV2,
+	});
+
+	const [currentPlan, previewPlan] = await Promise.all([
+		getPlanResponse({
+			ctx,
+			product: currentFullProduct,
+			features: ctx.features,
+			currency,
+		}),
+		getPlanResponse({
+			ctx,
+			product: incomingFullProduct,
+			features: ctx.features,
+			currency,
+		}),
+	]);
+
+	const versionable = planWouldVersion({
+		ctx,
+		current: currentFullProduct,
+		incoming: incomingProductV2,
+		updates: data,
+		hasCustomers,
+	});
+	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
+	const variants = await previewAffectedVariants({
+		ctx,
+		base: currentFullProduct,
+		diff,
+		data,
+	});
+
+	return PlanUpdatePreviewSchema.parse({
+		...buildCorePlanUpdatePreview({
+			ctx,
+			planId: data.plan_id,
+			current: currentPlan,
+			preview: previewPlan,
+			hasCustomers,
+			versionable,
+		}),
+		variants,
+	});
+};
 
 export const previewUpdatePlan = async ({
 	ctx,
@@ -26,57 +92,25 @@ export const previewUpdatePlan = async ({
 		planId: data.plan_id,
 	});
 
-	const previewCtx = {
+	const previewCtx: AutumnContext = {
+		...ctx,
 		expand: data.expand ?? [],
 	};
 
 	const incomingProductV2 = buildIncomingProductV2({
-		ctx,
+		ctx: previewCtx,
 		base: baseFullProduct,
 		data,
 	});
-	const incomingFullProduct = buildIncomingFullProduct({
-		ctx,
-		base: baseFullProduct,
-		product: incomingProductV2,
-	});
 
-	const [hasCustomers, currentPlan, previewPlan] = await Promise.all([
-		hasPlanCustomers({ ctx, product: baseFullProduct }),
-		getPlanResponse({ ctx, product: baseFullProduct, features: ctx.features }),
-		getPlanResponse({
-			ctx,
-			product: incomingFullProduct,
-			features: ctx.features,
-		}),
-	]);
-
-	const versionable = planWouldVersion({
-		ctx,
-		current: baseFullProduct,
-		incoming: incomingProductV2,
-		updates: data,
-		hasCustomers,
-	});
-
-	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
-	const variants = await previewAffectedVariants({
-		ctx,
-		base: baseFullProduct,
-		diff,
+	return buildPlanUpdatePreview({
+		ctx: previewCtx,
+		currentFullProduct: baseFullProduct,
+		incomingProductV2,
 		data,
-		previewCtx,
-	});
-
-	return PlanUpdatePreviewSchema.parse({
-		...buildCorePlanUpdatePreview({
+		hasCustomers: await hasPlanCustomers({
 			ctx: previewCtx,
-			planId: data.plan_id,
-			current: currentPlan,
-			preview: previewPlan,
-			hasCustomers,
-			versionable,
+			product: baseFullProduct,
 		}),
-		variants,
 	});
 };

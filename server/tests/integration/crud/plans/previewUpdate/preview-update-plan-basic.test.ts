@@ -141,6 +141,48 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("plans preview_update: pro with customer name-only change is not versionable")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const customerId = `plan_preview_name_${suffix}`;
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const preview = await autumnV2_3.plans.previewUpdate({
+			plan_id: pro.id,
+			name: "Pro Renamed",
+		});
+
+		expectPreviewUpdatePlanCorrect({
+			preview,
+			logPreview: false,
+			expected: {
+				plan_id: pro.id,
+				has_customers: true,
+				versionable: false,
+				customize: null,
+				price_change: undefined,
+				previous_attributes: {
+					name: pro.name,
+				},
+				item_changes: [],
+				variants: [],
+			},
+		});
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("plans preview_update: variant diffs mirror propagated base item changes")}`,
 	async () => {
 		const suffix = Math.random().toString(36).slice(2, 9);

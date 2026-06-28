@@ -6,6 +6,7 @@ export {
 	FeatureUpdateBlockerSchema,
 	MigrationDraftSchema,
 } from "./catalog/previewUpdateCatalogResponse.js";
+export { PreviewUpdateFeatureResponseSchema } from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export { CreateBalanceParamsV0Schema } from "./balances/create/createBalanceParams.js";
 export { AttachParamsV1Schema } from "./billing/attachV2/attachParamsV1.js";
 export {

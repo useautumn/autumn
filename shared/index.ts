@@ -120,6 +120,7 @@ export * from "./models/featureModels/featureModels";
 
 // export * from "./models/featureModels/featureResModels";
 
+export * from "./api/features/previewUpdateFeature/previewUpdateFeatureResponse";
 export * from "./api/products/components/billingMethod";
 export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";
 export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";

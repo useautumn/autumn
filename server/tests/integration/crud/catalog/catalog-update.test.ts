@@ -3,26 +3,27 @@
  *
  * Contract under test:
  *   POST /v1/catalog.preview_update (read-only, NO persist):
- *     - plans[]: ApiPlanV1 (proposed plan resolved, items reflect the change) +
- *       will_version, has_customers, migration_draft impact fields, flattened
+ *     - plans[]: PlanUpdatePreview with the proposed ApiPlanV1 under `plan`
  *     - does NOT persist (plans.get still returns the original plan)
  *   POST /v1/catalog.update:
  *     - creates a new plan when plan_id does not exist
  *     - returns { plans: ApiPlanV1[], features, migrations }
  *
  * Pre-impl red: routes/handlers do not exist (404 / undefined fields).
- * Post-impl green: catalog handlers resolve params via productV2ToApiPlanV1 +
- *   has_customers impact + buildMigrationDraft, and upsert via create/updateProduct.
+ * Post-impl green: catalog handlers resolve params into the shared plan preview
+ *   shape and upsert via create/updateProduct.
  */
 
 import { expect, test } from "bun:test";
+import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { expectCatalogPreview } from "./utils/expectCatalogPreview.js";
 
 test.concurrent(
-	`${chalk.yellowBright("catalog: preview_update resolves impact + migration draft without persisting")}`,
+	`${chalk.yellowBright("catalog: preview_update resolves shared plan preview without persisting")}`,
 	async () => {
 		const customerId = "catalog-preview-customer";
 		const prod = products.pro({
@@ -39,7 +40,35 @@ test.concurrent(
 			actions: [s.attach({ productId: prod.id })],
 		});
 
+		const compactPreview = await autumnV2_2.post("/catalog.preview_update", {
+			plans: [
+				{
+					plan_id: prod.id,
+					name: prod.name,
+					items: [
+						{
+							feature_id: "messages",
+							included: 500,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		});
+		expectCatalogPreview({
+			preview: compactPreview,
+			planChanges: [
+				{
+					planId: prod.id,
+					hasCustomers: true,
+					willVersion: true,
+					planExpanded: false,
+				},
+			],
+		});
+
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["plan_changes.plan"],
 			plans: [
 				{
 					plan_id: prod.id,
@@ -55,32 +84,119 @@ test.concurrent(
 			],
 		});
 
-		// ── Contract 1: resolved ApiPlan reflects the proposed change ──
-		expect(preview.plans).toHaveLength(1);
-		const result = preview.plans[0];
-		expect(result.id).toBe(prod.id);
-		const messagesItem = result.items.find(
-			(item: { feature_id: string }) => item.feature_id === "messages",
-		);
-		expect(messagesItem?.included).toBe(500);
+		expectCatalogPreview({
+			preview,
+			planChanges: [
+				{
+					planId: prod.id,
+					hasCustomers: true,
+					willVersion: true,
+					planExpanded: true,
+					items: [{ featureId: TestFeature.Messages, included: 500 }],
+				},
+			],
+		});
 
-		// ── Contract 2: versioning impact ──
-		expect(result.will_version).toBe(true);
-		expect(result.has_customers).toBe(true);
-
-		// ── Contract 3: migration draft present (created from the diff) ──
-		expect(result.migration_draft).not.toBeNull();
-		expect(typeof result.migration_draft.id).toBe("string");
-		expect(result.migration_draft.operations.customer.length).toBeGreaterThan(
-			0,
-		);
-
-		// ── Contract 4: NOT persisted — original plan unchanged ──
+		// ── Contract 3: NOT persisted — original plan unchanged ──
 		const original = await autumnV2_2.post("/plans.get", { plan_id: prod.id });
 		const originalMessages = original.items.find(
 			(item: { feature_id: string }) => item.feature_id === "messages",
 		);
 		expect(originalMessages?.included).toBe(100);
+	},
+);
+
+test(
+	`${chalk.yellowBright("catalog: update honors force_version like plans.update")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const planId = `catalog_force_version_${suffix}`;
+		const prod = products.pro({
+			id: planId,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2 } = await initScenario({
+			customerId: `catalog-force-version-${suffix}`,
+			setup: [s.products({ list: [prod], prefix: "" })],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/catalog.update", {
+			plans: [
+				{
+					plan_id: planId,
+					name: prod.name,
+					force_version: true,
+					items: [
+						{
+							feature_id: TestFeature.Messages,
+							included: 500,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		});
+
+		const got = await autumnV2_2.post("/plans.get", { plan_id: planId });
+		expect(got.version).toBe(2);
+		const item = got.items.find(
+			(entry: { feature_id: string }) =>
+				entry.feature_id === TestFeature.Messages,
+		);
+		expect(item?.included).toBe(500);
+	},
+);
+
+test(
+	`${chalk.yellowBright("catalog: update propagates plan updates to selected variants")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const planId = `catalog_propagate_${suffix}`;
+		const variantId = `${planId}_annual`;
+		const prod = products.pro({
+			id: planId,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId: `catalog-propagate-${suffix}`,
+			setup: [s.products({ list: [prod], prefix: "" })],
+			actions: [],
+		});
+
+		await autumnV2_3.plans.createVariant({
+			base_plan_id: planId,
+			variant_plan_id: variantId,
+			name: "Annual",
+		});
+
+		await autumnV2_2.post("/catalog.update", {
+			plans: [
+				{
+					plan_id: planId,
+					name: prod.name,
+					propagate_to_variants: [variantId],
+					items: [
+						{
+							feature_id: TestFeature.Messages,
+							included: 500,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		});
+
+		const variant = await autumnV2_2.post("/plans.get", {
+			plan_id: variantId,
+		});
+		const item = variant.items.find(
+			(entry: { feature_id: string }) =>
+				entry.feature_id === TestFeature.Messages,
+		);
+		expect(item?.included).toBe(500);
 	},
 );
 
