@@ -182,6 +182,7 @@ test.concurrent(
 
 		// ── C: a brand-new feature + a non-blockable rename of an existing one ──
 		const allowed = await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["feature_changes.feature"],
 			features: [
 				{ feature_id: newFeatureId, name: "Brand New", type: "boolean" },
 				{
@@ -233,7 +234,7 @@ test.concurrent(
 
 		// ── D: net-new feature + a plan that uses it, in one preview call ──
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
-			expand: ["plan_changes.plan"],
+			expand: ["plan_changes.plan", "feature_changes.feature"],
 			features: [
 				{
 					feature_id: newFeatureId,

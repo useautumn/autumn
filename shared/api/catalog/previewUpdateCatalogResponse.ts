@@ -1,10 +1,7 @@
-import { ApiFeatureV1Schema } from "@api/features/apiFeatureV1.js";
+import { PreviewUpdateFeatureResponseSchema } from "@api/features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 import { MigrationFilterSchema } from "@api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@api/migrations/operations/operations.js";
-import {
-	type PlanUpdatePreview,
-	PlanUpdatePreviewSchema,
-} from "@api/products/previewUpdatePlan/planUpdatePreview.js";
+import { PlanUpdatePreviewSchema } from "@api/products/previewUpdatePlan/planUpdatePreview.js";
 import { z } from "zod/v4";
 
 /** Draft migration that would move existing customers onto the new plan shape. */
@@ -15,14 +12,13 @@ export const MigrationDraftSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
-export const CatalogPlanPreviewSchema = z.object({
-	plan_id: z.string(),
-	plan_changes: PlanUpdatePreviewSchema,
+export const CatalogPlanPreviewSchema = PlanUpdatePreviewSchema.extend({
+	will_archive: z.boolean().optional().default(false).meta({
+		description:
+			"Whether applying this derived plan removal archives the plan instead of deleting it.",
+	}),
 });
-export type CatalogPlanPreview = {
-	plan_id: string;
-	plan_changes: PlanUpdatePreview;
-};
+export type CatalogPlanPreview = z.infer<typeof CatalogPlanPreviewSchema>;
 
 /** Reason a feature update would be rejected, surfaced before the write is attempted. */
 export const FeatureUpdateBlockerSchema = z.object({
@@ -42,18 +38,14 @@ export const FeatureUpdateBlockerSchema = z.object({
 export type FeatureUpdateBlocker = z.infer<typeof FeatureUpdateBlockerSchema>;
 export type FeatureUpdateBlockerCode = FeatureUpdateBlocker["code"];
 
-/** Resolved preview for a single feature, with any blocking update conditions. */
-export const CatalogFeaturePreviewSchema = z.object({
-	feature: ApiFeatureV1Schema,
-	blockers: z.array(FeatureUpdateBlockerSchema),
-});
+export const CatalogFeaturePreviewSchema = PreviewUpdateFeatureResponseSchema;
 
 export type CatalogFeaturePreview = z.infer<typeof CatalogFeaturePreviewSchema>;
 
 /** Response for `catalog.preview_update`: resolved plans + features, unpersisted. */
 export const CatalogPreviewUpdateResponseSchema = z.object({
-	plans: z.array(CatalogPlanPreviewSchema),
-	features: z.array(CatalogFeaturePreviewSchema),
+	plan_changes: z.array(CatalogPlanPreviewSchema),
+	feature_changes: z.array(CatalogFeaturePreviewSchema),
 });
 
 export type CatalogPreviewUpdateResponse = z.infer<

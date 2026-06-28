@@ -11,6 +11,7 @@ import { z } from "zod/v4";
 export const CatalogUpdateParamsSchema = z.object({
 	features: z.array(CreateFeatureV2ParamsSchema).optional().default([]),
 	plans: z.array(UpdatePlanParamsV2Schema).optional().default([]),
+	skip_deletions: z.boolean().optional().default(true),
 	expand: z.array(z.string()).optional(),
 	// Atomically create (not run) a migration draft for in-place plan updates
 	// that change a plan with existing customers.

@@ -9,6 +9,7 @@ type PlanChangeExpectation = {
 	planId: string;
 	willVersion?: boolean;
 	hasCustomers?: boolean;
+	willArchive?: boolean;
 	planExpanded?: boolean;
 	items?: ItemExpectation[];
 };
@@ -54,24 +55,25 @@ const formatCustomize = (customize: any) => {
 };
 
 const formatCatalogPreview = (preview: CatalogPreviewUpdateResponse) => ({
-	plans: preview.plans.map(({ plan_id, plan_changes }) => {
+	plan_changes: preview.plan_changes.map((planChanges) => {
 		const summary: Record<string, unknown> = {
-			id: plan_id,
-			expanded: Boolean(plan_changes.plan),
-			customers: plan_changes.has_customers,
-			versions: plan_changes.versionable,
-			customize: formatCustomize(plan_changes.customize),
-			items: plan_changes.item_changes.map(formatItemChange),
+			id: planChanges.plan_id,
+			expanded: Boolean(planChanges.plan),
+			customers: planChanges.has_customers,
+			versions: planChanges.versionable,
+			archive: planChanges.will_archive,
+			customize: formatCustomize(planChanges.customize),
+			items: planChanges.item_changes.map(formatItemChange),
 		};
 
-		if (plan_changes.previous_attributes) {
-			summary.previous = plan_changes.previous_attributes;
+		if (planChanges.previous_attributes) {
+			summary.previous = planChanges.previous_attributes;
 		}
-		if (plan_changes.price_change) {
-			summary.price = plan_changes.price_change;
+		if (planChanges.price_change) {
+			summary.price = planChanges.price_change;
 		}
-		if (plan_changes.variants.length) {
-			summary.variants = plan_changes.variants.map((variant) => ({
+		if (planChanges.variants.length) {
+			summary.variants = planChanges.variants.map((variant) => ({
 				id: variant.plan_id,
 				customers: variant.has_customers,
 				versions: variant.versionable,
@@ -82,10 +84,13 @@ const formatCatalogPreview = (preview: CatalogPreviewUpdateResponse) => ({
 
 		return summary;
 	}),
-	features: preview.features.map(({ feature, blockers }) => ({
-		id: feature.id,
-		type: feature.type,
-		blockers: blockers.map((blocker) => `${blocker.field}:${blocker.code}`),
+	feature_changes: preview.feature_changes.map((featureChanges) => ({
+		id: featureChanges.feature_id,
+		action: featureChanges.action,
+		archive: featureChanges.will_archive,
+		blocked: featureChanges.blocked,
+		reason: featureChanges.blocked_reason,
+		expanded: Object.prototype.hasOwnProperty.call(featureChanges, "feature"),
 	})),
 });
 
@@ -106,15 +111,14 @@ export const expectCatalogPreview = ({
 	}
 
 	return planChanges.map((expectedPlanChange) => {
-		const { planId, willVersion, hasCustomers, planExpanded, items } =
+		const { planId, willVersion, hasCustomers, willArchive, planExpanded, items } =
 			expectedPlanChange;
-		const result = preview.plans.find(
-			(plan) =>
-				plan.plan_id === planId || plan.plan_changes.plan?.id === planId,
+		const result = preview.plan_changes.find(
+			(planChanges) =>
+				planChanges.plan_id === planId || planChanges.plan?.id === planId,
 		);
 		expect(result, `No plan preview for ${planId}`).toBeDefined();
-		const planPreview = result as CatalogPlanPreview;
-		const planChanges = planPreview.plan_changes;
+		const planChanges = result as CatalogPlanPreview;
 
 		if (typeof willVersion !== "undefined") {
 			expect(planChanges.versionable, `versionable for ${planId}`).toBe(
@@ -125,6 +129,12 @@ export const expectCatalogPreview = ({
 		if (typeof hasCustomers !== "undefined") {
 			expect(planChanges.has_customers, `has_customers for ${planId}`).toBe(
 				hasCustomers,
+			);
+		}
+
+		if (typeof willArchive !== "undefined") {
+			expect(planChanges.will_archive, `will_archive for ${planId}`).toBe(
+				willArchive,
 			);
 		}
 
@@ -156,6 +166,6 @@ export const expectCatalogPreview = ({
 			}
 		}
 
-		return planPreview;
+		return planChanges;
 	});
 };

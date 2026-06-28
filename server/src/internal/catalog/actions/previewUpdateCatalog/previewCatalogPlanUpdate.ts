@@ -1,6 +1,5 @@
 import {
 	apiPlan,
-	type CatalogPlanPreview,
 	expandPathIncludes,
 	type FullProduct,
 	type PlanUpdatePreview,
@@ -81,18 +80,15 @@ export const previewCatalogPlanUpdate = async ({
 	current: FullProduct | null;
 	hasCustomers: boolean;
 	currency: string;
-}): Promise<CatalogPlanPreview> => {
+}): Promise<PlanUpdatePreview> => {
 	const { plan_id } = planParams;
 
 	if (!current) {
-		return {
-			plan_id,
-			plan_changes: previewNewPlan({
-				ctx,
-				planParams,
-				currency,
-			}),
-		};
+		return previewNewPlan({
+			ctx,
+			planParams,
+			currency,
+		});
 	}
 
 	const shouldExpandPlan = expandPathIncludes({
@@ -105,15 +101,12 @@ export const previewCatalogPlanUpdate = async ({
 	};
 	const incoming = buildIncomingProductV2({ ctx, base: current, data });
 
-	return {
-		plan_id,
-		plan_changes: await buildPlanUpdatePreview({
-			ctx,
-			currentFullProduct: current,
-			incomingProductV2: incoming,
-			data,
-			hasCustomers,
-			currency,
-		}),
-	};
+	return buildPlanUpdatePreview({
+		ctx,
+		currentFullProduct: current,
+		incomingProductV2: incoming,
+		data,
+		hasCustomers,
+		currency,
+	});
 };
