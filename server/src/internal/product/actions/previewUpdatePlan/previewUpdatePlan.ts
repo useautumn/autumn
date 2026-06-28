@@ -11,7 +11,7 @@ import { getPlanResponse } from "@/internal/products/productUtils/productRespons
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { buildIncomingFullProduct } from "./buildIncomingFullProduct.js";
 import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
-import { getBaseFullProduct } from "./getBaseFullProduct.js";
+import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
@@ -64,6 +64,7 @@ export const buildPlanUpdatePreview = async ({
 		ctx,
 		base: currentFullProduct,
 		diff,
+		currentBasePlan: currentPlan,
 		editedBasePlan: previewPlan,
 		data,
 	});
@@ -88,7 +89,7 @@ export const previewUpdatePlan = async ({
 	ctx: AutumnContext;
 	data: PreviewUpdatePlanParamsV2;
 }): Promise<PlanUpdatePreview> => {
-	const baseFullProduct = await getBaseFullProduct({
+	const baseFullProduct = await getPreviewTargetProduct({
 		ctx,
 		planId: data.plan_id,
 	});

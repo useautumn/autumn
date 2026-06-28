@@ -2,6 +2,8 @@ import { isFeaturePriceItem } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -18,6 +20,7 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
@@ -32,9 +35,12 @@ export const SaveChangesBar = ({
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
+	const { features = [] } = useFeaturesQuery();
+	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
 	const [saving, setSaving] = useState(false);
 
@@ -77,6 +83,20 @@ export const SaveChangesBar = ({
 			}
 			const hasCustomers = (counts?.all ?? 0) > 0 && !isMetadataOnlyChange;
 			if (hasCustomers || variants.length > 0) {
+				// Warm the preview so the dialog opens with data already present.
+				setSaving(true);
+				try {
+					await prefetchPlanUpdatePreview({
+						planId: product.id,
+						params: buildPreviewUpdatePlanParams({
+							baseProduct,
+							editedProduct: product,
+							features,
+						}),
+					});
+				} finally {
+					setSaving(false);
+				}
 				setShowNewVersionDialog(true);
 				return;
 			}

@@ -1,14 +1,37 @@
-import type {
-	ApiPlanItemV1,
-	ApiPlanV1,
-	DiffedCustomizePlanV1,
-	Feature,
-	PlanItemFilter,
-	PlanUpdatePreviewVariantConflict,
+import {
+	type ApiPlanItemV1,
+	type ApiPlanV1,
+	composeMatchKey,
+	type DiffedCustomizePlanV1,
+	type Feature,
+	type PlanItemFilter,
+	type PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
 
 const intervalOf = (item: ApiPlanItemV1): string =>
 	item.price?.interval ?? item.reset?.interval ?? "none";
+
+// Fields that the match key ignores — the customizable "value" of an item.
+const valueSignature = (item: ApiPlanItemV1): string =>
+	JSON.stringify({
+		included: item.included ?? null,
+		unlimited: item.unlimited ?? null,
+		price: item.price ?? null,
+		rollover: item.rollover ?? null,
+	});
+
+const basePricesEqual = (
+	a: ApiPlanV1["price"],
+	b: ApiPlanV1["price"],
+): boolean => {
+	if (a == null && b == null) return true;
+	if (a == null || b == null) return false;
+	return (
+		a.amount === b.amount &&
+		a.interval === b.interval &&
+		(a.interval_count ?? 1) === (b.interval_count ?? 1)
+	);
+};
 
 const groupByFeature = (
 	items: ApiPlanItemV1[],
@@ -35,16 +58,22 @@ const filterForItem = (item: ApiPlanItemV1): PlanItemFilter => {
 };
 
 /**
- * A feature is conflicting when the base edit changed it but the variant holds
- * it only at intervals the edited plan doesn't touch — propagating would insert
- * a spurious item, so the owner should handle that variant separately.
+ * Conflicts the variant owner should resolve manually before propagating:
+ * - different_interval: variant holds the feature at an interval the edit
+ *   doesn't touch — propagation adds a duplicate item.
+ * - value_divergence: variant customized the feature's value relative to the
+ *   base — propagation would silently overwrite it.
+ * - base_price_divergence: variant customized its base price — a base price
+ *   edit would overwrite it.
  */
 export const detectVariantConflicts = ({
+	currentBasePlan,
 	editedBasePlan,
 	diff,
 	variantPlan,
 	features,
 }: {
+	currentBasePlan: ApiPlanV1;
 	editedBasePlan: ApiPlanV1;
 	diff: DiffedCustomizePlanV1;
 	variantPlan: ApiPlanV1;
@@ -59,8 +88,15 @@ export const detectVariantConflicts = ({
 
 	const editedByFeature = groupByFeature(editedBasePlan.items);
 	const variantByFeature = groupByFeature(variantPlan.items);
+	const baseOldByMatchKey = new Map(
+		currentBasePlan.items.map((item) => [composeMatchKey(item), item]),
+	);
+
+	const featureName = (featureId: string) =>
+		features.find((f) => f.id === featureId)?.name;
 
 	const conflicts: PlanUpdatePreviewVariantConflict[] = [];
+
 	for (const featureId of changedFeatureIds) {
 		// Feature removed from the base entirely — propagating the removal is
 		// clean, so it's never a conflict.
@@ -75,13 +111,40 @@ export const detectVariantConflicts = ({
 		const sharesInterval = [...variantIntervals].some((iv) =>
 			editedIntervals.has(iv),
 		);
-		if (sharesInterval) continue;
 
-		conflicts.push({
-			item_filter: filterForItem(variantList[0]),
-			feature_name: features.find((f) => f.id === featureId)?.name,
-			reason: "different_interval",
+		if (!sharesInterval) {
+			conflicts.push({
+				item_filter: filterForItem(variantList[0]),
+				feature_name: featureName(featureId),
+				reason: "different_interval",
+			});
+			continue;
+		}
+
+		// Shares the interval the edit touches: propagation overwrites the
+		// variant's item, so flag it if the variant customized the value relative
+		// to the base it forked from.
+		const divergentItem = variantList.find((item) => {
+			if (!editedIntervals.has(intervalOf(item))) return false;
+			const baseOld = baseOldByMatchKey.get(composeMatchKey(item));
+			return (
+				baseOld != null && valueSignature(item) !== valueSignature(baseOld)
+			);
 		});
+		if (divergentItem) {
+			conflicts.push({
+				item_filter: filterForItem(divergentItem),
+				feature_name: featureName(featureId),
+				reason: "value_divergence",
+			});
+		}
+	}
+
+	if (
+		diff.price !== undefined &&
+		!basePricesEqual(variantPlan.price, currentBasePlan.price)
+	) {
+		conflicts.push({ reason: "base_price_divergence" });
 	}
 
 	return conflicts;

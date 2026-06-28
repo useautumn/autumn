@@ -1,7 +1,7 @@
 import {
 	Button,
+	CopyButton,
 	IconBadge,
-	IconButton,
 	Select,
 	SelectContent,
 	SelectItem,
@@ -23,12 +23,11 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
-import { CopyButton } from "@autumn/ui";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useIsCusPlanEditor,
 	useProductStore,
@@ -48,6 +47,8 @@ import {
 	useMigratableVersions,
 } from "../versioning/MigrateCustomersDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
+
+const MIGRATE_CUSTOMERS = "__migrate_customers__";
 
 export const EditPlanHeader = () => {
 	const { numVersions, versionCounts, isLoading } = useProductQuery();
@@ -106,7 +107,13 @@ export const EditPlanHeader = () => {
 	);
 	const currentVersion = queryStates.version || product.version;
 
+	const canMigrate = pastVersionsWithCustomers.length > 0 && !isCusPlanEditor;
+
 	const handleVersionChange = (version: string) => {
+		if (version === MIGRATE_CUSTOMERS) {
+			setMigrateDialogOpen(true);
+			return;
+		}
 		const versionNumber = parseInt(version, 10);
 		if (versionNumber === numVersions && !isCusPlanEditor) {
 			// Remove version param for latest version
@@ -247,28 +254,22 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
-							<IconButton
-								variant="secondary"
-								size="mini"
-								icon={<ArrowsClockwiseIcon />}
-								iconOrientation="left"
-								onClick={() => setMigrateDialogOpen(true)}
-							>
-								Migrate customers
-							</IconButton>
-						)}
 						<VariantSelect />
 						{numVersions && numVersions > 1 && (
 							<Select
 								value={currentVersion.toString()}
 								onValueChange={handleVersionChange}
-								items={Object.fromEntries(
-									versionOptions.map((version) => [
-										version.toString(),
-										`Version ${version}`,
-									]),
-								)}
+								items={{
+									...Object.fromEntries(
+										versionOptions.map((version) => [
+											version.toString(),
+											`Version ${version}`,
+										]),
+									),
+									...(canMigrate
+										? { [MIGRATE_CUSTOMERS]: "Migrate customers" }
+										: {}),
+								}}
 							>
 								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 									<SelectValue placeholder="Version" />
@@ -295,6 +296,17 @@ export const EditPlanHeader = () => {
 											</SelectItem>
 										);
 									})}
+									{canMigrate && (
+										<>
+											<SelectSeparator />
+											<SelectItem value={MIGRATE_CUSTOMERS}>
+												<div className="flex items-center gap-2">
+													<ArrowsClockwiseIcon />
+													<span>Migrate customers</span>
+												</div>
+											</SelectItem>
+										</>
+									)}
 								</SelectContent>
 							</Select>
 						)}

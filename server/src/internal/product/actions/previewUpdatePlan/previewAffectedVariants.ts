@@ -17,12 +17,14 @@ export const previewAffectedVariants = async ({
 	ctx,
 	base,
 	diff,
+	currentBasePlan,
 	editedBasePlan,
 	data,
 }: {
 	ctx: AutumnContext;
 	base: FullProduct;
 	diff: DiffedCustomizePlanV1;
+	currentBasePlan: ApiPlanV1;
 	editedBasePlan: ApiPlanV1;
 	data: PreviewUpdatePlanParamsV2;
 }): Promise<PlanUpdatePreviewVariant[]> => {
@@ -74,6 +76,7 @@ export const previewAffectedVariants = async ({
 					versionable,
 				}),
 				conflicts: detectVariantConflicts({
+					currentBasePlan,
 					editedBasePlan,
 					diff,
 					variantPlan: currentPlan,
