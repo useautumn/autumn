@@ -34,10 +34,6 @@ export const PlanFeatureList = ({
 	const { product, setProduct } = useProduct();
 	const { sheetType, itemId, setSheet } = useSheet();
 
-	const isCreatingFeature = sheetType === "new-feature" || itemId === "new";
-	const isAddButtonDisabled =
-		isCreatingFeature || sheetType === "select-feature";
-
 	const filteredItems = useMemo(
 		() => (product ? productV2ToFeatureItems({ items: product.items }) : []),
 		[product],
@@ -69,24 +65,13 @@ export const PlanFeatureList = ({
 		}
 	};
 
-	const handleAddFeature = () => {
-		setSheet({ type: "new-feature", itemId: "new" });
-	};
-
 	const isCreatingNewFeature = sheetType === "new-feature";
 
 	if (filteredItems.length === 0) {
 		return (
 			<div className="space-y-1">
 				<div className="space-y-1">
-					{isCreatingNewFeature ? (
-						<DummyPlanFeatureRow />
-					) : (
-						<AddFeatureRow
-							onClick={handleAddFeature}
-							disabled={isAddButtonDisabled}
-						/>
-					)}
+					{isCreatingNewFeature ? <DummyPlanFeatureRow /> : <AddFeatureRow />}
 				</div>
 			</div>
 		);
@@ -140,14 +125,7 @@ export const PlanFeatureList = ({
 			)}
 
 			{allowAddFeature &&
-				(isCreatingNewFeature ? (
-					<DummyPlanFeatureRow />
-				) : (
-					<AddFeatureRow
-						onClick={handleAddFeature}
-						disabled={isAddButtonDisabled}
-					/>
-				))}
+				(isCreatingNewFeature ? <DummyPlanFeatureRow /> : <AddFeatureRow />)}
 		</div>
 	);
 };

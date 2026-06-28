@@ -151,7 +151,7 @@ export function ProductListTable() {
 			getSubRows: (row: ProductWithCounts) => row.subRows,
 			getRowId: (row: ProductWithCounts) => row.id,
 			autoResetExpanded: false,
-			initialState: { expanded: true },
+			initialState: { expanded: false },
 		},
 	});
 

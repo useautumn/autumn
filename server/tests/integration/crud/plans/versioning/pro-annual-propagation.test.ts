@@ -153,7 +153,7 @@ test.concurrent(
 			items: [monthlyMessagesItem(500)],
 			price: basePrice(20, BillingInterval.Month),
 			force_version: true,
-			propagate_to_variants: [annualPlanId],
+			update_variant_ids: [annualPlanId],
 		});
 
 		const proV1 = await getFullProduct({ ctx, planId: pro.id, version: 1 });
@@ -294,7 +294,7 @@ test.concurrent(
 			items: [monthlyMessagesItem(100), dashboardItem()],
 			price: basePrice(20, BillingInterval.Month),
 			force_version: true,
-			propagate_to_variants: [variantPlanId],
+			update_variant_ids: [variantPlanId],
 		});
 
 		const proV2 = await getFullProduct({ ctx, planId: pro.id });

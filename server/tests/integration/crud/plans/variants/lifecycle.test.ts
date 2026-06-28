@@ -5,7 +5,7 @@
  *   New endpoints:
  *     - POST /v1/plans.create_variant { base_plan_id, variant_plan_id, name } → getPlanResponse
  *     - POST /v1/plans.preview_update (UpdatePlanParams omit propagate) → PlanUpdatePreview
- *     - POST /v1/plans.update (extended: propagate_to_variants, force_version, is_default)
+ *     - POST /v1/plans.update (extended: update_variant_ids, force_version, is_default)
  *   New DB column:
  *     - products.base_internal_product_id — set on variant insert, immutable
  *   New behaviors:
@@ -341,7 +341,7 @@ test.concurrent(
 // 7. update without propagate leaves variant untouched
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants update: omit propagate_to_variants → variant unchanged")}`,
+	`${chalk.yellowBright("variants update: omit update_variant_ids → variant unchanged")}`,
 	async () => {
 		const cid = readableVariantTestId("lc_no_propagate");
 		const base = baseProduct(`lc_base_${cid}`);
@@ -416,7 +416,7 @@ test.concurrent(
 			items: [monthlyItem(200)],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const baseAfter = await getFull(ctx, base.id);
@@ -473,7 +473,7 @@ test.concurrent(
 			items: [monthlyItem(200)],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const baseAfter = await getFull(ctx, base.id);
@@ -530,7 +530,7 @@ test.concurrent(
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(base.id, {
 			items: [monthlyItem(200)],
 			price: monthlyPrice,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const baseV2 = await getFull(ctx, base.id);
@@ -633,7 +633,7 @@ test.concurrent(
 				items: [monthlyItem(200)],
 				price: monthlyPrice,
 				disable_version: true,
-				propagate_to_variants: [`unrelated_${cid}`],
+				update_variant_ids: [`unrelated_${cid}`],
 			}),
 		);
 
@@ -674,7 +674,7 @@ test.concurrent(
 				items: [monthlyItem(200)],
 				price: monthlyPrice,
 				disable_version: true,
-				propagate_to_variants: [base.id],
+				update_variant_ids: [base.id],
 			}),
 		);
 
@@ -717,7 +717,7 @@ test.concurrent(
 				items: [monthlyItem(200)],
 				price: monthlyPrice,
 				disable_version: true,
-				propagate_to_variants: ids,
+				update_variant_ids: ids,
 			}),
 		);
 

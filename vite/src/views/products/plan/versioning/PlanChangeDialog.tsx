@@ -1,5 +1,4 @@
 import type { FrontendProduct } from "@autumn/shared";
-import { productsAreSame } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -14,14 +13,16 @@ import {
 	ShortcutButton,
 	Switch,
 } from "@autumn/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { PlanItemsSection } from "@/components/forms/shared";
+import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
+import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -38,16 +39,18 @@ import {
 	type CombinedVariantTarget,
 	planHasPricingChange,
 } from "./buildMigrationDraft";
-import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
 import { PropagateVariantsStep } from "./PropagateVariantsStep";
+import { getPlanPriceChange } from "./planMigrationDiff";
 import { Stepper, type StepperStep } from "./Stepper";
-import { getVariantConflictInfo } from "./variantConflicts";
+import type { VariantConflictInfo } from "./variantConflicts";
 
 type VersionChoice = "new" | "update";
 type StepKey = "review" | "variants" | "migrate";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-	return <span className="text-[13px] font-medium text-foreground">{children}</span>;
+	return (
+		<span className="text-[13px] font-medium text-foreground">{children}</span>
+	);
 }
 
 function ConfirmInput({
@@ -124,13 +127,24 @@ export default function PlanChangeDialog({
 		[baseProduct, product, currency],
 	);
 
-	const baseHasCustomers = useMemo(
-		() =>
-			Object.values(versionCounts).some(
-				(vc) => (vc.active ?? 0) + (vc.trialing ?? 0) > 0,
-			),
-		[versionCounts],
-	);
+	// Preview the in-place update so versioning, customer impact, item changes
+	// and variant conflicts come from the backend. disable_version is dropped so
+	// `versionable` reflects whether applying in place would version.
+	const previewParams = useMemo(() => {
+		const params = buildInPlaceUpdatePlanParams({
+			baseProduct: baseProduct ?? product,
+			editedProduct: product,
+			features,
+		});
+		delete params.disable_version;
+		return params;
+	}, [baseProduct, product, features]);
+
+	const { data: preview } = usePlanUpdatePreview({
+		planId: product.id,
+		params: previewParams,
+		enabled: open,
+	});
 
 	const customCount = useMemo(
 		() =>
@@ -141,38 +155,45 @@ export default function PlanChangeDialog({
 		[versionCounts],
 	);
 
-	const hasMigrationDiff = useMemo(
-		() => hasPlanMigrationDiff({ baseProduct, product, currency }),
-		[baseProduct, product, currency],
-	);
 	// Patch-in-place applies the change to the base's current version, so its
 	// existing customers need a migration. New-version intentionally grandfathers.
 	const baseNeedsMigration =
-		versionChoice === "update" && hasMigrationDiff && baseHasCustomers;
+		versionChoice === "update" && (preview?.versionable ?? false);
 
 	const { data: variants = [], refetch: refetchVariants } = usePlanVariants(
 		product.id,
 		open,
 	);
 
-	const variantConflicts = useMemo(() => {
-		if (!baseProduct) return [];
-		return getVariantConflictInfo({
-			baseItems: baseProduct.items,
-			editedItems: product.items,
-			variants,
-			features,
-		});
-	}, [baseProduct, product, variants, features]);
+	const variantConflicts = useMemo<VariantConflictInfo[]>(
+		() =>
+			variants.map((variant) => {
+				const previewVariant = preview?.variants.find(
+					(v) => v.plan_id === variant.id,
+				);
+				return {
+					variant,
+					conflictFeatureNames: (previewVariant?.conflicts ?? []).map(
+						(conflict) =>
+							conflict.feature_name ??
+							conflict.item_filter.feature_id ??
+							variant.id,
+					),
+					itemChanges: previewVariant?.item_changes ?? [],
+				};
+			}),
+		[variants, preview],
+	);
 
-	// Default-select only conflict-free variants the first time they load.
+	// Default-select only conflict-free variants once both variants and the
+	// preview (which carries conflicts) have loaded.
 	const variantSelectionInit = useRef(false);
 	useEffect(() => {
 		if (!open) {
 			variantSelectionInit.current = false;
 			return;
 		}
-		if (!variantSelectionInit.current && variantConflicts.length > 0) {
+		if (!variantSelectionInit.current && variants.length > 0 && preview) {
 			setSelectedVariantIds(
 				variantConflicts
 					.filter((v) => v.conflictFeatureNames.length === 0)
@@ -180,7 +201,7 @@ export default function PlanChangeDialog({
 			);
 			variantSelectionInit.current = true;
 		}
-	}, [open, variantConflicts]);
+	}, [open, variants, preview, variantConflicts]);
 
 	const hasVariants = variants.length > 0;
 	const migrateNeeded = baseNeedsMigration || selectedVariantIds.length > 0;
@@ -232,7 +253,7 @@ export default function PlanChangeDialog({
 				features,
 			});
 			if (selectedVariantIds.length > 0) {
-				updateParams.propagate_to_variants = selectedVariantIds;
+				updateParams.update_variant_ids = selectedVariantIds;
 			}
 			await ProductService.updatePlan(axiosInstance, updateParams);
 		} else {
@@ -243,7 +264,7 @@ export default function PlanChangeDialog({
 			});
 			delete updateParams.disable_version;
 			if (selectedVariantIds.length > 0) {
-				updateParams.propagate_to_variants = selectedVariantIds;
+				updateParams.update_variant_ids = selectedVariantIds;
 			}
 			await ProductService.updatePlan(axiosInstance, updateParams);
 		}
@@ -330,10 +351,7 @@ export default function PlanChangeDialog({
 				});
 				await invalidateMigrations();
 				toast.success("Migration created");
-				navigateTo(
-					`/migrations/${migration.id}?step=live&run=true`,
-					navigate,
-				);
+				navigateTo(`/migrations/${migration.id}?step=live&run=true`, navigate);
 			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to create migration"));
@@ -349,18 +367,22 @@ export default function PlanChangeDialog({
 
 	const handlePrimary = () => {
 		if (step === "review") {
+			if (hasVariants) {
+				setStep("variants");
+				return;
+			}
 			if (!confirmed) {
 				toast.error("Confirmation text is incorrect");
 				return;
 			}
-			if (hasVariants) {
-				setStep("variants");
-			} else {
-				void goNextFromConfig();
-			}
+			void goNextFromConfig();
 			return;
 		}
 		if (step === "variants") {
+			if (!confirmed) {
+				toast.error("Confirmation text is incorrect");
+				return;
+			}
 			void goNextFromConfig();
 			return;
 		}
@@ -408,7 +430,8 @@ export default function PlanChangeDialog({
 
 	const title =
 		step === "migrate" ? "Migrate existing customers" : "Save plan changes";
-	const onReviewStep = step === "review";
+	// Confirmation lives on the variants step when variants exist, otherwise on review.
+	const onConfirmStep = step === (hasVariants ? "variants" : "review");
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -430,20 +453,14 @@ export default function PlanChangeDialog({
 							{step === "review" && (
 								<>
 									<div className="flex flex-col gap-3">
-										<div className="rounded-xl bg-secondary/40 px-3.5 py-3">
-											<PlanItemsSection
-												product={product}
-												originalItems={baseProduct?.items}
-												features={features}
-												prepaidOptions={{}}
-												initialPrepaidOptions={{}}
-												showDiff
-												changesOnly
-												disableBooleanCollapse
-												currency={currency}
-												onEditPlan={() => {}}
+										<div className="rounded-xl bg-secondary/40 px-3.5 py-3 flex flex-col gap-2">
+											<PlanPriceHeader
 												priceChange={priceChange}
-												readOnly
+												product={product}
+												currency={currency}
+											/>
+											<ItemChangeList
+												itemChanges={preview?.item_changes ?? []}
 											/>
 										</div>
 									</div>
@@ -469,26 +486,35 @@ export default function PlanChangeDialog({
 										</RadioGroup>
 									</div>
 
+									{!hasVariants && (
+										<ConfirmInput
+											productId={product.id}
+											value={confirmText}
+											onChange={setConfirmText}
+										/>
+									)}
+								</>
+							)}
+
+							{step === "variants" && (
+								<>
+									<PropagateVariantsStep
+										variants={variantConflicts}
+										selectedIds={selectedVariantIds}
+										onToggle={(id) =>
+											setSelectedVariantIds((prev) =>
+												prev.includes(id)
+													? prev.filter((v) => v !== id)
+													: [...prev, id],
+											)
+										}
+									/>
 									<ConfirmInput
 										productId={product.id}
 										value={confirmText}
 										onChange={setConfirmText}
 									/>
 								</>
-							)}
-
-							{step === "variants" && (
-								<PropagateVariantsStep
-									variants={variantConflicts}
-									selectedIds={selectedVariantIds}
-									onToggle={(id) =>
-										setSelectedVariantIds((prev) =>
-											prev.includes(id)
-												? prev.filter((v) => v !== id)
-												: [...prev, id],
-										)
-									}
-								/>
 							)}
 
 							{step === "migrate" && (
@@ -549,7 +575,7 @@ export default function PlanChangeDialog({
 							metaShortcut="enter"
 							onClick={handlePrimary}
 							isLoading={isLoading}
-							disabled={isLoading || (onReviewStep && !confirmed)}
+							disabled={isLoading || (onConfirmStep && !confirmed)}
 						>
 							{primaryText}
 						</ShortcutButton>

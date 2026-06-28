@@ -66,9 +66,9 @@ export const UpdatePlanParamsV2Schema = z
 			description:
 				"Force versioning even when no customers exist. Mutually exclusive with disable_version.",
 		}),
-		propagate_to_variants: z.array(z.string()).optional().meta({
+		update_variant_ids: z.array(z.string()).optional().meta({
 			description:
-				"Variant plan IDs to propagate this update to. Empty or omitted means no propagation.",
+				"Variant plan IDs to apply this update to. Empty or omitted means no propagation.",
 		}),
 		is_default: z.boolean().optional().meta({
 			description:

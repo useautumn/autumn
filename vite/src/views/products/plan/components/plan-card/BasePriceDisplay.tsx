@@ -63,7 +63,7 @@ export const BasePriceDisplay = ({
 			case "variable":
 				return (
 					<span className="text-tertiary-foreground!">
-						{priceDisplay.displayText}
+						{readOnly ? priceDisplay.displayText : "Price varies"}
 					</span>
 				);
 

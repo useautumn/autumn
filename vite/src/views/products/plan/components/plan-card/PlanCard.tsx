@@ -19,7 +19,7 @@ export default function PlanCard() {
 			onMouseDown={(e) => e.stopPropagation()}
 		>
 			{sheetType && (
-				<div className="bg-white/50 dark:bg-black/50 absolute pointer-events-none rounded-2xl -inset-[5px]" />
+				<div className="bg-white/50 dark:bg-black/50 absolute pointer-events-none rounded-2xl -inset-[5px] z-10" />
 			)}
 			<PlanCardHeader />
 

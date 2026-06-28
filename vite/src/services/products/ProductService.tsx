@@ -1,8 +1,10 @@
 import type {
 	CreateVariantParamsV2Input,
 	DiffedCustomizePlanV1,
+	PlanUpdatePreview,
 	PlanUpdatePreviewItemChange,
 	PlanUpdatePreviewPriceChange,
+	PreviewUpdatePlanParamsV2Input,
 	ProductItem,
 	ProductV2,
 	UpdatePlanParamsV2Input,
@@ -79,21 +81,15 @@ export class ProductService {
 		axiosInstance: AxiosInstance,
 		data: CreateVariantParamsV2Input,
 	) {
-		const response = await axiosInstance.post(
-			"/v1/plans.create_variant",
-			data,
-		);
+		const response = await axiosInstance.post("/v1/plans.create_variant", data);
 		return response.data;
 	}
 
 	static async previewUpdate(
 		axiosInstance: AxiosInstance,
-		data: UpdatePlanParamsV2Input,
-	) {
-		const response = await axiosInstance.post(
-			"/v1/plans.preview_update",
-			data,
-		);
+		data: PreviewUpdatePlanParamsV2Input,
+	): Promise<PlanUpdatePreview> {
+		const response = await axiosInstance.post("/v1/plans.preview_update", data);
 		return response.data;
 	}
 

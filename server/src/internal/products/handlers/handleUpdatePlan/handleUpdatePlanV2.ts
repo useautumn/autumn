@@ -24,7 +24,7 @@ export const handleUpdatePlanV2 = createRoute({
 			force_version,
 			disable_version,
 			version,
-			propagate_to_variants,
+			update_variant_ids,
 			...planParams
 		} = body;
 		const ctx = c.get("ctx");
@@ -64,13 +64,15 @@ export const handleUpdatePlanV2 = createRoute({
 			env: ctx.env,
 		});
 
-		const propagateToVariants = propagate_to_variants ?? [];
+		const propagateToVariants = update_variant_ids ?? [];
 		if (propagateToVariants.length > 0) {
 			await updateVariants({
 				ctx,
 				oldBase: initialFullProduct,
 				newBase: latestFullProduct,
 				propagateToVariants,
+				disableVersion: disable_version,
+				forceVersion: force_version,
 			});
 		}
 

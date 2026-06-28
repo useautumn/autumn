@@ -305,7 +305,7 @@ test.concurrent(
 			items: [...allItems(), v1.adminRights()],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantPlan = await rpc.plans.get<ApiPlanV1>(variantId);
@@ -360,7 +360,7 @@ test.concurrent(
 			],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantPlan = await rpc.plans.get<ApiPlanV1>(variantId);
@@ -405,7 +405,7 @@ test.concurrent(
 			],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [],
+			update_variant_ids: [],
 		});
 
 		const optOutPlan = await rpc.plans.get<ApiPlanV1>(variantId1);
@@ -427,7 +427,7 @@ test.concurrent(
 			],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId2],
+			update_variant_ids: [variantId2],
 		});
 
 		const optInPlan = await rpc.plans.get<ApiPlanV1>(variantId2);
@@ -468,7 +468,7 @@ test.concurrent(
 			],
 			price: monthlyPrice,
 			disable_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantPlan = await rpc.plans.get<ApiPlanV1>(variantId);
@@ -495,7 +495,7 @@ test.concurrent(
 			items: [...allItems(), v1.adminRights()],
 			price: monthlyPrice,
 			force_version: true,
-			propagate_to_variants: [],
+			update_variant_ids: [],
 		});
 
 		// v2→v3: add Storage, propagate to both
@@ -503,7 +503,7 @@ test.concurrent(
 			items: [...allItems(), v1.adminRights(), v1.storage()],
 			price: monthlyPrice,
 			force_version: true,
-			propagate_to_variants: [variantId1, variantId2],
+			update_variant_ids: [variantId1, variantId2],
 		});
 
 		const v1Plan = await rpc.plans.get<ApiPlanV1>(variantId1);
@@ -628,7 +628,7 @@ test.concurrent(
 			items: [...itemsNoDashboard(), v1.storage()],
 			price: monthlyPrice,
 			force_version: true,
-			propagate_to_variants: [variantId],
+			update_variant_ids: [variantId],
 		});
 
 		const variantV2 = await getFull(ctx, variantId);

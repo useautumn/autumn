@@ -64,6 +64,7 @@ export const buildPlanUpdatePreview = async ({
 		ctx,
 		base: currentFullProduct,
 		diff,
+		editedBasePlan: previewPlan,
 		data,
 	});
 

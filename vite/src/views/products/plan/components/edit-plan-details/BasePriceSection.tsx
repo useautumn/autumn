@@ -8,57 +8,56 @@ import {
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import {
-	AreaRadioGroupItem,
+	Button,
 	FormLabel,
 	GroupedTabButton,
 	InputGroup,
 	InputGroupAddon,
 	InputGroupInput,
-	RadioGroup,
 } from "@autumn/ui";
-import { ArrowsClockwiseIcon, CheckCircleIcon } from "@phosphor-icons/react";
 import {
-	useProduct,
-	useSheet,
-} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+	ArrowsClockwiseIcon,
+	CheckCircleIcon,
+	PlusIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
+import { FreeTrialOption } from "./FreeTrialOption";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
 export const BasePriceSection = ({
-	withSeparator = true,
+	withSeparator = false,
+	className,
 }: {
 	withSeparator?: boolean;
+	className?: string;
 }) => {
 	const { product, setProduct } = useProduct();
-	const { sheetType } = useSheet();
-
-	const basePriceType = product.basePriceType;
 	const { org } = useOrg();
 	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
 
-	// When sheetType is null, we're in CreateProductSheet (overlay sheet, not inline sheet)
-	const isCreatingNewPlan = sheetType === null;
-
 	if (!product.items) return null;
-	if (product.planType !== "paid") return null;
+	if (!product.planType) return null;
 
 	const basePrice = productV2ToBasePrice({ product });
+	const hasBasePrice =
+		product.basePriceType === "recurring" ||
+		product.basePriceType === "one-off";
+	const billingType =
+		product.basePriceType === "one-off" ? "one-off" : "recurring";
 
-	const getBasePriceIndex = () => {
-		return product.items.findIndex(
+	const getBasePriceIndex = () =>
+		product.items.findIndex(
 			(item: ProductItem) =>
 				item.price === basePrice?.price && isPriceItem(item),
 		);
-	};
 
 	const setItem = (item: ProductItem) => {
 		const newItems = [...product.items];
 		newItems[getBasePriceIndex()] = item;
-		setProduct({
-			...product,
-			items: newItems,
-		});
+		setProduct({ ...product, items: newItems });
 	};
 
 	const handleUpdateBasePrice = ({
@@ -71,8 +70,6 @@ export const BasePriceSection = ({
 		intervalCount?: number;
 	}) => {
 		const newItems = [...product.items];
-
-		// Find base price item by isBasePrice flag, not by price match
 		const basePriceIndex = newItems.findIndex((item: ProductItem) =>
 			isPriceItem(item),
 		);
@@ -88,197 +85,165 @@ export const BasePriceSection = ({
 			newItems[basePriceIndex] = {
 				...newItems[basePriceIndex],
 				price: newAmount as number,
-				// interval: interval
-				// 	? billingToItemInterval({ billingInterval: interval })
-				// 	: basePrice?.interval,
 				interval_count: interval ? intervalCount : basePrice?.interval_count,
 			};
 		}
 
+		setProduct({ ...product, items: newItems });
+	};
+
+	const addBasePrice = () => {
+		const hasPriceItem = product.items.some((item) => isPriceItem(item));
 		setProduct({
 			...product,
-			items: newItems,
+			basePriceType: "recurring",
+			items: hasPriceItem
+				? product.items
+				: [
+						...product.items,
+						{
+							price: "" as unknown as number,
+							interval: ProductItemInterval.Month,
+							interval_count: 1,
+						},
+					],
+		});
+	};
+
+	const removeBasePrice = () => {
+		setProduct({
+			...product,
+			basePriceType: "usage",
+			items: product.items.filter((item) => !isPriceItem(item)),
+		});
+	};
+
+	const handleBillingTypeChange = (value: string) => {
+		setProduct({
+			...product,
+			basePriceType: value as "recurring" | "one-off",
+			items: product.items.map((item) =>
+				isPriceItem(item)
+					? {
+							...item,
+							interval: value === "one-off" ? null : ProductItemInterval.Month,
+						}
+					: item,
+			),
 		});
 	};
 
 	const disabled = nullish(basePrice);
 
-	// Determine if we're in "usage" (per unit only) mode or "base price" mode
-	const isPerUnitOnly = basePriceType === "usage";
-
-	// Get the billing type (recurring or one-off) - default to recurring
-	const billingType =
-		basePriceType === "usage"
-			? "recurring"
-			: basePriceType === "one-off"
-				? "one-off"
-				: "recurring";
-
-	const handleBillingTypeChange = (value: string) => {
-		// Only change billing type if we're in base price mode
-		if (isPerUnitOnly) return;
-
-		// Check if there's already a price item
-		const hasPriceItem = product.items.some((item) => isPriceItem(item));
-
-		if (!hasPriceItem) {
-			// Recreate the price item with default price of 0
-			const newPriceItem: ProductItem = {
-				price: "" as unknown as number,
-				interval: value === "one-off" ? null : ProductItemInterval.Month,
-				interval_count: 1,
-			};
-
-			setProduct({
-				...product,
-				basePriceType: value as "recurring" | "one-off",
-				items: [...product.items, newPriceItem],
-			});
-			return;
-		}
-
-		// Update existing price item
-		setProduct({
-			...product,
-			basePriceType: value as "recurring" | "one-off",
-			items: product.items.map((item) => {
-				if (isPriceItem(item)) {
-					return {
-						...item,
-						interval: value === "one-off" ? null : ProductItemInterval.Month,
-					};
-				}
-				return item;
-			}),
-		});
-	};
-
-	const handlePriceTypeChange = (value: string) => {
-		if (value === "usage") {
-			// Switch to per unit only - remove base price item
-			setProduct({
-				...product,
-				basePriceType: "usage",
-				items: product.items.filter((item) => !isPriceItem(item)),
-			});
-		} else {
-			// Switch to base price - restore price item with current billing type
-			const hasPriceItem = product.items.some((item) => isPriceItem(item));
-
-			if (!hasPriceItem) {
-				const newPriceItem: ProductItem = {
-					price: "" as unknown as number,
-					interval:
-						billingType === "one-off" ? null : ProductItemInterval.Month,
-					interval_count: 1,
-				};
-
-				setProduct({
-					...product,
-					basePriceType: billingType as "recurring" | "one-off",
-					items: [...product.items, newPriceItem],
-				});
-			} else {
-				setProduct({
-					...product,
-					basePriceType: billingType as "recurring" | "one-off",
-				});
-			}
-		}
-	};
+	const isPaid = product.planType === "paid";
 
 	return (
-		<SheetSection title="Plan Price" withSeparator={withSeparator}>
-			<div className="space-y-4">
-				<div className="py-2">
-					<RadioGroup
-						value={isPerUnitOnly ? "usage" : "base"}
-						onValueChange={handlePriceTypeChange}
-						className="space-y-1"
+		<SheetSection
+			title={isPaid ? "Base price" : undefined}
+			description={
+				isPaid
+					? "Add a fixed price for the plan. Optional for per-unit or usage-based plans."
+					: undefined
+			}
+			className={className}
+			withSeparator={withSeparator}
+			action={
+				isPaid && hasBasePrice ? (
+					<Button
+						variant="ghost"
+						size="mini"
+						className="gap-1 text-tertiary-foreground hover:text-destructive"
+						onClick={removeBasePrice}
 					>
-						<AreaRadioGroupItem
-							value="base"
-							label="Base price"
-							description={`This plan has a fixed price. ${isCreatingNewPlan ? "You can add per-unit prices later." : ""}`}
-						/>
-						<AreaRadioGroupItem
-							value="usage"
-							label="Per unit only"
-							description="Plan price is based entirely on usage or units purchased."
-						/>
-					</RadioGroup>
-				</div>
+						<TrashIcon className="size-3.5" />
+						Remove
+					</Button>
+				) : undefined
+			}
+		>
+			<div className="space-y-5">
+				{isPaid &&
+					(hasBasePrice ? (
+						<div className="space-y-2">
+							<GroupedTabButton
+								value={billingType}
+								className="w-full"
+								onValueChange={handleBillingTypeChange}
+								options={[
+									{
+										value: "recurring",
+										label: "Recurring",
+										icon: (
+											<ArrowsClockwiseIcon
+												className="size-[14px]"
+												weight="regular"
+											/>
+										),
+									},
+									{
+										value: "one-off",
+										label: "One-off",
+										icon: (
+											<CheckCircleIcon
+												className="size-[14px]"
+												weight="regular"
+											/>
+										),
+									},
+								]}
+							/>
 
-				<div className="space-y-2">
-					<GroupedTabButton
-						value={billingType}
-						className="w-full"
-						onValueChange={handleBillingTypeChange}
-						disabled={isPerUnitOnly}
-						options={[
-							{
-								value: "recurring",
-								label: "Recurring",
-								icon: (
-									<ArrowsClockwiseIcon
-										className="size-[14px]"
-										weight="regular"
-									/>
-								),
-							},
-							{
-								value: "one-off",
-								label: "One-off",
-								icon: (
-									<CheckCircleIcon className="size-[14px]" weight="regular" />
-								),
-							},
-						]}
-					/>
-				</div>
-				<div className="flex gap-2">
-					<div className="w-full">
-						<FormLabel disabled={disabled || isPerUnitOnly}>Price</FormLabel>
-						<InputGroup data-disabled={isPerUnitOnly}>
-							<InputGroupInput
-								type="number"
-								placeholder="eg. 100"
-								disabled={isPerUnitOnly}
-								value={isPerUnitOnly ? "" : (basePrice?.price ?? "")}
-								onKeyDown={(e) => {
-									// Prevent typing minus sign
-									if (e.key === "-" || e.key === "Minus") {
-										e.preventDefault();
-									}
-								}}
-								onChange={(e) => {
-									// extra guard in case value changes programmatically
-									const cleanedValue = e.target.value.replace(/-/g, "");
-									if (Number(cleanedValue) >= 0) {
-										handleUpdateBasePrice({
-											amount: cleanedValue,
-										});
-									}
-								}}
-							/>
-							<InputGroupAddon align="inline-end">
-								<span className="text-tertiary-foreground text-xs">
-									{defaultCurrency}
-								</span>
-							</InputGroupAddon>
-						</InputGroup>
-					</div>
-					{billingType === "recurring" && (
-						<div className="w-full">
-							<SelectBillingCycle
-								item={basePrice}
-								setItem={setItem}
-								disabled={disabled || isPerUnitOnly}
-								filterOneOff={billingType === "recurring"}
-							/>
+							<div className="flex gap-2">
+								<div className="w-full">
+									<FormLabel disabled={disabled}>Price</FormLabel>
+									<InputGroup>
+										<InputGroupInput
+											type="number"
+											placeholder="eg. 100"
+											value={basePrice?.price ?? ""}
+											onKeyDown={(e) => {
+												if (e.key === "-" || e.key === "Minus") {
+													e.preventDefault();
+												}
+											}}
+											onChange={(e) => {
+												const cleanedValue = e.target.value.replace(/-/g, "");
+												if (Number(cleanedValue) >= 0) {
+													handleUpdateBasePrice({ amount: cleanedValue });
+												}
+											}}
+										/>
+										<InputGroupAddon align="inline-end">
+											<span className="text-tertiary-foreground text-xs">
+												{defaultCurrency}
+											</span>
+										</InputGroupAddon>
+									</InputGroup>
+								</div>
+								{billingType === "recurring" && (
+									<div className="w-full">
+										<SelectBillingCycle
+											item={basePrice}
+											setItem={setItem}
+											disabled={disabled}
+											filterOneOff={true}
+										/>
+									</div>
+								)}
+							</div>
 						</div>
-					)}
-				</div>
+					) : (
+						<Button
+							variant="secondary"
+							size="sm"
+							className="w-full gap-2"
+							onClick={addBasePrice}
+						>
+							<PlusIcon className="size-3.5" />
+							Add a base price
+						</Button>
+					))}
+				<FreeTrialOption />
 			</div>
 		</SheetSection>
 	);

@@ -1,7 +1,6 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
-import { getProductItemDisplay } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -10,19 +9,13 @@ import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { PlanFeatureIcon } from "./PlanFeatureIcon";
-
-export const CustomDotIcon = () => {
-	return <div className="w-[2px] h-[2px] mx-0.5 bg-current rounded-full" />;
-};
 
 interface PlanFeatureRowProps {
 	item: ProductItem;
@@ -39,8 +32,6 @@ export const PlanFeatureRow = ({
 	readOnly = false,
 	prepaidQuantity,
 }: PlanFeatureRowProps) => {
-	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
 	const { itemId, setSheet } = useSheet();
@@ -57,21 +48,6 @@ export const PlanFeatureRow = ({
 			playgroundMode !== "edit");
 
 	const item = readOnly ? itemProp : product.items?.[index] || itemProp;
-
-	const display = getProductItemDisplay({
-		item,
-		features,
-		currency: org?.default_currency || "USD",
-		fullDisplay: true,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
-
-	const feature = features.find((f) => f.id === item.feature_id);
-	const hasFeatureName = feature?.name && feature.name.trim() !== "";
-
-	const displayText = hasFeatureName
-		? display.primary_text
-		: "Name your feature";
 
 	const currentItemId = getItemId({ item, itemIndex: index });
 	const isSelected = itemId === currentItemId;
@@ -161,7 +137,7 @@ export const PlanFeatureRow = ({
 			data-pressed={isPressed}
 			className={cn(
 				"flex items-center w-full group group/row select-none rounded-xl hover:relative hover:z-95",
-				!readOnly && "h-10! input-base input-state-open-tiny",
+				!readOnly && "h-10! input-base input-state-open-tiny cursor-pointer",
 				readOnly && "py-1",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
@@ -192,28 +168,12 @@ export const PlanFeatureRow = ({
 			}}
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-				<AdminHover texts={adminHoverText()}>
-					<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
-						<PlanFeatureIcon item={item} position="left" />
-
-						<CustomDotIcon />
-
-						<PlanFeatureIcon item={item} position="right" />
-					</div>
-				</AdminHover>
-
-				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
-						{displayText}
-					</span>
-
-					{display.secondary_text && (
-						<span className="text-body-secondary">
-							{" "}
-							{display.secondary_text}
-						</span>
+				<PlanItemLabel
+					item={item}
+					wrapIcons={(icons) => (
+						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>
 					)}
-				</p>
+				/>
 
 				<div
 					className={cn(

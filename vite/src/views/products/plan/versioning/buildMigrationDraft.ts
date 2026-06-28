@@ -297,10 +297,11 @@ export interface CombinedVariantTarget {
 /**
  * One migration moving every target plan's customers to that plan's current
  * (post-propagation) version via a version reset. Targets can be the base plan
- * and/or its variants — each is a distinct plan_id, so the filter matches
- * customers on any of them and each gets its own update_plan op. Works for both
- * versioned and patched-in-place plans because a numeric `version` triggers
- * resetToCatalogVersion, re-materializing cus_ents from the updated catalog.
+ * and/or its variants — each is a distinct plan_id. Variants sharing a target
+ * version collapse into a single `$in` op, so the common case (all variants on
+ * the same version) yields one op. Works for both versioned and patched-in-place
+ * plans because a numeric `version` triggers resetToCatalogVersion,
+ * re-materializing cus_ents from the updated catalog.
  */
 export function buildCombinedVariantMigrationDraft({
 	variants,
@@ -321,11 +322,18 @@ export function buildCombinedVariantMigrationDraft({
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
 
+	const byVersion = new Map<number, string[]>();
+	for (const variant of variants) {
+		const ids = byVersion.get(variant.version) ?? [];
+		ids.push(variant.id);
+		byVersion.set(variant.version, ids);
+	}
+
 	const versionOps = (custom: boolean): UpdatePlanOp[] =>
-		variants.map((v) => ({
+		Array.from(byVersion.entries()).map(([version, ids]) => ({
 			type: "update_plan",
-			plan_filter: { plan_id: v.id, custom },
-			version: v.version,
+			plan_filter: { plan_id: ids.length === 1 ? ids[0] : { $in: ids }, custom },
+			version,
 		}));
 
 	const operations: Operations = {

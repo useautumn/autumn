@@ -23,7 +23,7 @@ export const buildIncomingProductV2 = ({
 		disable_version,
 		version,
 		force_version,
-		propagate_to_variants,
+		update_variant_ids,
 		expand,
 		...planParams
 	} = data;

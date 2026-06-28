@@ -21,7 +21,7 @@ export const PlanEditor = () => {
 	return (
 		<div className="flex w-full h-full overflow-hidden relative">
 			<motion.div
-				className="h-full overflow-hidden absolute inset-0 z-0"
+				className="h-full overflow-hidden absolute inset-0"
 				animate={{
 					width: isSheetOpen && !isMobile ? "calc(100% - 28rem)" : "100%",
 				}}

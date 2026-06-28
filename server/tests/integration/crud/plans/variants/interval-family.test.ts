@@ -264,7 +264,7 @@ test.concurrent(
 
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
-			propagate_to_variants: variantIds,
+			update_variant_ids: variantIds,
 		});
 
 		const baseAfter = await getFull(ctx, baseId);
@@ -294,7 +294,7 @@ test.concurrent(
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
 			disable_version: true,
-			propagate_to_variants: selected,
+			update_variant_ids: selected,
 		});
 
 		for (const vid of selected) {
@@ -331,7 +331,7 @@ test.concurrent(
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
 			disable_version: true,
-			propagate_to_variants: variantIds,
+			update_variant_ids: variantIds,
 		});
 
 		const v0 = await getFull(ctx, variantIds[0]);
@@ -365,7 +365,7 @@ test.concurrent(
 
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
-			propagate_to_variants: variantIds,
+			update_variant_ids: variantIds,
 		});
 
 		const baseV2 = await getFull(ctx, baseId);
@@ -413,7 +413,7 @@ test.concurrent(
 		// force_version: customer is on v1, so v2 has no customers — force versioning
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200), usersItem(5)],
-			propagate_to_variants: selected,
+			update_variant_ids: selected,
 			force_version: true,
 		});
 
@@ -458,7 +458,7 @@ test.concurrent(
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
 			disable_version: true,
-			propagate_to_variants: variantIds,
+			update_variant_ids: variantIds,
 		});
 
 		// Variants with non-monthly intervals should NOT be affected
@@ -550,7 +550,7 @@ test.concurrent(
 		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
 			items: [monthlyItem(200)],
 			disable_version: true,
-			propagate_to_variants: [variantIds[0]],
+			update_variant_ids: [variantIds[0]],
 		});
 
 		const v2Full = await getFull(ctx, variantIds[0]);

@@ -187,7 +187,7 @@ test(
 				{
 					plan_id: planId,
 					name: prod.name,
-					propagate_to_variants: [variantId],
+					update_variant_ids: [variantId],
 					items: [
 						{
 							feature_id: TestFeature.Messages,

@@ -8,7 +8,7 @@
  *   New behaviors:
  *     - create_variant copies BOTH same-feature_id items (day + month not collapsed)
  *     - preview_update diff disambiguates by reset.interval (day vs month)
- *     - propagate_to_variants applies base→base diff to each variant
+ *     - update_variant_ids applies base→base diff to each variant
  *     - credit-pack tier ladder: 4 priced variants, Dashboard propagation
  *     - 21 variants → too_many_variants (400), 20 succeeds
  *     - day-reset survives versioning of both base and variant
@@ -194,7 +194,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: propagate day-only change, mo
 			creditsItem(100, ResetInterval.Month),
 			creditsItem(300, ResetInterval.Day),
 		],
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 	});
 
 	const variantAfter = await getPlanRpc(variantId);
@@ -230,7 +230,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: tier ladder — 4 priced vari
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		items: [prepaidCreditsItem(10), dashboardItem],
-		propagate_to_variants: variantIds,
+		update_variant_ids: variantIds,
 	});
 
 	for (let i = 0; i < 4; i++) {
@@ -265,7 +265,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: 21 variants in propagate → 
 		func: async () => {
 			await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 				items: [creditsItem(200, ResetInterval.Month)],
-				propagate_to_variants: variantIds,
+				update_variant_ids: variantIds,
 			});
 		},
 	});
@@ -290,7 +290,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: 20 variants in propagate succ
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		items: [creditsItem(200, ResetInterval.Month)],
-		propagate_to_variants: variantIds,
+		update_variant_ids: variantIds,
 	});
 
 	for (const vid of variantIds) {
@@ -349,7 +349,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: day-reset survives versioning
 			creditsItem(100, ResetInterval.Month),
 			creditsItem(300, ResetInterval.Day),
 		],
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 	});
 
 	const baseAfter = await ProductService.getFull({ db, idOrInternalId: prefixedBaseId, orgId: org.id, env });
@@ -401,7 +401,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: hour-reset propagates to vari
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		items: [creditsItem(200, ResetInterval.Hour)],
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 	});
 
 	const variant = await getPlanRpc(variantId);
@@ -434,7 +434,7 @@ test.concurrent(`${chalk.yellowBright("reset-tier: Stripe price_id retained on v
 
 	await autumnRpc.plans.update<ApiPlanV1>(baseId, {
 		items: [prepaidCreditsItem(10), dashboardItem],
-		propagate_to_variants: [variantId],
+		update_variant_ids: [variantId],
 		force_version: true,
 	} as any);
 
