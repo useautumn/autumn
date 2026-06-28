@@ -102,6 +102,7 @@ export const previewUpdatePlan = async ({
 	const baseFullProduct = await getPreviewTargetProduct({
 		ctx,
 		planId: data.plan_id,
+		version: data.version,
 	});
 
 	const previewCtx: AutumnContext = {
