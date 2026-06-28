@@ -2,6 +2,7 @@ import { Card, CardContent, CopyButton, IconButton } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore";
 import type { PlanVariant } from "@/services/products/ProductService";
 import { pushPage } from "@/utils/genUtils";
 import { VariantPrice } from "./VariantPrice";
@@ -10,6 +11,7 @@ const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
 export function VariantPlanCard({ variant }: { variant: PlanVariant }) {
 	const navigate = useNavigate();
+	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
 
 	return (
 		<Card className="min-w-sm max-w-xl mx-4 w-full !rounded-2xl bg-background">
@@ -29,13 +31,14 @@ export function VariantPlanCard({ variant }: { variant: PlanVariant }) {
 							aria-label={`Go to ${variant.name}`}
 							icon={<ArrowRightIcon size={14} />}
 							iconOrientation="center"
-							onClick={() =>
+							onClick={() => {
+								setShowAllVariants(false);
 								pushPage({
 									navigate,
 									path: `/products/${variant.id}`,
 									preserveParams: false,
-								})
-							}
+								});
+							}}
 							size="mini"
 							variant="secondary"
 						/>

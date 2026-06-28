@@ -1,10 +1,12 @@
+import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { VariantPlanCard } from "./variant-card/VariantPlanCard";
 
 export function VariantPlanCards() {
 	const { variants } = useProductQuery();
+	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 
-	if (variants.length === 0) return null;
+	if (!showAllVariants || variants.length === 0) return null;
 
 	return (
 		<div className="flex w-full flex-col items-center gap-4">

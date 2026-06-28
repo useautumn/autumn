@@ -5,6 +5,7 @@ import {
 	Select,
 	SelectContent,
 	SelectItem,
+	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
 	SmallSpinner,
@@ -32,6 +33,7 @@ import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
+import { useVariantViewStore } from "@/hooks/stores/useVariantViewStore.ts";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
@@ -304,10 +306,14 @@ export const EditPlanHeader = () => {
 	);
 };
 
+const SHOW_ALL_VARIANTS = "__show_all_variants__";
+
 const VariantSelect = () => {
 	const product = useProductStore((s) => s.product);
 	const { products } = useProductsQuery();
 	const navigate = useNavigate();
+	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
+	const setShowAllVariants = useVariantViewStore((s) => s.setShowAllVariants);
 
 	// base_id is only populated on products-list entries, not the store product,
 	// so resolve it from the list. A base plan is its own base.
@@ -328,15 +334,31 @@ const VariantSelect = () => {
 	if (!hasVariants) return null;
 
 	const handleChange = (id: string) => {
+		if (id === SHOW_ALL_VARIANTS) {
+			setShowAllVariants(true);
+			// Variant cards only exist on the base, so focus it.
+			if (product.id !== baseId) {
+				pushPage({
+					navigate,
+					path: `/products/${baseId}`,
+					preserveParams: false,
+				});
+			}
+			return;
+		}
+		setShowAllVariants(false);
 		if (id === product.id) return;
 		pushPage({ navigate, path: `/products/${id}`, preserveParams: false });
 	};
 
 	return (
 		<Select
-			value={product.id}
+			value={showAllVariants ? SHOW_ALL_VARIANTS : product.id}
 			onValueChange={handleChange}
-			items={Object.fromEntries(variantOptions.map((v) => [v.id, v.name]))}
+			items={{
+				...Object.fromEntries(variantOptions.map((v) => [v.id, v.name])),
+				[SHOW_ALL_VARIANTS]: "All variants",
+			}}
 		>
 			<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 				<SelectValue placeholder="Variant" />
@@ -352,6 +374,10 @@ const VariantSelect = () => {
 						</div>
 					</SelectItem>
 				))}
+				<SelectSeparator />
+				<SelectItem value={SHOW_ALL_VARIANTS}>
+					<span>Show all variants</span>
+				</SelectItem>
 			</SelectContent>
 		</Select>
 	);
