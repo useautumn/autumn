@@ -136,6 +136,9 @@ export function buildVariantCode({
 
 	lines.push(`export const ${varName} = ${basePlanVarName}.variant({`);
 	lines.push(`\tid: '${escapeString(variant.id)}',`);
+	if (variant.version !== undefined) {
+		lines.push(`\tversion: ${variant.version},`);
+	}
 	lines.push(`\tname: '${escapeString(variant.name)}',`);
 
 	if (variant.customize) {

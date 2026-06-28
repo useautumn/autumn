@@ -23,6 +23,8 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { expectCatalogPreview } from "./utils/expectCatalogPreview.js";
 
 beforeAll(async () => {
@@ -188,6 +190,171 @@ test(`${chalk.yellowBright("catalog: update honors force_version like plans.upda
 	expect(item?.included).toBe(500);
 });
 
+test(`${chalk.yellowBright("catalog: update targets exact historical plan version in place")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_exact_version_${suffix}`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId: `catalog-exact-version-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				force_version: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 200,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				version: 1,
+				name: prod.name,
+				disable_version: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 150,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+
+	const [v1, v2] = await Promise.all([
+		ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			version: 1,
+		}),
+		ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			version: 2,
+		}),
+	]);
+
+	expect(
+		v1.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		)?.allowance,
+	).toBe(150);
+	expect(
+		v2.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		)?.allowance,
+	).toBe(200);
+});
+
+test(`${chalk.yellowBright("catalog: update can draft migration for exact historical version")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_exact_migration_${suffix}`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId: `catalog-exact-migration-${suffix}`,
+		setup: [s.customer({ paymentMethod: "success" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+	await autumnV2_2.billing.attach({
+		customer_id: `catalog-exact-migration-${suffix}`,
+		plan_id: planId,
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				force_version: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 200,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				version: 1,
+				name: prod.name,
+				disable_version: true,
+				create_migration: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 150,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+
+	const migrations = await migrationRepo.get({ ctx });
+	const migration = migrations.find((candidate) =>
+		candidate.id.startsWith("plan-migrate-1-"),
+	);
+	expect(migration?.operations).not.toBeNull();
+	const [operation] = migration?.operations?.customer ?? [];
+
+	expect(operation).toMatchObject({
+		type: "update_plan",
+		version: 1,
+		plan_filter: {
+			plan_id: planId,
+			custom: false,
+		},
+	});
+});
+
 test(`${chalk.yellowBright("catalog: preview_update marks selected variant propagation targets")}`, async () => {
 	const suffix = Math.random().toString(36).slice(2, 9);
 	const planId = `catalog_preview_variants_${suffix}`;
@@ -251,6 +418,84 @@ test(`${chalk.yellowBright("catalog: preview_update marks selected variant propa
 		plan_id: variantId,
 		name: "Annual",
 		will_apply: true,
+	});
+});
+
+test(`${chalk.yellowBright("catalog: preview_update leaves no-op base variant previews as none")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_preview_noop_variants_${suffix}`;
+	const variantId = `${planId}_annual`;
+
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-preview-noop-variants-${suffix}`,
+		setup: [],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: "No-op Variant Base",
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: {
+							remove_items: [
+								{ feature_id: TestFeature.Messages, interval: "month" },
+							],
+							add_items: [
+								{
+									feature_id: TestFeature.Messages,
+									included: 1200,
+									reset: { interval: "year" },
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				plan_id: planId,
+				name: "No-op Variant Base",
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+	const [planChange] = preview.plan_changes;
+	const [variantChange] = planChange.variants;
+
+	expect(planChange).toMatchObject({
+		action: "none",
+		customize: null,
+		item_changes: [],
+		previous_attributes: null,
+	});
+	expect(variantChange).toMatchObject({
+		plan_id: variantId,
+		customize: null,
+		item_changes: [],
+		previous_attributes: null,
+		will_apply: false,
 	});
 });
 

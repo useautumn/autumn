@@ -6,6 +6,14 @@ import { buildImports } from "./imports.js";
 import { buildPlanCode } from "./plan.js";
 import { buildVariantCode } from "./variant.js";
 
+const versionedCodegenId = ({
+	id,
+	version,
+}: {
+	id: string;
+	version?: number;
+}) => (version === undefined ? id : `${id}-v-${version}`);
+
 /**
  * Generate complete autumn.config.ts file content
  */
@@ -16,8 +24,10 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 	// named "free") are disambiguated before any code is emitted.
 	const { featureVarMap, planVarMap, variantVarMap } = resolveVarNames(
 		features.map((f) => f.id),
-		plans.map((p) => p.id),
-		plans.flatMap((p) => p.variants?.map((variant) => variant.id) ?? []),
+		plans.map(versionedCodegenId),
+		plans.flatMap(
+			(p) => p.variants?.map((variant) => versionedCodegenId(variant)) ?? [],
+		),
 	);
 
 	// Add imports
@@ -37,7 +47,7 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 	if (plans.length > 0) {
 		sections.push("// Plans");
 		for (const plan of plans) {
-			const planVarName = planVarMap.get(plan.id);
+			const planVarName = planVarMap.get(versionedCodegenId(plan));
 			sections.push(buildPlanCode(plan, features, featureVarMap, planVarName));
 			sections.push("");
 			for (const planVariant of plan.variants ?? []) {
@@ -47,7 +57,9 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 						variant: planVariant,
 						features,
 						featureVarMap,
-						varNameOverride: variantVarMap.get(planVariant.id),
+						varNameOverride: variantVarMap.get(
+							versionedCodegenId(planVariant),
+						),
 					}),
 				);
 				sections.push("");

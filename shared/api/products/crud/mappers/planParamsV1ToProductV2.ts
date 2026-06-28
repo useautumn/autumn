@@ -7,6 +7,10 @@ import { notNullish } from "@utils/index";
 import type { SharedContext } from "../../../../types/sharedContext";
 import { planParamsV1ToProductItems } from "./planParamsV1ToProductItems";
 
+type ProductV2UpdateParams = Partial<ProductV2> & {
+	base_plan_id?: string | null;
+};
+
 export function planParamsV1ToProductV2({
 	ctx,
 	params,
@@ -22,7 +26,7 @@ export function planParamsV1ToProductV2({
 		env: AppEnv;
 		created_at: number;
 	};
-}): Partial<ProductV2> {
+}): ProductV2UpdateParams {
 	// Convert plan to items using shared utility
 	const items = planParamsV1ToProductItems({
 		ctx,
@@ -63,7 +67,7 @@ export function planParamsV1ToProductV2({
 			? (params.is_default as boolean)
 			: undefined;
 
-	const result: Partial<ProductV2> = {};
+	const result: ProductV2UpdateParams = {};
 
 	if (params.id !== undefined) result.id = params.id;
 	if (params.name !== undefined) result.name = params.name;
@@ -90,6 +94,9 @@ export function planParamsV1ToProductV2({
 	if (config !== undefined) result.config = config;
 	if (billingControls !== undefined) result.billing_controls = billingControls;
 	if (metadata !== undefined) result.metadata = metadata;
+	if ("base_plan_id" in params && params.base_plan_id !== undefined) {
+		result.base_plan_id = params.base_plan_id;
+	}
 	if (createInStripe !== undefined)
 		Object.assign(result, { create_in_stripe: createInStripe });
 

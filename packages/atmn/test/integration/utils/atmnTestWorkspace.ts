@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { migrationItemRuns, migrations } from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
 import { invalidateProductsCache } from "../../../../../server/src/internal/products/productCacheUtils.js";
 import { getFeatures } from "../../../../../server/tests/setup/v2Features.js";
@@ -161,6 +163,26 @@ const ensureTestOrg = () => {
 	}
 };
 
+const clearAtmnMigrations = async (ctx: TestContext) => {
+	const orgMigrations = await ctx.db
+		.select({ internalId: migrations.internal_id })
+		.from(migrations)
+		.where(and(eq(migrations.org_id, ctx.org.id), eq(migrations.env, ctx.env)));
+
+	if (orgMigrations.length > 0) {
+		await ctx.db.delete(migrationItemRuns).where(
+			inArray(
+				migrationItemRuns.migration_internal_id,
+				orgMigrations.map((migration) => migration.internalId),
+			),
+		);
+	}
+
+	await ctx.db
+		.delete(migrations)
+		.where(and(eq(migrations.org_id, ctx.org.id), eq(migrations.env, ctx.env)));
+};
+
 export const createCleanAtmnIntegrationContext =
 	async (): Promise<TestContext> => {
 		ensureTestOrg();
@@ -171,6 +193,7 @@ export const createCleanAtmnIntegrationContext =
 			env: ctx.env,
 			orgId: ctx.org.id,
 		});
+		await clearAtmnMigrations(ctx);
 		await invalidateProductsCache({
 			env: ctx.env,
 			orgId: ctx.org.id,

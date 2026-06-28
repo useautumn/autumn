@@ -123,6 +123,55 @@ describe("variant config generation", () => {
 		expect(code).toContain("featureId: messages.id");
 	});
 
+	test("all-version codegen suffixes exports and attaches variants to latest base", () => {
+		const plans = transformApiPlans(
+			[
+				baseApiPlan({ id: "pro", name: "Pro", version: 1 }),
+				baseApiPlan({ id: "pro", name: "Pro", version: 2 }),
+				baseApiPlan({
+					id: "pro_annual",
+					name: "Pro Annual",
+					version: 1,
+					variant_details: {
+						base_plan_id: "pro",
+						customize: {
+							price: { amount: 500, interval: "year" },
+						},
+					},
+				}),
+				baseApiPlan({
+					id: "pro_annual",
+					name: "Pro Annual",
+					version: 2,
+					variant_details: {
+						base_plan_id: "pro",
+						customize: {
+							price: { amount: 550, interval: "year" },
+						},
+					},
+				}),
+			],
+			{ allVersions: true },
+		);
+
+		expect(plans).toHaveLength(2);
+		expect(plans[0]?.version).toBe(1);
+		expect(plans[0]?.variants).toBeUndefined();
+		expect(plans[1]?.version).toBe(2);
+		expect(plans[1]?.variants?.map((variant) => variant.version)).toEqual([
+			1, 2,
+		]);
+
+		const code = buildConfigFile([], plans);
+
+		expect(code).toContain("export const proV1 = plan({");
+		expect(code).toContain("version: 1,");
+		expect(code).toContain("export const proV2 = plan({");
+		expect(code).toContain("export const proAnnualV1 = proV2.variant({");
+		expect(code).toContain("export const proAnnualV2 = proV2.variant({");
+		expect(code).not.toContain("proV1.variant({");
+	});
+
 	test("buildConfigFile emits boolean items without included: 0", () => {
 		const features: Feature[] = [
 			{

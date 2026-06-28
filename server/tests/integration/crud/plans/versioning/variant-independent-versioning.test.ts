@@ -99,6 +99,20 @@ const getRequiredProduct = async (params: {
 	return product as FullProductResult;
 };
 
+const getOptionalProduct = (params: {
+	ctx: TestContext;
+	planId: string;
+	version?: number;
+}) =>
+	ProductService.getFull({
+		db: params.ctx.db as never,
+		idOrInternalId: params.planId,
+		orgId: params.ctx.org.id,
+		env: params.ctx.env as never,
+		version: params.version,
+		allowNotFound: true,
+	});
+
 const setupVariantVersioning = async ({
 	testId,
 	attachBaseCustomer = false,
@@ -682,5 +696,119 @@ test.concurrent(
 			customerId: variantCustomerIds[0],
 			planId: variantId,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("plan delete: deleting latest base version relinks variants to previous base version")}`,
+	async () => {
+		const { baseId, baseV1, ctx, rpc, variantIds } =
+			await setupVariantVersioning({
+				testId: "delete_latest_base_relink",
+				variants: [{ key: "annual" }],
+			});
+		const variantId = variantIds.annual;
+
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
+			items: [monthlyMessagesItem(500)],
+			force_version: true,
+		});
+
+		const baseV2 = await getRequiredProduct({ ctx, planId: baseId });
+		const variantBeforeDelete = await getRequiredProduct({
+			ctx,
+			planId: variantId,
+		});
+		expect(baseV2.version).toBe(2);
+		expect(variantBeforeDelete.base_internal_product_id).toBe(
+			baseV2.internal_id,
+		);
+
+		await rpc.plans.delete(baseId);
+
+		const deletedBaseV2 = await getOptionalProduct({
+			ctx,
+			planId: baseId,
+			version: 2,
+		});
+		const latestBase = await getRequiredProduct({ ctx, planId: baseId });
+		const variantAfterDelete = await getRequiredProduct({
+			ctx,
+			planId: variantId,
+		});
+
+		expect(deletedBaseV2).toBeNull();
+		expect(latestBase.version).toBe(1);
+		expect(latestBase.internal_id).toBe(baseV1.internal_id);
+		expect(variantAfterDelete.base_internal_product_id).toBe(
+			baseV1.internal_id,
+		);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalog update: removing latest base version relinks variants to previous base version")}`,
+	async () => {
+		const { autumnV2_2, baseId, baseV1, ctx, rpc, variantIds } =
+			await setupVariantVersioning({
+				testId: "catalog_delete_latest_base_relink",
+				variants: [{ key: "annual" }],
+			});
+		const variantId = variantIds.annual;
+
+		await rpc.plans.update<ApiPlanV1, RpcUpdate>(baseId, {
+			items: [monthlyMessagesItem(500)],
+			force_version: true,
+		});
+
+		const baseV2 = await getRequiredProduct({ ctx, planId: baseId });
+		const variantBeforeDelete = await getRequiredProduct({
+			ctx,
+			planId: variantId,
+		});
+		expect(baseV2.version).toBe(2);
+		expect(variantBeforeDelete.base_internal_product_id).toBe(
+			baseV2.internal_id,
+		);
+
+		const plansToKeep = await ProductService.listFull({
+			db: ctx.db as never,
+			orgId: ctx.org.id,
+			env: ctx.env as never,
+			returnAll: true,
+		});
+		const skipPlanIds = [
+			...new Set(
+				plansToKeep
+					.map((product) => product.id)
+					.filter((planId) => planId !== baseId),
+			),
+		];
+
+		await autumnV2_2.catalog.update({
+			features: [],
+			plans: [{ plan_id: baseId, version: 1 }],
+			skip_deletions: false,
+			skip_feature_ids: ctx.features.map((feature) => feature.id),
+			skip_plan_ids: skipPlanIds,
+		});
+
+		const deletedBaseV2 = await getOptionalProduct({
+			ctx,
+			planId: baseId,
+			version: 2,
+		});
+		const latestBase = await getRequiredProduct({ ctx, planId: baseId });
+		const variantAfterDelete = await getRequiredProduct({
+			ctx,
+			planId: variantId,
+		});
+
+		expect(deletedBaseV2).toBeNull();
+		expect(latestBase.version).toBe(1);
+		expect(latestBase.internal_id).toBe(baseV1.internal_id);
+		expect(variantAfterDelete.base_internal_product_id).toBe(
+			baseV1.internal_id,
+		);
 	},
 );

@@ -26,11 +26,15 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	deriveReplaceFeatureIds,
-	deriveReplacePlanIds,
+	deriveReplacePlanRemovals,
+	type ReplacePlanRemoval,
 } from "../deriveReplaceRemovals.js";
 import { sortRemoveFeatureIds } from "../featureRemovalOrder.js";
 import { getFeatureUpdateBlockedReason } from "../previewUpdateCatalog/previewFeature.js";
-import { validateCatalogVariantUpdates } from "../validateCatalogVariantUpdates.js";
+import {
+	validateCatalogVariantUpdates,
+	validateCatalogVariantVersionTargets,
+} from "../validateCatalogVariantUpdates.js";
 
 const archiveProductVersions = async ({
 	ctx,
@@ -322,12 +326,45 @@ const upsertPlans = async ({
 
 const applyMissingPlanRemovals = async ({
 	ctx,
-	planIds,
+	removals,
 }: {
 	ctx: AutumnContext;
-	planIds: string[];
+	removals: ReplacePlanRemoval[];
 }) => {
-	for (const planId of planIds) {
+	for (const removal of removals) {
+		const { planId } = removal;
+
+		if (!removal.allVersions) {
+			const product = await ProductService.get({
+				db: ctx.db,
+				id: planId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				version: removal.version,
+			});
+			if (!product) continue;
+
+			const counts = await CusProdReadService.getCounts({
+				db: ctx.db,
+				internalProductId: product.internal_id,
+			});
+
+			if (Number(counts?.all ?? 0) > 0) {
+				await ProductService.updateByInternalId({
+					db: ctx.db,
+					internalId: product.internal_id,
+					update: { archived: true },
+				});
+			} else {
+				await deleteProduct({
+					ctx,
+					productId: planId,
+					version: removal.version,
+				});
+			}
+			continue;
+		}
+
 		const counts = await CusProdReadService.getCountsForAllVersions({
 			db: ctx.db,
 			productId: planId,
@@ -477,16 +514,20 @@ export const updateCatalog = async ({
 		orgId: org.id,
 		env,
 	});
+	validateCatalogVariantVersionTargets({
+		params,
+		products: productsBeforeUpdate,
+	});
 	const replacePlanIds = params.skip_deletions
 		? []
-		: deriveReplacePlanIds({
+		: deriveReplacePlanRemovals({
 				products: productsBeforeUpdate,
 				plans: params.plans,
-			}).filter((planId) => !params.skip_plan_ids.includes(planId));
+			}).filter((removal) => !params.skip_plan_ids.includes(removal.planId));
 
 	await upsertFeatures({ ctx, params, products: productsBeforeUpdate });
 	await upsertPlans({ ctx, params });
-	await applyMissingPlanRemovals({ ctx, planIds: replacePlanIds });
+	await applyMissingPlanRemovals({ ctx, removals: replacePlanIds });
 
 	const replaceFeatureIds = params.skip_deletions
 		? []

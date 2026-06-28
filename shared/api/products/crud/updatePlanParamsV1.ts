@@ -33,6 +33,16 @@ export const UpdatePlanParamsV1Schema =
 			description:
 				"The free trial of the plan. Set to null to remove the free trial.",
 		}),
+		base_plan_id: z
+			.string()
+			.nonempty()
+			.regex(idRegex)
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+			}),
 	});
 
 export const UpdatePlanParamsV2Schema = z
@@ -83,6 +93,16 @@ export const UpdatePlanParamsV2Schema = z
 			description:
 				"Whether this is the org's default plan. Cannot be true on a variant.",
 		}),
+		base_plan_id: z
+			.string()
+			.nonempty()
+			.regex(idRegex)
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+			}),
 	});
 
 export const UpdatePlanQuerySchema = z.object({

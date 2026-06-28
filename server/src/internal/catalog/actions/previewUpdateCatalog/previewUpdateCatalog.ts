@@ -27,7 +27,10 @@ import {
 } from "./previewFeature.js";
 import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
-import { validateCatalogVariantUpdates } from "../validateCatalogVariantUpdates.js";
+import {
+	validateCatalogVariantUpdates,
+	validateCatalogVariantVersionTargets,
+} from "../validateCatalogVariantUpdates.js";
 
 const productUsesFeature = ({
 	product,
@@ -126,12 +129,19 @@ const planPreviewAction = ({
 	preview: PlanUpdatePreview;
 }): CatalogPlanPreview["action"] => {
 	if (!current) return "created";
+	const hasVariantChanges = preview.variants.some(
+		(variant) =>
+			variant.customize ||
+			variant.previous_attributes ||
+			variant.price_change ||
+			variant.item_changes.length > 0,
+	);
 	if (
 		preview.customize ||
 		preview.previous_attributes ||
 		preview.price_change ||
 		preview.item_changes.length > 0 ||
-		preview.variants.length > 0
+		hasVariantChanges
 	) {
 		return "updated";
 	}
@@ -211,6 +221,10 @@ export const previewUpdateCatalog = async ({
 			ctx,
 			params: { ...params, plans: activePlans, features: activeFeatures },
 		});
+	validateCatalogVariantVersionTargets({
+		params: { ...params, plans: activePlans },
+		products,
+	});
 	const planChangesCtx = scopeExpandForCtx({
 		ctx: { ...planCtx, expand: params.expand ?? [] },
 		prefix: "plan_changes",

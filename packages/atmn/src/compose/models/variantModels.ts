@@ -29,11 +29,13 @@ export type CustomizePlan = {
 export type Variant = {
 	id: string;
 	name: string;
+	version?: number;
 	customize?: CustomizePlan;
 	readonly __atmnType?: "variant";
 };
 
 export type Plan = BasePlan & {
+	version?: number;
 	variants?: Variant[];
 	variant?: (params: Omit<Variant, "__atmnType">) => Variant;
 };

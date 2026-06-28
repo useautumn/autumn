@@ -4,7 +4,7 @@
  * Contract under test (from _temp/variants/CONTRACT.md):
  *   - force_version + disable_version mutually exclusive → conflicting_version_flags
  *   - force_version bypasses customer-check, always versions
- *   - base_internal_product_id set on insert, never mutated
+ *   - base_internal_product_id set on insert and mutable through base_plan_id
  *   - create_variant returns ApiPlanV1 shape
  *   - preview_update is idempotent, no writes
  *   - archived variants silently filtered from propagate
@@ -269,7 +269,10 @@ test.concurrent(
 			],
 		};
 
-		await deleteVariantTestPlans({ rpc: autumnRpc, planIds: [baseId, variantId] });
+		await deleteVariantTestPlans({
+			rpc: autumnRpc,
+			planIds: [baseId, variantId],
+		});
 		await autumnRpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
 			plan_id: baseId,
 			name: `Base ${baseId}`,
@@ -308,52 +311,61 @@ test.concurrent(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5. base_internal_product_id is NEVER mutated on existing rows
+// 5. base_plan_id can relink and detach an existing variant
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
-	`${chalk.yellowBright("variants contract: base_internal_product_id never mutated on existing rows")}`,
+	`${chalk.yellowBright("variants contract: base_plan_id relinks and detaches an existing variant")}`,
 	async () => {
-		const baseId = readableVariantTestId("cc_immutable_link");
+		const baseId = readableVariantTestId("cc_mutable_link");
+		const nextBaseId = `${baseId}_next`;
 		const variantId = `${baseId}_variant`;
+		await deleteVariantTestPlans({
+			rpc: autumnRpc,
+			planIds: [baseId, nextBaseId, variantId],
+		});
 		const base = await createBase(baseId);
+		const nextBase = await createBase(nextBaseId);
 
-		await createVariantRpc(baseId, variantId, "Variant Immutable");
+		await createVariantRpc(baseId, variantId, "Variant Mutable", false);
 
-		const v1 = await ProductService.getFull({
+		const initialVariant = await ProductService.getFull({
 			db,
 			idOrInternalId: variantId,
 			orgId: org.id,
 			env,
 		});
-		const bipiBefore = v1.base_internal_product_id;
-		expect(bipiBefore).toBe(base.internal_id);
+		expect(initialVariant.base_internal_product_id).toBe(base.internal_id);
 
 		await autumnRpc.plans.update<ApiPlanV1>(variantId, {
-			items: [msgItem(300)],
+			base_plan_id: nextBaseId,
 		});
 
-		const afterInPlace = await ProductService.getFull({
+		const relinked = await ProductService.getFull({
 			db,
 			idOrInternalId: variantId,
 			orgId: org.id,
 			env,
 		});
-		expect(afterInPlace.base_internal_product_id).toBe(bipiBefore);
+		expect(relinked.base_internal_product_id).toBe(nextBase.internal_id);
 
-		await autumnRpc.plans.update<ApiPlanV1>(variantId, {
-			items: [msgItem(600)],
-			force_version: true,
+		const relinkedPlan = await getPlanRpc(variantId);
+		expect(relinkedPlan.variant_details?.base_plan_id).toBe(nextBaseId);
+
+		await autumnV1_2.products.update<ApiPlanV1>(variantId, {
+			base_plan_id: null,
 		});
 
-		const v1Still = await ProductService.getFull({
+		const detached = await ProductService.getFull({
 			db,
 			idOrInternalId: variantId,
 			orgId: org.id,
 			env,
-			version: 1,
 		});
-		expect(v1Still.base_internal_product_id).toBe(bipiBefore);
+		expect(detached.base_internal_product_id).toBeNull();
+
+		const detachedPlan = await getPlanRpc(variantId);
+		expect(detachedPlan.variant_details).toBeUndefined();
 	},
 );
 
@@ -659,7 +671,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("variants contract: plans.list omits variant_details when pinned to older base version")}`,
+	`${chalk.yellowBright("variants contract: plans.list keeps variants linked after base versions")}`,
 	async () => {
 		const baseId = readableVariantTestId("cc_list_orphan");
 		const variantId = `${baseId}_variant`;
@@ -674,7 +686,7 @@ test.concurrent(
 		const { list } = await listPlansRpc();
 		const variant = list.find((p) => p.id === variantId);
 		expect(variant).toBeDefined();
-		expect(variant?.variant_details).toBeUndefined();
+		expect(variant?.variant_details?.base_plan_id).toBe(baseId);
 	},
 );
 

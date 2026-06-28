@@ -1,4 +1,9 @@
-import { ErrCode, RecaseError, type CatalogUpdateParams } from "@autumn/shared";
+import {
+	ErrCode,
+	RecaseError,
+	type CatalogUpdateParams,
+	type FullProduct,
+} from "@autumn/shared";
 
 export const validateCatalogVariantUpdates = ({
 	params,
@@ -44,5 +49,33 @@ export const validateCatalogVariantUpdates = ({
 
 			variantBaseById.set(variant.variant_plan_id, plan.plan_id);
 		}
+	}
+};
+
+export const validateCatalogVariantVersionTargets = ({
+	params,
+	products,
+}: {
+	params: CatalogUpdateParams;
+	products: FullProduct[];
+}) => {
+	const latestByPlanId = new Map(
+		products
+			.filter((product) => product.base_internal_product_id === null)
+			.map((product) => [product.id, product]),
+	);
+
+	for (const plan of params.plans) {
+		if ((plan.variants ?? []).length === 0) continue;
+		if (plan.version === undefined) continue;
+
+		const latest = latestByPlanId.get(plan.plan_id);
+		if (!latest || plan.version >= latest.version) continue;
+
+		throw new RecaseError({
+			message: `Variants can only be updated under the latest version of base plan ${plan.plan_id}.`,
+			code: ErrCode.InvalidPropagationTarget,
+			statusCode: 400,
+		});
 	}
 };

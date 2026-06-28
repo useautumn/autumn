@@ -15,14 +15,15 @@ export const proAnnual = pro.variant({...});
 All-version support should extend this model rather than introduce top-level
 `variant(...)` or `variants: []` config.
 
-The core requirement is that atmn preserves the exact version graph:
+The current variant model links variants to the latest version of the base plan.
+All-version support should preserve base versions and variant versions without
+pinning variants to historical base versions:
 
 ```txt
 pro v1
+pro v2
   pro_annual v1
   pro_annual v2
-
-pro v2
   pro_annual v3
 ```
 
@@ -30,7 +31,7 @@ This means local identity is no longer just `id`:
 
 - Base plan: `(plan_id, version)`
 - Variant: `(variant_plan_id, version)`
-- Variant lineage: `(base_plan_id, base_plan_version)`
+- Variant family: `base_plan_id`
 
 ## Backend Contract
 
@@ -49,11 +50,10 @@ Response requirements:
 - Return every variant plan version.
 - Include `version` on every plan response.
 - Include `variant_details.base_plan_id` on variant responses.
-- Include `variant_details.base_plan_version` on variant responses.
 - Include `variant_details.customize` on variant responses.
 
-`base_plan_version` is required. `base_plan_id` alone is ambiguous once variants
-can remain pinned to old base versions.
+Do not add `variant_details.base_plan_version` for now. Variants belong to the
+latest base version.
 
 Add version-targeted catalog writes:
 
@@ -66,27 +66,26 @@ catalog.preview_update({
 });
 ```
 
-Variant updates live under the base version they belong to:
+Variant updates live under the latest base version:
 
 ```ts
 catalog.update({
   plans: [
     {
       plan_id: "pro",
-      version: 1,
+      version: 2,
       variants: [
         { variant_plan_id: "pro_annual", version: 1, ... },
         { variant_plan_id: "pro_annual", version: 2, ... },
+        { variant_plan_id: "pro_annual", version: 3, ... },
       ],
-    },
-    {
-      plan_id: "pro",
-      version: 2,
-      variants: [{ variant_plan_id: "pro_annual", version: 3, ... }],
     },
   ],
 });
 ```
+
+If a catalog request includes variants under a non-latest base version, preview
+and update should reject it.
 
 Preview rows should include `version` directly, not only through expanded `plan`:
 
@@ -120,7 +119,7 @@ atmn pull --all-versions
 
 - Calls `plans.list({ include_archived: true, all_versions: true })`.
 - Groups base plans by `(id, version)`.
-- Groups variants under `(base_plan_id, base_plan_version)`.
+- Groups variants under the latest base plan for each `base_plan_id`.
 - Emits version-suffixed exports.
 
 Example output:
@@ -133,25 +132,25 @@ export const proV1 = plan({
   items: [...],
 });
 
-export const proAnnualV1 = proV1.variant({
+export const proV2 = plan({
+  id: "pro",
+  version: 2,
+  name: "Pro",
+  items: [...],
+});
+
+export const proAnnualV1 = proV2.variant({
   id: "pro_annual",
   version: 1,
   name: "Pro Annual",
   customize: {...},
 });
 
-export const proAnnualV2 = proV1.variant({
+export const proAnnualV2 = proV2.variant({
   id: "pro_annual",
   version: 2,
   name: "Pro Annual",
   customize: {...},
-});
-
-export const proV2 = plan({
-  id: "pro",
-  version: 2,
-  name: "Pro",
-  items: [...],
 });
 
 export const proAnnualV3 = proV2.variant({
@@ -203,11 +202,10 @@ Write semantics:
 - Existing exact version with identical shape: no-op.
 - Existing exact historical version with customers and different shape: blocked
   unless we explicitly support unsafe rewrite semantics.
-- Variant `version: 1` missing: create from the specified base version.
+- Variant `version: 1` missing: create from the latest base version.
 - Variant `version: 2+` missing: create by versioning the previous variant
   version.
-- Variant lineage must be preserved by setting `base_internal_product_id` to the
-  exact base version's internal id.
+- Variant writes under non-latest base versions are rejected.
 
 ## Catalog Preview Behavior
 
@@ -227,7 +225,7 @@ Preview should evaluate v1 first, then v2 against the virtual result of v1.
 This matters because:
 
 - v2 may not exist until v1 is created.
-- Variant v3 may depend on base v2.
+- Variant updates must be evaluated against the latest base version.
 - Feature removals should consider the final virtual catalog, not only the
   persisted starting state.
 
@@ -271,10 +269,11 @@ Backend tests:
 
 - `plans.list` latest-only by default.
 - `plans.list({ all_versions: true })` returns every base and variant version.
-- Variant response includes `base_plan_version`.
+- Variant response includes `base_plan_id` and no `base_plan_version`.
 - `catalog.preview_update` accepts duplicate `plan_id` with different `version`.
 - `catalog.update` creates missing base v1 and v2 in order.
-- `catalog.update` creates variant versions under the correct base version.
+- `catalog.update` rejects variants under non-latest base versions.
+- `catalog.update` creates variant versions under the latest base version.
 - Existing customer-bearing historical version with changed config is blocked or
   clearly skipped.
 - Preview rows include `version` without requiring `expand`.
@@ -283,12 +282,11 @@ atmn tests:
 
 - `pull` latest-only still emits clean method-style variants.
 - `pull --all-versions` emits version-suffixed base and variant exports.
-- Pull preserves old-base variant lineage.
+- Pull attaches all variant versions to the latest base version.
 - Config load ignores standalone variant exports but keeps them attached to base
   plans.
 - `push --all-versions` sends versioned catalog params.
-- Push round-trip recreates base v1, variant v1/v2 under base v1, base v2, and
-  variant v3 under base v2.
+- Push round-trip recreates base v1, base v2, and variant v1/v2/v3 under base v2.
 - Latest-only push behavior remains unchanged.
 
 ## Follow-Up Notes

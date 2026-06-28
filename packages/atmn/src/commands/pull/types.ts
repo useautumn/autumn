@@ -17,6 +17,8 @@ export interface PullOptions {
 	forceOverwrite?: boolean;
 	/** Skip generating @useautumn-sdk.d.ts */
 	noDeclarationFile?: boolean;
+	/** Pull every historical plan version */
+	allVersions?: boolean;
 }
 
 /**

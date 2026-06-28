@@ -158,10 +158,51 @@ export const variantPushAnnual = variantPushBase.variant({
 });
 `;
 
-const pullConfig = async ({ secretKey }: { secretKey: string }) => {
+const inheritedVariantPushConfig = ({
+	baseIncluded,
+	basePlanId,
+	variantPlanId,
+}: {
+	baseIncluded: number;
+	basePlanId: string;
+	variantPlanId: string;
+}) => `import { feature, item, plan } from 'atmn';
+
+export const messages = feature({
+\tid: 'messages',
+\tname: 'Messages',
+\ttype: 'metered',
+\tconsumable: true,
+});
+
+export const variantRefreshBase = plan({
+\tid: '${basePlanId}',
+\tname: 'Variant Refresh Base',
+\titems: [
+\t\titem({
+\t\t\tfeatureId: messages.id,
+\t\t\tincluded: ${baseIncluded},
+\t\t\treset: { interval: 'month' },
+\t\t}),
+\t],
+});
+
+export const variantRefreshInherited = variantRefreshBase.variant({
+\tid: '${variantPlanId}',
+\tname: 'Variant Refresh Inherited',
+});
+`;
+
+const pullConfig = async ({
+	args = ["--force", "--no-declaration-file"],
+	secretKey,
+}: {
+	args?: string[];
+	secretKey: string;
+}) => {
 	const workspace = await prepareAtmnIntegrationWorkspace({ secretKey });
 	await runAtmnWorkspaceCli({
-		args: ["--force", "--no-declaration-file"],
+		args,
 		command: "pull",
 		headless: true,
 		workspace,
@@ -171,9 +212,10 @@ const pullConfig = async ({ secretKey }: { secretKey: string }) => {
 
 const pushConfig = async (
 	workspace: Awaited<ReturnType<typeof prepareAtmnIntegrationWorkspace>>,
+	args = ["--yes"],
 ) => {
 	await runAtmnWorkspaceCli({
-		args: ["--yes"],
+		args,
 		command: "push",
 		headless: true,
 		workspace,
@@ -244,6 +286,56 @@ test(`${chalk.yellowBright("atmn catalog push: creates and updates configured va
 			(entitlement) => entitlement.feature.id === TestFeature.Messages,
 		)?.allowance,
 	).toBe(2400);
+});
+
+test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs after base update")}`, async () => {
+	const basePlanId = "atmn_variant_refresh_base";
+	const variantPlanId = "atmn_variant_refresh_inherited";
+	const ctx = await createCleanAtmnIntegrationContext();
+	const workspace = await prepareAtmnIntegrationWorkspace({
+		secretKey: ctx.orgSecretKey,
+	});
+
+	await writeFile(
+		workspace.configPath,
+		inheritedVariantPushConfig({
+			baseIncluded: 100,
+			basePlanId,
+			variantPlanId,
+		}),
+	);
+	await pushConfig(workspace);
+
+	await writeFile(
+		workspace.configPath,
+		inheritedVariantPushConfig({
+			baseIncluded: 200,
+			basePlanId,
+			variantPlanId,
+		}),
+	);
+	await pushConfig(workspace, [
+		"--yes",
+		"--variant-propagations",
+		JSON.stringify({ [basePlanId]: [] }),
+	]);
+
+	const configAfterPush = await readFile(workspace.configPath, "utf8");
+	const variantAfter = await ProductService.getFull({
+		db: ctx.db,
+		env: ctx.env,
+		idOrInternalId: variantPlanId,
+		orgId: ctx.org.id,
+	});
+
+	expect(configAfterPush).toContain("included: 200,");
+	expect(configAfterPush).toContain("customize: {");
+	expect(configAfterPush).toContain("included: 100,");
+	expect(
+		variantAfter.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		)?.allowance,
+	).toBe(100);
 });
 
 test(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature are deleted")}`, async () => {
@@ -412,6 +504,109 @@ test(`${chalk.yellowBright("atmn catalog push: creates a new feature and plan in
 			(entitlement) => entitlement.feature.id === featureId,
 		),
 	).toBe(true);
+});
+
+test(`${chalk.yellowBright("atmn catalog push --all-versions: historical plan updates in place")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const customerId = `atmn-all-versions-push-${suffix}`;
+	const planId = `atmn_all_versions_push_${suffix}`;
+	const plan = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const ctx = await createCleanAtmnIntegrationContext();
+	const { autumnV2_2 } = await initScenario({
+		ctx,
+		customerId,
+		setup: [s.customer({ paymentMethod: "success" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: plan.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: planId,
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: plan.name,
+				force_version: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 200,
+						reset: { interval: "month" },
+					},
+				],
+			},
+		],
+	});
+
+	const workspace = await pullConfig({
+		args: ["--force", "--all-versions", "--no-declaration-file"],
+		secretKey: ctx.orgSecretKey,
+	});
+	const initialConfig = await readFile(workspace.configPath, "utf8");
+	const updatedConfig = replaceFirst({
+		from: initialConfig,
+		search: "included: 100,",
+		value: "included: 150,",
+	});
+	await writeFile(workspace.configPath, updatedConfig);
+
+	await pushConfig(workspace, ["--yes", "--all-versions"]);
+
+	const [v1, v2, latest] = await Promise.all([
+		ProductService.getFull({
+			db: ctx.db,
+			env: ctx.env,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+			version: 1,
+		}),
+		ProductService.getFull({
+			db: ctx.db,
+			env: ctx.env,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+			version: 2,
+		}),
+		ProductService.getFull({
+			db: ctx.db,
+			env: ctx.env,
+			idOrInternalId: planId,
+			orgId: ctx.org.id,
+		}),
+	]);
+
+	expect(
+		v1.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		)?.allowance,
+	).toBe(150);
+	expect(
+		v2.entitlements.find(
+			(entitlement) => entitlement.feature.id === TestFeature.Messages,
+		)?.allowance,
+	).toBe(200);
+	expect(latest.version).toBe(2);
 });
 
 test(`${chalk.yellowBright("atmn catalog push: missing feature referenced by kept plan is archived")}`, async () => {

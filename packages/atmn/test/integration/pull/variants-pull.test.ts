@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 
 import { expect, test } from "bun:test";
-import { readFile } from "node:fs/promises";
+import { readFile, unlink, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import {
 	ApiVersion,
@@ -46,10 +46,16 @@ const pullConfig = async ({
 
 const loadConfigModule = async (configPath: string) => {
 	const jiti = createJiti(import.meta.url);
-	return (await jiti.import(pathToFileURL(configPath).href)) as Record<
-		string,
-		unknown
-	>;
+	const cacheBustedPath = `${configPath}.${Date.now()}.ts`;
+	await writeFile(cacheBustedPath, await readFile(configPath, "utf8"));
+	try {
+		return (await jiti.import(pathToFileURL(cacheBustedPath).href)) as Record<
+			string,
+			unknown
+		>;
+	} finally {
+		await unlink(cacheBustedPath).catch(() => {});
+	}
 };
 
 test(`${chalk.yellowBright("atmn pull variants: method exports, boolean items, camelCase names")}`, async () => {
@@ -235,4 +241,87 @@ test(`${chalk.yellowBright("atmn pull variants: variable names handle collisions
 	expect(config).toContain("item({ featureId: feature2fa.id })");
 	expect(config).toContain("export const pro = plan(");
 	expect(config).toContain("export const proAnnualVariant = pro.variant({");
+});
+
+test(`${chalk.yellowBright("atmn pull --all-versions: emits versioned base and variant exports")}`, async () => {
+	const ctx = await createCleanAtmnIntegrationContext();
+	const rpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+
+	await FeatureService.insert({
+		db: ctx.db,
+		logger: console,
+		data: [
+			constructMeteredFeature({
+				env: ctx.env,
+				featureId: "av_messages",
+				orgId: ctx.org.id,
+				usageType: FeatureUsageType.Single,
+			}),
+		],
+	});
+
+	await rpc.plans.create<ApiPlanV1, CreatePlanParamsV2Input>({
+		plan_id: "av-pro",
+		name: "AV Pro",
+		items: [
+			{
+				feature_id: "av_messages",
+				included: 100,
+				reset: { interval: ResetInterval.Month },
+			},
+		],
+	});
+	await rpc.post("/plans.create_variant", {
+		base_plan_id: "av-pro",
+		variant_plan_id: "av-pro-annual",
+		name: "AV Pro Annual",
+	});
+	await rpc.plans.update<ApiPlanV1>("av-pro-annual", {
+		price: { amount: 500, interval: BillingInterval.Year },
+		disable_version: true,
+	});
+	await rpc.plans.update<ApiPlanV1>("av-pro", {
+		items: [
+			{
+				feature_id: "av_messages",
+				included: 200,
+				reset: { interval: ResetInterval.Month },
+			},
+		],
+		force_version: true,
+	});
+	await rpc.plans.update<ApiPlanV1>("av-pro-annual", {
+		price: { amount: 550, interval: BillingInterval.Year },
+		force_version: true,
+	});
+
+	const workspace = await pullConfig({
+		args: ["--force", "--all-versions", "--no-declaration-file"],
+		secretKey: ctx.orgSecretKey,
+	});
+	const config = await readFile(workspace.configPath, "utf8");
+	const mod = await loadConfigModule(workspace.configPath);
+
+	expect(config).toContain("export const avProV1 = plan({");
+	expect(config).toContain("export const avProV2 = plan({");
+	expect(config).toContain("export const avProAnnualV1 = avProV2.variant({");
+	expect(config).toContain("export const avProAnnualV2 = avProV2.variant({");
+	expect(config).not.toContain("avProV1.variant({");
+
+	const baseV1 = mod.avProV1 as { version?: number; variants?: unknown[] };
+	const baseV2 = mod.avProV2 as {
+		version?: number;
+		variants?: { version?: number; __atmnType?: string }[];
+	};
+
+	expect(baseV1.version).toBe(1);
+	expect(baseV1.variants).toBeUndefined();
+	expect(baseV2.version).toBe(2);
+	expect(baseV2.variants?.map((variant) => variant.version)).toEqual([1, 2]);
+	expect(baseV2.variants?.every((variant) => variant.__atmnType === "variant")).toBe(
+		true,
+	);
 });

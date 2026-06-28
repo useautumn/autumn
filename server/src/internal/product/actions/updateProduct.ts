@@ -42,17 +42,52 @@ interface UpdateProductParams {
 	};
 	updates: UpdateProductV2Params;
 	initialFullProduct?: FullProduct;
-	baseInternalProductId?: string;
+	baseInternalProductId?: string | null;
 	propagateToVariants?: string[];
 	variantUpdates?: UpdateVariantParams[];
 	allowVariantSettingsUpdate?: boolean;
 }
 
+const resolveBaseInternalProductId = async ({
+	ctx,
+	productId,
+	basePlanId,
+}: {
+	ctx: AutumnContext;
+	productId: string;
+	basePlanId: string | null;
+}) => {
+	if (basePlanId === null) return null;
+	if (basePlanId === productId) {
+		throw new RecaseError({
+			message: "A plan cannot be linked to itself as a base plan.",
+			code: ErrCode.InvalidPropagationTarget,
+			statusCode: 400,
+		});
+	}
+
+	const base = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: basePlanId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	if (base.base_internal_product_id !== null) {
+		throw new RecaseError({
+			message: "A variant plan cannot be used as a base plan.",
+			code: ErrCode.InvalidPropagationTarget,
+			statusCode: 400,
+		});
+	}
+
+	return base.internal_id;
+};
+
 export const updateProduct = async ({
 	ctx,
 	query,
 	productId,
-	updates,
+	updates: rawProductUpdates,
 	initialFullProduct,
 	baseInternalProductId,
 	propagateToVariants = [],
@@ -61,6 +96,8 @@ export const updateProduct = async ({
 }: UpdateProductParams) => {
 	const { db, org, env, features } = ctx;
 	const { version, upsert, disable_version, force_version } = query;
+	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
+	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
 
 	if (force_version && disable_version) {
 		throw new RecaseError({
@@ -82,11 +119,30 @@ export const updateProduct = async ({
 		version,
 		initialFullProduct,
 	});
+	const resolvedBaseInternalProductId = basePlanIdProvided
+		? await resolveBaseInternalProductId({
+				ctx,
+				productId: fullProduct.id,
+				basePlanId: basePlanId ?? null,
+			})
+		: undefined;
+	const nextBaseInternalProductId =
+		resolvedBaseInternalProductId !== undefined
+			? resolvedBaseInternalProductId
+			: baseInternalProductId;
+	const applyBasePlanLink = async () => {
+		if (!basePlanIdProvided) return;
+		await ProductService.updateByInternalId({
+			db,
+			internalId: fullProduct.internal_id,
+			update: { base_internal_product_id: resolvedBaseInternalProductId },
+		});
+	};
 	validateVariantSettingsUpdate({
 		allowVariantSettingsUpdate,
 		fullProduct,
 		currentProduct: curProductV2,
-		updates,
+		updates: productUpdates,
 	});
 
 	const applyVariantUpdates = async ({
@@ -101,7 +157,7 @@ export const updateProduct = async ({
 				latestBase,
 				propagateToVariants,
 				variantUpdates,
-				updates,
+				updates: productUpdates,
 			})
 		) {
 			return;
@@ -119,42 +175,52 @@ export const updateProduct = async ({
 	};
 
 	const newFreeTrial =
-		"free_trial" in updates
-			? ((updates.free_trial as FreeTrial | undefined) ?? undefined)
+		"free_trial" in productUpdates
+			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
 			: (curProductV2.free_trial ?? undefined);
 
 	const newProductV2: ProductV2 = {
 		...curProductV2,
-		...updates,
-		group: updates.group || curProductV2.group || "",
-		items: updates.items ?? curProductV2.items,
+		...productUpdates,
+		group: productUpdates.group || curProductV2.group || "",
+		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
 		billing_controls: mergeBillingControls(
 			curProductV2.billing_controls,
-			updates.billing_controls,
+			productUpdates.billing_controls,
 		),
 	};
 
-	if (Object.keys(updates).length === 0) {
+	if (Object.keys(productUpdates).length === 0) {
+		await applyBasePlanLink();
+		const latestProduct = basePlanIdProvided
+			? await ProductService.getFull({
+					db,
+					idOrInternalId: fullProduct.id,
+					orgId: org.id,
+					env,
+					version: fullProduct.version,
+				})
+			: fullProduct;
 		await applyVariantUpdates({ latestBase: fullProduct });
 		return getProductResponse({
-			product: fullProduct,
+			product: latestProduct,
 			features,
 		});
 	}
 
 	await validateDefaultFlag({
 		ctx,
-		body: updates,
+		body: productUpdates,
 		curProduct: fullProduct,
 	});
 
-	const itemsExist = notNullish(updates.items);
+	const itemsExist = notNullish(productUpdates.items);
 	const customerProductExists = customerUsage.hasAnyCustomerProducts;
 	const versionableCustomerProductExists =
 		customerUsage.hasVersionableCustomerProducts;
-	const freeTrialProvided = "free_trial" in updates;
-	const billingControlsProvided = "billing_controls" in updates;
+	const freeTrialProvided = "free_trial" in productUpdates;
+	const billingControlsProvided = "billing_controls" in productUpdates;
 
 	if (
 		versionableCustomerProductExists &&
@@ -194,7 +260,7 @@ export const updateProduct = async ({
 				latestProduct: fullProduct,
 				org,
 				env,
-				baseInternalProductId,
+				baseInternalProductId: nextBaseInternalProductId,
 			});
 
 			const latestBase = await ProductService.getFull({
@@ -212,23 +278,23 @@ export const updateProduct = async ({
 	await handleUpdateProductDetails({
 		db,
 		curProduct: fullProduct,
-		newProduct: UpdateProductSchema.parse(updates),
+		newProduct: UpdateProductSchema.parse(productUpdates),
 		newFreeTrial: newFreeTrial,
-		items: updates.items || curProductV2.items,
+		items: productUpdates.items || curProductV2.items,
 		org,
 		rewardPrograms,
 		logger: ctx.logger,
 	});
 
-	if (notNullish(updates.metadata)) {
+	if (notNullish(productUpdates.metadata)) {
 		await productRepo.updateMetadataByExternalId({
 			db,
 			orgId: org.id,
 			env,
-			id: updates.id || fullProduct.id,
-			metadata: updates.metadata,
+			id: productUpdates.id || fullProduct.id,
+			metadata: productUpdates.metadata,
 		});
-		fullProduct.metadata = updates.metadata;
+		fullProduct.metadata = productUpdates.metadata;
 	}
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
@@ -239,7 +305,7 @@ export const updateProduct = async ({
 			latestProduct: fullProduct,
 			org,
 			env,
-			baseInternalProductId,
+			baseInternalProductId: nextBaseInternalProductId,
 		});
 		const latestBase = await ProductService.getFull({
 			db,
@@ -271,7 +337,7 @@ export const updateProduct = async ({
 				latestProduct: fullProduct,
 				org,
 				env,
-				baseInternalProductId,
+				baseInternalProductId: nextBaseInternalProductId,
 			});
 
 			const latestBase = await ProductService.getFull({
@@ -286,26 +352,28 @@ export const updateProduct = async ({
 		}
 
 		await applyVariantUpdates({ latestBase: fullProduct });
+		await applyBasePlanLink();
 		return fullProduct;
 	}
 
-	const { free_trial } = updates;
+	const { free_trial } = productUpdates;
 
-	if (updates.items) {
+	if (productUpdates.items) {
 		await updateProductItems({
 			ctx,
 			db,
-				fullProduct,
-				newItems: updates.items,
-				features,
-				useInPlaceEdit: customerProductExists,
-			});
+			fullProduct,
+			newItems: productUpdates.items,
+			features,
+			useInPlaceEdit: customerProductExists,
+		});
 	}
 
-	const latestProductId = updates.id || fullProduct.id;
+	const latestProductId = productUpdates.id || fullProduct.id;
+	await applyBasePlanLink();
 
 	// New full product
-	const newFullProduct = await ProductService.getFull({
+	let newFullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: latestProductId,
 		orgId: org.id,
@@ -325,6 +393,13 @@ export const updateProduct = async ({
 			newFreeTrial: free_trial,
 			internalProductId: fullProduct.internal_id,
 			isCustom: false,
+		});
+		newFullProduct = await ProductService.getFull({
+			db,
+			idOrInternalId: latestProductId,
+			orgId: org.id,
+			env,
+			version: fullProduct.version,
 		});
 	}
 

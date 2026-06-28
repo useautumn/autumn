@@ -143,6 +143,16 @@ export const UpdateProductV2ParamsSchema = z.object({
 	is_default: z.boolean().optional().meta({
 		description: descriptions.is_default,
 	}),
+	base_plan_id: z
+		.string()
+		.nonempty()
+		.regex(idRegex)
+		.nullable()
+		.optional()
+		.meta({
+			description:
+				"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+		}),
 
 	description: z.string().nullish().optional().meta({
 		description: descriptions.description,

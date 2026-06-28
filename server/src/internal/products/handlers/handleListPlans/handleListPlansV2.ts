@@ -32,7 +32,8 @@ export const handleListPlansV2 = createRoute({
 		const { org, features, env, db } = ctx;
 		const body = c.req.valid("json");
 
-		const { customer_id, entity_id, include_archived } = body ?? {};
+		const { customer_id, entity_id, include_archived, all_versions } =
+			body ?? {};
 
 		const startedAt = Date.now();
 
@@ -42,6 +43,7 @@ export const handleListPlansV2 = createRoute({
 				orgId: org.id,
 				env,
 				archived: include_archived ? undefined : false,
+				returnAll: all_versions,
 			}),
 			customer_id
 				? CusService.getFull({
@@ -67,6 +69,7 @@ export const handleListPlansV2 = createRoute({
 					ctx,
 					currency: org.default_currency || undefined,
 					baseFullProduct: findBaseFullProduct({ product, products }),
+					resolveBaseFullProduct: false,
 				}),
 			),
 		);

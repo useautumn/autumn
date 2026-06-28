@@ -9,6 +9,7 @@ import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 export type PromptType =
 	| "prod_confirmation"
 	| "plan_versioning"
+	| "plan_migration"
 	| "plan_variant_propagation"
 	| "plan_delete_has_customers"
 	| "plan_delete_no_customers"
@@ -21,6 +22,7 @@ export type PromptType =
 export interface PromptOption {
 	label: string;
 	value: string;
+	description?: string;
 	isDefault?: boolean;
 }
 
@@ -49,6 +51,16 @@ interface PlanVariantPropagationPromptInfo {
 		customize?: unknown;
 		conflicts?: unknown[];
 	};
+}
+
+interface PlanVariantPropagationGroupPromptInfo {
+	basePlanId: string;
+	basePlanName: string;
+	variants: PlanVariantPropagationPromptInfo["variant"][];
+}
+
+interface PlanMigrationPromptInfo {
+	plan: Pick<Plan, "id" | "name">;
 }
 
 // Counter for unique prompt IDs
@@ -82,7 +94,6 @@ export function createPlanVersioningPrompt(
 	info: PlanVersioningPromptInfo,
 	env?: AppEnv,
 ): PushPrompt {
-	const isSandbox = !env || env === AppEnv.Sandbox;
 	return {
 		id: generatePromptId(),
 		type: "plan_versioning",
@@ -93,26 +104,46 @@ export function createPlanVersioningPrompt(
 			planName: info.plan.name,
 		},
 		options: [
-			...(isSandbox
-				? [
-						{
-							label: "Update current version and create migration",
-							value: "update_current_and_migrate",
-							isDefault: true,
-						},
-					]
-				: []),
 			{
-				label: "Create a new version",
+				label: "Create new version",
+				description: "Existing customers stay on their current version.",
 				value: "create_version",
-				isDefault: !isSandbox,
+				isDefault: env === AppEnv.Live,
 			},
 			{
-				label: "Update current version only",
+				label: "Update existing version",
+				description:
+					"Update the current plan version now. You can migrate current users next.",
 				value: "update_current",
+				isDefault: env !== AppEnv.Live,
+			},
+		],
+	};
+}
+
+export function createPlanMigrationPrompt(
+	info: PlanMigrationPromptInfo,
+): PushPrompt {
+	return {
+		id: generatePromptId(),
+		type: "plan_migration",
+		entityId: info.plan.id,
+		entityName: info.plan.name,
+		data: {
+			planId: info.plan.id,
+			planName: info.plan.name,
+		},
+		options: [
+			{
+				label: "Create migration",
+				value: "create_migration",
 				isDefault: false,
 			},
-			{ label: "Skip this plan", value: "skip", isDefault: false },
+			{
+				label: "Skip migration",
+				value: "skip_migration",
+				isDefault: true,
+			},
 		],
 	};
 }
@@ -148,6 +179,30 @@ export function createPlanVariantPropagationPrompt(
 				isDefault: true,
 			},
 		],
+	};
+}
+
+export function createPlanVariantPropagationGroupPrompt(
+	info: PlanVariantPropagationGroupPromptInfo,
+): PushPrompt {
+	return {
+		id: generatePromptId(),
+		type: "plan_variant_propagation",
+		entityId: info.basePlanId,
+		entityName: info.basePlanName,
+		data: {
+			basePlanId: info.basePlanId,
+			basePlanName: info.basePlanName,
+			variants: info.variants.map((variant) => ({
+				variantPlanId: variant.plan_id,
+				variantName: variant.name,
+				versionable: variant.versionable,
+				conflictCount: variant.conflicts?.length ?? 0,
+				conflicts: variant.conflicts ?? [],
+				customize: variant.customize,
+			})),
+		},
+		options: [],
 	};
 }
 

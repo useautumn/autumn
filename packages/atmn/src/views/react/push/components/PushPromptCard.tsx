@@ -1,6 +1,6 @@
 import { Text } from "ink";
 import type { PushPrompt } from "../../../../commands/push/prompts.js";
-import { PromptCard } from "../../components/index.js";
+import { MultiSelect, PromptCard } from "../../components/index.js";
 
 type VariantConflict = {
 	feature_name?: string;
@@ -8,8 +8,17 @@ type VariantConflict = {
 	reason?: string;
 };
 
+type VariantPropagationOption = {
+	conflictCount: number;
+	conflicts: VariantConflict[];
+	variantName: string;
+	variantPlanId: string;
+	versionable: boolean;
+};
+
 interface PushPromptCardProps {
 	prompt: PushPrompt;
+	onBack?: () => void;
 	onRespond: (value: string) => void;
 }
 
@@ -21,7 +30,11 @@ function getData<T>(prompt: PushPrompt, key: string): T {
 /**
  * Renders appropriate prompt card based on prompt type
  */
-export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
+export function PushPromptCard({
+	prompt,
+	onBack,
+	onRespond,
+}: PushPromptCardProps) {
 	switch (prompt.type) {
 		case "prod_confirmation":
 			return (
@@ -29,6 +42,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Production Environment"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>You are about to push to PRODUCTION.</Text>
@@ -39,21 +53,78 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 		case "plan_versioning":
 			return (
 				<PromptCard
-					title="Plan Has Customers"
+					title="Save Plan Changes"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
 						Plan "{getData<string>(prompt, "planName")}" has customers on it.
 					</Text>
+					<Text color="yellow">How should this apply?</Text>
+				</PromptCard>
+			);
+
+		case "plan_migration":
+			return (
+				<PromptCard
+					title="Migrate Existing Customers"
+					icon="⚠"
+					options={prompt.options}
+					onBack={onBack}
+					onSelect={onRespond}
+				>
+					<Text>
+						Plan "{getData<string>(prompt, "planName")}" will update the
+						existing version.
+					</Text>
 					<Text color="yellow">
-						Choose whether to create a new version or update the current one.
+						Create a migration to move current customers to the updated version?
 					</Text>
 				</PromptCard>
 			);
 
 		case "plan_variant_propagation": {
+			const groupedVariants = getData<VariantPropagationOption[] | undefined>(
+				prompt,
+				"variants",
+			);
+			if (groupedVariants) {
+				const basePlanName = getData<string>(prompt, "basePlanName");
+				return (
+					<PromptCard
+						title="Apply Changes to Variants?"
+						icon="⚠"
+						options={[]}
+						onSelect={onRespond}
+					>
+						<Text>Plan "{basePlanName}" has variants.</Text>
+						<Text color="yellow">
+							Select which variants should receive the base plan changes.
+						</Text>
+						<MultiSelect
+							onBack={onBack}
+							onSubmit={(values) => onRespond(JSON.stringify(values))}
+							options={groupedVariants.map((variant) => {
+								const conflicts = variant.conflicts
+									.map((conflict) => {
+										const feature = conflict.feature_name ?? "Unknown feature";
+										const interval = conflict.item_filter?.interval ?? "none";
+										return `${feature}: ${conflict.reason ?? "conflict"} (${interval})`;
+									})
+									.join("; ");
+								return {
+									label: variant.variantName,
+									value: variant.variantPlanId,
+									description: conflicts || undefined,
+								};
+							})}
+						/>
+					</PromptCard>
+				);
+			}
+
 			const basePlanName = getData<string>(prompt, "basePlanName");
 			const variantName = getData<string>(prompt, "variantName");
 			const versionable = getData<boolean>(prompt, "versionable");
@@ -64,6 +135,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Apply Changes to Variant?"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
@@ -104,6 +176,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Cannot Delete Plan"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
@@ -125,6 +198,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Delete Plan?"
 					icon="🗑"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>Plan "{prompt.entityId}" is not in your config.</Text>
@@ -138,6 +212,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Archived Plan"
 					icon="📦"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
@@ -154,6 +229,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Cannot Delete Feature"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>Feature "{prompt.entityId}" is used by credit systems:</Text>
@@ -179,6 +255,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Cannot Delete Feature"
 					icon="⚠"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>Feature "{prompt.entityId}" is used by products:</Text>
@@ -199,6 +276,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Delete Feature?"
 					icon="🗑"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>Feature "{prompt.entityId}" is not in your config.</Text>
@@ -212,6 +290,7 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					title="Archived Feature"
 					icon="📦"
 					options={prompt.options}
+					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>

@@ -17,6 +17,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 
@@ -48,6 +49,7 @@ export const getPlanResponse = async ({
 	expand = [],
 	currency = "usd",
 	baseFullProduct,
+	resolveBaseFullProduct = true,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -56,6 +58,7 @@ export const getPlanResponse = async ({
 	expand?: string[];
 	currency?: string;
 	baseFullProduct?: FullProduct;
+	resolveBaseFullProduct?: boolean;
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -143,10 +146,21 @@ export const getPlanResponse = async ({
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1;
 
-	const basePlan = baseFullProduct
+	const resolvedBaseFullProduct =
+		baseFullProduct ??
+		(resolveBaseFullProduct && ctx && product.base_internal_product_id
+			? ((await ProductService.getFull({
+					db: ctx.db,
+					idOrInternalId: product.base_internal_product_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					allowNotFound: true,
+				})) ?? undefined)
+			: undefined);
+	const basePlan = resolvedBaseFullProduct
 		? await getPlanResponse({
 				ctx,
-				product: baseFullProduct,
+				product: resolvedBaseFullProduct,
 				features,
 				expand,
 				currency,

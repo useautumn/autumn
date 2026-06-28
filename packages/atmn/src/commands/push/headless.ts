@@ -13,14 +13,18 @@ import {
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
-	createPlanVariantPropagationPrompt,
+	createPlanMigrationPrompt,
+	createPlanVariantPropagationGroupPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PushPrompt,
 } from "./prompts.js";
 import {
+	buildLatestPlanVersionById,
 	catalogPreviewHasChanges,
 	fetchRemoteData,
+	isHistoricalPlan,
+	planTargetKey,
 	previewCatalogPush,
 	pushCatalog,
 	unarchiveFeature,
@@ -33,6 +37,7 @@ import type {
 	VariantPropagationSelections,
 } from "./types.js";
 import { formatValidationErrors, validateConfig } from "./validate.js";
+import { getVariantPropagationPreviews } from "./variantPropagation.js";
 
 interface LocalConfig {
 	features: Feature[];
@@ -42,6 +47,7 @@ interface LocalConfig {
 interface HeadlessPushOptions {
 	cwd?: string;
 	environment?: AppEnv;
+	allVersions?: boolean;
 	planIntents?: Record<string, PlanUpdateIntent | "skip">;
 	variantPropagations?: Record<string, string[]>;
 	yes?: boolean;
@@ -90,6 +96,7 @@ const formatJsonExample = () =>
 		"",
 		chalk.cyan("Headless decision flags:"),
 		`  --plan-intents '{"pro":"create_version"}'`,
+		`  --plan-intents '{"pro@v1":"update_current"}'`,
 		`  --plan-intents '{"pro":"update_current"}'`,
 		`  --plan-intents '{"pro":"update_current_and_migrate"}'`,
 		`  --variant-propagations '{"pro":["pro_annual"]}'`,
@@ -154,12 +161,32 @@ function resolveHeadlessUpdateDecisions({
 	for (const prompt of prompts) {
 		if (prompt.type !== "plan_variant_propagation") continue;
 		const basePlanId = prompt.data.basePlanId as string;
-		const variantPlanId = prompt.data.variantPlanId as string;
 		if (skipPlanIds.includes(basePlanId)) continue;
 		if (!(basePlanId in variantPropagations)) {
 			missing.push(`plan "${basePlanId}" needs variant propagation choices`);
 			continue;
 		}
+
+		const variants = prompt.data.variants as
+			| {
+					customize?: unknown;
+					variantName?: string;
+					variantPlanId: string;
+			  }[]
+			| undefined;
+		if (variants) {
+			const selectedIds = new Set(variantPropagations[basePlanId] ?? []);
+			variantPropagationSelections[basePlanId] = variants
+				.filter((variant) => selectedIds.has(variant.variantPlanId))
+				.map((variant) => ({
+					variant_plan_id: variant.variantPlanId,
+					name: variant.variantName,
+					customize: variant.customize ?? {},
+				}));
+			continue;
+		}
+
+		const variantPlanId = prompt.data.variantPlanId as string;
 		if (!variantPropagations[basePlanId]?.includes(variantPlanId)) continue;
 
 		variantPropagationSelections[basePlanId] = [
@@ -255,7 +282,14 @@ function buildPromptQueueFromPreview(
 	plans: Plan[],
 ): PushPrompt[] {
 	const prompts: PushPrompt[] = [];
-	const localPlansById = new Map(plans.map((plan) => [plan.id, plan]));
+	const latestVersionById = buildLatestPlanVersionById(plans);
+	const planForChange = (
+		planChange: CatalogPreviewUpdateResponse["plan_changes"][number],
+		index: number,
+	) => {
+		const indexedPlan = plans[index];
+		return indexedPlan?.id === planChange.plan_id ? indexedPlan : undefined;
+	};
 
 	if (environment === AppEnv.Live) {
 		prompts.push(createProdConfirmationPrompt());
@@ -269,8 +303,21 @@ function buildPromptQueueFromPreview(
 		prompts.push(createPlanArchivedPrompt(plan));
 	}
 
-	for (const planChange of preview.plan_changes) {
-		if (planChange.action === "updated" && planChange.versionable) {
+	for (const [index, planChange] of preview.plan_changes.entries()) {
+		const localPlan = planForChange(planChange, index);
+		if (
+			planChange.action === "updated" &&
+			planChange.versionable &&
+			!localPlan
+		) {
+			continue;
+		}
+		if (
+			planChange.action === "updated" &&
+			planChange.versionable &&
+			localPlan &&
+			!isHistoricalPlan({ latestVersionById, plan: localPlan })
+		) {
 			prompts.push(
 				createPlanVersioningPrompt(
 					{
@@ -287,25 +334,36 @@ function buildPromptQueueFromPreview(
 		}
 	}
 
-	for (const planChange of preview.plan_changes) {
-		const basePlan = localPlansById.get(planChange.plan_id);
+	for (const [index, planChange] of preview.plan_changes.entries()) {
+		const basePlan = planForChange(planChange, index);
 		if (!basePlan) continue;
 
-		for (const variant of planChange.variants ?? []) {
-			const hasVariantChanges = Boolean(
-				!variant.will_apply &&
-					(variant.customize ||
-						variant.price_change ||
-						(variant.item_changes?.length ?? 0) > 0 ||
-						(variant.conflicts?.length ?? 0) > 0),
-			);
-			if (!hasVariantChanges) continue;
+		const affectedVariants = getVariantPropagationPreviews({ planChange });
+		if (affectedVariants.length === 0) continue;
 
+		prompts.push(
+			createPlanVariantPropagationGroupPrompt({
+				basePlanId: planChange.plan_id,
+				basePlanName: basePlan.name,
+				variants: affectedVariants,
+			}),
+		);
+	}
+
+	for (const [index, planChange] of preview.plan_changes.entries()) {
+		const localPlan = planForChange(planChange, index);
+		if (
+			planChange.action === "updated" &&
+			planChange.versionable &&
+			localPlan &&
+			!isHistoricalPlan({ latestVersionById, plan: localPlan })
+		) {
 			prompts.push(
-				createPlanVariantPropagationPrompt({
-					basePlanId: planChange.plan_id,
-					basePlanName: basePlan.name,
-					variant,
+				createPlanMigrationPrompt({
+					plan: {
+						id: planChange.plan_id,
+						name: planChange.plan?.name ?? planChange.plan_id,
+					},
 				}),
 			);
 		}
@@ -350,6 +408,11 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 			case "plan_versioning":
 				issues.push(
 					`  - Plan "${prompt.entityId}" has customers; choose create_version, update_current, update_current_and_migrate, or skip`,
+				);
+				break;
+			case "plan_migration":
+				issues.push(
+					`  - Plan "${prompt.entityId}" can create a migration after updating the existing version`,
 				);
 				break;
 			case "plan_variant_propagation": {
@@ -451,13 +514,14 @@ async function syncArchivedFeaturesToConfig(
 
 async function getArchivedTargets(
 	config: LocalConfig,
+	allVersions = false,
 ): Promise<ArchivedTargets> {
-	const remoteData = await fetchRemoteData();
+	const remoteData = await fetchRemoteData({ allVersions });
 	const remoteFeaturesById = new Map(
 		remoteData.features.map((feature) => [feature.id, feature]),
 	);
 	const remotePlansById = new Map(
-		remoteData.plans.map((plan) => [plan.id, plan]),
+		remoteData.plans.map((plan) => [planTargetKey(plan), plan]),
 	);
 
 	return {
@@ -466,7 +530,7 @@ async function getArchivedTargets(
 			return Boolean(remote?.archived && !feature.archived);
 		}),
 		plans: config.plans.filter((plan) => {
-			const remote = remotePlansById.get(plan.id);
+			const remote = remotePlansById.get(planTargetKey(plan));
 			return Boolean(remote?.archived && !plan.archived);
 		}),
 	};
@@ -539,6 +603,7 @@ async function executePushWithDefaults(
 	}
 
 	const pushResult = await pushCatalog({
+		cwd,
 		features: config.features,
 		plans: config.plans,
 		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
@@ -598,6 +663,7 @@ async function _headlessPushImpl(
 ): Promise<HeadlessPushResult> {
 	const cwd = options.cwd ?? process.cwd();
 	const environment = options.environment ?? AppEnv.Sandbox;
+	const allVersions = options.allVersions ?? false;
 	const yes = options.yes ?? false;
 
 	const envLabel = environment === AppEnv.Live ? "production" : "sandbox";
@@ -627,7 +693,7 @@ async function _headlessPushImpl(
 			features: config.features,
 			plans: config.plans,
 		}),
-		getArchivedTargets(config),
+		getArchivedTargets(config, allVersions),
 	]);
 
 	const hasChanges =

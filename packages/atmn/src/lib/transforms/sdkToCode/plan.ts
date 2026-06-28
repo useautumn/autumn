@@ -22,6 +22,9 @@ export function buildPlanCode(
 
 	lines.push(`export const ${varName} = plan({`);
 	lines.push(`\tid: '${plan.id}',`);
+	if (plan.version !== undefined) {
+		lines.push(`\tversion: ${plan.version},`);
+	}
 	lines.push(`\tname: '${plan.name}',`);
 
 	// Add description

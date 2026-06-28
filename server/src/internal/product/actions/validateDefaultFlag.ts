@@ -79,6 +79,34 @@ const disableCurrentDefault = async ({
 	}
 };
 
+const validateLatestVersionCanBeDefault = async ({
+	ctx,
+	body,
+	curProduct,
+}: {
+	ctx: AutumnContext;
+	body: CreateProductV2Params | UpdateProductV2Params;
+	curProduct?: FullProduct;
+}) => {
+	if (body.is_default !== true || !curProduct) return;
+
+	const latestProduct = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: curProduct.id,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+
+	if (latestProduct.internal_id === curProduct.internal_id) return;
+
+	throw new RecaseError({
+		message:
+			"Only the latest version of a plan can be marked as auto-enable.",
+		code: ErrCode.HistoricalPlanVersionCannotBeDefault,
+		statusCode: 400,
+	});
+};
+
 export const validateDefaultFlag = async ({
 	ctx,
 	body,
@@ -95,6 +123,8 @@ export const validateDefaultFlag = async ({
 			statusCode: 400,
 		});
 	}
+
+	await validateLatestVersionCanBeDefault({ ctx, body, curProduct });
 
 	const validate = (): { type: "free" | "default_trial" | undefined } => {
 		const isDefault =

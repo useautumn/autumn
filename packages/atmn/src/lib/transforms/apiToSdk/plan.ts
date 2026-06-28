@@ -57,8 +57,12 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 	},
 });
 
-export function transformApiPlan(apiPlan: ApiPlan): BasePlan {
-	return planTransformer.transform(apiPlan);
+export function transformApiPlan(
+	apiPlan: ApiPlan,
+	options: { includeVersion?: boolean } = {},
+): Plan {
+	const plan = planTransformer.transform(apiPlan);
+	return options.includeVersion ? { ...plan, version: apiPlan.version } : plan;
 }
 
 type ApiCustomizePlan = NonNullable<
@@ -132,7 +136,10 @@ const transformApiCustomizePlan = (
 	return Object.keys(result).length > 0 ? result : undefined;
 };
 
-const transformApiPlanVariant = (apiPlan: ApiPlan): Variant => {
+const transformApiPlanVariant = (
+	apiPlan: ApiPlan,
+	options: { includeVersion?: boolean } = {},
+): Variant => {
 	const customize = transformApiCustomizePlan(
 		apiPlan.variant_details?.customize,
 	);
@@ -140,14 +147,31 @@ const transformApiPlanVariant = (apiPlan: ApiPlan): Variant => {
 	return {
 		id: apiPlan.id,
 		name: apiPlan.name,
+		...(options.includeVersion ? { version: apiPlan.version } : {}),
 		...(customize ? { customize } : {}),
 	};
 };
 
-export function transformApiPlans(apiPlans: ApiPlan[]): Plan[] {
+const sortByIdVersion = (a: ApiPlan, b: ApiPlan) =>
+	a.id.localeCompare(b.id) || a.version - b.version;
+
+export function transformApiPlans(
+	apiPlans: ApiPlan[],
+	options: { allVersions?: boolean } = {},
+): Plan[] {
+	const { allVersions = false } = options;
 	const planById = new Map(apiPlans.map((apiPlan) => [apiPlan.id, apiPlan]));
 	const variantsByBaseId = new Map<string, Variant[]>();
 	const basePlanIds = new Set<string>();
+	const basePlans = apiPlans.filter((apiPlan) => !apiPlan.variant_details);
+	const latestBaseVersionById = new Map<string, number>();
+
+	for (const apiPlan of basePlans) {
+		const latestVersion = latestBaseVersionById.get(apiPlan.id) ?? 0;
+		if (apiPlan.version > latestVersion) {
+			latestBaseVersionById.set(apiPlan.id, apiPlan.version);
+		}
+	}
 
 	for (const apiPlan of apiPlans) {
 		const basePlanId = apiPlan.variant_details?.base_plan_id;
@@ -155,15 +179,31 @@ export function transformApiPlans(apiPlans: ApiPlan[]): Plan[] {
 
 		basePlanIds.add(apiPlan.id);
 		const variants = variantsByBaseId.get(basePlanId) ?? [];
-		variants.push(transformApiPlanVariant(apiPlan));
+		variants.push(
+			transformApiPlanVariant(apiPlan, { includeVersion: allVersions }),
+		);
 		variantsByBaseId.set(basePlanId, variants);
 	}
 
-	return apiPlans
+	const transformed = apiPlans
 		.filter((apiPlan) => !basePlanIds.has(apiPlan.id))
+		.sort(allVersions ? sortByIdVersion : () => 0)
 		.map((apiPlan) => {
-			const plan = transformApiPlan(apiPlan) as Plan;
-			const variants = variantsByBaseId.get(apiPlan.id);
+			const plan = transformApiPlan(apiPlan, {
+				includeVersion: allVersions,
+			}) as Plan;
+			const isLatestBase =
+				!allVersions ||
+				apiPlan.version === latestBaseVersionById.get(apiPlan.id);
+			const variants = isLatestBase
+				? variantsByBaseId.get(apiPlan.id)?.sort((a, b) => {
+						const byId = a.id.localeCompare(b.id);
+						if (byId !== 0) return byId;
+						return (a.version ?? 0) - (b.version ?? 0);
+					})
+				: undefined;
 			return variants && variants.length > 0 ? { ...plan, variants } : plan;
 		});
+
+	return transformed;
 }

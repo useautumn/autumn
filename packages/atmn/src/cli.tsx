@@ -122,9 +122,10 @@ program
 	.command("push")
 	.description("Push changes to Autumn")
 	.option("-y, --yes", "Confirm all prompts automatically")
+	.option("--all-versions", "Push every historical plan version in config")
 	.option(
 		"--plan-intents <json>",
-		"JSON map of plan_id to create_version, update_current, update_current_and_migrate, or skip",
+		"JSON map of plan_id or plan_id@vN to create_version, update_current, update_current_and_migrate, or skip",
 	)
 	.option(
 		"--variant-propagations <json>",
@@ -143,6 +144,7 @@ program
 				<QueryProvider>
 					<PushView
 						environment={environment}
+						allVersions={options.allVersions}
 						yes={options.yes}
 						onComplete={() => {
 							process.exit(0);
@@ -166,6 +168,7 @@ program
 				await headlessPush({
 					cwd: process.cwd(),
 					environment,
+					allVersions: options.allVersions,
 					planIntents: parseJsonOption(options.planIntents),
 					variantPropagations: parseJsonOption(options.variantPropagations),
 					yes: options.yes,
@@ -181,6 +184,7 @@ program
 	.command("pull")
 	.description("Pull changes from Autumn")
 	.option("-f, --force", "Force overwrite config (skip in-place update)")
+	.option("--all-versions", "Pull every historical plan version")
 	.option("--no-declaration-file", "Skip generating @useautumn-sdk.d.ts")
 	.action(async (options) => {
 		// Import AppEnv here to avoid circular dependencies
@@ -202,6 +206,7 @@ program
 						environment={environment}
 						forceOverwrite={options.force}
 						noDeclarationFile={skipDts}
+						allVersions={options.allVersions}
 						onComplete={() => {
 							process.exit(0);
 						}}
@@ -219,6 +224,7 @@ program
 					environment,
 					forceOverwrite: options.force,
 					noDeclarationFile: skipDts,
+					allVersions: options.allVersions,
 				});
 
 				console.log(

@@ -38,6 +38,7 @@ import {
 	transformFeatureToApi,
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
+import { writeConfig } from "../pull/writeConfig.js";
 import type {
 	CatalogPreviewUpdateResponse,
 	CatalogUpdateParams,
@@ -52,6 +53,7 @@ import type {
 	RemoteData,
 	VariantPropagationSelections,
 } from "./types.js";
+import { getVariantPropagationPreviews } from "./variantPropagation.js";
 
 /**
  * Get the secret key for the current environment
@@ -67,12 +69,16 @@ function getSecretKey(): string {
  */
 
 // Fetch all features and plans from remote
-export async function fetchRemoteData(): Promise<RemoteData> {
+export async function fetchRemoteData({
+	allVersions = false,
+}: {
+	allVersions?: boolean;
+} = {}): Promise<RemoteData> {
 	const secretKey = getSecretKey();
 
 	const [apiFeatures, apiPlans] = await Promise.all([
 		fetchFeatures({ secretKey, includeArchived: true }),
-		fetchPlans({ secretKey, includeArchived: true }),
+		fetchPlans({ secretKey, includeArchived: true, allVersions }),
 	]);
 
 	return {
@@ -80,6 +86,33 @@ export async function fetchRemoteData(): Promise<RemoteData> {
 		plans: transformApiPlans(apiPlans),
 	};
 }
+
+type VersionedPlanIdentity = Pick<Plan, "id"> & { version?: number };
+
+export const planTargetKey = ({ id, version }: VersionedPlanIdentity) =>
+	version === undefined ? id : `${id}@v${version}`;
+
+export const buildLatestPlanVersionById = (plans: VersionedPlanIdentity[]) => {
+	const latestById = new Map<string, number>();
+	for (const plan of plans) {
+		if (plan.version === undefined) continue;
+		latestById.set(
+			plan.id,
+			Math.max(latestById.get(plan.id) ?? plan.version, plan.version),
+		);
+	}
+	return latestById;
+};
+
+export const isHistoricalPlan = ({
+	latestVersionById,
+	plan,
+}: {
+	latestVersionById: Map<string, number>;
+	plan: VersionedPlanIdentity;
+}) =>
+	plan.version !== undefined &&
+	plan.version < (latestVersionById.get(plan.id) ?? plan.version);
 
 // Check if a feature can be deleted
 export async function checkFeatureDeleteInfo(
@@ -598,19 +631,32 @@ function toCatalogVariantParams(variant: Variant): Record<string, unknown> {
 
 function toCatalogPlanParams(
 	plan: Plan,
-	variants: NonNullable<VariantPropagationSelections[string]> = [],
+	variants?: VariantPropagationSelections[string],
 	intent?: PlanUpdateIntentSelections[string],
+	latestVersionById: Map<string, number> = new Map(),
 ): Record<string, unknown> {
 	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
 	const { description, id, ...rest } = apiPlan;
+	const historical = isHistoricalPlan({ latestVersionById, plan });
 	const configuredVariants = (plan.variants ?? []).map(toCatalogVariantParams);
-	const variantUpdates = [...configuredVariants, ...variants];
+	const configuredVariantsById = new Map(
+		configuredVariants.map((variant) => [variant.variant_plan_id, variant]),
+	);
+	const variantUpdates =
+		variants === undefined
+			? configuredVariants
+			: variants.map(
+					(variant) =>
+						configuredVariantsById.get(variant.variant_plan_id) ?? variant,
+				);
 
 	return {
 		plan_id: id,
+		...(plan.version !== undefined ? { version: plan.version } : {}),
 		...rest,
 		...(variantUpdates.length > 0 ? { variants: variantUpdates } : {}),
-		...(intent === "update_current" ||
+		...(historical ||
+		intent === "update_current" ||
 		intent === "update_current_and_migrate"
 			? { disable_version: true }
 			: {}),
@@ -634,6 +680,86 @@ function collectVariantPlanIds(plans: Plan[]): string[] {
 	});
 }
 
+function collectSkippedPropagationVariantIds({
+	preview,
+	variantPropagationSelections,
+}: {
+	preview: CatalogPreviewUpdateResponse;
+	variantPropagationSelections: VariantPropagationSelections;
+}) {
+	const skipped = new Set<string>();
+
+	for (const planChange of preview.plan_changes) {
+		if (!(planChange.plan_id in variantPropagationSelections)) continue;
+
+		const selectedIds = new Set(
+			(variantPropagationSelections[planChange.plan_id] ?? []).map(
+				(variant) => variant.variant_plan_id,
+			),
+		);
+
+		for (const variant of getVariantPropagationPreviews({ planChange })) {
+			const variantPlanId = (variant as { plan_id?: string }).plan_id;
+			if (variantPlanId && !selectedIds.has(variantPlanId)) {
+				skipped.add(variantPlanId);
+			}
+		}
+	}
+
+	return skipped;
+}
+
+async function syncSkippedPropagationVariantsToConfig({
+	cwd,
+	features,
+	plans,
+	preview,
+	secretKey,
+	variantPropagationSelections,
+}: {
+	cwd: string;
+	features: Feature[];
+	plans: Plan[];
+	preview: CatalogPreviewUpdateResponse;
+	secretKey: string;
+	variantPropagationSelections: VariantPropagationSelections;
+}) {
+	const skippedVariantIds = collectSkippedPropagationVariantIds({
+		preview,
+		variantPropagationSelections,
+	});
+	if (skippedVariantIds.size === 0) return;
+
+	const remotePlans = transformApiPlans(
+		await fetchPlans({ secretKey, includeArchived: true }),
+	);
+	const remoteVariantsById = new Map(
+		remotePlans.flatMap((plan) =>
+			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
+		),
+	);
+	let changed = false;
+	const nextPlans = plans.map((plan) => {
+		if (!plan.variants?.length) return plan;
+		let planChanged = false;
+
+		const nextVariants = plan.variants.map((variant) => {
+			if (!skippedVariantIds.has(variant.id)) return variant;
+			const remoteVariant = remoteVariantsById.get(variant.id);
+			if (!remoteVariant) return variant;
+			changed = true;
+			planChanged = true;
+			return remoteVariant;
+		});
+
+		return planChanged ? { ...plan, variants: nextVariants } : plan;
+	});
+
+	if (changed) {
+		await writeConfig(features, nextPlans, cwd);
+	}
+}
+
 export function buildCatalogUpdateParams({
 	features,
 	plans,
@@ -654,14 +780,18 @@ export function buildCatalogUpdateParams({
 		if (a.type !== "credit_system" && b.type === "credit_system") return -1;
 		return 0;
 	});
+	const latestVersionById = buildLatestPlanVersionById(plans);
 
 	return {
 		features: sortedFeatures.map(toCatalogFeatureParams),
 		plans: plans.map((plan) =>
 			toCatalogPlanParams(
 				plan,
-				variantPropagationSelections[plan.id] ?? [],
-				planUpdateIntentSelections[plan.id],
+				variantPropagationSelections[planTargetKey(plan)] ??
+					variantPropagationSelections[plan.id],
+				planUpdateIntentSelections[planTargetKey(plan)] ??
+					planUpdateIntentSelections[plan.id],
+				latestVersionById,
 			),
 		),
 		skip_deletions: false,
@@ -781,6 +911,7 @@ export async function pushCatalog({
 	skipPlanIds,
 	planUpdateIntentSelections,
 	variantPropagationSelections,
+	cwd,
 }: {
 	features: Feature[];
 	migratePlanIds?: string[];
@@ -791,6 +922,7 @@ export async function pushCatalog({
 	skipPlanIds?: string[];
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
 	variantPropagationSelections?: VariantPropagationSelections;
+	cwd?: string;
 }): Promise<PushResult> {
 	const secretKey = getSecretKey();
 	const params = buildCatalogUpdateParams({
@@ -806,6 +938,17 @@ export async function pushCatalog({
 
 	await updateCatalog({ secretKey, params });
 	const result = catalogPreviewToPushResult(resolvedPreview);
+
+	if (cwd && variantPropagationSelections) {
+		await syncSkippedPropagationVariantsToConfig({
+			cwd,
+			features,
+			plans,
+			preview: resolvedPreview,
+			secretKey,
+			variantPropagationSelections,
+		});
+	}
 
 	const plansToMigrate =
 		migratePlanIds ?? (migrateVersioned ? result.plansVersioned : []);

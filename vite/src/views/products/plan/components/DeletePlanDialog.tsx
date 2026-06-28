@@ -55,6 +55,8 @@ export const DeletePlanDialog = ({
 	const isBaseVariant = products.some(
 		(p) => p.base_id === product.id && p.id !== product.id,
 	);
+	const willDetachVariants =
+		isBaseVariant && (deleteAllVersions || product.version === 1);
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
@@ -229,7 +231,7 @@ export const DeletePlanDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{isBaseVariant && !hasCusProducts && !product.archived && (
+				{willDetachVariants && !hasCusProducts && !product.archived && (
 					<InfoBox variant="warning">
 						This is a base variant. Deleting this plan will convert variants of
 						this plan into base plans.

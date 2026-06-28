@@ -22,6 +22,8 @@ interface PullViewProps {
 	cwd?: string;
 	/** Skip generating @useautumn-sdk.d.ts */
 	noDeclarationFile?: boolean;
+	/** Pull every historical plan version */
+	allVersions?: boolean;
 }
 
 /**
@@ -34,6 +36,7 @@ export function PullView({
 	forceOverwrite = false,
 	cwd,
 	noDeclarationFile = false,
+	allVersions = false,
 }: PullViewProps) {
 	const [startTime] = useState(Date.now());
 	const {
@@ -47,7 +50,14 @@ export function PullView({
 		error,
 		inPlace,
 		updateResult,
-	} = usePull({ environment, onComplete, forceOverwrite, cwd, noDeclarationFile });
+	} = usePull({
+		environment,
+		onComplete,
+		forceOverwrite,
+		cwd,
+		noDeclarationFile,
+		allVersions,
+	});
 
 	const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
@@ -110,7 +120,10 @@ export function PullView({
 						) : plans.length > 0 ? (
 							<>
 								{plans.slice(0, 4).map((plan) => (
-									<PlanRow key={plan.id} plan={plan} />
+									<PlanRow
+										key={`${plan.id}:${plan.version ?? "latest"}`}
+										plan={plan}
+									/>
 								))}
 								{plans.length > 4 && (
 									<Text color="gray">... {plans.length - 4} more</Text>

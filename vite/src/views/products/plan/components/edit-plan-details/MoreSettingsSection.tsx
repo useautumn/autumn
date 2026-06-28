@@ -1,6 +1,11 @@
 import { notNullish } from "@autumn/shared";
 import {
 	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 	SheetAccordion,
 	SheetAccordionItem,
 	Switch,
@@ -13,15 +18,35 @@ import { useParams } from "react-router";
 import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { MetadataEditor } from "./MetadataEditor";
 import { PlanBillingControlsSection } from "./PlanBillingControlsSection";
+
+const NO_BASE_PLAN = "__none__";
 
 export const MoreSettingsSection = () => {
 	const { product, setProduct } = useProduct();
 	const { customer_id } = useParams();
 	const isCustomPlan = notNullish(customer_id);
+	const { products } = useProductsQuery();
 
 	const hasGroup = notNullish(product.group);
+	const currentListProduct = products.find((p) => p.id === product.id);
+	const selectedBasePlanId =
+		product.base_id ?? currentListProduct?.base_id ?? null;
+	const basePlanOptions = products.filter(
+		(p) => p.id !== product.id && !p.base_id,
+	);
+	const selectedBasePlan = products.find((p) => p.id === selectedBasePlanId);
+	const hasSelectedBaseOption = basePlanOptions.some(
+		(p) => p.id === selectedBasePlanId,
+	);
+	const visibleBasePlanOptions =
+		selectedBasePlan && !hasSelectedBaseOption
+			? [selectedBasePlan, ...basePlanOptions]
+			: basePlanOptions;
+	const hasVariantBase = selectedBasePlanId !== null;
+	const canSelectBasePlan = visibleBasePlanOptions.length > 0;
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
@@ -81,6 +106,51 @@ export const MoreSettingsSection = () => {
 							/>
 						}
 					/>
+
+					{!isCustomPlan && (
+						<ConfigRow
+							title="Base plan"
+							description="Link this plan as a variant of another plan."
+							expanded={hasVariantBase}
+							action={
+								<Switch
+									checked={hasVariantBase}
+									disabled={!hasVariantBase && !canSelectBasePlan}
+									onCheckedChange={(checked) => {
+										setProduct({
+											...product,
+											base_id: checked
+												? (selectedBasePlanId ??
+													visibleBasePlanOptions[0]?.id ??
+													null)
+												: null,
+										});
+									}}
+								/>
+							}
+						>
+							<Select
+								value={selectedBasePlanId ?? NO_BASE_PLAN}
+								onValueChange={(value) => {
+									setProduct({
+										...product,
+										base_id: value === NO_BASE_PLAN ? null : value,
+									});
+								}}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select base plan" />
+								</SelectTrigger>
+								<SelectContent>
+									{visibleBasePlanOptions.map((basePlan) => (
+										<SelectItem key={basePlan.id} value={basePlan.id}>
+											{basePlan.name}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</ConfigRow>
+					)}
 
 					{isCustomPlan ? (
 						<ConfigRow

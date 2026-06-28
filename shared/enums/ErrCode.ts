@@ -202,6 +202,8 @@ export const ErrCode = {
 	TooManyVariants: "too_many_variants",
 	ConflictingVersionFlags: "conflicting_version_flags",
 	VariantCannotBeDefault: "variant_cannot_be_default",
+	HistoricalPlanVersionCannotBeDefault:
+		"historical_plan_version_cannot_be_default",
 
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
