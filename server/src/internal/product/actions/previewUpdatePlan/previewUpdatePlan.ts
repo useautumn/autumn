@@ -17,6 +17,7 @@ import { hasPlanCustomers } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
 import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
+import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const buildPlanUpdatePreview = async ({
 	ctx,
@@ -78,6 +79,14 @@ export const buildPlanUpdatePreview = async ({
 		data,
 		variantUpdates,
 	});
+	const otherVersions = await previewOtherProductVersions({
+		ctx,
+		product: currentFullProduct,
+		currentPlan,
+		editedPlan: previewPlan,
+		diff,
+		settingsPatch,
+	});
 
 	return PlanUpdatePreviewSchema.parse({
 		...buildCorePlanUpdatePreview({
@@ -89,6 +98,7 @@ export const buildPlanUpdatePreview = async ({
 			versionable,
 		}),
 		variants,
+		other_versions: otherVersions,
 	});
 };
 

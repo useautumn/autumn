@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { CorePlanUpdatePreviewSchema } from "./corePlanUpdatePreview.js";
+import { PlanUpdatePreviewOtherVersionSchema } from "./planUpdatePreviewOtherVersion.js";
 import { PlanUpdatePreviewVariantConflictSchema } from "./planUpdatePreviewVariantConflict.js";
 
 export const PlanUpdatePreviewVariantSchema =
@@ -24,6 +25,13 @@ export const PlanUpdatePreviewVariantSchema =
 			.meta({
 				description:
 					"Potential conflicts that make automatic propagation ambiguous for this variant. Empty when no conflicts are detected.",
+			}),
+		other_versions: z
+			.array(PlanUpdatePreviewOtherVersionSchema)
+			.default([])
+			.meta({
+				description:
+					"Historical versions of this variant that can receive the same update diff.",
 			}),
 	});
 

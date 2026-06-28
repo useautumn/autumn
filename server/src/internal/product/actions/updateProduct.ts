@@ -28,6 +28,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";
+import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
@@ -39,6 +40,7 @@ interface UpdateProductParams {
 		version?: number;
 		disable_version?: boolean;
 		force_version?: boolean;
+		all_versions?: boolean;
 	};
 	updates: UpdateProductV2Params;
 	initialFullProduct?: FullProduct;
@@ -46,6 +48,7 @@ interface UpdateProductParams {
 	propagateToVariants?: string[];
 	variantUpdates?: UpdateVariantParams[];
 	allowVariantSettingsUpdate?: boolean;
+	skipVariantUpdates?: boolean;
 }
 
 const resolveBaseInternalProductId = async ({
@@ -93,15 +96,32 @@ export const updateProduct = async ({
 	propagateToVariants = [],
 	variantUpdates = [],
 	allowVariantSettingsUpdate = false,
+	skipVariantUpdates = false,
 }: UpdateProductParams) => {
 	const { db, org, env, features } = ctx;
-	const { version, upsert, disable_version, force_version } = query;
+	const { version, upsert, disable_version, force_version, all_versions } =
+		query;
+	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
 	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
 
 	if (force_version && disable_version) {
 		throw new RecaseError({
 			message: "Cannot use both force_version and disable_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
+	if (all_versions && disable_version) {
+		throw new RecaseError({
+			message: "Cannot use both all_versions and disable_version",
+			code: ErrCode.ConflictingVersionFlags,
+			statusCode: 400,
+		});
+	}
+	if (all_versions && force_version) {
+		throw new RecaseError({
+			message: "Cannot use both all_versions and force_version",
 			code: ErrCode.ConflictingVersionFlags,
 			statusCode: 400,
 		});
@@ -150,6 +170,7 @@ export const updateProduct = async ({
 	}: {
 		latestBase: FullProduct;
 	}) => {
+		if (skipVariantUpdates) return;
 		if (baseBeforeUpdate.base_internal_product_id !== null) return;
 		if (
 			!shouldApplyVariantUpdates({
@@ -169,8 +190,32 @@ export const updateProduct = async ({
 			newBase: latestBase,
 			propagateToVariants,
 			variantUpdates,
-			disableVersion: disable_version,
+			disableVersion: effectiveDisableVersion,
 			forceVersion: force_version,
+			allVersions: all_versions,
+		});
+	};
+	const applyHistoricalVersions = async ({
+		latestProduct,
+	}: {
+		latestProduct: FullProduct;
+	}) => {
+		await applyOtherProductVersions({
+			ctx,
+			enabled: all_versions,
+			productBeforeUpdate: baseBeforeUpdate,
+			latestProduct,
+			updateVersion: async ({ product, updates }) => {
+				await updateProduct({
+					ctx,
+					productId: product.id,
+					query: { version: product.version, disable_version: true },
+					updates,
+					initialFullProduct: product,
+					allowVariantSettingsUpdate,
+					skipVariantUpdates: true,
+				});
+			},
 		});
 	};
 
@@ -224,7 +269,7 @@ export const updateProduct = async ({
 
 	if (
 		versionableCustomerProductExists &&
-		!disable_version &&
+		!effectiveDisableVersion &&
 		!force_version &&
 		billingControlsProvided
 	) {
@@ -319,7 +364,7 @@ export const updateProduct = async ({
 
 	if (
 		versionableCustomerProductExists &&
-		!disable_version &&
+		!effectiveDisableVersion &&
 		(itemsExist || freeTrialProvided)
 	) {
 		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
@@ -351,6 +396,7 @@ export const updateProduct = async ({
 			return newProduct;
 		}
 
+		await applyHistoricalVersions({ latestProduct: fullProduct });
 		await applyVariantUpdates({ latestBase: fullProduct });
 		await applyBasePlanLink();
 		return fullProduct;
@@ -405,6 +451,7 @@ export const updateProduct = async ({
 
 	// New full product
 
+	await applyHistoricalVersions({ latestProduct: newFullProduct });
 	await applyVariantUpdates({ latestBase: newFullProduct });
 
 	await initProductInStripe({

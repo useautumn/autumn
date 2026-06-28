@@ -22,7 +22,9 @@ export const planWouldVersion = ({
 	hasCustomers: boolean;
 }) => {
 	if (updates.force_version) return true;
-	if (updates.disable_version || !hasCustomers) return false;
+	if (updates.disable_version || updates.all_versions || !hasCustomers) {
+		return false;
+	}
 
 	const currentProductV2 = mapToProductV2({
 		product: current,

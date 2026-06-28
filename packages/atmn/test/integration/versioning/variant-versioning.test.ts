@@ -684,7 +684,7 @@ test(`${chalk.yellowBright("atmn variant versioning: multiple customer-bearing v
 			ctx,
 			planId: secondVariantId,
 		});
-		return;
+		// return;
 
 		await pushMultiVariantVersioningConfig({
 			baseIncluded: 500,

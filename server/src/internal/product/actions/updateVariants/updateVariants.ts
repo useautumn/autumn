@@ -160,6 +160,7 @@ export const updateVariants = async ({
 	variantUpdates = [],
 	disableVersion,
 	forceVersion,
+	allVersions,
 }: {
 	ctx: AutumnContext;
 	oldBase: FullProduct;
@@ -168,6 +169,7 @@ export const updateVariants = async ({
 	variantUpdates?: UpdateVariantParams[];
 	disableVersion?: boolean;
 	forceVersion?: boolean;
+	allVersions?: boolean;
 }) => {
 	validateVariantUpdates(variantUpdates);
 
@@ -216,7 +218,7 @@ export const updateVariants = async ({
 		if (variantUpdate?.force_version) return true;
 		if (variantUpdate?.disable_version) return false;
 		if (forceVersion) return true;
-		if (disableVersion) return false;
+		if (disableVersion || allVersions) return false;
 		return hasPlanCustomers({ ctx, product: variant });
 	};
 
@@ -277,6 +279,7 @@ export const updateVariants = async ({
 			settingsPatch,
 			shouldVersion,
 			baseInternalProductId: baseWasVersioned ? newBase.internal_id : undefined,
+			allVersions,
 		});
 	}
 

@@ -74,6 +74,10 @@ export const UpdatePlanParamsV2Schema = z
 		disable_version: z.boolean().optional().meta({
 			internal: true,
 		}),
+		all_versions: z.boolean().optional().meta({
+			description:
+				"Apply the update diff to all versions of this plan. Mutually exclusive with disable_version.",
+		}),
 		create_migration: z.boolean().optional().meta({
 			internal: true,
 		}),

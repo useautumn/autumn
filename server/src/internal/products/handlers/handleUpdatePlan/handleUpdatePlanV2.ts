@@ -22,6 +22,7 @@ export const handleUpdatePlanV2 = createRoute({
 			new_plan_id,
 			force_version,
 			disable_version,
+			all_versions,
 			version,
 			update_variant_ids,
 			variants,
@@ -49,7 +50,7 @@ export const handleUpdatePlanV2 = createRoute({
 		await updateProduct({
 			ctx,
 			productId: plan_id,
-			query: { force_version, disable_version },
+			query: { force_version, disable_version, all_versions },
 			updates: updateProductV2Params,
 			initialFullProduct,
 			propagateToVariants: update_variant_ids ?? [],

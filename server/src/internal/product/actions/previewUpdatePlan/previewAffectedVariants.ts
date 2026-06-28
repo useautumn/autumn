@@ -16,6 +16,7 @@ import {
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "./detectVariantConflicts.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
+import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const previewAffectedVariants = async ({
 	ctx,
@@ -89,11 +90,27 @@ export const previewAffectedVariants = async ({
 			const versionable =
 				data.force_version ||
 				(!data.disable_version &&
+					!data.all_versions &&
 					hasCustomers &&
 					(diff.price !== undefined ||
 						diff.add_items != null ||
 						diff.remove_items != null ||
 						diff.free_trial !== undefined));
+			const conflicts = detectVariantConflicts({
+				currentBasePlan,
+				editedBasePlan,
+				diff,
+				variantPlan: currentPlan,
+				features,
+			});
+			const otherVersions = await previewOtherProductVersions({
+				ctx,
+				product: variant,
+				currentPlan,
+				editedPlan: previewPlan,
+				diff,
+				settingsPatch,
+			});
 
 			return {
 				...buildCorePlanUpdatePreview({
@@ -106,13 +123,8 @@ export const previewAffectedVariants = async ({
 				}),
 				name: variant.name,
 				will_apply: selectedVariantIds.has(variant.id),
-				conflicts: detectVariantConflicts({
-					currentBasePlan,
-					editedBasePlan,
-					diff,
-					variantPlan: currentPlan,
-					features,
-				}),
+				conflicts,
+				other_versions: otherVersions,
 			};
 		}),
 	);

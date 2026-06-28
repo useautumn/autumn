@@ -1,4 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
+import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -29,14 +29,17 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import {
+	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	buildInPlaceUpdatePlanParams,
 	buildPreviewUpdatePlanParams,
+	type AllVersionsUpdateMigrationTarget,
 	type CombinedVariantTarget,
 	planHasPricingChange,
 } from "./buildMigrationDraft";
@@ -45,7 +48,7 @@ import { getPlanPriceChange } from "./planMigrationDiff";
 import { Stepper, type StepperStep } from "./Stepper";
 import type { VariantConflictInfo } from "./variantConflicts";
 
-type VersionChoice = "new" | "update";
+type VersionChoice = "new" | "update" | "all";
 type StepKey = "review" | "variants" | "migrate";
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -85,6 +88,46 @@ function ConfirmInput({
 	);
 }
 
+const previewHasCustomersAcrossVersions = ({
+	preview,
+}: {
+	preview: Pick<PlanUpdatePreview, "has_customers" | "other_versions">;
+}) =>
+	preview.has_customers ||
+	(preview.other_versions ?? []).some((version) => version.has_customers);
+
+const collectAllVersionMigrationTargets = ({
+	preview,
+	selectedVariantIds,
+}: {
+	preview: PlanUpdatePreview | undefined;
+	selectedVariantIds: string[];
+}): AllVersionsUpdateMigrationTarget[] => {
+	if (!preview) return [];
+
+	const targets: AllVersionsUpdateMigrationTarget[] = [];
+	if (preview.customize && previewHasCustomersAcrossVersions({ preview })) {
+		targets.push({ id: preview.plan_id, customize: preview.customize });
+	}
+
+	for (const variantId of selectedVariantIds) {
+		const variantPreview = preview.variants.find(
+			(variant) => variant.plan_id === variantId,
+		);
+		if (
+			variantPreview?.customize &&
+			previewHasCustomersAcrossVersions({ preview: variantPreview })
+		) {
+			targets.push({
+				id: variantPreview.plan_id,
+				customize: variantPreview.customize,
+			});
+		}
+	}
+
+	return targets;
+};
+
 export default function PlanChangeDialog({
 	open,
 	setOpen,
@@ -118,6 +161,9 @@ export default function PlanChangeDialog({
 	const [appliedVariantTargets, setAppliedVariantTargets] = useState<
 		CombinedVariantTarget[]
 	>([]);
+	const [appliedAllVersionTargets, setAppliedAllVersionTargets] = useState<
+		AllVersionsUpdateMigrationTarget[]
+	>([]);
 	// Snapshotted at apply time: markSaved overwrites baseProduct, which zeroes
 	// out the live preview these would otherwise derive from.
 	const [appliedBaseTarget, setAppliedBaseTarget] =
@@ -149,6 +195,11 @@ export default function PlanChangeDialog({
 		params: previewParams,
 		enabled: open,
 	});
+	const hasHistoricalVersions =
+		(preview?.other_versions?.length ?? 0) > 0 ||
+		(preview?.variants ?? []).some(
+			(variant) => (variant.other_versions?.length ?? 0) > 0,
+		);
 
 	const customCount = useMemo(
 		() =>
@@ -163,6 +214,37 @@ export default function PlanChangeDialog({
 	// existing customers need a migration. New-version intentionally grandfathers.
 	const baseNeedsMigration =
 		versionChoice === "update" && (preview?.versionable ?? false);
+	const allVersionsMigrationTargets = useMemo(
+		() =>
+			versionChoice === "all"
+				? collectAllVersionMigrationTargets({
+						preview,
+						selectedVariantIds,
+					})
+				: [],
+		[versionChoice, preview, selectedVariantIds],
+	);
+	const allVersionConflictCount = useMemo(() => {
+		if (!preview || versionChoice !== "all") return 0;
+
+		const baseConflicts = (preview.other_versions ?? []).reduce(
+			(sum, version) => sum + version.conflicts.length,
+			0,
+		);
+		const variantConflicts = preview.variants
+			.filter((variant) => selectedVariantIds.includes(variant.plan_id))
+			.reduce(
+				(sum, variant) =>
+					sum +
+					(variant.other_versions ?? []).reduce(
+						(inner, version) => inner + version.conflicts.length,
+						0,
+					),
+				0,
+			);
+
+		return baseConflicts + variantConflicts;
+	}, [preview, selectedVariantIds, versionChoice]);
 
 	const { data: variants = [], refetch: refetchVariants } = usePlanVariants(
 		product.id,
@@ -203,11 +285,12 @@ export default function PlanChangeDialog({
 	}, [open, variants, preview, variantConflicts]);
 
 	const hasVariants = variants.length > 0;
-	// New-version grandfathers the base and every propagated variant, so migration
-	// only applies to the in-place update path.
+	// New-version and all-versions catalog rewrites do not use the version-reset
+	// migration path below; only the single-version in-place path does.
 	const migrateNeeded =
-		versionChoice === "update" &&
-		(baseNeedsMigration || selectedVariantIds.length > 0);
+		(versionChoice === "update" &&
+			(baseNeedsMigration || selectedVariantIds.length > 0)) ||
+		allVersionsMigrationTargets.length > 0;
 
 	const steps: StepperStep[] = useMemo(
 		() => [
@@ -227,6 +310,7 @@ export default function PlanChangeDialog({
 		setConfirmText("");
 		setSelectedVariantIds([]);
 		setAppliedVariantTargets([]);
+		setAppliedAllVersionTargets([]);
 		setAppliedBaseTarget(null);
 		setBaseChangedPricing(false);
 	};
@@ -246,7 +330,7 @@ export default function PlanChangeDialog({
 
 	// Apply the base edit (in-place or new version) + propagate to selected variants.
 	const applyBaseChange = async () => {
-		if (versionChoice === "update") {
+		if (versionChoice === "update" || versionChoice === "all") {
 			if (!baseProduct) return;
 			if (product.id !== baseProduct.id) {
 				throw new Error(
@@ -258,6 +342,10 @@ export default function PlanChangeDialog({
 				editedProduct: product,
 				features,
 			});
+			if (versionChoice === "all") {
+				delete updateParams.disable_version;
+				updateParams.all_versions = true;
+			}
 			if (selectedVariantIds.length > 0) {
 				updateParams.update_variant_ids = selectedVariantIds;
 			}
@@ -285,9 +373,12 @@ export default function PlanChangeDialog({
 		setAppliedBaseTarget(
 			baseNeedsMigration ? { id: product.id, version: product.version } : null,
 		);
+		setAppliedAllVersionTargets(
+			versionChoice === "all" ? allVersionsMigrationTargets : [],
+		);
 		markSaved();
 
-		// Variants were just (re)versioned — read their new versions for migration.
+		// Variants were just versioned; read their new versions for migration.
 		if (selectedVariantIds.length > 0) {
 			const fresh = (await refetchVariants()).data ?? [];
 			const targets: CombinedVariantTarget[] = selectedVariantIds
@@ -309,7 +400,11 @@ export default function PlanChangeDialog({
 		try {
 			await applyBaseChange();
 			toast.success(
-				versionChoice === "new" ? "New version created" : "Plan updated",
+				versionChoice === "new"
+					? "New version created"
+					: versionChoice === "all"
+						? "All versions updated"
+						: "Plan updated",
 			);
 			void invalidateProduct();
 			void invalidateProducts();
@@ -328,10 +423,17 @@ export default function PlanChangeDialog({
 		}
 	};
 
-	// One migration covering the base (if patched in place) + every selected
-	// variant. Each plan is a target with its current version, re-synced via a
-	// version reset from the patched catalog.
+	// One migration can cover the base plus selected variants.
+	// Version-reset targets use each plan's post-save catalog version.
 	const combinedMigrationDraft = () => {
+		if (appliedAllVersionTargets.length > 0) {
+			return buildAllVersionsUpdateMigrationDraft({
+				targets: appliedAllVersionTargets,
+				hasPricingChange: baseChangedPricing,
+				includeCustom,
+			});
+		}
+
 		const targets: CombinedVariantTarget[] = [
 			...(appliedBaseTarget ? [appliedBaseTarget] : []),
 			...appliedVariantTargets,
@@ -413,6 +515,11 @@ export default function PlanChangeDialog({
 			: "";
 
 	const migrateTargetLabel = useMemo(() => {
+		if (appliedAllVersionTargets.length > 0) {
+			const count = appliedAllVersionTargets.length;
+			return `${count} plan${count !== 1 ? "s" : ""} across all versions`;
+		}
+
 		const parts: string[] = [];
 		if (appliedBaseTarget) parts.push("the base plan");
 		if (appliedVariantTargets.length > 0) {
@@ -425,14 +532,22 @@ export default function PlanChangeDialog({
 				? `${parts[0]} and ${parts[1]}`
 				: (parts[0] ?? "this plan");
 		return `Existing customers on ${joined}`;
-	}, [appliedBaseTarget, appliedVariantTargets]);
+	}, [appliedAllVersionTargets, appliedBaseTarget, appliedVariantTargets]);
+
+	const migrationDescription =
+		appliedAllVersionTargets.length > 0
+			? `Existing customers on ${migrateTargetLabel} will receive the updated plan changes. Customers you don't migrate stay as they are.`
+			: `${migrateTargetLabel} will be moved to the updated version. Customers you don't migrate stay on their current version.`;
 
 	const primaryText = useMemo(() => {
 		if (step === "review") return hasVariants ? "Next" : "Apply changes";
-		if (step === "variants")
-			return versionChoice === "new"
-				? `Create version${propagationLabel}`
-				: `Update plan${propagationLabel}`;
+		if (step === "variants") {
+			if (versionChoice === "new") return `Create version${propagationLabel}`;
+			if (versionChoice === "all") {
+				return `Update all versions${propagationLabel}`;
+			}
+			return `Update plan${propagationLabel}`;
+		}
 		return "Create migration";
 	}, [step, hasVariants, versionChoice, propagationLabel]);
 
@@ -491,7 +606,22 @@ export default function PlanChangeDialog({
 												label="Update existing version"
 												description="Update the current plan version now. You can migrate current users next."
 											/>
+											{hasHistoricalVersions && (
+												<AreaRadioGroupItem
+													value="all"
+													label="Update all versions"
+													description="Apply this change to every version of this plan and selected variants."
+												/>
+											)}
 										</RadioGroup>
+										{versionChoice === "all" && allVersionConflictCount > 0 && (
+											<InfoBox variant="warning">
+												This update conflicts with {allVersionConflictCount}{" "}
+												historical version
+												{allVersionConflictCount === 1 ? "" : "s"}. Review
+												affected versions before applying.
+											</InfoBox>
+										)}
 									</div>
 
 									{!hasVariants && (
@@ -528,8 +658,7 @@ export default function PlanChangeDialog({
 							{step === "migrate" && (
 								<div className="flex flex-col gap-4">
 									<p className="text-sm text-muted-foreground">
-										{migrateTargetLabel} will be moved to the updated version.
-										Customers you don't migrate stay on their current version.
+										{migrationDescription}
 									</p>
 
 									{customCount > 0 && (

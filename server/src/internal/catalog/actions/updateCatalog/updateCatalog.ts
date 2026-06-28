@@ -190,6 +190,7 @@ const upsertPlans = async ({
 			plan_id,
 			new_plan_id,
 			disable_version,
+			all_versions,
 			create_migration,
 			force_version,
 			update_variant_ids,
@@ -286,7 +287,7 @@ const upsertPlans = async ({
 		await updateProduct({
 			ctx,
 			productId: plan_id,
-			query: { version, disable_version, force_version },
+			query: { version, disable_version, force_version, all_versions },
 			updates: updateParams,
 			initialFullProduct: current,
 			propagateToVariants: update_variant_ids ?? [],

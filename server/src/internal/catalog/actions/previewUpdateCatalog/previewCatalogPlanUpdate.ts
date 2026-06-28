@@ -71,6 +71,7 @@ const previewNewPlan = ({
 		previous_attributes: null,
 		item_changes: [],
 		variants: [],
+		other_versions: [],
 	});
 };
 

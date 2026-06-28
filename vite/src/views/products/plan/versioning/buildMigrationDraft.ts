@@ -314,15 +314,12 @@ export interface CombinedVariantTarget {
 	version: number;
 }
 
-/**
- * One migration moving every target plan's customers to that plan's current
- * (post-propagation) version via a version reset. Targets can be the base plan
- * and/or its variants — each is a distinct plan_id. Variants sharing a target
- * version collapse into a single `$in` op, so the common case (all variants on
- * the same version) yields one op. Works for both versioned and patched-in-place
- * plans because a numeric `version` triggers resetToCatalogVersion,
- * re-materializing cus_ents from the updated catalog.
- */
+export interface AllVersionsUpdateMigrationTarget {
+	id: string;
+	customize: DiffedCustomizePlanV1 | null;
+}
+
+// Version resets re-materialize customer entitlements from the updated catalog.
 export function buildCombinedVariantMigrationDraft({
 	variants,
 	hasPricingChange,
@@ -369,6 +366,48 @@ export function buildCombinedVariantMigrationDraft({
 		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
 		filter: { customer: { plan: planFilter } },
 		operations,
+		no_billing_changes: !hasPricingChange,
+	};
+}
+
+export function buildAllVersionsUpdateMigrationDraft({
+	targets,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	targets: AllVersionsUpdateMigrationTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	const ops = targets.flatMap((target): UpdatePlanOp[] => {
+		if (!target.customize) return [];
+		const customize = getMigratablePlanDiff(target.customize);
+		if (Object.keys(customize).length === 0) return [];
+
+		const op = (custom: boolean): UpdatePlanOp => ({
+			type: "update_plan",
+			plan_filter: { plan_id: target.id, custom },
+			customize,
+		});
+
+		return includeCustom ? [op(false), op(true)] : [op(false)];
+	});
+	if (ops.length === 0) return null;
+
+	const planIds = [...new Set(targets.map((target) => target.id))];
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+	const basePlanFilter = { plan_id: planMatcher };
+
+	return {
+		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
+		filter: {
+			customer: {
+				plan: includeCustom
+					? basePlanFilter
+					: { ...basePlanFilter, custom: false },
+			},
+		},
+		operations: { customer: ops },
 		no_billing_changes: !hasPricingChange,
 	};
 }

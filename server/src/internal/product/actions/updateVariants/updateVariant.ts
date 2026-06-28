@@ -5,9 +5,13 @@ import {
 	applyDiffToVariantPlan,
 	buildProductUpdatesFromApiPlan,
 	fullProductToApiPlanV1,
+	getApiPlanDiff,
+	getVariantSettingsPatch,
+	variantSettingsPatchHasValues,
 	type VariantSettingsPatch,
 } from "../common/planTransformUtils.js";
 import { updateProduct } from "../updateProduct.js";
+import { updateOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const updateVariant = async ({
 	ctx,
@@ -17,6 +21,7 @@ export const updateVariant = async ({
 	targetPlan,
 	shouldVersion,
 	baseInternalProductId,
+	allVersions,
 }: {
 	ctx: AutumnContext;
 	variant: FullProduct;
@@ -25,6 +30,7 @@ export const updateVariant = async ({
 	targetPlan?: ApiPlanV1;
 	shouldVersion: boolean;
 	baseInternalProductId?: string;
+	allVersions?: boolean;
 }) => {
 	const currentPlan = await fullProductToApiPlanV1({
 		ctx,
@@ -51,5 +57,35 @@ export const updateVariant = async ({
 		initialFullProduct: variant,
 		baseInternalProductId,
 		allowVariantSettingsUpdate: true,
+	});
+
+	if (!allVersions) return;
+
+	const diffForOtherVersions = getApiPlanDiff({
+		from: currentPlan,
+		to: previewPlan,
+	});
+	const settingsForOtherVersions = getVariantSettingsPatch({
+		from: currentPlan,
+		to: previewPlan,
+	});
+	await updateOtherProductVersions({
+		ctx,
+		product: variant,
+		diff: diffForOtherVersions,
+		settingsPatch: variantSettingsPatchHasValues(settingsForOtherVersions)
+			? settingsForOtherVersions
+			: undefined,
+		updateVersion: async ({ product, updates }) => {
+			await updateProduct({
+				ctx,
+				productId: product.id,
+				query: { version: product.version, disable_version: true },
+				updates,
+				initialFullProduct: product,
+				allowVariantSettingsUpdate: true,
+				skipVariantUpdates: true,
+			});
+		},
 	});
 };
