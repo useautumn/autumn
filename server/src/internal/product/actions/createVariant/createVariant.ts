@@ -6,6 +6,7 @@ import {
 	type FullProduct,
 	ProcessorType,
 	RecaseError,
+	billingControlsFromColumns,
 	copyStripeResourcesToMatchingPrice,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -65,6 +66,7 @@ const getVariantCreateParams = ({
 	items: getVariantItems({ base, features }),
 	free_trial: getCreateFreeTrial({ base }),
 	config: base.config,
+	billing_controls: billingControlsFromColumns(base),
 	metadata: base.metadata,
 	create_in_stripe: false,
 	base_internal_product_id: base.internal_id,

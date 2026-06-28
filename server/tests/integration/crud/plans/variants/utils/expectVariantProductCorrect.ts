@@ -3,6 +3,7 @@ import {
 	type FullProduct,
 	type Price,
 	ProcessorType,
+	billingControlsFromColumns,
 } from "@autumn/shared";
 
 const stripeResourceFields = new Set([
@@ -46,12 +47,24 @@ export const priceMatchKey = (price: Price) => {
 export const indexPricesByMatchKey = (product: FullProduct) =>
 	new Map(product.prices.map((price) => [priceMatchKey(price), price]));
 
+const normalizedFreeTrial = (product: FullProduct) =>
+	product.free_trial
+		? {
+				length: product.free_trial.length,
+				duration: product.free_trial.duration,
+				unique_fingerprint: product.free_trial.unique_fingerprint,
+				card_required: product.free_trial.card_required,
+				on_end: product.free_trial.on_end,
+			}
+		: null;
+
 export const expectVariantProductCorrect = ({
 	base,
 	variant,
 	version = 1,
 	isDefault = false,
 	expectSharedProcessor = false,
+	expectCopiedPlanDetails = false,
 	log = false,
 }: {
 	base: FullProduct;
@@ -59,6 +72,7 @@ export const expectVariantProductCorrect = ({
 	version?: number;
 	isDefault?: boolean;
 	expectSharedProcessor?: boolean;
+	expectCopiedPlanDetails?: boolean;
 	log?: boolean;
 }) => {
 	logValue({ label: "base product", value: base, log });
@@ -67,6 +81,18 @@ export const expectVariantProductCorrect = ({
 	expect(variant.version).toBe(version);
 	expect(variant.is_default).toBe(isDefault);
 	expect(variant.base_internal_product_id).toBe(base.internal_id);
+
+	if (expectCopiedPlanDetails) {
+		expect(variant.description).toBe(base.description);
+		expect(variant.is_add_on).toBe(base.is_add_on);
+		expect(variant.group).toBe(base.group);
+		expect(variant.config).toEqual(base.config);
+		expect(variant.metadata).toEqual(base.metadata);
+		expect(billingControlsFromColumns(variant)).toEqual(
+			billingControlsFromColumns(base),
+		);
+		expect(normalizedFreeTrial(variant)).toEqual(normalizedFreeTrial(base));
+	}
 
 	if (expectSharedProcessor) {
 		expect(base.processor?.type).toBe(ProcessorType.Stripe);

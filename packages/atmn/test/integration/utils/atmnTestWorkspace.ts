@@ -39,7 +39,9 @@ const readWorkspaceSecretKey = (workspaceDir: string) => {
 		);
 	}
 
-	const match = readFileSync(envPath, "utf8").match(/^AUTUMN_SECRET_KEY=(.*)$/m);
+	const match = readFileSync(envPath, "utf8").match(
+		/^AUTUMN_SECRET_KEY=(.*)$/m,
+	);
 	if (!match?.[1]) {
 		throw new Error(`Missing AUTUMN_SECRET_KEY in ${envPath}`);
 	}
@@ -159,33 +161,34 @@ const ensureTestOrg = () => {
 	}
 };
 
-export const createCleanAtmnIntegrationContext = async (): Promise<TestContext> => {
-	ensureTestOrg();
+export const createCleanAtmnIntegrationContext =
+	async (): Promise<TestContext> => {
+		ensureTestOrg();
 
-	const ctx = await createTestContext();
-	await clearOrgDbOnly({
-		db: ctx.db,
-		env: ctx.env,
-		orgId: ctx.org.id,
-	});
-	await invalidateProductsCache({
-		env: ctx.env,
-		orgId: ctx.org.id,
-	});
+		const ctx = await createTestContext();
+		await clearOrgDbOnly({
+			db: ctx.db,
+			env: ctx.env,
+			orgId: ctx.org.id,
+		});
+		await invalidateProductsCache({
+			env: ctx.env,
+			orgId: ctx.org.id,
+		});
 
-	await FeatureService.insert({
-		db: ctx.db,
-		data: Object.values(getFeatures({ orgId: ctx.org.id })),
-		logger: console,
-	});
-	ctx.features = await FeatureService.list({
-		db: ctx.db,
-		env: ctx.env,
-		orgId: ctx.org.id,
-	});
+		await FeatureService.insert({
+			db: ctx.db,
+			data: Object.values(getFeatures({ orgId: ctx.org.id })),
+			logger: console,
+		});
+		ctx.features = await FeatureService.list({
+			db: ctx.db,
+			env: ctx.env,
+			orgId: ctx.org.id,
+		});
 
-	return ctx;
-};
+		return ctx;
+	};
 
 export const prepareAtmnScenario = async ({
 	clean = false,
@@ -209,7 +212,10 @@ export const prepareAtmnScenario = async ({
 	const configPath = join(workspaceDir, "autumn.config.ts");
 
 	await Promise.all([
-		writeFile(join(workspaceDir, ".env"), `AUTUMN_SECRET_KEY=${ctx.orgSecretKey}\n`),
+		writeFile(
+			join(workspaceDir, ".env"),
+			`AUTUMN_SECRET_KEY=${ctx.orgSecretKey}\n`,
+		),
 		writeFile(
 			join(workspaceDir, "scenario.json"),
 			`${JSON.stringify(
@@ -304,7 +310,10 @@ export const prepareAtmnScratchWorkspace = async ({
 
 	const configPath = join(workspaceDir, "autumn.config.ts");
 	await Promise.all([
-		writeFile(join(workspaceDir, ".env"), `AUTUMN_SECRET_KEY=${ctx.orgSecretKey}\n`),
+		writeFile(
+			join(workspaceDir, ".env"),
+			`AUTUMN_SECRET_KEY=${ctx.orgSecretKey}\n`,
+		),
 		writeFile(
 			join(workspaceDir, "README.md"),
 			[

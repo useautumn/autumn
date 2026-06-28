@@ -2,17 +2,18 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	apiPlan,
-	buildMigrationDraft,
+	buildCombinedVariantMigrationDraft,
 	type CatalogUpdateParams,
 	type CreateProductV2Params,
 	dbToApiFeatureV1,
 	diffPlanV1,
 	featureV1ToDbFeature,
+	planDiffHasBillingChanges,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
@@ -21,7 +22,6 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { deleteProduct } from "@/internal/product/actions/deleteProduct.js";
 import { updateProduct } from "@/internal/product/actions/updateProduct.js";
-import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
@@ -30,6 +30,7 @@ import {
 } from "../deriveReplaceRemovals.js";
 import { sortRemoveFeatureIds } from "../featureRemovalOrder.js";
 import { getFeatureUpdateBlockedReason } from "../previewUpdateCatalog/previewFeature.js";
+import { validateCatalogVariantUpdates } from "../validateCatalogVariantUpdates.js";
 
 const archiveProductVersions = async ({
 	ctx,
@@ -64,6 +65,8 @@ const upsertFeatures = async ({
 	params: CatalogUpdateParams;
 	products: Awaited<ReturnType<typeof ProductService.listFull>>;
 }) => {
+	validateCatalogVariantUpdates({ params });
+
 	const { db, org, env } = ctx;
 	let changed = false;
 	const skipFeatureIds = new Set(params.skip_feature_ids);
@@ -108,6 +111,66 @@ const upsertFeatures = async ({
 	}
 };
 
+const createPlanMigrationDraft = async ({
+	ctx,
+	current,
+	fromPlan,
+	planId,
+	selectedVariantIds,
+	toPlan,
+}: {
+	ctx: AutumnContext;
+	current: Awaited<ReturnType<typeof ProductService.getFull>>;
+	fromPlan: Awaited<ReturnType<typeof getPlanResponse>>;
+	planId: string;
+	selectedVariantIds: string[];
+	toPlan: Awaited<ReturnType<typeof getPlanResponse>>;
+}) => {
+	if (!current) return;
+
+	const diff = diffPlanV1({ from: fromPlan, to: toPlan });
+	if (Object.keys(diff).length === 0) return;
+
+	const variants = selectedVariantIds.length
+		? await ProductService.listFull({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				inIds: selectedVariantIds,
+			})
+		: [];
+	const usageByProduct = await customerProductRepo.getVersioningUsage({
+		db: ctx.db,
+		internalProductIds: [
+			current.internal_id,
+			...variants.map((variant) => variant.internal_id),
+		],
+	});
+	const baseUsage = usageByProduct.get(current.internal_id);
+	const targets = [
+		...(baseUsage?.hasVersionableCustomerProducts
+			? [{ id: planId, version: current.version }]
+			: []),
+		...variants
+			.filter(
+				(variant) =>
+					usageByProduct.get(variant.internal_id)
+						?.hasVersionableCustomerProducts,
+			)
+			.map((variant) => ({
+				id: variant.id,
+				version: variant.version,
+			})),
+	];
+	const draft = buildCombinedVariantMigrationDraft({
+		targets,
+		hasBillingChanges: planDiffHasBillingChanges(diff, fromPlan),
+	});
+	if (!draft) return;
+
+	await migrationRepo.insert({ ctx, insert: draft });
+};
+
 const upsertPlans = async ({
 	ctx,
 	params,
@@ -123,8 +186,10 @@ const upsertPlans = async ({
 			plan_id,
 			new_plan_id,
 			disable_version,
+			create_migration,
 			force_version,
 			update_variant_ids,
+			variants,
 			version,
 			...rest
 		} = planParams;
@@ -145,6 +210,7 @@ const upsertPlans = async ({
 		});
 
 		if (!current) {
+			const variantUpdates = variants ?? [];
 			const createParams = apiPlan.map.paramsV1ToProductV2({
 				ctx,
 				params: {
@@ -155,6 +221,22 @@ const upsertPlans = async ({
 				},
 			}) as CreateProductV2Params;
 			await createProduct({ ctx, data: createParams });
+			if (variantUpdates.length > 0) {
+				const created = await ProductService.getFull({
+					db,
+					idOrInternalId: plan_id,
+					orgId: org.id,
+					env,
+				});
+				await updateProduct({
+					ctx,
+					productId: plan_id,
+					query: {},
+					updates: {},
+					initialFullProduct: created,
+					variantUpdates,
+				});
+			}
 			continue;
 		}
 
@@ -174,10 +256,14 @@ const upsertPlans = async ({
 		const hasPlanUpdate =
 			new_plan_id !== undefined ||
 			Object.entries(rest).some(hasPlanUpdateValue);
-		if (!hasPlanUpdate) continue;
+		const variantUpdates = variants ?? [];
+		const hasVariantUpdates = variantUpdates.length > 0;
+		if (!hasPlanUpdate && !hasVariantUpdates) continue;
 
 		const fromPlan =
-			params.create_migration && disable_version
+			hasPlanUpdate &&
+			(create_migration ?? params.create_migration) &&
+			disable_version
 				? await getPlanResponse({
 						ctx,
 						product: current,
@@ -185,37 +271,23 @@ const upsertPlans = async ({
 					})
 				: null;
 
-		const updateParams = apiPlan.map.paramsV1ToProductV2({
-			ctx,
-			currentFullProduct: current,
-			params: { id: new_plan_id ?? plan_id, ...rest },
-		}) as UpdateProductV2Params;
+		const latestPlanId = new_plan_id ?? plan_id;
+		const updateParams = hasPlanUpdate
+			? (apiPlan.map.paramsV1ToProductV2({
+					ctx,
+					currentFullProduct: current,
+					params: { id: latestPlanId, ...rest },
+				}) as UpdateProductV2Params)
+			: {};
 		await updateProduct({
 			ctx,
 			productId: plan_id,
 			query: { version, disable_version, force_version },
 			updates: updateParams,
 			initialFullProduct: current,
+			propagateToVariants: update_variant_ids ?? [],
+			variantUpdates,
 		});
-
-		const latestPlanId = new_plan_id ?? plan_id;
-		const latestFullProduct = await ProductService.getFull({
-			db,
-			idOrInternalId: latestPlanId,
-			orgId: org.id,
-			env,
-		});
-		const propagateToVariants = update_variant_ids ?? [];
-		if (propagateToVariants.length > 0) {
-			await updateVariants({
-				ctx,
-				oldBase: current,
-				newBase: latestFullProduct,
-				propagateToVariants,
-				disableVersion: disable_version,
-				forceVersion: force_version,
-			});
-		}
 
 		if (!fromPlan) continue;
 
@@ -226,27 +298,25 @@ const upsertPlans = async ({
 			env,
 			version: current.version,
 		});
+		if (!after) continue;
 		const toPlan = await getPlanResponse({
 			ctx,
 			product: after,
 			features: ctx.features,
 		});
-		const cusProducts = await CusProductService.getByInternalProductId({
-			db,
-			internalProductId: current.internal_id,
+		await createPlanMigrationDraft({
+			ctx,
+			current,
+			fromPlan,
+			planId: plan_id,
+			selectedVariantIds: [
+				...new Set([
+					...(update_variant_ids ?? []),
+					...variantUpdates.map((variant) => variant.variant_plan_id),
+				]),
+			],
+			toPlan,
 		});
-		const hasDiff =
-			Object.keys(diffPlanV1({ from: fromPlan, to: toPlan })).length > 0;
-		if (cusProducts.length > 0 && hasDiff) {
-			const draft = buildMigrationDraft({
-				from: fromPlan,
-				to: toPlan,
-				planId: plan_id,
-				version: current.version,
-				scope: "all_customers",
-			});
-			await migrationRepo.insert({ ctx, insert: draft });
-		}
 	}
 };
 

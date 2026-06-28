@@ -3,15 +3,29 @@
  */
 
 /**
- * Convert ID to valid variable name
- * Examples: "pro-plan" → "pro_plan", "api_calls" → "api_calls", "123" → "123"
+ * Convert ID to camelCase tokens for JavaScript variable names.
+ * Examples: "pro-plan" → ["pro", "plan"], "api_calls" → ["api", "calls"]
  */
-function sanitizeId(id: string): string {
+function idToTokens(id: string): string[] {
 	return id
-		.replace(/[^a-zA-Z0-9_]/g, "_") // Replace invalid chars with underscore
-		.replace(/_+/g, "_") // Collapse multiple underscores
-		.replace(/^_/, "") // Remove leading underscore
-		.replace(/_$/, ""); // Remove trailing underscore
+		.split(/[^a-zA-Z0-9]+/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+}
+
+const lowerFirst = (value: string): string =>
+	value.charAt(0).toLowerCase() + value.slice(1);
+
+const upperFirst = (value: string): string =>
+	value.charAt(0).toUpperCase() + value.slice(1);
+
+function toCamelCase(id: string): string {
+	const tokens = idToTokens(id).map((token) => token.toLowerCase());
+	if (tokens.length === 0) return "";
+	return [
+		tokens[0]!,
+		...tokens.slice(1).map((token) => upperFirst(token)),
+	].join("");
 }
 
 /**
@@ -19,11 +33,12 @@ function sanitizeId(id: string): string {
  * Generic version - kept for backwards compatibility
  */
 export function idToVarName(id: string, prefix = "item_"): string {
-	const sanitized = sanitizeId(id);
+	const sanitized = toCamelCase(id);
+	const normalizedPrefix = prefix.replace(/_+$/, "");
 
 	// JavaScript identifiers can't start with a number
-	if (/^[0-9]/.test(sanitized)) {
-		return prefix + sanitized;
+	if (!sanitized || /^[0-9]/.test(sanitized)) {
+		return `${normalizedPrefix}${upperFirst(sanitized)}`;
 	}
 
 	return sanitized;
@@ -31,18 +46,22 @@ export function idToVarName(id: string, prefix = "item_"): string {
 
 /**
  * Convert plan ID to valid variable name
- * Examples: "pro-plan" → "pro_plan", "123" → "plan_123"
+ * Examples: "pro-plan" → "proPlan", "123" → "plan123"
  */
 export function planIdToVarName(id: string): string {
-	return idToVarName(id, "plan_");
+	return idToVarName(id, "plan");
 }
 
 /**
  * Convert feature ID to valid variable name
- * Examples: "api-calls" → "api_calls", "123" → "feature_123"
+ * Examples: "api-calls" → "apiCalls", "123" → "feature123"
  */
 export function featureIdToVarName(id: string): string {
-	return idToVarName(id, "feature_");
+	return idToVarName(id, "feature");
+}
+
+export function variantIdToVarName(id: string): string {
+	return idToVarName(id, "plan");
 }
 
 /**
@@ -57,12 +76,15 @@ export function featureIdToVarName(id: string): string {
 export function resolveVarNames(
 	featureIds: string[],
 	planIds: string[],
+	variantIds: string[] = [],
 ): {
 	featureVarMap: Map<string, string>;
 	planVarMap: Map<string, string>;
+	variantVarMap: Map<string, string>;
 } {
 	const featureVarMap = new Map<string, string>();
 	const planVarMap = new Map<string, string>();
+	const variantVarMap = new Map<string, string>();
 
 	for (const id of featureIds) {
 		featureVarMap.set(id, featureIdToVarName(id));
@@ -73,13 +95,22 @@ export function resolveVarNames(
 	for (const id of planIds) {
 		let varName = planIdToVarName(id);
 		if (usedNames.has(varName)) {
-			varName = `${varName}_plan`;
+			varName = `${varName}Plan`;
 		}
 		planVarMap.set(id, varName);
 		usedNames.add(varName);
 	}
 
-	return { featureVarMap, planVarMap };
+	for (const id of variantIds) {
+		let varName = variantIdToVarName(id);
+		if (usedNames.has(varName)) {
+			varName = `${varName}Variant`;
+		}
+		variantVarMap.set(id, varName);
+		usedNames.add(varName);
+	}
+
+	return { featureVarMap, planVarMap, variantVarMap };
 }
 
 /**

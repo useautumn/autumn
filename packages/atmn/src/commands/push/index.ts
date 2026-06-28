@@ -4,6 +4,7 @@ export {
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
+	createPlanVariantPropagationPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PromptType,
@@ -32,9 +33,11 @@ export type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
+	PlanUpdateIntentSelections,
 	PushAnalysis,
 	PushResult,
 	RemoteData,
+	VariantPropagationSelections,
 } from "./types.js";
 
 export {

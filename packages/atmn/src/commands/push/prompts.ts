@@ -9,6 +9,7 @@ import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 export type PromptType =
 	| "prod_confirmation"
 	| "plan_versioning"
+	| "plan_variant_propagation"
 	| "plan_delete_has_customers"
 	| "plan_delete_no_customers"
 	| "plan_archived"
@@ -36,6 +37,18 @@ interface PlanVersioningPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
 	willVersion: boolean;
 	isArchived: boolean;
+}
+
+interface PlanVariantPropagationPromptInfo {
+	basePlanId: string;
+	basePlanName: string;
+	variant: {
+		plan_id: string;
+		name: string;
+		versionable: boolean;
+		customize?: unknown;
+		conflicts?: unknown[];
+	};
 }
 
 // Counter for unique prompt IDs
@@ -83,18 +96,57 @@ export function createPlanVersioningPrompt(
 			...(isSandbox
 				? [
 						{
-							label: "Yes, migrate existing customers and create a new version",
-							value: "version_and_migrate",
+							label: "Update current version and create migration",
+							value: "update_current_and_migrate",
 							isDefault: true,
 						},
 					]
 				: []),
 			{
-				label: "Yes, but create a new version only",
-				value: "version",
+				label: "Create a new version",
+				value: "create_version",
 				isDefault: !isSandbox,
 			},
-			{ label: "No, skip this plan", value: "skip", isDefault: false },
+			{
+				label: "Update current version only",
+				value: "update_current",
+				isDefault: false,
+			},
+			{ label: "Skip this plan", value: "skip", isDefault: false },
+		],
+	};
+}
+
+export function createPlanVariantPropagationPrompt(
+	info: PlanVariantPropagationPromptInfo,
+): PushPrompt {
+	const conflictCount = info.variant.conflicts?.length ?? 0;
+	return {
+		id: generatePromptId(),
+		type: "plan_variant_propagation",
+		entityId: info.variant.plan_id,
+		entityName: info.variant.name,
+		data: {
+			basePlanId: info.basePlanId,
+			basePlanName: info.basePlanName,
+			variantPlanId: info.variant.plan_id,
+			variantName: info.variant.name,
+			versionable: info.variant.versionable,
+			conflictCount,
+			conflicts: info.variant.conflicts ?? [],
+			customize: info.variant.customize,
+		},
+		options: [
+			{
+				label: "Apply base changes to this variant",
+				value: "apply",
+				isDefault: false,
+			},
+			{
+				label: "Skip this variant",
+				value: "skip",
+				isDefault: true,
+			},
 		],
 	};
 }

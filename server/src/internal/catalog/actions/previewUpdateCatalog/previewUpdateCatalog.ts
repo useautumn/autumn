@@ -1,14 +1,20 @@
 import type {
+	CatalogMigrationPreview,
 	CatalogPreviewUpdateResponse,
 	CatalogPlanPreview,
 	CatalogUpdateParams,
 	FullProduct,
 	PlanUpdatePreview,
 } from "@autumn/shared";
-import { PlanUpdatePreviewSchema } from "@autumn/shared";
+import {
+	buildCombinedVariantMigrationDraft,
+	PlanUpdatePreviewSchema,
+	planDiffHasBillingChanges,
+} from "@autumn/shared";
 import { scopeExpandForCtx } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	deriveReplaceFeatureIds,
 	deriveReplacePlanIds,
@@ -21,6 +27,7 @@ import {
 } from "./previewFeature.js";
 import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
+import { validateCatalogVariantUpdates } from "../validateCatalogVariantUpdates.js";
 
 const productUsesFeature = ({
 	product,
@@ -29,8 +36,9 @@ const productUsesFeature = ({
 	product: FullProduct;
 	featureId: string;
 }) =>
-	product.entitlements.some((entitlement) => entitlement.feature.id === featureId) ||
-	product.prices.some((price) => price.config?.feature_id === featureId);
+	product.entitlements.some(
+		(entitlement) => entitlement.feature.id === featureId,
+	) || product.prices.some((price) => price.config?.feature_id === featureId);
 
 const productsForFeatureRemovalPreview = ({
 	featureId,
@@ -63,8 +71,7 @@ const productsForFeatureRemovalPreview = ({
 		const removesFeature = !planParams.items.some(
 			(item) => item.feature_id === featureId,
 		);
-		const planVersions =
-			planResultById.get(product.id)?.versionable ?? false;
+		const planVersions = planResultById.get(product.id)?.versionable ?? false;
 
 		return !(removesFeature && !planVersions);
 	});
@@ -131,6 +138,47 @@ const planPreviewAction = ({
 	return "none";
 };
 
+const previewMigrationForInPlaceUpdate = async ({
+	ctx,
+	current,
+	preview,
+}: {
+	ctx: AutumnContext;
+	current: FullProduct | null;
+	preview: PlanUpdatePreview;
+}): Promise<CatalogMigrationPreview | undefined> => {
+	if (!current || !preview.customize) return undefined;
+
+	const targets = [
+		...(preview.versionable
+			? [{ id: current.id, version: current.version }]
+			: []),
+		...preview.variants
+			.filter((variant) => variant.will_apply && variant.has_customers)
+			.map((variant) => ({
+				id: variant.plan_id,
+				version: variant.plan?.version ?? current.version,
+			})),
+	];
+	const fromPlan = await getPlanResponse({
+		ctx,
+		product: current,
+		features: ctx.features,
+	});
+	const draft = buildCombinedVariantMigrationDraft({
+		targets,
+		hasBillingChanges: planDiffHasBillingChanges(preview.customize, fromPlan),
+	});
+	if (!draft) return undefined;
+
+	return {
+		draft,
+		plan_ids: targets.map((target) => target.id),
+		include_custom: false,
+		has_billing_changes: !draft.no_billing_changes,
+	};
+};
+
 /**
  * Resolve a proposed catalog change (features + plans) WITHOUT persisting, so a
  * live preview matches what `catalog.update` would apply. Reads and the virtual
@@ -143,6 +191,8 @@ export const previewUpdateCatalog = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }): Promise<CatalogPreviewUpdateResponse> => {
+	validateCatalogVariantUpdates({ params });
+
 	const { plans, features, skip_deletions } = params;
 	const currency = ctx.org.default_currency ?? "usd";
 	const skipFeatureIds = new Set(params.skip_feature_ids);
@@ -196,7 +246,9 @@ export const previewUpdateCatalog = async ({
 	);
 	const missingPlanCustomers = new Set(
 		missingProducts
-			.filter((_, index) => Number(missingPlanCustomerCounts[index]?.all ?? 0) > 0)
+			.filter(
+				(_, index) => Number(missingPlanCustomerCounts[index]?.all ?? 0) > 0,
+			)
 			.map((product) => product.id),
 	);
 
@@ -233,14 +285,28 @@ export const previewUpdateCatalog = async ({
 			hasCustomers: missingPlanCustomers.has(product.id),
 		}),
 	);
-	const planChanges = planResults.map((planResult, index) => ({
-		...planResult,
-		action: planPreviewAction({
-			current: currents[index],
-			preview: planResult,
+	const planChanges = await Promise.all(
+		planResults.map(async (planResult, index) => {
+			const action = planPreviewAction({
+				current: currents[index],
+				preview: planResult,
+			});
+			const migration =
+				action === "updated"
+					? await previewMigrationForInPlaceUpdate({
+							ctx: planChangesCtx,
+							current: currents[index],
+							preview: planResult,
+						})
+					: undefined;
+			return {
+				...planResult,
+				action,
+				will_archive: false,
+				...(migration ? { migration } : {}),
+			};
 		}),
-		will_archive: false,
-	}));
+	);
 	const skippedPlanResults = [
 		...plans
 			.filter(
@@ -254,7 +320,8 @@ export const previewUpdateCatalog = async ({
 				(product) =>
 					skipPlanIds.has(product.id) &&
 					!plans.some(
-						(plan) => plan.plan_id === product.id || plan.new_plan_id === product.id,
+						(plan) =>
+							plan.plan_id === product.id || plan.new_plan_id === product.id,
 					),
 			)
 			.map((product) => previewSkippedPlan({ planId: product.id })),
@@ -295,8 +362,9 @@ export const previewUpdateCatalog = async ({
 					ctx: featureChangesCtx,
 					featureId: feature.feature_id,
 					existing:
-						ctx.features.find((candidate) => candidate.id === feature.feature_id) ??
-						null,
+						ctx.features.find(
+							(candidate) => candidate.id === feature.feature_id,
+						) ?? null,
 				}),
 			),
 		...ctx.features

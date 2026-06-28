@@ -1,5 +1,12 @@
 // @ts-nocheck - Using ts-nocheck due to complex Record<string, unknown> index signature issues
-import type { Feature, Plan, PlanItem } from "../../compose/models/index.js";
+import type {
+	CustomizePlan,
+	Feature,
+	Plan,
+	PlanItem,
+	PlanItemFilter,
+	Variant,
+} from "../../compose/models/index.js";
 import {
 	archiveFeature as archiveFeatureApi,
 	archivePlan as archivePlanApi,
@@ -24,9 +31,10 @@ import { isProd } from "../../lib/env/cliContext.js";
 import { AppEnv, getKey } from "../../lib/env/index.js";
 import {
 	transformApiFeature,
-	transformApiPlan,
+	transformApiPlans,
 } from "../../lib/transforms/apiToSdk/index.js";
 import {
+	transformPlanItem,
 	transformFeatureToApi,
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
@@ -38,9 +46,11 @@ import type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
+	PlanUpdateIntentSelections,
 	PushAnalysis,
 	PushResult,
 	RemoteData,
+	VariantPropagationSelections,
 } from "./types.js";
 
 /**
@@ -67,7 +77,7 @@ export async function fetchRemoteData(): Promise<RemoteData> {
 
 	return {
 		features: apiFeatures.map(transformApiFeature),
-		plans: apiPlans.map(transformApiPlan),
+		plans: transformApiPlans(apiPlans),
 	};
 }
 
@@ -524,13 +534,89 @@ function toCatalogFeatureParams(feature: Feature): Record<string, unknown> {
 	};
 }
 
-function toCatalogPlanParams(plan: Plan): Record<string, unknown> {
+function toApiPlanItemFilter(filter: PlanItemFilter): Record<string, unknown> {
+	return {
+		...(filter.featureId !== undefined ? { feature_id: filter.featureId } : {}),
+		...(filter.billingMethod !== undefined
+			? { billing_method: filter.billingMethod }
+			: {}),
+		...(filter.interval !== undefined ? { interval: filter.interval } : {}),
+		...(filter.intervalCount !== undefined
+			? { interval_count: filter.intervalCount }
+			: {}),
+	};
+}
+
+function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
+	return {
+		...(customize.price !== undefined
+			? {
+					price: customize.price
+						? {
+								amount: customize.price.amount,
+								interval: customize.price.interval,
+								...(customize.price.intervalCount !== undefined
+									? { interval_count: customize.price.intervalCount }
+									: {}),
+							}
+						: null,
+				}
+			: {}),
+		...(customize.items !== undefined
+			? { items: customize.items.map(transformPlanItem) }
+			: {}),
+		...(customize.addItems !== undefined
+			? { add_items: customize.addItems.map(transformPlanItem) }
+			: {}),
+		...(customize.removeItems !== undefined
+			? { remove_items: customize.removeItems.map(toApiPlanItemFilter) }
+			: {}),
+		...(customize.freeTrial !== undefined
+			? {
+					free_trial: customize.freeTrial
+						? {
+								duration_type: customize.freeTrial.durationType,
+								duration_length: customize.freeTrial.durationLength,
+								card_required: customize.freeTrial.cardRequired,
+							}
+						: null,
+				}
+			: {}),
+		...(customize.billingControls !== undefined
+			? { billing_controls: customize.billingControls }
+			: {}),
+	};
+}
+
+function toCatalogVariantParams(variant: Variant): Record<string, unknown> {
+	return {
+		variant_plan_id: variant.id,
+		name: variant.name,
+		customize: toApiCustomizePlan(variant.customize ?? {}),
+	};
+}
+
+function toCatalogPlanParams(
+	plan: Plan,
+	variants: NonNullable<VariantPropagationSelections[string]> = [],
+	intent?: PlanUpdateIntentSelections[string],
+): Record<string, unknown> {
 	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
 	const { description, id, ...rest } = apiPlan;
+	const configuredVariants = (plan.variants ?? []).map(toCatalogVariantParams);
+	const variantUpdates = [...configuredVariants, ...variants];
 
 	return {
 		plan_id: id,
 		...rest,
+		...(variantUpdates.length > 0 ? { variants: variantUpdates } : {}),
+		...(intent === "update_current" ||
+		intent === "update_current_and_migrate"
+			? { disable_version: true }
+			: {}),
+		...(intent === "update_current_and_migrate"
+			? { create_migration: true }
+			: {}),
 		...(description != null ? { description } : {}),
 		group: apiPlan.group ?? "",
 		add_on: apiPlan.add_on ?? false,
@@ -541,16 +627,27 @@ function toCatalogPlanParams(plan: Plan): Record<string, unknown> {
 	};
 }
 
+function collectVariantPlanIds(plans: Plan[]): string[] {
+	return plans.flatMap((plan) => {
+		const variants = (plan as { variants?: { id: string }[] }).variants;
+		return variants?.map((variant) => variant.id) ?? [];
+	});
+}
+
 export function buildCatalogUpdateParams({
 	features,
 	plans,
 	skipFeatureIds = [],
 	skipPlanIds = [],
+	planUpdateIntentSelections = {},
+	variantPropagationSelections = {},
 }: {
 	features: Feature[];
 	plans: Plan[];
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
 }): CatalogUpdateParams {
 	const sortedFeatures = [...features].sort((a, b) => {
 		if (a.type === "credit_system" && b.type !== "credit_system") return 1;
@@ -560,10 +657,18 @@ export function buildCatalogUpdateParams({
 
 	return {
 		features: sortedFeatures.map(toCatalogFeatureParams),
-		plans: plans.map(toCatalogPlanParams),
+		plans: plans.map((plan) =>
+			toCatalogPlanParams(
+				plan,
+				variantPropagationSelections[plan.id] ?? [],
+				planUpdateIntentSelections[plan.id],
+			),
+		),
 		skip_deletions: false,
 		skip_feature_ids: skipFeatureIds,
-		skip_plan_ids: skipPlanIds,
+		skip_plan_ids: [
+			...new Set([...skipPlanIds, ...collectVariantPlanIds(plans)]),
+		],
 	};
 }
 
@@ -639,11 +744,15 @@ export async function previewCatalogPush({
 	plans,
 	skipFeatureIds,
 	skipPlanIds,
+	planUpdateIntentSelections,
+	variantPropagationSelections,
 }: {
 	features: Feature[];
 	plans: Plan[];
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
 }): Promise<{
 	params: CatalogUpdateParams;
 	preview: CatalogPreviewUpdateResponse;
@@ -654,6 +763,8 @@ export async function previewCatalogPush({
 		plans,
 		skipFeatureIds,
 		skipPlanIds,
+		planUpdateIntentSelections,
+		variantPropagationSelections,
 	});
 	const preview = await previewUpdateCatalog({ secretKey, params });
 
@@ -668,6 +779,8 @@ export async function pushCatalog({
 	preview,
 	skipFeatureIds,
 	skipPlanIds,
+	planUpdateIntentSelections,
+	variantPropagationSelections,
 }: {
 	features: Feature[];
 	migratePlanIds?: string[];
@@ -676,6 +789,8 @@ export async function pushCatalog({
 	preview?: CatalogPreviewUpdateResponse;
 	skipFeatureIds?: string[];
 	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
 }): Promise<PushResult> {
 	const secretKey = getSecretKey();
 	const params = buildCatalogUpdateParams({
@@ -683,6 +798,8 @@ export async function pushCatalog({
 		plans,
 		skipFeatureIds,
 		skipPlanIds,
+		planUpdateIntentSelections,
+		variantPropagationSelections,
 	});
 	const resolvedPreview =
 		preview ?? (await previewUpdateCatalog({ secretKey, params }));
@@ -690,7 +807,8 @@ export async function pushCatalog({
 	await updateCatalog({ secretKey, params });
 	const result = catalogPreviewToPushResult(resolvedPreview);
 
-	const plansToMigrate = migratePlanIds ?? (migrateVersioned ? result.plansVersioned : []);
+	const plansToMigrate =
+		migratePlanIds ?? (migrateVersioned ? result.plansVersioned : []);
 	if (plansToMigrate.length > 0) {
 		const updatedPlans = await fetchPlans({
 			secretKey,
@@ -771,11 +889,7 @@ export async function analyzePush(
 
 	// Find plans that exist remotely but not locally (potential deletes)
 	const planIdsToDelete = [...remotePlansById.values()]
-		.filter(
-			(p) =>
-				!localPlanIds.has(p.id) &&
-				!p.archived,
-		)
+		.filter((p) => !localPlanIds.has(p.id) && !p.archived)
 		.map((p) => p.id);
 
 	// Check deletion info for each plan
@@ -835,11 +949,7 @@ export async function analyzePush(
 	// Find features that exist remotely but not locally (potential deletes)
 	// Exclude already archived features
 	const featureIdsToDelete = [...remoteFeaturesById.values()]
-		.filter(
-			(f) =>
-				!localFeatureIds.has(f.id) &&
-				!f.archived,
-		)
+		.filter((f) => !localFeatureIds.has(f.id) && !f.archived)
 		.map((f) => f.id);
 
 	// Check deletion info for each feature

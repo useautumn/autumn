@@ -204,23 +204,6 @@ export class CusProductService {
 		return data as FullCusProduct | undefined;
 	}
 
-	static async getByInternalProductId({
-		db,
-		internalProductId,
-		limit = 1,
-	}: {
-		db: DrizzleCli;
-		internalProductId: string;
-		limit?: number;
-	}) {
-		const data = await db.query.customerProducts.findMany({
-			where: eq(customerProducts.internal_product_id, internalProductId),
-			limit,
-		});
-
-		return data as CusProduct[];
-	}
-
 	static async getByProductId({
 		db,
 		productId,

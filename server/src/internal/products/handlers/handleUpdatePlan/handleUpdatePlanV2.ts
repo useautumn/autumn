@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
-import { updateVariants } from "../../../product/actions/updateVariants/updateVariants.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -25,6 +24,7 @@ export const handleUpdatePlanV2 = createRoute({
 			disable_version,
 			version,
 			update_variant_ids,
+			variants,
 			...planParams
 		} = body;
 		const ctx = c.get("ctx");
@@ -52,6 +52,8 @@ export const handleUpdatePlanV2 = createRoute({
 			query: { force_version, disable_version },
 			updates: updateProductV2Params,
 			initialFullProduct,
+			propagateToVariants: update_variant_ids ?? [],
+			variantUpdates: variants ?? [],
 		});
 
 		const latestPlanId = new_plan_id || plan_id;
@@ -63,18 +65,6 @@ export const handleUpdatePlanV2 = createRoute({
 			orgId: ctx.org.id,
 			env: ctx.env,
 		});
-
-		const propagateToVariants = update_variant_ids ?? [];
-		if (propagateToVariants.length > 0) {
-			await updateVariants({
-				ctx,
-				oldBase: initialFullProduct,
-				newBase: latestFullProduct,
-				propagateToVariants,
-				disableVersion: disable_version,
-				forceVersion: force_version,
-			});
-		}
 
 		const latestPlan = await getPlanResponse({
 			product: latestFullProduct,

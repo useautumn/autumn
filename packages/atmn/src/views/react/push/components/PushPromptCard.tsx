@@ -2,6 +2,12 @@ import { Text } from "ink";
 import type { PushPrompt } from "../../../../commands/push/prompts.js";
 import { PromptCard } from "../../components/index.js";
 
+type VariantConflict = {
+	feature_name?: string;
+	item_filter?: { interval?: string; interval_count?: number };
+	reason?: string;
+};
+
 interface PushPromptCardProps {
 	prompt: PushPrompt;
 	onRespond: (value: string) => void;
@@ -41,9 +47,54 @@ export function PushPromptCard({ prompt, onRespond }: PushPromptCardProps) {
 					<Text>
 						Plan "{getData<string>(prompt, "planName")}" has customers on it.
 					</Text>
-					<Text color="yellow">Updating will create a new version.</Text>
+					<Text color="yellow">
+						Choose whether to create a new version or update the current one.
+					</Text>
 				</PromptCard>
 			);
+
+		case "plan_variant_propagation": {
+			const basePlanName = getData<string>(prompt, "basePlanName");
+			const variantName = getData<string>(prompt, "variantName");
+			const versionable = getData<boolean>(prompt, "versionable");
+			const conflictCount = getData<number>(prompt, "conflictCount");
+			const conflicts = getData<VariantConflict[]>(prompt, "conflicts");
+			return (
+				<PromptCard
+					title="Apply Changes to Variant?"
+					icon="⚠"
+					options={prompt.options}
+					onSelect={onRespond}
+				>
+					<Text>
+						Plan "{basePlanName}" has variant "{variantName}".
+					</Text>
+					<Text color="yellow">
+						Choose whether to apply the base plan changes to this variant.
+					</Text>
+					{versionable && (
+						<Text color="yellow">
+							Applying will create a new variant version.
+						</Text>
+					)}
+					{conflictCount > 0 && (
+						<Text color="yellow">
+							{conflictCount} propagation conflict
+							{conflictCount > 1 ? "s" : ""} detected.
+						</Text>
+					)}
+					{conflicts?.map((conflict, index) => {
+						const feature = conflict.feature_name ?? "Unknown feature";
+						const interval = conflict.item_filter?.interval ?? "none";
+						return (
+							<Text color="gray" key={`${feature}-${index}`}>
+								- {feature}: {conflict.reason ?? "conflict"} ({interval})
+							</Text>
+						);
+					})}
+				</PromptCard>
+			);
+		}
 
 		case "plan_delete_has_customers": {
 			const count = getData<number>(prompt, "customerCount");

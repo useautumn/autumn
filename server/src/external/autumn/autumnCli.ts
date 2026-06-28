@@ -8,6 +8,9 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
+	type CatalogPreviewUpdateResponse,
+	type CatalogUpdateParamsInput,
+	type CatalogUpdateResponse,
 	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
@@ -800,6 +803,28 @@ export class AutumnInt {
 			name: string;
 		}): Promise<TResponse> => {
 			const data = await this.post(`/plans.create_variant`, params);
+			return data as TResponse;
+		},
+	};
+
+	catalog = {
+		previewUpdate: async <
+			TResponse = CatalogPreviewUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.preview_update`, params);
+			return data as TResponse;
+		},
+
+		update: async <
+			TResponse = CatalogUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.update`, params);
 			return data as TResponse;
 		},
 	};

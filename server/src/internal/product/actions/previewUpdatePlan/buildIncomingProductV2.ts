@@ -24,6 +24,7 @@ export const buildIncomingProductV2 = ({
 		version,
 		force_version,
 		update_variant_ids,
+		variants: _variants,
 		expand,
 		...planParams
 	} = data;

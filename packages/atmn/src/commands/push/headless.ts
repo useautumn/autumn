@@ -13,6 +13,7 @@ import {
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
+	createPlanVariantPropagationPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PushPrompt,
@@ -26,6 +27,11 @@ import {
 	unarchivePlan,
 } from "./push.js";
 import type { PushResult } from "./types.js";
+import type {
+	PlanUpdateIntent,
+	PlanUpdateIntentSelections,
+	VariantPropagationSelections,
+} from "./types.js";
 import { formatValidationErrors, validateConfig } from "./validate.js";
 
 interface LocalConfig {
@@ -36,6 +42,8 @@ interface LocalConfig {
 interface HeadlessPushOptions {
 	cwd?: string;
 	environment?: AppEnv;
+	planIntents?: Record<string, PlanUpdateIntent | "skip">;
+	variantPropagations?: Record<string, string[]>;
 	yes?: boolean;
 }
 
@@ -56,6 +64,13 @@ type ArchivedTargets = {
 	plans: Plan[];
 };
 
+const isVariantExport = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as { __atmnType?: unknown }).__atmnType === "variant",
+	);
+
 function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 	return {
 		success: true,
@@ -67,6 +82,101 @@ function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
 		plansUpdated: [...result.plansUpdated, ...result.plansVersioned],
 		plansDeleted: result.plansDeleted,
 		plansArchived: result.plansArchived,
+	};
+}
+
+const formatJsonExample = () =>
+	[
+		"",
+		chalk.cyan("Headless decision flags:"),
+		`  --plan-intents '{"pro":"create_version"}'`,
+		`  --plan-intents '{"pro":"update_current"}'`,
+		`  --plan-intents '{"pro":"update_current_and_migrate"}'`,
+		`  --variant-propagations '{"pro":["pro_annual"]}'`,
+	].join("\n");
+
+const isPlanUpdateIntent = (value: unknown): value is PlanUpdateIntent =>
+	value === "create_version" ||
+	value === "update_current" ||
+	value === "update_current_and_migrate";
+
+const formatVariantConflict = (conflict: unknown): string => {
+	if (!conflict || typeof conflict !== "object") return "unknown conflict";
+	const value = conflict as {
+		feature_name?: string;
+		item_filter?: { interval?: string };
+		reason?: string;
+	};
+	const feature = value.feature_name ?? "unknown feature";
+	const interval = value.item_filter?.interval
+		? ` (${value.item_filter.interval})`
+		: "";
+	return `${feature}: ${value.reason ?? "conflict"}${interval}`;
+};
+
+function resolveHeadlessUpdateDecisions({
+	planIntents = {},
+	prompts,
+	variantPropagations = {},
+}: {
+	planIntents?: HeadlessPushOptions["planIntents"];
+	prompts: PushPrompt[];
+	variantPropagations?: HeadlessPushOptions["variantPropagations"];
+}): {
+	missing: string[];
+	planUpdateIntentSelections: PlanUpdateIntentSelections;
+	skipPlanIds: string[];
+	variantPropagationSelections: VariantPropagationSelections;
+} {
+	const missing: string[] = [];
+	const planUpdateIntentSelections: PlanUpdateIntentSelections = {};
+	const skipPlanIds: string[] = [];
+	const variantPropagationSelections: VariantPropagationSelections = {};
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_versioning") continue;
+		const intent = planIntents[prompt.entityId];
+		if (!intent) {
+			missing.push(`plan "${prompt.entityId}" needs a plan intent`);
+			continue;
+		}
+		if (intent === "skip") {
+			skipPlanIds.push(prompt.entityId);
+			continue;
+		}
+		if (!isPlanUpdateIntent(intent)) {
+			missing.push(`plan "${prompt.entityId}" has invalid plan intent`);
+			continue;
+		}
+		planUpdateIntentSelections[prompt.entityId] = intent;
+	}
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_variant_propagation") continue;
+		const basePlanId = prompt.data.basePlanId as string;
+		const variantPlanId = prompt.data.variantPlanId as string;
+		if (skipPlanIds.includes(basePlanId)) continue;
+		if (!(basePlanId in variantPropagations)) {
+			missing.push(`plan "${basePlanId}" needs variant propagation choices`);
+			continue;
+		}
+		if (!variantPropagations[basePlanId]?.includes(variantPlanId)) continue;
+
+		variantPropagationSelections[basePlanId] = [
+			...(variantPropagationSelections[basePlanId] ?? []),
+			{
+				variant_plan_id: variantPlanId,
+				name: prompt.data.variantName as string | undefined,
+				customize: prompt.data.customize ?? {},
+			},
+		];
+	}
+
+	return {
+		missing: [...new Set(missing)],
+		planUpdateIntentSelections,
+		skipPlanIds,
+		variantPropagationSelections,
 	};
 }
 
@@ -119,6 +229,7 @@ async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 		// New format: individual named exports
 		for (const [key, value] of Object.entries(modRecord)) {
 			if (key === "default") continue;
+			if (isVariantExport(value)) continue;
 
 			const obj = value as { items?: unknown; type?: unknown };
 			if (obj && typeof obj === "object") {
@@ -141,8 +252,10 @@ function buildPromptQueueFromPreview(
 	preview: CatalogPreviewUpdateResponse,
 	archivedTargets: ArchivedTargets,
 	environment: AppEnv,
+	plans: Plan[],
 ): PushPrompt[] {
 	const prompts: PushPrompt[] = [];
+	const localPlansById = new Map(plans.map((plan) => [plan.id, plan]));
 
 	if (environment === AppEnv.Live) {
 		prompts.push(createProdConfirmationPrompt());
@@ -170,6 +283,30 @@ function buildPromptQueueFromPreview(
 					},
 					environment,
 				),
+			);
+		}
+	}
+
+	for (const planChange of preview.plan_changes) {
+		const basePlan = localPlansById.get(planChange.plan_id);
+		if (!basePlan) continue;
+
+		for (const variant of planChange.variants ?? []) {
+			const hasVariantChanges = Boolean(
+				!variant.will_apply &&
+					(variant.customize ||
+						variant.price_change ||
+						(variant.item_changes?.length ?? 0) > 0 ||
+						(variant.conflicts?.length ?? 0) > 0),
+			);
+			if (!hasVariantChanges) continue;
+
+			prompts.push(
+				createPlanVariantPropagationPrompt({
+					basePlanId: planChange.plan_id,
+					basePlanName: basePlan.name,
+					variant,
+				}),
 			);
 		}
 	}
@@ -212,9 +349,20 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 				break;
 			case "plan_versioning":
 				issues.push(
-					`  - Plan "${prompt.entityId}" has customers and will create a new version`,
+					`  - Plan "${prompt.entityId}" has customers; choose create_version, update_current, update_current_and_migrate, or skip`,
 				);
 				break;
+			case "plan_variant_propagation": {
+				const conflicts =
+					(prompt.data.conflicts as unknown[] | undefined) ?? [];
+				issues.push(
+					`  - Variant "${prompt.entityId}" may receive base plan changes from "${prompt.data.basePlanId}"`,
+				);
+				for (const conflict of conflicts) {
+					issues.push(`    conflict: ${formatVariantConflict(conflict)}`);
+				}
+				break;
+			}
 			case "plan_delete_has_customers":
 				issues.push(
 					`  - Plan "${prompt.entityId}" needs to be removed but has customers`,
@@ -301,12 +449,16 @@ async function syncArchivedFeaturesToConfig(
 	await writeConfig(Array.from(localFeaturesById.values()), config.plans, cwd);
 }
 
-async function getArchivedTargets(config: LocalConfig): Promise<ArchivedTargets> {
+async function getArchivedTargets(
+	config: LocalConfig,
+): Promise<ArchivedTargets> {
 	const remoteData = await fetchRemoteData();
 	const remoteFeaturesById = new Map(
 		remoteData.features.map((feature) => [feature.id, feature]),
 	);
-	const remotePlansById = new Map(remoteData.plans.map((plan) => [plan.id, plan]));
+	const remotePlansById = new Map(
+		remoteData.plans.map((plan) => [plan.id, plan]),
+	);
 
 	return {
 		features: config.features.filter((feature) => {
@@ -330,6 +482,11 @@ async function executePushWithDefaults(
 	prompts: PushPrompt[],
 	cwd: string,
 	environment: AppEnv,
+	decisions: {
+		planUpdateIntentSelections?: PlanUpdateIntentSelections;
+		skipPlanIds?: string[];
+		variantPropagationSelections?: VariantPropagationSelections;
+	} = {},
 ): Promise<HeadlessPushResult> {
 	const result: HeadlessPushResult = {
 		success: true,
@@ -383,9 +540,11 @@ async function executePushWithDefaults(
 
 	const pushResult = await pushCatalog({
 		features: config.features,
-		migrateVersioned: environment === AppEnv.Sandbox,
 		plans: config.plans,
+		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
 		preview,
+		skipPlanIds: decisions.skipPlanIds,
+		variantPropagationSelections: decisions.variantPropagationSelections,
 	});
 	Object.assign(result, headlessResultFromPushResult(pushResult));
 
@@ -495,7 +654,21 @@ async function _headlessPushImpl(
 		preview,
 		archivedTargets,
 		environment,
+		config.plans,
 	);
+	const decisions = resolveHeadlessUpdateDecisions({
+		planIntents: options.planIntents,
+		prompts,
+		variantPropagations: options.variantPropagations,
+	});
+	if (decisions.missing.length > 0) {
+		console.log(chalk.yellow("\nPush requires update-flow decisions:"));
+		for (const missing of decisions.missing) {
+			console.log(`  - ${missing}`);
+		}
+		console.log(formatJsonExample());
+		process.exit(1);
+	}
 
 	// If there are prompts and --yes is not set, exit with helpful message
 	if (prompts.length > 0 && !yes) {
@@ -511,10 +684,9 @@ async function _headlessPushImpl(
 			),
 		);
 		console.log(
-			chalk.white(
-				"  2. Run with --yes to automatically proceed with default actions",
-			),
+			chalk.white("  2. Run with --yes plus explicit headless decision flags"),
 		);
+		console.log(formatJsonExample());
 		console.log("");
 
 		// Exit with non-zero to indicate action required
@@ -534,6 +706,11 @@ async function _headlessPushImpl(
 			prompts,
 			cwd,
 			environment,
+			{
+				planUpdateIntentSelections: decisions.planUpdateIntentSelections,
+				skipPlanIds: decisions.skipPlanIds,
+				variantPropagationSelections: decisions.variantPropagationSelections,
+			},
 		);
 	} else {
 		// No edge cases, clean push

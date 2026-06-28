@@ -10,13 +10,16 @@ import {
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
+	createPlanVariantPropagationPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	fetchRemoteData,
 	previewCatalogPush,
+	type PlanUpdateIntentSelections,
 	type PushAnalysis,
 	type PushPrompt,
 	type PushResult,
+	type VariantPropagationSelections,
 	pushCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
@@ -70,6 +73,13 @@ interface LocalConfig {
 	plans: Plan[];
 }
 
+const isVariantExport = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as { __atmnType?: unknown }).__atmnType === "variant",
+	);
+
 // Load local config file
 async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 	const configPath = resolveConfigPath(cwd);
@@ -118,6 +128,7 @@ async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 		// New format: individual named exports
 		for (const [key, value] of Object.entries(modRecord)) {
 			if (key === "default") continue;
+			if (isVariantExport(value)) continue;
 
 			const obj = value as { items?: unknown; type?: unknown };
 			// Detect if it's a plan (has items array) or feature (has type)
@@ -152,6 +163,50 @@ const findPromptResponse = ({
 	return prompt ? promptResponses.get(prompt.id) : undefined;
 };
 
+const variantPreviewHasChanges = (variant: {
+	conflicts?: unknown[];
+	customize?: unknown;
+	item_changes?: unknown[];
+	price_change?: unknown;
+	will_apply?: boolean;
+}) =>
+	Boolean(
+		!variant.will_apply &&
+			(variant.customize ||
+				variant.price_change ||
+				(variant.item_changes?.length ?? 0) > 0 ||
+				(variant.conflicts?.length ?? 0) > 0),
+	);
+
+const buildVariantPropagationPrompts = ({
+	plans,
+	preview,
+}: {
+	plans: Plan[];
+	preview: CatalogPreviewUpdateResponse;
+}): PushPrompt[] => {
+	const localPlansById = new Map(plans.map((plan) => [plan.id, plan]));
+	const prompts: PushPrompt[] = [];
+
+	for (const planChange of preview.plan_changes) {
+		const basePlan = localPlansById.get(planChange.plan_id);
+		if (!basePlan) continue;
+
+		for (const variant of planChange.variants ?? []) {
+			if (!variantPreviewHasChanges(variant)) continue;
+			prompts.push(
+				createPlanVariantPropagationPrompt({
+					basePlanId: planChange.plan_id,
+					basePlanName: basePlan.name,
+					variant,
+				}),
+			);
+		}
+	}
+
+	return prompts;
+};
+
 const catalogPreviewToAnalysis = ({
 	features,
 	plans,
@@ -163,12 +218,16 @@ const catalogPreviewToAnalysis = ({
 	preview: CatalogPreviewUpdateResponse;
 	remoteData: { features: Feature[]; plans: Plan[] };
 }): PushAnalysis => {
-	const localFeaturesById = new Map(features.map((feature) => [feature.id, feature]));
+	const localFeaturesById = new Map(
+		features.map((feature) => [feature.id, feature]),
+	);
 	const localPlansById = new Map(plans.map((plan) => [plan.id, plan]));
 	const remoteFeaturesById = new Map(
 		remoteData.features.map((feature) => [feature.id, feature]),
 	);
-	const remotePlansById = new Map(remoteData.plans.map((plan) => [plan.id, plan]));
+	const remotePlansById = new Map(
+		remoteData.plans.map((plan) => [plan.id, plan]),
+	);
 	const analysis: PushAnalysis = {
 		featuresToCreate: [],
 		featuresToUpdate: [],
@@ -177,7 +236,8 @@ const catalogPreviewToAnalysis = ({
 		plansToUpdate: [],
 		plansToDelete: [],
 		archivedFeatures: features.filter(
-			(feature) => remoteFeaturesById.get(feature.id)?.archived && !feature.archived,
+			(feature) =>
+				remoteFeaturesById.get(feature.id)?.archived && !feature.archived,
 		),
 		archivedPlans: plans.filter(
 			(plan) => remotePlansById.get(plan.id)?.archived && !plan.archived,
@@ -345,6 +405,13 @@ export function usePush(options?: UsePushOptions) {
 				prompts.push(createPlanArchivedPrompt(plan));
 			}
 
+			prompts.push(
+				...buildVariantPropagationPrompts({
+					plans: localConfig?.plans ?? [],
+					preview,
+				}),
+			);
+
 			// Plans that will version
 			for (const planInfo of analysisResult.plansToUpdate) {
 				if (planInfo.willVersion) {
@@ -363,6 +430,17 @@ export function usePush(options?: UsePushOptions) {
 			}
 
 			setPromptQueue(prompts);
+
+			if (
+				yes &&
+				prompts.some((prompt) => prompt.type === "plan_variant_propagation")
+			) {
+				setError(
+					"Variant propagation choices require interactive confirmation. Run without --yes to choose affected variants.",
+				);
+				setPhase("error");
+				return;
+			}
 
 			// If yes flag or no prompts, proceed directly
 			if (yes || prompts.length === 0) {
@@ -474,22 +552,52 @@ export function usePush(options?: UsePushOptions) {
 		return [...skipped];
 	}, [analysis, promptQueue, promptResponses]);
 
-	const getMigrationPlanIds = useCallback(
-		() =>
-			(analysis?.plansToUpdate ?? [])
-				.filter(
-					(planInfo) =>
-						planInfo.willVersion &&
-						findPromptResponse({
-							entityId: planInfo.plan.id,
-							promptQueue,
-							promptResponses,
-							typePrefix: "plan_versioning",
-						}) === "version_and_migrate",
-				)
-				.map((planInfo) => planInfo.plan.id),
-		[analysis, promptQueue, promptResponses],
-	);
+	const getVariantPropagationSelections =
+		useCallback((): VariantPropagationSelections => {
+			const selections: VariantPropagationSelections = {};
+
+			for (const prompt of promptQueue) {
+				if (prompt.type !== "plan_variant_propagation") continue;
+				if (promptResponses.get(prompt.id) !== "apply") continue;
+
+				const basePlanId = prompt.data.basePlanId as string;
+				const variantPlanId = prompt.data.variantPlanId as string;
+				const variantName = prompt.data.variantName as string | undefined;
+				const customize = prompt.data.customize ?? {};
+				selections[basePlanId] = [
+					...(selections[basePlanId] ?? []),
+					{ variant_plan_id: variantPlanId, name: variantName, customize },
+				];
+			}
+
+			return selections;
+		}, [promptQueue, promptResponses]);
+
+	const getPlanUpdateIntentSelections =
+		useCallback((): PlanUpdateIntentSelections => {
+			const selections: PlanUpdateIntentSelections = {};
+			const isPlanUpdateIntent = (
+				value: string | undefined,
+			): value is PlanUpdateIntentSelections[string] =>
+				value === "create_version" ||
+				value === "update_current" ||
+				value === "update_current_and_migrate";
+
+			for (const planInfo of analysis?.plansToUpdate ?? []) {
+				if (!planInfo.willVersion) continue;
+				const response = findPromptResponse({
+					entityId: planInfo.plan.id,
+					promptQueue,
+					promptResponses,
+					typePrefix: "plan_versioning",
+				});
+				if (response === "skip") continue;
+				selections[planInfo.plan.id] = isPlanUpdateIntent(response)
+					? response
+					: "create_version";
+			}
+			return selections;
+		}, [analysis, promptQueue, promptResponses]);
 
 	const pushFeaturesMutation = useMutation({
 		mutationFn: async (_config: LocalConfig) => {
@@ -515,7 +623,10 @@ export function usePush(options?: UsePushOptions) {
 			}
 			for (const info of analysis?.featuresToDelete ?? []) {
 				setFeatureProgress((prev) =>
-					new Map(prev).set(info.id, skipped.has(info.id) ? "skipped" : "pushing"),
+					new Map(prev).set(
+						info.id,
+						skipped.has(info.id) ? "skipped" : "pushing",
+					),
 				);
 			}
 
@@ -559,16 +670,20 @@ export function usePush(options?: UsePushOptions) {
 			}
 			for (const info of analysis?.plansToDelete ?? []) {
 				setPlanProgress((prev) =>
-					new Map(prev).set(info.id, skippedPlans.has(info.id) ? "skipped" : "pushing"),
+					new Map(prev).set(
+						info.id,
+						skippedPlans.has(info.id) ? "skipped" : "pushing",
+					),
 				);
 			}
 
 			return pushCatalog({
 				features: config.features,
-				migratePlanIds: getMigrationPlanIds(),
 				plans: config.plans,
+				planUpdateIntentSelections: getPlanUpdateIntentSelections(),
 				skipFeatureIds: skippedFeatureIds,
 				skipPlanIds: skippedPlanIds,
+				variantPropagationSelections: getVariantPropagationSelections(),
 			});
 		},
 		onSuccess: (finalResult) => {
