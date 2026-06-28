@@ -23,7 +23,7 @@ import {
 	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -101,7 +101,7 @@ export const handleUpdatePlanV1 = createRoute({
 		if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
 
 		const cusProductsCurVersion =
-			await CusProductService.getByInternalProductId({
+			await customerProductRepo.getByInternalProductId({
 				db,
 				internalProductId: fullProduct.internal_id,
 			});

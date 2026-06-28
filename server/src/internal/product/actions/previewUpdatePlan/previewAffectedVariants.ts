@@ -4,11 +4,15 @@ import type {
 	FullProduct,
 	PlanUpdatePreviewVariant,
 	PreviewUpdatePlanParamsV2,
+	UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
-import { applyDiffToVariantPlan } from "../common/planTransformUtils.js";
+import {
+	applyDiffToVariantPlan,
+	type VariantSettingsPatch,
+} from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "./detectVariantConflicts.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
@@ -18,17 +22,31 @@ export const previewAffectedVariants = async ({
 	base,
 	diff,
 	currentBasePlan,
+	settingsPatch,
 	editedBasePlan,
 	data,
+	variantUpdates = [],
 }: {
 	ctx: AutumnContext;
 	base: FullProduct;
 	diff: DiffedCustomizePlanV1;
 	currentBasePlan: ApiPlanV1;
+	settingsPatch?: VariantSettingsPatch;
 	editedBasePlan: ApiPlanV1;
 	data: PreviewUpdatePlanParamsV2;
+	variantUpdates?: UpdateVariantParams[];
 }): Promise<PlanUpdatePreviewVariant[]> => {
 	const { db, org, env, features } = ctx;
+	const updateByVariantId = new Map(
+		variantUpdates.map((variantUpdate) => [
+			variantUpdate.variant_plan_id,
+			variantUpdate.customize,
+		]),
+	);
+	const selectedVariantIds = new Set([
+		...(data.update_variant_ids ?? []),
+		...updateByVariantId.keys(),
+	]);
 
 	const family = await ProductService.listFull({
 		db,
@@ -52,10 +70,21 @@ export const previewAffectedVariants = async ({
 				product: variant,
 				features,
 			});
-			const previewPlan = applyDiffToVariantPlan({
-				plan: currentPlan,
-				diff,
-			});
+			const variantDiff = updateByVariantId.get(variant.id);
+			const previewPlan = variantDiff
+				? {
+						...applyDiffToVariantPlan({
+							plan: editedBasePlan,
+							diff: variantDiff,
+						}),
+						id: variant.id,
+						name: variant.name,
+					}
+				: applyDiffToVariantPlan({
+						plan: currentPlan,
+						diff,
+						settingsPatch,
+					});
 			const hasCustomers = await hasPlanCustomers({ ctx, product: variant });
 			const versionable =
 				data.force_version ||
@@ -75,6 +104,8 @@ export const previewAffectedVariants = async ({
 					hasCustomers,
 					versionable,
 				}),
+				name: variant.name,
+				will_apply: selectedVariantIds.has(variant.id),
 				conflicts: detectVariantConflicts({
 					currentBasePlan,
 					editedBasePlan,

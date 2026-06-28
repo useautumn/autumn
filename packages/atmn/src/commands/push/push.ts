@@ -1,5 +1,12 @@
 // @ts-nocheck - Using ts-nocheck due to complex Record<string, unknown> index signature issues
-import type { Feature, Plan, PlanItem } from "../../compose/models/index.js";
+import type {
+	CustomizePlan,
+	Feature,
+	Plan,
+	PlanItem,
+	PlanItemFilter,
+	Variant,
+} from "../../compose/models/index.js";
 import {
 	archiveFeature as archiveFeatureApi,
 	archivePlan as archivePlanApi,
@@ -11,8 +18,11 @@ import {
 	getFeatureDeletionInfo,
 	getPlanDeletionInfo,
 	getPlanHasCustomers,
+	migrateProduct,
+	previewUpdateCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
+	updateCatalog,
 	updateFeature,
 	updatePlan,
 	upsertFeature,
@@ -21,18 +31,26 @@ import { isProd } from "../../lib/env/cliContext.js";
 import { AppEnv, getKey } from "../../lib/env/index.js";
 import {
 	transformApiFeature,
-	transformApiPlan,
+	transformApiPlans,
 } from "../../lib/transforms/apiToSdk/index.js";
 import {
+	transformPlanItem,
 	transformFeatureToApi,
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
 import type {
+	CatalogPreviewUpdateResponse,
+	CatalogUpdateParams,
+} from "../../lib/api/endpoints/index.js";
+import type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
+	PlanUpdateIntentSelections,
 	PushAnalysis,
+	PushResult,
 	RemoteData,
+	VariantPropagationSelections,
 } from "./types.js";
 
 /**
@@ -59,7 +77,7 @@ export async function fetchRemoteData(): Promise<RemoteData> {
 
 	return {
 		features: apiFeatures.map(transformApiFeature),
-		plans: apiPlans.map(transformApiPlan),
+		plans: transformApiPlans(apiPlans),
 	};
 }
 
@@ -506,6 +524,314 @@ function planContainsFeature(plan: Plan, featureId: string): boolean {
 	return getPlanFeatureIds(plan).some((id) => id === featureId);
 }
 
+function toCatalogFeatureParams(feature: Feature): Record<string, unknown> {
+	const apiFeature = transformFeatureToApi(feature) as Record<string, unknown>;
+	const { id, archived, ...rest } = apiFeature;
+
+	return {
+		feature_id: id,
+		...rest,
+	};
+}
+
+function toApiPlanItemFilter(filter: PlanItemFilter): Record<string, unknown> {
+	return {
+		...(filter.featureId !== undefined ? { feature_id: filter.featureId } : {}),
+		...(filter.billingMethod !== undefined
+			? { billing_method: filter.billingMethod }
+			: {}),
+		...(filter.interval !== undefined ? { interval: filter.interval } : {}),
+		...(filter.intervalCount !== undefined
+			? { interval_count: filter.intervalCount }
+			: {}),
+	};
+}
+
+function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
+	return {
+		...(customize.price !== undefined
+			? {
+					price: customize.price
+						? {
+								amount: customize.price.amount,
+								interval: customize.price.interval,
+								...(customize.price.intervalCount !== undefined
+									? { interval_count: customize.price.intervalCount }
+									: {}),
+							}
+						: null,
+				}
+			: {}),
+		...(customize.items !== undefined
+			? { items: customize.items.map(transformPlanItem) }
+			: {}),
+		...(customize.addItems !== undefined
+			? { add_items: customize.addItems.map(transformPlanItem) }
+			: {}),
+		...(customize.removeItems !== undefined
+			? { remove_items: customize.removeItems.map(toApiPlanItemFilter) }
+			: {}),
+		...(customize.freeTrial !== undefined
+			? {
+					free_trial: customize.freeTrial
+						? {
+								duration_type: customize.freeTrial.durationType,
+								duration_length: customize.freeTrial.durationLength,
+								card_required: customize.freeTrial.cardRequired,
+							}
+						: null,
+				}
+			: {}),
+		...(customize.billingControls !== undefined
+			? { billing_controls: customize.billingControls }
+			: {}),
+	};
+}
+
+function toCatalogVariantParams(variant: Variant): Record<string, unknown> {
+	return {
+		variant_plan_id: variant.id,
+		name: variant.name,
+		customize: toApiCustomizePlan(variant.customize ?? {}),
+	};
+}
+
+function toCatalogPlanParams(
+	plan: Plan,
+	variants: NonNullable<VariantPropagationSelections[string]> = [],
+	intent?: PlanUpdateIntentSelections[string],
+): Record<string, unknown> {
+	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
+	const { description, id, ...rest } = apiPlan;
+	const configuredVariants = (plan.variants ?? []).map(toCatalogVariantParams);
+	const variantUpdates = [...configuredVariants, ...variants];
+
+	return {
+		plan_id: id,
+		...rest,
+		...(variantUpdates.length > 0 ? { variants: variantUpdates } : {}),
+		...(intent === "update_current" ||
+		intent === "update_current_and_migrate"
+			? { disable_version: true }
+			: {}),
+		...(intent === "update_current_and_migrate"
+			? { create_migration: true }
+			: {}),
+		...(description != null ? { description } : {}),
+		group: apiPlan.group ?? "",
+		add_on: apiPlan.add_on ?? false,
+		auto_enable: apiPlan.auto_enable ?? false,
+		price: apiPlan.price ?? null,
+		items: apiPlan.items ?? [],
+		free_trial: apiPlan.free_trial ?? null,
+	};
+}
+
+function collectVariantPlanIds(plans: Plan[]): string[] {
+	return plans.flatMap((plan) => {
+		const variants = (plan as { variants?: { id: string }[] }).variants;
+		return variants?.map((variant) => variant.id) ?? [];
+	});
+}
+
+export function buildCatalogUpdateParams({
+	features,
+	plans,
+	skipFeatureIds = [],
+	skipPlanIds = [],
+	planUpdateIntentSelections = {},
+	variantPropagationSelections = {},
+}: {
+	features: Feature[];
+	plans: Plan[];
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
+}): CatalogUpdateParams {
+	const sortedFeatures = [...features].sort((a, b) => {
+		if (a.type === "credit_system" && b.type !== "credit_system") return 1;
+		if (a.type !== "credit_system" && b.type === "credit_system") return -1;
+		return 0;
+	});
+
+	return {
+		features: sortedFeatures.map(toCatalogFeatureParams),
+		plans: plans.map((plan) =>
+			toCatalogPlanParams(
+				plan,
+				variantPropagationSelections[plan.id] ?? [],
+				planUpdateIntentSelections[plan.id],
+			),
+		),
+		skip_deletions: false,
+		skip_feature_ids: skipFeatureIds,
+		skip_plan_ids: [
+			...new Set([...skipPlanIds, ...collectVariantPlanIds(plans)]),
+		],
+	};
+}
+
+export const catalogPreviewHasChanges = (
+	preview: CatalogPreviewUpdateResponse,
+): boolean =>
+	preview.feature_changes.some((change) => change.action !== "none") ||
+	preview.plan_changes.some((change) => change.action !== "none");
+
+export function catalogPreviewToPushResult(
+	preview: CatalogPreviewUpdateResponse,
+): PushResult {
+	const result: PushResult = {
+		featuresCreated: [],
+		featuresUpdated: [],
+		featuresDeleted: [],
+		featuresArchived: [],
+		featuresSkipped: [],
+		plansCreated: [],
+		plansUpdated: [],
+		plansVersioned: [],
+		plansDeleted: [],
+		plansArchived: [],
+		plansSkipped: [],
+	};
+
+	for (const change of preview.feature_changes) {
+		if (change.blocked) {
+			result.featuresSkipped.push(change.feature_id);
+			continue;
+		}
+
+		if (change.action === "create") {
+			result.featuresCreated.push(change.feature_id);
+		} else if (change.action === "update") {
+			result.featuresUpdated.push(change.feature_id);
+		} else if (change.action === "remove") {
+			if (change.will_archive) {
+				result.featuresArchived.push(change.feature_id);
+			} else {
+				result.featuresDeleted.push(change.feature_id);
+			}
+		} else if (change.action === "skipped") {
+			result.featuresSkipped.push(change.feature_id);
+		}
+	}
+
+	for (const change of preview.plan_changes) {
+		if (change.action === "created") {
+			result.plansCreated.push(change.plan_id);
+		} else if (change.action === "updated") {
+			if (change.versionable) {
+				result.plansVersioned.push(change.plan_id);
+			} else {
+				result.plansUpdated.push(change.plan_id);
+			}
+		} else if (change.action === "deleted") {
+			if (change.will_archive) {
+				result.plansArchived.push(change.plan_id);
+			} else {
+				result.plansDeleted.push(change.plan_id);
+			}
+		} else if (change.action === "skipped") {
+			result.plansSkipped.push(change.plan_id);
+		}
+	}
+
+	return result;
+}
+
+export async function previewCatalogPush({
+	features,
+	plans,
+	skipFeatureIds,
+	skipPlanIds,
+	planUpdateIntentSelections,
+	variantPropagationSelections,
+}: {
+	features: Feature[];
+	plans: Plan[];
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
+}): Promise<{
+	params: CatalogUpdateParams;
+	preview: CatalogPreviewUpdateResponse;
+}> {
+	const secretKey = getSecretKey();
+	const params = buildCatalogUpdateParams({
+		features,
+		plans,
+		skipFeatureIds,
+		skipPlanIds,
+		planUpdateIntentSelections,
+		variantPropagationSelections,
+	});
+	const preview = await previewUpdateCatalog({ secretKey, params });
+
+	return { params, preview };
+}
+
+export async function pushCatalog({
+	features,
+	migratePlanIds,
+	migrateVersioned = false,
+	plans,
+	preview,
+	skipFeatureIds,
+	skipPlanIds,
+	planUpdateIntentSelections,
+	variantPropagationSelections,
+}: {
+	features: Feature[];
+	migratePlanIds?: string[];
+	migrateVersioned?: boolean;
+	plans: Plan[];
+	preview?: CatalogPreviewUpdateResponse;
+	skipFeatureIds?: string[];
+	skipPlanIds?: string[];
+	planUpdateIntentSelections?: PlanUpdateIntentSelections;
+	variantPropagationSelections?: VariantPropagationSelections;
+}): Promise<PushResult> {
+	const secretKey = getSecretKey();
+	const params = buildCatalogUpdateParams({
+		features,
+		plans,
+		skipFeatureIds,
+		skipPlanIds,
+		planUpdateIntentSelections,
+		variantPropagationSelections,
+	});
+	const resolvedPreview =
+		preview ?? (await previewUpdateCatalog({ secretKey, params }));
+
+	await updateCatalog({ secretKey, params });
+	const result = catalogPreviewToPushResult(resolvedPreview);
+
+	const plansToMigrate =
+		migratePlanIds ?? (migrateVersioned ? result.plansVersioned : []);
+	if (plansToMigrate.length > 0) {
+		const updatedPlans = await fetchPlans({
+			secretKey,
+			includeArchived: false,
+		});
+
+		for (const planId of plansToMigrate) {
+			const updatedPlan = updatedPlans.find((plan) => plan.id === planId);
+			if (updatedPlan && updatedPlan.version > 1) {
+				await migrateProduct({
+					secretKey,
+					fromProductId: planId,
+					fromVersion: updatedPlan.version - 1,
+					toProductId: planId,
+					toVersion: updatedPlan.version,
+				});
+			}
+		}
+	}
+
+	return result;
+}
+
 /**
  * Analyze what changes need to be pushed
  */
@@ -535,9 +861,8 @@ export async function analyzePush(
 	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedFeatures = localFeatures.filter((f) => {
 		const remote = remoteFeaturesById.get(f.id);
-		const localArchived = (f as Feature & { archived?: boolean }).archived;
-		const remoteArchived =
-			remote && (remote as Feature & { archived?: boolean }).archived;
+		const localArchived = f.archived;
+		const remoteArchived = remote?.archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
@@ -564,11 +889,7 @@ export async function analyzePush(
 
 	// Find plans that exist remotely but not locally (potential deletes)
 	const planIdsToDelete = [...remotePlansById.values()]
-		.filter(
-			(p) =>
-				!localPlanIds.has(p.id) &&
-				!(p as Plan & { archived?: boolean }).archived,
-		)
+		.filter((p) => !localPlanIds.has(p.id) && !p.archived)
 		.map((p) => p.id);
 
 	// Check deletion info for each plan
@@ -581,9 +902,8 @@ export async function analyzePush(
 	// Only include if: remote is archived AND local does NOT have archived: true
 	const archivedPlans = localPlans.filter((p) => {
 		const remote = remotePlansById.get(p.id);
-		const localArchived = (p as Plan & { archived?: boolean }).archived;
-		const remoteArchived =
-			remote && (remote as Plan & { archived?: boolean }).archived;
+		const localArchived = p.archived;
+		const remoteArchived = remote?.archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
@@ -629,11 +949,7 @@ export async function analyzePush(
 	// Find features that exist remotely but not locally (potential deletes)
 	// Exclude already archived features
 	const featureIdsToDelete = [...remoteFeaturesById.values()]
-		.filter(
-			(f) =>
-				!localFeatureIds.has(f.id) &&
-				!(f as Feature & { archived?: boolean }).archived,
-		)
+		.filter((f) => !localFeatureIds.has(f.id) && !f.archived)
 		.map((f) => f.id);
 
 	// Check deletion info for each feature

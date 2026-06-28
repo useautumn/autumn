@@ -23,7 +23,13 @@ const previewNewPlan = ({
 	planParams: UpdatePlanParamsV2;
 	currency: string;
 }): PlanUpdatePreview => {
-	const { plan_id, new_plan_id, version: _version, ...rest } = planParams;
+	const {
+		plan_id,
+		new_plan_id,
+		version: _version,
+		variants: _variants,
+		...rest
+	} = planParams;
 	const resolved = apiPlan.map.paramsV1ToProductV2({
 		ctx,
 		params: {
@@ -82,6 +88,7 @@ export const previewCatalogPlanUpdate = async ({
 	currency: string;
 }): Promise<PlanUpdatePreview> => {
 	const { plan_id } = planParams;
+	const { variants, ...basePlanParams } = planParams;
 
 	if (!current) {
 		return previewNewPlan({
@@ -96,7 +103,8 @@ export const previewCatalogPlanUpdate = async ({
 		includes: [PreviewUpdatePlanExpand.Plan],
 	});
 	const data: PreviewUpdatePlanParamsV2 = {
-		...planParams,
+		...basePlanParams,
+		variants,
 		expand: shouldExpandPlan ? [PreviewUpdatePlanExpand.Plan] : [],
 	};
 	const incoming = buildIncomingProductV2({ ctx, base: current, data });
@@ -106,6 +114,7 @@ export const previewCatalogPlanUpdate = async ({
 		currentFullProduct: current,
 		incomingProductV2: incoming,
 		data,
+		variantUpdates: variants,
 		hasCustomers,
 		currency,
 	});

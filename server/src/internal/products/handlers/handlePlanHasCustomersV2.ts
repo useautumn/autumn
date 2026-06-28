@@ -9,7 +9,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService";
 
 export const handlePlanHasCustomersV2 = createRoute({
@@ -42,8 +42,8 @@ export const handlePlanHasCustomersV2 = createRoute({
 			throw new ProductNotFoundError({ productId });
 		}
 
-		const cusProductsCurVersion =
-			await CusProductService.getByInternalProductId({
+		const customerUsage =
+			await customerProductRepo.getVersioningUsageForProduct({
 				db,
 				internalProductId: product.internal_id,
 			});
@@ -82,7 +82,8 @@ export const handlePlanHasCustomersV2 = createRoute({
 
 		return c.json({
 			current_version: product.version,
-			will_version: !productSame && cusProductsCurVersion.length > 0,
+			will_version:
+				!productSame && customerUsage.hasVersionableCustomerProducts,
 			archived: product.archived,
 		});
 	},

@@ -1,4 +1,5 @@
-import type { Feature, Plan } from "../../../compose/models/index.js";
+import type { Feature } from "../../../compose/models/index.js";
+import type { Plan } from "../../../compose/models/variantModels.js";
 import { formatValue, planIdToVarName } from "./helpers.js";
 import { buildPlanItemCode } from "./planItem.js";
 
@@ -56,11 +57,11 @@ export function buildPlanCode(
 	lines.push(`\titems: [`);
 	if (plan.items && plan.items.length > 0) {
 		for (const planItem of plan.items) {
-			const itemCode = buildPlanItemCode(
+			const itemCode = buildPlanItemCode({
 				planItem,
 				features,
 				featureVarMap,
-			);
+			});
 			lines.push(itemCode);
 		}
 	}

@@ -1,20 +1,18 @@
 import {
+	ErrCode,
 	type FreeTrial,
 	type FullProduct,
-	mapToProductV2,
 	mergeBillingControls,
 	notNullish,
-	ProductNotFoundError,
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
-	ErrCode,
 	UpdateProductSchema,
 	type UpdateProductV2Params,
+	type UpdateVariantParams,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
@@ -22,14 +20,15 @@ import {
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
-import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { resolveInPlaceEdit } from "./inPlaceUpdateUtils.js";
+import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
+import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
+import { updateProductItems } from "./updateProduct/updateProductItems.js";
+import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 interface UpdateProductParams {
@@ -44,7 +43,11 @@ interface UpdateProductParams {
 	updates: UpdateProductV2Params;
 	initialFullProduct?: FullProduct;
 	baseInternalProductId?: string;
+	propagateToVariants?: string[];
+	variantUpdates?: UpdateVariantParams[];
+	allowVariantSettingsUpdate?: boolean;
 }
+
 export const updateProduct = async ({
 	ctx,
 	query,
@@ -52,8 +55,11 @@ export const updateProduct = async ({
 	updates,
 	initialFullProduct,
 	baseInternalProductId,
+	propagateToVariants = [],
+	variantUpdates = [],
+	allowVariantSettingsUpdate = false,
 }: UpdateProductParams) => {
-	const { db, org, env, features, logger } = ctx;
+	const { db, org, env, features } = ctx;
 	const { version, upsert, disable_version, force_version } = query;
 
 	if (force_version && disable_version) {
@@ -64,43 +70,53 @@ export const updateProduct = async ({
 		});
 	}
 
-	const getFullProduct = async () => {
-		if (initialFullProduct) return initialFullProduct;
-		return ProductService.getFull({
-			db,
-			idOrInternalId: productId,
-			orgId: org.id,
-			env,
-			version,
+	const {
+		fullProduct,
+		baseBeforeUpdate,
+		currentProductV2: curProductV2,
+		rewardPrograms,
+		customerUsage,
+	} = await setupUpdateProductContext({
+		ctx,
+		productId,
+		version,
+		initialFullProduct,
+	});
+	validateVariantSettingsUpdate({
+		allowVariantSettingsUpdate,
+		fullProduct,
+		currentProduct: curProductV2,
+		updates,
+	});
+
+	const applyVariantUpdates = async ({
+		latestBase,
+	}: {
+		latestBase: FullProduct;
+	}) => {
+		if (baseBeforeUpdate.base_internal_product_id !== null) return;
+		if (
+			!shouldApplyVariantUpdates({
+				oldBase: baseBeforeUpdate,
+				latestBase,
+				propagateToVariants,
+				variantUpdates,
+				updates,
+			})
+		) {
+			return;
+		}
+
+		await updateVariants({
+			ctx,
+			oldBase: baseBeforeUpdate,
+			newBase: latestBase,
+			propagateToVariants,
+			variantUpdates,
+			disableVersion: disable_version,
+			forceVersion: force_version,
 		});
 	};
-
-	const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
-		getFullProduct(),
-		rewardProgramRepo.getByProductId({
-			db,
-			productIds: [productId],
-			orgId: org.id,
-			env,
-		}),
-		ProductService.listDefault({
-			db,
-			orgId: org.id,
-			env,
-		}),
-	]);
-
-	if (!fullProduct) throw new ProductNotFoundError({ productId: productId });
-
-	const cusProductsCurVersion = await CusProductService.getByInternalProductId({
-		db,
-		internalProductId: fullProduct.internal_id,
-	});
-
-	const curProductV2 = mapToProductV2({
-		product: fullProduct,
-		features,
-	});
 
 	const newFreeTrial =
 		"free_trial" in updates
@@ -119,6 +135,14 @@ export const updateProduct = async ({
 		),
 	};
 
+	if (Object.keys(updates).length === 0) {
+		await applyVariantUpdates({ latestBase: fullProduct });
+		return getProductResponse({
+			product: fullProduct,
+			features,
+		});
+	}
+
 	await validateDefaultFlag({
 		ctx,
 		body: updates,
@@ -126,11 +150,18 @@ export const updateProduct = async ({
 	});
 
 	const itemsExist = notNullish(updates.items);
-	const cusProductExists = cusProductsCurVersion.length > 0;
+	const customerProductExists = customerUsage.hasAnyCustomerProducts;
+	const versionableCustomerProductExists =
+		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in updates;
 	const billingControlsProvided = "billing_controls" in updates;
 
-	if (cusProductExists && !disable_version && !force_version && billingControlsProvided) {
+	if (
+		versionableCustomerProductExists &&
+		!disable_version &&
+		!force_version &&
+		billingControlsProvided
+	) {
 		const {
 			billingControlsSame,
 			itemsSame,
@@ -165,6 +196,14 @@ export const updateProduct = async ({
 				env,
 				baseInternalProductId,
 			});
+
+			const latestBase = await ProductService.getFull({
+				db,
+				idOrInternalId: newProduct.id,
+				orgId: org.id,
+				env,
+			});
+			await applyVariantUpdates({ latestBase });
 
 			return newProduct;
 		}
@@ -202,11 +241,18 @@ export const updateProduct = async ({
 			env,
 			baseInternalProductId,
 		});
+		const latestBase = await ProductService.getFull({
+			db,
+			idOrInternalId: newProduct.id,
+			orgId: org.id,
+			env,
+		});
+		await applyVariantUpdates({ latestBase });
 		return newProduct;
 	}
 
 	if (
-		cusProductExists &&
+		versionableCustomerProductExists &&
 		!disable_version &&
 		(itemsExist || freeTrialProvided)
 	) {
@@ -228,51 +274,32 @@ export const updateProduct = async ({
 				baseInternalProductId,
 			});
 
+			const latestBase = await ProductService.getFull({
+				db,
+				idOrInternalId: newProduct.id,
+				orgId: org.id,
+				env,
+			});
+			await applyVariantUpdates({ latestBase });
+
 			return newProduct;
 		}
 
+		await applyVariantUpdates({ latestBase: fullProduct });
 		return fullProduct;
 	}
 
 	const { free_trial } = updates;
 
 	if (updates.items) {
-		const newItems = updates.items;
-		if (cusProductExists && disable_version) {
-			// Retire the shared catalog rows + insert their replacements atomically:
-			// a failure between the two must not leave the plan with retired rows
-			// and no replacement.
-			await db.transaction(async (transaction) => {
-				const tx = transaction as unknown as DrizzleCli;
-				const inPlace = await resolveInPlaceEdit({
-					db: tx,
-					items: newItems,
-					currentFullProduct: fullProduct,
-					features,
-				});
-				await handleNewProductItems({
-					db: tx,
-					curPrices: inPlace.curPrices,
-					curEnts: inPlace.curEnts,
-					newItems: inPlace.items,
-					features,
-					product: fullProduct,
-					logger: ctx.logger,
-					isCustom: false,
-				});
-			});
-		} else {
-			await handleNewProductItems({
-				db,
-				curPrices: fullProduct.prices,
-				curEnts: fullProduct.entitlements,
-				newItems,
+		await updateProductItems({
+			ctx,
+			db,
+				fullProduct,
+				newItems: updates.items,
 				features,
-				product: fullProduct,
-				logger: ctx.logger,
-				isCustom: false,
+				useInPlaceEdit: customerProductExists,
 			});
-		}
 	}
 
 	const latestProductId = updates.id || fullProduct.id;
@@ -303,18 +330,20 @@ export const updateProduct = async ({
 
 	// New full product
 
+	await applyVariantUpdates({ latestBase: newFullProduct });
+
 	await initProductInStripe({
 		ctx,
 		product: newFullProduct,
 	});
 
-	logger.info("Adding task to queue to detect base variant");
-	await addTaskToQueue({
-		jobName: JobName.DetectBaseVariant,
-		payload: {
-			curProduct: newFullProduct,
-		},
-	});
+	// logger.info("Adding task to queue to detect base variant");
+	// await addTaskToQueue({
+	// 	jobName: JobName.DetectBaseVariant,
+	// 	payload: {
+	// 		curProduct: newFullProduct,
+	// 	},
+	// });
 
 	await addTaskToQueue({
 		jobName: JobName.RewardMigration,

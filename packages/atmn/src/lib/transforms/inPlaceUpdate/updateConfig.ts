@@ -5,12 +5,18 @@
  */
 
 import { existsSync, writeFileSync } from "node:fs";
-import type { Feature, Plan } from "../../../compose/models/index.js";
+import type { Feature } from "../../../compose/models/index.js";
+import type { Plan } from "../../../compose/models/variantModels.js";
 import { resolveConfigPath } from "../../env/index.js";
 import { buildFeatureCode } from "../sdkToCode/feature.js";
-import { planIdToVarName, resolveVarNames } from "../sdkToCode/helpers.js";
+import {
+	planIdToVarName,
+	resolveVarNames,
+	variantIdToVarName,
+} from "../sdkToCode/helpers.js";
 import { buildImports } from "../sdkToCode/imports.js";
 import { buildPlanCode } from "../sdkToCode/plan.js";
+import { buildVariantCode } from "../sdkToCode/variant.js";
 import { parseExistingConfig } from "./parseConfig.js";
 
 export interface UpdateResult {
@@ -52,6 +58,39 @@ function generatePlanCode(
 	return buildPlanCode(plan, features, featureVarMap, existingVarName);
 }
 
+function generatePlanWithVariantsCode({
+	featureVarMap,
+	features,
+	plan,
+	planVarName,
+	variantVarMap,
+}: {
+	featureVarMap?: Map<string, string>;
+	features: Feature[];
+	plan: Plan;
+	planVarName?: string;
+	variantVarMap: Map<string, string>;
+}): string {
+	const basePlanCode = generatePlanCode(
+		plan,
+		features,
+		planVarName,
+		featureVarMap,
+	);
+	const basePlanVarName = planVarName ?? planIdToVarName(plan.id);
+	const variantCodes = (plan.variants ?? []).map((variant) =>
+		buildVariantCode({
+			basePlanVarName,
+			variant,
+			features,
+			featureVarMap,
+			varNameOverride: variantVarMap.get(variant.id),
+		}),
+	);
+
+	return [basePlanCode, ...variantCodes].join("\n\n");
+}
+
 /**
  * Update autumn.config.ts in place
  *
@@ -86,13 +125,21 @@ export async function updateConfigInPlace(
 	// Build lookup maps
 	const apiFeatureMap = new Map(features.map((f) => [f.id, f]));
 	const apiPlanMap = new Map(plans.map((p) => [p.id, p]));
+	const apiVariantMap = new Map(
+		plans.flatMap((plan) =>
+			(plan.variants ?? []).map((variant) => [variant.id, variant] as const),
+		),
+	);
 
 	// Build feature ID -> variable name map from parsed entities
 	// This allows us to preserve local variable names when generating plan code
 	const featureVarMap = new Map<string, string>();
+	const existingVariantVarMap = new Map<string, string>();
 	for (const entity of parsed.entities) {
 		if (entity.type === "feature") {
 			featureVarMap.set(entity.id, entity.varName);
+		} else if (entity.type === "variant") {
+			existingVariantVarMap.set(entity.id, entity.varName);
 		}
 	}
 
@@ -112,7 +159,7 @@ export async function updateConfigInPlace(
 		let varName = resolved.get(id)!;
 		if (existingVarNames.has(varName)) {
 			// Shouldn't normally happen (IDs are unique), but guard anyway
-			varName = `${varName}_feature`;
+			varName = `${varName}Feature`;
 		}
 		newFeatureVarMap.set(id, varName);
 		existingVarNames.add(varName);
@@ -123,9 +170,7 @@ export async function updateConfigInPlace(
 	// Resolve new plan var names, avoiding all names already in use.
 	// "New" means the plan ID is not present in any parsed entity.
 	const existingPlanIds = new Set(
-		parsed.entities
-			.filter((e) => e.type === "plan")
-			.map((e) => e.id),
+		parsed.entities.filter((e) => e.type === "plan").map((e) => e.id),
 	);
 	const newPlanIds = plans
 		.filter((p) => !existingPlanIds.has(p.id))
@@ -135,9 +180,24 @@ export async function updateConfigInPlace(
 	for (const id of newPlanIds) {
 		let varName = planIdToVarName(id);
 		if (existingVarNames.has(varName)) {
-			varName = `${varName}_plan`;
+			varName = `${varName}Plan`;
 		}
 		newPlanVarMap.set(id, varName);
+		existingVarNames.add(varName);
+	}
+
+	const variantVarMap = new Map<string, string>();
+	for (const id of apiVariantMap.keys()) {
+		if (existingVariantVarMap.has(id)) {
+			variantVarMap.set(id, existingVariantVarMap.get(id)!);
+			continue;
+		}
+
+		let varName = variantIdToVarName(id);
+		if (existingVarNames.has(varName)) {
+			varName = `${varName}Variant`;
+		}
+		variantVarMap.set(id, varName);
 		existingVarNames.add(varName);
 	}
 
@@ -212,18 +272,23 @@ export async function updateConfigInPlace(
 				const apiPlan = apiPlanMap.get(entity.id);
 				if (apiPlan) {
 					// Update existing plan
-					const newCode = generatePlanCode(
-						apiPlan,
-						features,
-						entity.varName,
+					const newCode = generatePlanWithVariantsCode({
 						featureVarMap,
-					);
+						features,
+						plan: apiPlan,
+						planVarName: entity.varName,
+						variantVarMap,
+					});
 					outputBlocks.push(newCode);
 					matchedPlanIds.add(entity.id);
 					lastPlanBlockIndex = outputBlocks.length - 1;
 					result.plansUpdated++;
 				} else {
 					// Plan not in API - delete it (don't add to output)
+					result.plansDeleted++;
+				}
+			} else if (entity.type === "variant") {
+				if (!apiVariantMap.has(entity.id)) {
 					result.plansDeleted++;
 				}
 			}
@@ -312,12 +377,13 @@ export async function updateConfigInPlace(
 	if (newPlans.length > 0) {
 		const newPlanCode = newPlans
 			.map((p) =>
-				generatePlanCode(
-					p,
-					features,
-					newPlanVarMap.get(p.id),
+				generatePlanWithVariantsCode({
 					featureVarMap,
-				),
+					features,
+					plan: p,
+					planVarName: newPlanVarMap.get(p.id),
+					variantVarMap,
+				}),
 			)
 			.join("\n\n");
 

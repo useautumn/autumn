@@ -1,8 +1,4 @@
-import {
-	ErrCode,
-	RecaseError,
-	type FullProduct,
-} from "@autumn/shared";
+import { ErrCode, RecaseError, type FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
@@ -10,11 +6,17 @@ export const getVariantPropagationTargets = async ({
 	ctx,
 	oldBase,
 	propagateToVariants,
+	missingAllowedIds = new Set(),
 }: {
 	ctx: AutumnContext;
 	oldBase: FullProduct;
 	propagateToVariants: string[];
-}): Promise<FullProduct[]> => {
+	missingAllowedIds?: Set<string>;
+}): Promise<{
+	variants: FullProduct[];
+	allVariants: FullProduct[];
+	missingVariantIds: string[];
+}> => {
 	if (propagateToVariants.length > 20) {
 		throw new RecaseError({
 			message: "Cannot propagate to more than 20 variants",
@@ -46,14 +48,20 @@ export const getVariantPropagationTargets = async ({
 		allFamily.filter((p) => p.archived).map((p) => p.id),
 	);
 
-	const targetProducts = await ProductService.listFull({
-		db,
-		orgId: org.id,
-		env,
-		inIds: propagateToVariants,
-		returnAll: true,
-	});
+	const targetProducts =
+		propagateToVariants.length > 0
+			? await ProductService.listFull({
+					db,
+					orgId: org.id,
+					env,
+					inIds: propagateToVariants,
+					returnAll: true,
+				})
+			: [];
 
+	const targetById = new Map(
+		targetProducts.map((product) => [product.id, product]),
+	);
 	const baseInternalIdsSet = new Set(baseInternalProductIds);
 	for (const product of targetProducts) {
 		if (
@@ -68,7 +76,22 @@ export const getVariantPropagationTargets = async ({
 
 	const variantById = new Map(variants.map((variant) => [variant.id, variant]));
 	const selectedVariants: FullProduct[] = [];
+	const missingVariantIds: string[] = [];
 	for (const id of propagateToVariants) {
+		const target = targetById.get(id);
+		if (!target) {
+			if (missingAllowedIds.has(id)) {
+				missingVariantIds.push(id);
+				continue;
+			}
+
+			throw new RecaseError({
+				message: `Invalid propagation target: ${id}`,
+				code: ErrCode.InvalidPropagationTarget,
+				statusCode: 400,
+			});
+		}
+
 		if (id === oldBase.id || !familyIds.has(id)) {
 			throw new RecaseError({
 				message: `Invalid propagation target: ${id}`,
@@ -82,5 +105,9 @@ export const getVariantPropagationTargets = async ({
 		if (variant) selectedVariants.push(variant);
 	}
 
-	return selectedVariants;
+	return {
+		variants: selectedVariants,
+		allVariants: variants,
+		missingVariantIds,
+	};
 };

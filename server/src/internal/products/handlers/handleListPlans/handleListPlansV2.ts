@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	type ApiPlanV1,
 	applyResponseVersionChanges,
+	type FullProduct,
 	ListPlanParamsSchema,
 	Scopes,
 } from "@autumn/shared";
@@ -9,6 +10,19 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+
+const findBaseFullProduct = ({
+	product,
+	products,
+}: {
+	product: FullProduct;
+	products: FullProduct[];
+}) => {
+	if (!product.base_internal_product_id) return undefined;
+	return products.find(
+		(candidate) => candidate.internal_id === product.base_internal_product_id,
+	);
+};
 
 export const handleListPlansV2 = createRoute({
 	scopes: [Scopes.Plans.Read],
@@ -44,24 +58,22 @@ export const handleListPlansV2 = createRoute({
 		const endedAt = Date.now();
 		ctx.logger.debug(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
-		const batchResponse = [];
-		for (const p of products) {
-			batchResponse.push(
+		const plansList = await Promise.all(
+			products.map((product) =>
 				getPlanResponse({
-					product: p,
+					product,
 					features,
 					fullCus: customer ? customer : undefined,
 					ctx,
 					currency: org.default_currency || undefined,
+					baseFullProduct: findBaseFullProduct({ product, products }),
 				}),
-			);
-		}
+			),
+		);
 
-		const plansList = await Promise.all(batchResponse);
-
-		const res = plansList.map((p) => {
+		const res = plansList.map((plan) => {
 			return applyResponseVersionChanges<ApiPlanV1>({
-				input: p,
+				input: plan,
 				targetVersion: ctx.apiVersion,
 				resource: AffectedResource.Product,
 				legacyData: {

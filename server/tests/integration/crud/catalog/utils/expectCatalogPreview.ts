@@ -7,6 +7,7 @@ import type {
 type ItemExpectation = { featureId: string; included?: number };
 type PlanChangeExpectation = {
 	planId: string;
+	action?: CatalogPlanPreview["action"];
 	willVersion?: boolean;
 	hasCustomers?: boolean;
 	willArchive?: boolean;
@@ -58,6 +59,7 @@ const formatCatalogPreview = (preview: CatalogPreviewUpdateResponse) => ({
 	plan_changes: preview.plan_changes.map((planChanges) => {
 		const summary: Record<string, unknown> = {
 			id: planChanges.plan_id,
+			action: planChanges.action,
 			expanded: Boolean(planChanges.plan),
 			customers: planChanges.has_customers,
 			versions: planChanges.versionable,
@@ -111,14 +113,25 @@ export const expectCatalogPreview = ({
 	}
 
 	return planChanges.map((expectedPlanChange) => {
-		const { planId, willVersion, hasCustomers, willArchive, planExpanded, items } =
-			expectedPlanChange;
+		const {
+			planId,
+			action,
+			willVersion,
+			hasCustomers,
+			willArchive,
+			planExpanded,
+			items,
+		} = expectedPlanChange;
 		const result = preview.plan_changes.find(
 			(planChanges) =>
 				planChanges.plan_id === planId || planChanges.plan?.id === planId,
 		);
 		expect(result, `No plan preview for ${planId}`).toBeDefined();
 		const planChanges = result as CatalogPlanPreview;
+
+		if (typeof action !== "undefined") {
+			expect(planChanges.action, `action for ${planId}`).toBe(action);
+		}
 
 		if (typeof willVersion !== "undefined") {
 			expect(planChanges.versionable, `versionable for ${planId}`).toBe(

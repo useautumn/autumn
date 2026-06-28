@@ -5,7 +5,7 @@ import {
 	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 type ProposedFeature = { existing: Feature | null; dbFeature: Feature };
@@ -64,10 +64,16 @@ export const setupPreviewCatalogContext = async ({
 	const internalProductIds = currents
 		.filter((current): current is FullProduct => current !== null)
 		.map((current) => current.internal_id);
-	const withCustomers = await CusProdReadService.existsForProducts({
+	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db,
 		internalProductIds,
 	});
+	const withCustomers = new Set(
+		internalProductIds.filter(
+			(internalProductId) =>
+				usageByProduct.get(internalProductId)?.hasVersionableCustomerProducts,
+		),
+	);
 
 	const featureById = new Map(
 		ctx.features.map((feature) => [feature.id, feature]),

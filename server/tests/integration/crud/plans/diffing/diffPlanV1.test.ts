@@ -1,5 +1,6 @@
 import { type ApiPlanV1, BillingInterval } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
+import { applyDiff } from "@autumn/shared/utils/planV1Utils/diff/applyDiff.js";
 import { diffPlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { popflyStart, popflyStartAnnual } from "./diffPlanV1.fixtures.js";
 
@@ -7,7 +8,10 @@ describe("diffPlanV1 — popfly start vs start_annual", () => {
 	test("start → start_annual: only price diffs (annual price)", () => {
 		const diff = diffPlanV1({ from: popflyStart, to: popflyStartAnnual });
 
-		expect(diff.price).toEqual({ amount: 5988, interval: BillingInterval.Year });
+		expect(diff.price).toEqual({
+			amount: 5988,
+			interval: BillingInterval.Year,
+		});
 		expect(diff.add_items).toBeUndefined();
 		expect(diff.remove_items).toBeUndefined();
 		expect(diff.free_trial).toBeUndefined();
@@ -22,7 +26,10 @@ describe("diffPlanV1 — popfly start vs start_annual", () => {
 	test("start_annual → start (reverse): price is the monthly price", () => {
 		const diff = diffPlanV1({ from: popflyStartAnnual, to: popflyStart });
 
-		expect(diff.price).toEqual({ amount: 499, interval: BillingInterval.Month });
+		expect(diff.price).toEqual({
+			amount: 499,
+			interval: BillingInterval.Month,
+		});
 		expect(diff.add_items).toBeUndefined();
 		expect(diff.remove_items).toBeUndefined();
 		expect(diff.free_trial).toBeUndefined();
@@ -49,5 +56,21 @@ describe("diffPlanV1 — popfly start vs start_annual", () => {
 			included: 999,
 		});
 		expect(diff.price).toBeUndefined();
+	});
+
+	test("applyDiff dedupes boolean add_items already present on the base plan", () => {
+		const reconstructed = applyDiff({
+			base: popflyStart,
+			diff: {
+				add_items: [{ feature_id: "adventures" }],
+			},
+		});
+
+		let adventuresCount = 0;
+		for (const item of reconstructed.items) {
+			if (item.feature_id === "adventures") adventuresCount += 1;
+		}
+
+		expect(adventuresCount).toBe(1);
 	});
 });

@@ -13,6 +13,7 @@ import {
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 	billingControlsFromColumns,
+	diffPlanV1,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -46,6 +47,7 @@ export const getPlanResponse = async ({
 	fullCus,
 	expand = [],
 	currency = "usd",
+	baseFullProduct,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -53,6 +55,7 @@ export const getPlanResponse = async ({
 	fullCus?: FullCustomer;
 	expand?: string[];
 	currency?: string;
+	baseFullProduct?: FullProduct;
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -114,7 +117,7 @@ export const getPlanResponse = async ({
 	});
 
 	// 9. Build Plan response
-	return ApiPlanV1Schema.parse({
+	const plan = {
 		id: product.id,
 		name: product.name || "",
 		description: product.description || null,
@@ -138,5 +141,31 @@ export const getPlanResponse = async ({
 		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
+	} satisfies ApiPlanV1;
+
+	const basePlan = baseFullProduct
+		? await getPlanResponse({
+				ctx,
+				product: baseFullProduct,
+				features,
+				expand,
+				currency,
+			})
+		: undefined;
+	const customize = basePlan
+		? diffPlanV1({ from: basePlan, to: plan })
+		: undefined;
+	const hasCustomize = customize && Object.keys(customize).length > 0;
+
+	return ApiPlanV1Schema.parse({
+		...plan,
+		...(basePlan
+			? {
+					variant_details: {
+						base_plan_id: basePlan.id,
+						...(hasCustomize ? { customize } : {}),
+					},
+				}
+			: {}),
 	} satisfies ApiPlanV1);
 };

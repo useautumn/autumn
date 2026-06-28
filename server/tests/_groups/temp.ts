@@ -9,6 +9,11 @@ const activeTempPaths = [
 	"integration/crud/plans/variants/rollover-disambiguation.test.ts",
 	"integration/crud/plans/variants/stripe-resource-carryover.test.ts",
 	"integration/crud/plans/previewUpdate/preview-update-plan-basic.test.ts",
+	"integration/crud/plans/update/in-place/in-place-add.test.ts",
+	"integration/crud/plans/update/in-place/in-place-base-price.test.ts",
+	"integration/crud/plans/update/in-place/in-place-delete.test.ts",
+	"integration/crud/plans/update/in-place/in-place-isolation.test.ts",
+	"integration/crud/plans/update/in-place/in-place-update.test.ts",
 	"integration/crud/plans/versioning/pro-annual-propagation.test.ts",
 	"integration/crud/plans/versioning/pro-usage-ladder-variants.test.ts",
 ];

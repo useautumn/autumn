@@ -30,6 +30,22 @@ export interface PlanUpdateInfo {
 	requiresVersioningRecheck?: boolean;
 }
 
+export type VariantPropagationSelections = Record<
+	string,
+	{
+		variant_plan_id: string;
+		name?: string;
+		customize: unknown;
+	}[]
+>;
+
+export type PlanUpdateIntent =
+	| "create_version"
+	| "update_current"
+	| "update_current_and_migrate";
+
+export type PlanUpdateIntentSelections = Record<string, PlanUpdateIntent>;
+
 // Analysis result
 export interface PushAnalysis {
 	featuresToCreate: Feature[];

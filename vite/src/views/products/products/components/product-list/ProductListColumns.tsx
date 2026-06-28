@@ -59,7 +59,10 @@ export const createProductListColumns = ({
 							<span className="text-tertiary-foreground pr-1">└</span>
 						</>
 					)}
-					<AdminHover texts={getPlanHoverTexts({ plan: row.original })}>
+					<AdminHover
+						texts={getPlanHoverTexts({ plan: row.original })}
+						side="right"
+					>
 						{row.original.name}
 					</AdminHover>
 					<PlanTypeBadges

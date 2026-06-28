@@ -12,10 +12,36 @@ export const MigrationDraftSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
+export const CatalogMigrationPreviewSchema = z.object({
+	draft: MigrationDraftSchema,
+	plan_ids: z.array(z.string()),
+	include_custom: z.boolean().default(false),
+	has_billing_changes: z.boolean(),
+});
+export type CatalogMigrationPreview = z.infer<
+	typeof CatalogMigrationPreviewSchema
+>;
+
+export const CatalogPlanPreviewActionSchema = z.enum([
+	"created",
+	"updated",
+	"deleted",
+	"skipped",
+	"none",
+]);
+
 export const CatalogPlanPreviewSchema = PlanUpdatePreviewSchema.extend({
+	action: CatalogPlanPreviewActionSchema.meta({
+		description:
+			"Whether the plan would be created, updated, deleted, or unchanged.",
+	}),
 	will_archive: z.boolean().optional().default(false).meta({
 		description:
 			"Whether applying this derived plan removal archives the plan instead of deleting it.",
+	}),
+	migration: CatalogMigrationPreviewSchema.optional().meta({
+		description:
+			"Migration draft that can be created if this plan is updated in place.",
 	}),
 });
 export type CatalogPlanPreview = z.infer<typeof CatalogPlanPreviewSchema>;

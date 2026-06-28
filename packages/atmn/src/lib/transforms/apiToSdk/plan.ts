@@ -1,4 +1,10 @@
-import type { Plan } from "../../../compose/models/planModels.js";
+import type { Plan as BasePlan } from "../../../compose/models/planModels.js";
+import type {
+	CustomizePlan,
+	Plan,
+	PlanItemFilter,
+	Variant,
+} from "../../../compose/models/variantModels.js";
 import type { ApiPlan } from "../../api/types/index.js";
 import { transformApiPlanItem } from "./planItem.js";
 import { createTransformer } from "./Transformer.js";
@@ -6,8 +12,8 @@ import { createTransformer } from "./Transformer.js";
 /**
  * Declarative plan transformer - replaces 57 lines with ~20 lines of config
  */
-export const planTransformer = createTransformer<ApiPlan, Plan>({
-	copy: ["id", "name", "description", "group"],
+export const planTransformer = createTransformer<ApiPlan, BasePlan>({
+	copy: ["id", "name", "description", "group", "archived"],
 
 	// Rename snake_case API fields → camelCase SDK fields
 	rename: {
@@ -51,6 +57,113 @@ export const planTransformer = createTransformer<ApiPlan, Plan>({
 	},
 });
 
-export function transformApiPlan(apiPlan: ApiPlan): Plan {
+export function transformApiPlan(apiPlan: ApiPlan): BasePlan {
 	return planTransformer.transform(apiPlan);
+}
+
+type ApiCustomizePlan = NonNullable<
+	NonNullable<ApiPlan["variant_details"]>["customize"]
+> & {
+	items?: ApiPlan["items"];
+};
+type ApiPlanItemInput = Parameters<typeof transformApiPlanItem>[0];
+
+const transformApiCompatiblePlanItem = (
+	item: ApiPlanItemInput | NonNullable<ApiCustomizePlan["add_items"]>[number],
+) => transformApiPlanItem(item as ApiPlanItemInput);
+
+const transformApiPlanItemFilter = (
+	filter: NonNullable<ApiCustomizePlan["remove_items"]>[number],
+): PlanItemFilter => ({
+	...(filter.feature_id !== undefined ? { featureId: filter.feature_id } : {}),
+	...(filter.billing_method !== undefined
+		? { billingMethod: filter.billing_method }
+		: {}),
+	...(filter.interval !== undefined ? { interval: filter.interval } : {}),
+	...(filter.interval_count !== undefined
+		? { intervalCount: filter.interval_count }
+		: {}),
+});
+
+const transformApiCustomizePlan = (
+	customize: ApiCustomizePlan | undefined,
+): CustomizePlan | undefined => {
+	if (!customize) return undefined;
+
+	const result: CustomizePlan = {
+		...(customize.price !== undefined
+			? {
+					price: customize.price
+						? {
+								amount: customize.price.amount,
+								interval: customize.price.interval,
+								...(customize.price.interval_count !== undefined
+									? { intervalCount: customize.price.interval_count }
+									: {}),
+							}
+						: null,
+				}
+			: {}),
+		...(customize.items !== undefined
+			? { items: customize.items.map(transformApiCompatiblePlanItem) }
+			: {}),
+		...(customize.add_items !== undefined
+			? { addItems: customize.add_items.map(transformApiCompatiblePlanItem) }
+			: {}),
+		...(customize.remove_items !== undefined
+			? { removeItems: customize.remove_items.map(transformApiPlanItemFilter) }
+			: {}),
+		...(customize.free_trial !== undefined
+			? {
+					freeTrial: customize.free_trial
+						? {
+								durationLength: customize.free_trial.duration_length,
+								durationType: customize.free_trial.duration_type,
+								cardRequired: customize.free_trial.card_required,
+							}
+						: null,
+				}
+			: {}),
+		...(customize.billing_controls !== undefined
+			? { billingControls: customize.billing_controls }
+			: {}),
+	};
+
+	return Object.keys(result).length > 0 ? result : undefined;
+};
+
+const transformApiPlanVariant = (apiPlan: ApiPlan): Variant => {
+	const customize = transformApiCustomizePlan(
+		apiPlan.variant_details?.customize,
+	);
+
+	return {
+		id: apiPlan.id,
+		name: apiPlan.name,
+		...(customize ? { customize } : {}),
+	};
+};
+
+export function transformApiPlans(apiPlans: ApiPlan[]): Plan[] {
+	const planById = new Map(apiPlans.map((apiPlan) => [apiPlan.id, apiPlan]));
+	const variantsByBaseId = new Map<string, Variant[]>();
+	const basePlanIds = new Set<string>();
+
+	for (const apiPlan of apiPlans) {
+		const basePlanId = apiPlan.variant_details?.base_plan_id;
+		if (!basePlanId || !planById.has(basePlanId)) continue;
+
+		basePlanIds.add(apiPlan.id);
+		const variants = variantsByBaseId.get(basePlanId) ?? [];
+		variants.push(transformApiPlanVariant(apiPlan));
+		variantsByBaseId.set(basePlanId, variants);
+	}
+
+	return apiPlans
+		.filter((apiPlan) => !basePlanIds.has(apiPlan.id))
+		.map((apiPlan) => {
+			const plan = transformApiPlan(apiPlan) as Plan;
+			const variants = variantsByBaseId.get(apiPlan.id);
+			return variants && variants.length > 0 ? { ...plan, variants } : plan;
+		});
 }

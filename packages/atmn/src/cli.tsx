@@ -122,6 +122,14 @@ program
 	.command("push")
 	.description("Push changes to Autumn")
 	.option("-y, --yes", "Confirm all prompts automatically")
+	.option(
+		"--plan-intents <json>",
+		"JSON map of plan_id to create_version, update_current, update_current_and_migrate, or skip",
+	)
+	.option(
+		"--variant-propagations <json>",
+		"JSON map of base plan_id to variant plan_id arrays to apply base changes to",
+	)
 	.action(async (options) => {
 		// Import AppEnv here to avoid circular dependencies
 		const { AppEnv } = await import("./lib/env/index.js");
@@ -147,9 +155,19 @@ program
 			const { headlessPush } = await import("./commands/push/headless.js");
 			const { formatError } = await import("./lib/api/client.js");
 			try {
+				const parseJsonOption = (value?: string) => {
+					if (!value) return undefined;
+					try {
+						return JSON.parse(value);
+					} catch {
+						throw new Error(`Invalid JSON option: ${value}`);
+					}
+				};
 				await headlessPush({
 					cwd: process.cwd(),
 					environment,
+					planIntents: parseJsonOption(options.planIntents),
+					variantPropagations: parseJsonOption(options.variantPropagations),
 					yes: options.yes,
 				});
 			} catch (error) {
@@ -173,7 +191,7 @@ program
 		const { getGlobalConfig } = await import("./commands/config/command.js");
 		const skipDts =
 			options.declarationFile === false ||
-			(getGlobalConfig().get("noDeclarationFile") === true);
+			getGlobalConfig().get("noDeclarationFile") === true;
 
 		if (process.stdout.isTTY) {
 			process.exitCode = 1;

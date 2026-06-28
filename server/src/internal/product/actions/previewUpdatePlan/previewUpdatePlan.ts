@@ -5,6 +5,7 @@ import {
 	PlanUpdatePreviewSchema,
 	type PreviewUpdatePlanParamsV2,
 	type ProductV2,
+	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
@@ -15,12 +16,14 @@ import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { hasPlanCustomers } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
+import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
 
 export const buildPlanUpdatePreview = async ({
 	ctx,
 	currentFullProduct,
 	incomingProductV2,
 	data,
+	variantUpdates,
 	hasCustomers,
 	currency = "usd",
 }: {
@@ -28,6 +31,7 @@ export const buildPlanUpdatePreview = async ({
 	currentFullProduct: FullProduct;
 	incomingProductV2: ProductV2;
 	data: PreviewUpdatePlanParamsV2;
+	variantUpdates?: UpdateVariantParams[];
 	hasCustomers: boolean;
 	currency?: string;
 }): Promise<PlanUpdatePreview> => {
@@ -60,13 +64,19 @@ export const buildPlanUpdatePreview = async ({
 		hasCustomers,
 	});
 	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
+	const settingsPatch = getVariantSettingsPatch({
+		from: currentPlan,
+		to: previewPlan,
+	});
 	const variants = await previewAffectedVariants({
 		ctx,
 		base: currentFullProduct,
 		diff,
 		currentBasePlan: currentPlan,
+		settingsPatch,
 		editedBasePlan: previewPlan,
 		data,
+		variantUpdates,
 	});
 
 	return PlanUpdatePreviewSchema.parse({
@@ -110,6 +120,7 @@ export const previewUpdatePlan = async ({
 		currentFullProduct: baseFullProduct,
 		incomingProductV2,
 		data,
+		variantUpdates: data.variants,
 		hasCustomers: await hasPlanCustomers({
 			ctx: previewCtx,
 			product: baseFullProduct,

@@ -233,3 +233,31 @@ export const previewRemoveFeature = async ({
 		...(shouldExpandFeature(ctx) ? { feature: null } : {}),
 	};
 };
+
+export const previewSkippedFeature = ({
+	ctx,
+	featureId,
+	existing,
+}: {
+	ctx: AutumnContext;
+	featureId: string;
+	existing?: Feature | null;
+}): PreviewUpdateFeatureResponse => ({
+	feature_id: featureId,
+	action: "skipped",
+	will_archive: false,
+	blocked: false,
+	blocked_reason: null,
+	previous_attributes: null,
+	...(shouldExpandFeature(ctx)
+		? {
+				feature: existing
+					? dbToApiFeatureV1({
+							ctx,
+							dbFeature: existing,
+							targetVersion: FEATURE_TARGET_VERSION,
+						})
+					: null,
+			}
+		: {}),
+});

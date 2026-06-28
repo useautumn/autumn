@@ -18,7 +18,7 @@ import {
 	runAtmnWorkspaceCli,
 } from "../utils/atmnTestWorkspace.js";
 
-const customerId = "atmn_version_customer";
+const customerId = "atmn-version-customer";
 const planId = "atmn_version_pro";
 
 const replaceFirst = ({

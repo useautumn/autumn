@@ -5,3 +5,4 @@ export * from "./getPlanParamsV0.js";
 export * from "./listPlanParams.js";
 export * from "../previewUpdatePlan/index.js";
 export * from "./updatePlanParamsV1.js";
+export * from "./variants/index.js";

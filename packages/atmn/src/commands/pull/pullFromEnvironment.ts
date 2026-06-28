@@ -1,7 +1,7 @@
 import { fetchFeatures, fetchPlans } from "../../lib/api/endpoints/index.js";
 import {
 	transformApiFeature,
-	transformApiPlan,
+	transformApiPlans,
 } from "../../lib/transforms/index.js";
 import type { EnvironmentData } from "./types.js";
 
@@ -19,7 +19,7 @@ export async function pullFromEnvironment(
 
 	// Transform to SDK types
 	const features = apiFeatures.map(transformApiFeature);
-	const plans = apiPlans.map(transformApiPlan);
+	const plans = transformApiPlans(apiPlans);
 
 	return { features, plans };
 }

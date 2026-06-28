@@ -71,12 +71,14 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: planWithCustomer.id,
+					action: "updated",
 					hasCustomers: true,
 					willVersion: true,
 					items: [{ featureId: TestFeature.Messages, included: 500 }],
 				},
 				{
 					planId: planNoCustomer.id,
+					action: "updated",
 					hasCustomers: false,
 					willVersion: false,
 					items: [{ featureId: TestFeature.Messages, included: 500 }],
@@ -104,6 +106,28 @@ test.concurrent(
 			actions: [s.attach({ productId: plan.id })],
 		});
 
+		// ── B: unchanged plan → no action ──
+		const noChange = await autumnV2_2.post("/catalog.preview_update", {
+			plans: [
+				{
+					plan_id: plan.id,
+					name: plan.name,
+					items: [messagesItem(100)],
+				},
+			],
+		});
+		expectCatalogPreview({
+			preview: noChange,
+			planChanges: [
+				{
+					planId: plan.id,
+					action: "none",
+					hasCustomers: true,
+					willVersion: false,
+				},
+			],
+		});
+
 		// ── B: rename only (items unchanged) → has customers but no version ──
 		const nameOnly = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [
@@ -115,6 +139,7 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: plan.id,
+					action: "updated",
 					hasCustomers: true,
 					willVersion: false,
 				},
@@ -136,6 +161,7 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: plan.id,
+					action: "updated",
 					hasCustomers: true,
 					willVersion: false,
 				},
@@ -151,6 +177,7 @@ test.concurrent(
 			planChanges: [
 				{
 					planId: plan.id,
+					action: "updated",
 					hasCustomers: true,
 					willVersion: true,
 					planExpanded: false,
@@ -222,13 +249,11 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalog preview: a plan can reference a feature created in the same batch")}`,
 	async () => {
-		const customerId = "catalog-preview-batch-upsert";
 		const newFeatureId = "catalog_preview_batch_feature";
 		const planId = "catalog_preview_batch_plan";
 
 		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
+			setup: [],
 			actions: [],
 		});
 
@@ -269,6 +294,7 @@ test.concurrent(
 			planChanges: [
 				{
 					planId,
+					action: "created",
 					items: [{ featureId: newFeatureId, included: 100 }],
 				},
 			],

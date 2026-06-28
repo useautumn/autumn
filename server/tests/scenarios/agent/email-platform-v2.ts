@@ -9,6 +9,7 @@ import {
 	type ProductV2,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
+import { productItemsToCustomizePlanV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemsToCustomizePlanV1";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -148,6 +149,21 @@ type EmailPlatformPlanMap = ReturnType<
 
 export type EmailPlatformPlanKey = keyof EmailPlatformPlanMap;
 type RpcUpdatePlan = Omit<UpdatePlanParamsV2Input, "plan_id">;
+
+const productItemsToPlanUpdate = ({
+	ctx,
+	items,
+}: {
+	ctx: TestContext;
+	items: ProductItem[];
+}): Pick<RpcUpdatePlan, "price" | "items"> => {
+	const customize = productItemsToCustomizePlanV1({ ctx, items });
+
+	return {
+		price: customize.price,
+		items: customize.items?.map((item) => ({ ...item, proration: undefined })),
+	};
+};
 
 const booleanItem = (featureId: EmailPlatformFeatureId): ProductItem =>
 	constructFeatureItem({
@@ -719,9 +735,14 @@ export const createEmailPlatformVariants = async ({
 			}
 		}
 
+		const update = productItemsToPlanUpdate({
+			ctx,
+			items: variantPlan.items,
+		});
+
 		await rpc.plans.update<unknown, RpcUpdatePlan>(variantPlanId, {
 			name: variantPlan.name,
-			items: variantPlan.items as RpcUpdatePlan["items"],
+			...update,
 		});
 	}
 

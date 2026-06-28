@@ -3,6 +3,7 @@ import { idRegex } from "@utils/utils";
 import { z } from "zod/v4";
 import { BasePriceParamsSchema } from "../components/basePrice/basePrice";
 import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
+import { UpdateVariantParamsSchema } from "./variants/index.js";
 
 // const UpdatePlanBaseFieldsSchema = z.object({
 // 	name: CreatePlanParamsV1Schema.shape.name.optional(),
@@ -21,6 +22,7 @@ import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
 
 export const UpdatePlanParamsV1Schema =
 	CreatePlanParamsV1Schema.partial().extend({
+		group: CreatePlanParamsV1Schema.shape.group.removeDefault().optional(),
 		version: z.number().optional(),
 		archived: z.boolean().default(false).optional(),
 		price: BasePriceParamsSchema.nullable().optional().meta({
@@ -62,6 +64,9 @@ export const UpdatePlanParamsV2Schema = z
 		disable_version: z.boolean().optional().meta({
 			internal: true,
 		}),
+		create_migration: z.boolean().optional().meta({
+			internal: true,
+		}),
 		force_version: z.boolean().optional().meta({
 			description:
 				"Force versioning even when no customers exist. Mutually exclusive with disable_version.",
@@ -69,6 +74,10 @@ export const UpdatePlanParamsV2Schema = z
 		update_variant_ids: z.array(z.string()).optional().meta({
 			description:
 				"Variant plan IDs to apply this update to. Empty or omitted means no propagation.",
+		}),
+		variants: z.array(UpdateVariantParamsSchema).optional().default([]).meta({
+			description:
+				"Additive variant updates for this base plan. Missing variants are created when name is provided.",
 		}),
 		is_default: z.boolean().optional().meta({
 			description:

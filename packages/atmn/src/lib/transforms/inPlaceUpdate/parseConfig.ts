@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 
 export interface ParsedEntity {
 	id: string;
-	type: "feature" | "plan";
+	type: "feature" | "plan" | "variant";
 	varName: string;
 	/** Starting line index (0-based) */
 	startLine: number;
@@ -60,7 +60,7 @@ function extractVarName(line: string): string | null {
 /**
  * Determine entity type from source lines
  */
-function determineEntityType(lines: string[]): "feature" | "plan" | null {
+function determineEntityType(lines: string[]): ParsedEntity["type"] | null {
 	const joined = lines.join("\n");
 
 	// Check for feature indicators: type: 'boolean'|'metered'|'credit_system'
@@ -70,6 +70,10 @@ function determineEntityType(lines: string[]): "feature" | "plan" | null {
 	// Also check for feature() function call
 	if (/=\s*feature\s*\(/.test(joined)) {
 		return "feature";
+	}
+
+	if (/=\s*\w+\.variant\s*\(/.test(joined)) {
+		return "variant";
 	}
 
 	// Check for plan indicators: items: [ array (or legacy features: [)
@@ -109,8 +113,8 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 		// Import statement
 		if (trimmed.startsWith("import ")) {
 			const startLine = i;
-		// Import can span multiple lines until semicolon
-		while (i < lines.length && !lines[i]!.includes(";")) {
+			// Import can span multiple lines until semicolon
+			while (i < lines.length && !lines[i]!.includes(";")) {
 				i++;
 			}
 			const endLine = i;
@@ -176,7 +180,7 @@ export function parseExistingConfig(configPath: string): ParsedConfig {
 				}
 
 				// End when we close all braces and see semicolon
-			if (foundStart && depth === 0 && currentLine.includes(";")) {
+				if (foundStart && depth === 0 && currentLine.includes(";")) {
 					break;
 				}
 				i++;
