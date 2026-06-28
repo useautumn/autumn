@@ -18,8 +18,10 @@ import {
 	createProdConfirmationPrompt,
 	fetchRemoteData,
 	isHistoricalPlan,
+	planChangeHasHistoricalVersions,
 	planTargetKey,
 	previewCatalogPush,
+	type PlanMigrationSelections,
 	type PlanUpdateIntentSelections,
 	type PushAnalysis,
 	type PushPrompt,
@@ -260,12 +262,16 @@ const catalogPreviewToAnalysis = ({
 		if (change.action === "created" && localPlan) {
 			analysis.plansToCreate.push(localPlan);
 		} else if (change.action === "updated" && localPlan) {
+			const hasHistoricalVersions = planChangeHasHistoricalVersions({
+				planChange: change,
+			});
 			analysis.plansToUpdate.push({
 				plan: localPlan,
 				willVersion:
 					change.versionable &&
 					!isHistoricalPlan({ latestVersionById, plan: localPlan }),
 				isArchived: false,
+				hasHistoricalVersions,
 			});
 		} else if (change.action === "deleted") {
 			analysis.plansToDelete.push({
@@ -404,10 +410,11 @@ export function usePush(options?: UsePushOptions) {
 				prompts.push(createPlanArchivedPrompt(plan));
 			}
 
-			// Plans that will version
+			// Plans with versioning or all-version update choices
 			for (const planInfo of analysisResult.plansToUpdate) {
-				if (planInfo.willVersion) {
+				if (planInfo.willVersion || planInfo.hasHistoricalVersions) {
 					prompts.push(createPlanVersioningPrompt(planInfo, environment));
+					prompts.push(createPlanMigrationPrompt(planInfo));
 				}
 			}
 
@@ -417,12 +424,6 @@ export function usePush(options?: UsePushOptions) {
 					preview,
 				}),
 			);
-
-			for (const planInfo of analysisResult.plansToUpdate) {
-				if (planInfo.willVersion) {
-					prompts.push(createPlanMigrationPrompt(planInfo));
-				}
-			}
 
 			// Feature deletions
 			for (const info of analysisResult.featuresToDelete) {
@@ -529,7 +530,7 @@ export function usePush(options?: UsePushOptions) {
 
 		for (const planInfo of analysis?.plansToUpdate ?? []) {
 			if (
-				planInfo.willVersion &&
+				(planInfo.willVersion || planInfo.hasHistoricalVersions) &&
 				findPromptResponse({
 					entityId: planInfo.plan.id,
 					promptQueue,
@@ -603,32 +604,40 @@ export function usePush(options?: UsePushOptions) {
 		useCallback((): PlanUpdateIntentSelections => {
 			const selections: PlanUpdateIntentSelections = {};
 			for (const planInfo of analysis?.plansToUpdate ?? []) {
-				if (!planInfo.willVersion) continue;
+				if (!planInfo.willVersion && !planInfo.hasHistoricalVersions) continue;
 				const response = findPromptResponse({
 					entityId: planInfo.plan.id,
 					promptQueue,
 					promptResponses,
 					typePrefix: "plan_versioning",
 				});
-				if (response === "skip") continue;
-				if (response !== "update_current") {
-					selections[planInfo.plan.id] = "create_version";
-					continue;
+				if (
+					response === "create_version" ||
+					response === "update_current" ||
+					response === "update_all_versions"
+				) {
+					selections[planInfo.plan.id] = response;
 				}
-
-				const migrationResponse = findPromptResponse({
-					entityId: planInfo.plan.id,
-					promptQueue,
-					promptResponses,
-					typePrefix: "plan_migration",
-				});
-				selections[planInfo.plan.id] =
-					migrationResponse === "create_migration"
-						? "update_current_and_migrate"
-						: "update_current";
 			}
 			return selections;
 		}, [analysis, promptQueue, promptResponses]);
+
+	const getPlanMigrationSelections = useCallback((): PlanMigrationSelections => {
+		const selections: PlanMigrationSelections = {};
+		for (const planInfo of analysis?.plansToUpdate ?? []) {
+			if (!planInfo.willVersion && !planInfo.hasHistoricalVersions) continue;
+			const response = findPromptResponse({
+				entityId: planInfo.plan.id,
+				promptQueue,
+				promptResponses,
+				typePrefix: "plan_migration",
+			});
+			if (response !== undefined) {
+				selections[planInfo.plan.id] = response === "create_migration";
+			}
+		}
+		return selections;
+	}, [analysis, promptQueue, promptResponses]);
 
 	const pushFeaturesMutation = useMutation({
 		mutationFn: async (_config: LocalConfig) => {
@@ -712,6 +721,7 @@ export function usePush(options?: UsePushOptions) {
 				cwd: effectiveCwd,
 				features: config.features,
 				plans: config.plans,
+				planMigrationSelections: getPlanMigrationSelections(),
 				planUpdateIntentSelections: getPlanUpdateIntentSelections(),
 				skipFeatureIds: skippedFeatureIds,
 				skipPlanIds: skippedPlanIds,
@@ -775,7 +785,8 @@ export function usePush(options?: UsePushOptions) {
 					candidate.entityId === prompt.entityId,
 			);
 			if (!versionPrompt) return false;
-			return responses.get(versionPrompt.id) === "update_current";
+			const response = responses.get(versionPrompt.id);
+			return response === "update_current" || response === "update_all_versions";
 		},
 		[promptQueue],
 	);

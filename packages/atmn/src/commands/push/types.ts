@@ -27,6 +27,7 @@ export interface PlanUpdateInfo {
 	plan: Plan;
 	willVersion: boolean;
 	isArchived: boolean;
+	hasHistoricalVersions?: boolean;
 	requiresVersioningRecheck?: boolean;
 }
 
@@ -42,9 +43,10 @@ export type VariantPropagationSelections = Record<
 export type PlanUpdateIntent =
 	| "create_version"
 	| "update_current"
-	| "update_current_and_migrate";
+	| "update_all_versions";
 
 export type PlanUpdateIntentSelections = Record<string, PlanUpdateIntent>;
+export type PlanMigrationSelections = Record<string, boolean>;
 
 // Analysis result
 export interface PushAnalysis {

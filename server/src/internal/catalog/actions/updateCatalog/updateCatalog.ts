@@ -135,6 +135,8 @@ const upsertPlans = async ({
 			update_variant_ids,
 			variants,
 			version,
+			include_versions: _includeVersions,
+			include_variants: _includeVariants,
 			...rest
 		} = planParams;
 		if (

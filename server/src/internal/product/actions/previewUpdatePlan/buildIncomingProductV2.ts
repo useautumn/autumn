@@ -26,6 +26,8 @@ export const buildIncomingProductV2 = ({
 		update_variant_ids,
 		variants: _variants,
 		all_versions: _allVersions,
+		include_versions: _includeVersions,
+		include_variants: _includeVariants,
 		expand,
 		...planParams
 	} = data;

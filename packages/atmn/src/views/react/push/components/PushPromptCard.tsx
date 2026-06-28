@@ -69,18 +69,18 @@ export function PushPromptCard({
 		case "plan_migration":
 			return (
 				<PromptCard
-					title="Migrate Existing Customers"
+					title="Create Migration Draft?"
 					icon="⚠"
 					options={prompt.options}
 					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
-						Plan "{getData<string>(prompt, "planName")}" will update the
-						existing version.
+						Plan "{getData<string>(prompt, "planName")}" will be updated in
+						place.
 					</Text>
-					<Text color="yellow">
-						Create a migration to move current customers to the updated version?
+					<Text color="gray">
+						Customers move only when you run the migration draft.
 					</Text>
 				</PromptCard>
 			);

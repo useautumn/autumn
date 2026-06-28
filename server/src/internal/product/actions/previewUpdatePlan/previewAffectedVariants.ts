@@ -71,9 +71,14 @@ export const previewAffectedVariants = async ({
 			Math.max(latestVersionById.get(variant.id) ?? 0, variant.version),
 		);
 	}
+	const previewVariants = data.include_versions || data.all_versions
+		? variants
+		: variants.filter(
+				(variant) => variant.version === latestVersionById.get(variant.id),
+			);
 
 	return Promise.all(
-		variants.map(async (variant) => {
+		previewVariants.map(async (variant) => {
 			const isLatestVersion =
 				variant.version === latestVersionById.get(variant.id);
 			const currentPlan = await getPlanResponse({

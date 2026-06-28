@@ -193,6 +193,64 @@ export const variantRefreshInherited = variantRefreshBase.variant({
 });
 `;
 
+const annualVariantWithOptionalAdminConfig = ({
+	baseIncluded,
+	basePlanId,
+	includeAdmin,
+	variantPlanId,
+}: {
+	baseIncluded: number;
+	basePlanId: string;
+	includeAdmin: boolean;
+	variantPlanId: string;
+}) => `import { feature, item, plan } from 'atmn';
+
+export const messages = feature({
+\tid: 'messages',
+\tname: 'Messages',
+\ttype: 'metered',
+\tconsumable: true,
+});
+
+export const adminRights = feature({
+\tid: 'admin_rights',
+\tname: 'Admin',
+\ttype: 'boolean',
+});
+
+export const variantRefreshBase = plan({
+\tid: '${basePlanId}',
+\tname: 'Variant Refresh Base',
+\titems: [
+\t\titem({
+\t\t\tfeatureId: messages.id,
+\t\t\tincluded: ${baseIncluded},
+\t\t\treset: { interval: 'month' },
+\t\t}),
+${includeAdmin ? "\t\titem({ featureId: adminRights.id }),\n" : ""}\t],
+});
+
+export const variantRefreshAnnual = variantRefreshBase.variant({
+\tid: '${variantPlanId}',
+\tname: 'Variant Refresh Annual',
+\tcustomize: {
+\t\taddItems: [
+\t\t\titem({
+\t\t\t\tfeatureId: messages.id,
+\t\t\t\tincluded: 1400,
+\t\t\t\treset: { interval: 'year' },
+\t\t\t}),
+\t\t],
+\t\tremoveItems: [
+\t\t\t{
+\t\t\t\tfeatureId: messages.id,
+\t\t\t\tinterval: 'month',
+\t\t\t},
+\t\t],
+\t},
+});
+`;
+
 const pullConfig = async ({
 	args = ["--force", "--no-declaration-file"],
 	secretKey,
@@ -336,6 +394,57 @@ test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs a
 			(entitlement) => entitlement.feature.id === TestFeature.Messages,
 		)?.allowance,
 	).toBe(100);
+});
+
+test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs when base gains boolean item")}`, async () => {
+	const basePlanId = "atmn_variant_refresh_boolean_base";
+	const variantPlanId = "atmn_variant_refresh_boolean_annual";
+	const ctx = await createCleanAtmnIntegrationContext();
+	const workspace = await prepareAtmnIntegrationWorkspace({
+		secretKey: ctx.orgSecretKey,
+	});
+
+	await writeFile(
+		workspace.configPath,
+		annualVariantWithOptionalAdminConfig({
+			baseIncluded: 500,
+			basePlanId,
+			includeAdmin: false,
+			variantPlanId,
+		}),
+	);
+	await pushConfig(workspace);
+
+	await writeFile(
+		workspace.configPath,
+		annualVariantWithOptionalAdminConfig({
+			baseIncluded: 800,
+			basePlanId,
+			includeAdmin: true,
+			variantPlanId,
+		}),
+	);
+	await pushConfig(workspace, [
+		"--yes",
+		"--variant-propagations",
+		JSON.stringify({ [basePlanId]: [] }),
+	]);
+
+	const configAfterPush = await readFile(workspace.configPath, "utf8");
+	const variantAfter = await ProductService.getFull({
+		db: ctx.db,
+		env: ctx.env,
+		idOrInternalId: variantPlanId,
+		orgId: ctx.org.id,
+	});
+
+	expect(configAfterPush).toContain("item({ featureId: adminRights.id })");
+	expect(configAfterPush.match(/featureId: adminRights\.id/g)?.length).toBe(2);
+	expect(
+		variantAfter.entitlements.some(
+			(entitlement) => entitlement.feature.id === TestFeature.AdminRights,
+		),
+	).toBe(false);
 });
 
 test(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature are deleted")}`, async () => {

@@ -1,6 +1,11 @@
 import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
 import { UpdatePlanParamsV2Schema } from "@api/products/crud/updatePlanParamsV1.js";
+import { PreviewUpdatePlanDetailParamsSchema } from "@api/products/previewUpdatePlan/previewUpdatePlanParamsV2.js";
 import { z } from "zod/v4";
+
+export const CatalogPlanParamsSchema = UpdatePlanParamsV2Schema.extend(
+	PreviewUpdatePlanDetailParamsSchema.shape,
+);
 
 /**
  * A batch change to the org's catalog (features + plans), applied/previewed in
@@ -10,7 +15,7 @@ import { z } from "zod/v4";
  */
 export const CatalogUpdateParamsSchema = z.object({
 	features: z.array(CreateFeatureV2ParamsSchema).optional().default([]),
-	plans: z.array(UpdatePlanParamsV2Schema).optional().default([]),
+	plans: z.array(CatalogPlanParamsSchema).optional().default([]),
 	skip_deletions: z.boolean().optional().default(true),
 	skip_feature_ids: z.array(z.string()).optional().default([]),
 	skip_plan_ids: z.array(z.string()).optional().default([]),
@@ -20,6 +25,7 @@ export const CatalogUpdateParamsSchema = z.object({
 	create_migration: z.boolean().optional().default(false),
 });
 
+export type CatalogPlanParams = z.infer<typeof CatalogPlanParamsSchema>;
 export type CatalogUpdateParams = z.infer<typeof CatalogUpdateParamsSchema>;
 export type CatalogUpdateParamsInput = z.input<
 	typeof CatalogUpdateParamsSchema

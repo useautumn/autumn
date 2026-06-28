@@ -210,6 +210,7 @@ test.concurrent(
 		const preview = await autumnV2_3.plans.previewUpdate({
 			plan_id: pro.id,
 			items: [messagesItem(500)],
+			include_variants: true,
 		});
 
 		expectPreviewUpdatePlanCorrect({

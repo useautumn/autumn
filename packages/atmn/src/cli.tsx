@@ -125,7 +125,11 @@ program
 	.option("--all-versions", "Push every historical plan version in config")
 	.option(
 		"--plan-intents <json>",
-		"JSON map of plan_id or plan_id@vN to create_version, update_current, update_current_and_migrate, or skip",
+		"JSON map of plan_id or plan_id@vN to create_version, update_current, update_all_versions, or skip",
+	)
+	.option(
+		"--migration-drafts <json>",
+		"JSON map of plan_id or plan_id@vN to true or false for migration draft creation",
 	)
 	.option(
 		"--variant-propagations <json>",
@@ -169,6 +173,7 @@ program
 					cwd: process.cwd(),
 					environment,
 					allVersions: options.allVersions,
+					migrationDrafts: parseJsonOption(options.migrationDrafts),
 					planIntents: parseJsonOption(options.planIntents),
 					variantPropagations: parseJsonOption(options.variantPropagations),
 					yes: options.yes,

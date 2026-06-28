@@ -1,7 +1,10 @@
 import type {
 	ApiPlanV1,
+	DiffedCustomizePlanV1,
 	Feature,
 	FrontendProduct,
+	MigrationFilter,
+	Operations,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -13,9 +16,6 @@ import {
 	productV2ToFeatureItems,
 	sortProductItems,
 } from "@autumn/shared";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
-import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
 export interface MigrationDraft {
@@ -152,6 +152,8 @@ export function buildPreviewUpdatePlanParams({
 		features,
 	});
 	delete params.disable_version;
+	params.include_versions = true;
+	params.include_variants = true;
 	return params;
 }
 

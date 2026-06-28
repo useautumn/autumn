@@ -69,24 +69,36 @@ export const buildPlanUpdatePreview = async ({
 		from: currentPlan,
 		to: previewPlan,
 	});
-	const variants = await previewAffectedVariants({
-		ctx,
-		base: currentFullProduct,
-		diff,
-		currentBasePlan: currentPlan,
-		settingsPatch,
-		editedBasePlan: previewPlan,
-		data,
-		variantUpdates,
-	});
-	const otherVersions = await previewOtherProductVersions({
-		ctx,
-		product: currentFullProduct,
-		currentPlan,
-		editedPlan: previewPlan,
-		diff,
-		settingsPatch,
-	});
+	const shouldPreviewVersions = Boolean(data.include_versions || data.all_versions);
+	const shouldPreviewVariants = Boolean(
+		data.include_variants ||
+			(data.update_variant_ids?.length ?? 0) > 0 ||
+			(data.variants?.length ?? 0) > 0,
+	);
+	const [variants, otherVersions] = await Promise.all([
+		shouldPreviewVariants
+			? previewAffectedVariants({
+					ctx,
+					base: currentFullProduct,
+					diff,
+					currentBasePlan: currentPlan,
+					settingsPatch,
+					editedBasePlan: previewPlan,
+					data,
+					variantUpdates,
+				})
+			: [],
+		shouldPreviewVersions
+			? previewOtherProductVersions({
+					ctx,
+					product: currentFullProduct,
+					currentPlan,
+					editedPlan: previewPlan,
+					diff,
+					settingsPatch,
+				})
+			: [],
+	]);
 
 	return PlanUpdatePreviewSchema.parse({
 		...buildCorePlanUpdatePreview({

@@ -1,6 +1,7 @@
 import {
 	apiPlan,
 	expandPathIncludes,
+	type CatalogPlanParams,
 	type FullProduct,
 	type PlanUpdatePreview,
 	PlanUpdatePreviewSchema,
@@ -8,7 +9,6 @@ import {
 	type PreviewUpdatePlanParamsV2,
 	type ProductV2,
 	productV2ToApiPlanV1,
-	type UpdatePlanParamsV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildIncomingProductV2 } from "@/internal/product/actions/previewUpdatePlan/buildIncomingProductV2.js";
@@ -20,7 +20,7 @@ const previewNewPlan = ({
 	currency,
 }: {
 	ctx: AutumnContext;
-	planParams: UpdatePlanParamsV2;
+	planParams: CatalogPlanParams;
 	currency: string;
 }): PlanUpdatePreview => {
 	const {
@@ -28,6 +28,8 @@ const previewNewPlan = ({
 		new_plan_id,
 		version: _version,
 		variants: _variants,
+		include_versions: _includeVersions,
+		include_variants: _includeVariants,
 		...rest
 	} = planParams;
 	const resolved = apiPlan.map.paramsV1ToProductV2({
@@ -83,7 +85,7 @@ export const previewCatalogPlanUpdate = async ({
 	currency,
 }: {
 	ctx: AutumnContext;
-	planParams: UpdatePlanParamsV2;
+	planParams: CatalogPlanParams;
 	current: FullProduct | null;
 	hasCustomers: boolean;
 	currency: string;
@@ -107,6 +109,15 @@ export const previewCatalogPlanUpdate = async ({
 		...basePlanParams,
 		variants,
 		expand: shouldExpandPlan ? [PreviewUpdatePlanExpand.Plan] : [],
+		include_versions: Boolean(
+			planParams.include_versions || planParams.all_versions,
+		),
+		include_variants: Boolean(
+			planParams.include_variants ||
+				(planParams.all_versions &&
+					((planParams.update_variant_ids?.length ?? 0) > 0 ||
+						(variants?.length ?? 0) > 0)),
+		),
 	};
 	const incoming = buildIncomingProductV2({ ctx, base: current, data });
 

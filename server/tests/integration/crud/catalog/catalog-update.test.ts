@@ -379,6 +379,7 @@ test(`${chalk.yellowBright("catalog: preview_update marks selected variant propa
 	const planUpdate = {
 		plan_id: planId,
 		name: prod.name,
+		include_variants: true,
 		items: [
 			{
 				feature_id: TestFeature.Messages,
@@ -471,6 +472,7 @@ test(`${chalk.yellowBright("catalog: preview_update leaves no-op base variant pr
 			{
 				plan_id: planId,
 				name: "No-op Variant Base",
+				include_variants: true,
 				items: [
 					{
 						feature_id: TestFeature.Messages,
@@ -526,6 +528,7 @@ test(`${chalk.yellowBright("catalog: preview_update includes auto-propagated var
 				plan_id: planId,
 				name: "Base Renamed",
 				add_on: true,
+				include_variants: true,
 				group: "team",
 				config: { ignore_past_due: true },
 			},
@@ -877,6 +880,7 @@ test(`${chalk.yellowBright("catalog: preview_update does not propagate auto_enab
 				plan_id: planId,
 				name: prod.name,
 				auto_enable: true,
+				include_variants: true,
 			},
 		],
 	});

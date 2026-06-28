@@ -39,6 +39,7 @@ interface PlanVersioningPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
 	willVersion: boolean;
 	isArchived: boolean;
+	hasHistoricalVersions?: boolean;
 }
 
 interface PlanVariantPropagationPromptInfo {
@@ -117,6 +118,17 @@ export function createPlanVersioningPrompt(
 				value: "update_current",
 				isDefault: env !== AppEnv.Live,
 			},
+			...(info.hasHistoricalVersions
+				? [
+						{
+							label: "Update all versions",
+							description:
+								"Apply this change to every version of this plan and selected variants.",
+							value: "update_all_versions",
+							isDefault: false,
+						},
+					]
+				: []),
 		],
 	};
 }
@@ -135,12 +147,13 @@ export function createPlanMigrationPrompt(
 		},
 		options: [
 			{
-				label: "Create migration",
+				label: "Create migration draft",
+				description: "Customers move only when you run the draft.",
 				value: "create_migration",
 				isDefault: false,
 			},
 			{
-				label: "Skip migration",
+				label: "Do not create migration draft",
 				value: "skip_migration",
 				isDefault: true,
 			},

@@ -15,11 +15,18 @@ This is also the flow agents should follow when using catalog preview/update thr
 
 Call `catalog.preview_update` with the proposed catalog.
 
+For plan updates, include preview details on the plan params when the caller needs
+dashboard-style choices:
+
+- `include_versions: true`: include historical version previews
+- `include_variants: true`: include variant previews
+
 Inspect each `plan_changes[]` entry:
 
 - `action`: `created`, `updated`, `deleted`, `skipped`, or `none`
 - `versionable`: true when a normal update would create a new version
 - `migration`: draft that can be created if the plan is updated in place
+- `other_versions[]`: historical versions affected by all-version choices
 - `variants[]`: affected variants and propagation conflicts
 
 For variants, inspect:
@@ -30,12 +37,20 @@ For variants, inspect:
 
 ## Ask The User
 
-For every updated plan where `versionable` is true, ask for one intent:
+For every updated latest plan where `versionable` is true or the preview includes
+historical versions, ask for one update target:
 
 - `create_version`: grandfather existing customers
 - `update_current`: patch the current catalog version only
-- `update_current_and_migrate`: patch current version and create a migration draft
+- `update_all_versions`: patch every version
 - `skip`: leave this plan unchanged
+
+Only show the all-versions option when the base plan or selected variants have
+historical versions in the preview.
+
+If the user chooses `update_current` or `update_all_versions`, ask separately
+whether to create a migration draft. This is independent: all versions can be
+updated with or without a draft.
 
 For every base plan with variant propagation prompts, ask which variants should receive the base-plan change.
 
@@ -62,7 +77,13 @@ bun atmn push --headless --yes \
   --plan-intents '{"pro":"update_current"}'
 
 bun atmn push --headless --yes \
-  --plan-intents '{"pro":"update_current_and_migrate"}' \
+  --plan-intents '{"pro":"update_current"}' \
+  --migration-drafts '{"pro":true}' \
+  --variant-propagations '{"pro":["pro_annual"]}'
+
+bun atmn push --headless --yes \
+  --plan-intents '{"pro":"update_all_versions"}' \
+  --migration-drafts '{"pro":false}' \
   --variant-propagations '{"pro":["pro_annual"]}'
 ```
 
@@ -86,13 +107,14 @@ bun atmn push --headless --yes \
 
 - Sends `disable_version: true`.
 - Existing customer rows are preserved where needed.
-- No migration draft is created.
+- Sends per-plan `create_migration: true` only when the separate migration choice is true.
 
-`update_current_and_migrate`:
+`update_all_versions`:
 
-- Sends `disable_version: true`.
-- Sends per-plan `create_migration: true`.
-- Catalog update creates one migration draft for the base plan and selected variants that have migratable customers.
+- Sends `all_versions: true`.
+- Updates every version of the base plan in place.
+- Updates every version of selected variants in place.
+- Sends per-plan `create_migration: true` only when the separate migration choice is true.
 
 ## Migration Drafts
 

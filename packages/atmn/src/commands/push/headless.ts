@@ -24,6 +24,7 @@ import {
 	catalogPreviewHasChanges,
 	fetchRemoteData,
 	isHistoricalPlan,
+	planChangeHasHistoricalVersions,
 	planTargetKey,
 	previewCatalogPush,
 	pushCatalog,
@@ -32,6 +33,7 @@ import {
 } from "./push.js";
 import type { PushResult } from "./types.js";
 import type {
+	PlanMigrationSelections,
 	PlanUpdateIntent,
 	PlanUpdateIntentSelections,
 	VariantPropagationSelections,
@@ -44,11 +46,21 @@ interface LocalConfig {
 	plans: Plan[];
 }
 
+type CombinedPlanUpdateIntent =
+	| "update_current_and_migrate"
+	| "update_all_versions_and_migrate";
+
+type HeadlessPlanUpdateIntent =
+	| PlanUpdateIntent
+	| CombinedPlanUpdateIntent
+	| "skip";
+
 interface HeadlessPushOptions {
 	cwd?: string;
 	environment?: AppEnv;
 	allVersions?: boolean;
-	planIntents?: Record<string, PlanUpdateIntent | "skip">;
+	planIntents?: Record<string, HeadlessPlanUpdateIntent>;
+	migrationDrafts?: Record<string, boolean>;
 	variantPropagations?: Record<string, string[]>;
 	yes?: boolean;
 }
@@ -98,14 +110,33 @@ const formatJsonExample = () =>
 		`  --plan-intents '{"pro":"create_version"}'`,
 		`  --plan-intents '{"pro@v1":"update_current"}'`,
 		`  --plan-intents '{"pro":"update_current"}'`,
-		`  --plan-intents '{"pro":"update_current_and_migrate"}'`,
+		`  --plan-intents '{"pro":"update_all_versions"}'`,
+		`  --migration-drafts '{"pro":true}'`,
 		`  --variant-propagations '{"pro":["pro_annual"]}'`,
 	].join("\n");
 
 const isPlanUpdateIntent = (value: unknown): value is PlanUpdateIntent =>
 	value === "create_version" ||
 	value === "update_current" ||
-	value === "update_current_and_migrate";
+	value === "update_all_versions";
+
+const normalizePlanIntent = ({
+	intent,
+}: {
+	intent: HeadlessPlanUpdateIntent;
+}): {
+	createMigration?: boolean;
+	intent: PlanUpdateIntent | "skip" | null;
+} => {
+	if (intent === "update_current_and_migrate") {
+		return { intent: "update_current", createMigration: true };
+	}
+	if (intent === "update_all_versions_and_migrate") {
+		return { intent: "update_all_versions", createMigration: true };
+	}
+	if (intent === "skip" || isPlanUpdateIntent(intent)) return { intent };
+	return { intent: null };
+};
 
 const formatVariantConflict = (conflict: unknown): string => {
 	if (!conflict || typeof conflict !== "object") return "unknown conflict";
@@ -122,20 +153,24 @@ const formatVariantConflict = (conflict: unknown): string => {
 };
 
 function resolveHeadlessUpdateDecisions({
+	migrationDrafts = {},
 	planIntents = {},
 	prompts,
 	variantPropagations = {},
 }: {
+	migrationDrafts?: HeadlessPushOptions["migrationDrafts"];
 	planIntents?: HeadlessPushOptions["planIntents"];
 	prompts: PushPrompt[];
 	variantPropagations?: HeadlessPushOptions["variantPropagations"];
 }): {
 	missing: string[];
+	planMigrationSelections: PlanMigrationSelections;
 	planUpdateIntentSelections: PlanUpdateIntentSelections;
 	skipPlanIds: string[];
 	variantPropagationSelections: VariantPropagationSelections;
 } {
 	const missing: string[] = [];
+	const planMigrationSelections: PlanMigrationSelections = {};
 	const planUpdateIntentSelections: PlanUpdateIntentSelections = {};
 	const skipPlanIds: string[] = [];
 	const variantPropagationSelections: VariantPropagationSelections = {};
@@ -147,15 +182,34 @@ function resolveHeadlessUpdateDecisions({
 			missing.push(`plan "${prompt.entityId}" needs a plan intent`);
 			continue;
 		}
-		if (intent === "skip") {
+		const normalized = normalizePlanIntent({ intent });
+		if (normalized.intent === "skip") {
 			skipPlanIds.push(prompt.entityId);
 			continue;
 		}
-		if (!isPlanUpdateIntent(intent)) {
+		if (normalized.intent === null) {
 			missing.push(`plan "${prompt.entityId}" has invalid plan intent`);
 			continue;
 		}
-		planUpdateIntentSelections[prompt.entityId] = intent;
+		planUpdateIntentSelections[prompt.entityId] = normalized.intent;
+		if (normalized.createMigration !== undefined) {
+			planMigrationSelections[prompt.entityId] = normalized.createMigration;
+		}
+	}
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_migration") continue;
+		if (skipPlanIds.includes(prompt.entityId)) continue;
+		if (planUpdateIntentSelections[prompt.entityId] === "create_version") {
+			continue;
+		}
+		const selected = migrationDrafts[prompt.entityId];
+		if (selected === undefined) {
+			if (prompt.entityId in planMigrationSelections) continue;
+			missing.push(`plan "${prompt.entityId}" needs a migration draft choice`);
+			continue;
+		}
+		planMigrationSelections[prompt.entityId] = selected;
 	}
 
 	for (const prompt of prompts) {
@@ -201,6 +255,7 @@ function resolveHeadlessUpdateDecisions({
 
 	return {
 		missing: [...new Set(missing)],
+		planMigrationSelections,
 		planUpdateIntentSelections,
 		skipPlanIds,
 		variantPropagationSelections,
@@ -305,32 +360,31 @@ function buildPromptQueueFromPreview(
 
 	for (const [index, planChange] of preview.plan_changes.entries()) {
 		const localPlan = planForChange(planChange, index);
-		if (
-			planChange.action === "updated" &&
-			planChange.versionable &&
-			!localPlan
-		) {
-			continue;
-		}
-		if (
-			planChange.action === "updated" &&
-			planChange.versionable &&
-			localPlan &&
-			!isHistoricalPlan({ latestVersionById, plan: localPlan })
-		) {
+		if (planChange.action !== "updated" || !localPlan) continue;
+
+		const hasHistoricalVersions = planChangeHasHistoricalVersions({
+			planChange,
+		});
+		const shouldPrompt =
+			!isHistoricalPlan({ latestVersionById, plan: localPlan }) &&
+			(planChange.versionable || hasHistoricalVersions);
+		if (shouldPrompt) {
+			const plan = {
+				id: planChange.plan_id,
+				name: planChange.plan?.name ?? planChange.plan_id,
+			};
 			prompts.push(
 				createPlanVersioningPrompt(
 					{
-						plan: {
-							id: planChange.plan_id,
-							name: planChange.plan?.name ?? planChange.plan_id,
-						},
-						willVersion: true,
+						plan,
+						willVersion: planChange.versionable,
 						isArchived: false,
+						hasHistoricalVersions,
 					},
 					environment,
 				),
 			);
+			prompts.push(createPlanMigrationPrompt({ plan }));
 		}
 	}
 
@@ -348,25 +402,6 @@ function buildPromptQueueFromPreview(
 				variants: affectedVariants,
 			}),
 		);
-	}
-
-	for (const [index, planChange] of preview.plan_changes.entries()) {
-		const localPlan = planForChange(planChange, index);
-		if (
-			planChange.action === "updated" &&
-			planChange.versionable &&
-			localPlan &&
-			!isHistoricalPlan({ latestVersionById, plan: localPlan })
-		) {
-			prompts.push(
-				createPlanMigrationPrompt({
-					plan: {
-						id: planChange.plan_id,
-						name: planChange.plan?.name ?? planChange.plan_id,
-					},
-				}),
-			);
-		}
 	}
 
 	for (const featureChange of preview.feature_changes) {
@@ -407,12 +442,12 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 				break;
 			case "plan_versioning":
 				issues.push(
-					`  - Plan "${prompt.entityId}" has customers; choose create_version, update_current, update_current_and_migrate, or skip`,
+					`  - Plan "${prompt.entityId}" needs an update intent; choose create_version, update_current, update_all_versions, or skip`,
 				);
 				break;
 			case "plan_migration":
 				issues.push(
-					`  - Plan "${prompt.entityId}" can create a migration after updating the existing version`,
+					`  - Plan "${prompt.entityId}" needs a migration draft choice`,
 				);
 				break;
 			case "plan_variant_propagation": {
@@ -547,6 +582,7 @@ async function executePushWithDefaults(
 	cwd: string,
 	environment: AppEnv,
 	decisions: {
+		planMigrationSelections?: PlanMigrationSelections;
 		planUpdateIntentSelections?: PlanUpdateIntentSelections;
 		skipPlanIds?: string[];
 		variantPropagationSelections?: VariantPropagationSelections;
@@ -606,6 +642,7 @@ async function executePushWithDefaults(
 		cwd,
 		features: config.features,
 		plans: config.plans,
+		planMigrationSelections: decisions.planMigrationSelections,
 		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
 		preview,
 		skipPlanIds: decisions.skipPlanIds,
@@ -723,6 +760,7 @@ async function _headlessPushImpl(
 		config.plans,
 	);
 	const decisions = resolveHeadlessUpdateDecisions({
+		migrationDrafts: options.migrationDrafts,
 		planIntents: options.planIntents,
 		prompts,
 		variantPropagations: options.variantPropagations,
@@ -773,6 +811,7 @@ async function _headlessPushImpl(
 			cwd,
 			environment,
 			{
+				planMigrationSelections: decisions.planMigrationSelections,
 				planUpdateIntentSelections: decisions.planUpdateIntentSelections,
 				skipPlanIds: decisions.skipPlanIds,
 				variantPropagationSelections: decisions.variantPropagationSelections,

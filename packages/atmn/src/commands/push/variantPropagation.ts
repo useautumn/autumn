@@ -2,7 +2,9 @@ type VariantPreview = {
 	conflicts?: unknown[];
 	customize?: unknown;
 	item_changes?: unknown[];
+	plan_id?: string;
 	price_change?: unknown;
+	version?: number;
 };
 
 type PlanChangeWithVariants = {
@@ -26,7 +28,26 @@ export const getVariantPropagationPreviews = <
 	planChange: TPlanChange;
 }): NonNullable<TPlanChange["variants"]> => {
 	if (!planChange.customize) return [];
-	return (planChange.variants ?? []).filter(
+	const changedVariants = (planChange.variants ?? []).filter(
 		variantPreviewHasChanges,
-	) as NonNullable<TPlanChange["variants"]>;
+	);
+	const withoutPlanId: VariantPreview[] = [];
+	const latestByPlanId = new Map<string, VariantPreview>();
+
+	for (const variant of changedVariants) {
+		if (!variant.plan_id) {
+			withoutPlanId.push(variant);
+			continue;
+		}
+
+		const existing = latestByPlanId.get(variant.plan_id);
+		if (!existing || (variant.version ?? 0) > (existing.version ?? 0)) {
+			latestByPlanId.set(variant.plan_id, variant);
+		}
+	}
+
+	return [
+		...withoutPlanId,
+		...latestByPlanId.values(),
+	] as NonNullable<TPlanChange["variants"]>;
 };

@@ -25,6 +25,7 @@ export {
 	deletePlan,
 	fetchRemoteData,
 	isHistoricalPlan,
+	planChangeHasHistoricalVersions,
 	planTargetKey,
 	previewCatalogPush,
 	pushCatalog,
@@ -36,6 +37,7 @@ export {
 } from "./push.js";
 export type {
 	FeatureDeleteInfo,
+	PlanMigrationSelections,
 	PlanDeleteInfo,
 	PlanUpdateInfo,
 	PlanUpdateIntentSelections,

@@ -157,6 +157,7 @@ const pushVariantVersioningConfig = async ({
 	baseIncluded,
 	basePlanId,
 	ctx,
+	migrationDrafts,
 	planIntents,
 	variantIncluded,
 	variantPlanId,
@@ -165,6 +166,7 @@ const pushVariantVersioningConfig = async ({
 	baseIncluded: number;
 	basePlanId: string;
 	ctx: TestContext;
+	migrationDrafts?: Record<string, boolean>;
 	planIntents?: Record<string, string>;
 	variantIncluded: number;
 	variantPlanId: string;
@@ -184,6 +186,9 @@ const pushVariantVersioningConfig = async ({
 	);
 	const args = [
 		"--yes",
+		...(migrationDrafts
+			? ["--migration-drafts", JSON.stringify(migrationDrafts)]
+			: []),
 		...(planIntents ? ["--plan-intents", JSON.stringify(planIntents)] : []),
 		...(variantPropagations
 			? ["--variant-propagations", JSON.stringify(variantPropagations)]
@@ -203,6 +208,7 @@ const pushMultiVariantVersioningConfig = async ({
 	ctx,
 	firstVariantId,
 	firstVariantIncluded,
+	migrationDrafts,
 	planIntents,
 	secondVariantId,
 	secondVariantIncluded,
@@ -213,6 +219,7 @@ const pushMultiVariantVersioningConfig = async ({
 	ctx: TestContext;
 	firstVariantId: string;
 	firstVariantIncluded: number;
+	migrationDrafts?: Record<string, boolean>;
 	planIntents?: Record<string, string>;
 	secondVariantId: string;
 	secondVariantIncluded: number;
@@ -234,6 +241,9 @@ const pushMultiVariantVersioningConfig = async ({
 	);
 	const args = [
 		"--yes",
+		...(migrationDrafts
+			? ["--migration-drafts", JSON.stringify(migrationDrafts)]
+			: []),
 		...(planIntents ? ["--plan-intents", JSON.stringify(planIntents)] : []),
 		...(variantPropagations
 			? ["--variant-propagations", JSON.stringify(variantPropagations)]
@@ -517,6 +527,7 @@ test(`${chalk.yellowBright("atmn variant versioning: update current keeps base v
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
+			migrationDrafts: { [basePlanId]: false },
 			planIntents: { [basePlanId]: "update_current" },
 			variantIncluded: 1200,
 			variantPlanId,
@@ -554,7 +565,8 @@ test(`${chalk.yellowBright("atmn variant versioning: update current and migrate 
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
-			planIntents: { [basePlanId]: "update_current_and_migrate" },
+			migrationDrafts: { [basePlanId]: true },
+			planIntents: { [basePlanId]: "update_current" },
 			variantIncluded: 1200,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [] },

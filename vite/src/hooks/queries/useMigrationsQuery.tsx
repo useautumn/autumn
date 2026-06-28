@@ -1,6 +1,4 @@
-import type { Migration } from "@autumn/shared";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
+import type { Migration, MigrationFilter, Operations } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
