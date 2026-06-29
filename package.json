@@ -70,7 +70,10 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.20.0"
+		"@types/pg": "8.20.0",
+		"@typescript/native-preview": "7.0.0-dev.20260511.1",
+		"@tanstack/react-query": "5.101.1",
+		"drizzle-orm": "0.43.1"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -89,7 +92,10 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.20.0"
+		"@types/pg": "8.20.0",
+		"@typescript/native-preview": "7.0.0-dev.20260511.1",
+		"@tanstack/react-query": "5.101.1",
+		"drizzle-orm": "0.43.1"
 	},
 	"type": "module",
 	"scripts": {
