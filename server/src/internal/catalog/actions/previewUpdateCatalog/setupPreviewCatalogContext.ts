@@ -5,7 +5,7 @@ import {
 	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 type ProposedFeature = { existing: Feature | null; dbFeature: Feature };
@@ -17,6 +17,8 @@ export interface PreviewCatalogContext {
 	currents: (FullProduct | null)[];
 	/** Internal product ids that have at least one customer. */
 	withCustomers: Set<string>;
+	/** Migration-eligible customer count per internal product id. */
+	customerCountByInternalId: Map<string, number>;
 	/** The batch's features resolved to DB shape, paired with what they replace. */
 	proposedFeatures: ProposedFeature[];
 	/** ctx with the batch's features virtually upserted, so plans can reference net-new ones. */
@@ -64,10 +66,22 @@ export const setupPreviewCatalogContext = async ({
 	const internalProductIds = currents
 		.filter((current): current is FullProduct => current !== null)
 		.map((current) => current.internal_id);
-	const withCustomers = await CusProdReadService.existsForProducts({
+	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db,
 		internalProductIds,
 	});
+	const withCustomers = new Set(
+		internalProductIds.filter(
+			(internalProductId) =>
+				usageByProduct.get(internalProductId)?.hasVersionableCustomerProducts,
+		),
+	);
+	const customerCountByInternalId = new Map(
+		internalProductIds.map((internalProductId) => [
+			internalProductId,
+			usageByProduct.get(internalProductId)?.versionableCustomerCount ?? 0,
+		]),
+	);
 
 	const featureById = new Map(
 		ctx.features.map((feature) => [feature.id, feature]),
@@ -91,5 +105,12 @@ export const setupPreviewCatalogContext = async ({
 		],
 	};
 
-	return { products, currents, withCustomers, proposedFeatures, planCtx };
+	return {
+		products,
+		currents,
+		withCustomers,
+		customerCountByInternalId,
+		proposedFeatures,
+		planCtx,
+	};
 };

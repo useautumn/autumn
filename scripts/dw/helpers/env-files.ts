@@ -13,11 +13,13 @@ import {
 	PROJECT_ROOT,
 } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { isProvisioned } from "./entry.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
 	elasticMqPortFor,
 	portlessHttpsUrl,
+	serverPortFor,
 } from "./ports.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
@@ -74,28 +76,41 @@ export function mergeEnvFile(
 	return `${outLines.join("\n")}\n`;
 }
 
+function urlsForEntry(entry: RegistryEntry): { apiUrl: string; viteUrl: string } {
+	if (isProvisioned(entry)) {
+		const aliases = aliasesFor(entry.worktreeNum);
+		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
+	}
+	const serverPort = serverPortFor(entry.worktreeNum);
+	const vitePort = 3000 + (entry.worktreeNum - 1) * 100;
+	return {
+		apiUrl: `http://localhost:${serverPort}`,
+		viteUrl: `http://localhost:${vitePort}`,
+	};
+}
+
 export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) {
 		log("writeEnvLocalFiles: entry missing databaseUrl, skipping");
 		return;
 	}
-	const aliases = aliasesFor(worktreeNum);
-	const serverPort = 8080 + (worktreeNum - 1) * 100;
+	const { apiUrl, viteUrl } = urlsForEntry(entry);
+	const serverPort = serverPortFor(worktreeNum);
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
 
 	const dbUrl = forceSslVerifyFull(databaseUrl);
 	const serverEnv: Record<string, string> = {
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
-		BETTER_AUTH_URL: aliases.apiUrl,
-		CLIENT_URL: aliases.viteUrl,
+		BETTER_AUTH_URL: apiUrl,
+		CLIENT_URL: viteUrl,
 		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
-		AUTUMN_TEST_VITE_URL: aliases.viteUrl,
+		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 	};
-	if (worktreeNum > 1) {
+	if (isProvisioned(entry)) {
 		const dragonflyPort = dragonflyPortFor(worktreeNum);
 		const elasticMqPort = elasticMqPortFor(worktreeNum);
 		const redisUrl = `redis://localhost:${dragonflyPort}`;
@@ -116,12 +131,12 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	}
 
 	const viteEnv: Record<string, string> = {
-		VITE_BACKEND_URL: aliases.apiUrl,
-		VITE_FRONTEND_URL: aliases.viteUrl,
+		VITE_BACKEND_URL: apiUrl,
+		VITE_FRONTEND_URL: viteUrl,
 	};
 
 	const checkoutEnv: Record<string, string> = {
-		VITE_BACKEND_URL: aliases.apiUrl,
+		VITE_BACKEND_URL: apiUrl,
 	};
 
 	const writeOne = (relPath: string, managed: Record<string, string>) => {

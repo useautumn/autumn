@@ -35,8 +35,14 @@ export const orgDefaultAppliesToEntities = ({
 	return ctx.org.config.default_applies_to_entities;
 };
 
-export const orgDisableStripeWrites = ({ ctx }: { ctx: SharedContext }) => {
-	if (ctx.env === AppEnv.Sandbox) {
+export const orgDisableStripeWrites = ({
+	ctx,
+	includeSandbox = false,
+}: {
+	ctx: SharedContext;
+	includeSandbox?: boolean;
+}) => {
+	if (ctx.env === AppEnv.Sandbox && !includeSandbox) {
 		return false;
 	}
 	return ctx.org.config.disable_stripe_writes;

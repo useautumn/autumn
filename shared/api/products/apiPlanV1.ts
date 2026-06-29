@@ -4,6 +4,7 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
+import { CustomizePlanV1Schema } from "../billing/common/customizePlan/customizePlanV1.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
@@ -47,6 +48,10 @@ export const API_PLAN_V1_EXAMPLE = {
 	billing_controls: {},
 	metadata: {},
 };
+
+const VariantCustomizeSchema = CustomizePlanV1Schema.omit({
+	items: true,
+});
 
 export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({
@@ -118,8 +123,24 @@ export const ApiPlanV1Schema = z.object({
 	}),
 	base_variant_id: z.string().nullable().meta({
 		description:
-			"If this is a variant, the ID of the base plan it was created from.",
+			"Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.",
+		deprecated: true,
 	}),
+	variant_details: z
+		.object({
+			base_plan_id: z.string().meta({
+				description: "The ID of the base plan this variant was derived from.",
+			}),
+			customize: VariantCustomizeSchema.optional().meta({
+				description:
+					"The customization that transforms the base plan into this variant.",
+			}),
+		})
+		.optional()
+		.meta({
+			description:
+				"Details about how this variant relates to its latest base plan.",
+		}),
 
 	config: ProductConfigSchema.meta({
 		description: "Miscellaneous plan-level configuration flags.",

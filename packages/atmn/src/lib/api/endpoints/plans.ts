@@ -8,6 +8,7 @@ import type { ApiPlan } from "../types/index.js";
 export interface FetchPlansOptions {
 	secretKey: string;
 	includeArchived?: boolean;
+	allVersions?: boolean;
 }
 
 export interface FetchPlansResponse {
@@ -17,14 +18,15 @@ export interface FetchPlansResponse {
 export async function fetchPlans(
 	options: FetchPlansOptions,
 ): Promise<ApiPlan[]> {
-	const { secretKey, includeArchived = true } = options;
+	const { secretKey, includeArchived = true, allVersions = false } = options;
 
 	const response = await request<FetchPlansResponse>({
-		method: "GET",
-		path: "/v1/products",
+		method: "POST",
+		path: "/v1/plans.list",
 		secretKey,
-		queryParams: {
+		body: {
 			include_archived: includeArchived,
+			all_versions: allVersions,
 		},
 	});
 

@@ -11,6 +11,13 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.Scheduled,
 ];
 
+export const VERSIONABLE_CUSTOMER_STATUSES = [
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Scheduled,
+	CusProductStatus.Paused,
+];
+
 export const ALL_STATUSES = [
 	CusProductStatus.Scheduled,
 	CusProductStatus.Active,

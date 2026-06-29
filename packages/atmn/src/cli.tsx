@@ -122,6 +122,19 @@ program
 	.command("push")
 	.description("Push changes to Autumn")
 	.option("-y, --yes", "Confirm all prompts automatically")
+	.option("--all-versions", "Push every historical plan version in config")
+	.option(
+		"--plan-intents <json>",
+		"JSON map of plan_id or plan_id@vN to create_version, update_current, update_all_versions, or skip",
+	)
+	.option(
+		"--migration-drafts <json>",
+		"JSON map of plan_id or plan_id@vN to true or false for migration draft creation",
+	)
+	.option(
+		"--variant-propagations <json>",
+		"JSON map of base plan_id to variant plan_id arrays to apply base changes to",
+	)
 	.action(async (options) => {
 		// Import AppEnv here to avoid circular dependencies
 		const { AppEnv } = await import("./lib/env/index.js");
@@ -135,6 +148,7 @@ program
 				<QueryProvider>
 					<PushView
 						environment={environment}
+						allVersions={options.allVersions}
 						yes={options.yes}
 						onComplete={() => {
 							process.exit(0);
@@ -147,9 +161,21 @@ program
 			const { headlessPush } = await import("./commands/push/headless.js");
 			const { formatError } = await import("./lib/api/client.js");
 			try {
+				const parseJsonOption = (value?: string) => {
+					if (!value) return undefined;
+					try {
+						return JSON.parse(value);
+					} catch {
+						throw new Error(`Invalid JSON option: ${value}`);
+					}
+				};
 				await headlessPush({
 					cwd: process.cwd(),
 					environment,
+					allVersions: options.allVersions,
+					migrationDrafts: parseJsonOption(options.migrationDrafts),
+					planIntents: parseJsonOption(options.planIntents),
+					variantPropagations: parseJsonOption(options.variantPropagations),
 					yes: options.yes,
 				});
 			} catch (error) {
@@ -163,6 +189,7 @@ program
 	.command("pull")
 	.description("Pull changes from Autumn")
 	.option("-f, --force", "Force overwrite config (skip in-place update)")
+	.option("--all-versions", "Pull every historical plan version")
 	.option("--no-declaration-file", "Skip generating @useautumn-sdk.d.ts")
 	.action(async (options) => {
 		// Import AppEnv here to avoid circular dependencies
@@ -173,7 +200,7 @@ program
 		const { getGlobalConfig } = await import("./commands/config/command.js");
 		const skipDts =
 			options.declarationFile === false ||
-			(getGlobalConfig().get("noDeclarationFile") === true);
+			getGlobalConfig().get("noDeclarationFile") === true;
 
 		if (process.stdout.isTTY) {
 			process.exitCode = 1;
@@ -184,6 +211,7 @@ program
 						environment={environment}
 						forceOverwrite={options.force}
 						noDeclarationFile={skipDts}
+						allVersions={options.allVersions}
 						onComplete={() => {
 							process.exit(0);
 						}}
@@ -201,6 +229,7 @@ program
 					environment,
 					forceOverwrite: options.force,
 					noDeclarationFile: skipDts,
+					allVersions: options.allVersions,
 				});
 
 				console.log(

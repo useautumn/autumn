@@ -1,4 +1,5 @@
 import {
+	AppEnv,
 	type AutumnBillingPlan,
 	type BillingContext,
 	copyStripeResourcesToMatchingPrice,
@@ -17,6 +18,7 @@ import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
@@ -30,6 +32,8 @@ export const initStripeResourcesForProducts = async ({
 	internalEntityId?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
+	if (env === AppEnv.Live) return;
+	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 
 	const batchProductUpdates = [];
 	for (const product of products) {
@@ -120,6 +124,8 @@ export const initStripeResourcesForBillingPlan = async ({
 		});
 		return;
 	}
+
+	if (orgDisableStripeWrites({ ctx })) return;
 
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;

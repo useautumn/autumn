@@ -16,6 +16,7 @@ import { handleGetMigrations } from "./internalHandlers/handleGetMigrations.js";
 import { handleGetProductCount } from "./internalHandlers/handleGetProductCount.js";
 import { handleGetProductCounts } from "./internalHandlers/handleGetProductCounts.js";
 import { handleGetProductInternal } from "./internalHandlers/handleGetProductInternal.js";
+import { handleListPlanVariants } from "./handlers/handleListPlanVariants.js";
 import { handleGetRewards } from "./internalHandlers/handleGetRewards.js";
 import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupons.js";
 
@@ -36,6 +37,7 @@ internalProductRouter.get("/migrations", ...handleGetMigrations);
 // SINGLE PRODUCT ENDPOINTS
 internalProductRouter.get("/:productId/count", ...handleGetProductCount);
 internalProductRouter.get("/:productId/data", ...handleGetProductInternal);
+internalProductRouter.get("/:productId/variants", ...handleListPlanVariants);
 internalProductRouter.post("/copy_to_production", ...handleCopyEnvironment);
 internalProductRouter.get("/:productId/info", ...handleGetProductDeleteInfo);
 internalProductRouter.get(

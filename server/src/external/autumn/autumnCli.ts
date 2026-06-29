@@ -8,6 +8,9 @@ import {
 	type ApiCusFeatureV3,
 	type ApiCusProductV3,
 	type ApiCustomerV3,
+	type CatalogPreviewUpdateResponse,
+	type CatalogUpdateParamsInput,
+	type CatalogUpdateResponse,
 	type ApiEntityBillingControlsParams,
 	type ApiEntityV0,
 	type AttachBodyV0,
@@ -39,6 +42,8 @@ import {
 	type MigrationRun,
 	type Operations,
 	type OrgConfig,
+	type PlanUpdatePreview,
+	type PreviewUpdatePlanParamsV2Input,
 	type ProductItem,
 	type RecalculateBalanceParamsV0,
 	type RecalculateBalancePreview,
@@ -60,11 +65,21 @@ import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 export default class AutumnError extends Error {
 	message: string;
 	code: string;
+	statusCode?: number;
 
-	constructor({ message, code }: { message: string; code: string }) {
+	constructor({
+		message,
+		code,
+		statusCode,
+	}: {
+		message: string;
+		code: string;
+		statusCode?: number;
+	}) {
 		super(message);
 		this.message = message;
 		this.code = code;
+		this.statusCode = statusCode;
 	}
 
 	toString(): string {
@@ -768,6 +783,49 @@ export class AutumnInt {
 		delete: async (productId: string) => {
 			const data = await this.delete(`/products/${productId}`);
 			return data;
+		},
+	};
+
+	plans = {
+		previewUpdate: async <
+			TResponse = PlanUpdatePreview,
+			TInput = PreviewUpdatePlanParamsV2Input,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/plans.preview_update`, params);
+			return data as TResponse;
+		},
+
+		createVariant: async <TResponse = any>(params: {
+			base_plan_id: string;
+			variant_plan_id: string;
+			name: string;
+		}): Promise<TResponse> => {
+			const data = await this.post(`/plans.create_variant`, params);
+			return data as TResponse;
+		},
+	};
+
+	catalog = {
+		previewUpdate: async <
+			TResponse = CatalogPreviewUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.preview_update`, params);
+			return data as TResponse;
+		},
+
+		update: async <
+			TResponse = CatalogUpdateResponse,
+			TInput = CatalogUpdateParamsInput,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			const data = await this.post(`/catalog.update`, params);
+			return data as TResponse;
 		},
 	};
 

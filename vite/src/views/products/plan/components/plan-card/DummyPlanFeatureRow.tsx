@@ -4,10 +4,10 @@ import {
 	isAnyCreditSystem,
 } from "@autumn/shared";
 import { BoxArrowDownIcon } from "@phosphor-icons/react";
+import { CustomDotIcon } from "@/components/v2/PlanItemLabel";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
-import { CustomDotIcon } from "./PlanFeatureRow";
 
 /**
  * Displays a preview row in the plan card for a feature being created.

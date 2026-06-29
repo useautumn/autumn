@@ -36,26 +36,6 @@ export class CusProdReadService {
 		return result.length > 0;
 	}
 
-	/** Internal product ids (from the input set) that have at least one customer product, any status. */
-	static async existsForProducts({
-		db,
-		internalProductIds,
-	}: {
-		db: DrizzleCli;
-		internalProductIds: string[];
-	}): Promise<Set<string>> {
-		if (internalProductIds.length === 0) return new Set();
-
-		const rows = await db
-			.selectDistinct({
-				internalProductId: customerProducts.internal_product_id,
-			})
-			.from(customerProducts)
-			.where(inArray(customerProducts.internal_product_id, internalProductIds));
-
-		return new Set(rows.map((row) => row.internalProductId));
-	}
-
 	static getCounts = async ({
 		db,
 		internalProductId,

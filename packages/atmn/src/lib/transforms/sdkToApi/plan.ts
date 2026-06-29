@@ -58,7 +58,7 @@ export interface ApiPlanItemParams {
  * - SDK top-level reset -> API reset.interval
  * - SDK price.interval -> API price.interval
  */
-function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
+export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 	const result: ApiPlanItemParams = {
 		feature_id: planItem.featureId,
 	};
@@ -106,7 +106,11 @@ function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 			}),
 			...(planItem.price.tiers && {
 				tiers: planItem.price.tiers.map((tier) => {
-					const t = tier as { to: number | "inf"; amount: number; flatAmount?: number };
+					const t = tier as {
+						to: number | "inf";
+						amount: number;
+						flatAmount?: number;
+					};
 					return {
 						to: t.to,
 						amount: t.amount,

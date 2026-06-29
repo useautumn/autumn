@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import prettier from "prettier";
-import type { Feature, Plan } from "../../compose/models/index.js";
+import type { Feature } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 import { resolveConfigPath } from "../../lib/env/index.js";
 import { buildConfigFile } from "../../lib/transforms/index.js";
 import {

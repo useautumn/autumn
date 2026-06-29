@@ -22,6 +22,7 @@ import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 
 export const DeletePlanDialog = ({
@@ -47,8 +48,15 @@ export const DeletePlanDialog = ({
 
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
-	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { products, invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateProduct } = useProductQuery();
+
+	// A base variant is a plan that other variants point to via base_id.
+	const isBaseVariant = products.some(
+		(p) => p.base_id === product.id && p.id !== product.id,
+	);
+	const willDetachVariants =
+		isBaseVariant && (deleteAllVersions || product.version === 1);
 
 	const { data: productInfo, isLoading } = useGeneralQuery({
 		url: `/products/${product.id}/info`,
@@ -222,6 +230,13 @@ export const DeletePlanDialog = ({
 							))}
 					</DialogDescription>
 				</DialogHeader>
+
+				{willDetachVariants && !hasCusProducts && !product.archived && (
+					<InfoBox variant="warning">
+						This is a base variant. Deleting this plan will convert variants of
+						this plan into base plans.
+					</InfoBox>
+				)}
 
 				{productInfo.numVersion > 1 &&
 					!product.archived &&
