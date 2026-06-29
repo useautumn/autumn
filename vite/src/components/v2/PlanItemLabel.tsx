@@ -111,25 +111,38 @@ function priceTierRows(
 	item: ProductItem,
 	currency: string,
 ): { range: string; value: string }[] {
-	let from = 0;
-	return (item.tiers ?? []).map((tier) => {
-		const isInfinite = tier.to === TierInfinite;
-		const range = isInfinite ? `${from}+` : `${from}–${tier.to}`;
-		if (!isInfinite && typeof tier.to === "number") from = tier.to;
+	// Tiers store `to` relative to the granted usage, so add it back to show the
+	// same absolute boundaries as the editor (PriceTiers' getTierToDisplay).
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
 
-		const fmt = (amount: number) =>
-			formatAmount({
-				currency,
-				amount,
-				amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-			});
+	const fmt = (amount: number) =>
+		formatAmount({
+			currency,
+			amount,
+			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		});
+
+	const rows: { range: string; value: string }[] = [];
+	if (includedUsage > 0) {
+		rows.push({ range: `0–${includedUsage}`, value: "Included" });
+	}
+
+	let from = includedUsage;
+	for (const tier of item.tiers ?? []) {
+		const isInfinite = tier.to === TierInfinite;
+		const to = typeof tier.to === "number" ? tier.to + includedUsage : tier.to;
+		const range = isInfinite ? `${from}+` : `${from}–${to}`;
+		if (!isInfinite && typeof to === "number") from = to;
 
 		const parts: string[] = [];
 		if (tier.amount) parts.push(fmt(tier.amount));
 		if (tier.flat_amount) parts.push(`${fmt(tier.flat_amount)} flat`);
 
-		return { range, value: parts.length > 0 ? parts.join(" + ") : "Free" };
-	});
+		rows.push({ range, value: parts.length > 0 ? parts.join(" + ") : "Free" });
+	}
+
+	return rows;
 }
 
 function KeyValueRow({ label, value }: { label: string; value: string }) {
