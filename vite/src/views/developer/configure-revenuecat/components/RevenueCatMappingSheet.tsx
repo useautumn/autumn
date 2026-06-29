@@ -34,6 +34,19 @@ interface RevenueCatMappingSheetProps {
 interface RCProduct {
 	id: string;
 	name: string;
+	platforms: string[];
+}
+
+// Show the store identifier alongside the (possibly grouped, possibly empty)
+// display name, plus the platforms it spans, e.g.
+// "Annual, Annual (annual) [ios/android]". Falls back to just the id when the
+// product has no display name so the option is never blank.
+function formatRcProductLabel(product: RCProduct): string {
+	const base = product.name ? `${product.name} (${product.id})` : product.id;
+	if (product.platforms.length === 0) {
+		return base;
+	}
+	return `${base} [${product.platforms.join("/")}]`;
 }
 
 const MappingRow = memo(function MappingRow({
@@ -81,7 +94,9 @@ const MappingRow = memo(function MappingRow({
 								key={productId}
 								className="flex items-center gap-1 border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 rounded-lg pl-3 pr-2 py-1 text-xs"
 							>
-								<span className="text-tiny">{product?.name || productId}</span>
+								<span className="text-tiny">
+									{product ? formatRcProductLabel(product) : productId}
+								</span>
 								<button
 									type="button"
 									onClick={() =>
@@ -117,7 +132,10 @@ const MappingRow = memo(function MappingRow({
 						}
 					}}
 					items={Object.fromEntries(
-						availableProducts.map((product) => [product.id, product.name]),
+						availableProducts.map((product) => [
+							product.id,
+							formatRcProductLabel(product),
+						]),
 					)}
 				>
 					<SelectTrigger className="w-full">
@@ -126,7 +144,7 @@ const MappingRow = memo(function MappingRow({
 					<SelectContent>
 						{availableProducts.map((product) => (
 							<SelectItem key={product.id} value={product.id}>
-								{product.name}
+								{formatRcProductLabel(product)}
 							</SelectItem>
 						))}
 					</SelectContent>
