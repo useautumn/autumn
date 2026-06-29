@@ -6,6 +6,11 @@ const BATCH_SIZE = 5000;
 const TICK_MS = 30_000;
 const RUN_BUDGET_MS = 55_000;
 
+// Grace window: don't mark products that expired recently (they may still be
+// reactivated/refunded/resubscribed). updated_at is stamped on every status
+// change; ended_at is unreliable (not set on manual expiry).
+const EXPIRED_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Backfill: mark entitlements of expired (terminal) products as expired so the
@@ -13,13 +18,16 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // sticky. Self-terminating once drained; remove this job after it idles.
 const clearExpiredBatch = async ({ ctx }: { ctx: CronContext }) => {
 	const { db } = ctx;
+	const graceBefore = Date.now() - EXPIRED_GRACE_MS;
 	const updated = await db.execute<{ id: string }>(sql`
 		WITH batch AS (
 			SELECT ce.id
 			FROM customer_entitlements ce
 			JOIN customer_products cp ON ce.customer_product_id = cp.id
 			WHERE ce.expired IS NULL
+				AND ce.next_reset_at IS NOT NULL
 				AND cp.status = ${CusProductStatus.Expired}
+				AND (cp.updated_at IS NULL OR cp.updated_at < ${graceBefore})
 			LIMIT ${BATCH_SIZE}
 			FOR UPDATE OF ce SKIP LOCKED
 		)
