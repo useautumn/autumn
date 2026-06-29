@@ -1,4 +1,5 @@
 import type { Plan, PlanItem } from "../../../compose/models/index.js";
+import { transformBillingControlsToApi } from "./billingControls.js";
 
 /**
  * API plan format expected by the server's CreatePlanParams schema
@@ -20,6 +21,7 @@ export interface ApiPlanParams {
 		duration_length: number;
 		card_required: boolean;
 	};
+	billing_controls?: ReturnType<typeof transformBillingControlsToApi>;
 }
 
 export interface ApiPlanItemParams {
@@ -193,6 +195,11 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 			duration_length: plan.freeTrial.durationLength,
 			card_required: plan.freeTrial.cardRequired,
 		};
+	}
+
+	const billingControls = transformBillingControlsToApi(plan.billingControls);
+	if (billingControls !== undefined) {
+		result.billing_controls = billingControls;
 	}
 
 	return result;
