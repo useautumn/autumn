@@ -1,8 +1,30 @@
-import { isValidScope } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { oauthClientRepo } from "../repos/index.js";
 
 const ATMN_OAUTH_CLIENT_NAMES = new Set(["atmn", "autumn cli"]);
+
+// Fixed scope set the pinned legacy atmn CLI requests. Self-heal is limited to
+// these so an unauthenticated /authorize can never widen the reserved client.
+const ATMN_LEGACY_OAUTH_SCOPES = new Set<string>([
+	"organisation:read",
+	"customers:create",
+	"customers:read",
+	"customers:list",
+	"customers:update",
+	"customers:delete",
+	"features:create",
+	"features:read",
+	"features:list",
+	"features:update",
+	"features:delete",
+	"plans:create",
+	"plans:read",
+	"plans:list",
+	"plans:update",
+	"plans:delete",
+	"apiKeys:create",
+	"apiKeys:read",
+]);
 
 const configuredAtmnClientIds = () =>
 	new Set(
@@ -94,7 +116,9 @@ export const ensureAtmnAuthorizeScopes = async ({
 }) => {
 	if (!scope) return;
 
-	const requested = scope.split(/\s+/).filter(Boolean).filter(isValidScope);
+	const requested = scope
+		.split(/\s+/)
+		.filter((s) => ATMN_LEGACY_OAUTH_SCOPES.has(s));
 	if (requested.length === 0) return;
 
 	const client = await oauthClientRepo.getByClientId({ db, clientId });
@@ -110,12 +134,12 @@ export const ensureAtmnAuthorizeScopes = async ({
 	}
 
 	const existing = new Set(client.scopes ?? []);
-	const missing = requested.filter((s) => !existing.has(s));
-	if (missing.length === 0) return;
+	if (requested.every((s) => existing.has(s))) return;
 
-	await oauthClientRepo.updateScopesByClientId({
+	// Union atomically in SQL — concurrent self-heals must not clobber each other.
+	await oauthClientRepo.addScopesByClientId({
 		db,
 		clientId,
-		scopes: [...(client.scopes ?? []), ...missing],
+		scopes: requested,
 	});
 };

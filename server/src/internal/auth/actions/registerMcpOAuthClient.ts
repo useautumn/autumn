@@ -7,8 +7,8 @@ import {
 } from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 import { isAtmnOAuthClientRecord } from "../oauth/atmnOAuthClients.js";
+import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DANGEROUS_REDIRECT_SCHEMES = new Set([
@@ -272,7 +272,9 @@ export const registerMcpOAuthClient = async ({
 		scope,
 	});
 	const scopeKey = [...requestedScopes].sort().join(" ");
-	const cacheKey = `${info.type}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
+	// Include the name so two distinct dynamic clients sharing redirect/scope
+	// don't collapse onto one cached client_id.
+	const cacheKey = `${info.type}:${normalize(info.name)}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
 	const cached = getCachedRegistration(cacheKey);
 	if (cached)
 		return { body: cached as RegistrationResponse["body"], status: 200 };
