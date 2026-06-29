@@ -67,7 +67,7 @@ function ConfirmInput({
 	onChange: (value: string) => void;
 }) {
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2 text-sm">
 			<div className="flex items-center gap-1 flex-wrap">
 				<span>Type</span>
 				<MiniCopyButton
@@ -589,17 +589,21 @@ export default function PlanChangeDialog({
 											/>
 										</div>
 									)}
-
-									<ConfirmInput
-										productId={product.id}
-										value={confirmText}
-										onChange={setConfirmText}
-									/>
 								</>
 							)}
 						</motion.div>
 					</DialogDescription>
 				</div>
+
+				{step === "migrate" && (
+					<div className="px-5 py-4 border-t border-border/60">
+						<ConfirmInput
+							productId={product.id}
+							value={confirmText}
+							onChange={setConfirmText}
+						/>
+					</div>
+				)}
 
 				<DialogFooter className="flex-row justify-between gap-2 sm:justify-between p-5 pt-4 border-t border-border/60">
 					{step === "review" ? (

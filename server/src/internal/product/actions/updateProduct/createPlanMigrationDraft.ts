@@ -92,28 +92,20 @@ export const createPlanMigrationDraft = async ({
 					inIds: selectedVariantIds,
 				})
 			: [];
-		const usageByProduct = await customerProductRepo.getVersioningUsage({
+		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
 			db: ctx.db,
-			internalProductIds: [
-				current.internal_id,
-				...variants.map((variant) => variant.internal_id),
-			],
+			internalProductId: current.internal_id,
 		});
+		// Always migrate every selected variant so the user lands on the run
+		// stage; the run is a no-op for variants without matching customers.
 		const targets = [
-			...(usageByProduct.get(current.internal_id)
-				?.hasVersionableCustomerProducts
+			...(baseUsage.hasVersionableCustomerProducts
 				? [{ id: planId, version: current.version }]
 				: []),
-			...variants
-				.filter(
-					(variant) =>
-						usageByProduct.get(variant.internal_id)
-							?.hasVersionableCustomerProducts,
-				)
-				.map((variant) => ({
-					id: variant.id,
-					version: variant.version,
-				})),
+			...variants.map((variant) => ({
+				id: variant.id,
+				version: variant.version,
+			})),
 		];
 		const draft = buildCombinedVariantMigrationDraft({
 			targets,
@@ -132,36 +124,15 @@ export const createPlanMigrationDraft = async ({
 		inIds: [planId],
 		returnAll: true,
 	});
-	const variantVersions = selectedVariantIds.length
-		? await ProductService.listFull({
-				db: ctx.db,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				inIds: selectedVariantIds,
-				returnAll: true,
-			})
-		: [];
 	const usageByProduct = await customerProductRepo.getVersioningUsage({
 		db: ctx.db,
-		internalProductIds: [
-			...baseVersions.map((product) => product.internal_id),
-			...variantVersions.map((product) => product.internal_id),
-		],
+		internalProductIds: baseVersions.map((product) => product.internal_id),
 	});
-	const variantVersionsById = new Map<string, FullProduct[]>();
-	for (const variant of variantVersions) {
-		const versions = variantVersionsById.get(variant.id) ?? [];
-		versions.push(variant);
-		variantVersionsById.set(variant.id, versions);
-	}
 
+	// Every selected variant becomes a target so the user always lands on the
+	// run stage; the run is a no-op for variants without matching customers.
 	const variantTargets = await Promise.all(
 		variantsBefore.map(async (before) => {
-			const versions = variantVersionsById.get(before.product.id) ?? [];
-			if (!hasVersionableUsage({ products: versions, usageByProduct })) {
-				return null;
-			}
-
 			const after = await ProductService.getFull({
 				db: ctx.db,
 				idOrInternalId: before.product.id,

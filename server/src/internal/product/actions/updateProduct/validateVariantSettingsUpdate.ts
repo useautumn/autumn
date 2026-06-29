@@ -24,7 +24,9 @@ const normalizeVariantSettingValue = ({
 	value: unknown;
 }) => {
 	if (field === "group") return value || "";
-	if (field === "description") return value ?? null;
+	// Treat "" and null/undefined as the same empty description; the editor sends
+	// "" while a description-less plan stores null, which isn't a real change.
+	if (field === "description") return value || null;
 	if (["config", "billing_controls", "metadata"].includes(field)) {
 		return JSON.stringify(value ?? {});
 	}

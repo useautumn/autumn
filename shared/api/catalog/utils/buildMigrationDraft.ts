@@ -116,11 +116,6 @@ export const buildCombinedVariantMigrationDraft = ({
 	if (targets.length === 0) return null;
 
 	const planIds = targets.map((target) => target.id);
-	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
-	const basePlanFilter = { plan_id: planMatcher };
-	const planFilter = includeCustom
-		? basePlanFilter
-		: { ...basePlanFilter, custom: false };
 
 	const idsByVersion = new Map<number, string[]>();
 	for (const target of targets) {
@@ -128,20 +123,34 @@ export const buildCombinedVariantMigrationDraft = ({
 		ids.push(target.id);
 		idsByVersion.set(target.version, ids);
 	}
+	const versionGroups = Array.from(idsByVersion.entries());
+
+	const planMatcher = (ids: string[]) =>
+		ids.length === 1 ? ids[0] : { $in: ids };
 
 	const versionOps = (custom: boolean): UpdatePlanOp[] =>
-		Array.from(idsByVersion.entries()).map(([version, ids]) => ({
+		versionGroups.map(([version, ids]) => ({
 			type: "update_plan",
-			plan_filter: {
-				plan_id: ids.length === 1 ? ids[0] : { $in: ids },
-				custom,
-			},
+			plan_filter: { plan_id: planMatcher(ids), version, custom },
 			version,
 		}));
 
+	// Scope candidate selection to each target's edited version so the count
+	// and run never reach across versions. Base and variants can sit at
+	// different versions, so OR the per-version branches.
+	const planFilters = versionGroups.map(([version, ids]) => ({
+		plan_id: planMatcher(ids),
+		version,
+		...(includeCustom ? {} : { custom: false }),
+	}));
+	const customerFilter: MigrationFilter["customer"] =
+		planFilters.length === 1
+			? { plan: planFilters[0] }
+			: { $or: planFilters.map((plan) => ({ plan })) };
+
 	return {
 		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
-		filter: { customer: { plan: planFilter } },
+		filter: { customer: customerFilter },
 		operations: {
 			customer: includeCustom
 				? [...versionOps(false), ...versionOps(true)]
@@ -160,19 +169,37 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 	hasBillingChanges: boolean;
 	includeCustom?: boolean;
 }): MigrationDraft | null => {
-	const ops = targets.flatMap((target): UpdatePlanOp[] => {
-		if (!target.customize) return [];
+	// Group plans sharing an identical customize so the same edit becomes one op.
+	const groups = new Map<
+		string,
+		{ customize: DiffedCustomizePlanV1; ids: string[] }
+	>();
+	for (const target of targets) {
+		if (!target.customize) continue;
 		const customize = migratablePlanDiff(target.customize);
-		if (Object.keys(customize).length === 0) return [];
+		if (Object.keys(customize).length === 0) continue;
 
-		const op = (custom: boolean): UpdatePlanOp => ({
-			type: "update_plan",
-			plan_filter: { plan_id: target.id, custom },
-			customize,
-		});
+		const key = JSON.stringify(customize);
+		const group = groups.get(key);
+		if (group) {
+			if (!group.ids.includes(target.id)) group.ids.push(target.id);
+		} else {
+			groups.set(key, { customize, ids: [target.id] });
+		}
+	}
 
-		return includeCustom ? [op(false), op(true)] : [op(false)];
-	});
+	const ops = Array.from(groups.values()).flatMap(
+		({ customize, ids }): UpdatePlanOp[] => {
+			const planMatcher = ids.length === 1 ? ids[0] : { $in: ids };
+			const op = (custom: boolean): UpdatePlanOp => ({
+				type: "update_plan",
+				plan_filter: { plan_id: planMatcher, custom },
+				customize,
+			});
+
+			return includeCustom ? [op(false), op(true)] : [op(false)];
+		},
+	);
 	if (ops.length === 0) return null;
 
 	const planIds = [...new Set(targets.map((target) => target.id))];
