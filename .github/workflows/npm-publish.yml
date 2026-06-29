@@ -110,7 +110,7 @@ jobs:
           echo "Updated npm version: $(npm --version)"
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: .github/scripts/bun-install-with-retry.sh
 
       - name: Install Speakeasy CLI
         if: inputs.install-speakeasy

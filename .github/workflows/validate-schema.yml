@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.schema == 'true'
-        run: bun install --frozen-lockfile
+        run: .github/scripts/bun-install-with-retry.sh
 
       - name: Validate schema
         if: needs.changes.outputs.schema == 'true'
