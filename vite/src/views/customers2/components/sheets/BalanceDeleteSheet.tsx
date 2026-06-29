@@ -33,6 +33,7 @@ import {
 } from "../table/customer-balance/customerBalanceUtils";
 
 type DeleteMode = "keep" | "deduct";
+type OverageDeleteMode = "overage" | "remove";
 
 export function BalanceDeleteSheet() {
 	const sheetData = useSheetStore((s) => s.data);
@@ -46,6 +47,10 @@ export function BalanceDeleteSheet() {
 	const axiosInstance = useAxiosInstance();
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [deleteMode, setDeleteMode] = useState<DeleteMode>("keep");
+	const [overageDeleteSelection, setOverageDeleteSelection] = useState<{
+		balanceId: string;
+		mode: OverageDeleteMode;
+	} | null>(null);
 
 	const balance = sheetData?.balance as
 		| FullCusEntWithFullCusProduct
@@ -72,6 +77,17 @@ export function BalanceDeleteSheet() {
 		entityId: entityId ?? undefined,
 	});
 	const balanceId = balance.external_id ?? null;
+	const balanceLabel = balanceId ? (
+		<>
+			the{" "}
+			<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
+				{balanceId}
+			</span>{" "}
+			balance
+		</>
+	) : (
+		"this balance"
+	);
 
 	const selectedEntity =
 		customer.entities?.find(
@@ -90,9 +106,19 @@ export function BalanceDeleteSheet() {
 	});
 	const canDeductFromOtherBalances =
 		otherRemainingBalance > 0 && deletedUsage > 0;
+	const isOverageBalance = remainingBalance < 0;
+	const canKeepAsOverage =
+		deletedUsage > 0 && !canDeductFromOtherBalances && !isOverageBalance;
+	const showUsageHandling =
+		deletedUsage > 0 && (canDeductFromOtherBalances || canKeepAsOverage);
+	const overageDeleteMode =
+		overageDeleteSelection?.balanceId === balance.id
+			? overageDeleteSelection.mode
+			: "overage";
 
 	const handleClose = () => {
 		setDeleteMode("keep");
+		setOverageDeleteSelection(null);
 		closeSheet();
 	};
 
@@ -100,8 +126,8 @@ export function BalanceDeleteSheet() {
 		const customerId = customer.id || customer.internal_id;
 		if (!customerId) return;
 		const recalculateBalances =
-			deletedUsage > 0 &&
-			(!canDeductFromOtherBalances || deleteMode === "deduct");
+			(canDeductFromOtherBalances && deleteMode === "deduct") ||
+			(canKeepAsOverage && overageDeleteMode === "overage");
 
 		setIsDeleting(true);
 		try {
@@ -136,52 +162,38 @@ export function BalanceDeleteSheet() {
 					description="Permanently delete this balance from the customer."
 				/>
 
-				{!canDeductFromOtherBalances && (
+				<SheetSection withSeparator={false} className="pb-0">
+					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
+						This action cannot be undone.
+					</InfoBox>
+				</SheetSection>
+
+				{!showUsageHandling && !isOverageBalance && (
 					<SheetSection withSeparator={false}>
 						<p className="text-sm text-tertiary-foreground">
-							{balanceId ? (
-								<>
-									Deleting the{" "}
-									<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
-										{balanceId}
-									</span>{" "}
-									balance
-								</>
-							) : (
-								"Deleting this balance"
-							)}
-							{deletedUsage === 0 ? (
-								" has no usage to deduct from other balances."
-							) : (
-								<>
-									{" has "}
-									{numberWithCommas(remainingBalance)} remaining, but there are
-									no other balances with remaining{" "}
-									{balance.entitlement.feature.name} to deduct{" "}
-									{numberWithCommas(deletedUsage)} from. The used amount will be
-									kept as overage.
-								</>
-							)}
+							Deleting {balanceLabel}
+							{" has no usage to deduct from other balances."}
 						</p>
 					</SheetSection>
 				)}
 
-				{canDeductFromOtherBalances && (
+				{isOverageBalance && (
+					<SheetSection withSeparator={false}>
+						<p className="text-sm text-tertiary-foreground">
+							Deleting {balanceLabel}
+							{" will remove its "}
+							{numberWithCommas(Math.abs(remainingBalance))}{" "}
+							{balance.entitlement.feature.name} overage.
+						</p>
+					</SheetSection>
+				)}
+
+				{showUsageHandling && (
 					<SheetSection
 						title="Usage Handling"
 						description={
 							<>
-								{balanceId ? (
-									<>
-										Deleting the{" "}
-										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
-											{balanceId}
-										</span>{" "}
-										balance
-									</>
-								) : (
-									"Deleting this balance"
-								)}
+								Deleting {balanceLabel}
 								{" with "}
 								{numberWithCommas(remainingBalance)} remaining and{" "}
 								{numberWithCommas(deletedUsage)} already used{" "}
@@ -190,53 +202,95 @@ export function BalanceDeleteSheet() {
 						}
 						withSeparator={false}
 					>
-						<div className="space-y-3">
-							<div className="flex w-full items-center gap-4">
-								<PanelButton
-									isSelected={deleteMode === "keep"}
-									onClick={() => setDeleteMode("keep")}
-									icon={<ShieldCheckIcon size={18} weight="duotone" />}
-								/>
-								<div className="flex-1">
-									<div className="text-body-highlight mb-1">
-										Keep other balances unchanged
-									</div>
-									<div className="text-body-secondary leading-tight">
-										Delete this balance only. The{" "}
-										{numberWithCommas(deletedUsage)} already used will not be
-										deducted elsewhere.
+						{canDeductFromOtherBalances ? (
+							<div className="space-y-3">
+								<div className="flex w-full items-center gap-4">
+									<PanelButton
+										isSelected={deleteMode === "keep"}
+										onClick={() => setDeleteMode("keep")}
+										icon={<ShieldCheckIcon size={18} weight="duotone" />}
+									/>
+									<div className="flex-1">
+										<div className="text-body-highlight mb-1">
+											Keep other balances unchanged
+										</div>
+										<div className="text-body-secondary leading-tight">
+											Delete this balance only. The{" "}
+											{numberWithCommas(deletedUsage)} already used will not be
+											deducted elsewhere.
+										</div>
 									</div>
 								</div>
-							</div>
 
-							<div className="flex w-full items-center gap-4">
-								<PanelButton
-									isSelected={deleteMode === "deduct"}
-									onClick={() => setDeleteMode("deduct")}
-									icon={<MinusCircleIcon size={18} weight="duotone" />}
-								/>
-								<div className="flex-1">
-									<div className="text-body-highlight mb-1">
-										Deduct usage from other balances
-									</div>
-									<div className="text-body-secondary leading-tight">
-										Delete this balance and remove{" "}
-										{numberWithCommas(deletedUsage)} from the customer's other
-										balances for this feature.
+								<div className="flex w-full items-center gap-4">
+									<PanelButton
+										isSelected={deleteMode === "deduct"}
+										onClick={() => setDeleteMode("deduct")}
+										icon={<MinusCircleIcon size={18} weight="duotone" />}
+									/>
+									<div className="flex-1">
+										<div className="text-body-highlight mb-1">
+											Deduct usage from other balances
+										</div>
+										<div className="text-body-secondary leading-tight">
+											Delete this balance and remove{" "}
+											{numberWithCommas(deletedUsage)} from the customer's other
+											balances for this feature.
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
+						) : (
+							<div className="space-y-3">
+								<div className="flex w-full items-center gap-4">
+									<PanelButton
+										isSelected={overageDeleteMode === "overage"}
+										onClick={() =>
+											setOverageDeleteSelection({
+												balanceId: balance.id,
+												mode: "overage",
+											})
+										}
+										icon={<ShieldCheckIcon size={18} weight="duotone" />}
+									/>
+									<div className="flex-1">
+										<div className="text-body-highlight mb-1">
+											Keep used amount as overage
+										</div>
+										<div className="text-body-secondary leading-tight">
+											Delete this balance and keep the{" "}
+											{numberWithCommas(deletedUsage)} already used as overage.
+										</div>
+									</div>
+								</div>
+
+								<div className="flex w-full items-center gap-4">
+									<PanelButton
+										isSelected={overageDeleteMode === "remove"}
+										onClick={() =>
+											setOverageDeleteSelection({
+												balanceId: balance.id,
+												mode: "remove",
+											})
+										}
+										icon={<MinusCircleIcon size={18} weight="duotone" />}
+									/>
+									<div className="flex-1">
+										<div className="text-body-highlight mb-1">
+											Remove balance and usage
+										</div>
+										<div className="text-body-secondary leading-tight">
+											Delete this balance without keeping the{" "}
+											{numberWithCommas(deletedUsage)} already used as overage.
+										</div>
+									</div>
+								</div>
+							</div>
+						)}
 					</SheetSection>
 				)}
 
-				<div className="px-4 pb-2">
-					<InfoBox variant="warning" classNames={{ infoBox: "w-full" }}>
-						This action cannot be undone.
-					</InfoBox>
-				</div>
-
-				<SheetFooter>
+				<SheetFooter className="pt-4">
 					<Button
 						variant="secondary"
 						className="w-full"
