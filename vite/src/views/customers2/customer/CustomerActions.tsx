@@ -44,7 +44,7 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [clearCacheLoading, setClearCacheLoading] = useState(false);
 	const { customer } = useCusQuery();
-	const { org } = useOrg();
+	const { org } = useOrg({ skipSandbox: false });
 	const { isAdmin } = useAdmin();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();

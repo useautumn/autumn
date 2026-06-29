@@ -21,7 +21,7 @@ const isValidUrl = (url: string) =>
 	!url || url.startsWith("http://") || url.startsWith("https://");
 
 export const StripeCheckoutSettings = () => {
-	const { org, mutate } = useOrg();
+	const { org, mutate } = useOrg({ skipSandbox: false });
 	const axiosInstance = useAxiosInstance();
 
 	const [successUrl, setSuccessUrl] = useState(org?.success_url ?? "");
