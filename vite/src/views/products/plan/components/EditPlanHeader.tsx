@@ -46,6 +46,7 @@ import {
 	MigrateCustomersDialog,
 	useMigratableVersions,
 } from "../versioning/MigrateCustomersDialog";
+import { CreateVariantButton } from "./CreateVariantButton";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 const MIGRATE_CUSTOMERS = "__migrate_customers__";
@@ -276,10 +277,7 @@ export const EditPlanHeader = () => {
 								{showAllVariants ? (
 									<Tooltip>
 										<TooltipTrigger render={<span />}>
-											<SelectTrigger
-												className="w-fit min-w-28 !h-6"
-												size="sm"
-											>
+											<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 												<SelectValue placeholder="Version" />
 											</SelectTrigger>
 										</TooltipTrigger>
@@ -328,7 +326,12 @@ export const EditPlanHeader = () => {
 								</SelectContent>
 							</Select>
 						)}
-						{!isCusPlanEditor && <PlanToolbar />}
+						{!isCusPlanEditor && (
+							<>
+								<CreateVariantButton />
+								<PlanToolbar />
+							</>
+						)}
 					</div>
 				</div>
 			</div>
