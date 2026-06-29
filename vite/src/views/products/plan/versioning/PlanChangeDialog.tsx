@@ -13,12 +13,19 @@ import {
 	ShortcutButton,
 	Switch,
 } from "@autumn/ui";
+import {
+	GitForkIcon,
+	SealCheckIcon,
+	SlidersIcon,
+	StackIcon,
+} from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
@@ -26,6 +33,7 @@ import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { useMeasuredHeight } from "@/hooks/useMeasuredHeight";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
@@ -159,6 +167,8 @@ export default function PlanChangeDialog({
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>([]);
+	const { ref: bodyRef, height: bodyHeight } =
+		useMeasuredHeight<HTMLDivElement>();
 
 	const confirmed = confirmText === product.id;
 	const currency = org?.default_currency ?? "USD";
@@ -311,10 +321,14 @@ export default function PlanChangeDialog({
 
 	const steps: StepperStep[] = useMemo(
 		() => [
-			{ key: "review", label: "Changes" },
-			...(isMetadataOnly ? [] : [{ key: "strategy", label: "Versions" }]),
-			...(showScope ? [{ key: "scope", label: "Variants" }] : []),
-			{ key: "migrate", label: "Review" },
+			{ key: "review", label: "Changes", icon: SlidersIcon },
+			...(isMetadataOnly
+				? []
+				: [{ key: "strategy", label: "Versions", icon: StackIcon }]),
+			...(showScope
+				? [{ key: "scope", label: "Variants", icon: GitForkIcon }]
+				: []),
+			{ key: "migrate", label: "Review", icon: SealCheckIcon },
 		],
 		[showScope, isMetadataOnly],
 	);
@@ -455,27 +469,63 @@ export default function PlanChangeDialog({
 	}, [isFinalStep, migrateNeeded, isMetadataOnly, versionChoice, isLatest]);
 
 	const title = "Save plan changes";
+	const description = useMemo(() => {
+		switch (step) {
+			case "review":
+				return "Review what's changing before you save.";
+			case "strategy":
+				return "Choose how this applies across versions.";
+			case "scope":
+				return "Pick which variants to update alongside this plan.";
+			default:
+				return migrateNeeded
+					? "Confirm and migrate existing customers."
+					: "Confirm the changes you're about to save.";
+		}
+	}, [step, migrateNeeded]);
+	const migrateSubtitle = useMemo(() => {
+		if (isMetadataOnly) return "Applies across every version and variant.";
+		if (migrateNeeded)
+			return "Customers you don't migrate stay on their current version.";
+		return "Existing customers stay on their current version.";
+	}, [isMetadataOnly, migrateNeeded]);
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
-				<DialogHeader className="gap-3.5 p-5 pb-4 border-b border-border/60">
-					<DialogTitle className="text-[15px]">{title}</DialogTitle>
-					{steps.length > 1 && <Stepper steps={steps} currentKey={step} />}
+				<DialogHeader className="gap-3 p-4 pb-3">
+					<div className="flex flex-col gap-1.5">
+						<DialogTitle>{title}</DialogTitle>
+						<DialogDescription>{description}</DialogDescription>
+					</div>
+					{steps.length > 1 && (
+						<Stepper
+							steps={steps}
+							currentKey={step}
+							onStepSelect={(key) => setStep(key as StepKey)}
+						/>
+					)}
 				</DialogHeader>
 
-				<div className="overflow-y-auto min-h-0 flex-1 px-5 py-5">
-					<DialogDescription asChild>
+				<motion.div
+					initial={false}
+					animate={{ height: bodyHeight ?? "auto" }}
+					transition={LAYOUT_TRANSITION}
+					style={{ overflow: "clip" }}
+					className="min-h-0 shrink-0"
+				>
+					<div ref={bodyRef} className="px-4 pt-1 pb-4">
 						<motion.div
 							key={step}
-							initial={{ opacity: 0, y: 4 }}
-							animate={{ opacity: 1, y: 0 }}
-							transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-							className="text-sm flex flex-col gap-6"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ duration: 0.15, ease: "easeOut" }}
+							className="text-sm flex flex-col gap-4"
 						>
 							{step === "review" && (
-								<div className="flex flex-col gap-3">
-									<div className="rounded-xl bg-secondary/40 px-3.5 py-3 flex flex-col gap-2">
+								<div className="flex flex-col gap-2.5">
+									<FieldLabel>Preview changes</FieldLabel>
+									<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
 										{priceChange && (
 											<PlanPriceHeader
 												priceChange={priceChange}
@@ -490,17 +540,20 @@ export default function PlanChangeDialog({
 							)}
 
 							{step === "scope" && (
-								<PropagateVariantsStep
-									variants={variantConflicts}
-									selectedIds={selectedVariantIds}
-									onToggle={(id) =>
-										setSelectedVariantIds((prev) =>
-											prev.includes(id)
-												? prev.filter((v) => v !== id)
-												: [...prev, id],
-										)
-									}
-								/>
+								<div className="flex flex-col gap-2.5">
+									<FieldLabel>Apply to variants</FieldLabel>
+									<PropagateVariantsStep
+										variants={variantConflicts}
+										selectedIds={selectedVariantIds}
+										onToggle={(id) =>
+											setSelectedVariantIds((prev) =>
+												prev.includes(id)
+													? prev.filter((v) => v !== id)
+													: [...prev, id],
+											)
+										}
+									/>
+								</div>
 							)}
 
 							{step === "strategy" && (
@@ -547,33 +600,27 @@ export default function PlanChangeDialog({
 
 							{step === "migrate" && (
 								<>
-									{isMetadataOnly ? (
-										<>
+									<div className="flex flex-col gap-2.5">
+										<div className="flex flex-col gap-0.5">
+											<FieldLabel>Review &amp; confirm</FieldLabel>
 											<span className="text-xs text-muted-foreground">
-												These settings apply across every version of this plan
-												and its variants.
+												{migrateSubtitle}
 											</span>
-											<div className="rounded-xl bg-secondary/40 px-3.5 py-3">
+										</div>
+										{isMetadataOnly ? (
+											<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
 												<PlanSettingsChanges changes={settingsChanges} />
 											</div>
-										</>
-									) : (
-										<>
-											<span className="text-xs text-muted-foreground">
-												{migrateNeeded
-													? "Versions with customers will be migrated to the updated plan. Customers you don't migrate stay as they are."
-													: "Everything that will change. Existing customers stay on their current versions."}
-											</span>
-
+										) : (
 											<MigrateTargetsStep
 												showCustomers={migrateNeeded}
 												targets={migrateTargets}
 											/>
-										</>
-									)}
+										)}
+									</div>
 
 									{migrateNeeded && customCount > 0 && (
-										<div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-3.5 py-3">
+										<div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-2.5">
 											<div className="flex flex-col gap-0.5">
 												<span className="text-sm font-medium text-foreground">
 													Apply to custom plans
@@ -592,11 +639,11 @@ export default function PlanChangeDialog({
 								</>
 							)}
 						</motion.div>
-					</DialogDescription>
-				</div>
+					</div>
+				</motion.div>
 
 				{step === "migrate" && (
-					<div className="px-5 py-4 border-t border-border/60">
+					<div className="px-4 pb-1">
 						<ConfirmInput
 							productId={product.id}
 							value={confirmText}
@@ -605,10 +652,8 @@ export default function PlanChangeDialog({
 					</div>
 				)}
 
-				<DialogFooter className="flex-row justify-between gap-2 sm:justify-between p-5 pt-4 border-t border-border/60">
-					{step === "review" ? (
-						<span />
-					) : (
+				<DialogFooter className="flex-row items-center gap-2 p-4 pt-2">
+					{step !== "review" && (
 						<ShortcutButton
 							variant="secondary"
 							onClick={handleBack}
@@ -617,27 +662,25 @@ export default function PlanChangeDialog({
 							Back
 						</ShortcutButton>
 					)}
-
-					<div className="flex items-center gap-2">
-						{step === "migrate" && migrateNeeded && (
-							<ShortcutButton
-								variant="secondary"
-								onClick={() => applyChanges({ migrate: false })}
-								disabled={isLoading || !confirmed}
-							>
-								Skip
-							</ShortcutButton>
-						)}
+					{step === "migrate" && migrateNeeded && (
 						<ShortcutButton
-							variant="primary"
-							metaShortcut="enter"
-							onClick={advance}
-							isLoading={isLoading}
-							disabled={isLoading || (step === "migrate" && !confirmed)}
+							variant="secondary"
+							onClick={() => applyChanges({ migrate: false })}
+							disabled={isLoading || !confirmed}
 						>
-							{primaryText}
+							Skip
 						</ShortcutButton>
-					</div>
+					)}
+					<ShortcutButton
+						variant="primary"
+						metaShortcut="enter"
+						onClick={advance}
+						isLoading={isLoading}
+						disabled={isLoading || (step === "migrate" && !confirmed)}
+						className="flex-1 justify-center"
+					>
+						{primaryText}
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

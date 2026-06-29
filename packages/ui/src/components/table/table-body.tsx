@@ -29,6 +29,7 @@ export function TableBody() {
 		emptyStateText,
 		selectedItemId,
 		flexibleTableColumns,
+		getRowClassName,
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 	const lastRowCountRef = useRef(DEFAULT_SKELETON_ROWS);
@@ -104,6 +105,7 @@ export function TableBody() {
 						className={cn(
 							"text-tertiary-foreground transition-none h-12 py-4 relative",
 							rowClassName,
+							getRowClassName?.(row.original),
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 							(onRowClick || rowHref) && "cursor-pointer",
 						)}

@@ -1,6 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -9,6 +8,7 @@ import {
 	DialogTitle,
 	FormLabel,
 	Input,
+	ShortcutButton,
 } from "@autumn/ui";
 import { useCallback, useEffect } from "react";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
@@ -100,15 +100,16 @@ export function CreateVariantDialog({
 					</div>
 				</div>
 				<DialogFooter>
-					<Button
+					<ShortcutButton
 						variant="primary"
+						metaShortcut="enter"
 						onClick={onCreate}
 						isLoading={isLoading}
 						disabled={isLoading || !variantId.trim() || !variantName.trim()}
-						className="w-full"
+						className="w-full justify-center"
 					>
 						Create variant
-					</Button>
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
