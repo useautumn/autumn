@@ -38,6 +38,32 @@ const usage = (
 		},
 	}) as ApiPlanItemV1;
 
+// Included balance entitlement (month reset, no price) — distinct match key
+// from the one-off price item below.
+const includedMonthly = (featureId: string, included: number): ApiPlanItemV1 =>
+	({
+		feature_id: featureId,
+		included,
+		unlimited: false,
+		reset: { interval: ResetInterval.Month },
+		price: null,
+	}) as ApiPlanItemV1;
+
+const oneOffPrepaid = (featureId: string, amount: number): ApiPlanItemV1 =>
+	({
+		feature_id: featureId,
+		included: 0,
+		unlimited: false,
+		reset: null,
+		price: {
+			amount,
+			interval: BillingInterval.OneOff,
+			billing_units: 1,
+			billing_method: BillingMethod.Prepaid,
+			max_purchase: null,
+		},
+	}) as ApiPlanItemV1;
+
 const basePrice = (amount: number, interval: BillingInterval) =>
 	({ amount, interval }) as ApiPlanV1["price"];
 
@@ -131,6 +157,48 @@ describe("detectVariantConflicts", () => {
 			feature_name: "Messages",
 			item_filter: { feature_id: "messages" },
 		});
+	});
+
+	test("editing only the one-off price ignores a customized included amount on the same feature", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([
+				includedMonthly("messages", 403),
+				oneOffPrepaid("messages", 1),
+			]),
+			editedBasePlan: plan([
+				includedMonthly("messages", 403),
+				oneOffPrepaid("messages", 3),
+			]),
+			diff: {
+				add_items: [{ feature_id: "messages" }],
+				remove_items: [{ feature_id: "messages" }],
+			} as DiffedCustomizePlanV1,
+			// variant customized its included amount (5003) but tracks the one-off
+			// price ($1) the edit touches — propagation leaves the included alone.
+			variantPlan: plan([
+				includedMonthly("messages", 5003),
+				oneOffPrepaid("messages", 1),
+			]),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(0);
+	});
+
+	test("editing the included amount flags a variant that customized it", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([includedMonthly("messages", 403)]),
+			editedBasePlan: plan([includedMonthly("messages", 1000)]),
+			diff: {
+				add_items: [{ feature_id: "messages" }],
+				remove_items: [{ feature_id: "messages" }],
+			} as DiffedCustomizePlanV1,
+			variantPlan: plan([includedMonthly("messages", 5003)]),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toMatchObject({ reason: "value_divergence" });
 	});
 
 	test("editing the base price when the variant has a different price is a base_price_divergence conflict", () => {

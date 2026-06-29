@@ -221,7 +221,7 @@ const rolloversEqual = (
 };
 
 // Compare user-controlled item fields only; API joins/display are ignored.
-const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
+export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	return (
 		a.feature_id === b.feature_id &&
 		(a.entity_feature_id ?? null) === (b.entity_feature_id ?? null) &&

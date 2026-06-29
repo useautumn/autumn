@@ -4,21 +4,13 @@ import {
 	composeMatchKey,
 	type DiffedCustomizePlanV1,
 	type Feature,
+	itemsEqual,
 	type PlanItemFilter,
 	type PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
 
 const intervalOf = (item: ApiPlanItemV1): string =>
 	item.price?.interval ?? item.reset?.interval ?? "none";
-
-// Fields that the match key ignores — the customizable "value" of an item.
-const valueSignature = (item: ApiPlanItemV1): string =>
-	JSON.stringify({
-		included: item.included ?? null,
-		unlimited: item.unlimited ?? null,
-		price: item.price ?? null,
-		rollover: item.rollover ?? null,
-	});
 
 const basePricesEqual = (
 	a: ApiPlanV1["price"],
@@ -91,6 +83,22 @@ export const detectVariantConflicts = ({
 	const baseOldByMatchKey = new Map(
 		currentBasePlan.items.map((item) => [composeMatchKey(item), item]),
 	);
+	const editedByMatchKey = new Map(
+		editedBasePlan.items.map((item) => [composeMatchKey(item), item]),
+	);
+
+	// Match keys whose item the edit actually changes — only these get
+	// overwritten on propagate. A customization on an untouched item (e.g. the
+	// variant's included amount when only the price changed) is left intact.
+	const changedMatchKeys = new Set<string>();
+	for (const [key, editedItem] of editedByMatchKey) {
+		const baseOld = baseOldByMatchKey.get(key);
+		if (baseOld == null || !itemsEqual(editedItem, baseOld))
+			changedMatchKeys.add(key);
+	}
+	for (const key of baseOldByMatchKey.keys()) {
+		if (!editedByMatchKey.has(key)) changedMatchKeys.add(key);
+	}
 
 	const featureName = (featureId: string) =>
 		features.find((f) => f.id === featureId)?.name;
@@ -121,15 +129,10 @@ export const detectVariantConflicts = ({
 			continue;
 		}
 
-		// Shares the interval the edit touches: propagation overwrites the
-		// variant's item, so flag it if the variant customized the value relative
-		// to the base it forked from.
 		const divergentItem = variantList.find((item) => {
-			if (!editedIntervals.has(intervalOf(item))) return false;
+			if (!changedMatchKeys.has(composeMatchKey(item))) return false;
 			const baseOld = baseOldByMatchKey.get(composeMatchKey(item));
-			return (
-				baseOld != null && valueSignature(item) !== valueSignature(baseOld)
-			);
+			return baseOld != null && !itemsEqual(item, baseOld);
 		});
 		if (divergentItem) {
 			conflicts.push({
