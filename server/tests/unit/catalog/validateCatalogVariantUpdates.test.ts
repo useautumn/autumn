@@ -40,7 +40,6 @@ const params = ({
 		skip_deletions: true,
 		skip_feature_ids: [],
 		skip_plan_ids: [],
-		create_migration: false,
 	}) as CatalogUpdateParams;
 
 test("catalog variant updates must target the latest base version", () => {

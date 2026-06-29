@@ -20,6 +20,7 @@ import { updateProduct } from "@/internal/product/actions/updateProduct.js";
 import {
 	createPlanMigrationDraft,
 	getVariantMigrationSnapshots,
+	validateNoDirectVariantMigrationDrafts,
 } from "@/internal/product/actions/updateProduct/createPlanMigrationDraft.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
@@ -130,7 +131,7 @@ const upsertPlans = async ({
 			new_plan_id,
 			disable_version,
 			all_versions,
-			create_migration,
+			migration,
 			force_version,
 			update_variant_ids,
 			variants,
@@ -208,7 +209,7 @@ const upsertPlans = async ({
 
 		const fromPlan =
 			hasPlanUpdate &&
-			(create_migration ?? params.create_migration) &&
+			(migration?.draft ?? params.migration?.draft) &&
 			(disable_version || all_versions)
 				? await getPlanResponse({
 						ctx,
@@ -225,12 +226,17 @@ const upsertPlans = async ({
 			]),
 		];
 		const variantsBefore =
-			fromPlan && all_versions
+			fromPlan && selectedVariantIds.length > 0
 				? await getVariantMigrationSnapshots({
 						ctx,
 						variantIds: selectedVariantIds,
 					})
 				: [];
+		validateNoDirectVariantMigrationDrafts({
+			hasMigrationDraft: Boolean(fromPlan),
+			variantUpdates,
+			variantsBefore,
+		});
 		const updateParams = hasPlanUpdate
 			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,
@@ -267,6 +273,7 @@ const upsertPlans = async ({
 			ctx,
 			current,
 			fromPlan,
+			includeCustom: migration?.include_custom ?? params.migration?.include_custom,
 			mode: all_versions ? "all_versions" : "version",
 			planId: plan_id,
 			selectedVariantIds,

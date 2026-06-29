@@ -1,5 +1,6 @@
 import { CreateFeatureV2ParamsSchema } from "@api/features/crud/createFeatureParams.js";
 import { UpdatePlanParamsV2Schema } from "@api/products/crud/updatePlanParamsV1.js";
+import { MigrationParamsSchema } from "@api/products/crud/migrationParams.js";
 import { PreviewUpdatePlanDetailParamsSchema } from "@api/products/previewUpdatePlan/previewUpdatePlanParamsV2.js";
 import { z } from "zod/v4";
 
@@ -20,9 +21,7 @@ export const CatalogUpdateParamsSchema = z.object({
 	skip_feature_ids: z.array(z.string()).optional().default([]),
 	skip_plan_ids: z.array(z.string()).optional().default([]),
 	expand: z.array(z.string()).optional(),
-	// Atomically create (not run) a migration draft for in-place plan updates
-	// that change a plan with existing customers.
-	create_migration: z.boolean().optional().default(false),
+	migration: MigrationParamsSchema.optional(),
 });
 
 export type CatalogPlanParams = z.infer<typeof CatalogPlanParamsSchema>;

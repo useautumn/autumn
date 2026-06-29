@@ -3,6 +3,7 @@ import { idRegex } from "@utils/utils";
 import { z } from "zod/v4";
 import { BasePriceParamsSchema } from "../components/basePrice/basePrice";
 import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
+import { MigrationParamsSchema } from "./migrationParams.js";
 import { UpdateVariantParamsSchema } from "./variants/index.js";
 
 // const UpdatePlanBaseFieldsSchema = z.object({
@@ -78,7 +79,7 @@ export const UpdatePlanParamsV2Schema = z
 			description:
 				"Apply the update diff to all versions of this plan. Mutually exclusive with disable_version.",
 		}),
-		create_migration: z.boolean().optional().meta({
+		migration: MigrationParamsSchema.optional().meta({
 			internal: true,
 		}),
 		force_version: z.boolean().optional().meta({

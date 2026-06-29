@@ -83,9 +83,9 @@ test("buildCatalogUpdateParams accepts exact-version plan intents", () => {
 		plan_id: "pro",
 		version: 1,
 		disable_version: true,
-		create_migration: true,
+		migration: { draft: true },
 	});
-	expect(params.plans[1]).not.toHaveProperty("create_migration");
+	expect(params.plans[1]).not.toHaveProperty("migration");
 });
 
 test("buildCatalogUpdateParams maps all-versions intent without migration", () => {
@@ -101,7 +101,7 @@ test("buildCatalogUpdateParams maps all-versions intent without migration", () =
 		plan_id: "pro",
 		all_versions: true,
 	});
-	expect(params.plans[0]).not.toHaveProperty("create_migration");
+	expect(params.plans[0]).not.toHaveProperty("migration");
 	expect(params.plans[0]).not.toHaveProperty("disable_version");
 });
 
@@ -120,7 +120,7 @@ test("buildCatalogUpdateParams maps all-versions migration selection", () => {
 	expect(params.plans[0]).toMatchObject({
 		plan_id: "pro",
 		all_versions: true,
-		create_migration: true,
+		migration: { draft: true },
 	});
 });
 
@@ -168,7 +168,7 @@ test("buildCatalogUpdateParams maps direct variant update-current migration cont
 			{
 				variant_plan_id: "pro_annual",
 				disable_version: true,
-				create_migration: true,
+				migration: { draft: true },
 			},
 		],
 	});
@@ -209,7 +209,7 @@ test("buildCatalogUpdateParams maps direct variant create-version controls", () 
 	});
 	expect(
 		(params.plans[0].variants as Record<string, unknown>[])[0],
-	).not.toHaveProperty("create_migration");
+	).not.toHaveProperty("migration");
 });
 
 test("buildCatalogUpdateParams filters skipped direct variants", () => {

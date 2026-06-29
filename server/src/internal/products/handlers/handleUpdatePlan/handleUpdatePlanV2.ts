@@ -10,6 +10,7 @@ import { updateProduct } from "../../../product/actions/updateProduct.js";
 import {
 	createPlanMigrationDraft,
 	getVariantMigrationSnapshots,
+	validateNoDirectVariantMigrationDrafts,
 } from "../../../product/actions/updateProduct/createPlanMigrationDraft.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
@@ -27,7 +28,7 @@ export const handleUpdatePlanV2 = createRoute({
 			force_version,
 			disable_version,
 			all_versions,
-			create_migration,
+			migration,
 			version,
 			update_variant_ids,
 			variants,
@@ -52,7 +53,7 @@ export const handleUpdatePlanV2 = createRoute({
 			},
 		}) as UpdateProductV2Params;
 		const fromPlan =
-			create_migration && (disable_version || all_versions)
+			migration?.draft && (disable_version || all_versions)
 				? await getPlanResponse({
 						ctx,
 						product: initialFullProduct,
@@ -67,12 +68,17 @@ export const handleUpdatePlanV2 = createRoute({
 			]),
 		];
 		const variantsBefore =
-			fromPlan && all_versions
+			fromPlan && selectedVariantIds.length > 0
 				? await getVariantMigrationSnapshots({
 						ctx,
 						variantIds: selectedVariantIds,
 					})
 				: [];
+		validateNoDirectVariantMigrationDrafts({
+			hasMigrationDraft: Boolean(fromPlan),
+			variantUpdates,
+			variantsBefore,
+		});
 
 		await updateProduct({
 			ctx,
@@ -106,6 +112,7 @@ export const handleUpdatePlanV2 = createRoute({
 					ctx,
 					current: initialFullProduct,
 					fromPlan,
+					includeCustom: migration?.include_custom,
 					mode: all_versions ? "all_versions" : "version",
 					planId: plan_id,
 					selectedVariantIds,

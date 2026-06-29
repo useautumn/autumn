@@ -344,8 +344,7 @@ export default function PlanChangeDialog({
 	};
 
 	// Apply the base edit (in-place, new version, or all versions) + propagate to
-	// selected variants. plans.update creates the migration server-side when
-	// create_migration is set, so the FE no longer builds a draft.
+	// selected variants. plans.update creates the migration server-side.
 	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
 		// Type-to-confirm only gates the migration step (the only point where
 		// existing customers are moved). Lower-impact applies skip it.
@@ -385,7 +384,10 @@ export default function PlanChangeDialog({
 				updateParams.update_variant_ids = effectiveVariantIds;
 			}
 			if (willMigrate) {
-				updateParams.create_migration = true;
+				updateParams.migration = {
+					draft: true,
+					include_custom: includeCustom,
+				};
 			}
 
 			const result = await ProductService.updatePlan(
@@ -581,8 +583,6 @@ export default function PlanChangeDialog({
 													user{customCount !== 1 ? "s" : ""} on custom versions.
 												</span>
 											</div>
-											{/* TODO: plans.update create_migration must accept an
-											    include_custom flag for this toggle to take effect. */}
 											<Switch
 												checked={includeCustom}
 												onCheckedChange={setIncludeCustom}

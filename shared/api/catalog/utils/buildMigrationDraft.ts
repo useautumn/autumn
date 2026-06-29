@@ -20,6 +20,7 @@ export interface MigrationDraft {
 export interface CombinedVariantMigrationTarget {
 	id: string;
 	version: number;
+	customize: DiffedCustomizePlanV1 | null;
 }
 
 export interface AllVersionsUpdateMigrationTarget {
@@ -59,6 +60,56 @@ const migratablePlanDiff = (
 		: {}),
 });
 
+const planMatcher = (ids: string[]) => (ids.length === 1 ? ids[0] : { $in: ids });
+
+const withCustomGuard = <T extends Record<string, unknown>>({
+	includeCustom,
+	planFilter,
+}: {
+	includeCustom: boolean;
+	planFilter: T;
+}) => (includeCustom ? planFilter : { ...planFilter, custom: false });
+
+const versionedPlanFilter = (
+	targets: Pick<CombinedVariantMigrationTarget, "id" | "version">[],
+) => {
+	const idsByVersion = new Map<number, string[]>();
+	for (const target of targets) {
+		const ids = idsByVersion.get(target.version) ?? [];
+		ids.push(target.id);
+		idsByVersion.set(target.version, ids);
+	}
+	const groups = Array.from(idsByVersion.entries()).map(([version, ids]) => ({
+		plan_id: planMatcher(ids),
+		version,
+	}));
+
+	return groups.length === 1 ? groups[0] : { $or: groups };
+};
+
+const groupTargetsByCustomize = <
+	T extends { customize: DiffedCustomizePlanV1 | null },
+>(
+	targets: T[],
+): { customize: DiffedCustomizePlanV1; targets: T[] }[] => {
+	const groups = new Map<string, { customize: DiffedCustomizePlanV1; targets: T[] }>();
+	for (const target of targets) {
+		if (!target.customize) continue;
+		const customize = migratablePlanDiff(target.customize);
+		if (Object.keys(customize).length === 0) continue;
+
+		const key = JSON.stringify(customize);
+		const group = groups.get(key);
+		if (group) {
+			group.targets.push(target);
+		} else {
+			groups.set(key, { customize, targets: [target] });
+		}
+	}
+
+	return [...groups.values()];
+};
+
 /** Build a draft that moves customers on `planId` from `from` to `to`.
  * Creating a draft does not run it. */
 export const buildMigrationDraft = ({
@@ -83,17 +134,17 @@ export const buildMigrationDraft = ({
 		plan_id: planId,
 		...(scope === "this_version" && version !== undefined ? { version } : {}),
 	};
-	const planFilter = includeCustom
-		? basePlanFilter
-		: { ...basePlanFilter, custom: false };
 
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: basePlanFilter,
+		plan_filter: withCustomGuard({
+			includeCustom,
+			planFilter: basePlanFilter,
+		}),
 		...(customize ? { customize } : {}),
 	};
 
-	const filter: MigrationFilter = { customer: { plan: planFilter } };
+	const filter: MigrationFilter = { customer: { plan: basePlanFilter } };
 	const suffix = scope === "all_customers" ? "update-all" : "update";
 
 	return {
@@ -116,46 +167,23 @@ export const buildCombinedVariantMigrationDraft = ({
 	if (targets.length === 0) return null;
 
 	const planIds = targets.map((target) => target.id);
-
-	const idsByVersion = new Map<number, string[]>();
-	for (const target of targets) {
-		const ids = idsByVersion.get(target.version) ?? [];
-		ids.push(target.id);
-		idsByVersion.set(target.version, ids);
-	}
-	const versionGroups = Array.from(idsByVersion.entries());
-
-	const planMatcher = (ids: string[]) =>
-		ids.length === 1 ? ids[0] : { $in: ids };
-
-	const versionOps = (custom: boolean): UpdatePlanOp[] =>
-		versionGroups.map(([version, ids]) => ({
+	const basePlanFilter = versionedPlanFilter(targets);
+	const ops = groupTargetsByCustomize(targets).map(
+		({ customize, targets }): UpdatePlanOp => ({
 			type: "update_plan",
-			plan_filter: { plan_id: planMatcher(ids), version, custom },
-			version,
-		}));
-
-	// Scope candidate selection to each target's edited version so the count
-	// and run never reach across versions. Base and variants can sit at
-	// different versions, so OR the per-version branches.
-	const planFilters = versionGroups.map(([version, ids]) => ({
-		plan_id: planMatcher(ids),
-		version,
-		...(includeCustom ? {} : { custom: false }),
-	}));
-	const customerFilter: MigrationFilter["customer"] =
-		planFilters.length === 1
-			? { plan: planFilters[0] }
-			: { $or: planFilters.map((plan) => ({ plan })) };
+			plan_filter: withCustomGuard({
+				includeCustom,
+				planFilter: versionedPlanFilter(targets),
+			}),
+			customize,
+		}),
+	);
+	if (ops.length === 0) return null;
 
 	return {
 		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
-		filter: { customer: customerFilter },
-		operations: {
-			customer: includeCustom
-				? [...versionOps(false), ...versionOps(true)]
-				: versionOps(false),
-		},
+		filter: { customer: { plan: basePlanFilter } },
+		operations: { customer: ops },
 		no_billing_changes: !hasBillingChanges,
 	};
 };
@@ -169,50 +197,30 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 	hasBillingChanges: boolean;
 	includeCustom?: boolean;
 }): MigrationDraft | null => {
-	// Group plans sharing an identical customize so the same edit becomes one op.
-	const groups = new Map<
-		string,
-		{ customize: DiffedCustomizePlanV1; ids: string[] }
-	>();
-	for (const target of targets) {
-		if (!target.customize) continue;
-		const customize = migratablePlanDiff(target.customize);
-		if (Object.keys(customize).length === 0) continue;
-
-		const key = JSON.stringify(customize);
-		const group = groups.get(key);
-		if (group) {
-			if (!group.ids.includes(target.id)) group.ids.push(target.id);
-		} else {
-			groups.set(key, { customize, ids: [target.id] });
-		}
-	}
-
-	const ops = Array.from(groups.values()).flatMap(
-		({ customize, ids }): UpdatePlanOp[] => {
-			const planMatcher = ids.length === 1 ? ids[0] : { $in: ids };
-			const op = (custom: boolean): UpdatePlanOp => ({
+	const ops = groupTargetsByCustomize(targets).map(
+		({ customize, targets }): UpdatePlanOp => {
+			const ids = targets.map((target) => target.id);
+			return {
 				type: "update_plan",
-				plan_filter: { plan_id: planMatcher, custom },
+				plan_filter: withCustomGuard({
+					includeCustom,
+					planFilter: { plan_id: planMatcher(ids) },
+				}),
 				customize,
-			});
-
-			return includeCustom ? [op(false), op(true)] : [op(false)];
+			};
 		},
 	);
 	if (ops.length === 0) return null;
 
 	const planIds = [...new Set(targets.map((target) => target.id))];
-	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
-	const basePlanFilter = { plan_id: planMatcher };
+	const allPlanMatcher = planMatcher(planIds);
+	const basePlanFilter = { plan_id: allPlanMatcher };
 
 	return {
 		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
 		filter: {
 			customer: {
-				plan: includeCustom
-					? basePlanFilter
-					: { ...basePlanFilter, custom: false },
+				plan: basePlanFilter,
 			},
 		},
 		operations: { customer: ops },

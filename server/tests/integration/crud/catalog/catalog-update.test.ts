@@ -268,93 +268,6 @@ test(`${chalk.yellowBright("catalog: update targets exact historical plan versio
 	).toBe(200);
 });
 
-test(`${chalk.yellowBright("catalog: update can draft migration for exact historical version")}`, async () => {
-	const suffix = Math.random().toString(36).slice(2, 9);
-	const planId = `catalog_exact_migration_${suffix}`;
-	const prod = products.pro({
-		id: planId,
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
-
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId: `catalog-exact-migration-${suffix}`,
-		setup: [s.customer({ paymentMethod: "success" })],
-		actions: [],
-	});
-
-	await autumnV2_2.post("/catalog.update", {
-		plans: [
-			{
-				plan_id: planId,
-				name: prod.name,
-				items: [
-					{
-						feature_id: TestFeature.Messages,
-						included: 100,
-						reset: { interval: "month" },
-					},
-				],
-			},
-		],
-	});
-	await autumnV2_2.billing.attach({
-		customer_id: `catalog-exact-migration-${suffix}`,
-		plan_id: planId,
-	});
-
-	await autumnV2_2.catalog.update({
-		plans: [
-			{
-				plan_id: planId,
-				name: prod.name,
-				force_version: true,
-				items: [
-					{
-						feature_id: TestFeature.Messages,
-						included: 200,
-						reset: { interval: "month" },
-					},
-				],
-			},
-		],
-	});
-
-	await autumnV2_2.catalog.update({
-		plans: [
-			{
-				plan_id: planId,
-				version: 1,
-				name: prod.name,
-				disable_version: true,
-				create_migration: true,
-				items: [
-					{
-						feature_id: TestFeature.Messages,
-						included: 150,
-						reset: { interval: "month" },
-					},
-				],
-			},
-		],
-	});
-
-	const migrations = await migrationRepo.get({ ctx });
-	const migration = migrations.find((candidate) =>
-		candidate.id.startsWith("plan-migrate-1-"),
-	);
-	expect(migration?.operations).not.toBeNull();
-	const [operation] = migration?.operations?.customer ?? [];
-
-	expect(operation).toMatchObject({
-		type: "update_plan",
-		version: 1,
-		plan_filter: {
-			plan_id: planId,
-			custom: false,
-		},
-	});
-});
-
 test(`${chalk.yellowBright("catalog: preview_update marks selected variant propagation targets")}`, async () => {
 	const suffix = Math.random().toString(36).slice(2, 9);
 	const planId = `catalog_preview_variants_${suffix}`;
@@ -1211,7 +1124,7 @@ test(`${chalk.yellowBright("catalog: update creates a migration draft for a dire
 						variant_plan_id: variantId,
 						name: "Annual",
 						disable_version: true,
-						create_migration: true,
+						migration: { draft: true },
 						customize: {
 							remove_items: [
 								{ feature_id: TestFeature.Messages, interval: "month" },
@@ -1241,12 +1154,28 @@ test(`${chalk.yellowBright("catalog: update creates a migration draft for a dire
 
 	expect(operation).toMatchObject({
 		type: "update_plan",
-		version: 1,
 		plan_filter: {
 			plan_id: variantId,
+			version: 1,
 			custom: false,
 		},
+		customize: {
+			remove_items: [
+				{
+					feature_id: TestFeature.Messages,
+					interval: "year",
+					interval_count: 1,
+				},
+			],
+			add_items: [
+				expect.objectContaining({
+					feature_id: TestFeature.Messages,
+					included: 2400,
+				}),
+			],
+		},
 	});
+	expect(operation).not.toHaveProperty("version");
 });
 
 test(`${chalk.yellowBright("catalog: update rejects variant controls without direct customize changes")}`, async () => {
@@ -1304,7 +1233,7 @@ test(`${chalk.yellowBright("catalog: update rejects variant controls without dir
 							variant_plan_id: variantId,
 							name: "Annual",
 							disable_version: true,
-							create_migration: true,
+							migration: { draft: true },
 							customize: currentVariant.variant_details.customize,
 						},
 					],

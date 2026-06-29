@@ -664,7 +664,7 @@ function toCatalogVariantParams(
 		...(intent === "create_version" ? { force_version: true } : {}),
 		...(intent === "update_current" ? { disable_version: true } : {}),
 		...(createMigration && intent === "update_current"
-			? { create_migration: true }
+			? { migration: { draft: true } }
 			: {}),
 	};
 }
@@ -736,7 +736,7 @@ function toCatalogPlanParams(
 			: {}),
 		...(updateCurrent ? { disable_version: true } : {}),
 		...(updateAllVersions ? { all_versions: true } : {}),
-		...(shouldCreateMigration ? { create_migration: true } : {}),
+		...(shouldCreateMigration ? { migration: { draft: true } } : {}),
 		...(description != null ? { description } : {}),
 		group: apiPlan.group ?? "",
 		add_on: apiPlan.add_on ?? false,

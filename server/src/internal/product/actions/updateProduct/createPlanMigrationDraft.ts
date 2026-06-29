@@ -5,12 +5,17 @@ import {
 	planDiffHasBillingChanges,
 	type ApiPlanV1,
 	type FullProduct,
+	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import {
+	validateDirectVariantMigrationDraftUnsupported,
+	variantCustomizeChanged,
+} from "../common/variantUpdateSource.js";
 
 export type VariantMigrationSnapshot = {
 	product: FullProduct;
@@ -61,11 +66,51 @@ export const getVariantMigrationSnapshots = async ({
 	);
 };
 
+const getVariantMigrationSnapshotsById = async ({
+	ctx,
+	variantIds,
+}: {
+	ctx: AutumnContext;
+	variantIds: string[];
+}) => {
+	const snapshots = await getVariantMigrationSnapshots({ ctx, variantIds });
+	return new Map(snapshots.map((snapshot) => [snapshot.product.id, snapshot]));
+};
+
+export const validateNoDirectVariantMigrationDrafts = ({
+	hasMigrationDraft,
+	variantUpdates,
+	variantsBefore,
+}: {
+	hasMigrationDraft: boolean;
+	variantUpdates: UpdateVariantParams[];
+	variantsBefore: VariantMigrationSnapshot[];
+}) => {
+	if (!hasMigrationDraft) return;
+
+	const beforeById = new Map(
+		variantsBefore.map((snapshot) => [snapshot.product.id, snapshot]),
+	);
+	for (const variantUpdate of variantUpdates) {
+		const before = beforeById.get(variantUpdate.variant_plan_id);
+		if (!before) continue;
+		validateDirectVariantMigrationDraftUnsupported({
+			hasMigrationDraft: true,
+			isDirect: variantCustomizeChanged({
+				currentCustomize: before.plan.variant_details?.customize,
+				incomingCustomize: variantUpdate.customize,
+			}),
+			variantPlanId: variantUpdate.variant_plan_id,
+		});
+	}
+};
+
 export const createPlanMigrationDraft = async ({
 	ctx,
 	current,
 	fromPlan,
 	mode,
+	includeCustom = false,
 	planId,
 	selectedVariantIds,
 	toPlan,
@@ -74,6 +119,7 @@ export const createPlanMigrationDraft = async ({
 	ctx: AutumnContext;
 	current: FullProduct;
 	fromPlan: ApiPlanV1;
+	includeCustom?: boolean;
 	mode: "all_versions" | "version";
 	planId: string;
 	selectedVariantIds: string[];
@@ -82,34 +128,47 @@ export const createPlanMigrationDraft = async ({
 }): Promise<string | undefined> => {
 	const baseDiff = diffPlanV1({ from: fromPlan, to: toPlan });
 	if (Object.keys(baseDiff).length === 0) return;
+	const selectedVariantsBefore =
+		variantsBefore.length > 0 || selectedVariantIds.length === 0
+			? variantsBefore
+			: await getVariantMigrationSnapshots({ ctx, variantIds: selectedVariantIds });
 
 	if (mode === "version") {
-		const variants = selectedVariantIds.length
-			? await ProductService.listFull({
-					db: ctx.db,
-					orgId: ctx.org.id,
-					env: ctx.env,
-					inIds: selectedVariantIds,
-				})
-			: [];
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
 			db: ctx.db,
 			internalProductId: current.internal_id,
 		});
-		// Always migrate every selected variant so the user lands on the run
-		// stage; the run is a no-op for variants without matching customers.
+		const variantsAfter = await getVariantMigrationSnapshotsById({
+			ctx,
+			variantIds: selectedVariantsBefore.map((before) => before.product.id),
+		});
+		const variantResults = selectedVariantsBefore.flatMap((before) => {
+			const after = variantsAfter.get(before.product.id);
+			if (!after) return [];
+			const customize = diffPlanV1({ from: before.plan, to: after.plan });
+			return [
+				{
+					hasBillingChanges: planDiffHasBillingChanges(customize, before.plan),
+					target: {
+						id: before.product.id,
+						version: before.product.version,
+						customize,
+					},
+				},
+			];
+		});
 		const targets = [
 			...(baseUsage.hasVersionableCustomerProducts
-				? [{ id: planId, version: current.version }]
+				? [{ id: planId, version: current.version, customize: baseDiff }]
 				: []),
-			...variants.map((variant) => ({
-				id: variant.id,
-				version: variant.version,
-			})),
+			...variantResults.map((result) => result.target),
 		];
 		const draft = buildCombinedVariantMigrationDraft({
 			targets,
-			hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
+			hasBillingChanges:
+				planDiffHasBillingChanges(baseDiff, fromPlan) ||
+				variantResults.some((result) => result.hasBillingChanges),
+			includeCustom,
 		});
 		if (!draft) return;
 
@@ -129,39 +188,36 @@ export const createPlanMigrationDraft = async ({
 		internalProductIds: baseVersions.map((product) => product.internal_id),
 	});
 
-	// Every selected variant becomes a target so the user always lands on the
-	// run stage; the run is a no-op for variants without matching customers.
-	const variantTargets = await Promise.all(
-		variantsBefore.map(async (before) => {
-			const after = await ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: before.product.id,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			});
-			const afterPlan = await getPlanResponse({
-				ctx,
-				product: after,
-				features: ctx.features,
-			});
-
-			return {
-				id: before.product.id,
-				customize: diffPlanV1({ from: before.plan, to: afterPlan }),
-			};
-		}),
-	);
+	const variantsAfter = await getVariantMigrationSnapshotsById({
+		ctx,
+		variantIds: selectedVariantsBefore.map((before) => before.product.id),
+	});
+	const variantResults = selectedVariantsBefore.flatMap((before) => {
+		const after = variantsAfter.get(before.product.id);
+		if (!after) return [];
+		const customize = diffPlanV1({ from: before.plan, to: after.plan });
+		return [
+			{
+				hasBillingChanges: planDiffHasBillingChanges(customize, before.plan),
+				target: {
+					id: before.product.id,
+					customize,
+				},
+			},
+		];
+	});
 	const targets = [
 		...(hasVersionableUsage({ products: baseVersions, usageByProduct })
 			? [{ id: planId, customize: baseDiff }]
 			: []),
-		...variantTargets.filter((target): target is NonNullable<typeof target> =>
-			Boolean(target),
-		),
+		...variantResults.map((result) => result.target),
 	];
 	const draft = buildAllVersionsUpdateMigrationDraft({
 		targets,
-		hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
+		hasBillingChanges:
+			planDiffHasBillingChanges(baseDiff, fromPlan) ||
+			variantResults.some((result) => result.hasBillingChanges),
+		includeCustom,
 	});
 	if (!draft) return;
 

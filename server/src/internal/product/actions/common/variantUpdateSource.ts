@@ -37,6 +37,24 @@ export const validateDirectVariantControls = ({
 	});
 };
 
+export const validateDirectVariantMigrationDraftUnsupported = ({
+	hasMigrationDraft,
+	isDirect,
+	variantPlanId,
+}: {
+	hasMigrationDraft: boolean;
+	isDirect: boolean;
+	variantPlanId: string;
+}) => {
+	if (!hasMigrationDraft || !isDirect) return;
+
+	throw new RecaseError({
+		message: `Migration drafts for direct variant customize updates are not supported yet. Variant ${variantPlanId} must be versioned or updated without a migration draft.`,
+		code: ErrCode.InvalidPropagationTarget,
+		statusCode: 400,
+	});
+};
+
 export const resolveVariantUpdateSource = ({
 	currentCustomize,
 	incomingCustomize,

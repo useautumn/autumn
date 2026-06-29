@@ -1,6 +1,7 @@
 import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { idRegex } from "@utils/utils";
 import { z } from "zod/v4";
+import { MigrationParamsSchema } from "../migrationParams.js";
 
 export const UpdateVariantParamsSchema = z.object({
 	variant_plan_id: z.string().nonempty().regex(idRegex).meta({
@@ -22,8 +23,9 @@ export const UpdateVariantParamsSchema = z.object({
 		description: "Force this variant update to create a new version.",
 		internal: true,
 	}),
-	create_migration: z.boolean().optional().meta({
-		description: "Create a migration draft for an in-place variant update.",
+	migration: MigrationParamsSchema.optional().meta({
+		description:
+			"Migration draft options for an in-place direct variant update.",
 		internal: true,
 	}),
 });

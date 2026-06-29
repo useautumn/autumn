@@ -138,11 +138,13 @@ const previewMigrationForInPlaceUpdate = async ({
 	allVersions = false,
 	ctx,
 	current,
+	includeCustom = false,
 	preview,
 }: {
 	allVersions?: boolean;
 	ctx: AutumnContext;
 	current: FullProduct | null;
+	includeCustom?: boolean;
 	preview: PlanUpdatePreview;
 }): Promise<CatalogMigrationPreview | undefined> => {
 	if (!current || !preview.customize) return undefined;
@@ -187,38 +189,41 @@ const previewMigrationForInPlaceUpdate = async ({
 		const draft = buildAllVersionsUpdateMigrationDraft({
 			targets,
 			hasBillingChanges: planDiffHasBillingChanges(preview.customize, fromPlan),
+			includeCustom,
 		});
 		if (!draft) return undefined;
 
 		return {
 			draft,
 			plan_ids: targets.map((target) => target.id),
-			include_custom: false,
+			include_custom: includeCustom,
 			has_billing_changes: !draft.no_billing_changes,
 		};
 	}
 
 	const targets = [
 		...(preview.versionable
-			? [{ id: current.id, version: current.version }]
+			? [{ id: current.id, version: current.version, customize: preview.customize }]
 			: []),
 		...preview.variants
 			.filter((variant) => variant.will_apply && variant.has_customers)
 			.map((variant) => ({
 				id: variant.plan_id,
 				version: variant.version,
+				customize: preview.customize,
 			})),
 	];
 	const draft = buildCombinedVariantMigrationDraft({
 		targets,
 		hasBillingChanges: planDiffHasBillingChanges(preview.customize, fromPlan),
+		includeCustom,
 	});
 	if (!draft) return undefined;
 
 	return {
 		draft,
 		plan_ids: targets.map((target) => target.id),
-		include_custom: false,
+		include_custom: includeCustom,
 		has_billing_changes: !draft.no_billing_changes,
 	};
 };
@@ -355,6 +360,9 @@ export const previewUpdateCatalog = async ({
 							allVersions: activePlans[index]?.all_versions,
 							ctx: planChangesCtx,
 							current: currents[index],
+							includeCustom:
+								activePlans[index]?.migration?.include_custom ??
+								params.migration?.include_custom,
 							preview: planResult,
 						})
 					: undefined;

@@ -16,6 +16,7 @@ import {
 } from "../common/planTransformUtils.js";
 import {
 	validateDirectVariantControls,
+	validateDirectVariantMigrationDraftUnsupported,
 	variantCustomizeChanged,
 } from "../common/variantUpdateSource.js";
 import { updateProduct } from "../updateProduct.js";
@@ -59,8 +60,13 @@ export const updateVariant = async ({
 		hasControls: Boolean(
 			variantUpdate?.force_version ||
 				variantUpdate?.disable_version ||
-				variantUpdate?.create_migration,
+			variantUpdate?.migration?.draft,
 		),
+	});
+	validateDirectVariantMigrationDraftUnsupported({
+		hasMigrationDraft: Boolean(variantUpdate?.migration?.draft),
+		isDirect: isDirectUpdate,
+		variantPlanId: variant.id,
 	});
 	const previewPlan =
 		targetPlan ??
@@ -85,11 +91,12 @@ export const updateVariant = async ({
 		allowVariantSettingsUpdate: true,
 	});
 
-	if (variantUpdate?.create_migration && isDirectUpdate && !shouldVersion) {
+	if (variantUpdate?.migration?.draft && isDirectUpdate && !shouldVersion) {
 		await createPlanMigrationDraft({
 			ctx,
 			current: variant,
 			fromPlan: currentPlan,
+			includeCustom: variantUpdate.migration.include_custom,
 			mode: "version",
 			planId: variant.id,
 			selectedVariantIds: [],

@@ -42,9 +42,12 @@ export type VariantPropagationSelections = Record<
 		variant_plan_id: string;
 		name?: string;
 		customize: unknown;
-		create_migration?: boolean;
 		disable_version?: boolean;
 		force_version?: boolean;
+		migration?: {
+			draft?: boolean;
+			include_custom?: boolean;
+		};
 	}[]
 >;
 
