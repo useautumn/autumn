@@ -1,11 +1,52 @@
 import { expect, test } from "bun:test";
-import type { CheckResponseV2 } from "@autumn/shared";
+import {
+	customerEntitlements,
+	type CheckResponseV2,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq, or } from "drizzle-orm";
+
+type TestCtx = Awaited<ReturnType<typeof initScenario>>["ctx"];
+
+const expectRawBalance = async ({
+	ctx,
+	balanceId,
+	balance,
+	entityId,
+}: {
+	ctx: TestCtx;
+	balanceId: string;
+	balance: number;
+	entityId?: string;
+}) => {
+	const rows = await ctx.db
+		.select({
+			balance: customerEntitlements.balance,
+			entities: customerEntitlements.entities,
+		})
+		.from(customerEntitlements)
+		.where(
+			or(
+				eq(customerEntitlements.id, balanceId),
+				eq(customerEntitlements.external_id, balanceId),
+			),
+		)
+		.limit(1);
+
+	expect(rows).toHaveLength(1);
+	expect(
+		entityId
+			? (rows[0].entities as Record<string, { balance: number }>)[entityId]
+					?.balance
+			: rows[0].balance,
+	).toBe(balance);
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-1: Basic delete of a loose balance removes it from
@@ -345,6 +386,300 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances d
 	expect(checkDb.balance?.current_balance).toBe(70);
 	expect(checkDb.balance?.granted_balance).toBe(200);
 	expect(checkDb.balance?.usage).toBe(130);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2E: if there are no surviving balances to receive the
+// deleted balance's usage, recalculate_balances converts the balance to
+// overage instead of dropping the usage.
+//
+// Contract under test:
+// - No new fields/endpoints.
+// - Deleting the only partially-used balance with recalculate_balances=true
+//   preserves the deleted usage as overage: grant 0, current balance floors at 0,
+//   and overage is exposed as purchased_balance.
+// - The converted overage is visible from cache and skip_cache=true.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2e: recalculate_balances converts only balance to overage")}`, async () => {
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "del-bal-2e",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "balance-a",
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-a");
+	expect(check.balance?.current_balance).toBe(0);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.purchased_balance).toBe(40);
+	expect(check.balance?.usage).toBe(40);
+
+	const checkDb = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(checkDb.balance?.breakdown).toHaveLength(1);
+	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-a");
+	expect(checkDb.balance?.current_balance).toBe(0);
+	expect(checkDb.balance?.granted_balance).toBe(0);
+	expect(checkDb.balance?.purchased_balance).toBe(40);
+	expect(checkDb.balance?.usage).toBe(40);
+	await expectRawBalance({ ctx, balanceId: "balance-a", balance: -40 });
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2f: converted overage balance does not reset")}`, async () => {
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "del-bal-2f",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2f-balance",
+		reset: { interval: ResetInterval.Month },
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "del-bal-2f-balance",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2f-balance",
+		recalculate_balances: true,
+	});
+
+	const rows = await ctx.db
+		.select({
+			next_reset_at: customerEntitlements.next_reset_at,
+			reset_cycle_anchor: customerEntitlements.reset_cycle_anchor,
+		})
+		.from(customerEntitlements)
+		.where(eq(customerEntitlements.external_id, "del-bal-2f-balance"))
+		.limit(1);
+
+	expect(rows[0]?.next_reset_at).toBeNull();
+	expect(rows[0]?.reset_cycle_anchor).toBeNull();
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.current_balance).toBe(0);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.purchased_balance).toBe(40);
+	expect(check.balance?.usage).toBe(40);
+	await expectRawBalance({
+		ctx,
+		balanceId: "del-bal-2f-balance",
+		balance: -40,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2g: recalculate_balances converts entity balance to overage")}`, async () => {
+	const messagesItem = items.monthlyMessages({
+		includedUsage: 100,
+		entityFeatureId: TestFeature.Users,
+	});
+	const free = products.base({
+		id: "del-bal-2g-free",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2, entities, ctx } = await initScenario({
+		customerId: "del-bal-2g",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.current_balance).toBe(0);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.purchased_balance).toBe(40);
+	expect(check.balance?.usage).toBe(40);
+	const balanceId = check.balance?.breakdown?.[0].id;
+	expect(balanceId).toBeDefined();
+	await expectRawBalance({
+		ctx,
+		balanceId: balanceId!,
+		balance: -40,
+		entityId: entities[0].id,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2h: recalculate_balances converts multiple balances to one overage")}`, async () => {
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "del-bal-2h",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2h-a",
+	});
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 200,
+		balance_id: "del-bal-2h-b",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2h-a",
+		remaining: 60,
+	});
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2h-b",
+		remaining: 170,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.current_balance).toBe(0);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.purchased_balance).toBe(70);
+	expect(check.balance?.usage).toBe(70);
+	const balanceId = check.balance?.breakdown?.[0].id;
+	expect(balanceId).toBeDefined();
+	await expectRawBalance({ ctx, balanceId: balanceId!, balance: -70 });
+});
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2i: recalculate_balances converts multiple entity balances to overage")}`, async () => {
+	const { customerId, autumnV2, entities, ctx } = await initScenario({
+		customerId: "del-bal-2i",
+		setup: [
+			s.customer({ testClock: false }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2i-a",
+	});
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "del-bal-2i-b",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2i-a",
+		remaining: 0,
+	});
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		balance_id: "del-bal-2i-b",
+		remaining: 70,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.current_balance).toBe(0);
+	expect(check.balance?.granted_balance).toBe(0);
+	expect(check.balance?.purchased_balance).toBe(130);
+	expect(check.balance?.usage).toBe(130);
+	const balanceId = check.balance?.breakdown?.[0].id;
+	expect(balanceId).toBeDefined();
+	await expectRawBalance({ ctx, balanceId: balanceId!, balance: -130 });
 });
 
 // ═══════════════════════════════════════════════════════════════════
