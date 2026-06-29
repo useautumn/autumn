@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+	type ApiCustomerV5,
 	CusProductStatus,
 	type DbSpendLimit,
 	type FullCusProduct,
 	resolveBillingControlWithProduct,
 	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
+import { resolveCheckSpendLimits } from "@/internal/balances/check/resolveCheckSpendLimits.js";
 
 const FEATURE = "messages";
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
@@ -215,5 +217,21 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 		});
 
 		expect(resolved).toBe(100);
+	});
+
+	test("check spend-limit resolution includes aggregate allowance", () => {
+		const subject = {
+			billing_controls: { spend_limits: [percent(50)] },
+		} as unknown as ApiCustomerV5;
+
+		const resolved = resolveCheckSpendLimits({
+			subject,
+			cusEntsForFeature: () => [],
+			additionalAllowanceForFeature: () => 200,
+		});
+		const spendLimit = resolved.billing_controls?.spend_limits?.[0];
+
+		expect(spendLimit?.overage_limit).toBe(100);
+		expect(spendLimit?.limit_type).toBe("absolute");
 	});
 });
