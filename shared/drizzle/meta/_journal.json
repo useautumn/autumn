@@ -225,6 +225,13 @@
       "when": 1782573840271,
       "tag": "0031_absent_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1782760749233,
+      "tag": "0032_white_stone_men",
+      "breakpoints": true
     }
   ]
 }
