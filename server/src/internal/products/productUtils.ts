@@ -1,5 +1,5 @@
 import {
-	type AppEnv,
+	AppEnv,
 	BillingInterval,
 	BillingType,
 	type CreateProductV2Params,
@@ -11,13 +11,13 @@ import {
 	type FullProduct,
 	nullish,
 	type Organization,
-	pickBillingControlColumns,
 	type Price,
 	PriceSchema,
 	PriceType,
 	ProcessorType,
 	type Product,
 	ProductSchema,
+	pickBillingControlColumns,
 	isProductUpgrade as sharedIsProductUpgrade,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -34,6 +34,7 @@ import type {
 	AttachParams,
 	InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
+import { orgDisableStripeWrites } from "../orgs/orgUtils/convertOrgUtils.js";
 import { isStripeConnected } from "../orgs/orgUtils.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
@@ -515,7 +516,9 @@ export const initProductInStripe = async ({
 	product: FullProduct;
 }): Promise<undefined> => {
 	const { org, env, logger, db } = ctx;
+	if (env === AppEnv.Live) return;
 	if (!isStripeConnected({ org, env })) return;
+	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 
 	await checkStripeProductExists({
 		db,
