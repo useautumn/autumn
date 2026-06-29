@@ -60,9 +60,9 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: skipSandbox
-			? ["org", env, activeOrgId]
-			: ["org", env, activeOrgId, "sandbox", sandboxOrgId],
+		queryKey: sandboxOrgId
+			? ["org", env, activeOrgId, "sandbox", sandboxOrgId]
+			: ["org", env, activeOrgId],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
