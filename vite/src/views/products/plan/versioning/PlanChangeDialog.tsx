@@ -541,7 +541,13 @@ export default function PlanChangeDialog({
 
 							{step === "scope" && (
 								<div className="flex flex-col gap-2.5">
-									<FieldLabel>Apply to variants</FieldLabel>
+									<div className="flex flex-col gap-0.5">
+										<FieldLabel>Apply to variants</FieldLabel>
+										<span className="text-tertiary-foreground text-xs">
+											Select which variants receive this change. Unselected
+											variants stay as they are.
+										</span>
+									</div>
 									<PropagateVariantsStep
 										variants={variantConflicts}
 										selectedIds={selectedVariantIds}
@@ -603,7 +609,7 @@ export default function PlanChangeDialog({
 									<div className="flex flex-col gap-2.5">
 										<div className="flex flex-col gap-0.5">
 											<FieldLabel>Review &amp; confirm</FieldLabel>
-											<span className="text-xs text-muted-foreground">
+											<span className="text-tertiary-foreground text-xs">
 												{migrateSubtitle}
 											</span>
 										</div>
