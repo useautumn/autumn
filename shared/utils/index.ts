@@ -29,6 +29,7 @@ export * from "./featureUtils";
 // Feature utils
 export * from "./featureUtils/apiFeatureToDbFeature";
 export * from "./featureUtils/convertFeatureUtils";
+export * from "./featureUtils/diffFeature/diffFeatureV1";
 export * from "./featureUtils/findFeatureUtils";
 export * from "./featureUtils/index";
 
@@ -61,12 +62,14 @@ export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/matchPlanItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";
 export * from "./productV2Utils/productItemUtils/sortPlanItems";
+export * from "./productV2Utils/productV2ToApiPlanV1";
 export * from "./productV2Utils/productV2ToFrontendProduct";
 export * from "./productV2Utils/productV2ToV1";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
 
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/diffPlanV1";
+export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
 export * from "./planV1Utils/diff/applyDiff";
 
 // Stripe resource utils

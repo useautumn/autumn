@@ -31,7 +31,6 @@ import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
 import { DeleteSandboxDialog } from "./env-dropdown/DeleteSandboxDialog";
 import { EditSandboxDialog } from "./env-dropdown/EditSandboxDialog";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
-import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
 import { useSidebarContext } from "./SidebarContext";
 
 export const useEnvChange = () => {
@@ -59,7 +58,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const { org, isLoading } = useOrg();
 	const activeSandbox = useActiveSandbox();
 	const { sandboxes } = useSandboxesQuery({
-		enabled: !isLoading && !!org?.deployed,
+		enabled: !isLoading && !!org,
 	});
 
 	const [isHovered, setIsHovered] = useState(false);
@@ -81,15 +80,6 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 		return (
 			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
 				<Skeleton className={cn("h-6", expanded ? "w-full" : "w-7")} />
-			</div>
-		);
-	}
-
-	const canSwitch = !!org?.deployed;
-	if (!canSwitch) {
-		return (
-			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
-				<StaticEnvPill />
 			</div>
 		);
 	}
@@ -117,7 +107,11 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 			<DropdownMenu open={open} onOpenChange={setOpen}>
 				<ExpandedEnvTrigger isHovered={isHovered} />
 
-				<DropdownMenuContent side="bottom" align="start" className="w-[200px]">
+				<DropdownMenuContent
+					side="bottom"
+					align="start"
+					className="w-(--anchor-width)"
+				>
 					<DropdownMenuItem
 						className={itemClass}
 						onClick={() => selectMainEnv(AppEnv.Sandbox)}
@@ -128,15 +122,17 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 						)}
 					</DropdownMenuItem>
 
-					<DropdownMenuItem
-						className={itemClass}
-						onClick={() => selectMainEnv(AppEnv.Live)}
-					>
-						<span>Production</span>
-						{env === AppEnv.Live && (
-							<Check size={12} className="!h-4 text-tertiary-foreground" />
-						)}
-					</DropdownMenuItem>
+					{org?.deployed && (
+						<DropdownMenuItem
+							className={itemClass}
+							onClick={() => selectMainEnv(AppEnv.Live)}
+						>
+							<span>Production</span>
+							{env === AppEnv.Live && (
+								<Check size={12} className="!h-4 text-tertiary-foreground" />
+							)}
+						</DropdownMenuItem>
+					)}
 
 					{sandboxes.length > 0 && <DropdownMenuSeparator />}
 

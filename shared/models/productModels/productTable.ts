@@ -36,6 +36,7 @@ export const products = pgTable(
 		version: numeric({ mode: "number" }).notNull().default(1),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		base_variant_id: text("base_variant_id"),
+		base_internal_product_id: text("base_internal_product_id"),
 		archived: boolean("archived").notNull().default(false),
 		config: jsonb().$type<ProductConfig>().notNull().default(sql`'{}'::jsonb`),
 		metadata: jsonb()

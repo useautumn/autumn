@@ -1,38 +1,20 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
-import { autumnChatInstructions } from "../../../../../src/harness/common/instructions/index.js";
-import { agentDocUris } from "../../../../../src/agent/prompts/readDocs.js";
 import { claudeManagedConfig } from "../../../../../src/harness/claudeManaged/config.js";
+import { ensureLeafSkills } from "../../../../../src/harness/claudeManaged/skills.js";
 import type { EvalDriverMessage } from "../types.js";
 
-const readDocs = async (mcpClient: MCPClient) => {
-	const resources = await Promise.allSettled(
-		agentDocUris.map((uri) => mcpClient.resources.read("autumn", uri)),
-	);
-	return resources
-		.flatMap((result) =>
-			result.status === "fulfilled"
-				? result.value.contents.flatMap((content) =>
-						"text" in content ? [content.text] : [],
-					)
-				: [],
-		)
-		.join("\n\n");
-};
-
-// Read tool defs (for the always_ask destructive set) + docs from the LOCAL mock
-// — the eval process reaches localhost directly, no tunnel needed.
+// Read tool defs (for the always_ask destructive set) from the LOCAL mock — the
+// eval process reaches localhost directly, no tunnel needed.
 export const loadMcpMetadata = async ({ url }: { url: URL }) => {
 	const mcpClient = new MCPClient({
 		id: `cma-live-eval-${crypto.randomUUID()}`,
 		servers: { autumn: { url } },
 	});
 	try {
-		const [{ toolsets, errors }, docsText] = await Promise.all([
-			mcpClient.listToolsetsWithErrors(),
-			readDocs(mcpClient),
-		]);
+		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
 		if (Object.keys(errors).length) {
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
@@ -45,7 +27,7 @@ export const loadMcpMetadata = async ({ url }: { url: URL }) => {
 				.filter(([, tool]) => tool.mcp?.annotations?.destructiveHint === true)
 				.map(([name]) => name),
 		);
-		return { destructiveTools, docsText };
+		return { destructiveTools };
 	} finally {
 		await mcpClient.disconnect();
 	}
@@ -62,31 +44,39 @@ const ensureEvalEnvironment = async (client: Anthropic) => {
 	return created.id;
 };
 
-const buildAgentConfig = ({
+// Mirror prod: a small surface system prompt + skills ATTACHED (read on demand),
+// not the full skills text inlined. Inlining all skills exceeds Anthropic's 100k
+// system-prompt limit and isn't what prod does, so it can't measure prod latency.
+const buildAgentConfig = async ({
+	client,
 	destructiveTools,
-	docsText,
 	env,
 	mcpUrl,
 	model,
 	today,
 }: {
+	client: Anthropic;
 	destructiveTools: Set<string>;
-	docsText: string;
 	env: AppEnv;
 	mcpUrl: string;
 	model: string;
 	today?: Date;
 }) => ({
-	model: model.replace(/^anthropic\//, ""),
+	// `speed: fast` = same model, faster output-token generation (premium price).
+	// Opt-in (LEAF_FAST_MODE) so correctness evals stay on standard pricing/limits.
+	model: {
+		id: model.replace(/^anthropic\//, ""),
+		speed: process.env.LEAF_FAST_MODE ? ("fast" as const) : ("standard" as const),
+	},
 	name: "Autumn Leaf (eval)",
 	system: [
-		autumnChatInstructions,
+		leafSystemPrompt("slack"),
 		`Current Autumn environment: ${env}.`,
 		today ? `Current date: ${today.toISOString()}.` : null,
-		docsText,
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n"),
+	skills: await ensureLeafSkills(client),
 	mcp_servers: [
 		{
 			name: claudeManagedConfig.autumnMcpServerName,
@@ -124,14 +114,13 @@ export const ensureEvalAgent = async ({
 }: {
 	client: Anthropic;
 	destructiveTools: Set<string>;
-	docsText: string;
 	env: AppEnv;
 	mcpUrl: string;
 	model: string;
 	today?: Date;
 }) => {
 	evalAgentPromise ??= (async () => {
-		const agentConfig = buildAgentConfig(config);
+		const agentConfig = await buildAgentConfig({ client, ...config });
 		const environmentId = await ensureEvalEnvironment(client);
 
 		let existing: { id: string; version: number } | undefined;

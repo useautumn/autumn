@@ -42,10 +42,27 @@ export const handleGetProducts = createRoute({
 			: products;
 		const groupToDefaults = getGroupToDefaults({ defaultProds });
 
+		// Variants store base_internal_product_id pointing at a specific (often older)
+		// version; resolve it to the stable public base id so the UI can group them.
+		const allVersions = await ProductService.listCachedAllVersions({
+			db,
+			orgId: org.id,
+			env,
+		});
+		const internalIdToPublicId = new Map(
+			allVersions.map((p) => [p.internal_id, p.id]),
+		);
+
 		return c.json({
-			products: products.map((p) =>
-				mapToProductV2({ product: p, features: features }),
-			),
+			products: products.map((p) => {
+				const productV2 = mapToProductV2({ product: p, features });
+				return {
+					...productV2,
+					base_id: p.base_internal_product_id
+						? (internalIdToPublicId.get(p.base_internal_product_id) ?? null)
+						: null,
+				};
+			}),
 			groupToDefaults,
 		});
 	},

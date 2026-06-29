@@ -4,6 +4,10 @@ import { z } from "zod";
 import { DEFAULT_CHAT_ORG_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import type { ChatContextMessage } from "../../../types.js";
+import {
+	chatOrgSelectorInstructions,
+	chatOrgSelectorOutputInstructions,
+} from "../../prompts/selectorPrompts.js";
 import { recentMessageContext } from "./selectChatEnv.js";
 
 const orgSelectionSchema = z.strictObject({
@@ -33,16 +37,14 @@ export const selectChatOrg = async ({
 	const agent = new Agent({
 		id: "autumn-chat-org",
 		name: "Autumn Chat Org",
-		instructions:
-			"Extract the Autumn organization reference from the latest Slack thread-starting user message. Return the user's org phrase, slug, or ID; do not invent an org when none is mentioned.",
+		instructions: chatOrgSelectorInstructions,
 		model: DEFAULT_CHAT_ORG_MODEL,
 	});
 	const output = await agent.generate(message, {
 		maxSteps: 1,
 		structuredOutput: {
 			schema: orgSelectionSchema,
-			instructions:
-				"Return org_identifier only when the message explicitly names an org, org slug, or org ID. Otherwise return null.",
+			instructions: chatOrgSelectorOutputInstructions,
 		},
 		context: [...recentMessageContext(recentMessages)],
 	});

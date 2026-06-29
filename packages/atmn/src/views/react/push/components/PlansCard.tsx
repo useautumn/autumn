@@ -5,7 +5,7 @@ import type { PlanStatus } from "../../../../lib/hooks/usePush.js";
 import { Card, StatusRow } from "../../components/index.js";
 
 interface PlansCardProps {
-	plans: Plan[];
+	plans: Pick<Plan, "id" | "name">[];
 	progress: Map<string, PlanStatus>;
 	/** Plans pending deletion (shown during deleting phase) */
 	deletions?: PlanDeleteInfo[];

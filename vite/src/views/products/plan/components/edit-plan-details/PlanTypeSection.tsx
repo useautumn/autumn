@@ -1,7 +1,6 @@
 import {
 	isPriceItem,
 	type ProductItem,
-	ProductItemInterval,
 	productV2ToPlanType,
 } from "@autumn/shared";
 import { PanelButton } from "@autumn/ui";
@@ -26,7 +25,6 @@ export const PlanTypeSection = () => {
 								setProduct({
 									...product,
 									planType: "free",
-									is_default: !product.is_add_on,
 									basePriceType: null,
 									items:
 										product.items?.filter(
@@ -51,20 +49,14 @@ export const PlanTypeSection = () => {
 						<PanelButton
 							isSelected={planType === "paid"}
 							onClick={async () => {
-								// await handleDeleteBasePrice();
 								setProduct({
 									...product,
 									planType: "paid",
-									basePriceType: "recurring",
+									basePriceType: "usage",
 									is_default: false,
-									items: [
-										...product.items,
-										{
-											price: "" as unknown as number,
-											interval: ProductItemInterval.Month,
-											interval_count: 1,
-										},
-									],
+									items: product.items.filter(
+										(item: ProductItem) => !isPriceItem(item),
+									),
 								});
 							}}
 							icon={<CoinsIcon size={16} color="currentColor" />}

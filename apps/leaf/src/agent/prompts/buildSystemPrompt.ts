@@ -1,24 +1,27 @@
+import { leafSkillsText, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AppEnv } from "@autumn/shared";
-import { autumnChatInstructions } from "../../harness/common/instructions/index.js";
 import type { ChatContextMessage } from "../../types.js";
 
 /**
- * Single source for agent system prompts. The Mastra engine omits thread and
- * recentMessages (it passes those as context messages); Claude Code includes them.
+ * Mastra/Claude-Code system prompt: leaf instructions + the knowledge skills
+ * inlined (mastra has no native skill loading). Claude Code includes thread +
+ * recentMessages; the Mastra engine passes those as context messages instead.
  */
 export const buildSystemPrompt = ({
-	docsText,
 	env,
+	inlineSkills = true,
 	recentMessages,
 	thread,
 }: {
-	docsText: string;
 	env: AppEnv;
+	/** Inline all skill text into the prompt. Off for engines that read skills on
+	 * demand (mastra via the `readAutumnDoc` tool) to keep context lean. */
+	inlineSkills?: boolean;
 	recentMessages?: ChatContextMessage[];
 	thread?: { provider: string; resourceId: string; threadId: string };
 }) =>
 	[
-		autumnChatInstructions,
+		leafSystemPrompt(thread?.provider === "slack" ? "slack" : "dashboard"),
 		`Current Autumn environment: ${env}.`,
 		thread
 			? `${thread.provider} thread: ${thread.threadId}. Autumn resource: ${thread.resourceId}.`
@@ -34,7 +37,7 @@ export const buildSystemPrompt = ({
 					)
 					.join("\n")}`
 			: null,
-		docsText,
+		inlineSkills ? leafSkillsText() : null,
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");

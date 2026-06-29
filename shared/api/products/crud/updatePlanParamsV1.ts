@@ -3,6 +3,8 @@ import { idRegex } from "@utils/utils";
 import { z } from "zod/v4";
 import { BasePriceParamsSchema } from "../components/basePrice/basePrice";
 import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
+import { MigrationParamsSchema } from "./migrationParams.js";
+import { UpdateVariantParamsSchema } from "./variants/index.js";
 
 // const UpdatePlanBaseFieldsSchema = z.object({
 // 	name: CreatePlanParamsV1Schema.shape.name.optional(),
@@ -21,6 +23,7 @@ import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
 
 export const UpdatePlanParamsV1Schema =
 	CreatePlanParamsV1Schema.partial().extend({
+		group: CreatePlanParamsV1Schema.shape.group.removeDefault().optional(),
 		version: z.number().optional(),
 		archived: z.boolean().default(false).optional(),
 		price: BasePriceParamsSchema.nullable().optional().meta({
@@ -31,6 +34,16 @@ export const UpdatePlanParamsV1Schema =
 			description:
 				"The free trial of the plan. Set to null to remove the free trial.",
 		}),
+		base_plan_id: z
+			.string()
+			.nonempty()
+			.regex(idRegex)
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+			}),
 	});
 
 export const UpdatePlanParamsV2Schema = z
@@ -62,6 +75,39 @@ export const UpdatePlanParamsV2Schema = z
 		disable_version: z.boolean().optional().meta({
 			internal: true,
 		}),
+		all_versions: z.boolean().optional().meta({
+			description:
+				"Apply the update diff to all versions of this plan. Mutually exclusive with disable_version.",
+		}),
+		migration: MigrationParamsSchema.optional().meta({
+			internal: true,
+		}),
+		force_version: z.boolean().optional().meta({
+			description:
+				"Force versioning even when no customers exist. Mutually exclusive with disable_version.",
+		}),
+		update_variant_ids: z.array(z.string()).optional().meta({
+			description:
+				"Variant plan IDs to apply this update to. Empty or omitted means no propagation.",
+		}),
+		variants: z.array(UpdateVariantParamsSchema).optional().default([]).meta({
+			description:
+				"Additive variant updates for this base plan. Missing variants are created when name is provided.",
+		}),
+		is_default: z.boolean().optional().meta({
+			description:
+				"Whether this is the org's default plan. Cannot be true on a variant.",
+		}),
+		base_plan_id: z
+			.string()
+			.nonempty()
+			.regex(idRegex)
+			.nullable()
+			.optional()
+			.meta({
+				description:
+					"The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.",
+			}),
 	});
 
 export const UpdatePlanQuerySchema = z.object({

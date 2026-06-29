@@ -60,7 +60,7 @@ describe("pricesAreSame", () => {
 			},
 		});
 
-		expect(parsed.config.stripe_product_id).toBeNull();
+		expect(parsed.config.stripe_product_id).toBe("prod_fixed");
 		expect(parsed.config.feature_id).toBeNull();
 		expect(parsed.config.internal_feature_id).toBeNull();
 	});

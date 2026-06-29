@@ -91,6 +91,9 @@ export function CustomerProductsTable() {
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;
 	const showFooter = totalCount >= CUSTOMER_PRODUCTS_PAGE_SIZES[0];
 
+	const hasActiveFilters = kind !== "all" || showExpired;
+	const showFilter = totalCount > 0 || hasActiveFilters;
+
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
@@ -211,12 +214,14 @@ export function CustomerProductsTable() {
 							Plans
 						</Table.Heading>
 						<Table.Actions>
-							<CustomerProductsFilterButton
-								kind={kind}
-								setKind={setKind}
-								showExpired={showExpired}
-								setShowExpired={setShowExpired}
-							/>
+							{showFilter && (
+								<CustomerProductsFilterButton
+									kind={kind}
+									setKind={setKind}
+									showExpired={showExpired}
+									setShowExpired={setShowExpired}
+								/>
+							)}
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>

@@ -1,6 +1,7 @@
 import {
 	type ColumnDef,
 	getCoreRowModel,
+	getExpandedRowModel,
 	getFilteredRowModel,
 	getSortedRowModel,
 	type TableOptions,
@@ -27,6 +28,7 @@ export function useProductTable<TData>({
 		columns,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		getExpandedRowModel: getExpandedRowModel(),
 		...(enableSorting && { getSortedRowModel: getSortedRowModel() }),
 		enableSorting,
 		...options,

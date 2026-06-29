@@ -1,5 +1,9 @@
-import type { Feature, Plan } from "../../compose/models/index.js";
+import type { Feature } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 import type { EnvironmentData } from "./types.js";
+
+const planKey = (plan: Plan) =>
+	plan.version === undefined ? plan.id : `${plan.id}:${plan.version}`;
 
 /**
  * Merge sandbox and production data for SDK types generation
@@ -24,18 +28,19 @@ export function mergeEnvironments(
 		}
 	}
 
-	// Merge plans (dedupe by ID)
+	// Merge plans (dedupe by ID + version)
 	const planMap = new Map<string, Plan>();
 
 	// Add sandbox plans first
 	for (const plan of sandbox.plans) {
-		planMap.set(plan.id, plan);
+		planMap.set(planKey(plan), plan);
 	}
 
 	// Add production plans that don't exist in sandbox
 	for (const plan of production.plans) {
-		if (!planMap.has(plan.id)) {
-			planMap.set(plan.id, plan);
+		const key = planKey(plan);
+		if (!planMap.has(key)) {
+			planMap.set(key, plan);
 		}
 	}
 

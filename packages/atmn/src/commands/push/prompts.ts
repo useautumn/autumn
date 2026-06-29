@@ -1,10 +1,6 @@
 import type { Feature, Plan } from "../../compose/models/index.js";
 import { AppEnv } from "../../lib/env/index.js";
-import type {
-	FeatureDeleteInfo,
-	PlanDeleteInfo,
-	PlanUpdateInfo,
-} from "./types.js";
+import type { FeatureDeleteInfo, PlanDeleteInfo } from "./types.js";
 
 /**
  * Types for push prompts
@@ -13,6 +9,8 @@ import type {
 export type PromptType =
 	| "prod_confirmation"
 	| "plan_versioning"
+	| "plan_migration"
+	| "plan_variant_propagation"
 	| "plan_delete_has_customers"
 	| "plan_delete_no_customers"
 	| "plan_archived"
@@ -24,6 +22,7 @@ export type PromptType =
 export interface PromptOption {
 	label: string;
 	value: string;
+	description?: string;
 	isDefault?: boolean;
 }
 
@@ -34,6 +33,37 @@ export interface PushPrompt {
 	entityName: string;
 	data: Record<string, unknown>;
 	options: PromptOption[];
+}
+
+interface PlanVersioningPromptInfo {
+	plan: Pick<Plan, "id" | "name">;
+	scope?: "plan" | "variant";
+	willVersion: boolean;
+	isArchived: boolean;
+	hasHistoricalVersions?: boolean;
+}
+
+interface PlanVariantPropagationPromptInfo {
+	basePlanId: string;
+	basePlanName: string;
+	variant: {
+		plan_id: string;
+		name: string;
+		versionable: boolean;
+		customize?: unknown;
+		conflicts?: unknown[];
+	};
+}
+
+interface PlanVariantPropagationGroupPromptInfo {
+	basePlanId: string;
+	basePlanName: string;
+	variants: PlanVariantPropagationPromptInfo["variant"][];
+}
+
+interface PlanMigrationPromptInfo {
+	plan: Pick<Plan, "id" | "name">;
+	scope?: "plan" | "variant";
 }
 
 // Counter for unique prompt IDs
@@ -64,10 +94,9 @@ export function createProdConfirmationPrompt(): PushPrompt {
  * Create plan versioning prompt
  */
 export function createPlanVersioningPrompt(
-	info: PlanUpdateInfo,
+	info: PlanVersioningPromptInfo,
 	env?: AppEnv,
 ): PushPrompt {
-	const isSandbox = !env || env === AppEnv.Sandbox;
 	return {
 		id: generatePromptId(),
 		type: "plan_versioning",
@@ -76,24 +105,121 @@ export function createPlanVersioningPrompt(
 		data: {
 			planId: info.plan.id,
 			planName: info.plan.name,
+			scope: info.scope ?? "plan",
 		},
 		options: [
-			...(isSandbox
+			{
+				label: "Create new version",
+				description: "Existing customers stay on their current version.",
+				value: "create_version",
+				isDefault: env === AppEnv.Live,
+			},
+			{
+				label: "Update existing version",
+				description:
+					"Update the current plan version now. You can migrate current users next.",
+				value: "update_current",
+				isDefault: env !== AppEnv.Live,
+			},
+			...(info.hasHistoricalVersions
 				? [
 						{
-							label: "Yes, migrate existing customers and create a new version",
-							value: "version_and_migrate",
-							isDefault: true,
+							label: "Update all versions",
+							description:
+								"Apply this change to every version of this plan and selected variants.",
+							value: "update_all_versions",
+							isDefault: false,
 						},
 					]
 				: []),
-			{
-				label: "Yes, but create a new version only",
-				value: "version",
-				isDefault: !isSandbox,
-			},
-			{ label: "No, skip this plan", value: "skip", isDefault: false },
 		],
+	};
+}
+
+export function createPlanMigrationPrompt(
+	info: PlanMigrationPromptInfo,
+): PushPrompt {
+	return {
+		id: generatePromptId(),
+		type: "plan_migration",
+		entityId: info.plan.id,
+		entityName: info.plan.name,
+		data: {
+			planId: info.plan.id,
+			planName: info.plan.name,
+			scope: info.scope ?? "plan",
+		},
+		options: [
+			{
+				label: "Create migration draft",
+				description: "Customers move only when you run the draft.",
+				value: "create_migration",
+				isDefault: false,
+			},
+			{
+				label: "Do not create migration draft",
+				value: "skip_migration",
+				isDefault: true,
+			},
+		],
+	};
+}
+
+export function createPlanVariantPropagationPrompt(
+	info: PlanVariantPropagationPromptInfo,
+): PushPrompt {
+	const conflictCount = info.variant.conflicts?.length ?? 0;
+	return {
+		id: generatePromptId(),
+		type: "plan_variant_propagation",
+		entityId: info.variant.plan_id,
+		entityName: info.variant.name,
+		data: {
+			basePlanId: info.basePlanId,
+			basePlanName: info.basePlanName,
+			variantPlanId: info.variant.plan_id,
+			variantName: info.variant.name,
+			versionable: info.variant.versionable,
+			conflictCount,
+			conflicts: info.variant.conflicts ?? [],
+			customize: info.variant.customize,
+		},
+		options: [
+			{
+				label: "Apply base changes to this variant",
+				value: "apply",
+				isDefault: false,
+			},
+			{
+				label: "Skip this variant",
+				value: "skip",
+				isDefault: true,
+			},
+		],
+	};
+}
+
+export function createPlanVariantPropagationGroupPrompt(
+	info: PlanVariantPropagationGroupPromptInfo,
+): PushPrompt {
+	return {
+		id: generatePromptId(),
+		type: "plan_variant_propagation",
+		entityId: info.basePlanId,
+		entityName: info.basePlanName,
+		data: {
+			basePlanId: info.basePlanId,
+			basePlanName: info.basePlanName,
+			variants: info.variants.map((variant) => ({
+				variantPlanId: variant.plan_id,
+				variantName: variant.name,
+				versionable: variant.versionable,
+				conflictCount: variant.conflicts?.length ?? 0,
+				conflicts: variant.conflicts ?? [],
+				customize: variant.customize,
+			})),
+		},
+		options: [],
 	};
 }
 
@@ -136,7 +262,6 @@ export function createPlanDeleteNoCustomersPrompt(
 		},
 		options: [
 			{ label: "Delete permanently", value: "delete", isDefault: true },
-			{ label: "Archive instead", value: "archive", isDefault: false },
 			{ label: "Skip (keep as is)", value: "skip", isDefault: false },
 		],
 	};
@@ -230,7 +355,6 @@ export function createFeatureDeleteNoDepsPrompt(
 		},
 		options: [
 			{ label: "Delete permanently", value: "delete", isDefault: true },
-			{ label: "Archive instead", value: "archive", isDefault: false },
 			{ label: "Skip (keep as is)", value: "skip", isDefault: false },
 		],
 	};

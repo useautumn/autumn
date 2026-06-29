@@ -1,4 +1,8 @@
-import { AffectedResource, GetPlanParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	AffectedResource,
+	GetPlanParamsV0Schema,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
@@ -20,6 +24,7 @@ export const handleGetPlanV2 = createRoute({
 		});
 
 		const latestPlan = await getPlanResponse({
+			ctx,
 			product: fullProduct,
 			features: ctx.features,
 		});

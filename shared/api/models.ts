@@ -14,6 +14,8 @@ export * from "./entities/prevVersions/apiEntityV0.js";
 export * from "./errors/classes/featureErrClasses.js";
 export * from "./errors/codes/featureErrCodes.js";
 // Features
+export * from "./features/apiFeatureV1.js";
+export * from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 // Others
@@ -21,6 +23,11 @@ export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
 export * from "./products/index.js";
+export * from "./catalog/catalogMappingModels.js";
+export * from "./catalog/previewUpdateCatalogParams.js";
+export * from "./catalog/previewUpdateCatalogResponse.js";
+export * from "./catalog/updateCatalogResponse.js";
+export * from "./catalog/utils/index.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/createReferralCodeParams.js";

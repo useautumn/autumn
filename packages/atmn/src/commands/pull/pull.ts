@@ -39,20 +39,21 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 		environment = AppEnv.Sandbox,
 		forceOverwrite = false,
 		noDeclarationFile = false,
+		allVersions = false,
 	} = options;
 
 	// 1. Get key for specified environment (checks cwd then falls back to root)
 	const primaryKey = getKey(environment, cwd);
 
 	// 2. Fetch & transform from specified environment
-	const primaryData = await pullFromEnvironment(primaryKey);
+	const primaryData = await pullFromEnvironment(primaryKey, { allVersions });
 
 	// 3. Write autumn.config.ts (in-place update if exists, unless forceOverwrite)
 	const writeResult = await writeConfig(
 		primaryData.features,
 		primaryData.plans,
 		cwd,
-		{ forceOverwrite },
+		{ forceOverwrite: forceOverwrite || allVersions },
 	);
 
 	const result: PullResult = {
@@ -71,7 +72,7 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 		if (environment === AppEnv.Sandbox && hasKey(AppEnv.Live, cwd)) {
 			try {
 				const liveKey = getKey(AppEnv.Live, cwd);
-				const liveData = await pullFromEnvironment(liveKey);
+				const liveData = await pullFromEnvironment(liveKey, { allVersions });
 
 				// Merge sandbox and live
 				mergedData = mergeEnvironments(primaryData, liveData);
@@ -83,7 +84,9 @@ async function _pullImpl(options: PullOptions = {}): Promise<PullResult> {
 		else if (environment === AppEnv.Live && hasKey(AppEnv.Sandbox, cwd)) {
 			try {
 				const sandboxKey = getKey(AppEnv.Sandbox, cwd);
-				const sandboxData = await pullFromEnvironment(sandboxKey);
+				const sandboxData = await pullFromEnvironment(sandboxKey, {
+					allVersions,
+				});
 
 				// Merge live and sandbox
 				mergedData = mergeEnvironments(sandboxData, primaryData);

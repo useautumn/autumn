@@ -46,6 +46,7 @@ export const createStripeFixedPrice = async ({
 	});
 
 	config.stripe_price_id = stripePrice.id;
+	config.stripe_product_id = stripePrice.product as string;
 
 	await PriceService.update({
 		db,

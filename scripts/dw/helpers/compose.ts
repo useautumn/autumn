@@ -30,9 +30,10 @@ export function dockerComposeAvailable(): boolean {
 
 export function ensureComposeStack(
 	worktreeNum: number,
+	branchName: string | undefined,
 	ngrokDomainArg?: string,
 ): { ngrokEnabled: boolean } {
-	if (worktreeNum === 1) return { ngrokEnabled: false };
+	if (worktreeNum === 1 && !branchName) return { ngrokEnabled: false };
 	if (!dockerComposeAvailable()) {
 		log("docker compose not available; skipping infra stack");
 		return { ngrokEnabled: false };
@@ -119,8 +120,11 @@ export async function readNgrokTunnelUrl(
 	return undefined;
 }
 
-export function removeComposeStack(worktreeNum: number): void {
-	if (worktreeNum === 1) return;
+export function removeComposeStack(
+	worktreeNum: number,
+	branchName: string | undefined,
+): void {
+	if (worktreeNum === 1 && !branchName) return;
 	const project = composeProjectName(worktreeNum);
 	const down = sh("docker", [
 		"compose",

@@ -4,44 +4,70 @@ import { pathToFileURL } from "node:url";
 import chalk from "chalk";
 import createJiti from "jiti";
 import type { Feature, Plan } from "../../compose/models/index.js";
-import { fetchPlans, migrateProduct } from "../../lib/api/endpoints/index.js";
+import type { CatalogPreviewUpdateResponse } from "../../lib/api/endpoints/index.js";
 import { withAuthRecovery } from "../../lib/auth/headlessAuthRecovery.js";
-import { AppEnv, getKey, resolveConfigPath } from "../../lib/env/index.js";
+import { AppEnv, resolveConfigPath } from "../../lib/env/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import {
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
 	createPlanArchivedPrompt,
 	createPlanDeletePrompt,
+	createPlanMigrationPrompt,
+	createPlanVariantPropagationGroupPrompt,
 	createPlanVersioningPrompt,
 	createProdConfirmationPrompt,
 	type PushPrompt,
 } from "./prompts.js";
 import {
-	analyzePush,
-	archiveFeature,
-	archivePlan,
-	checkFeatureDeleteInfo,
-	deleteFeature,
-	deletePlan,
+	buildLatestPlanVersionById,
+	catalogPlanChangeHasChanges,
+	catalogPreviewHasChanges,
 	fetchRemoteData,
-	pushFeature,
-	pushPlan,
-	refreshPlansForVersioning,
+	isHistoricalPlan,
+	planChangeHasHistoricalVersions,
+	planTargetKey,
+	previewCatalogPush,
+	pushCatalog,
 	unarchiveFeature,
 	unarchivePlan,
 } from "./push.js";
-import type { PushAnalysis } from "./types.js";
+import type { PushResult } from "./types.js";
+import type {
+	PlanMigrationSelections,
+	PlanUpdateIntent,
+	PlanUpdateIntentSelections,
+	VariantMigrationSelections,
+	VariantPropagationSelections,
+	VariantUpdateIntentSelections,
+} from "./types.js";
 import { formatValidationErrors, validateConfig } from "./validate.js";
+import {
+	getDirectVariantUpdatePreviews,
+	getVariantPropagationPreviews,
+} from "./variantPropagation.js";
 
 interface LocalConfig {
 	features: Feature[];
 	plans: Plan[];
 }
 
+type CombinedPlanUpdateIntent =
+	| "update_current_and_migrate"
+	| "update_all_versions_and_migrate";
+
+type HeadlessPlanUpdateIntent =
+	| PlanUpdateIntent
+	| CombinedPlanUpdateIntent
+	| "skip";
+
 interface HeadlessPushOptions {
 	cwd?: string;
 	environment?: AppEnv;
+	allVersions?: boolean;
+	planIntents?: Record<string, HeadlessPlanUpdateIntent>;
+	migrationDrafts?: Record<string, boolean>;
+	variantPropagations?: Record<string, string[]>;
 	yes?: boolean;
 }
 
@@ -55,6 +81,231 @@ interface HeadlessPushResult {
 	plansUpdated: string[];
 	plansDeleted: string[];
 	plansArchived: string[];
+}
+
+type ArchivedTargets = {
+	features: Feature[];
+	plans: Plan[];
+};
+
+const isVariantExport = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as { __atmnType?: unknown }).__atmnType === "variant",
+	);
+
+function headlessResultFromPushResult(result: PushResult): HeadlessPushResult {
+	return {
+		success: true,
+		featuresCreated: result.featuresCreated,
+		featuresUpdated: result.featuresUpdated,
+		featuresDeleted: result.featuresDeleted,
+		featuresArchived: result.featuresArchived,
+		plansCreated: result.plansCreated,
+		plansUpdated: [...result.plansUpdated, ...result.plansVersioned],
+		plansDeleted: result.plansDeleted,
+		plansArchived: result.plansArchived,
+	};
+}
+
+const formatJsonExample = () =>
+	[
+		"",
+		chalk.cyan("Headless decision flags:"),
+		`  --plan-intents '{"pro":"create_version"}'`,
+		`  --plan-intents '{"pro@v1":"update_current"}'`,
+		`  --plan-intents '{"pro":"update_current"}'`,
+		`  --plan-intents '{"pro":"update_all_versions"}'`,
+		`  --migration-drafts '{"pro":true}'`,
+		`  --variant-propagations '{"pro":["pro_annual"]}'`,
+	].join("\n");
+
+const isPlanUpdateIntent = (value: unknown): value is PlanUpdateIntent =>
+	value === "create_version" ||
+	value === "update_current" ||
+	value === "update_all_versions";
+
+const normalizePlanIntent = ({
+	intent,
+}: {
+	intent: HeadlessPlanUpdateIntent;
+}): {
+	createMigration?: boolean;
+	intent: PlanUpdateIntent | "skip" | null;
+} => {
+	if (intent === "update_current_and_migrate") {
+		return { intent: "update_current", createMigration: true };
+	}
+	if (intent === "update_all_versions_and_migrate") {
+		return { intent: "update_all_versions", createMigration: true };
+	}
+	if (intent === "skip" || isPlanUpdateIntent(intent)) return { intent };
+	return { intent: null };
+};
+
+const formatVariantConflict = (conflict: unknown): string => {
+	if (!conflict || typeof conflict !== "object") return "unknown conflict";
+	const value = conflict as {
+		feature_name?: string;
+		item_filter?: { interval?: string };
+		reason?: string;
+	};
+	const feature = value.feature_name ?? "unknown feature";
+	const interval = value.item_filter?.interval
+		? ` (${value.item_filter.interval})`
+		: "";
+	return `${feature}: ${value.reason ?? "conflict"}${interval}`;
+};
+
+function resolveHeadlessUpdateDecisions({
+	migrationDrafts = {},
+	planIntents = {},
+	prompts,
+	variantPropagations = {},
+}: {
+	migrationDrafts?: HeadlessPushOptions["migrationDrafts"];
+	planIntents?: HeadlessPushOptions["planIntents"];
+	prompts: PushPrompt[];
+	variantPropagations?: HeadlessPushOptions["variantPropagations"];
+}): {
+	missing: string[];
+	planMigrationSelections: PlanMigrationSelections;
+	planUpdateIntentSelections: PlanUpdateIntentSelections;
+	skipPlanIds: string[];
+	variantMigrationSelections: VariantMigrationSelections;
+	variantPropagationSelections: VariantPropagationSelections;
+	variantUpdateIntentSelections: VariantUpdateIntentSelections;
+} {
+	const missing: string[] = [];
+	const planMigrationSelections: PlanMigrationSelections = {};
+	const planUpdateIntentSelections: PlanUpdateIntentSelections = {};
+	const skipPlanIds: string[] = [];
+	const variantMigrationSelections: VariantMigrationSelections = {};
+	const variantPropagationSelections: VariantPropagationSelections = {};
+	const variantUpdateIntentSelections: VariantUpdateIntentSelections = {};
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_versioning") continue;
+		const isVariantPrompt = prompt.data.scope === "variant";
+		const intent = planIntents[prompt.entityId];
+		if (!intent) {
+			missing.push(
+				`${isVariantPrompt ? "variant" : "plan"} "${prompt.entityId}" needs an update intent`,
+			);
+			continue;
+		}
+		const normalized = normalizePlanIntent({ intent });
+		if (normalized.intent === "skip") {
+			skipPlanIds.push(prompt.entityId);
+			continue;
+		}
+		if (normalized.intent === null) {
+			missing.push(
+				`${isVariantPrompt ? "variant" : "plan"} "${prompt.entityId}" has invalid update intent`,
+			);
+			continue;
+		}
+		if (isVariantPrompt) {
+			if (normalized.intent === "update_all_versions") {
+				missing.push(
+					`variant "${prompt.entityId}" cannot use update_all_versions`,
+				);
+				continue;
+			}
+			variantUpdateIntentSelections[prompt.entityId] = normalized.intent;
+			if (normalized.createMigration !== undefined) {
+				variantMigrationSelections[prompt.entityId] =
+					normalized.createMigration;
+			}
+			continue;
+		}
+		planUpdateIntentSelections[prompt.entityId] = normalized.intent;
+		if (normalized.createMigration !== undefined) {
+			planMigrationSelections[prompt.entityId] = normalized.createMigration;
+		}
+	}
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_migration") continue;
+		const isVariantPrompt = prompt.data.scope === "variant";
+		if (skipPlanIds.includes(prompt.entityId)) continue;
+		const intent = isVariantPrompt
+			? variantUpdateIntentSelections[prompt.entityId]
+			: planUpdateIntentSelections[prompt.entityId];
+		if (intent === "create_version") {
+			continue;
+		}
+		const selected = migrationDrafts[prompt.entityId];
+		if (selected === undefined) {
+			if (
+				prompt.entityId in
+				(isVariantPrompt ? variantMigrationSelections : planMigrationSelections)
+			) {
+				continue;
+			}
+			missing.push(
+				`${isVariantPrompt ? "variant" : "plan"} "${prompt.entityId}" needs a migration draft choice`,
+			);
+			continue;
+		}
+		if (isVariantPrompt) {
+			variantMigrationSelections[prompt.entityId] = selected;
+			continue;
+		}
+		planMigrationSelections[prompt.entityId] = selected;
+	}
+
+	for (const prompt of prompts) {
+		if (prompt.type !== "plan_variant_propagation") continue;
+		const basePlanId = prompt.data.basePlanId as string;
+		if (skipPlanIds.includes(basePlanId)) continue;
+		if (!(basePlanId in variantPropagations)) {
+			missing.push(`plan "${basePlanId}" needs variant propagation choices`);
+			continue;
+		}
+
+		const variants = prompt.data.variants as
+			| {
+					customize?: unknown;
+					variantName?: string;
+					variantPlanId: string;
+			  }[]
+			| undefined;
+		if (variants) {
+			const selectedIds = new Set(variantPropagations[basePlanId] ?? []);
+			variantPropagationSelections[basePlanId] = variants
+				.filter((variant) => selectedIds.has(variant.variantPlanId))
+				.map((variant) => ({
+					variant_plan_id: variant.variantPlanId,
+					name: variant.variantName,
+					customize: variant.customize ?? {},
+				}));
+			continue;
+		}
+
+		const variantPlanId = prompt.data.variantPlanId as string;
+		if (!variantPropagations[basePlanId]?.includes(variantPlanId)) continue;
+
+		variantPropagationSelections[basePlanId] = [
+			...(variantPropagationSelections[basePlanId] ?? []),
+			{
+				variant_plan_id: variantPlanId,
+				name: prompt.data.variantName as string | undefined,
+				customize: prompt.data.customize ?? {},
+			},
+		];
+	}
+
+	return {
+		missing: [...new Set(missing)],
+		planMigrationSelections,
+		planUpdateIntentSelections,
+		skipPlanIds,
+		variantMigrationSelections,
+		variantPropagationSelections,
+		variantUpdateIntentSelections,
+	};
 }
 
 /**
@@ -106,6 +357,7 @@ async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 		// New format: individual named exports
 		for (const [key, value] of Object.entries(modRecord)) {
 			if (key === "default") continue;
+			if (isVariantExport(value)) continue;
 
 			const obj = value as { items?: unknown; type?: unknown };
 			if (obj && typeof obj === "object") {
@@ -124,42 +376,137 @@ async function loadLocalConfig(cwd: string): Promise<LocalConfig> {
 /**
  * Build the list of prompts that would be shown in interactive mode
  */
-function buildPromptQueue(
-	analysis: PushAnalysis,
+function buildPromptQueueFromPreview(
+	preview: CatalogPreviewUpdateResponse,
+	archivedTargets: ArchivedTargets,
 	environment: AppEnv,
+	plans: Plan[],
 ): PushPrompt[] {
 	const prompts: PushPrompt[] = [];
+	const latestVersionById = buildLatestPlanVersionById(plans);
+	const baseMigrationPromptPlans: Pick<Plan, "id" | "name">[] = [];
+	const variantMigrationPromptPlans: Pick<Plan, "id" | "name">[] = [];
+	const planForChange = (
+		planChange: CatalogPreviewUpdateResponse["plan_changes"][number],
+		index: number,
+	) => {
+		const indexedPlan = plans[index];
+		return indexedPlan?.id === planChange.plan_id ? indexedPlan : undefined;
+	};
 
-	// Production confirmation
 	if (environment === AppEnv.Live) {
 		prompts.push(createProdConfirmationPrompt());
 	}
 
-	// Archived features
-	for (const feature of analysis.archivedFeatures) {
+	for (const feature of archivedTargets.features) {
 		prompts.push(createFeatureArchivedPrompt(feature));
 	}
 
-	// Archived plans
-	for (const plan of analysis.archivedPlans) {
+	for (const plan of archivedTargets.plans) {
 		prompts.push(createPlanArchivedPrompt(plan));
 	}
 
-	// Plans that will version
-	for (const planInfo of analysis.plansToUpdate) {
-		if (planInfo.willVersion) {
-			prompts.push(createPlanVersioningPrompt(planInfo, environment));
+	for (const [index, planChange] of preview.plan_changes.entries()) {
+		const localPlan = planForChange(planChange, index);
+		if (
+			planChange.action !== "updated" ||
+			!catalogPlanChangeHasChanges(planChange) ||
+			!localPlan
+		) {
+			continue;
+		}
+
+		const hasHistoricalVersions = planChangeHasHistoricalVersions({
+			planChange,
+		});
+		const shouldPrompt =
+			!isHistoricalPlan({ latestVersionById, plan: localPlan }) &&
+			(planChange.versionable || hasHistoricalVersions);
+		if (shouldPrompt) {
+			const plan = {
+				id: planChange.plan_id,
+				name: planChange.plan?.name ?? planChange.plan_id,
+			};
+			prompts.push(
+				createPlanVersioningPrompt(
+					{
+						plan,
+						willVersion: planChange.versionable,
+						isArchived: false,
+						hasHistoricalVersions,
+					},
+					environment,
+				),
+			);
+			baseMigrationPromptPlans.push(plan);
 		}
 	}
 
-	// Feature deletions
-	for (const info of analysis.featuresToDelete) {
-		prompts.push(createFeatureDeletePrompt(info));
+	for (const planChange of preview.plan_changes) {
+		for (const variant of getDirectVariantUpdatePreviews({ planChange })) {
+			if (!variant.versionable) continue;
+			const plan = {
+				id: variant.plan_id,
+				name: variant.name ?? variant.plan_id,
+			};
+			prompts.push(
+				createPlanVersioningPrompt(
+					{
+						plan,
+						scope: "variant",
+						willVersion: variant.versionable,
+						isArchived: false,
+					},
+					environment,
+				),
+			);
+			variantMigrationPromptPlans.push(plan);
+		}
 	}
 
-	// Plan deletions
-	for (const info of analysis.plansToDelete) {
-		prompts.push(createPlanDeletePrompt(info));
+	for (const [index, planChange] of preview.plan_changes.entries()) {
+		const basePlan = planForChange(planChange, index);
+		if (!basePlan) continue;
+
+		const affectedVariants = getVariantPropagationPreviews({ planChange });
+		if (affectedVariants.length === 0) continue;
+
+		prompts.push(
+			createPlanVariantPropagationGroupPrompt({
+				basePlanId: planChange.plan_id,
+				basePlanName: basePlan.name,
+				variants: affectedVariants,
+			}),
+		);
+	}
+
+	for (const plan of baseMigrationPromptPlans) {
+		prompts.push(createPlanMigrationPrompt({ plan }));
+	}
+	for (const plan of variantMigrationPromptPlans) {
+		prompts.push(createPlanMigrationPrompt({ plan, scope: "variant" }));
+	}
+
+	for (const featureChange of preview.feature_changes) {
+		if (featureChange.action !== "remove") continue;
+		prompts.push(
+			createFeatureDeletePrompt({
+				id: featureChange.feature_id,
+				canDelete: !featureChange.will_archive,
+				reason: featureChange.will_archive ? "products" : undefined,
+			}),
+		);
+	}
+
+	for (const planChange of preview.plan_changes) {
+		if (planChange.action !== "deleted") continue;
+		prompts.push(
+			createPlanDeletePrompt({
+				id: planChange.plan_id,
+				canDelete: !planChange.will_archive,
+				customerCount: planChange.will_archive ? 1 : 0,
+			}),
+		);
 	}
 
 	return prompts;
@@ -178,9 +525,25 @@ function formatIssuesSummary(prompts: PushPrompt[]): string {
 				break;
 			case "plan_versioning":
 				issues.push(
-					`  - Plan "${prompt.entityId}" has customers and will create a new version`,
+					`  - ${prompt.data.scope === "variant" ? "Variant" : "Plan"} "${prompt.entityId}" needs an update intent`,
 				);
 				break;
+			case "plan_migration":
+				issues.push(
+					`  - ${prompt.data.scope === "variant" ? "Variant" : "Plan"} "${prompt.entityId}" needs a migration draft choice`,
+				);
+				break;
+			case "plan_variant_propagation": {
+				const conflicts =
+					(prompt.data.conflicts as unknown[] | undefined) ?? [];
+				issues.push(
+					`  - Variant "${prompt.entityId}" may receive base plan changes from "${prompt.data.basePlanId}"`,
+				);
+				for (const conflict of conflicts) {
+					issues.push(`    conflict: ${formatVariantConflict(conflict)}`);
+				}
+				break;
+			}
 			case "plan_delete_has_customers":
 				issues.push(
 					`  - Plan "${prompt.entityId}" needs to be removed but has customers`,
@@ -267,15 +630,48 @@ async function syncArchivedFeaturesToConfig(
 	await writeConfig(Array.from(localFeaturesById.values()), config.plans, cwd);
 }
 
+async function getArchivedTargets(
+	config: LocalConfig,
+	allVersions = false,
+): Promise<ArchivedTargets> {
+	const remoteData = await fetchRemoteData({ allVersions });
+	const remoteFeaturesById = new Map(
+		remoteData.features.map((feature) => [feature.id, feature]),
+	);
+	const remotePlansById = new Map(
+		remoteData.plans.map((plan) => [planTargetKey(plan), plan]),
+	);
+
+	return {
+		features: config.features.filter((feature) => {
+			const remote = remoteFeaturesById.get(feature.id);
+			return Boolean(remote?.archived && !feature.archived);
+		}),
+		plans: config.plans.filter((plan) => {
+			const remote = remotePlansById.get(planTargetKey(plan));
+			return Boolean(remote?.archived && !plan.archived);
+		}),
+	};
+}
+
 /**
  * Execute the push with --yes flag (auto-confirm all prompts with defaults)
  */
 async function executePushWithDefaults(
 	config: LocalConfig,
-	analysis: PushAnalysis,
+	archivedTargets: ArchivedTargets,
+	preview: CatalogPreviewUpdateResponse,
 	prompts: PushPrompt[],
 	cwd: string,
 	environment: AppEnv,
+	decisions: {
+		planMigrationSelections?: PlanMigrationSelections;
+		planUpdateIntentSelections?: PlanUpdateIntentSelections;
+		skipPlanIds?: string[];
+		variantMigrationSelections?: VariantMigrationSelections;
+		variantPropagationSelections?: VariantPropagationSelections;
+		variantUpdateIntentSelections?: VariantUpdateIntentSelections;
+	} = {},
 ): Promise<HeadlessPushResult> {
 	const result: HeadlessPushResult = {
 		success: true,
@@ -303,12 +699,8 @@ async function executePushWithDefaults(
 		);
 	}
 
-	// Get remote plans for pushPlan
-	const remoteData = await fetchRemoteData();
-	const remotePlans = remoteData.plans;
-
 	// Handle archived features - unarchive if default says so
-	for (const feature of analysis.archivedFeatures) {
+	for (const feature of archivedTargets.features) {
 		const promptId = prompts.find(
 			(p) => p.type === "feature_archived" && p.entityId === feature.id,
 		)?.id;
@@ -319,36 +711,8 @@ async function executePushWithDefaults(
 		}
 	}
 
-	// Push features — credit_system features must come after their metered dependencies
-	const allFeatures = [...config.features].sort((a, b) => {
-		if (a.type === "credit_system" && b.type !== "credit_system") return 1;
-		if (a.type !== "credit_system" && b.type === "credit_system") return -1;
-		return 0;
-	});
-	for (const feature of allFeatures) {
-		const isArchived = analysis.archivedFeatures.some(
-			(af) => af.id === feature.id,
-		);
-		if (isArchived) {
-			const promptId = prompts.find(
-				(p) => p.type === "feature_archived" && p.entityId === feature.id,
-			)?.id;
-			const response = promptId ? responses.get(promptId) : undefined;
-			if (response === "skip") {
-				continue;
-			}
-		}
-
-		const pushResult = await pushFeature(feature);
-		if (pushResult.action === "created") {
-			result.featuresCreated.push(feature.id);
-		} else {
-			result.featuresUpdated.push(feature.id);
-		}
-	}
-
 	// Handle archived plans - unarchive if default says so
-	for (const plan of analysis.archivedPlans) {
+	for (const plan of archivedTargets.plans) {
 		const promptId = prompts.find(
 			(p) => p.type === "plan_archived" && p.entityId === plan.id,
 		)?.id;
@@ -359,134 +723,19 @@ async function executePushWithDefaults(
 		}
 	}
 
-	// Push plans to create
-	for (const plan of analysis.plansToCreate) {
-		await pushPlan(plan, remotePlans);
-		result.plansCreated.push(plan.id);
-	}
-
-	const refreshedPlanUpdates = await refreshPlansForVersioning(
-		analysis.plansToUpdate,
-		config.features,
-	);
-	const planUpdateById = new Map(
-		refreshedPlanUpdates.map((planInfo) => [planInfo.plan.id, planInfo]),
-	);
-
-	// Push plans to update
-	for (const planInfo of analysis.plansToUpdate) {
-		const refreshedPlanInfo = planUpdateById.get(planInfo.plan.id) ?? planInfo;
-
-		const versioningPromptId = prompts.find(
-			(p) => p.type === "plan_versioning" && p.entityId === planInfo.plan.id,
-		)?.id;
-		const versioningResponse = versioningPromptId
-			? responses.get(versioningPromptId)
-			: undefined;
-
-		if (refreshedPlanInfo.willVersion && versioningResponse === "skip") {
-			continue;
-		}
-
-		if (planInfo.isArchived || refreshedPlanInfo.isArchived) {
-			const promptId = prompts.find(
-				(p) => p.type === "plan_archived" && p.entityId === planInfo.plan.id,
-			)?.id;
-			const response = promptId ? responses.get(promptId) : undefined;
-			if (response === "skip") {
-				continue;
-			}
-		}
-
-		await pushPlan(planInfo.plan, remotePlans);
-
-		if (
-			refreshedPlanInfo.willVersion &&
-			versioningResponse === "version_and_migrate"
-		) {
-			const secretKey = getKey(environment);
-			const updatedPlans = await fetchPlans({
-				secretKey,
-				includeArchived: false,
-			});
-			const updatedPlan = updatedPlans.find((p) => p.id === planInfo.plan.id);
-			if (updatedPlan && updatedPlan.version > 1) {
-				await migrateProduct({
-					secretKey,
-					fromProductId: planInfo.plan.id,
-					fromVersion: updatedPlan.version - 1,
-					toProductId: planInfo.plan.id,
-					toVersion: updatedPlan.version,
-				});
-			}
-		}
-
-		if (refreshedPlanInfo.willVersion) {
-			result.plansUpdated.push(refreshedPlanInfo.plan.id);
-		} else {
-			result.plansUpdated.push(planInfo.plan.id);
-		}
-	}
-
-	// Handle plan deletions first so feature dependencies are removed first
-	for (const info of analysis.plansToDelete) {
-		const promptId = prompts.find(
-			(p) => p.type.startsWith("plan_delete") && p.entityId === info.id,
-		)?.id;
-		const response = promptId ? responses.get(promptId) : undefined;
-
-		if (response === "delete") {
-			console.log(chalk.dim(`  Deleting plan: ${info.id}`));
-			await deletePlan(info.id);
-			result.plansDeleted.push(info.id);
-		} else if (response === "archive") {
-			console.log(chalk.dim(`  Archiving plan: ${info.id}`));
-			await archivePlan(info.id);
-			result.plansArchived.push(info.id);
-		}
-		// skip = do nothing
-	}
-
-	const latestRemoteData = await fetchRemoteData();
-	const refreshedFeatureDeleteInfo = new Map<string, boolean>();
-	if (analysis.featuresToDelete.length > 0) {
-		const refreshedInfos = await Promise.all(
-			analysis.featuresToDelete.map((featureInfo) =>
-				checkFeatureDeleteInfo(
-					featureInfo.id,
-					config.features,
-					latestRemoteData.features,
-				),
-			),
-		);
-		for (const info of refreshedInfos) {
-			refreshedFeatureDeleteInfo.set(info.id, info.canDelete);
-		}
-	}
-
-	// Handle feature deletions
-	for (const info of analysis.featuresToDelete) {
-		const promptId = prompts.find(
-			(p) => p.type.startsWith("feature_delete") && p.entityId === info.id,
-		)?.id;
-		const response = promptId ? responses.get(promptId) : undefined;
-		const canDelete = refreshedFeatureDeleteInfo.get(info.id) ?? info.canDelete;
-
-		if (response === "delete") {
-			if (!canDelete) {
-				console.log(chalk.yellow(`  Skipping feature delete: ${info.id}`));
-				continue;
-			}
-			console.log(chalk.dim(`  Deleting feature: ${info.id}`));
-			await deleteFeature(info.id);
-			result.featuresDeleted.push(info.id);
-		} else if (response === "archive") {
-			console.log(chalk.dim(`  Archiving feature: ${info.id}`));
-			await archiveFeature(info.id);
-			result.featuresArchived.push(info.id);
-		}
-		// skip = do nothing
-	}
+	const pushResult = await pushCatalog({
+		cwd,
+		features: config.features,
+		plans: config.plans,
+		planMigrationSelections: decisions.planMigrationSelections,
+		planUpdateIntentSelections: decisions.planUpdateIntentSelections,
+		preview,
+		skipPlanIds: decisions.skipPlanIds,
+		variantMigrationSelections: decisions.variantMigrationSelections,
+		variantPropagationSelections: decisions.variantPropagationSelections,
+		variantUpdateIntentSelections: decisions.variantUpdateIntentSelections,
+	});
+	Object.assign(result, headlessResultFromPushResult(pushResult));
 
 	if (result.featuresArchived.length > 0) {
 		await syncArchivedFeaturesToConfig(config, result.featuresArchived, cwd);
@@ -500,51 +749,15 @@ async function executePushWithDefaults(
  */
 async function executeCleanPush(
 	config: LocalConfig,
-	analysis: PushAnalysis,
+	preview: CatalogPreviewUpdateResponse,
 ): Promise<HeadlessPushResult> {
-	const result: HeadlessPushResult = {
-		success: true,
-		featuresCreated: [],
-		featuresUpdated: [],
-		featuresDeleted: [],
-		featuresArchived: [],
-		plansCreated: [],
-		plansUpdated: [],
-		plansDeleted: [],
-		plansArchived: [],
-	};
-
-	const remoteData = await fetchRemoteData();
-	const remotePlans = remoteData.plans;
-
-	// Push all features — credit_system features must come after their metered dependencies
-	const sortedFeatures = [...config.features].sort((a, b) => {
-		if (a.type === "credit_system" && b.type !== "credit_system") return 1;
-		if (a.type !== "credit_system" && b.type === "credit_system") return -1;
-		return 0;
+	const result = await pushCatalog({
+		features: config.features,
+		plans: config.plans,
+		preview,
 	});
-	for (const feature of sortedFeatures) {
-		const pushResult = await pushFeature(feature);
-		if (pushResult.action === "created") {
-			result.featuresCreated.push(feature.id);
-		} else {
-			result.featuresUpdated.push(feature.id);
-		}
-	}
 
-	// Push plans to create
-	for (const plan of analysis.plansToCreate) {
-		await pushPlan(plan, remotePlans);
-		result.plansCreated.push(plan.id);
-	}
-
-	// Push plans to update (no versioning issues since prompts.length === 0)
-	for (const planInfo of analysis.plansToUpdate) {
-		await pushPlan(planInfo.plan, remotePlans);
-		result.plansUpdated.push(planInfo.plan.id);
-	}
-
-	return result;
+	return headlessResultFromPushResult(result);
 }
 
 /**
@@ -574,6 +787,7 @@ async function _headlessPushImpl(
 ): Promise<HeadlessPushResult> {
 	const cwd = options.cwd ?? process.cwd();
 	const environment = options.environment ?? AppEnv.Sandbox;
+	const allVersions = options.allVersions ?? false;
 	const yes = options.yes ?? false;
 
 	const envLabel = environment === AppEnv.Live ? "production" : "sandbox";
@@ -598,18 +812,18 @@ async function _headlessPushImpl(
 
 	// Analyze changes
 	console.log(chalk.dim(`Analyzing changes against ${envLabel}...`));
-	const analysis = await analyzePush(config.features, config.plans);
+	const [{ preview }, archivedTargets] = await Promise.all([
+		previewCatalogPush({
+			features: config.features,
+			plans: config.plans,
+		}),
+		getArchivedTargets(config, allVersions),
+	]);
 
-	// Check if there are any changes that require action
 	const hasChanges =
-		analysis.featuresToCreate.length > 0 ||
-		analysis.featuresToUpdate.length > 0 ||
-		analysis.featuresToDelete.length > 0 ||
-		analysis.plansToCreate.length > 0 ||
-		analysis.plansToUpdate.length > 0 ||
-		analysis.plansToDelete.length > 0 ||
-		analysis.archivedFeatures.length > 0 ||
-		analysis.archivedPlans.length > 0;
+		catalogPreviewHasChanges(preview) ||
+		archivedTargets.features.length > 0 ||
+		archivedTargets.plans.length > 0;
 
 	if (!hasChanges) {
 		console.log(chalk.green("\nAlready in sync - no changes to push."));
@@ -626,8 +840,26 @@ async function _headlessPushImpl(
 		};
 	}
 
-	// Build prompt queue to check for edge cases
-	const prompts = buildPromptQueue(analysis, environment);
+	const prompts = buildPromptQueueFromPreview(
+		preview,
+		archivedTargets,
+		environment,
+		config.plans,
+	);
+	const decisions = resolveHeadlessUpdateDecisions({
+		migrationDrafts: options.migrationDrafts,
+		planIntents: options.planIntents,
+		prompts,
+		variantPropagations: options.variantPropagations,
+	});
+	if (decisions.missing.length > 0) {
+		console.log(chalk.yellow("\nPush requires update-flow decisions:"));
+		for (const missing of decisions.missing) {
+			console.log(`  - ${missing}`);
+		}
+		console.log(formatJsonExample());
+		process.exit(1);
+	}
 
 	// If there are prompts and --yes is not set, exit with helpful message
 	if (prompts.length > 0 && !yes) {
@@ -643,10 +875,9 @@ async function _headlessPushImpl(
 			),
 		);
 		console.log(
-			chalk.white(
-				"  2. Run with --yes to automatically proceed with default actions",
-			),
+			chalk.white("  2. Run with --yes plus explicit headless decision flags"),
 		);
+		console.log(formatJsonExample());
 		console.log("");
 
 		// Exit with non-zero to indicate action required
@@ -661,14 +892,21 @@ async function _headlessPushImpl(
 		// --yes was set, execute with defaults
 		result = await executePushWithDefaults(
 			config,
-			analysis,
+			archivedTargets,
+			preview,
 			prompts,
 			cwd,
 			environment,
+			{
+				planMigrationSelections: decisions.planMigrationSelections,
+				planUpdateIntentSelections: decisions.planUpdateIntentSelections,
+				skipPlanIds: decisions.skipPlanIds,
+				variantPropagationSelections: decisions.variantPropagationSelections,
+			},
 		);
 	} else {
 		// No edge cases, clean push
-		result = await executeCleanPush(config, analysis);
+		result = await executeCleanPush(config, preview);
 	}
 
 	// Print summary

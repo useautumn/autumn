@@ -1,26 +1,17 @@
 import {
-	getProductItemDisplay,
 	type ProductItem,
 	roundUsageToNearestBillingUnit,
 	UsageModel,
 } from "@autumn/shared";
-import {
-	ConditionalTooltip,
-	IconButton,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
+import { IconButton } from "@autumn/ui";
 import { CheckIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
-import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { ItemStatusDot } from "@/components/v2/ItemStatusDot";
+import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
-import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
-import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { FAST_TRANSITION } from "../constants/animationConstants";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 
@@ -38,18 +29,14 @@ function usePrepaidDisplayState({
 	item,
 	prepaidQuantity,
 	isPrepaid,
-	isDeleted,
 	form,
 	featureId,
-	isEditingQuantity,
 }: {
 	item: ProductItem;
 	prepaidQuantity: number | null | undefined;
 	isPrepaid: boolean;
-	isDeleted: boolean;
 	form: SubscriptionItemRowProps["form"];
 	featureId: string | undefined;
-	isEditingQuantity: boolean;
 }) {
 	const inputQuantity = prepaidQuantity ?? undefined;
 	const billingUnitStep = item.billing_units ?? 1;
@@ -70,17 +57,12 @@ function usePrepaidDisplayState({
 	});
 
 	const showPrepaidControl = isPrepaid && !!form && !!featureId;
-	const showTooltip = !isDeleted && showPrepaidControl && !isEditingQuantity;
 	const showRightControlRing = showPrepaidControl && showDebouncedOffUnitRing;
 
 	return {
 		inputQuantity,
 		billingUnitStep,
-		roundedQuantity,
-		normalizedBillingUnits,
-		shouldShowRoundingHint,
 		showPrepaidControl,
-		showTooltip,
 		showRightControlRing,
 	};
 }
@@ -183,23 +165,6 @@ function PrepaidQuantityControl({
 	);
 }
 
-const ITEM_STATE_CONFIG = {
-	new: { color: "bg-green-500", label: "New feature" },
-	removed: { color: "bg-red-500", label: "Removed" },
-} as const;
-
-function ItemStatusDot({ state }: { state: keyof typeof ITEM_STATE_CONFIG }) {
-	const { color, label } = ITEM_STATE_CONFIG[state];
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span className={cn("size-2 rounded-full shrink-0", color)} />
-			</TooltipTrigger>
-			<TooltipContent side="top">{label}</TooltipContent>
-		</Tooltip>
-	);
-}
-
 export function SubscriptionItemRow({
 	item,
 	form,
@@ -209,33 +174,16 @@ export function SubscriptionItemRow({
 	isCreated = false,
 	readOnly = false,
 }: SubscriptionItemRowProps) {
-	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
 	const [isEditingQuantity, setIsEditingQuantity] = useState(false);
 
-	const display = getProductItemDisplay({
-		item,
-		features,
-		currency: org?.default_currency || "USD",
-		fullDisplay: true,
-		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-	});
-
-	const feature = features.find((f) => f.id === item.feature_id);
-	const hasFeatureName = feature?.name && feature.name.trim() !== "";
-	const displayText = hasFeatureName
-		? display.primary_text
-		: "Name your feature";
 	const isPrepaid = item.usage_model === UsageModel.Prepaid;
 
 	const prepaid = usePrepaidDisplayState({
 		item,
 		prepaidQuantity,
 		isPrepaid,
-		isDeleted,
 		form,
 		featureId,
-		isEditingQuantity,
 	});
 
 	const renderRowIndicator = () => {
@@ -262,22 +210,7 @@ export function SubscriptionItemRow({
 				)}
 			>
 				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					<div className="flex flex-row items-center gap-1 shrink-0">
-						<PlanFeatureIcon item={item} position="left" />
-						<CustomDotIcon />
-						<PlanFeatureIcon item={item} position="right" />
-					</div>
-					<p className="whitespace-nowrap truncate flex-1 min-w-0">
-						<span
-							className={cn("text-body", !hasFeatureName && "text-subtle!")}
-						>
-							{displayText}
-						</span>
-						<span className="text-body-secondary">
-							{" "}
-							{display.secondary_text}
-						</span>
-					</p>
+					<PlanItemLabel item={item} />
 				</div>
 
 				<div className="flex items-center gap-2 shrink-0">
@@ -300,25 +233,5 @@ export function SubscriptionItemRow({
 		</div>
 	);
 
-	const prepaidTooltipContent = (
-		<div className="flex flex-col gap-1">
-			<p>Quantity includes included usage.</p>
-			{prepaid.shouldShowRoundingHint && (
-				<p>
-					Rounded up to {prepaid.roundedQuantity} to match{" "}
-					{prepaid.normalizedBillingUnits}-unit billing.
-				</p>
-			)}
-		</div>
-	);
-
-	return (
-		<ConditionalTooltip
-			enabled={!!prepaid.showTooltip}
-			content={prepaidTooltipContent}
-			contentClassName="max-w-(--anchor-width)"
-		>
-			{rowContent}
-		</ConditionalTooltip>
-	);
+	return rowContent;
 }
