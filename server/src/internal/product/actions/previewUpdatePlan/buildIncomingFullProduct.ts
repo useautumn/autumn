@@ -1,8 +1,9 @@
-import type {
-	Entitlement,
-	FullProduct,
-	Price,
-	ProductV2,
+import {
+	type Entitlement,
+	type FullProduct,
+	pickBillingControlColumns,
+	type Price,
+	type ProductV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
@@ -52,5 +53,8 @@ export const buildIncomingFullProduct = ({
 		free_trial: product.free_trial ?? base.free_trial,
 		config: product.config ?? base.config,
 		metadata: product.metadata ?? base.metadata,
+		// billing_controls are stored as top-level columns, not on items; overlay
+		// the incoming ones so the version-impact preview diff sees the change.
+		...pickBillingControlColumns(product.billing_controls),
 	} as FullProduct;
 };

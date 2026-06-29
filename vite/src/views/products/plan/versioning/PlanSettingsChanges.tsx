@@ -1,79 +1,30 @@
-import { compareBillingControls, type FrontendProduct } from "@autumn/shared";
-
 export type SettingChange = { key: string; label: string; detail: string };
 
-const boolState = (value: unknown) => (value ? "enabled" : "disabled");
-const orDash = (value: unknown) =>
-	value === null || value === undefined || value === "" ? "—" : String(value);
-const jsonChanged = (a: unknown, b: unknown) =>
-	JSON.stringify(a ?? null) !== JSON.stringify(b ?? null);
+const SETTING_LABELS: Record<string, string> = {
+	name: "Name",
+	description: "Description",
+	group: "Group",
+	add_on: "Add-on",
+	auto_enable: "Default plan",
+	free_trial: "Free trial",
+	config: "Config",
+	billing_controls: "Billing controls",
+};
 
-// Diff straight from the products rather than preview.previous_attributes: an
-// added field has an `undefined` old value, which JSON.stringify drops from the
-// API response (so e.g. a newly added free trial never arrives there).
-export function buildSettingsChanges({
-	baseProduct,
-	product,
-}: {
-	baseProduct: FrontendProduct | null | undefined;
-	product: FrontendProduct;
-}): SettingChange[] {
-	if (!baseProduct) return [];
-	const changes: SettingChange[] = [];
-
-	if (baseProduct.name !== product.name) {
-		changes.push({
-			key: "name",
-			label: "Name",
-			detail: `${orDash(baseProduct.name)} → ${orDash(product.name)}`,
-		});
-	}
-	if ((baseProduct.description ?? "") !== (product.description ?? "")) {
-		changes.push({ key: "description", label: "Description", detail: "updated" });
-	}
-	if ((baseProduct.group ?? "") !== (product.group ?? "")) {
-		changes.push({
-			key: "group",
-			label: "Group",
-			detail: `${orDash(baseProduct.group)} → ${orDash(product.group)}`,
-		});
-	}
-	if (baseProduct.is_add_on !== product.is_add_on) {
-		changes.push({
-			key: "add_on",
-			label: "Add-on",
-			detail: boolState(product.is_add_on),
-		});
-	}
-	if (baseProduct.is_default !== product.is_default) {
-		changes.push({
-			key: "auto_enable",
-			label: "Default plan",
-			detail: boolState(product.is_default),
-		});
-	}
-	if (jsonChanged(baseProduct.free_trial, product.free_trial)) {
-		let detail = "updated";
-		if (!baseProduct.free_trial) detail = "added";
-		else if (!product.free_trial) detail = "removed";
-		changes.push({ key: "free_trial", label: "Free trial", detail });
-	}
-	if (jsonChanged(baseProduct.config, product.config)) {
-		changes.push({ key: "config", label: "Config", detail: "updated" });
-	}
-	const billingControlsSame = compareBillingControls({
-		newBillingControls: product.billing_controls,
-		curBillingControls: baseProduct.billing_controls,
-	});
-	if (!billingControlsSame) {
-		changes.push({
-			key: "billing_controls",
-			label: "Billing controls",
-			detail: "updated",
-		});
-	}
-
-	return changes;
+// Derived entirely from the backend preview's previous_attributes — the
+// frontend never diffs plan objects itself. A null previous value means the
+// field was added.
+export function previousAttributesToSettingChanges(
+	previousAttributes: Record<string, unknown> | null | undefined,
+): SettingChange[] {
+	if (!previousAttributes) return [];
+	return Object.keys(previousAttributes)
+		.filter((key) => key in SETTING_LABELS)
+		.map((key) => ({
+			key,
+			label: SETTING_LABELS[key],
+			detail: previousAttributes[key] == null ? "added" : "updated",
+		}));
 }
 
 export function PlanSettingsChanges({ changes }: { changes: SettingChange[] }) {
