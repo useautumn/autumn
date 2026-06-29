@@ -132,10 +132,29 @@ export const upsertOAuthClient = async ({
 	return getOAuthClientByClientId({ db, clientId: insert.clientId });
 };
 
+export const updateOAuthClientScopesByClientId = async ({
+	db,
+	clientId,
+	scopes,
+}: {
+	db: DrizzleCli;
+	clientId: string;
+	scopes: string[];
+}) => {
+	const [client] = await db
+		.update(oauthClient)
+		.set({ scopes, updatedAt: new Date() })
+		.where(eq(oauthClient.clientId, clientId))
+		.returning(oauthClientSelect);
+
+	return client ?? null;
+};
+
 export const oauthClientRepo = {
 	list: listOAuthClients,
 	listForAdmin: listOAuthClientsForAdmin,
 	getByClientId: getOAuthClientByClientId,
 	updateById: updateOAuthClientById,
+	updateScopesByClientId: updateOAuthClientScopesByClientId,
 	upsert: upsertOAuthClient,
 };
