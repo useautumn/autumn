@@ -24,7 +24,11 @@ const getRefundMode = ({
 	return "credits";
 };
 
-export function RefundBehaviorSection() {
+export function RefundBehaviorSection({
+	proratedOnly = false,
+}: {
+	proratedOnly?: boolean;
+} = {}) {
 	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
@@ -52,7 +56,7 @@ export function RefundBehaviorSection() {
 			case "refund":
 				form.setFieldValue("billingBehavior", null);
 				form.setFieldValue("refundBehavior", "refund");
-				if (!formValues.refundAmount) {
+				if (proratedOnly || !formValues.refundAmount) {
 					form.setFieldValue("refundAmount", "prorated");
 				}
 				break;
@@ -104,7 +108,9 @@ export function RefundBehaviorSection() {
 										Refund to payment method
 									</div>
 									<div className="text-body-secondary leading-tight">
-										Refund directly to the customer's original payment method.
+										{proratedOnly
+											? "Prorated refund directly to the customer's original payment method."
+											: "Refund directly to the customer's original payment method."}
 									</div>
 								</div>
 							</div>
