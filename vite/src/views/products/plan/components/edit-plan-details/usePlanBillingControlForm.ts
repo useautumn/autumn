@@ -7,6 +7,7 @@ import {
 	type DbUsageLimit,
 	PurchaseLimitInterval,
 	ResetInterval,
+	type SpendLimitType,
 } from "@autumn/shared";
 import { useRef } from "react";
 import { z } from "zod/v4";
@@ -29,6 +30,7 @@ export type PlanBillingControlFormValues = {
 	purchase_limit_interval_count: number | null;
 	purchase_limit_limit: number | null;
 	invoice_mode: boolean;
+	limit_type: SpendLimitType;
 	overage_limit: number | null;
 	usage_limit: number | null;
 	usage_interval: ResetInterval;
@@ -64,6 +66,7 @@ const AutoTopupFormSchema = z
 const SpendLimitFormSchema = z
 	.object({
 		feature_id: z.string(),
+		limit_type: z.enum(["absolute", "usage_percentage"]),
 		overage_limit: z.number().nullable(),
 	})
 	.check((ctx) => {
@@ -155,6 +158,7 @@ export function buildControlItem(
 		return {
 			feature_id: emptyToUndefined(values.feature_id),
 			enabled: values.enabled,
+			limit_type: values.limit_type,
 			overage_limit: values.overage_limit ?? undefined,
 		} satisfies DbSpendLimit;
 	}
@@ -222,6 +226,7 @@ function toDefaultValues(
 			autoTopup?.purchase_limit?.interval_count ?? 1,
 		purchase_limit_limit: autoTopup?.purchase_limit?.limit ?? null,
 		invoice_mode: autoTopup?.invoice_mode ?? false,
+		limit_type: spendLimit?.limit_type ?? "absolute",
 		overage_limit: spendLimit?.overage_limit ?? null,
 		usage_limit: usageLimit?.limit ?? null,
 		usage_interval: usageLimit?.interval ?? ResetInterval.Month,
