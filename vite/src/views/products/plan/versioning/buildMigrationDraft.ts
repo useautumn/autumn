@@ -1,7 +1,10 @@
 import type {
 	ApiPlanV1,
+	DiffedCustomizePlanV1,
 	Feature,
 	FrontendProduct,
+	MigrationFilter,
+	Operations,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -13,9 +16,6 @@ import {
 	productV2ToFeatureItems,
 	sortProductItems,
 } from "@autumn/shared";
-import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
-import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
-import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
 export interface MigrationDraft {
@@ -133,6 +133,28 @@ export function buildInPlaceUpdatePlanParams({
 		billing_controls: plan.billing_controls,
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
+}
+
+// Preview params mirror the in-place update but drop disable_version so the
+// backend reports whether applying in place would version.
+export function buildPreviewUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+}: {
+	baseProduct: FrontendProduct | null;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct: baseProduct ?? editedProduct,
+		editedProduct,
+		features,
+	});
+	delete params.disable_version;
+	params.include_versions = true;
+	params.include_variants = true;
+	return params;
 }
 
 function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
@@ -286,5 +308,108 @@ export function buildMigrationDraft({
 			customer: [updatePlanOp],
 		},
 		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
+	};
+}
+
+export interface CombinedVariantTarget {
+	id: string;
+	version: number;
+}
+
+export interface AllVersionsUpdateMigrationTarget {
+	id: string;
+	customize: DiffedCustomizePlanV1 | null;
+}
+
+// Version resets re-materialize customer entitlements from the updated catalog.
+export function buildCombinedVariantMigrationDraft({
+	variants,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	variants: CombinedVariantTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	if (variants.length === 0) return null;
+
+	const planIds = variants.map((v) => v.id);
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+
+	const basePlanFilter = { plan_id: planMatcher };
+	const planFilter = includeCustom
+		? basePlanFilter
+		: { ...basePlanFilter, custom: false };
+
+	const byVersion = new Map<number, string[]>();
+	for (const variant of variants) {
+		const ids = byVersion.get(variant.version) ?? [];
+		ids.push(variant.id);
+		byVersion.set(variant.version, ids);
+	}
+
+	const versionOps = (custom: boolean): UpdatePlanOp[] =>
+		Array.from(byVersion.entries()).map(([version, ids]) => ({
+			type: "update_plan",
+			plan_filter: {
+				plan_id: ids.length === 1 ? ids[0] : { $in: ids },
+				custom,
+			},
+			version,
+		}));
+
+	const operations: Operations = {
+		customer: includeCustom
+			? [...versionOps(false), ...versionOps(true)]
+			: versionOps(false),
+	};
+
+	return {
+		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
+		filter: { customer: { plan: planFilter } },
+		operations,
+		no_billing_changes: !hasPricingChange,
+	};
+}
+
+export function buildAllVersionsUpdateMigrationDraft({
+	targets,
+	hasPricingChange,
+	includeCustom = false,
+}: {
+	targets: AllVersionsUpdateMigrationTarget[];
+	hasPricingChange: boolean;
+	includeCustom?: boolean;
+}): MigrationDraft | null {
+	const ops = targets.flatMap((target): UpdatePlanOp[] => {
+		if (!target.customize) return [];
+		const customize = getMigratablePlanDiff(target.customize);
+		if (Object.keys(customize).length === 0) return [];
+
+		const op = (custom: boolean): UpdatePlanOp => ({
+			type: "update_plan",
+			plan_filter: { plan_id: target.id, custom },
+			customize,
+		});
+
+		return includeCustom ? [op(false), op(true)] : [op(false)];
+	});
+	if (ops.length === 0) return null;
+
+	const planIds = [...new Set(targets.map((target) => target.id))];
+	const planMatcher = planIds.length === 1 ? planIds[0] : { $in: planIds };
+	const basePlanFilter = { plan_id: planMatcher };
+
+	return {
+		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
+		filter: {
+			customer: {
+				plan: includeCustom
+					? basePlanFilter
+					: { ...basePlanFilter, custom: false },
+			},
+		},
+		operations: { customer: ops },
+		no_billing_changes: !hasPricingChange,
 	};
 }

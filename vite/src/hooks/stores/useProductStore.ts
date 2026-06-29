@@ -77,6 +77,7 @@ export const useHasChanges = () => {
 			curProductV2: baseProduct as unknown as FrontendProduct,
 			features,
 		});
+		const basePlanSame = product.base_id === baseProduct.base_id;
 
 		const hasChanges =
 			!comparison.itemsSame ||
@@ -84,7 +85,8 @@ export const useHasChanges = () => {
 			!comparison.freeTrialsSame ||
 			!comparison.configSame ||
 			!comparison.billingControlsSame ||
-			!comparison.metadataSame;
+			!comparison.metadataSame ||
+			!basePlanSame;
 
 		return hasChanges;
 	}, [product, baseProduct, features]);

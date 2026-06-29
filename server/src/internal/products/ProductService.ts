@@ -309,7 +309,9 @@ export class ProductService {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
-	}): Promise<Array<{ internal_id: string; id: string; name: string; version: number }>> {
+	}): Promise<
+		Array<{ internal_id: string; id: string; name: string; version: number }>
+	> {
 		return queryWithCache({
 			key: buildAllVersionsProductsCacheKey({ orgId, env }),
 			ttl: PRODUCTS_CACHE_TTL,
@@ -473,6 +475,75 @@ export class ProductService {
 
 		sortFullProducts({ products: result });
 		return result;
+	}
+
+	static async listVariantsByParent({
+		db,
+		baseInternalProductIds,
+		orgId,
+		env,
+		returnAll = false,
+	}: {
+		db: DrizzleCli;
+		baseInternalProductIds: string[];
+		orgId: string;
+		env: AppEnv;
+		returnAll?: boolean;
+	}): Promise<FullProduct[]> {
+		if (baseInternalProductIds.length === 0) return [];
+
+		const latestVersionsSubquery = db
+			.select({
+				id: products.id,
+				maxVersion: sql<number>`MAX(${products.version})`.as("max_version"),
+			})
+			.from(products)
+			.where(
+				and(
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+					inArray(products.base_internal_product_id, baseInternalProductIds),
+					ne(products.archived, true),
+				),
+			)
+			.groupBy(products.id)
+			.as("latest_versions");
+
+		const data = (await db.query.products.findMany({
+			where: and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				ne(products.archived, true),
+				inArray(products.base_internal_product_id, baseInternalProductIds),
+				returnAll
+					? undefined
+					: exists(
+							db
+								.select()
+								.from(latestVersionsSubquery)
+								.where(
+									and(
+										eq(latestVersionsSubquery.id, products.id),
+										eq(latestVersionsSubquery.maxVersion, products.version),
+									),
+								),
+						),
+			),
+			with: {
+				entitlements: {
+					with: {
+						feature: true,
+					},
+					where: eq(entitlements.is_custom, false),
+				},
+				prices: { where: eq(prices.is_custom, false) },
+				free_trials: { where: eq(freeTrials.is_custom, false) },
+			},
+		})) as FullProduct[];
+
+		parseFreeTrials({ products: data });
+
+		return returnAll ? data : getLatestProducts(data);
 	}
 
 	static async getFull({

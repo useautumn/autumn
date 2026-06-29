@@ -1,11 +1,19 @@
 export { CatalogUpdateParamsSchema } from "./catalog/previewUpdateCatalogParams.js";
 export {
+	CatalogGetMappingsParamsSchema,
+	CatalogGetMappingsResponseSchema,
+	CatalogUpdateMappingsParamsSchema,
+	CatalogUpdateMappingsResponseSchema,
+} from "./catalog/catalogMappingModels.js";
+export {
 	CatalogFeaturePreviewSchema,
 	CatalogPlanPreviewSchema,
 	CatalogPreviewUpdateResponseSchema,
 	FeatureUpdateBlockerSchema,
 	MigrationDraftSchema,
 } from "./catalog/previewUpdateCatalogResponse.js";
+export { CatalogUpdateResponseSchema } from "./catalog/updateCatalogResponse.js";
+export { PreviewUpdateFeatureResponseSchema } from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export { CreateBalanceParamsV0Schema } from "./balances/create/createBalanceParams.js";
 export { AttachParamsV1Schema } from "./billing/attachV2/attachParamsV1.js";
 export {

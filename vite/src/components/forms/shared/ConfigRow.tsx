@@ -26,10 +26,10 @@ export function ConfigRow({
 	return (
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between gap-3">
-				<div className="flex flex-col gap-0.5 min-w-0">
+				<div className="flex flex-col gap-px min-w-0">
 					<span className="text-sm font-medium text-foreground">{title}</span>
 					{description && (
-						<span className="text-xs text-tertiary-foreground">
+						<span className="text-xs leading-snug text-tertiary-foreground/70">
 							{description}
 						</span>
 					)}

@@ -67,6 +67,7 @@ export class AutumnRpcCli {
 				throw new AutumnError({
 					message: "request failed, rate limit exceeded",
 					code: "rate_limit_exceeded",
+					statusCode: response.status,
 				});
 			}
 
@@ -77,12 +78,14 @@ export class AutumnRpcCli {
 				throw new AutumnError({
 					message: `request failed, error: ${error}`,
 					code: ErrCode.InternalError,
+					statusCode: response.status,
 				});
 			}
 
 			throw new AutumnError({
 				message: error.message,
 				code: error.code,
+				statusCode: response.status,
 			});
 		}
 

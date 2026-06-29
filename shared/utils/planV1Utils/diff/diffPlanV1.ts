@@ -1,4 +1,6 @@
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
+import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	type ApiPlanV1,
 	type CreatePlanItemParamsV1,
@@ -14,6 +16,15 @@ export const DiffedCustomizePlanV1Schema = CustomizePlanV1Schema.omit({
 export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
 
 type ApiPlanItem = ApiPlanV1["items"][number];
+type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
+type PlanItemPrice = NonNullable<PlanItemInput["price"]>;
+type PlanItemRollover = NonNullable<PlanItemInput["rollover"]>;
+type PlanItemProration = NonNullable<PlanItemInput["proration"]>;
+type BasePriceInput = {
+	amount: number;
+	interval?: string | null;
+	interval_count?: number | null;
+};
 
 const toBasePriceParams = (
 	price: NonNullable<ApiPlanV1["price"]>,
@@ -27,6 +38,8 @@ const toBasePriceParams = (
 
 const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
+	if (item.entity_feature_id !== undefined)
+		out.entity_feature_id = item.entity_feature_id;
 	if (item.included !== undefined && item.included !== null)
 		out.included = item.included;
 	if (item.unlimited !== undefined && item.unlimited !== null)
@@ -43,6 +56,12 @@ const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
 			...(item.rollover.expiry_duration_length !== undefined
 				? { expiry_duration_length: item.rollover.expiry_duration_length }
 				: {}),
+		};
+	}
+	if (item.proration?.on_increase && item.proration.on_decrease) {
+		out.proration = {
+			on_increase: item.proration.on_increase,
+			on_decrease: item.proration.on_decrease,
 		};
 	}
 	return out;
@@ -65,15 +84,28 @@ type MatchKeyItem = {
 export const composeMatchKey = (item: MatchKeyItem): string => {
 	const billingMethod = item.price?.billing_method ?? "";
 	const interval = item.price?.interval ?? item.reset?.interval ?? "";
-	const intervalCount =
-		item.price?.interval_count ?? item.reset?.interval_count ?? "";
+	const intervalCount = normalizeIntervalCount({
+		interval,
+		intervalCount: item.price?.interval_count ?? item.reset?.interval_count,
+	});
 	return `${item.feature_id}|${billingMethod}|${interval}|${intervalCount}`;
 };
 
 /** Match key for a remove_items filter, in the same format as composeMatchKey
  * (buildRemoveFilter already flattens the matched item's fields onto it). */
 export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
-	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${filter.interval_count ?? ""}`;
+	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount({
+		interval: filter.interval,
+		intervalCount: filter.interval_count,
+	})}`;
+
+const normalizeIntervalCount = ({
+	interval,
+	intervalCount,
+}: {
+	interval?: string | null;
+	intervalCount?: number | null;
+}): number | "" => (interval ? (intervalCount ?? 1) : (intervalCount ?? ""));
 
 const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 	const filter: PlanItemFilter = { feature_id: item.feature_id };
@@ -84,13 +116,17 @@ const buildRemoveFilter = (item: ApiPlanItem): PlanItemFilter => {
 		filter.interval = interval as PlanItemFilter["interval"];
 	const intervalCount =
 		item.price?.interval_count ?? item.reset?.interval_count;
-	if (intervalCount !== undefined) filter.interval_count = intervalCount;
+	if (interval !== undefined) filter.interval_count = intervalCount ?? 1;
 	return filter;
 };
 
-const pricesEqual = (a: ApiPlanV1["price"], b: ApiPlanV1["price"]): boolean => {
+const pricesEqual = (
+	a: BasePriceInput | null | undefined,
+	b: BasePriceInput | null | undefined,
+): boolean => {
+	if (a === undefined && b === undefined) return true;
 	if (a === null && b === null) return true;
-	if (a === null || b === null) return false;
+	if (a == null || b == null) return false;
 	return (
 		a.amount === b.amount &&
 		a.interval === b.interval &&
@@ -99,18 +135,167 @@ const pricesEqual = (a: ApiPlanV1["price"], b: ApiPlanV1["price"]): boolean => {
 };
 
 const freeTrialsEqual = (
-	a: ApiPlanV1["free_trial"],
-	b: ApiPlanV1["free_trial"],
+	a: DiffedCustomizePlanV1["free_trial"] | ApiPlanV1["free_trial"],
+	b: DiffedCustomizePlanV1["free_trial"] | ApiPlanV1["free_trial"],
+): boolean => {
+	if (a === undefined && b === undefined) return true;
+	if (a === null && b === null) return true;
+	if (a == null || b == null) return false;
+	return (
+		a.duration_length === b.duration_length &&
+		(a.duration_type ?? FreeTrialDuration.Month) ===
+			(b.duration_type ?? FreeTrialDuration.Month) &&
+		(a.card_required ?? true) === (b.card_required ?? true) &&
+		(a.on_end ?? "bill") === (b.on_end ?? "bill")
+	);
+};
+
+const tiersEqual = (
+	a: NonNullable<PlanItemPrice["tiers"]> | undefined,
+	b: NonNullable<PlanItemPrice["tiers"]> | undefined,
+): boolean => {
+	if (!a?.length && !b?.length) return true;
+	if (!a || !b || a.length !== b.length) return false;
+
+	return a.every((tier, index) => {
+		const other = b[index];
+		return (
+			tier.to === other.to &&
+			(tier.amount ?? 0) === (other.amount ?? 0) &&
+			(tier.flat_amount ?? null) === (other.flat_amount ?? null)
+		);
+	});
+};
+
+const itemPricesEqual = (
+	a: PlanItemPrice | null | undefined,
+	b: PlanItemPrice | null | undefined,
 ): boolean => {
 	if (a == null && b == null) return true;
 	if (a == null || b == null) return false;
-	return JSON.stringify(a) === JSON.stringify(b);
+	const aTierBehavior = a.tiers?.length
+		? (a.tier_behavior ?? TierBehavior.Graduated)
+		: null;
+	const bTierBehavior = b.tiers?.length
+		? (b.tier_behavior ?? TierBehavior.Graduated)
+		: null;
+
+	return (
+		(a.amount ?? null) === (b.amount ?? null) &&
+		tiersEqual(a.tiers, b.tiers) &&
+		aTierBehavior === bTierBehavior &&
+		a.interval === b.interval &&
+		(a.interval_count ?? 1) === (b.interval_count ?? 1) &&
+		(a.billing_units ?? 1) === (b.billing_units ?? 1) &&
+		a.billing_method === b.billing_method &&
+		(a.max_purchase ?? null) === (b.max_purchase ?? null)
+	);
 };
 
-// Equality ignores `display` (UI-derived) and `feature` (join, not user input).
-const itemsEqual = (a: ApiPlanItem, b: ApiPlanItem): boolean => {
-	const strip = ({ display: _d, feature: _f, ...rest }: ApiPlanItem) => rest;
-	return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
+const prorationsEqual = (
+	a: PlanItemProration | null | undefined,
+	b: PlanItemProration | null | undefined,
+): boolean => {
+	if (a == null && b == null) return true;
+	if (a == null || b == null) return false;
+	return (
+		(a.on_increase ?? null) === (b.on_increase ?? null) &&
+		(a.on_decrease ?? null) === (b.on_decrease ?? null)
+	);
+};
+
+const rolloversEqual = (
+	a: PlanItemRollover | null | undefined,
+	b: PlanItemRollover | null | undefined,
+): boolean => {
+	if (a == null && b == null) return true;
+	if (a == null || b == null) return false;
+
+	return (
+		a.expiry_duration_type === b.expiry_duration_type &&
+		(a.expiry_duration_length ?? null) ===
+			(b.expiry_duration_length ?? null) &&
+		(a.max ?? null) === (b.max ?? null) &&
+		(a.max_percentage ?? null) === (b.max_percentage ?? null)
+	);
+};
+
+// Compare user-controlled item fields only; API joins/display are ignored.
+export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
+	return (
+		a.feature_id === b.feature_id &&
+		(a.entity_feature_id ?? null) === (b.entity_feature_id ?? null) &&
+		(a.included ?? 0) === (b.included ?? 0) &&
+		(a.unlimited ?? false) === (b.unlimited ?? false) &&
+		(a.reset?.interval ?? null) === (b.reset?.interval ?? null) &&
+		(a.reset?.interval_count ?? 1) === (b.reset?.interval_count ?? 1) &&
+		itemPricesEqual(a.price, b.price) &&
+		rolloversEqual(a.rollover, b.rollover) &&
+		prorationsEqual(a.proration, b.proration)
+	);
+};
+
+const removeFiltersEqual = (
+	a: PlanItemFilter,
+	b: PlanItemFilter,
+): boolean =>
+	a.feature_id === b.feature_id &&
+	(a.billing_method ?? null) === (b.billing_method ?? null) &&
+	(a.interval ?? null) === (b.interval ?? null) &&
+	normalizeIntervalCount({
+		interval: a.interval,
+		intervalCount: a.interval_count,
+	}) ===
+		normalizeIntervalCount({
+			interval: b.interval,
+			intervalCount: b.interval_count,
+		});
+
+const arraysEqual = <T>({
+	left,
+	right,
+	equals,
+}: {
+	left?: T[];
+	right?: T[];
+	equals: (left: T, right: T) => boolean;
+}): boolean => {
+	if (!left?.length && !right?.length) return true;
+	if (!left || !right || left.length !== right.length) return false;
+
+	const unmatched = [...right];
+	return left.every((item) => {
+		const index = unmatched.findIndex((other) => equals(item, other));
+		if (index === -1) return false;
+		unmatched.splice(index, 1);
+		return true;
+	});
+};
+
+export const customizePlanV1DiffsEqual = ({
+	left,
+	right,
+}: {
+	left?: DiffedCustomizePlanV1 | null;
+	right?: DiffedCustomizePlanV1 | null;
+}): boolean => {
+	const a = left ?? {};
+	const b = right ?? {};
+
+	return (
+		pricesEqual(a.price, b.price) &&
+		freeTrialsEqual(a.free_trial, b.free_trial) &&
+		arraysEqual({
+			left: a.add_items,
+			right: b.add_items,
+			equals: itemsEqual,
+		}) &&
+		arraysEqual({
+			left: a.remove_items,
+			right: b.remove_items,
+			equals: removeFiltersEqual,
+		})
+	);
 };
 
 // Modify-in-place is expressed as remove + add ("out with the old, in with the new").

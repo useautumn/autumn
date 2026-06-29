@@ -24,6 +24,8 @@ export const ProductV2Schema = z.object({
 	created_at: z.number(),
 	stripe_id: z.string().nullish(),
 	archived: z.boolean().default(false).nullish(),
+	base_internal_product_id: z.string().nullish(),
+	base_id: z.string().nullish(),
 	config: ProductConfigSchema.partial().optional(),
 	billing_controls: CustomerBillingControlsSchema.optional(),
 	metadata: ProductMetadataSchema.optional(),

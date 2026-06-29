@@ -55,6 +55,7 @@ export const handleGetPlanV1 = createRoute({
 		if (schemaVersionInt === 1) return c.json(product);
 
 		const planResponse = await getPlanResponse({
+			ctx,
 			product,
 			features,
 		});

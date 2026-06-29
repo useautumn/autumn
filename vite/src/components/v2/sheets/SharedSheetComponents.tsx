@@ -1,10 +1,9 @@
-import { Separator } from "@autumn/ui";
+import { Checkbox, Separator } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useId } from "react";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "@autumn/ui";
 
 export { LayoutGroup } from "motion/react";
 
@@ -62,6 +61,7 @@ export function SheetHeader({
 interface SheetSectionProps {
 	title?: string | React.ReactNode;
 	description?: string | React.ReactNode;
+	action?: React.ReactNode;
 	checked?: boolean;
 	setChecked?: (checked: boolean) => void;
 	children: React.ReactNode;
@@ -71,6 +71,7 @@ interface SheetSectionProps {
 
 export function SheetSection({
 	title,
+	action,
 	className,
 	description,
 	checked = true,
@@ -84,11 +85,11 @@ export function SheetSection({
 	return (
 		<>
 			<div className={cn("p-4", className)}>
-				{title && (
-					<div className="flex items-center justify-between h-6 mb-2">
+				{(title || action) && (
+					<div className="flex items-center justify-between gap-2 h-6 mb-2">
 						<label
 							htmlFor={id}
-							className="flex items-center gap-2 w-full justify-between h-6"
+							className="flex items-center gap-2 flex-1 min-w-0 justify-between h-6"
 						>
 							{withTogle && (
 								<div className="flex items-center gap-2">
@@ -105,6 +106,7 @@ export function SheetSection({
 								</div>
 							)}
 						</label>
+						{action}
 					</div>
 				)}
 
@@ -121,13 +123,9 @@ export function SheetSection({
 				{children}
 			</div>
 			{withSeparator && (
-				<motion.div
-					layout
-					transition={{ layout: LAYOUT_TRANSITION }}
-					className="px-4"
-				>
+				<div className="px-4">
 					<Separator />
-				</motion.div>
+				</div>
 			)}
 		</>
 	);

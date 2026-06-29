@@ -75,6 +75,7 @@ export const constructProduct = ({
 	orgId,
 	env,
 	processor,
+	baseInternalProductId,
 }: {
 	productData: CreateProductV2Params;
 	version?: number;
@@ -84,6 +85,7 @@ export const constructProduct = ({
 		id: string;
 		type: string;
 	};
+	baseInternalProductId?: string | null;
 }) => {
 	const newProduct: Product = {
 		id: productData.id,
@@ -100,6 +102,8 @@ export const constructProduct = ({
 		created_at: Date.now(),
 		processor,
 		base_variant_id: null,
+		base_internal_product_id:
+			baseInternalProductId ?? productData.base_internal_product_id ?? null,
 		archived: false,
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,

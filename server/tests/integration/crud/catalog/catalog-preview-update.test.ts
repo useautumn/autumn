@@ -4,7 +4,7 @@
  * Contract under test (POST /v1/catalog.preview_update, read-only, NO persist):
  *   A. has_customers — true for a plan with an attached customer, false otherwise.
  *      Resolved independently per plan when several are previewed at once.
- *   B. will_version — only true when the proposed change differs in ITEMS and the
+ *   B. versionable — only true when the proposed change differs in ITEMS and the
  *      plan has customers. A name-only or id-only change → false. An items change
  *      on a plan WITHOUT customers → false.
  *   C. feature diffing — features[] resolves each proposed feature and surfaces
@@ -19,15 +19,15 @@
  * org's features.
  */
 
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { expectCatalogPreview } from "./utils/expectCatalogPreview.js";
 import { expectFeaturePreviewCorrect } from "./utils/expectFeaturePreviewCorrect.js";
-import { expectPlanPreviewCorrect } from "./utils/expectPlanPreviewCorrect.js";
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
@@ -36,7 +36,7 @@ const messagesItem = (included: number) => ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("catalog preview: has_customers + will_version resolve per plan across a batch")}`,
+	`${chalk.yellowBright("catalog preview: has_customers + versionable resolve per plan across a batch")}`,
 	async () => {
 		const customerId = "catalog-preview-multi";
 		const planWithCustomer = products.pro({
@@ -59,36 +59,37 @@ test.concurrent(
 
 		// Both plans change items (100 -> 500) in a single preview call.
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["plan_changes.plan"],
 			plans: [
 				{ plan_id: planWithCustomer.id, items: [messagesItem(500)] },
 				{ plan_id: planNoCustomer.id, items: [messagesItem(500)] },
 			],
 		});
 
-		// ── A + B: plan with a customer → has_customers, versions, migration ──
-		expectPlanPreviewCorrect({
+		expectCatalogPreview({
 			preview,
-			planId: planWithCustomer.id,
-			hasCustomers: true,
-			willVersion: true,
-			hasMigrationDraft: true,
-			items: [{ featureId: TestFeature.Messages, included: 500 }],
-		});
-
-		// ── A + B: same item change, no customers → no version, no migration ──
-		expectPlanPreviewCorrect({
-			preview,
-			planId: planNoCustomer.id,
-			hasCustomers: false,
-			willVersion: false,
-			hasMigrationDraft: false,
-			items: [{ featureId: TestFeature.Messages, included: 500 }],
+			planChanges: [
+				{
+					planId: planWithCustomer.id,
+					action: "updated",
+					hasCustomers: true,
+					willVersion: true,
+					items: [{ featureId: TestFeature.Messages, included: 500 }],
+				},
+				{
+					planId: planNoCustomer.id,
+					action: "updated",
+					hasCustomers: false,
+					willVersion: false,
+					items: [{ featureId: TestFeature.Messages, included: 500 }],
+				},
+			],
 		});
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("catalog preview: will_version is false for name/id-only changes, true for item changes")}`,
+	`${chalk.yellowBright("catalog preview: versionable is false for name/id-only changes, true for item changes")}`,
 	async () => {
 		const customerId = "catalog-preview-willversion";
 		const plan = products.pro({
@@ -98,8 +99,33 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false, paymentMethod: "success" }), s.products({ list: [plan] })],
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [plan] }),
+			],
 			actions: [s.attach({ productId: plan.id })],
+		});
+
+		// ── B: unchanged plan → no action ──
+		const noChange = await autumnV2_2.post("/catalog.preview_update", {
+			plans: [
+				{
+					plan_id: plan.id,
+					name: plan.name,
+					items: [messagesItem(100)],
+				},
+			],
+		});
+		expectCatalogPreview({
+			preview: noChange,
+			planChanges: [
+				{
+					planId: plan.id,
+					action: "none",
+					hasCustomers: true,
+					willVersion: false,
+				},
+			],
 		});
 
 		// ── B: rename only (items unchanged) → has customers but no version ──
@@ -108,12 +134,16 @@ test.concurrent(
 				{ plan_id: plan.id, name: "Renamed Pro", items: [messagesItem(100)] },
 			],
 		});
-		expectPlanPreviewCorrect({
+		expectCatalogPreview({
 			preview: nameOnly,
-			planId: plan.id,
-			hasCustomers: true,
-			willVersion: false,
-			hasMigrationDraft: false,
+			planChanges: [
+				{
+					planId: plan.id,
+					action: "updated",
+					hasCustomers: true,
+					willVersion: false,
+				},
+			],
 		});
 
 		// ── B: new_plan_id only (items unchanged) → no version ──
@@ -126,23 +156,33 @@ test.concurrent(
 				},
 			],
 		});
-		expectPlanPreviewCorrect({
+		expectCatalogPreview({
 			preview: idOnly,
-			planId: "catalog_preview_wv_renamed",
-			hasCustomers: true,
-			willVersion: false,
+			planChanges: [
+				{
+					planId: plan.id,
+					action: "updated",
+					hasCustomers: true,
+					willVersion: false,
+				},
+			],
 		});
 
 		// ── B: item change → versions (control) ──
 		const itemChange = await autumnV2_2.post("/catalog.preview_update", {
 			plans: [{ plan_id: plan.id, items: [messagesItem(500)] }],
 		});
-		expectPlanPreviewCorrect({
+		expectCatalogPreview({
 			preview: itemChange,
-			planId: plan.id,
-			hasCustomers: true,
-			willVersion: true,
-			hasMigrationDraft: true,
+			planChanges: [
+				{
+					planId: plan.id,
+					action: "updated",
+					hasCustomers: true,
+					willVersion: true,
+					planExpanded: false,
+				},
+			],
 		});
 	},
 );
@@ -159,13 +199,17 @@ test.concurrent(
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
-			setup: [s.customer({ testClock: false, paymentMethod: "success" }), s.products({ list: [plan] })],
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [plan] }),
+			],
 			// Attaching messages creates a customer entitlement for it.
 			actions: [s.attach({ productId: plan.id })],
 		});
 
 		// ── C: a brand-new feature + a non-blockable rename of an existing one ──
 		const allowed = await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["feature_changes.feature"],
 			features: [
 				{ feature_id: newFeatureId, name: "Brand New", type: "boolean" },
 				{
@@ -205,18 +249,17 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("catalog preview: a plan can reference a feature created in the same batch")}`,
 	async () => {
-		const customerId = "catalog-preview-batch-upsert";
 		const newFeatureId = "catalog_preview_batch_feature";
 		const planId = "catalog_preview_batch_plan";
 
 		const { autumnV2_2 } = await initScenario({
-			customerId,
-			setup: [s.customer({ testClock: false, paymentMethod: "success" })],
+			setup: [],
 			actions: [],
 		});
 
 		// ── D: net-new feature + a plan that uses it, in one preview call ──
 		const preview = await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["plan_changes.plan", "feature_changes.feature"],
 			features: [
 				{
 					feature_id: newFeatureId,
@@ -246,10 +289,15 @@ test.concurrent(
 			type: FeatureType.Metered,
 			noBlockers: true,
 		});
-		expectPlanPreviewCorrect({
+		expectCatalogPreview({
 			preview,
-			planId,
-			items: [{ featureId: newFeatureId, included: 100 }],
+			planChanges: [
+				{
+					planId,
+					action: "created",
+					items: [{ featureId: newFeatureId, included: 100 }],
+				},
+			],
 		});
 	},
 );

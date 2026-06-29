@@ -10,6 +10,7 @@ export const RESERVED_SANDBOX_SLUGS = new Set([
 	"analytics",
 	"settings",
 	"admin",
+	"chat",
 	"quickstart",
 	"impersonate-redirect",
 	"trmnl",

@@ -32,6 +32,7 @@ export const ProductSchema = z.object({
 		})
 		.nullish(),
 	base_variant_id: z.string().nullable(),
+	base_internal_product_id: z.string().nullable().optional(),
 	archived: z.boolean().default(false),
 	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
 	...DbBillingControlsSchema.shape,

@@ -169,7 +169,10 @@ export const PlanSchema = z.object({
   /** Display name for the plan */
   name: z.string().nonempty(),
   /** Group for organizing plans */
-  group: z.string().default("")
+  group: z.string().default(""),
+  archived: z.boolean().optional().meta({
+    description: "Whether the plan is archived.",
+  })
 });
 
 
@@ -344,5 +347,7 @@ export type Plan = {
 
   /** Free trial period before billing begins */
   freeTrial?: FreeTrial | null;
-};
 
+  /** Whether the plan is archived */
+  archived?: boolean;
+};

@@ -2,6 +2,9 @@ import { isFeaturePriceItem } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
+import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
@@ -10,12 +13,13 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
-import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
@@ -30,15 +34,21 @@ export const SaveChangesBar = ({
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
+	const { features = [] } = useFeaturesQuery();
+	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
 	const [saving, setSaving] = useState(false);
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { refetch: queryRefetch, invalidate: invalidateProduct } =
-		useProductQuery();
+	const {
+		refetch: queryRefetch,
+		invalidate: invalidateProduct,
+		versionCounts,
+	} = useProductQuery();
 	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
@@ -47,10 +57,10 @@ export const SaveChangesBar = ({
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
 	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
 
-	useProductChangedAlert({
-		hasChanges,
-		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
-	});
+	const { data: variants = [] } = usePlanVariants(
+		product.id,
+		hasChanges && !isOnboarding,
+	);
 
 	const handleSaveClicked = async () => {
 		// if (
@@ -68,7 +78,28 @@ export const SaveChangesBar = ({
 				toast.error("Plan counts are loading");
 				return;
 			}
-			if ((counts?.all ?? 0) > 0 && !isMetadataOnlyChange) {
+			// Customers on any version (not just the one being edited) mean the
+			// change could affect grandfathered users, so surface the versioning
+			// dialog with its "update existing/all versions" options.
+			const hasCustomersOnAnyVersion =
+				(counts?.all ?? 0) > 0 ||
+				Object.values(versionCounts).some((vc) => (vc.active ?? 0) > 0);
+			const hasCustomers = hasCustomersOnAnyVersion && !isMetadataOnlyChange;
+			if (hasCustomers || variants.length > 0) {
+				// Warm the preview so the dialog opens with data already present.
+				setSaving(true);
+				try {
+					await prefetchPlanUpdatePreview({
+						planId: product.id,
+						params: buildPreviewUpdatePlanParams({
+							baseProduct,
+							editedProduct: product,
+							features,
+						}),
+					});
+				} finally {
+					setSaving(false);
+				}
 				setShowNewVersionDialog(true);
 				return;
 			}

@@ -3,7 +3,7 @@ import type {
 	CreatePlanItemParamsV1,
 	PlanItemFilter,
 } from "@autumn/shared";
-import type { DiffedCustomizePlanV1 } from "./diffPlanV1.js";
+import { composeMatchKey, type DiffedCustomizePlanV1 } from "./diffPlanV1.js";
 
 export type ApplyDiffOutput = {
 	price: ApiPlanV1["price"];
@@ -29,8 +29,7 @@ const itemMatchesFilter = (
 	if (filter.feature_id !== undefined && item.feature_id !== filter.feature_id)
 		return false;
 	if (filter.billing_method !== undefined) {
-		if (item.price?.billing_method !== filter.billing_method)
-			return false;
+		if (item.price?.billing_method !== filter.billing_method) return false;
 	} else if (item.price?.billing_method !== undefined) {
 		return false;
 	}
@@ -39,8 +38,7 @@ const itemMatchesFilter = (
 		if (String(itemInterval) !== String(filter.interval)) return false;
 	}
 	if (filter.interval_count !== undefined) {
-		const itemCount =
-			item.price?.interval_count ?? item.reset?.interval_count;
+		const itemCount = item.price?.interval_count ?? item.reset?.interval_count;
 		if ((itemCount ?? 1) !== filter.interval_count) return false;
 	}
 	return true;
@@ -56,8 +54,18 @@ const removeItems = (
 };
 
 const toApiPlanItem = (params: CreatePlanItemParamsV1): ApiPlanItem => {
-	return { ...params } as ApiPlanItem;
+	return {
+		...params,
+		included: params.included ?? 0,
+		unlimited: params.unlimited ?? false,
+		reset: params.reset ?? null,
+		price: params.price ?? null,
+	} as ApiPlanItem;
 };
+
+const isFreeNonResetEntitlement = (
+	item: ApiPlanItem | CreatePlanItemParamsV1,
+): boolean => item.price == null && item.reset == null;
 
 const applyItems = (
 	baseItems: ApiPlanV1["items"],
@@ -68,7 +76,24 @@ const applyItems = (
 		items = removeItems(items, diff.remove_items);
 	}
 	if (diff.add_items) {
-		items = [...items, ...diff.add_items.map(toApiPlanItem)];
+		const entitlementKeys = new Set<string>();
+		for (const item of items) {
+			if (isFreeNonResetEntitlement(item)) {
+				entitlementKeys.add(composeMatchKey(item));
+			}
+		}
+
+		for (const addItem of diff.add_items) {
+			const key = composeMatchKey(addItem);
+			if (isFreeNonResetEntitlement(addItem) && entitlementKeys.has(key)) {
+				continue;
+			}
+
+			items.push(toApiPlanItem(addItem));
+			if (isFreeNonResetEntitlement(addItem)) {
+				entitlementKeys.add(key);
+			}
+		}
 	}
 	return items;
 };

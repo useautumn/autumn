@@ -11,6 +11,10 @@ import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
+type EditableProductUpdate = UpdateProductV2Params & {
+	base_id?: string | null;
+};
+
 export const updateProduct = async ({
 	axiosInstance,
 	productId,
@@ -20,7 +24,7 @@ export const updateProduct = async ({
 }: {
 	axiosInstance: AxiosInstance;
 	productId: string;
-	product: UpdateProductV2Params;
+	product: EditableProductUpdate;
 	onSuccess: () => Promise<void>;
 	version?: number;
 }) => {
@@ -34,8 +38,10 @@ export const updateProduct = async ({
 
 	try {
 		const sortedItems = sortPlanItems({ items: product.items });
+		const { base_id, ...productUpdates } = product;
 		const updateData = UpdateProductV2ParamsSchema.parse({
-			...product,
+			...productUpdates,
+			...(base_id !== undefined ? { base_plan_id: base_id } : {}),
 			items: sortedItems,
 			free_trial: product.free_trial,
 		});

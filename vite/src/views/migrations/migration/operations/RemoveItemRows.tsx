@@ -1,16 +1,17 @@
-import { Button, Sheet, SheetContent } from "@autumn/ui";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { useState } from "react";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Sheet,
+	SheetContent,
 } from "@autumn/ui";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
+import { FeatureIconCluster } from "@/components/v2/PlanItemLabel";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
-import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { RemoveButton } from "../shared/RemoveButton";
 import {
 	BillingMethodDropdown,
@@ -48,17 +49,7 @@ export function RemoveItemRows({
 				>
 					{hasFeature ? (
 						<>
-							<div className="flex flex-row items-center gap-1 shrink-0">
-								<PlanFeatureIcon
-									item={filterToProductItem(filter)}
-									position="left"
-								/>
-								<CustomDotIcon />
-								<PlanFeatureIcon
-									item={filterToProductItem(filter)}
-									position="right"
-								/>
-							</div>
+							<FeatureIconCluster item={filterToProductItem(filter)} />
 							<span className="text-body whitespace-nowrap truncate flex-1 min-w-0">
 								{getFilterSummary(filter, features)}
 							</span>

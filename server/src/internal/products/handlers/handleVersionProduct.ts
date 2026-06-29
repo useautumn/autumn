@@ -3,6 +3,7 @@ import {
 	CreateProductV2ParamsSchema,
 	type FullProduct,
 	type Organization,
+	products,
 	type ProductV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
@@ -19,6 +20,28 @@ import {
 } from "@server/internal/products/productUtils.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
+import { and, eq, ne } from "drizzle-orm";
+
+const clearDefaultFlagFromOtherVersions = async ({
+	ctx,
+	product,
+}: {
+	ctx: AutumnContext;
+	product: { id: string; internal_id: string };
+}) => {
+	await ctx.db
+		.update(products)
+		.set({ is_default: false })
+		.where(
+			and(
+				eq(products.org_id, ctx.org.id),
+				eq(products.env, ctx.env),
+				eq(products.id, product.id),
+				ne(products.internal_id, product.internal_id),
+				eq(products.is_default, true),
+			),
+		);
+};
 
 export const handleVersionProductV2 = async ({
 	ctx,
@@ -27,17 +50,15 @@ export const handleVersionProductV2 = async ({
 	org,
 	env,
 	skipStripeInit = false,
-	// items,
-	// freeTrial,
+	baseInternalProductId,
 }: {
 	ctx: AutumnContext;
 	newProductV2: ProductV2;
 	latestProduct: FullProduct;
 	org: Organization;
 	env: AppEnv;
-	// items: ProductItem[];
-	// freeTrial: FreeTrial;
 	skipStripeInit?: boolean;
+	baseInternalProductId?: string | null;
 }) => {
 	const { db, features } = ctx;
 
@@ -65,6 +86,11 @@ export const handleVersionProductV2 = async ({
 			? { ...latestProduct.config, ...newProductV2.config }
 			: latestProduct.config;
 
+	const effectiveBaseInternalProductId =
+		baseInternalProductId !== undefined
+			? baseInternalProductId
+			: (latestProduct.base_internal_product_id ?? null);
+
 	const newProduct = constructProduct({
 		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
@@ -75,6 +101,7 @@ export const handleVersionProductV2 = async ({
 		orgId: org.id,
 		env: latestProduct.env as AppEnv,
 		processor: latestProduct.processor || undefined,
+		baseInternalProductId: effectiveBaseInternalProductId,
 	});
 
 	// Validate product items...
@@ -85,17 +112,12 @@ export const handleVersionProductV2 = async ({
 		env,
 	});
 
-	if (latestProduct.is_default) {
-		await ProductService.updateByInternalId({
-			db,
-			internalId: latestProduct.internal_id,
-			update: {
-				is_default: false,
-			},
-		});
-	}
-
 	await ProductService.insert({ db, product: newProduct });
+
+	await clearDefaultFlagFromOtherVersions({
+		ctx,
+		product: newProduct,
+	});
 
 	const { customPrices, customEnts } = await handleNewProductItems({
 		db,

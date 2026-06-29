@@ -1,4 +1,5 @@
-import type { Feature, Plan, PlanItem } from "../../compose/models/index.js";
+import type { Feature, PlanItem } from "../../compose/models/index.js";
+import type { Plan } from "../../compose/models/variantModels.js";
 
 /**
  * Validation errors with user-friendly messages.
@@ -66,6 +67,12 @@ function validatePlanFeature(
 	const featureDefinition = features.find(
 		(f) => f.id === planFeature.featureId,
 	);
+	if (planFeature.featureId && !featureDefinition) {
+		errors.push({
+			path: basePath,
+			message: `Feature "${planFeature.featureId}" is referenced by this item but is not exported from your config.`,
+		});
+	}
 
 	// Get reset configuration from either top-level or price.interval
 	const topLevelReset = planFeature.reset;
@@ -175,6 +182,27 @@ function validatePlanFeature(
 	return errors;
 }
 
+function validateFeatureReference({
+	featureId,
+	features,
+	path,
+}: {
+	featureId?: string;
+	features: Feature[];
+	path: string;
+}): ValidationError[] {
+	if (!featureId) {
+		return [{ path, message: `"featureId" is required.` }];
+	}
+	if (features.some((feature) => feature.id === featureId)) return [];
+	return [
+		{
+			path,
+			message: `Feature "${featureId}" is referenced here but is not exported from your config.`,
+		},
+	];
+}
+
 /**
  * Validate a plan has all required fields.
  */
@@ -237,6 +265,39 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 				}
 				errors.push(...validatePlanFeature(planFeature, planId, i, features));
 			}
+		}
+	}
+
+	for (const [variantIndex, variant] of (plan.variants ?? []).entries()) {
+		const variantPath = `plan "${planId}" → variants[${variantIndex}] (${variant.id})`;
+		for (const [itemIndex, item] of (
+			variant.customize?.addItems ?? []
+		).entries()) {
+			if (!item.featureId) {
+				errors.push({
+					path: `${variantPath} → customize.addItems[${itemIndex}]`,
+					message: `"featureId" is required.`,
+				});
+			}
+			errors.push(
+				...validatePlanFeature(
+					item,
+					`${planId}.${variant.id}`,
+					itemIndex,
+					features,
+				),
+			);
+		}
+		for (const [itemIndex, item] of (
+			variant.customize?.removeItems ?? []
+		).entries()) {
+			errors.push(
+				...validateFeatureReference({
+					featureId: item.featureId,
+					features,
+					path: `${variantPath} → customize.removeItems[${itemIndex}]`,
+				}),
+			);
 		}
 	}
 

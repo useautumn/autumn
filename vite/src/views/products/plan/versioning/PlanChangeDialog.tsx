@@ -1,5 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
-import { productsAreSame } from "@autumn/shared";
+import type { FrontendProduct, PlanUpdatePreview } from "@autumn/shared";
 import {
 	AreaRadioGroupItem,
 	Dialog,
@@ -14,13 +13,17 @@ import {
 	ShortcutButton,
 	Switch,
 } from "@autumn/ui";
-import { useMemo, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { PlanItemsSection } from "@/components/forms/shared";
+import { PlanPriceHeader } from "@/components/forms/shared/plan-items/PlanPriceHeader";
+import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
+import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
@@ -30,15 +33,29 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { updateProduct } from "../../product/utils/updateProduct";
 import {
+	type AllVersionsUpdateMigrationTarget,
 	buildInPlaceUpdatePlanParams,
-	buildMigrationDraft,
-	type MigrationScope,
+	buildPreviewUpdatePlanParams,
 } from "./buildMigrationDraft";
-import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
+import { buildMigrateTargets, MigrateTargetsStep } from "./MigrateTargetsStep";
+import {
+	buildSettingsChanges,
+	PlanSettingsChanges,
+} from "./PlanSettingsChanges";
+import { PropagateVariantsStep } from "./PropagateVariantsStep";
+import { getPlanPriceChange } from "./planMigrationDiff";
+import { Stepper, type StepperStep } from "./Stepper";
+import type { VariantConflictInfo } from "./variantConflicts";
 
-type VersionChoice = "new" | "update";
+type VersionChoice = "new" | "update" | "all";
+type StepKey = "review" | "scope" | "strategy" | "migrate";
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+	return (
+		<span className="text-[13px] font-medium text-foreground">{children}</span>
+	);
+}
 
 function ConfirmInput({
 	productId,
@@ -50,7 +67,7 @@ function ConfirmInput({
 	onChange: (value: string) => void;
 }) {
 	return (
-		<div className="flex flex-col gap-2">
+		<div className="flex flex-col gap-2 text-sm">
 			<div className="flex items-center gap-1 flex-wrap">
 				<span>Type</span>
 				<MiniCopyButton
@@ -71,6 +88,47 @@ function ConfirmInput({
 	);
 }
 
+const previewHasCustomersAcrossVersions = ({
+	preview,
+}: {
+	preview: Pick<PlanUpdatePreview, "has_customers" | "other_versions">;
+}) =>
+	preview.has_customers ||
+	(preview.other_versions ?? []).some((version) => version.has_customers);
+
+const collectAllVersionMigrationTargets = ({
+	preview,
+	selectedVariantIds,
+}: {
+	preview: PlanUpdatePreview | undefined;
+	selectedVariantIds: string[];
+}): AllVersionsUpdateMigrationTarget[] => {
+	if (!preview) return [];
+
+	const targets: AllVersionsUpdateMigrationTarget[] = [];
+	if (preview.customize && previewHasCustomersAcrossVersions({ preview })) {
+		targets.push({ id: preview.plan_id, customize: preview.customize });
+	}
+
+	for (const variantId of selectedVariantIds) {
+		const variantRows = preview.variants.filter(
+			(variant) => variant.plan_id === variantId,
+		);
+		const variantPreview = variantRows[0];
+		if (
+			variantPreview?.customize &&
+			variantRows.some((row) => row.has_customers)
+		) {
+			targets.push({
+				id: variantPreview.plan_id,
+				customize: variantPreview.customize,
+			});
+		}
+	}
+
+	return targets;
+};
+
 export default function PlanChangeDialog({
 	open,
 	setOpen,
@@ -87,61 +145,189 @@ export default function PlanChangeDialog({
 	const {
 		refetch,
 		invalidate: invalidateProduct,
-		numVersions,
 		versionCounts,
+		numVersions,
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { createMigration, invalidate: invalidateMigrations } =
-		useMigrationsQuery();
+	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
 
-	const [step, setStep] = useState<1 | 2>(1);
+	const [step, setStep] = useState<StepKey>("review");
 	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
-	const [migrationScope, setMigrationScope] =
-		useState<MigrationScope>("all_customers");
-	const [migrationBaseProduct, setMigrationBaseProduct] =
-		useState<FrontendProduct | null>(null);
 	const [includeCustom, setIncludeCustom] = useState(false);
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
+	const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>([]);
 
 	const confirmed = confirmText === product.id;
-
 	const currency = org?.default_currency ?? "USD";
+
 	const priceChange = useMemo(
 		() => getPlanPriceChange({ baseProduct, product, currency }),
 		[baseProduct, product, currency],
 	);
-	const hasMultipleVersions = (numVersions ?? 1) > 1;
 
-	const customCount = useMemo(() => {
-		return Object.values(versionCounts).reduce(
-			(sum, vc) => sum + (vc.custom ?? 0),
-			0,
+	// Preview the in-place update so versioning, customer impact, item changes
+	// and variant conflicts come from the backend.
+	const previewParams = useMemo(
+		() =>
+			buildPreviewUpdatePlanParams({
+				baseProduct,
+				editedProduct: product,
+				features,
+			}),
+		[baseProduct, product, features],
+	);
+
+	const { data: preview } = usePlanUpdatePreview({
+		planId: product.id,
+		params: previewParams,
+		enabled: open,
+	});
+	const hasHistoricalVersions =
+		(preview?.other_versions?.length ?? 0) > 0 ||
+		(preview?.variants ?? []).some(
+			(variant) => (variant.other_versions?.length ?? 0) > 0,
 		);
-	}, [versionCounts]);
 
-	const hasChanges = useMemo(() => {
-		if (!baseProduct || features.length === 0) return false;
-		const { same } = productsAreSame({
-			curProductV2: baseProduct,
-			newProductV2: product,
-			features,
+	const settingsChanges = useMemo(
+		() => buildSettingsChanges({ baseProduct, product }),
+		[baseProduct, product],
+	);
+	// customize holds the billing/items/trial diff; billing_controls is versionable
+	// too but isn't in customize, so diff it directly. Everything else is metadata.
+	const billingControlsChanged =
+		JSON.stringify(baseProduct?.billing_controls ?? null) !==
+		JSON.stringify(product.billing_controls ?? null);
+	const isVersionableChange = !!preview?.customize || billingControlsChanged;
+	const isMetadataOnly = !!preview && !isVersionableChange;
+
+	const customCount = useMemo(
+		() =>
+			Object.values(versionCounts).reduce(
+				(sum, vc) => sum + (vc.custom ?? 0),
+				0,
+			),
+		[versionCounts],
+	);
+
+	// The latest version is numVersions; older versions can't patch variants at a
+	// matching version, so "update this version" never propagates to them.
+	const isLatest = product.version >= numVersions;
+	const { data: variants = [] } = usePlanVariants(product.id, open);
+	const hasVariants = variants.length > 0;
+	// Scope (variant selection) shows on the latest version, and on any version
+	// when applying to all versions — both propagate to variants. Metadata-only
+	// edits skip it (they fan out to all variants via the settings patch).
+	const showScope =
+		!isMetadataOnly && hasVariants && (isLatest || versionChoice === "all");
+	const effectiveVariantIds = useMemo(
+		() => (showScope ? selectedVariantIds : []),
+		[showScope, selectedVariantIds],
+	);
+
+	// Patch-in-place applies the change to the loaded version, so its existing
+	// customers need a migration. New-version intentionally grandfathers.
+	const baseNeedsMigration =
+		versionChoice === "update" && (preview?.versionable ?? false);
+	const allVersionsMigrationTargets = useMemo(
+		() =>
+			versionChoice === "all"
+				? collectAllVersionMigrationTargets({
+						preview,
+						selectedVariantIds: effectiveVariantIds,
+					})
+				: [],
+		[versionChoice, preview, effectiveVariantIds],
+	);
+
+	const variantConflicts = useMemo<VariantConflictInfo[]>(
+		() =>
+			variants.map((variant) => {
+				const previewVariant =
+					preview?.variants.find(
+						(v) =>
+							v.plan_id === variant.id && v.version === variant.latest_version,
+					) ?? preview?.variants.find((v) => v.plan_id === variant.id);
+				return {
+					variant,
+					conflicts: previewVariant?.conflicts ?? [],
+					itemChanges: previewVariant?.item_changes ?? [],
+				};
+			}),
+		[variants, preview],
+	);
+
+	// Default-select only conflict-free variants once both variants and the
+	// preview (which carries conflicts) have loaded.
+	const variantSelectionInit = useRef(false);
+	useEffect(() => {
+		if (!open) {
+			variantSelectionInit.current = false;
+			return;
+		}
+		if (!variantSelectionInit.current && variants.length > 0 && preview) {
+			setSelectedVariantIds(
+				variantConflicts
+					.filter((v) => v.conflicts.length === 0)
+					.map((v) => v.variant.id),
+			);
+			variantSelectionInit.current = true;
+		}
+	}, [open, variants, preview, variantConflicts]);
+
+	// Metadata-only edits always apply across all versions; there's no strategy
+	// step, so pin the choice.
+	useEffect(() => {
+		if (isMetadataOnly && versionChoice !== "all") setVersionChoice("all");
+	}, [isMetadataOnly, versionChoice]);
+
+	// "Create new version" isn't offered for a past version, so fall back to
+	// updating in place (also corrects once numVersions resolves).
+	useEffect(() => {
+		if (!(isMetadataOnly || isLatest) && versionChoice === "new") {
+			setVersionChoice("update");
+		}
+	}, [isMetadataOnly, isLatest, versionChoice]);
+
+	// New grandfathers everyone; update/all patch live versions, so their
+	// existing customers are migration targets.
+	const migrateNeeded =
+		(versionChoice === "update" &&
+			(baseNeedsMigration || effectiveVariantIds.length > 0)) ||
+		allVersionsMigrationTargets.length > 0;
+
+	const migrateTargets = useMemo(() => {
+		if (!preview) return [];
+		return buildMigrateTargets({
+			preview,
+			selectedVariantIds: effectiveVariantIds,
+			versionChoice,
+			currentVersion: product.version,
+			baseName: product.name ?? product.id,
 		});
-		return !same;
-	}, [baseProduct, product, features]);
-	const hasMigrationDiff = useMemo(() => {
-		return hasPlanMigrationDiff({ baseProduct, product, currency });
-	}, [baseProduct, product, currency]);
+	}, [preview, effectiveVariantIds, versionChoice, product]);
+
+	const steps: StepperStep[] = useMemo(
+		() => [
+			{ key: "review", label: "Changes" },
+			...(isMetadataOnly ? [] : [{ key: "strategy", label: "Versions" }]),
+			...(showScope ? [{ key: "scope", label: "Variants" }] : []),
+			{ key: "migrate", label: "Review" },
+		],
+		[showScope, isMetadataOnly],
+	);
+	const stepKeys = steps.map((s) => s.key as StepKey);
+	const currentIndex = stepKeys.indexOf(step);
+	const isFinalStep = currentIndex === stepKeys.length - 1;
 
 	const resetState = () => {
-		setStep(1);
-		setVersionChoice("new");
-		setMigrationScope("all_customers");
-		setMigrationBaseProduct(null);
+		setStep("review");
+		setVersionChoice(isLatest ? "new" : "update");
 		setIncludeCustom(false);
 		setConfirmText("");
+		setSelectedVariantIds([]);
 	};
 
 	const syncToLatestVersion = async () => {
@@ -150,73 +336,90 @@ export default function PlanChangeDialog({
 		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
 
-	const markSaved = () => {
-		setBaseProduct(product as FrontendProduct);
+	const markSaved = () => setBaseProduct(product as FrontendProduct);
+
+	const closeDialog = () => {
+		setOpen(false);
+		resetState();
 	};
 
-	const handleStep1Action = async () => {
-		if (!confirmed) {
+	// Apply the base edit (in-place, new version, or all versions) + propagate to
+	// selected variants. plans.update creates the migration server-side.
+	const applyChanges = async ({ migrate }: { migrate: boolean }) => {
+		// Type-to-confirm only gates the migration step (the only point where
+		// existing customers are moved). Lower-impact applies skip it.
+		if (step === "migrate" && !confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
-
-		if (versionChoice === "update") {
-			if (!baseProduct) return;
-			if (product.id !== baseProduct.id) {
-				toast.error(
-					"Plan IDs cannot be changed when updating the current version",
-				);
-				return;
-			}
-
-			setIsLoading(true);
-			try {
-				await ProductService.updatePlan(
-					axiosInstance,
-					buildInPlaceUpdatePlanParams({
-						baseProduct,
-						editedProduct: product,
-						features,
-					}),
-				);
-				markSaved();
-				toast.success("Plan updated");
-				if (hasMigrationDiff) {
-					setMigrationBaseProduct(baseProduct);
-					setStep(2);
-				} else {
-					setOpen(false);
-					resetState();
-					void refetch();
-				}
-				void invalidateProduct();
-				void invalidateProducts();
-			} catch (error) {
-				toast.error(getBackendErr(error, "Failed to update plan"));
-			} finally {
-				setIsLoading(false);
-			}
-			return;
-		}
-
 		setIsLoading(true);
 		try {
-			const result = await updateProduct({
-				axiosInstance,
-				productId: product.id,
-				product,
-				version: product.version,
-				onSuccess: async () => {
-					invalidateProducts();
-				},
-			});
+			const willMigrate = migrateNeeded && migrate;
+			let updateParams: ReturnType<typeof buildInPlaceUpdatePlanParams>;
+			if (versionChoice === "update" || versionChoice === "all") {
+				if (!baseProduct) return;
+				if (product.id !== baseProduct.id) {
+					throw new Error(
+						"Plan IDs cannot be changed when updating the current version",
+					);
+				}
+				updateParams = buildInPlaceUpdatePlanParams({
+					baseProduct,
+					editedProduct: product,
+					features,
+				});
+				if (versionChoice === "all") {
+					delete updateParams.disable_version;
+					updateParams.all_versions = true;
+				}
+			} else {
+				updateParams = buildInPlaceUpdatePlanParams({
+					baseProduct: baseProduct ?? product,
+					editedProduct: product,
+					features,
+				});
+				delete updateParams.disable_version;
+			}
+			if (effectiveVariantIds.length > 0) {
+				updateParams.update_variant_ids = effectiveVariantIds;
+			}
+			if (willMigrate) {
+				updateParams.migration = {
+					draft: true,
+					include_custom: includeCustom,
+				};
+			}
 
-			if (!result) return;
+			const result = await ProductService.updatePlan(
+				axiosInstance,
+				updateParams,
+			);
 			markSaved();
-			toast.success("New version created");
-			setOpen(false);
-			resetState();
-			syncToLatestVersion();
+			toast.success(
+				versionChoice === "new"
+					? "New version created"
+					: versionChoice === "all"
+						? "All versions updated"
+						: "Plan updated",
+			);
+			void invalidateProduct();
+			void invalidateProducts();
+			closeDialog();
+			if (versionChoice === "new") void syncToLatestVersion();
+			else void refetch();
+
+			if (willMigrate) {
+				void invalidateMigrations();
+				const migrationId = (
+					result as { migration?: { id?: string } } | undefined
+				)?.migration?.id;
+				navigateTo(
+					migrationId
+						? `/migrations/${migrationId}?step=live&run=true`
+						: "/migrations",
+					navigate,
+				);
+			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to save plan"));
 		} finally {
@@ -224,170 +427,160 @@ export default function PlanChangeDialog({
 		}
 	};
 
-	const handleStep2Action = async () => {
-		const draftBaseProduct = migrationBaseProduct ?? baseProduct;
-		if (!draftBaseProduct) return;
-		if (
-			!hasPlanMigrationDiff({
-				baseProduct: draftBaseProduct,
-				product,
-				currency,
-			})
-		) {
-			setOpen(false);
-			resetState();
-			void refetch();
-			void invalidateProduct();
-			void invalidateProducts();
+	const advance = () => {
+		if (!isFinalStep) {
+			setStep(stepKeys[currentIndex + 1]);
 			return;
 		}
+		void applyChanges({ migrate: step === "migrate" });
+	};
 
-		setIsLoading(true);
-		try {
-			const scope = hasMultipleVersions ? migrationScope : "this_version";
-
-			const draft = buildMigrationDraft({
-				baseProduct: draftBaseProduct,
-				editedProduct: product,
-				features,
-				scope,
-				includeCustom,
-			});
-
-			const migration = await createMigration({
-				id: draft.id,
-				filter: draft.filter,
-				operations: draft.operations,
-				no_billing_changes: draft.no_billing_changes,
-			});
-
-			await invalidateMigrations();
-			toast.success("Migration created");
-			setOpen(false);
-			resetState();
-			navigateTo(`/migrations/${migration.id}?step=live&run=true`, navigate);
-			void refetch();
-			void invalidateProduct();
-			void invalidateProducts();
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create migration"));
-		} finally {
-			setIsLoading(false);
-		}
+	const handleBack = () => {
+		if (currentIndex > 0) setStep(stepKeys[currentIndex - 1]);
 	};
 
 	const handleOpenChange = (nextOpen: boolean) => {
-		if (!isLoading) {
-			setOpen(nextOpen);
-			if (!nextOpen) resetState();
-		}
+		if (isLoading) return;
+		setOpen(nextOpen);
+		if (!nextOpen) resetState();
 	};
 
-	const buttonText =
-		step === 1
-			? versionChoice === "new"
-				? "Create new version"
-				: "Update plan"
-			: "Preview migration";
+	const primaryText = useMemo(() => {
+		if (!isFinalStep) return "Next";
+		if (migrateNeeded) return "Apply & migrate";
+		if (isMetadataOnly) return "Save changes";
+		if (versionChoice === "new") return "Create version";
+		if (versionChoice === "all") return "Update all versions";
+		return isLatest ? "Update version" : "Update this version";
+	}, [isFinalStep, migrateNeeded, isMetadataOnly, versionChoice, isLatest]);
+
+	const title = "Save plan changes";
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-				<DialogHeader>
-					<DialogTitle>
-						{step === 1 ? "Save plan changes" : "Create migration"}
-					</DialogTitle>
+			<DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
+				<DialogHeader className="gap-3.5 p-5 pb-4 border-b border-border/60">
+					<DialogTitle className="text-[15px]">{title}</DialogTitle>
+					{steps.length > 1 && <Stepper steps={steps} currentKey={step} />}
 				</DialogHeader>
 
-				<div className="overflow-y-auto min-h-0 flex-1">
+				<div className="overflow-y-auto min-h-0 flex-1 px-5 py-5">
 					<DialogDescription asChild>
-						<div className="text-sm flex flex-col gap-6">
-							{step === 1 && (
-								<>
-									{hasChanges && (
-										<PlanItemsSection
-											product={product}
-											originalItems={baseProduct?.items}
-											features={features}
-											prepaidOptions={{}}
-											initialPrepaidOptions={{}}
-											showDiff
-											changesOnly
-											currency={currency}
-											onEditPlan={() => {}}
-											priceChange={priceChange}
-											readOnly
-										/>
-									)}
+						<motion.div
+							key={step}
+							initial={{ opacity: 0, y: 4 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+							className="text-sm flex flex-col gap-6"
+						>
+							{step === "review" && (
+								<div className="flex flex-col gap-3">
+									<div className="rounded-xl bg-secondary/40 px-3.5 py-3 flex flex-col gap-2">
+										{priceChange && (
+											<PlanPriceHeader
+												priceChange={priceChange}
+												product={product}
+												currency={currency}
+											/>
+										)}
+										<ItemChangeList itemChanges={preview?.item_changes ?? []} />
+										<PlanSettingsChanges changes={settingsChanges} />
+									</div>
+								</div>
+							)}
 
+							{step === "scope" && (
+								<PropagateVariantsStep
+									variants={variantConflicts}
+									selectedIds={selectedVariantIds}
+									onToggle={(id) =>
+										setSelectedVariantIds((prev) =>
+											prev.includes(id)
+												? prev.filter((v) => v !== id)
+												: [...prev, id],
+										)
+									}
+								/>
+							)}
+
+							{step === "strategy" && (
+								<div className="flex flex-col gap-2.5">
+									<FieldLabel>How should this apply?</FieldLabel>
 									<RadioGroup
-										className="pt-1 pb-3"
 										value={versionChoice}
 										onValueChange={(val) =>
 											setVersionChoice(val as VersionChoice)
 										}
 									>
-										<AreaRadioGroupItem
-											value="new"
-											label="Create new version"
-											description="Existing customers stay on their current version."
-										/>
+										{isLatest && (
+											<AreaRadioGroupItem
+												value="new"
+												label="Create new version"
+												description="Existing customers stay grandfathered on their current versions."
+											/>
+										)}
 										<AreaRadioGroupItem
 											value="update"
-											label="Update existing version"
-											description="Update the current plan version now. After that, you can preview a migration for current users."
+											label={
+												isLatest
+													? "Update existing version"
+													: "Update this version"
+											}
+											description={
+												isLatest
+													? hasVariants
+														? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
+														: "Updates the latest version of this plan. You can migrate current customers after."
+													: `Updates only v${product.version}. Other versions and variants stay as they are.`
+											}
 										/>
+										{(!isLatest || hasHistoricalVersions) && (
+											<AreaRadioGroupItem
+												value="all"
+												label="Update all versions"
+												description="Applies this change to every version of this plan and its variants."
+											/>
+										)}
 									</RadioGroup>
-
-									<ConfirmInput
-										productId={product.id}
-										value={confirmText}
-										onChange={setConfirmText}
-									/>
-								</>
+								</div>
 							)}
 
-							{step === 2 && (
+							{step === "migrate" && (
 								<>
-									<p className="text-sm text-muted-foreground">
-										Autumn updated the current version of this plan directly.
-										New customers will get these changes immediately. Now create
-										a migration so you can review and apply the same changes to
-										current users.
-									</p>
+									{isMetadataOnly ? (
+										<>
+											<span className="text-xs text-muted-foreground">
+												These settings apply across every version of this plan
+												and its variants.
+											</span>
+											<div className="rounded-xl bg-secondary/40 px-3.5 py-3">
+												<PlanSettingsChanges changes={settingsChanges} />
+											</div>
+										</>
+									) : (
+										<>
+											<span className="text-xs text-muted-foreground">
+												{migrateNeeded
+													? "Versions with customers will be migrated to the updated plan. Customers you don't migrate stay as they are."
+													: "Everything that will change. Existing customers stay on their current versions."}
+											</span>
 
-									{hasMultipleVersions && (
-										<RadioGroup
-											className="pt-1 pb-3"
-											value={migrationScope}
-											onValueChange={(val) =>
-												setMigrationScope(val as MigrationScope)
-											}
-										>
-											<AreaRadioGroupItem
-												value="all_customers"
-												label="Update all customers"
-												description="Preview a migration for current users on any version of this plan."
+											<MigrateTargetsStep
+												showCustomers={migrateNeeded}
+												targets={migrateTargets}
 											/>
-											<AreaRadioGroupItem
-												value="this_version"
-												label={`Update customers on v${migrationBaseProduct?.version ?? baseProduct?.version ?? 1} only`}
-												description="Preview a migration only for current users on this specific version."
-											/>
-										</RadioGroup>
+										</>
 									)}
 
-									{customCount > 0 && (
-										<div className="flex items-center justify-between gap-4">
+									{migrateNeeded && customCount > 0 && (
+										<div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 px-3.5 py-3">
 											<div className="flex flex-col gap-0.5">
 												<span className="text-sm font-medium text-foreground">
 													Apply to custom plans
 												</span>
 												<span className="text-xs text-muted-foreground">
 													There {customCount === 1 ? "is" : "are"} {customCount}{" "}
-													user
-													{customCount !== 1 ? "s" : ""} on custom versions of
-													this plan
+													user{customCount !== 1 ? "s" : ""} on custom versions.
 												</span>
 											</div>
 											<Switch
@@ -396,29 +589,55 @@ export default function PlanChangeDialog({
 											/>
 										</div>
 									)}
-
-									{!hasMultipleVersions && customCount === 0 && (
-										<p className="text-sm text-muted-foreground">
-											Preview a migration for current users on this plan.
-										</p>
-									)}
 								</>
 							)}
-						</div>
+						</motion.div>
 					</DialogDescription>
 				</div>
 
-				<DialogFooter>
-					<ShortcutButton
-						variant="primary"
-						metaShortcut="enter"
-						onClick={step === 1 ? handleStep1Action : handleStep2Action}
-						isLoading={isLoading}
-						disabled={isLoading || (step === 1 && !confirmed)}
-						className="w-full"
-					>
-						{buttonText}
-					</ShortcutButton>
+				{step === "migrate" && (
+					<div className="px-5 py-4 border-t border-border/60">
+						<ConfirmInput
+							productId={product.id}
+							value={confirmText}
+							onChange={setConfirmText}
+						/>
+					</div>
+				)}
+
+				<DialogFooter className="flex-row justify-between gap-2 sm:justify-between p-5 pt-4 border-t border-border/60">
+					{step === "review" ? (
+						<span />
+					) : (
+						<ShortcutButton
+							variant="secondary"
+							onClick={handleBack}
+							disabled={isLoading}
+						>
+							Back
+						</ShortcutButton>
+					)}
+
+					<div className="flex items-center gap-2">
+						{step === "migrate" && migrateNeeded && (
+							<ShortcutButton
+								variant="secondary"
+								onClick={() => applyChanges({ migrate: false })}
+								disabled={isLoading || !confirmed}
+							>
+								Skip
+							</ShortcutButton>
+						)}
+						<ShortcutButton
+							variant="primary"
+							metaShortcut="enter"
+							onClick={advance}
+							isLoading={isLoading}
+							disabled={isLoading || (step === "migrate" && !confirmed)}
+						>
+							{primaryText}
+						</ShortcutButton>
+					</div>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
