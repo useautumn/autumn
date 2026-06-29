@@ -149,7 +149,7 @@ export class CusEntService {
 			)
 			.limit(10);
 
-		return data as FullCustomerEntitlement[];
+		return data as unknown as FullCustomerEntitlement[];
 	}
 
 	static async insert({
@@ -204,10 +204,12 @@ export class CusEntService {
 			customer_products: customerProducts,
 		};
 
-		// Common reset predicates applied in every branch: next_reset_at has
-		// passed and the entitlement has not expired.
+		// Common reset predicates applied in every branch: not marked expired
+		// (skips the backfilled terminal-product backlog via the partial index),
+		// next_reset_at has passed, and the entitlement has not expired.
 		const commonResetPredicates = () =>
 			and(
+				sql`${customerEntitlements.expired} IS NOT TRUE`,
 				lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
 				or(
 					isNull(customerEntitlements.expires_at),
