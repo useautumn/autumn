@@ -13,7 +13,7 @@ import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { buildIncomingFullProduct } from "./buildIncomingFullProduct.js";
 import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
 import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
-import { hasPlanCustomers } from "./hasPlanCustomers.js";
+import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
 import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
@@ -26,6 +26,7 @@ export const buildPlanUpdatePreview = async ({
 	data,
 	variantUpdates,
 	hasCustomers,
+	customerCount,
 	currency = "usd",
 }: {
 	ctx: AutumnContext;
@@ -34,6 +35,7 @@ export const buildPlanUpdatePreview = async ({
 	data: PreviewUpdatePlanParamsV2;
 	variantUpdates?: UpdateVariantParams[];
 	hasCustomers: boolean;
+	customerCount: number;
 	currency?: string;
 }): Promise<PlanUpdatePreview> => {
 	const incomingFullProduct = buildIncomingFullProduct({
@@ -107,6 +109,7 @@ export const buildPlanUpdatePreview = async ({
 			current: currentPlan,
 			preview: previewPlan,
 			hasCustomers,
+			customerCount,
 			versionable,
 		}),
 		variants,
@@ -138,15 +141,18 @@ export const previewUpdatePlan = async ({
 		data,
 	});
 
+	const baseUsage = await getPlanCustomerUsage({
+		ctx: previewCtx,
+		product: baseFullProduct,
+	});
+
 	return buildPlanUpdatePreview({
 		ctx: previewCtx,
 		currentFullProduct: baseFullProduct,
 		incomingProductV2,
 		data,
 		variantUpdates: data.variants,
-		hasCustomers: await hasPlanCustomers({
-			ctx: previewCtx,
-			product: baseFullProduct,
-		}),
+		hasCustomers: baseUsage.hasCustomers,
+		customerCount: baseUsage.customerCount,
 	});
 };

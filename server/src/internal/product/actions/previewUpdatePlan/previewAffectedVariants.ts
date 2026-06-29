@@ -15,7 +15,7 @@ import {
 } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "./detectVariantConflicts.js";
-import { hasPlanCustomers } from "./hasPlanCustomers.js";
+import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 
 export const previewAffectedVariants = async ({
 	ctx,
@@ -101,7 +101,10 @@ export const previewAffectedVariants = async ({
 						diff,
 						settingsPatch,
 					});
-			const hasCustomers = await hasPlanCustomers({ ctx, product: variant });
+			const { hasCustomers, customerCount } = await getPlanCustomerUsage({
+				ctx,
+				product: variant,
+			});
 			const versionable =
 				(isLatestVersion && data.force_version) ||
 				(isLatestVersion &&
@@ -126,6 +129,7 @@ export const previewAffectedVariants = async ({
 					current: currentPlan,
 					preview: previewPlan,
 					hasCustomers,
+					customerCount,
 					versionable,
 				}),
 				name: variant.name,

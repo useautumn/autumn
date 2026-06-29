@@ -78,6 +78,7 @@ export const handleGetProductInternal = createRoute({
 					current: basePlan,
 					preview: variantPlan,
 					hasCustomers: false,
+					customerCount: 0,
 					versionable: false,
 				});
 

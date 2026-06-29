@@ -65,6 +65,7 @@ export const EditPlanHeader = () => {
 	const env = useEnv();
 	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
+	const showAllVariants = useVariantViewStore((s) => s.showAllVariants);
 
 	const pastVersionsWithCustomers = useMemo(() => {
 		if (!numVersions || numVersions <= 1) return [];
@@ -259,6 +260,7 @@ export const EditPlanHeader = () => {
 							<Select
 								value={currentVersion.toString()}
 								onValueChange={handleVersionChange}
+								disabled={showAllVariants}
 								items={{
 									...Object.fromEntries(
 										versionOptions.map((version) => [
@@ -271,9 +273,25 @@ export const EditPlanHeader = () => {
 										: {}),
 								}}
 							>
-								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-									<SelectValue placeholder="Version" />
-								</SelectTrigger>
+								{showAllVariants ? (
+									<Tooltip>
+										<TooltipTrigger render={<span />}>
+											<SelectTrigger
+												className="w-fit min-w-28 !h-6"
+												size="sm"
+											>
+												<SelectValue placeholder="Version" />
+											</SelectTrigger>
+										</TooltipTrigger>
+										<TooltipContent>
+											Latest versions of all plans are shown
+										</TooltipContent>
+									</Tooltip>
+								) : (
+									<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+										<SelectValue placeholder="Version" />
+									</SelectTrigger>
+								)}
 								<SelectContent>
 									{versionOptions.map((version) => {
 										const count = versionCounts[version]?.active || 0;

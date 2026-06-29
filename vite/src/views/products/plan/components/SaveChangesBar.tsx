@@ -19,7 +19,6 @@ import { useProductCountsQuery } from "../../product/hooks/queries/useProductCou
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
-import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
 
@@ -45,8 +44,11 @@ export const SaveChangesBar = ({
 	const [saving, setSaving] = useState(false);
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { refetch: queryRefetch, invalidate: invalidateProduct } =
-		useProductQuery();
+	const {
+		refetch: queryRefetch,
+		invalidate: invalidateProduct,
+		versionCounts,
+	} = useProductQuery();
 	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
@@ -59,11 +61,6 @@ export const SaveChangesBar = ({
 		product.id,
 		hasChanges && !isOnboarding,
 	);
-
-	useProductChangedAlert({
-		hasChanges,
-		disabled: isOnboarding, // Disable navigation blocking in onboarding mode
-	});
 
 	const handleSaveClicked = async () => {
 		// if (
@@ -81,7 +78,13 @@ export const SaveChangesBar = ({
 				toast.error("Plan counts are loading");
 				return;
 			}
-			const hasCustomers = (counts?.all ?? 0) > 0 && !isMetadataOnlyChange;
+			// Customers on any version (not just the one being edited) mean the
+			// change could affect grandfathered users, so surface the versioning
+			// dialog with its "update existing/all versions" options.
+			const hasCustomersOnAnyVersion =
+				(counts?.all ?? 0) > 0 ||
+				Object.values(versionCounts).some((vc) => (vc.active ?? 0) > 0);
+			const hasCustomers = hasCustomersOnAnyVersion && !isMetadataOnlyChange;
 			if (hasCustomers || variants.length > 0) {
 				// Warm the preview so the dialog opens with data already present.
 				setSaving(true);

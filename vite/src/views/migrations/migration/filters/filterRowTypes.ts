@@ -282,7 +282,16 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	const mainRules: FilterRule[] = [];
 
 	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
-	if (planIdRule) mainRules.push(planIdRule);
+	if (planIdRule) {
+		// Sibling fields (e.g. custom) keep this off the pure-selection path, so
+		// fold a concrete version pin into the plan keys here or it's lost.
+		const version = pinnedVersion(filter.version);
+		if (typeof version === "number")
+			planIdRule.values = planIdRule.values.map((planId) =>
+				makePlanKey({ planId, version }),
+			);
+		mainRules.push(planIdRule);
+	}
 
 	if (filter.custom !== undefined)
 		mainRules.push(booleanRule("custom", filter.custom));

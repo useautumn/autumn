@@ -16,7 +16,7 @@ import {
 } from "../common/planTransformUtils.js";
 import { buildCorePlanUpdatePreview } from "../previewUpdatePlan/buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "../previewUpdatePlan/detectVariantConflicts.js";
-import { hasPlanCustomers } from "../previewUpdatePlan/hasPlanCustomers.js";
+import { getPlanCustomerUsage } from "../previewUpdatePlan/hasPlanCustomers.js";
 
 const getOtherVersions = async ({
 	ctx,
@@ -70,7 +70,7 @@ export const previewOtherProductVersions = async ({
 				diff,
 				settingsPatch,
 			});
-			const hasCustomers = await hasPlanCustomers({
+			const { hasCustomers, customerCount } = await getPlanCustomerUsage({
 				ctx,
 				product: otherVersion,
 			});
@@ -82,6 +82,7 @@ export const previewOtherProductVersions = async ({
 					current: otherPlan,
 					preview: previewPlan,
 					hasCustomers,
+					customerCount,
 					versionable: false,
 				}),
 				version: otherVersion.version,
