@@ -70,6 +70,8 @@ For defining a plan — the attachable package of items and pricing, read `refer
 
 For modeling plan items, or when you need concrete API request-body examples (included usage, prepaid, usage-based, tiers), read `references/plan-items.md`.
 
+For using customize, reading plan update previews, or representing a small diff from a base plan, read `references/customize.md`.
+
 For reasoning about free trials and when billing begins, read `references/trials.md`.
 
 For distinguishing a customer from an entity (seats, sub-accounts) and their runtime billing state, read `references/customer-entity.md`.
