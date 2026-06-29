@@ -39,6 +39,7 @@ export const claudeManagedEngine: AgentEngine = {
 	name: "claude-managed",
 	run: async ({ ctx, params }) => {
 		const {
+			autumnUserId,
 			env,
 			logger,
 			onAction,
@@ -88,7 +89,7 @@ export const claudeManagedEngine: AgentEngine = {
 							orgId: org.id,
 							provider: thread.provider,
 							workspaceId: thread.workspaceId,
-							userId: thread.provider === "web" ? providerUserId : undefined,
+							userId: autumnUserId,
 						}),
 					);
 				},
@@ -136,7 +137,7 @@ export const claudeManagedEngine: AgentEngine = {
 				orgId: org.id,
 				provider: thread.provider,
 				workspaceId: thread.workspaceId,
-				userId: thread.provider === "web" ? providerUserId : undefined,
+				userId: autumnUserId,
 			});
 
 			const { cancelledApprovals, cancelledCount } =

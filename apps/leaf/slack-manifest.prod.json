@@ -25,7 +25,8 @@
 				"im:write",
 				"mpim:history",
 				"mpim:read",
-				"users:read"
+				"users:read",
+				"users:read.email"
 			]
 		}
 	},

@@ -231,6 +231,7 @@ export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
+export * from "./utils/auth/getScopesForUserInOrg";
 export * from "./utils/auth/oauthScopeUtils";
 export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";

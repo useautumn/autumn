@@ -44,6 +44,12 @@ export type MessageContext = {
 	/** Posts a drained intermediate turn's text while follow-ups keep the run alive. */
 	onTurnComplete?: (text: string) => Promise<void> | void;
 	org: { id: string; slug?: string };
+	/**
+	 * The resolved Autumn user id whose scopes bound this run's token. Set for web
+	 * (== providerUserId) and for non-admin Slack senders resolved via their email.
+	 * Undefined for Slack admin installs, which keep the installer-scoped flow.
+	 */
+	autumnUserId?: string;
 	providerUserId: string;
 	run?: ActiveRun;
 	thread: ThreadRef;

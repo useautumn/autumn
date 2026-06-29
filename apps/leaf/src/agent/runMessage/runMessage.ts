@@ -3,15 +3,16 @@ import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/sessio
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
+import { decrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
-import { selectChatEnv } from "./setup/selectChatEnv.js";
-import { getDefaultChatEnv } from "./setup/selectChatEnv.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
+import { resolveSlackUserAuth } from "./setup/resolveSlackUserAuth.js";
+import { getDefaultChatEnv, selectChatEnv } from "./setup/selectChatEnv.js";
 import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
 
@@ -85,6 +86,26 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
+			// Resolve the Slack sender to their Autumn identity and a per-user
+			// scoped token. Admin installs keep the installer-scoped flow (the admin
+			// explicitly selects the target org). On any failure we deny here and
+			// never fall back to the shared installer token.
+			let autumnUserId: string | undefined;
+			if (!orgContext.admin) {
+				const userAuth = await resolveSlackUserAuth({
+					botToken: decrypt(effectiveInstallation.bot_access_token),
+					installation: effectiveInstallation,
+					logger,
+					orgId: org.id,
+					slackUserId: providerUserId,
+				});
+				if (!userAuth.ok) {
+					await onAgentReady?.();
+					return { env: getDefaultChatEnv(), text: userAuth.text };
+				}
+				autumnUserId = userAuth.userId;
+			}
+
 			const preparedPromise = prepareAttachmentMessage({
 				attachments,
 				fetchFallback: attachmentFetchFallback,
@@ -139,6 +160,7 @@ export const runMessage = async ({
 				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
+				userId: autumnUserId,
 			});
 
 			const agentTools =
@@ -148,6 +170,7 @@ export const runMessage = async ({
 
 			const ctx: MessageContext = {
 				agentTools,
+				autumnUserId,
 				claudeManagedSession:
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
