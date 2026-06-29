@@ -1,4 +1,3 @@
-import type { PlanUpdatePreviewVariantConflict } from "@autumn/shared";
 import {
 	Badge,
 	Checkbox,
@@ -10,40 +9,17 @@ import { EyeIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { cn } from "@/lib/utils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import type { VariantConflictInfo } from "./variantConflicts";
+import {
+	conflictBadgeLabel,
+	conflictSentence,
+	type VariantConflictInfo,
+} from "./variantConflicts";
 
 interface PropagateVariantsStepProps {
 	variants: VariantConflictInfo[];
 	selectedIds: string[];
 	onToggle: (id: string) => void;
 }
-
-const REASON_LABEL: Record<PlanUpdatePreviewVariantConflict["reason"], string> =
-	{
-		different_interval: "Different interval",
-		value_divergence: "Value override",
-		base_price_divergence: "Price override",
-	};
-
-const conflictFeature = (conflict: PlanUpdatePreviewVariantConflict) =>
-	conflict.feature_name ?? conflict.item_filter?.feature_id ?? "This feature";
-
-const conflictSentence = (
-	conflict: PlanUpdatePreviewVariantConflict,
-): string => {
-	if (conflict.reason === "base_price_divergence") {
-		return "This variant's base price would be overwritten.";
-	}
-	if (conflict.reason === "different_interval") {
-		return `${conflictFeature(conflict)} is on a different interval here — propagating would add a duplicate item.`;
-	}
-	return `${conflictFeature(conflict)} has a customized value that propagating would overwrite.`;
-};
-
-const badgeLabel = (conflicts: PlanUpdatePreviewVariantConflict[]): string => {
-	const reasons = new Set(conflicts.map((c) => c.reason));
-	return reasons.size === 1 ? REASON_LABEL[[...reasons][0]] : "Conflicts";
-};
 
 export function PropagateVariantsStep({
 	variants,
@@ -110,7 +86,7 @@ export function PropagateVariantsStep({
 												variant="secondary"
 											>
 												<WarningIcon size={11} weight="fill" />
-												{badgeLabel(conflicts)}
+												{conflictBadgeLabel(conflicts)}
 											</Badge>
 										) : (
 											<Badge
@@ -123,7 +99,11 @@ export function PropagateVariantsStep({
 										)}
 									</span>
 								</HoverCardTrigger>
-								<HoverCardContent align="end" className="w-80 p-3">
+								<HoverCardContent
+									align="start"
+									className="w-80 p-3"
+									side="right"
+								>
 									<div className="flex flex-col gap-2">
 										{hasConflict && (
 											<div className="flex flex-col gap-1">

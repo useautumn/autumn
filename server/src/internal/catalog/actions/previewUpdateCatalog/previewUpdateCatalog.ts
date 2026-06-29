@@ -265,7 +265,14 @@ export const previewUpdateCatalog = async ({
 		(feature) => !skipFeatureIds.has(feature.feature_id),
 	);
 
-	const { products, currents, withCustomers, proposedFeatures, planCtx } =
+	const {
+		products,
+		currents,
+		withCustomers,
+		customerCountByInternalId,
+		proposedFeatures,
+		planCtx,
+	} =
 		await setupPreviewCatalogContext({
 			ctx,
 			params: { ...params, plans: activePlans, features: activeFeatures },
@@ -326,6 +333,9 @@ export const previewUpdateCatalog = async ({
 					hasCustomers: current
 						? withCustomers.has(current.internal_id)
 						: false,
+					customerCount: current
+						? (customerCountByInternalId.get(current.internal_id) ?? 0)
+						: 0,
 					currency,
 				});
 			}),

@@ -17,6 +17,8 @@ export interface PreviewCatalogContext {
 	currents: (FullProduct | null)[];
 	/** Internal product ids that have at least one customer. */
 	withCustomers: Set<string>;
+	/** Migration-eligible customer count per internal product id. */
+	customerCountByInternalId: Map<string, number>;
 	/** The batch's features resolved to DB shape, paired with what they replace. */
 	proposedFeatures: ProposedFeature[];
 	/** ctx with the batch's features virtually upserted, so plans can reference net-new ones. */
@@ -74,6 +76,12 @@ export const setupPreviewCatalogContext = async ({
 				usageByProduct.get(internalProductId)?.hasVersionableCustomerProducts,
 		),
 	);
+	const customerCountByInternalId = new Map(
+		internalProductIds.map((internalProductId) => [
+			internalProductId,
+			usageByProduct.get(internalProductId)?.versionableCustomerCount ?? 0,
+		]),
+	);
 
 	const featureById = new Map(
 		ctx.features.map((feature) => [feature.id, feature]),
@@ -97,5 +105,12 @@ export const setupPreviewCatalogContext = async ({
 		],
 	};
 
-	return { products, currents, withCustomers, proposedFeatures, planCtx };
+	return {
+		products,
+		currents,
+		withCustomers,
+		customerCountByInternalId,
+		proposedFeatures,
+		planCtx,
+	};
 };

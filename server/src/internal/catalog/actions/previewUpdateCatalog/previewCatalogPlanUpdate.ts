@@ -80,12 +80,14 @@ export const previewCatalogPlanUpdate = async ({
 	planParams,
 	current,
 	hasCustomers,
+	customerCount,
 	currency,
 }: {
 	ctx: AutumnContext;
 	planParams: UpdatePlanParamsV2;
 	current: FullProduct | null;
 	hasCustomers: boolean;
+	customerCount: number;
 	currency: string;
 }): Promise<PlanUpdatePreview> => {
 	const { plan_id } = planParams;
@@ -117,6 +119,7 @@ export const previewCatalogPlanUpdate = async ({
 		data,
 		variantUpdates: variants,
 		hasCustomers,
+		customerCount,
 		currency,
 	});
 };

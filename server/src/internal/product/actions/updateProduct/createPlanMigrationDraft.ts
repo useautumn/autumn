@@ -79,7 +79,7 @@ export const createPlanMigrationDraft = async ({
 	selectedVariantIds: string[];
 	toPlan: ApiPlanV1;
 	variantsBefore?: VariantMigrationSnapshot[];
-}) => {
+}): Promise<string | undefined> => {
 	const baseDiff = diffPlanV1({ from: fromPlan, to: toPlan });
 	if (Object.keys(baseDiff).length === 0) return;
 
@@ -121,8 +121,8 @@ export const createPlanMigrationDraft = async ({
 		});
 		if (!draft) return;
 
-		await migrationRepo.insert({ ctx, insert: draft });
-		return;
+		const migration = await migrationRepo.insert({ ctx, insert: draft });
+		return migration.id;
 	}
 
 	const baseVersions = await ProductService.listFull({
@@ -194,5 +194,6 @@ export const createPlanMigrationDraft = async ({
 	});
 	if (!draft) return;
 
-	await migrationRepo.insert({ ctx, insert: draft });
+	const migration = await migrationRepo.insert({ ctx, insert: draft });
+	return migration.id;
 };

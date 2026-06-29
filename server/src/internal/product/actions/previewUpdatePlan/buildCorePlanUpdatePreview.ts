@@ -77,6 +77,7 @@ export const buildCorePlanUpdatePreview = ({
 	current,
 	preview,
 	hasCustomers,
+	customerCount,
 	versionable,
 }: {
 	ctx: { expand: string[] };
@@ -84,6 +85,7 @@ export const buildCorePlanUpdatePreview = ({
 	current: ApiPlanV1;
 	preview: ApiPlanV1;
 	hasCustomers: boolean;
+	customerCount: number;
 	versionable: boolean;
 }): CorePlanUpdatePreview => {
 	const customize = diffPlanV1({ from: current, to: preview });
@@ -96,6 +98,7 @@ export const buildCorePlanUpdatePreview = ({
 		plan_id: planId,
 		...(shouldExpandPlanFromScopedCtx ? { plan: preview } : {}),
 		has_customers: hasCustomers,
+		customer_count: customerCount,
 		versionable,
 		customize: Object.keys(customize).length > 0 ? customize : null,
 		previous_attributes: getPreviousAttributes({ current, preview }),

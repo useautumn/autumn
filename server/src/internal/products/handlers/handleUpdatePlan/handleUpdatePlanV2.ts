@@ -86,6 +86,7 @@ export const handleUpdatePlanV2 = createRoute({
 
 		const latestPlanId = new_plan_id || plan_id;
 		let responseFullProduct = null;
+		let migrationId: string | undefined;
 		if (fromPlan) {
 			const after = await ProductService.getFull({
 				db: ctx.db,
@@ -101,7 +102,7 @@ export const handleUpdatePlanV2 = createRoute({
 					product: after,
 					features: ctx.features,
 				});
-				await createPlanMigrationDraft({
+				migrationId = await createPlanMigrationDraft({
 					ctx,
 					current: initialFullProduct,
 					fromPlan,
@@ -130,6 +131,10 @@ export const handleUpdatePlanV2 = createRoute({
 			features: ctx.features,
 		});
 
-		return c.json(latestPlan);
+		return c.json(
+			migrationId
+				? { ...latestPlan, migration: { id: migrationId } }
+				: latestPlan,
+		);
 	},
 });

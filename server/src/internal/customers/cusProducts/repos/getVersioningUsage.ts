@@ -8,11 +8,13 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 export type CustomerProductVersioningUsage = {
 	hasAnyCustomerProducts: boolean;
 	hasVersionableCustomerProducts: boolean;
+	versionableCustomerCount: number;
 };
 
 const emptyUsage = (): CustomerProductVersioningUsage => ({
 	hasAnyCustomerProducts: false,
 	hasVersionableCustomerProducts: false,
+	versionableCustomerCount: 0,
 });
 
 export const getVersioningUsage = async ({
@@ -46,6 +48,7 @@ export const getVersioningUsage = async ({
 		usage.set(row.internalProductId, {
 			hasAnyCustomerProducts: Number(row.anyCount) > 0,
 			hasVersionableCustomerProducts: Number(row.versionableCount) > 0,
+			versionableCustomerCount: Number(row.versionableCount),
 		});
 	}
 

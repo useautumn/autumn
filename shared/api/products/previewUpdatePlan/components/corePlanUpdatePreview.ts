@@ -18,6 +18,10 @@ export const CorePlanUpdatePreviewSchema = z.object({
 		description:
 			"Whether the current plan has customers that could be affected by applying this update.",
 	}),
+	customer_count: z.number().default(0).meta({
+		description:
+			"Number of customers on this plan version that are eligible to be migrated by this update.",
+	}),
 	versionable: z.boolean().meta({
 		description:
 			"Whether applying this update would create a new plan version under the current versioning flags.",
