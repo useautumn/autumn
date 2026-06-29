@@ -8,6 +8,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
+import { isAtmnOAuthClientRecord } from "../oauth/atmnOAuthClients.js";
 
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DANGEROUS_REDIRECT_SCHEMES = new Set([
@@ -163,6 +164,18 @@ const clientMatches = ({
 	info: MpcClientInfo;
 	redirectUris: string[];
 }) => {
+	// Reserved clients (e.g. atmn) must never be a registration match target,
+	// or a dynamic registration would rename/overwrite them.
+	if (
+		isAtmnOAuthClientRecord({
+			clientId: client.clientId,
+			name: client.name,
+			metadata: client.metadata,
+		})
+	) {
+		return false;
+	}
+
 	const metadata = parseMetadata(client.metadata);
 	if (
 		info.type !== "dynamic" &&
@@ -180,6 +193,11 @@ const clientMatches = ({
 	if (!hasMatchingRedirectUri) return false;
 
 	if (normalize(client.name ?? "") === normalize(info.name)) return true;
+
+	// Two unrecognized ("dynamic") clients sharing a redirect URI are NOT the
+	// same client; require an explicit name/clientId identity signal above.
+	if (info.type === "dynamic") return false;
+
 	return (
 		classifyMcpClient({
 			clientName: client.name,
