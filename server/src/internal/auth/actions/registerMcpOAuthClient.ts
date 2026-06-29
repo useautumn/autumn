@@ -7,6 +7,7 @@ import {
 } from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
+import { isAtmnOAuthClientRecord } from "../oauth/atmnOAuthClients.js";
 import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -163,6 +164,18 @@ const clientMatches = ({
 	info: MpcClientInfo;
 	redirectUris: string[];
 }) => {
+	// Reserved clients (e.g. atmn) must never be a registration match target,
+	// or a dynamic registration would rename/overwrite them.
+	if (
+		isAtmnOAuthClientRecord({
+			clientId: client.clientId,
+			name: client.name,
+			metadata: client.metadata,
+		})
+	) {
+		return false;
+	}
+
 	const metadata = parseMetadata(client.metadata);
 	if (
 		info.type !== "dynamic" &&
@@ -180,6 +193,11 @@ const clientMatches = ({
 	if (!hasMatchingRedirectUri) return false;
 
 	if (normalize(client.name ?? "") === normalize(info.name)) return true;
+
+	// Two unrecognized ("dynamic") clients sharing a redirect URI are NOT the
+	// same client; require an explicit name/clientId identity signal above.
+	if (info.type === "dynamic") return false;
+
 	return (
 		classifyMcpClient({
 			clientName: client.name,
@@ -254,7 +272,9 @@ export const registerMcpOAuthClient = async ({
 		scope,
 	});
 	const scopeKey = [...requestedScopes].sort().join(" ");
-	const cacheKey = `${info.type}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
+	// Include the name so two distinct dynamic clients sharing redirect/scope
+	// don't collapse onto one cached client_id.
+	const cacheKey = `${info.type}:${normalize(info.name)}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
 	const cached = getCachedRegistration(cacheKey);
 	if (cached)
 		return { body: cached as RegistrationResponse["body"], status: 200 };
