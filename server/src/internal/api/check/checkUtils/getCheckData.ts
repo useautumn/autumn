@@ -3,6 +3,7 @@ import {
 	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
+	type DbSpendLimit,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
@@ -11,6 +12,7 @@ import {
 	InternalError,
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
+	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
@@ -86,6 +88,31 @@ export const getCheckData = async ({
 	);
 
 	apiSubject = apiCustomer;
+	// Normalize percentage-typed plan spend limits to absolute units *before*
+	// the most-restrictive merge picks across plans, so a `200%` cap can't lose
+	// to a `1000` absolute cap on raw-number comparison.
+	const cusEntsForFeature = (featureId: string) =>
+		fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureId,
+			entity: fullCustomer.entity,
+		});
+	const normalizeSpendLimitForCompare = (
+		control: DbSpendLimit,
+	): DbSpendLimit => {
+		if (control.limit_type !== "usage_percentage" || !control.feature_id) {
+			return control;
+		}
+		return {
+			...control,
+			overage_limit: resolveSpendLimitOverageLimit({
+				spendLimit: control,
+				cusEnts: cusEntsForFeature(control.feature_id),
+				entityId: entity_id,
+			}),
+			limit_type: "absolute",
+		};
+	};
 	if (entity_id && fullCustomer.entity) {
 		const { apiEntity: apiEntityResult } = await getApiEntityBase({
 			ctx,
@@ -97,11 +124,13 @@ export const getCheckData = async ({
 			entityApiSubject: apiEntityResult,
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullCustomer.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	} else {
 		apiSubject = mergePlanBillingControlsForCheck({
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullCustomer.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	}
 

@@ -29,19 +29,38 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 		const isMatch = (candidate: DbSpendLimit) =>
 			candidate.feature_id === featureId && candidate.overage_limit !== undefined;
 
+		// Compute cusEnts up front so percentage-typed plan spend limits can
+		// be resolved to absolute units *before* the most-restrictive merge
+		// compares them — otherwise e.g. a `200%` cap would lose to a `1000`
+		// absolute cap on raw-number comparison even when its resolved value
+		// is far higher.
+		const cusEnts = fullSubjectToCustomerEntitlements({
+			fullSubject,
+			featureIds: [featureId],
+		});
+		const entityId = fullSubject.entity?.id ?? undefined;
+		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
+			if (control.limit_type !== "usage_percentage") return control;
+			return {
+				...control,
+				overage_limit: resolveSpendLimitOverageLimit({
+					spendLimit: control,
+					cusEnts,
+					entityId,
+				}),
+				limit_type: "absolute",
+			};
+		};
+
 		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
 			controlKey: "spend_limits",
 			matches: isMatch,
+			normalizeForCompare,
 		});
 
 		if (spendLimit?.enabled) {
-			const cusEnts = fullSubjectToCustomerEntitlements({
-				fullSubject,
-				featureIds: [featureId],
-			});
-			const entityId = fullSubject.entity?.id ?? undefined;
 			const resolved = resolveSpendLimitOverageLimit({
 				spendLimit,
 				cusEnts,

@@ -37,23 +37,43 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 			candidate.feature_id === featureId &&
 			candidate.overage_limit !== undefined;
 
+		// Compute cusEnts up front so percentage-typed plan spend limits can
+		// be resolved to absolute units *before* the most-restrictive merge
+		// compares them — otherwise e.g. a `200%` cap would lose to a `1000`
+		// absolute cap on raw-number comparison even when its resolved value
+		// is far higher.
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureIds: [featureId],
+			entity,
+		});
+		const entityIdForResolve = entity?.id ?? entity?.internal_id ?? undefined;
+		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
+			if (control.limit_type !== "usage_percentage") return control;
+			return {
+				...control,
+				overage_limit: resolveSpendLimitOverageLimit({
+					spendLimit: control,
+					cusEnts,
+					entityId: entityIdForResolve,
+				}),
+				limit_type: "absolute",
+			};
+		};
+
 		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 			controlKey: "spend_limits",
 			matches: isMatch,
+			normalizeForCompare,
 		});
 
 		if (spendLimit?.enabled) {
-			const cusEnts = fullCustomerToCustomerEntitlements({
-				fullCustomer,
-				featureIds: [featureId],
-				entity,
-			});
 			const resolved = resolveSpendLimitOverageLimit({
 				spendLimit,
 				cusEnts,
-				entityId: entity?.id ?? entity?.internal_id ?? undefined,
+				entityId: entityIdForResolve,
 			});
 
 			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.

@@ -17,11 +17,13 @@ const mergeControlsByFeature = <
 	customerControls,
 	planCustomerProducts,
 	controlKey,
+	normalizeForCompare,
 }: {
 	entityControls: TControl[];
 	customerControls: TControl[];
 	planCustomerProducts: FullCusProduct[];
 	controlKey: TKey;
+	normalizeForCompare?: (control: TControl) => TControl;
 }): TControl[] => {
 	const inheritedFeatureIds = new Set(
 		entityControls
@@ -58,6 +60,7 @@ const mergeControlsByFeature = <
 			customerProducts: planCustomerProducts,
 			controlKey,
 			matches: (entry) => entry.feature_id === featureId,
+			normalizeForCompare,
 		});
 
 		return control ? [control] : [];
@@ -81,10 +84,19 @@ export const mergeCustomerBillingControlsForCheck = ({
 	entityApiSubject,
 	customerApiSubject,
 	planCustomerProducts = [],
+	normalizeSpendLimitForCompare,
 }: {
 	entityApiSubject: ApiEntityV2;
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
+	/**
+	 * Optional projection that resolves a percentage-typed spend limit to an
+	 * absolute one so the most-restrictive merge across plans can compare
+	 * percent and absolute caps on the same axis. Pass when callers have the
+	 * customer's main-plan allowance available (typically via
+	 * `fullCustomerToCustomerEntitlements` + `resolveSpendLimitOverageLimit`).
+	 */
+	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): ApiEntityV2 => {
 	const entitySpendLimits =
 		entityApiSubject.billing_controls?.spend_limits ?? [];
@@ -103,6 +115,7 @@ export const mergeCustomerBillingControlsForCheck = ({
 		customerControls: customerSpendLimits,
 		planCustomerProducts,
 		controlKey: "spend_limits",
+		normalizeForCompare: normalizeSpendLimitForCompare,
 	});
 	const usageLimits = mergeControlsByFeature<DbUsageLimit, "usage_limits">({
 		entityControls: entityUsageLimits,
@@ -142,9 +155,16 @@ export const mergeCustomerBillingControlsForCheck = ({
 export const mergePlanBillingControlsForCheck = ({
 	customerApiSubject,
 	planCustomerProducts = [],
+	normalizeSpendLimitForCompare,
 }: {
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
+	/**
+	 * Optional projection that resolves a percentage-typed spend limit to an
+	 * absolute one so the most-restrictive merge across plans can compare
+	 * percent and absolute caps on the same axis.
+	 */
+	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): ApiCustomerV5 => {
 	const customerSpendLimits =
 		customerApiSubject.billing_controls?.spend_limits ?? [];
@@ -157,6 +177,7 @@ export const mergePlanBillingControlsForCheck = ({
 		customerControls: [],
 		planCustomerProducts,
 		controlKey: "spend_limits",
+		normalizeForCompare: normalizeSpendLimitForCompare,
 	});
 	const usageLimits = mergeControlsByFeature<DbUsageLimit, "usage_limits">({
 		entityControls: customerUsageLimits,
