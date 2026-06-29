@@ -3,7 +3,6 @@ import type {
 	PlanUpdatePreviewItemChange,
 	PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
-import { Badge } from "@autumn/ui";
 import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import {
@@ -124,57 +123,55 @@ export function buildMigrateTargets({
 	return targets;
 }
 
-function CustomerBadge({ count }: { count: number }) {
-	if (count <= 0) return null;
+function MetaBadge({ children }: { children: React.ReactNode }) {
 	return (
-		<Badge
-			className="gap-1 text-[11px] text-muted-foreground"
-			variant="secondary"
-		>
-			<UsersIcon size={11} />
-			{count} customer{count === 1 ? "" : "s"}
-		</Badge>
+		<span className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-tertiary-foreground tabular-nums">
+			{children}
+		</span>
 	);
 }
 
-function VersionRow({
+function VersionStatusBadges({
 	row,
 	showCustomers,
 }: {
 	row: MigrateTargetRow;
 	showCustomers: boolean;
 }) {
-	const hasChanges =
-		row.itemChanges.length > 0 ||
-		row.hasPriceChange ||
-		row.settingChanges.length > 0;
-	let versionSuffix = "";
-	if (row.isNew) versionSuffix = " · new";
-	else if (row.isCurrent) versionSuffix = " · current";
+	let status = "";
+	if (row.isNew) status = "New";
+	else if (row.isCurrent) status = "Current";
 	return (
-		<div className="flex flex-col gap-1.5 rounded-md bg-muted/40 px-2.5 py-2">
-			<div className="flex flex-wrap items-center gap-2">
-				<span className="text-xs font-medium text-foreground">
-					v{row.version}
-					{versionSuffix}
+		<div className="flex shrink-0 items-center gap-1.5">
+			<MetaBadge>v{row.version}</MetaBadge>
+			{status && <MetaBadge>{status}</MetaBadge>}
+			{showCustomers && row.customerCount > 0 && (
+				<span className="flex items-center gap-1 text-[11px] text-tertiary-foreground">
+					<UsersIcon size={11} />
+					{row.customerCount}
 				</span>
-				{showCustomers && <CustomerBadge count={row.customerCount} />}
-				{row.conflicts.length > 0 && (
-					<Badge
-						className="gap-1 bg-amber-500/10 text-[11px] text-amber-600 dark:text-amber-500"
-						variant="secondary"
-					>
-						<WarningIcon size={11} weight="fill" />
-						{row.conflicts.length} conflict
-						{row.conflicts.length === 1 ? "" : "s"}
-					</Badge>
-				)}
-			</div>
+			)}
+			{row.conflicts.length > 0 && (
+				<span className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-500">
+					<WarningIcon size={11} weight="fill" />
+					{row.conflicts.length}
+				</span>
+			)}
+		</div>
+	);
+}
+
+function VersionBody({ row }: { row: MigrateTargetRow }) {
+	const hasChanges = row.itemChanges.length > 0 || row.hasPriceChange;
+	return (
+		<div className="flex flex-col gap-1.5">
 			{row.itemChanges.length > 0 && (
 				<ItemChangeList itemChanges={row.itemChanges} />
 			)}
 			{row.hasPriceChange && (
-				<span className="text-xs text-muted-foreground">Base price change</span>
+				<span className="text-tertiary-foreground text-xs">
+					Base price change
+				</span>
 			)}
 			{row.settingChanges.map((change) => (
 				<div className="flex items-center gap-1.5 text-xs" key={change.key}>
@@ -183,22 +180,18 @@ function VersionRow({
 				</div>
 			))}
 			{!hasChanges && (
-				<span className="text-xs text-muted-foreground/70 italic">
+				<span className="text-tertiary-foreground/70 text-xs italic">
 					No changes
 				</span>
 			)}
-			{row.conflicts.length > 0 && (
-				<div className="flex flex-col gap-0.5">
-					{row.conflicts.map((conflict, index) => (
-						<span
-							className="text-amber-600 text-xs dark:text-amber-500"
-							key={`${conflict.reason}-${index}`}
-						>
-							{conflictSentence(conflict)}
-						</span>
-					))}
-				</div>
-			)}
+			{row.conflicts.map((conflict, index) => (
+				<span
+					className="text-amber-600 text-xs dark:text-amber-500"
+					key={`${conflict.reason}-${index}`}
+				>
+					{conflictSentence(conflict)}
+				</span>
+			))}
 		</div>
 	);
 }
@@ -212,41 +205,51 @@ export function MigrateTargetsStep({
 }) {
 	if (targets.length === 0) {
 		return (
-			<p className="text-sm text-muted-foreground">No changes to apply.</p>
+			<p className="text-sm text-tertiary-foreground">No changes to apply.</p>
 		);
 	}
 
 	return (
-		<div className="flex flex-col gap-3">
-			{targets.map((target) => (
-				<div
-					className="flex flex-col gap-2 rounded-lg border border-border p-3"
-					key={target.id}
-				>
-					<div className="flex items-center justify-between gap-2">
-						<span className="text-sm font-medium text-foreground">
-							{target.name}
-						</span>
-						{target.isBase && (
-							<Badge
-								className="text-[11px] text-muted-foreground"
-								variant="secondary"
-							>
-								Base
-							</Badge>
+		<div className="flex flex-col gap-2">
+			{targets.map((target) => {
+				const singleRow = target.rows.length === 1;
+				return (
+					<div
+						className="flex flex-col gap-2.5 rounded-xl bg-secondary/40 px-3 py-2.5"
+						key={target.id}
+					>
+						<div className="flex items-center justify-between gap-2">
+							<span className="truncate text-sm font-medium text-foreground">
+								{target.name}
+							</span>
+							<div className="flex shrink-0 items-center gap-1.5">
+								{singleRow && (
+									<VersionStatusBadges
+										row={target.rows[0]}
+										showCustomers={showCustomers}
+									/>
+								)}
+								{target.isBase && <MetaBadge>Base</MetaBadge>}
+							</div>
+						</div>
+						{singleRow ? (
+							<VersionBody row={target.rows[0]} />
+						) : (
+							<div className="flex flex-col gap-2">
+								{target.rows.map((row) => (
+									<div className="flex flex-col gap-1.5" key={row.version}>
+										<VersionStatusBadges
+											row={row}
+											showCustomers={showCustomers}
+										/>
+										<VersionBody row={row} />
+									</div>
+								))}
+							</div>
 						)}
 					</div>
-					<div className="flex flex-col gap-2">
-						{target.rows.map((row) => (
-							<VersionRow
-								key={row.version}
-								row={row}
-								showCustomers={showCustomers}
-							/>
-						))}
-					</div>
-				</div>
-			))}
+				);
+			})}
 		</div>
 	);
 }
