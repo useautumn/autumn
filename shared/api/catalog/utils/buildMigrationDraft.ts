@@ -60,7 +60,8 @@ const migratablePlanDiff = (
 		: {}),
 });
 
-const planMatcher = (ids: string[]) => (ids.length === 1 ? ids[0] : { $in: ids });
+const planMatcher = (ids: string[]) =>
+	ids.length === 1 ? ids[0] : { $in: ids };
 
 const withCustomGuard = <T extends Record<string, unknown>>({
 	includeCustom,
@@ -92,7 +93,10 @@ const groupTargetsByCustomize = <
 >(
 	targets: T[],
 ): { customize: DiffedCustomizePlanV1; targets: T[] }[] => {
-	const groups = new Map<string, { customize: DiffedCustomizePlanV1; targets: T[] }>();
+	const groups = new Map<
+		string,
+		{ customize: DiffedCustomizePlanV1; targets: T[] }
+	>();
 	for (const target of targets) {
 		if (!target.customize) continue;
 		const customize = migratablePlanDiff(target.customize);
@@ -137,14 +141,18 @@ export const buildMigrationDraft = ({
 
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: withCustomGuard({
-			includeCustom,
-			planFilter: basePlanFilter,
-		}),
+		plan_filter: basePlanFilter,
 		...(customize ? { customize } : {}),
 	};
 
-	const filter: MigrationFilter = { customer: { plan: basePlanFilter } };
+	const filter: MigrationFilter = {
+		customer: {
+			plan: withCustomGuard({
+				includeCustom,
+				planFilter: basePlanFilter,
+			}),
+		},
+	};
 	const suffix = scope === "all_customers" ? "update-all" : "update";
 
 	return {
@@ -171,10 +179,7 @@ export const buildCombinedVariantMigrationDraft = ({
 	const ops = groupTargetsByCustomize(targets).map(
 		({ customize, targets }): UpdatePlanOp => ({
 			type: "update_plan",
-			plan_filter: withCustomGuard({
-				includeCustom,
-				planFilter: versionedPlanFilter(targets),
-			}),
+			plan_filter: versionedPlanFilter(targets),
 			customize,
 		}),
 	);
@@ -182,7 +187,14 @@ export const buildCombinedVariantMigrationDraft = ({
 
 	return {
 		id: `plan-migrate-${planIds.length}-${migrationUid()}`,
-		filter: { customer: { plan: basePlanFilter } },
+		filter: {
+			customer: {
+				plan: withCustomGuard({
+					includeCustom,
+					planFilter: basePlanFilter,
+				}),
+			},
+		},
 		operations: { customer: ops },
 		no_billing_changes: !hasBillingChanges,
 	};
@@ -202,10 +214,7 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 			const ids = targets.map((target) => target.id);
 			return {
 				type: "update_plan",
-				plan_filter: withCustomGuard({
-					includeCustom,
-					planFilter: { plan_id: planMatcher(ids) },
-				}),
+				plan_filter: { plan_id: planMatcher(ids) },
 				customize,
 			};
 		},
@@ -220,7 +229,10 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 		id: `plan-update-all-${planIds.length}-${migrationUid()}`,
 		filter: {
 			customer: {
-				plan: basePlanFilter,
+				plan: withCustomGuard({
+					includeCustom,
+					planFilter: basePlanFilter,
+				}),
 			},
 		},
 		operations: { customer: ops },

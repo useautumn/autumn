@@ -60,7 +60,7 @@ export const updateVariant = async ({
 		hasControls: Boolean(
 			variantUpdate?.force_version ||
 				variantUpdate?.disable_version ||
-			variantUpdate?.migration?.draft,
+				variantUpdate?.migration?.draft,
 		),
 	});
 	validateDirectVariantMigrationDraftUnsupported({

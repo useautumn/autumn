@@ -11,24 +11,24 @@ import chalk from "chalk";
 
 const plan = ({ included }: { included: number }): ApiPlanV1 =>
 	({
-	id: "pro",
-	name: "Pro",
-	description: null,
-	group: "",
-	version: 1,
-	add_on: false,
-	auto_enable: false,
-	price: null,
-	items: [
-		{
-			feature_id: "messages",
-			included,
-			unlimited: false,
-			reset: { interval: ResetInterval.Month },
-			price: null,
-		},
-	],
-	free_trial: undefined,
+		id: "pro",
+		name: "Pro",
+		description: null,
+		group: "",
+		version: 1,
+		add_on: false,
+		auto_enable: false,
+		price: null,
+		items: [
+			{
+				feature_id: "messages",
+				included,
+				unlimited: false,
+				reset: { interval: ResetInterval.Month },
+				price: null,
+			},
+		],
+		free_trial: undefined,
 	}) as ApiPlanV1;
 
 const messagesDiff: DiffedCustomizePlanV1 = {
@@ -60,11 +60,11 @@ test(`${chalk.yellowBright("migration draft builder: current-version drafts use 
 	const [operation] = draft.operations.customer ?? [];
 
 	expect(draft.filter).toEqual({
-		customer: { plan: { plan_id: "pro", version: 3 } },
+		customer: { plan: { plan_id: "pro", version: 3, custom: false } },
 	});
 	expect(operation).toEqual({
 		type: "update_plan",
-		plan_filter: { plan_id: "pro", version: 3, custom: false },
+		plan_filter: { plan_id: "pro", version: 3 },
 		customize: messagesDiff,
 	});
 	expect(operation).not.toHaveProperty("version");
@@ -107,6 +107,7 @@ test(`${chalk.yellowBright("migration draft builder: propagated current-version 
 			plan: {
 				plan_id: { $in: ["pro", "pro_annual"] },
 				version: 2,
+				custom: false,
 			},
 		},
 	});
@@ -116,7 +117,6 @@ test(`${chalk.yellowBright("migration draft builder: propagated current-version 
 		plan_filter: {
 			plan_id: { $in: ["pro", "pro_annual"] },
 			version: 2,
-			custom: false,
 		},
 		customize: messagesDiff,
 	});
@@ -137,6 +137,7 @@ test(`${chalk.yellowBright("migration draft builder: all-version variants share 
 		customer: {
 			plan: {
 				plan_id: { $in: ["pro", "pro_annual"] },
+				custom: false,
 			},
 		},
 	});
@@ -145,7 +146,6 @@ test(`${chalk.yellowBright("migration draft builder: all-version variants share 
 		type: "update_plan",
 		plan_filter: {
 			plan_id: { $in: ["pro", "pro_annual"] },
-			custom: false,
 		},
 		customize: messagesDiff,
 	});

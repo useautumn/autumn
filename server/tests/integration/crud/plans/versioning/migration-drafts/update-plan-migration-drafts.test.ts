@@ -2,20 +2,34 @@ import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
 	ApiVersion,
-	BillingInterval,
+	type AttachParamsV1Input,
+	customerProducts,
+	customers,
+	ErrCode,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { and, eq } from "drizzle-orm";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { expectMigrationDrafts } from "./expectMigrationDrafts.js";
 
 type RpcUpdate = Omit<UpdatePlanParamsV2Input, "plan_id">;
+
+const catchErr = async (fn: () => Promise<unknown>) => {
+	try {
+		await fn();
+		return null;
+	} catch (error: unknown) {
+		return error as { code?: string; statusCode?: number };
+	}
+};
 
 const messagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
@@ -35,6 +49,57 @@ const messagesDiff = (included: number) => ({
 	add_items: [messagesItem(included)],
 });
 
+const getCustomerProductCustomState = async ({
+	ctx,
+	customerId,
+	planId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customerId: string;
+	planId: string;
+}) => {
+	const [row] = await ctx.db
+		.select({ isCustom: customerProducts.is_custom })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, planId),
+			),
+		);
+
+	return row?.isCustom;
+};
+
+const findUpdatePlanOpByIncluded = ({
+	included,
+	migrations,
+}: {
+	included: number;
+	migrations: Awaited<ReturnType<typeof migrationRepo.get>>;
+}) => {
+	for (const operation of migrations.flatMap(
+		(migration) => migration.operations?.customer ?? [],
+	)) {
+		if (operation.type !== "update_plan") continue;
+		if (
+			operation.customize?.add_items?.some(
+				(item) =>
+					item.feature_id === TestFeature.Messages &&
+					item.included === included,
+			)
+		) {
+			return operation;
+		}
+	}
+};
+
 const setupPlan = async ({
 	id,
 	variantId,
@@ -53,7 +118,9 @@ const setupPlan = async ({
 		customerId,
 		setup: [
 			s.customer({}),
-			...(variantCustomerId ? [s.otherCustomers([{ id: variantCustomerId }])] : []),
+			...(variantCustomerId
+				? [s.otherCustomers([{ id: variantCustomerId }])]
+				: []),
 			s.products({ list: [base], prefix: "" }),
 		],
 		actions: [],
@@ -105,11 +172,11 @@ test(`${chalk.yellowBright("migration drafts: plans.update all_versions creates 
 		expected: [
 			{
 				planIds: [planId],
-				filter: { customer: { plan: { plan_id: planId } } },
+				filter: { customer: { plan: { plan_id: planId, custom: false } } },
 				noBillingChanges: true,
 				operation: {
 					type: "update_plan",
-					plan_filter: { plan_id: planId, custom: false },
+					plan_filter: { plan_id: planId },
 					customize: messagesDiff(500),
 				},
 			},
@@ -143,7 +210,10 @@ test(`${chalk.yellowBright("migration drafts: catalog.update all_versions base+v
 				planIds: [planId, variantId],
 				filter: {
 					customer: {
-						plan: { plan_id: { $in: [planId, variantId] } },
+						plan: {
+							plan_id: { $in: [planId, variantId] },
+							custom: false,
+						},
 					},
 				},
 				noBillingChanges: true,
@@ -151,12 +221,131 @@ test(`${chalk.yellowBright("migration drafts: catalog.update all_versions base+v
 					type: "update_plan",
 					plan_filter: {
 						plan_id: { $in: [planId, variantId] },
-						custom: false,
 					},
 					customize: messagesDiff(500),
 				},
 			},
 		],
+	});
+});
+
+test(`${chalk.yellowBright("migration drafts: variant custom plans follow include_custom")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `draft_variant_custom_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const baseCustomerId = `${planId}_base_customer`;
+	const customVariantCustomerId = `${planId}_custom_variant_customer`;
+	const base = products.base({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, autumnV2_2, autumnV2_3, ctx } = await initScenario({
+		customerId: baseCustomerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.otherCustomers([
+				{ id: customVariantCustomerId, paymentMethod: "success" },
+			]),
+			s.products({ list: [base], prefix: "" }),
+		],
+		actions: [],
+	});
+	await autumnV2_3.plans.createVariant({
+		base_plan_id: planId,
+		variant_plan_id: variantId,
+		name: "Annual",
+	});
+	await autumnV2_2.billing.attach({
+		customer_id: baseCustomerId,
+		plan_id: planId,
+		customize: {
+			price: itemsV2.annualPrice({ amount: 200 }),
+		},
+	});
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customVariantCustomerId,
+		plan_id: variantId,
+		customize: {
+			price: itemsV2.annualPrice({ amount: 200 }),
+		},
+		// items: [items.monthlyMessages({ includedUsage: 250 })],
+	});
+	return;
+
+	expect(
+		await getCustomerProductCustomState({
+			ctx,
+			customerId: customVariantCustomerId,
+			planId: variantId,
+		}),
+	).toBe(true);
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: "Base",
+				items: [messagesItem(500)],
+				update_variant_ids: [variantId],
+				disable_version: true,
+				migration: { draft: true },
+			},
+		],
+	});
+	const excludeCustomMigrations = await migrationRepo.get({ ctx });
+	const excludeCustomOp = findUpdatePlanOpByIncluded({
+		included: 500,
+		migrations: excludeCustomMigrations,
+	});
+	const excludeCustomMigration = excludeCustomMigrations.find((migration) =>
+		migration.operations?.customer?.includes(excludeCustomOp!),
+	);
+	expect(excludeCustomMigration?.filter).toEqual({
+		customer: {
+			plan: {
+				plan_id: { $in: [planId, variantId] },
+				version: 1,
+				custom: false,
+			},
+		},
+	});
+	expect(excludeCustomOp?.plan_filter).toEqual({
+		plan_id: { $in: [planId, variantId] },
+		version: 1,
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: "Base",
+				items: [messagesItem(700)],
+				update_variant_ids: [variantId],
+				disable_version: true,
+				migration: { draft: true, include_custom: true },
+			},
+		],
+	});
+	const includeCustomMigrations = await migrationRepo.get({ ctx });
+	const includeCustomOp = findUpdatePlanOpByIncluded({
+		included: 700,
+		migrations: includeCustomMigrations,
+	});
+	const includeCustomMigration = includeCustomMigrations.find((migration) =>
+		migration.operations?.customer?.includes(includeCustomOp!),
+	);
+	expect(includeCustomMigration?.filter).toEqual({
+		customer: {
+			plan: {
+				plan_id: { $in: [planId, variantId] },
+				version: 1,
+			},
+		},
+	});
+	expect(includeCustomOp?.plan_filter).toEqual({
+		plan_id: { $in: [planId, variantId] },
+		version: 1,
 	});
 });
 
@@ -181,11 +370,13 @@ test(`${chalk.yellowBright("migration drafts: catalog.update current version cre
 		expected: [
 			{
 				planIds: [planId],
-				filter: { customer: { plan: { plan_id: planId, version: 1 } } },
+				filter: {
+					customer: { plan: { plan_id: planId, version: 1, custom: false } },
+				},
 				noBillingChanges: true,
 				operation: {
 					type: "update_plan",
-					plan_filter: { plan_id: planId, version: 1, custom: false },
+					plan_filter: { plan_id: planId, version: 1 },
 					customize: messagesDiff(500),
 				},
 			},
@@ -216,6 +407,7 @@ test(`${chalk.yellowBright("migration drafts: plans.update current base+variant 
 						plan: {
 							plan_id: { $in: [planId, variantId] },
 							version: 1,
+							custom: false,
 						},
 					},
 				},
@@ -225,7 +417,6 @@ test(`${chalk.yellowBright("migration drafts: plans.update current base+variant 
 					plan_filter: {
 						plan_id: { $in: [planId, variantId] },
 						version: 1,
-						custom: false,
 					},
 					customize: messagesDiff(500),
 				},
@@ -234,55 +425,94 @@ test(`${chalk.yellowBright("migration drafts: plans.update current base+variant 
 	});
 });
 
-test(`${chalk.yellowBright("migration drafts: direct variant price update marks billing changes")}`, async () => {
+test(`${chalk.yellowBright("migration drafts: direct variant update migration is blocked")}`, async () => {
 	const suffix = Math.random().toString(36).slice(2, 9);
 	const planId = `draft_variant_price_${suffix}`;
 	const variantId = `${planId}_annual`;
-	const { autumnV2_2, ctx } = await setupPlan({ id: planId, variantId });
+	const { autumnV2_2 } = await setupPlan({ id: planId, variantId });
 
-	await autumnV2_2.catalog.update({
-		plans: [
-			{
-				plan_id: planId,
-				name: "Base",
-				variants: [
-					{
-						variant_plan_id: variantId,
-						name: "Annual",
-						disable_version: true,
-						migration: { draft: true },
-						customize: {
-							price: {
-								amount: 20,
-								interval: BillingInterval.Year,
+	const error = await catchErr(() =>
+		autumnV2_2.catalog.update({
+			plans: [
+				{
+					plan_id: planId,
+					name: "Base",
+					variants: [
+						{
+							variant_plan_id: variantId,
+							name: "Annual",
+							disable_version: true,
+							migration: { draft: true },
+							customize: {
+								remove_items: [
+									{
+										feature_id: TestFeature.Messages,
+										interval: ResetInterval.Month,
+									},
+								],
+								add_items: [
+									{
+										feature_id: TestFeature.Messages,
+										included: 1200,
+										unlimited: false,
+										reset: { interval: ResetInterval.Year },
+									},
+								],
 							},
 						},
-					},
-				],
-			},
-		],
-	});
-
-	expectMigrationDrafts({
-		migrations: await migrationRepo.get({ ctx }),
-		expected: [
-			{
-				planIds: [variantId],
-				filter: { customer: { plan: { plan_id: variantId, version: 1 } } },
-				noBillingChanges: false,
-				operation: {
-					type: "update_plan",
-					plan_filter: { plan_id: variantId, version: 1, custom: false },
-					customize: {
-						price: {
-							amount: 20,
-							interval: BillingInterval.Year,
-						},
-					},
+					],
 				},
-			},
-		],
-	});
+			],
+		}),
+	);
+
+	expect(error?.code).toBe(ErrCode.InvalidPropagationTarget);
+});
+
+test(`${chalk.yellowBright("migration drafts: base migration with direct variant customize is blocked")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `draft_base_direct_variant_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const { autumnV2_2 } = await setupPlan({ id: planId, variantId });
+
+	const error = await catchErr(() =>
+		autumnV2_2.catalog.update({
+			plans: [
+				{
+					plan_id: planId,
+					name: "Base",
+					items: [messagesItem(500)],
+					update_variant_ids: [variantId],
+					disable_version: true,
+					migration: { draft: true },
+					variants: [
+						{
+							variant_plan_id: variantId,
+							name: "Annual",
+							customize: {
+								remove_items: [
+									{
+										feature_id: TestFeature.Messages,
+										interval: ResetInterval.Month,
+									},
+								],
+								add_items: [
+									{
+										feature_id: TestFeature.Messages,
+										included: 1200,
+										unlimited: false,
+										reset: { interval: ResetInterval.Year },
+									},
+								],
+							},
+						},
+					],
+				},
+			],
+		}),
+	);
+
+	expect(error?.code).toBe(ErrCode.InvalidPropagationTarget);
 });
 
 test(`${chalk.yellowBright("migration drafts: create-version updates do not create migration drafts")}`, async () => {

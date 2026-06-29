@@ -23,7 +23,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { expectCatalogPreview } from "./utils/expectCatalogPreview.js";
 
@@ -1065,7 +1064,7 @@ test(`${chalk.yellowBright("catalog: preview_update marks unchanged variant cust
 	);
 });
 
-test(`${chalk.yellowBright("catalog: update creates a migration draft for a direct variant update")}`, async () => {
+test(`${chalk.yellowBright("catalog: update rejects migration draft for a direct variant update")}`, async () => {
 	const suffix = Math.random().toString(36).slice(2, 9);
 	const planId = `catalog_variant_migration_${suffix}`;
 	const variantId = `${planId}_annual`;
@@ -1074,7 +1073,7 @@ test(`${chalk.yellowBright("catalog: update creates a migration draft for a dire
 		items: [items.monthlyMessages({ includedUsage: 100 })],
 	});
 
-	const { autumnV2_2, ctx } = await initScenario({
+	const { autumnV2_2 } = await initScenario({
 		customerId: `catalog-variant-migration-${suffix}`,
 		setup: [
 			s.products({ list: [prod], prefix: "" }),
@@ -1114,68 +1113,38 @@ test(`${chalk.yellowBright("catalog: update creates a migration draft for a dire
 		plan_id: variantId,
 	});
 
-	await autumnV2_2.post("/catalog.update", {
-		plans: [
-			{
-				plan_id: planId,
-				name: prod.name,
-				variants: [
-					{
-						variant_plan_id: variantId,
-						name: "Annual",
-						disable_version: true,
-						migration: { draft: true },
-						customize: {
-							remove_items: [
-								{ feature_id: TestFeature.Messages, interval: "month" },
-							],
-							add_items: [
-								{
-									feature_id: TestFeature.Messages,
-									included: 2400,
-									reset: { interval: "year" },
-								},
-							],
-						},
-					},
-				],
-			},
-		],
-	});
-
-	const migrations = await migrationRepo.get({ ctx });
-	const operation = migrations
-		.flatMap((migration) => migration.operations?.customer ?? [])
-		.find(
-			(candidate) =>
-				candidate.type === "update_plan" &&
-				candidate.plan_filter.plan_id === variantId,
-		);
-
-	expect(operation).toMatchObject({
-		type: "update_plan",
-		plan_filter: {
-			plan_id: variantId,
-			version: 1,
-			custom: false,
-		},
-		customize: {
-			remove_items: [
+	const error = await catchErr(() =>
+		autumnV2_2.post("/catalog.update", {
+			plans: [
 				{
-					feature_id: TestFeature.Messages,
-					interval: "year",
-					interval_count: 1,
+					plan_id: planId,
+					name: prod.name,
+					variants: [
+						{
+							variant_plan_id: variantId,
+							name: "Annual",
+							disable_version: true,
+							migration: { draft: true },
+							customize: {
+								remove_items: [
+									{ feature_id: TestFeature.Messages, interval: "month" },
+								],
+								add_items: [
+									{
+										feature_id: TestFeature.Messages,
+										included: 2400,
+										reset: { interval: "year" },
+									},
+								],
+							},
+						},
+					],
 				},
 			],
-			add_items: [
-				expect.objectContaining({
-					feature_id: TestFeature.Messages,
-					included: 2400,
-				}),
-			],
-		},
-	});
-	expect(operation).not.toHaveProperty("version");
+		}),
+	);
+
+	expect(error?.code).toBe(ErrCode.InvalidPropagationTarget);
 });
 
 test(`${chalk.yellowBright("catalog: update rejects variant controls without direct customize changes")}`, async () => {

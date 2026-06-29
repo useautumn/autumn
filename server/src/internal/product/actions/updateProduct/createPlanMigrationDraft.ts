@@ -66,17 +66,6 @@ export const getVariantMigrationSnapshots = async ({
 	);
 };
 
-const getVariantMigrationSnapshotsById = async ({
-	ctx,
-	variantIds,
-}: {
-	ctx: AutumnContext;
-	variantIds: string[];
-}) => {
-	const snapshots = await getVariantMigrationSnapshots({ ctx, variantIds });
-	return new Map(snapshots.map((snapshot) => [snapshot.product.id, snapshot]));
-};
-
 export const validateNoDirectVariantMigrationDrafts = ({
 	hasMigrationDraft,
 	variantUpdates,
@@ -138,36 +127,19 @@ export const createPlanMigrationDraft = async ({
 			db: ctx.db,
 			internalProductId: current.internal_id,
 		});
-		const variantsAfter = await getVariantMigrationSnapshotsById({
-			ctx,
-			variantIds: selectedVariantsBefore.map((before) => before.product.id),
-		});
-		const variantResults = selectedVariantsBefore.flatMap((before) => {
-			const after = variantsAfter.get(before.product.id);
-			if (!after) return [];
-			const customize = diffPlanV1({ from: before.plan, to: after.plan });
-			return [
-				{
-					hasBillingChanges: planDiffHasBillingChanges(customize, before.plan),
-					target: {
-						id: before.product.id,
-						version: before.product.version,
-						customize,
-					},
-				},
-			];
-		});
 		const targets = [
 			...(baseUsage.hasVersionableCustomerProducts
 				? [{ id: planId, version: current.version, customize: baseDiff }]
 				: []),
-			...variantResults.map((result) => result.target),
+			...selectedVariantsBefore.map((before) => ({
+				id: before.product.id,
+				version: before.product.version,
+				customize: baseDiff,
+			})),
 		];
 		const draft = buildCombinedVariantMigrationDraft({
 			targets,
-			hasBillingChanges:
-				planDiffHasBillingChanges(baseDiff, fromPlan) ||
-				variantResults.some((result) => result.hasBillingChanges),
+			hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
 			includeCustom,
 		});
 		if (!draft) return;
@@ -188,35 +160,18 @@ export const createPlanMigrationDraft = async ({
 		internalProductIds: baseVersions.map((product) => product.internal_id),
 	});
 
-	const variantsAfter = await getVariantMigrationSnapshotsById({
-		ctx,
-		variantIds: selectedVariantsBefore.map((before) => before.product.id),
-	});
-	const variantResults = selectedVariantsBefore.flatMap((before) => {
-		const after = variantsAfter.get(before.product.id);
-		if (!after) return [];
-		const customize = diffPlanV1({ from: before.plan, to: after.plan });
-		return [
-			{
-				hasBillingChanges: planDiffHasBillingChanges(customize, before.plan),
-				target: {
-					id: before.product.id,
-					customize,
-				},
-			},
-		];
-	});
 	const targets = [
 		...(hasVersionableUsage({ products: baseVersions, usageByProduct })
 			? [{ id: planId, customize: baseDiff }]
 			: []),
-		...variantResults.map((result) => result.target),
+		...selectedVariantsBefore.map((before) => ({
+			id: before.product.id,
+			customize: baseDiff,
+		})),
 	];
 	const draft = buildAllVersionsUpdateMigrationDraft({
 		targets,
-		hasBillingChanges:
-			planDiffHasBillingChanges(baseDiff, fromPlan) ||
-			variantResults.some((result) => result.hasBillingChanges),
+		hasBillingChanges: planDiffHasBillingChanges(baseDiff, fromPlan),
 		includeCustom,
 	});
 	if (!draft) return;
