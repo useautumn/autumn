@@ -61,7 +61,7 @@ export const EditPlanHeader = () => {
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const flags = useAutumnFlags();
 	const { mappings } = useRCMappings();
-	const { org } = useOrg();
+	const { org } = useOrg({ skipSandbox: false });
 	const env = useEnv();
 	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);

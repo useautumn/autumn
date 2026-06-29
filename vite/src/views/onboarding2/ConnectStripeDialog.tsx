@@ -25,7 +25,7 @@ export default function ConnectStripeDialog({
 	setOpen: (open: boolean) => void;
 	onMismatch?: (message: string) => void;
 }) {
-	const { mutate: mutateOrg } = useOrg();
+	const { mutate: mutateOrg } = useOrg({ skipSandbox: false });
 
 	const axiosInstance = useAxiosInstance();
 

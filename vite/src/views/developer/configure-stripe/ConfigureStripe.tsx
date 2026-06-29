@@ -31,7 +31,7 @@ import { StripeDuplicateAccountDialog } from "./StripeDuplicateAccountDialog";
 import { useStripeOAuthParams } from "./useStripeOAuthParams";
 
 export const ConfigureStripe = () => {
-	const { org, mutate } = useOrg();
+	const { org, mutate } = useOrg({ skipSandbox: false });
 	const { stripeAccount, isLoading: isLoadingStripeAccount } =
 		useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
