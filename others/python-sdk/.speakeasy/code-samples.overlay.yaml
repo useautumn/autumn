@@ -556,7 +556,8 @@ actions:
                         {
                             "feature_id": "messages",
                             "enabled": True,
-                            "overage_limit": 25,
+                            "limit_type": "usage_percentage",
+                            "overage_limit": 120,
                         },
                     ],
                 })
@@ -840,7 +841,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.plans.update(plan_id="pro_plan", group="", name="Pro Plan (Updated)", price={
+                res = autumn.plans.update(plan_id="pro_plan", name="Pro Plan (Updated)", price={
                     "amount": 15,
                     "interval": "month",
                 }, create_in_stripe=True, archived=False)

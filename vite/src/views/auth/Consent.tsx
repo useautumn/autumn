@@ -27,6 +27,7 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 interface ClientInfo {
 	client_id: string;
@@ -181,9 +182,11 @@ export const Consent = () => {
 	const { data: session } = useSession();
 	const { data: orgs } = useListOrganizations();
 	const { data: activeOrganization } = authClient.useActiveOrganization();
+	const { isCurrentlyImpersonating } = useAdmin();
 	const errorIconMaskId = useId();
 	const consentIconMaskId = useId();
 
+	const [isEndingImpersonation, setIsEndingImpersonation] = useState(false);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
 		null,
@@ -222,6 +225,17 @@ export const Consent = () => {
 	const canAuthorize = selectedScopes.length > 0;
 
 	const currentOrg = activeOrganization || orgs?.[0];
+
+	const handleStopImpersonating = async () => {
+		setIsEndingImpersonation(true);
+		const { error } = await authClient.admin.stopImpersonating();
+		if (error) {
+			toast.error("Failed to end impersonation");
+			setIsEndingImpersonation(false);
+			return;
+		}
+		window.location.reload();
+	};
 
 	const handleSwitchOrg = async (orgId: string) => {
 		setSwitchingOrg(true);
@@ -433,6 +447,18 @@ export const Consent = () => {
 								{session.user.email}
 							</span>
 						</p>
+					)}
+					{isCurrentlyImpersonating && (
+						<button
+							type="button"
+							onClick={handleStopImpersonating}
+							disabled={isEndingImpersonation}
+							className="text-xs text-primary hover:underline disabled:opacity-50"
+						>
+							{isEndingImpersonation
+								? "Ending impersonation…"
+								: "End impersonation"}
+						</button>
 					)}
 				</div>
 

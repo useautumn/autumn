@@ -6,25 +6,33 @@ const BATCH_SIZE = 5000;
 const TICK_MS = 30_000;
 const RUN_BUDGET_MS = 55_000;
 
+// Grace window: don't mark products that expired recently (they may still be
+// reactivated/refunded/resubscribed). updated_at is stamped on every status
+// change; ended_at is unreliable (not set on manual expiry).
+const EXPIRED_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Backfill: clear next_reset_at on entitlements of expired (terminal) products
-// so the reset cron stops scanning ~12M stale rows. Self-terminating once the
-// backlog drains; remove this job after it idles. See forward fix at expiry sites.
+// Backfill: mark entitlements of expired (terminal) products as expired so the
+// reset cron can skip them. Only flips NULL -> true; a manual `false` stays
+// sticky. Self-terminating once drained; remove this job after it idles.
 const clearExpiredBatch = async ({ ctx }: { ctx: CronContext }) => {
 	const { db } = ctx;
+	const graceBefore = Date.now() - EXPIRED_GRACE_MS;
 	const updated = await db.execute<{ id: string }>(sql`
 		WITH batch AS (
 			SELECT ce.id
 			FROM customer_entitlements ce
 			JOIN customer_products cp ON ce.customer_product_id = cp.id
-			WHERE ce.next_reset_at IS NOT NULL
+			WHERE ce.expired IS NULL
+				AND ce.next_reset_at IS NOT NULL
 				AND cp.status = ${CusProductStatus.Expired}
+				AND (cp.updated_at IS NULL OR cp.updated_at < ${graceBefore})
 			LIMIT ${BATCH_SIZE}
 			FOR UPDATE OF ce SKIP LOCKED
 		)
 		UPDATE customer_entitlements ce
-		SET next_reset_at = NULL
+		SET expired = true
 		FROM batch
 		WHERE ce.id = batch.id
 		RETURNING ce.id
@@ -50,9 +58,9 @@ export const runClearExpiredResetCron = async ({ ctx }: { ctx: CronContext }) =>
 		}
 
 		total += count;
-		logger.info(`clearExpiredReset: nulled ${count} (run total ${total})`);
+		logger.info(`clearExpiredReset: marked ${count} (run total ${total})`);
 
-		// Drained: fewer than a full batch means no more stale rows.
+		// Drained: fewer than a full batch means no more unmarked rows.
 		if (count < BATCH_SIZE) break;
 		if (Date.now() - startTime + TICK_MS >= RUN_BUDGET_MS) break;
 		await sleep(TICK_MS);

@@ -7,10 +7,12 @@ export const resolveSpendLimitOverageLimit = ({
 	spendLimit,
 	cusEnts,
 	entityId,
+	additionalAllowance = 0,
 }: {
 	spendLimit: DbSpendLimit;
 	cusEnts: FullCusEntWithFullCusProduct[];
 	entityId?: string;
+	additionalAllowance?: number;
 }): number | undefined => {
 	if (spendLimit.overage_limit === undefined) return undefined;
 
@@ -18,7 +20,9 @@ export const resolveSpendLimitOverageLimit = ({
 		return spendLimit.overage_limit;
 	}
 
-	const denominator = cusEntsToMainPlanAllowance({ cusEnts, entityId });
+	const denominator =
+		cusEntsToMainPlanAllowance({ cusEnts, entityId }) +
+		additionalAllowance;
 	if (denominator === 0) return undefined;
 
 	return new Decimal(spendLimit.overage_limit)

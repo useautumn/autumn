@@ -335,6 +335,18 @@ export type ListEntitiesFlags = {
   feature?: ListEntitiesFeature | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const ListEntitiesLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type ListEntitiesLimitType = OpenEnum<typeof ListEntitiesLimitType>;
+
 export type ListEntitiesSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -345,7 +357,11 @@ export type ListEntitiesSpendLimit = {
    */
   enabled: boolean;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: ListEntitiesLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
 };
@@ -369,6 +385,10 @@ export type ListEntitiesUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -917,6 +937,12 @@ export function listEntitiesFlagsFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesLimitType$inboundSchema: z.ZodMiniType<
+  ListEntitiesLimitType,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesLimitType);
+
+/** @internal */
 export const ListEntitiesSpendLimit$inboundSchema: z.ZodMiniType<
   ListEntitiesSpendLimit,
   unknown
@@ -924,11 +950,13 @@ export const ListEntitiesSpendLimit$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(ListEntitiesLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "limit_type": "limitType",
       "overage_limit": "overageLimit",
     });
   }),
@@ -957,6 +985,7 @@ export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListEntitiesInterval$inboundSchema,
     usage: types.optional(types.number()),

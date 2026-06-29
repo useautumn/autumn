@@ -447,6 +447,18 @@ export type MultiAttachRedirectMode = ClosedEnum<
   typeof MultiAttachRedirectMode
 >;
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const MultiAttachLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type MultiAttachLimitType = ClosedEnum<typeof MultiAttachLimitType>;
+
 export type MultiAttachSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -457,7 +469,11 @@ export type MultiAttachSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: MultiAttachLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
 };
@@ -483,6 +499,10 @@ export type MultiAttachUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -1226,9 +1246,15 @@ export const MultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachRedirectMode);
 
 /** @internal */
+export const MultiAttachLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachLimitType
+> = z.enum(MultiAttachLimitType);
+
+/** @internal */
 export type MultiAttachSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -1240,11 +1266,13 @@ export const MultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(MultiAttachLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -1266,6 +1294,7 @@ export const MultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type MultiAttachUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -1277,6 +1306,7 @@ export const MultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: MultiAttachEntityDataInterval$outboundSchema,
   }),

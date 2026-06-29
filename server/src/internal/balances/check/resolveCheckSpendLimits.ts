@@ -12,10 +12,12 @@ export const resolveCheckSpendLimits = <
 	subject,
 	cusEntsForFeature,
 	entityId,
+	additionalAllowanceForFeature,
 }: {
 	subject: Subject;
 	cusEntsForFeature: (featureId: string) => FullCusEntWithFullCusProduct[];
 	entityId?: string;
+	additionalAllowanceForFeature?: (featureId: string) => number;
 }): Subject => {
 	const spendLimits = subject.billing_controls?.spend_limits;
 	if (!spendLimits || spendLimits.length === 0) {
@@ -30,6 +32,9 @@ export const resolveCheckSpendLimits = <
 			spendLimit,
 			cusEnts,
 			entityId,
+			additionalAllowance: spendLimit.feature_id
+				? additionalAllowanceForFeature?.(spendLimit.feature_id)
+				: undefined,
 		});
 		return overageLimit === undefined
 			? []
