@@ -27,6 +27,11 @@ export const setupPaymentAddItemTierSchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const setupPaymentAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
@@ -202,6 +207,68 @@ export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
 	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const setupPaymentPurchaseLimitOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.number(),
+	limit: z.number(),
+});
+
+export const setupPaymentAutoTopupOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchase_limit: z
+		.union([setupPaymentPurchaseLimitOutboundSchema, z.undefined()])
+		.optional(),
+	invoice_mode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const setupPaymentSpendLimitOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
+	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUsageLimitOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	limit: z.number(),
+	interval: z.string(),
+});
+
+export const setupPaymentUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const setupPaymentOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
+export const setupPaymentBillingControlsOutboundSchema = z.object({
+	auto_topups: z
+		.union([z.array(setupPaymentAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+	spend_limits: z
+		.union([z.array(setupPaymentSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_limits: z
+		.union([z.array(setupPaymentUsageLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_alerts: z
+		.union([z.array(setupPaymentUsageAlertOutboundSchema), z.undefined()])
+		.optional(),
+	overage_allowed: z
+		.union([z.array(setupPaymentOverageAllowedOutboundSchema), z.undefined()])
+		.optional(),
+});
+
 export const setupPaymentCustomizeOutboundSchema = z.object({
 	price: z
 		.union([setupPaymentBasePriceOutboundSchema, z.undefined()])
@@ -220,6 +287,9 @@ export const setupPaymentCustomizeOutboundSchema = z.object({
 		.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billing_controls: z
+		.union([setupPaymentBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentAttachDiscountOutboundSchema = z.object({
@@ -450,6 +520,71 @@ export const setupPaymentFreeTrialParamsSchema = z.object({
 	onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional(),
 });
 
+export const setupPaymentPurchaseLimitIntervalSchema = closedEnumSchema;
+
+export const setupPaymentPurchaseLimitSchema = z.object({
+	interval: setupPaymentPurchaseLimitIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.number(),
+});
+
+export const setupPaymentAutoTopupSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([setupPaymentPurchaseLimitSchema, z.undefined()])
+		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const setupPaymentLimitTypeSchema = closedEnumSchema;
+
+export const setupPaymentSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z.union([setupPaymentLimitTypeSchema, z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentUsageLimitIntervalSchema = closedEnumSchema;
+
+export const setupPaymentUsageLimitSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limit: z.number(),
+	interval: setupPaymentUsageLimitIntervalSchema,
+});
+
+export const setupPaymentThresholdTypeSchema = closedEnumSchema;
+
+export const setupPaymentUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: setupPaymentThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const setupPaymentBillingControlsSchema = z.object({
+	autoTopups: z
+		.union([z.array(setupPaymentAutoTopupSchema), z.undefined()])
+		.optional(),
+	spendLimits: z
+		.union([z.array(setupPaymentSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(setupPaymentUsageLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(setupPaymentUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(setupPaymentOverageAllowedSchema), z.undefined()])
+		.optional(),
+});
+
 export const setupPaymentCustomizeSchema = z.object({
 	price: z
 		.union([setupPaymentBasePriceSchema, z.undefined()])
@@ -468,6 +603,9 @@ export const setupPaymentCustomizeSchema = z.object({
 		.union([setupPaymentFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billingControls: z
+		.union([setupPaymentBillingControlsSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentProrationBehaviorSchema = closedEnumSchema;

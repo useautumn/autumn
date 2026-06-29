@@ -233,7 +233,7 @@ export type FeatureType2 = OpenEnum<typeof FeatureType2>;
 
 export type IncludedUsage2 = number | string;
 
-export const CheckInterval2 = {
+export const CheckItemInterval2 = {
   Minute: "minute",
   Hour: "hour",
   Day: "day",
@@ -243,7 +243,7 @@ export const CheckInterval2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type CheckInterval2 = OpenEnum<typeof CheckInterval2>;
+export type CheckItemInterval2 = OpenEnum<typeof CheckItemInterval2>;
 
 export const CheckTierBehavior2 = {
   Graduated: "graduated",
@@ -321,7 +321,7 @@ export type CheckItem2 = {
   /**
    * The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
    */
-  interval?: CheckInterval2 | null | undefined;
+  interval?: CheckItemInterval2 | null | undefined;
   /**
    * The interval count of the product item.
    */
@@ -419,6 +419,207 @@ export type CheckFreeTrial2 = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const CheckPurchaseLimitInterval2 = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type CheckPurchaseLimitInterval2 = OpenEnum<
+  typeof CheckPurchaseLimitInterval2
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type CheckPurchaseLimit2 = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: CheckPurchaseLimitInterval2;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type CheckAutoTopup2 = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: CheckPurchaseLimit2 | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CheckLimitType2 = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CheckLimitType2 = OpenEnum<typeof CheckLimitType2>;
+
+export type CheckSpendLimit2 = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CheckLimitType2 | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const CheckUsageLimitInterval2 = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type CheckUsageLimitInterval2 = OpenEnum<
+  typeof CheckUsageLimitInterval2
+>;
+
+export type CheckUsageLimit2 = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: CheckUsageLimitInterval2;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const CheckThresholdType2 = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type CheckThresholdType2 = OpenEnum<typeof CheckThresholdType2>;
+
+export type CheckUsageAlert2 = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: CheckThresholdType2;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CheckOverageAllowed2 = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Plan-level billing controls used as customer defaults
+ */
+export type CheckBillingControls2 = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<CheckAutoTopup2> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<CheckSpendLimit2> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<CheckUsageLimit2> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CheckUsageAlert2> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CheckOverageAllowed2> | undefined;
+};
+
+/**
  * Scenario for when this product is used in attach flows
  */
 export const ProductScenario2 = {
@@ -510,6 +711,10 @@ export type CheckProduct2 = {
    * ID of the base variant this product is derived from
    */
   baseVariantId: string | null;
+  /**
+   * Plan-level billing controls used as customer defaults
+   */
+  billingControls?: CheckBillingControls2 | undefined;
   /**
    * Scenario for when this product is used in attach flows
    */
@@ -748,7 +953,7 @@ export type FeatureType1 = OpenEnum<typeof FeatureType1>;
 
 export type IncludedUsage1 = number | string;
 
-export const CheckInterval1 = {
+export const CheckItemInterval1 = {
   Minute: "minute",
   Hour: "hour",
   Day: "day",
@@ -758,7 +963,7 @@ export const CheckInterval1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type CheckInterval1 = OpenEnum<typeof CheckInterval1>;
+export type CheckItemInterval1 = OpenEnum<typeof CheckItemInterval1>;
 
 export const CheckTierBehavior1 = {
   Graduated: "graduated",
@@ -836,7 +1041,7 @@ export type CheckItem1 = {
   /**
    * The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
    */
-  interval?: CheckInterval1 | null | undefined;
+  interval?: CheckItemInterval1 | null | undefined;
   /**
    * The interval count of the product item.
    */
@@ -934,6 +1139,207 @@ export type CheckFreeTrial1 = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const CheckPurchaseLimitInterval1 = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type CheckPurchaseLimitInterval1 = OpenEnum<
+  typeof CheckPurchaseLimitInterval1
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type CheckPurchaseLimit1 = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: CheckPurchaseLimitInterval1;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount: number;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type CheckAutoTopup1 = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled: boolean;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: CheckPurchaseLimit1 | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CheckLimitType1 = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CheckLimitType1 = OpenEnum<typeof CheckLimitType1>;
+
+export type CheckSpendLimit1 = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CheckLimitType1 | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const CheckUsageLimitInterval1 = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type CheckUsageLimitInterval1 = OpenEnum<
+  typeof CheckUsageLimitInterval1
+>;
+
+export type CheckUsageLimit1 = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: CheckUsageLimitInterval1;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const CheckThresholdType1 = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type CheckThresholdType1 = OpenEnum<typeof CheckThresholdType1>;
+
+export type CheckUsageAlert1 = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: CheckThresholdType1;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CheckOverageAllowed1 = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
+ * Plan-level billing controls used as customer defaults
+ */
+export type CheckBillingControls1 = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<CheckAutoTopup1> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<CheckSpendLimit1> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<CheckUsageLimit1> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CheckUsageAlert1> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CheckOverageAllowed1> | undefined;
+};
+
+/**
  * Scenario for when this product is used in attach flows
  */
 export const ProductScenario1 = {
@@ -1025,6 +1431,10 @@ export type CheckProduct1 = {
    * ID of the base variant this product is derived from
    */
   baseVariantId: string | null;
+  /**
+   * Plan-level billing controls used as customer defaults
+   */
+  billingControls?: CheckBillingControls1 | undefined;
   /**
    * Scenario for when this product is used in attach flows
    */
@@ -1378,10 +1788,10 @@ export function includedUsage2FromJSON(
 }
 
 /** @internal */
-export const CheckInterval2$inboundSchema: z.ZodMiniType<
-  CheckInterval2,
+export const CheckItemInterval2$inboundSchema: z.ZodMiniType<
+  CheckItemInterval2,
   unknown
-> = openEnums.inboundSchema(CheckInterval2);
+> = openEnums.inboundSchema(CheckItemInterval2);
 
 /** @internal */
 export const CheckTierBehavior2$inboundSchema: z.ZodMiniType<
@@ -1504,7 +1914,7 @@ export const CheckItem2$inboundSchema: z.ZodMiniType<CheckItem2, unknown> = z
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
-      interval: z.optional(z.nullable(CheckInterval2$inboundSchema)),
+      interval: z.optional(z.nullable(CheckItemInterval2$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
       tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
@@ -1590,6 +2000,248 @@ export function checkFreeTrial2FromJSON(
 }
 
 /** @internal */
+export const CheckPurchaseLimitInterval2$inboundSchema: z.ZodMiniType<
+  CheckPurchaseLimitInterval2,
+  unknown
+> = openEnums.inboundSchema(CheckPurchaseLimitInterval2);
+
+/** @internal */
+export const CheckPurchaseLimit2$inboundSchema: z.ZodMiniType<
+  CheckPurchaseLimit2,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: CheckPurchaseLimitInterval2$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function checkPurchaseLimit2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckPurchaseLimit2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckPurchaseLimit2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckPurchaseLimit2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckAutoTopup2$inboundSchema: z.ZodMiniType<
+  CheckAutoTopup2,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => CheckPurchaseLimit2$inboundSchema),
+    ),
+    invoice_mode: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
+    });
+  }),
+);
+
+export function checkAutoTopup2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckAutoTopup2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckAutoTopup2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckAutoTopup2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckLimitType2$inboundSchema: z.ZodMiniType<
+  CheckLimitType2,
+  unknown
+> = openEnums.inboundSchema(CheckLimitType2);
+
+/** @internal */
+export const CheckSpendLimit2$inboundSchema: z.ZodMiniType<
+  CheckSpendLimit2,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(CheckLimitType2$inboundSchema),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "limit_type": "limitType",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function checkSpendLimit2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckSpendLimit2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckSpendLimit2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckSpendLimit2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckUsageLimitInterval2$inboundSchema: z.ZodMiniType<
+  CheckUsageLimitInterval2,
+  unknown
+> = openEnums.inboundSchema(CheckUsageLimitInterval2);
+
+/** @internal */
+export const CheckUsageLimit2$inboundSchema: z.ZodMiniType<
+  CheckUsageLimit2,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
+    limit: types.number(),
+    interval: CheckUsageLimitInterval2$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function checkUsageLimit2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageLimit2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageLimit2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageLimit2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckThresholdType2$inboundSchema: z.ZodMiniType<
+  CheckThresholdType2,
+  unknown
+> = openEnums.inboundSchema(CheckThresholdType2);
+
+/** @internal */
+export const CheckUsageAlert2$inboundSchema: z.ZodMiniType<
+  CheckUsageAlert2,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: CheckThresholdType2$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function checkUsageAlert2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageAlert2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageAlert2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageAlert2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckOverageAllowed2$inboundSchema: z.ZodMiniType<
+  CheckOverageAllowed2,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function checkOverageAllowed2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckOverageAllowed2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckOverageAllowed2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckOverageAllowed2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckBillingControls2$inboundSchema: z.ZodMiniType<
+  CheckBillingControls2,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => CheckAutoTopup2$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CheckSpendLimit2$inboundSchema)),
+    ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => CheckUsageLimit2$inboundSchema)),
+    ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => CheckUsageAlert2$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CheckOverageAllowed2$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function checkBillingControls2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckBillingControls2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckBillingControls2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckBillingControls2' from JSON`,
+  );
+}
+
+/** @internal */
 export const ProductScenario2$inboundSchema: z.ZodMiniType<
   ProductScenario2,
   unknown
@@ -1643,6 +2295,9 @@ export const CheckProduct2$inboundSchema: z.ZodMiniType<
     items: z.array(z.lazy(() => CheckItem2$inboundSchema)),
     free_trial: types.nullable(z.lazy(() => CheckFreeTrial2$inboundSchema)),
     base_variant_id: types.nullable(types.string()),
+    billing_controls: types.optional(
+      z.lazy(() => CheckBillingControls2$inboundSchema),
+    ),
     scenario: types.optional(ProductScenario2$inboundSchema),
     properties: types.optional(z.lazy(() => Properties2$inboundSchema)),
   }),
@@ -1653,6 +2308,7 @@ export const CheckProduct2$inboundSchema: z.ZodMiniType<
       "created_at": "createdAt",
       "free_trial": "freeTrial",
       "base_variant_id": "baseVariantId",
+      "billing_controls": "billingControls",
     });
   }),
 );
@@ -1935,10 +2591,10 @@ export function includedUsage1FromJSON(
 }
 
 /** @internal */
-export const CheckInterval1$inboundSchema: z.ZodMiniType<
-  CheckInterval1,
+export const CheckItemInterval1$inboundSchema: z.ZodMiniType<
+  CheckItemInterval1,
   unknown
-> = openEnums.inboundSchema(CheckInterval1);
+> = openEnums.inboundSchema(CheckItemInterval1);
 
 /** @internal */
 export const CheckTierBehavior1$inboundSchema: z.ZodMiniType<
@@ -2061,7 +2717,7 @@ export const CheckItem1$inboundSchema: z.ZodMiniType<CheckItem1, unknown> = z
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
-      interval: z.optional(z.nullable(CheckInterval1$inboundSchema)),
+      interval: z.optional(z.nullable(CheckItemInterval1$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
       tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
@@ -2147,6 +2803,248 @@ export function checkFreeTrial1FromJSON(
 }
 
 /** @internal */
+export const CheckPurchaseLimitInterval1$inboundSchema: z.ZodMiniType<
+  CheckPurchaseLimitInterval1,
+  unknown
+> = openEnums.inboundSchema(CheckPurchaseLimitInterval1);
+
+/** @internal */
+export const CheckPurchaseLimit1$inboundSchema: z.ZodMiniType<
+  CheckPurchaseLimit1,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: CheckPurchaseLimitInterval1$inboundSchema,
+    interval_count: z._default(types.number(), 1),
+    limit: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+    });
+  }),
+);
+
+export function checkPurchaseLimit1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckPurchaseLimit1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckPurchaseLimit1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckPurchaseLimit1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckAutoTopup1$inboundSchema: z.ZodMiniType<
+  CheckAutoTopup1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+    threshold: types.number(),
+    quantity: types.number(),
+    purchase_limit: types.optional(
+      z.lazy(() => CheckPurchaseLimit1$inboundSchema),
+    ),
+    invoice_mode: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
+    });
+  }),
+);
+
+export function checkAutoTopup1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckAutoTopup1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckAutoTopup1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckAutoTopup1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckLimitType1$inboundSchema: z.ZodMiniType<
+  CheckLimitType1,
+  unknown
+> = openEnums.inboundSchema(CheckLimitType1);
+
+/** @internal */
+export const CheckSpendLimit1$inboundSchema: z.ZodMiniType<
+  CheckSpendLimit1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(CheckLimitType1$inboundSchema),
+    overage_limit: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "limit_type": "limitType",
+      "overage_limit": "overageLimit",
+    });
+  }),
+);
+
+export function checkSpendLimit1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckSpendLimit1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckSpendLimit1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckSpendLimit1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckUsageLimitInterval1$inboundSchema: z.ZodMiniType<
+  CheckUsageLimitInterval1,
+  unknown
+> = openEnums.inboundSchema(CheckUsageLimitInterval1);
+
+/** @internal */
+export const CheckUsageLimit1$inboundSchema: z.ZodMiniType<
+  CheckUsageLimit1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
+    limit: types.number(),
+    interval: CheckUsageLimitInterval1$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function checkUsageLimit1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageLimit1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageLimit1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageLimit1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckThresholdType1$inboundSchema: z.ZodMiniType<
+  CheckThresholdType1,
+  unknown
+> = openEnums.inboundSchema(CheckThresholdType1);
+
+/** @internal */
+export const CheckUsageAlert1$inboundSchema: z.ZodMiniType<
+  CheckUsageAlert1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: CheckThresholdType1$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function checkUsageAlert1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckUsageAlert1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckUsageAlert1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckUsageAlert1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckOverageAllowed1$inboundSchema: z.ZodMiniType<
+  CheckOverageAllowed1,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function checkOverageAllowed1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckOverageAllowed1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckOverageAllowed1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckOverageAllowed1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckBillingControls1$inboundSchema: z.ZodMiniType<
+  CheckBillingControls1,
+  unknown
+> = z.pipe(
+  z.object({
+    auto_topups: types.optional(
+      z.array(z.lazy(() => CheckAutoTopup1$inboundSchema)),
+    ),
+    spend_limits: types.optional(
+      z.array(z.lazy(() => CheckSpendLimit1$inboundSchema)),
+    ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => CheckUsageLimit1$inboundSchema)),
+    ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => CheckUsageAlert1$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CheckOverageAllowed1$inboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "auto_topups": "autoTopups",
+      "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
+    });
+  }),
+);
+
+export function checkBillingControls1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckBillingControls1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckBillingControls1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckBillingControls1' from JSON`,
+  );
+}
+
+/** @internal */
 export const ProductScenario1$inboundSchema: z.ZodMiniType<
   ProductScenario1,
   unknown
@@ -2200,6 +3098,9 @@ export const CheckProduct1$inboundSchema: z.ZodMiniType<
     items: z.array(z.lazy(() => CheckItem1$inboundSchema)),
     free_trial: types.nullable(z.lazy(() => CheckFreeTrial1$inboundSchema)),
     base_variant_id: types.nullable(types.string()),
+    billing_controls: types.optional(
+      z.lazy(() => CheckBillingControls1$inboundSchema),
+    ),
     scenario: types.optional(ProductScenario1$inboundSchema),
     properties: types.optional(z.lazy(() => Properties1$inboundSchema)),
   }),
@@ -2210,6 +3111,7 @@ export const CheckProduct1$inboundSchema: z.ZodMiniType<
       "created_at": "createdAt",
       "free_trial": "freeTrial",
       "base_variant_id": "baseVariantId",
+      "billing_controls": "billingControls",
     });
   }),
 );

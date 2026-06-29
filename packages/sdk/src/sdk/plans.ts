@@ -91,6 +91,8 @@ export class Plans extends ClientSDK {
    * @param items - Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. (optional)
    * @param freeTrial - Free trial configuration. Customers can try this plan before being charged. (optional)
    * @param config - Miscellaneous plan-level configuration flags. (optional)
+   * @param billingControls - Plan-level billing controls used as customer defaults. (optional)
+   * @param metadata - Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan. (optional)
    *
    * @returns The created plan object.
    */
@@ -201,7 +203,6 @@ export class Plans extends ClientSDK {
    * ```
    *
    * @param planId - The ID of the plan to update.
-   * @param group - Group identifier for organizing related plans. Plans in the same group are mutually exclusive. (optional)
    * @param name - Display name of the plan. (optional)
    * @param addOn - Whether the plan is an add-on. (optional)
    * @param autoEnable - Whether the plan is automatically enabled. (optional)
@@ -209,7 +210,15 @@ export class Plans extends ClientSDK {
    * @param items - Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. (optional)
    * @param freeTrial - The free trial of the plan. Set to null to remove the free trial. (optional)
    * @param config - Miscellaneous plan-level configuration flags. (optional)
+   * @param billingControls - Plan-level billing controls used as customer defaults. (optional)
+   * @param metadata - Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan. (optional)
+   * @param basePlanId - The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan. (optional)
    * @param newPlanId - The new ID to use for the plan. Can only be updated if the plan has not been used by any customers. (optional)
+   * @param allVersions - Apply the update diff to all versions of this plan. Mutually exclusive with disable_version. (optional)
+   * @param forceVersion - Force versioning even when no customers exist. Mutually exclusive with disable_version. (optional)
+   * @param updateVariantIds - Variant plan IDs to apply this update to. Empty or omitted means no propagation. (optional)
+   * @param variants - Additive variant updates for this base plan. Missing variants are created when name is provided. (optional)
+   * @param isDefault - Whether this is the org's default plan. Cannot be true on a variant. (optional)
    *
    * @returns The updated plan object.
    */

@@ -300,7 +300,7 @@ export const TrackTokensParams$outboundSchema: z.ZodMiniType<
     audioOutputTokens: z.optional(z.int()),
     reasoningTokens: z.optional(z.int()),
     properties: z.optional(z.record(z.string(), z.any())),
-    timestamp: z.optional(z.number()),
+    timestamp: z.optional(z.int()),
     async: z.optional(z.boolean()),
   }),
   z.transform((v) => {
