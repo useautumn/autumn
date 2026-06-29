@@ -42,7 +42,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install dependencies
-        run: .github/scripts/bun-install-with-retry.sh
+        run: bun install --frozen-lockfile
 
       - name: Run TypeScript type check
         run: cd server && bun ts
