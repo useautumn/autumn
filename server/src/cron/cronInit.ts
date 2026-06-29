@@ -16,6 +16,7 @@ import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
+import { runClearExpiredResetCron } from "./resetCron/runClearExpiredResetCron.js";
 import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
@@ -65,6 +66,7 @@ const main = async () => {
 		runInvoiceCron({ ctx }),
 		runOneOffCleanup({ ctx }),
 		runOneOffExpiry({ ctx }),
+		runClearExpiredResetCron({ ctx }),
 	]);
 };
 
