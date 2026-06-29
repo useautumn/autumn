@@ -170,6 +170,7 @@
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@useautumn/gateway --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
 		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
+		"atl": "NODE_PATH=packages bun packages/atmn/dist/cli.js",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",

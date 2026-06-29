@@ -47,8 +47,63 @@
 
 <variants>
 
-- Today, Autumn has no concept of "variants"; each variant is its own plan, e.g. `pro_monthly` or `pro_annual`.
-- Annual plan pricing can coexist with shorter plan item reset intervals, e.g. annual base price with monthly credit resets.
+- Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
+- `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
+- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
+- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- Common variant uses: billing intervals, A/B price packages, and volume ladders.
+
+Annual interval variant:
+
+```json
+{
+  "variant_plan_id": "pro_annual",
+  "name": "Pro Annual",
+  "customize": {
+    "price": { "amount": 200, "interval": "year" }
+  }
+}
+```
+
+A/B testing variant:
+
+```json
+{
+  "variant_plan_id": "pro_b",
+  "name": "Pro B",
+  "customize": {
+    "price": { "amount": 29, "interval": "month" },
+    "add_items": [{ "feature_id": "analytics" }]
+  }
+}
+```
+
+Metered volume variant:
+
+```json
+{
+  "variant_plan_id": "pro_100k",
+  "name": "Pro 100k",
+  "customize": {
+    "price": { "amount": 35, "interval": "month" },
+    "remove_items": [
+      { "feature_id": "emails", "billing_method": "usage_based" }
+    ],
+    "add_items": [
+      {
+        "feature_id": "emails",
+        "included": 100000,
+        "price": {
+          "amount": 0.9,
+          "billing_units": 1000,
+          "billing_method": "usage_based",
+          "interval": "month"
+        }
+      }
+    ]
+  }
+}
+```
 
 </variants>
 
