@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import {
 	type ApiPlanV1,
 	ApiVersion,
-	type AttachParamsV1Input,
 	customerProducts,
 	customers,
 	ErrCode,
@@ -11,7 +10,6 @@ import {
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -259,19 +257,12 @@ test(`${chalk.yellowBright("migration drafts: variant custom plans follow includ
 	await autumnV2_2.billing.attach({
 		customer_id: baseCustomerId,
 		plan_id: planId,
-		customize: {
-			price: itemsV2.annualPrice({ amount: 200 }),
-		},
 	});
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+	await autumnV1.billing.attach({
 		customer_id: customVariantCustomerId,
-		plan_id: variantId,
-		customize: {
-			price: itemsV2.annualPrice({ amount: 200 }),
-		},
-		// items: [items.monthlyMessages({ includedUsage: 250 })],
+		product_id: variantId,
+		items: [items.monthlyMessages({ includedUsage: 250 })],
 	});
-	return;
 
 	expect(
 		await getCustomerProductCustomState({
