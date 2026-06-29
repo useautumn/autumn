@@ -26,6 +26,7 @@ import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheCo
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
+import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
 import { handleGetMasterStripeAccount } from "./handleGetMasterStripeAccount";
 import { handleGetOrgMember } from "./handleGetOrgMember";
@@ -165,6 +166,7 @@ honoAdminRouter.patch(
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
+honoAdminRouter.get("/default-stripe-account", ...handleGetDefaultStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
 honoAdminRouter.post(
 	"/oauth-clients/slack-mcp",
