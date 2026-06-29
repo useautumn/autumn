@@ -211,8 +211,13 @@ fi
 # 6. bun
 # ---------------------------------------------------------------------------
 if ! command -v bun >/dev/null 2>&1; then
-  log "Installing bun"
-  curl -fsSL https://bun.sh/install | bash
+  BUN_VERSION="$(cat "$REPO_ROOT/.bun-version" 2>/dev/null | tr -d '[:space:]')"
+  log "Installing bun ${BUN_VERSION:-latest}"
+  if [ -n "$BUN_VERSION" ]; then
+    curl -fsSL https://bun.sh/install | bash -s "bun-v$BUN_VERSION"
+  else
+    curl -fsSL https://bun.sh/install | bash
+  fi
 fi
 # bun installs to ~/.bun/bin; surface it for the rest of this script.
 export PATH="$HOME/.bun/bin:$PATH"
@@ -225,7 +230,10 @@ log "bun $(bun --version)"
 # with "executable file not found in $PATH: bun".
 BUN_BIN="$(command -v bun)"
 sudo ln -sf "$BUN_BIN" /usr/local/bin/bun
-log "linked bun -> /usr/local/bin/bun ($BUN_BIN)"
+# `node` → bun too: the ingress server and any `env node` install shebang run on
+# one runtime (matches modalImage.ts; no separate node install).
+sudo ln -sf "$BUN_BIN" /usr/local/bin/node
+log "linked bun -> /usr/local/bin/bun + node ($BUN_BIN)"
 
 # ---------------------------------------------------------------------------
 # 7. initdb a PG18 cluster, role postgres/postgres SUPERUSER, createdb autumn,

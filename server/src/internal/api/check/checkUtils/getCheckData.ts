@@ -3,6 +3,8 @@ import {
 	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
+	type DbSpendLimit,
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
@@ -11,6 +13,7 @@ import {
 	InternalError,
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
+	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
@@ -18,6 +21,10 @@ import { resolveCheckSpendLimits } from "@/internal/balances/check/resolveCheckS
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
+import {
+	getOrCreateCachedPartialFullSubject,
+	getOrSetCachedPartialFullSubject,
+} from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
@@ -61,6 +68,9 @@ export const getCheckData = async ({
 	if (!feature) {
 		throw new FeatureNotFoundError({ featureId: feature_id });
 	}
+	const featureIds = Array.from(
+		new Set([feature_id, ...creditSystems.map((creditSystem) => creditSystem.id)]),
+	);
 
 	let apiSubject: ApiCustomerV5 | ApiEntityV2 | undefined;
 	const start = performance.now();
@@ -86,6 +96,49 @@ export const getCheckData = async ({
 	);
 
 	apiSubject = apiCustomer;
+	const fullSubjectForAggregates = !entity_id
+		? ctx.apiVersion.gte(ApiVersion.V2_1)
+			? await getOrSetCachedPartialFullSubject({
+					ctx,
+					customerId: customer_id,
+					featureIds,
+					source: "getCheckData",
+				})
+			: await getOrCreateCachedPartialFullSubject({
+					ctx,
+					params: body,
+					featureIds,
+					source: "getCheckData",
+				})
+		: undefined;
+	const additionalAllowanceForFeature = (featureId: string) =>
+		fullSubjectForAggregates?.aggregated_customer_entitlements?.find(
+			(entitlement) => entitlement.feature_id === featureId,
+		)?.allowance_total ?? 0;
+	const cusEntsForFeature = (featureId: string) =>
+		fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureId,
+			entity: fullCustomer.entity,
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
+		});
+	const normalizeSpendLimitForCompare = (
+		control: DbSpendLimit,
+	): DbSpendLimit => {
+		if (control.limit_type !== "usage_percentage" || !control.feature_id) {
+			return control;
+		}
+		return {
+			...control,
+			overage_limit: resolveSpendLimitOverageLimit({
+				spendLimit: control,
+				cusEnts: cusEntsForFeature(control.feature_id),
+				entityId: entity_id,
+				additionalAllowance: additionalAllowanceForFeature(control.feature_id),
+			}),
+			limit_type: "absolute",
+		};
+	};
 	if (entity_id && fullCustomer.entity) {
 		const { apiEntity: apiEntityResult } = await getApiEntityBase({
 			ctx,
@@ -97,11 +150,13 @@ export const getCheckData = async ({
 			entityApiSubject: apiEntityResult,
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullCustomer.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	} else {
 		apiSubject = mergePlanBillingControlsForCheck({
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullCustomer.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	}
 
@@ -118,8 +173,10 @@ export const getCheckData = async ({
 				fullCustomer,
 				featureId,
 				entity: fullCustomer.entity,
+				inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 			}),
 		entityId: entity_id,
+		additionalAllowanceForFeature,
 	});
 
 	const featureToUseMin = getFeatureToUseForCheck({

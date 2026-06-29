@@ -3,6 +3,8 @@ import {
 	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
+	type DbSpendLimit,
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
@@ -11,6 +13,7 @@ import {
 	getFeatureToUseForCheck,
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
+	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -93,6 +96,34 @@ export const getCheckDataV2 = async ({
 		includeAggregations: false,
 	});
 
+	const cusEntsForFeature = (featureId: string) =>
+		fullSubjectToCustomerEntitlements({
+			fullSubject,
+			featureIds: [featureId],
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
+		});
+	const additionalAllowanceForFeature = (featureId: string) =>
+		fullSubject.aggregated_customer_entitlements?.find(
+			(entitlement) => entitlement.feature_id === featureId,
+		)?.allowance_total ?? 0;
+	const normalizeSpendLimitForCompare = (
+		control: DbSpendLimit,
+	): DbSpendLimit => {
+		if (control.limit_type !== "usage_percentage" || !control.feature_id) {
+			return control;
+		}
+		return {
+			...control,
+			overage_limit: resolveSpendLimitOverageLimit({
+				spendLimit: control,
+				cusEnts: cusEntsForFeature(control.feature_id),
+				entityId: entity_id,
+				additionalAllowance: additionalAllowanceForFeature(control.feature_id),
+			}),
+			limit_type: "absolute",
+		};
+	};
+
 	if (fullSubject.subjectType === "entity") {
 		const { apiCustomer } = await getApiCustomerBaseV2({
 			ctx,
@@ -108,11 +139,13 @@ export const getCheckDataV2 = async ({
 			entityApiSubject: evaluationApiSubject as ApiEntityV2,
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullSubject.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	} else {
 		evaluationApiSubject = mergePlanBillingControlsForCheck({
 			customerApiSubject: evaluationApiSubject as ApiCustomerV5,
 			planCustomerProducts: fullSubject.customer_products,
+			normalizeSpendLimitForCompare,
 		});
 	}
 
@@ -122,8 +155,10 @@ export const getCheckDataV2 = async ({
 			fullSubjectToCustomerEntitlements({
 				fullSubject,
 				featureIds: [featureId],
+				inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 			}),
 		entityId: entity_id,
+		additionalAllowanceForFeature,
 	});
 
 	const featureToUseMin = getFeatureToUseForCheck({

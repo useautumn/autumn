@@ -693,7 +693,8 @@ actions:
                     {
                       featureId: "messages",
                       enabled: true,
-                      overageLimit: 25,
+                      limitType: "usage_percentage",
+                      overageLimit: 120,
                     },
                   ],
                 },

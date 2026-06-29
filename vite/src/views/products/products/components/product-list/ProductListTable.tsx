@@ -209,6 +209,10 @@ export function ProductListTable() {
 								enableSorting,
 								isLoading: isCountsLoading,
 								getRowHref,
+								getRowClassName: (product: ProductWithCounts) =>
+									product.base_id
+										? "bg-background hover:bg-background dark:hover:bg-background"
+										: undefined,
 								emptyStateText: queryStates.showArchivedProducts
 									? "You haven't archived any plans yet"
 									: "Recurring plans that bill customers on a regular schedule",

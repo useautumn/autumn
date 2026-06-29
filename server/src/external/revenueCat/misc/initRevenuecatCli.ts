@@ -20,7 +20,7 @@ import type {
 } from "../revenuecatTypes";
 
 type ListRevenuecatProductsResponse = {
-	products: { id: string; name: string }[];
+	products: { id: string; name: string; platforms: string[] }[];
 };
 
 type ListRevenuecatProjectsResponse = {
@@ -271,22 +271,44 @@ export const initRevenuecatCli = ({
 				nextPage = data.next_page;
 			}
 
-			// Group products by store_identifier and combine names
-			const productMap = new Map<string, string[]>();
+			// Resolve each app's store type so products can be labelled by platform.
+			const appsUrl = new URL(
+				`https://api.revenuecat.com/v2/projects/${projectId}/apps`,
+			);
+			appsUrl.searchParams.set("limit", "50");
+			const appsResponse = await fetchImpl(appsUrl, { headers: authHeaders });
+			await checkOk(appsResponse);
+			const appsData = (await appsResponse.json()) as RevenueCatAppsResponse;
+			const appTypeById = new Map(
+				(appsData.items ?? []).map((app) => [app.id, app.type]),
+			);
+
+			// Group products by store_identifier, combining names and platforms.
+			const productMap = new Map<
+				string,
+				{ names: string[]; platforms: Set<string> }
+			>();
 			for (const product of items) {
-				const existing = productMap.get(product.store_identifier);
-				if (existing) {
-					existing.push(product.display_name);
-				} else {
-					productMap.set(product.store_identifier, [product.display_name]);
+				const entry = productMap.get(product.store_identifier) ?? {
+					names: [],
+					platforms: new Set<string>(),
+				};
+				entry.names.push(product.display_name);
+				const platform = appTypeById.get(product.app_id);
+				if (platform) {
+					entry.platforms.add(platform);
 				}
+				productMap.set(product.store_identifier, entry);
 			}
 
 			return {
-				products: Array.from(productMap.entries()).map(([id, names]) => ({
-					id,
-					name: names.join(", "),
-				})),
+				products: Array.from(productMap.entries()).map(
+					([id, { names, platforms }]) => ({
+						id,
+						name: names.join(", "),
+						platforms: Array.from(platforms),
+					}),
+				),
 			} satisfies ListRevenuecatProductsResponse;
 		},
 

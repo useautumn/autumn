@@ -12,6 +12,8 @@ export type ApplyDiffOutput = {
 };
 
 type ApiPlanItem = ApiPlanV1["items"][number];
+type ApiPlanItemPrice = NonNullable<ApiPlanItem["price"]>;
+type ApiPlanItemRollover = NonNullable<ApiPlanItem["rollover"]>;
 
 const applyPrice = (
 	base: ApiPlanV1["price"],
@@ -53,13 +55,37 @@ const removeItems = (
 	);
 };
 
+const toApiPlanItemPrice = (
+	price: CreatePlanItemParamsV1["price"],
+): ApiPlanItemPrice | null => {
+	if (!price) return null;
+
+	return {
+		...price,
+		billing_units: price.billing_units ?? 1,
+		max_purchase: price.max_purchase ?? null,
+	};
+};
+
+const toApiPlanItemRollover = (
+	rollover: CreatePlanItemParamsV1["rollover"],
+): ApiPlanItemRollover | undefined => {
+	if (!rollover) return undefined;
+
+	return {
+		...rollover,
+		max: rollover.max ?? null,
+	};
+};
+
 const toApiPlanItem = (params: CreatePlanItemParamsV1): ApiPlanItem => {
 	return {
 		...params,
 		included: params.included ?? 0,
 		unlimited: params.unlimited ?? false,
 		reset: params.reset ?? null,
-		price: params.price ?? null,
+		price: toApiPlanItemPrice(params.price),
+		rollover: toApiPlanItemRollover(params.rollover),
 	} as ApiPlanItem;
 };
 

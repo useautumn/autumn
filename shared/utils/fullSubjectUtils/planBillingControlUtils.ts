@@ -16,7 +16,7 @@ const MOST_RESTRICTIVE_BY_KEY: Partial<Record<BillingControlKey, Comparator>> =
 		overage_allowed: pickStricterOverageAllowed as Comparator,
 	};
 
-const DEFAULT_PLAN_CONTROL_STATUSES = [
+export const DEFAULT_PLAN_CONTROL_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
 	CusProductStatus.Trialing,
@@ -64,18 +64,22 @@ export const findPlanBillingControlWithProduct = <
 	matches,
 	now,
 	inStatuses,
+	normalizeForCompare,
 }: {
 	customerProducts: FullCusProduct[];
 	controlKey: TKey;
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
+	/** Projection used only for comparison; the original control is returned. */
+	normalizeForCompare?: (control: TControl) => TControl;
 }): { control: TControl; customerProduct: FullCusProduct } | undefined => {
 	const mostRestrictive = MOST_RESTRICTIVE_BY_KEY[controlKey] as
 		| ((left: TControl, right: TControl) => TControl)
 		| undefined;
 
 	let winner: { control: TControl; customerProduct: FullCusProduct } | undefined;
+	let winnerNormalized: TControl | undefined;
 	for (const customerProduct of getPlanBillingControlProducts({
 		customerProducts,
 		now,
@@ -88,10 +92,20 @@ export const findPlanBillingControlWithProduct = <
 		const control = controls?.find(matches);
 		if (!control) continue;
 		if (!mostRestrictive) return { control, customerProduct };
-		winner =
-			winner && mostRestrictive(winner.control, control) === winner.control
-				? winner
-				: { control, customerProduct };
+		if (!winner) {
+			winner = { control, customerProduct };
+			winnerNormalized = normalizeForCompare?.(control) ?? control;
+			continue;
+		}
+		const candidateNormalized = normalizeForCompare?.(control) ?? control;
+		const stricter = mostRestrictive(
+			winnerNormalized as TControl,
+			candidateNormalized,
+		);
+		if (stricter !== winnerNormalized) {
+			winner = { control, customerProduct };
+			winnerNormalized = candidateNormalized;
+		}
 	}
 	return winner;
 };
@@ -105,6 +119,7 @@ export const findPlanBillingControl = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
+	normalizeForCompare?: (control: TControl) => TControl;
 }): TControl | undefined =>
 	findPlanBillingControlWithProduct<TControl, TKey>(args)?.control;
 
@@ -123,6 +138,7 @@ export const resolveBillingControlWithProduct = <
 	matches,
 	now,
 	inStatuses,
+	normalizeForCompare,
 }: {
 	controlLists: Array<TControl[] | null | undefined>;
 	customerProducts?: FullCusProduct[];
@@ -130,6 +146,7 @@ export const resolveBillingControlWithProduct = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
+	normalizeForCompare?: (control: TControl) => TControl;
 }): { control: TControl; customerProduct?: FullCusProduct } | undefined => {
 	for (const controls of controlLists) {
 		const control = controls?.find(matches);
@@ -144,6 +161,7 @@ export const resolveBillingControlWithProduct = <
 		matches,
 		now,
 		inStatuses,
+		normalizeForCompare,
 	});
 };
 
@@ -157,6 +175,7 @@ export const resolveBillingControl = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
+	normalizeForCompare?: (control: TControl) => TControl;
 }) => resolveBillingControlWithProduct<TControl, TKey>(args)?.control;
 
 export const fullSubjectToPlanProducts = ({

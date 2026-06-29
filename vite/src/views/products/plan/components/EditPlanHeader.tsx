@@ -18,6 +18,7 @@ import {
 	TriangleIcon,
 	UserIcon,
 } from "@phosphor-icons/react";
+import { PlusIcon } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
@@ -42,10 +43,13 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { useCreateVariant } from "../hooks/useCreateVariant";
 import {
 	MigrateCustomersDialog,
 	useMigratableVersions,
 } from "../versioning/MigrateCustomersDialog";
+import { CreateVariantButton } from "./CreateVariantButton";
+import { CreateVariantDialog } from "./CreateVariantDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 const MIGRATE_CUSTOMERS = "__migrate_customers__";
@@ -276,10 +280,7 @@ export const EditPlanHeader = () => {
 								{showAllVariants ? (
 									<Tooltip>
 										<TooltipTrigger render={<span />}>
-											<SelectTrigger
-												className="w-fit min-w-28 !h-6"
-												size="sm"
-											>
+											<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 												<SelectValue placeholder="Version" />
 											</SelectTrigger>
 										</TooltipTrigger>
@@ -328,7 +329,12 @@ export const EditPlanHeader = () => {
 								</SelectContent>
 							</Select>
 						)}
-						{!isCusPlanEditor && <PlanToolbar />}
+						{!isCusPlanEditor && (
+							<>
+								<CreateVariantButton />
+								<PlanToolbar />
+							</>
+						)}
 					</div>
 				</div>
 			</div>
@@ -337,6 +343,7 @@ export const EditPlanHeader = () => {
 };
 
 const SHOW_ALL_VARIANTS = "__show_all_variants__";
+const CREATE_VARIANT = "__create_variant__";
 
 const VariantSelect = () => {
 	const product = useProductStore((s) => s.product);
@@ -360,10 +367,17 @@ const VariantSelect = () => {
 		return base ? [base, ...variants] : variants;
 	}, [products, baseId]);
 
+	const baseProduct = products.find((p) => p.id === baseId);
+	const createVariant = useCreateVariant(baseProduct ?? product);
+
 	const hasVariants = variantOptions.some((p) => p.id !== baseId);
 	if (!hasVariants) return null;
 
 	const handleChange = (id: string) => {
+		if (id === CREATE_VARIANT) {
+			createVariant.setOpen(true);
+			return;
+		}
 		if (id === SHOW_ALL_VARIANTS) {
 			setShowAllVariants(true);
 			// Variant cards only exist on the base, so focus it.
@@ -382,34 +396,46 @@ const VariantSelect = () => {
 	};
 
 	return (
-		<Select
-			value={showAllVariants ? SHOW_ALL_VARIANTS : product.id}
-			onValueChange={handleChange}
-			items={{
-				...Object.fromEntries(variantOptions.map((v) => [v.id, v.name])),
-				[SHOW_ALL_VARIANTS]: "All variants",
-			}}
-		>
-			<SelectTrigger className="w-fit min-w-28 max-w-48 !h-6" size="sm">
-				<SelectValue placeholder="Variant" className="min-w-0 truncate" />
-			</SelectTrigger>
-			<SelectContent>
-				{variantOptions.map((variant) => (
-					<SelectItem key={variant.id} value={variant.id}>
-						<div className="flex items-center justify-between w-full gap-3">
-							<span>{variant.name}</span>
-							{variant.id === baseId && (
-								<IconBadge variant="muted">Base</IconBadge>
-							)}
+		<>
+			<Select
+				value={showAllVariants ? SHOW_ALL_VARIANTS : product.id}
+				onValueChange={handleChange}
+				items={{
+					...Object.fromEntries(variantOptions.map((v) => [v.id, v.name])),
+					[SHOW_ALL_VARIANTS]: "All variants",
+				}}
+			>
+				<SelectTrigger className="w-fit min-w-28 max-w-48 !h-6" size="sm">
+					<SelectValue placeholder="Variant" className="min-w-0 truncate" />
+				</SelectTrigger>
+				<SelectContent>
+					{variantOptions.map((variant) => (
+						<SelectItem key={variant.id} value={variant.id}>
+							<div className="flex items-center justify-between w-full gap-3">
+								<span>{variant.name}</span>
+								{variant.id === baseId && (
+									<span className="text-tertiary-foreground text-xs">Base</span>
+								)}
+							</div>
+						</SelectItem>
+					))}
+					<SelectSeparator />
+					<SelectItem value={SHOW_ALL_VARIANTS}>
+						<span>Show all variants</span>
+					</SelectItem>
+					<SelectSeparator />
+					<SelectItem value={CREATE_VARIANT}>
+						<div className="flex items-center gap-2">
+							<PlusIcon size={12} className="text-tertiary-foreground" />
+							<span>Create variant</span>
 						</div>
 					</SelectItem>
-				))}
-				<SelectSeparator />
-				<SelectItem value={SHOW_ALL_VARIANTS}>
-					<span>Show all variants</span>
-				</SelectItem>
-			</SelectContent>
-		</Select>
+				</SelectContent>
+			</Select>
+			{createVariant.open && (
+				<CreateVariantDialog {...createVariant.dialogProps} />
+			)}
+		</>
 	);
 };
 
