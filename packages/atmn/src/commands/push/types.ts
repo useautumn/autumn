@@ -31,12 +31,20 @@ export interface PlanUpdateInfo {
 	requiresVersioningRecheck?: boolean;
 }
 
+export interface VariantUpdateInfo {
+	variant: Pick<Plan, "id" | "name">;
+	willVersion: boolean;
+}
+
 export type VariantPropagationSelections = Record<
 	string,
 	{
 		variant_plan_id: string;
 		name?: string;
 		customize: unknown;
+		create_migration?: boolean;
+		disable_version?: boolean;
+		force_version?: boolean;
 	}[]
 >;
 
@@ -47,6 +55,9 @@ export type PlanUpdateIntent =
 
 export type PlanUpdateIntentSelections = Record<string, PlanUpdateIntent>;
 export type PlanMigrationSelections = Record<string, boolean>;
+export type VariantUpdateIntent = "create_version" | "update_current";
+export type VariantUpdateIntentSelections = Record<string, VariantUpdateIntent>;
+export type VariantMigrationSelections = Record<string, boolean>;
 
 // Analysis result
 export interface PushAnalysis {
@@ -55,6 +66,7 @@ export interface PushAnalysis {
 	featuresToDelete: FeatureDeleteInfo[];
 	plansToCreate: Plan[];
 	plansToUpdate: PlanUpdateInfo[];
+	variantsToUpdate: VariantUpdateInfo[];
 	plansToDelete: PlanDeleteInfo[];
 	archivedFeatures: Feature[]; // Features in local config that are archived remotely
 	archivedPlans: Plan[]; // Plans in local config that are archived remotely

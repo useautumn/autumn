@@ -43,11 +43,13 @@ const runSerialTest = async (fn: () => Promise<void>) => {
 const allVersionsConfig = ({
 	baseIncluded,
 	basePlanId,
+	includeAdmin = false,
 	variantIncluded,
 	variantPlanId,
 }: {
 	baseIncluded: number;
 	basePlanId: string;
+	includeAdmin?: boolean;
 	variantIncluded: number;
 	variantPlanId: string;
 }) => `import { feature, item, plan } from 'atmn';
@@ -58,6 +60,13 @@ export const messages = feature({
 \ttype: 'metered',
 \tconsumable: true,
 });
+${includeAdmin ? `
+export const adminRights = feature({
+\tid: 'admin_rights',
+\tname: 'Admin Rights',
+\ttype: 'boolean',
+});
+` : ""}
 
 export const allVersionsBase = plan({
 \tid: '${basePlanId}',
@@ -68,6 +77,7 @@ export const allVersionsBase = plan({
 \t\t\tincluded: ${baseIncluded},
 \t\t\treset: { interval: 'month' },
 \t\t}),
+\t\t${includeAdmin ? "item({ featureId: adminRights.id })," : ""}
 \t],
 });
 
@@ -91,6 +101,7 @@ const pushAllVersionsConfig = async ({
 	baseIncluded,
 	basePlanId,
 	ctx,
+	includeAdmin,
 	migrationDrafts,
 	planIntents,
 	variantIncluded,
@@ -100,6 +111,7 @@ const pushAllVersionsConfig = async ({
 	baseIncluded: number;
 	basePlanId: string;
 	ctx: TestContext;
+	includeAdmin?: boolean;
 	migrationDrafts?: Record<string, boolean>;
 	planIntents?: Record<string, string>;
 	variantIncluded: number;
@@ -114,6 +126,7 @@ const pushAllVersionsConfig = async ({
 		allVersionsConfig({
 			baseIncluded,
 			basePlanId,
+			includeAdmin,
 			variantIncluded,
 			variantPlanId,
 		}),
@@ -239,14 +252,17 @@ const setupTwoVersions = async ({
 	});
 	await timeout(5000);
 
-	await pushAllVersionsConfig({
-		baseIncluded: 200,
-		basePlanId,
-		ctx,
-		planIntents: { [basePlanId]: "create_version" },
-		variantIncluded: 1400,
-		variantPlanId,
-		variantPropagations: { [basePlanId]: [variantPlanId] },
+		await pushAllVersionsConfig({
+			baseIncluded: 200,
+			basePlanId,
+			ctx,
+			planIntents: {
+				[basePlanId]: "create_version",
+				[variantPlanId]: "create_version",
+			},
+			variantIncluded: 1400,
+			variantPlanId,
+			variantPropagations: { [basePlanId]: [variantPlanId] },
 	});
 
 	await insertCustomers({
@@ -276,8 +292,11 @@ test(`${chalk.yellowBright("atmn all versions: updates selected base and variant
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
-			migrationDrafts: { [basePlanId]: true },
-			planIntents: { [basePlanId]: "update_all_versions" },
+			migrationDrafts: { [basePlanId]: true, [variantPlanId]: true },
+			planIntents: {
+				[basePlanId]: "update_all_versions",
+				[variantPlanId]: "update_current",
+			},
 			variantIncluded: 1800,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [variantPlanId] },
@@ -289,36 +308,38 @@ test(`${chalk.yellowBright("atmn all versions: updates selected base and variant
 			version: 1,
 		});
 		const baseV2 = await getRequiredProduct({ ctx, planId: basePlanId });
-		const variantV1 = await getRequiredProduct({
-			ctx,
-			planId: variantPlanId,
-			version: 1,
-		});
-		const variantV2 = await getRequiredProduct({ ctx, planId: variantPlanId });
-		const [migration] = await migrationRepo.get({ ctx });
+			const variantV1 = await getRequiredProduct({
+				ctx,
+				planId: variantPlanId,
+				version: 1,
+			});
+			const variantV2 = await getRequiredProduct({ ctx, planId: variantPlanId });
+			const migrations = await migrationRepo.get({ ctx });
 
-		expect(baseV2.version).toBe(2);
-		expect(variantV2.version).toBe(2);
-		expectMessagesAllowance({ product: baseV1, included: 500 });
-		expectMessagesAllowance({ product: baseV2, included: 500 });
-		expectMessagesAllowance({ product: variantV1, included: 1800 });
-		expectMessagesAllowance({ product: variantV2, included: 1800 });
-		expect(migration?.filter).toMatchObject({
-			customer: { plan: { plan_id: { $in: [basePlanId, variantPlanId] } } },
-		});
-		expect(migration?.operations).toMatchObject({
-			customer: expect.arrayContaining([
-				expect.objectContaining({
-					type: "update_plan",
-					plan_filter: { plan_id: basePlanId, custom: false },
-				}),
-				expect.objectContaining({
-					type: "update_plan",
-					plan_filter: { plan_id: variantPlanId, custom: false },
-				}),
-			]),
-		});
-	}));
+			expect(baseV2.version).toBe(2);
+			expect(variantV2.version).toBe(2);
+			expectMessagesAllowance({ product: baseV1, included: 500 });
+			expectMessagesAllowance({ product: baseV2, included: 500 });
+			expectMessagesAllowance({ product: variantV1, included: 1800 });
+			expectMessagesAllowance({ product: variantV2, included: 1800 });
+			const [migration] = migrations;
+			expect(migrations).toHaveLength(1);
+			expect(migration?.filter).toMatchObject({
+				customer: { plan: { plan_id: { $in: [basePlanId, variantPlanId] } } },
+			});
+			expect(migration?.operations).toMatchObject({
+				customer: expect.arrayContaining([
+					expect.objectContaining({
+						type: "update_plan",
+						plan_filter: { plan_id: basePlanId, custom: false },
+					}),
+					expect.objectContaining({
+						type: "update_plan",
+						plan_filter: { plan_id: variantPlanId, custom: false },
+					}),
+				]),
+			});
+		}));
 
 test(`${chalk.yellowBright("atmn all versions: skipped variant versions remain unchanged")}`, () =>
 	runSerialTest(async () => {
@@ -331,7 +352,10 @@ test(`${chalk.yellowBright("atmn all versions: skipped variant versions remain u
 			basePlanId,
 			ctx,
 			migrationDrafts: { [basePlanId]: true },
-			planIntents: { [basePlanId]: "update_all_versions" },
+			planIntents: {
+				[basePlanId]: "update_all_versions",
+				[variantPlanId]: "skip",
+			},
 			variantIncluded: 1800,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [] },
@@ -380,8 +404,11 @@ test(`${chalk.yellowBright("atmn all versions: can update without migration draf
 			baseIncluded: 500,
 			basePlanId,
 			ctx,
-			migrationDrafts: { [basePlanId]: false },
-			planIntents: { [basePlanId]: "update_all_versions" },
+			migrationDrafts: { [basePlanId]: false, [variantPlanId]: false },
+			planIntents: {
+				[basePlanId]: "update_all_versions",
+				[variantPlanId]: "update_current",
+			},
 			variantIncluded: 1800,
 			variantPlanId,
 			variantPropagations: { [basePlanId]: [variantPlanId] },
@@ -408,4 +435,43 @@ test(`${chalk.yellowBright("atmn all versions: can update without migration draf
 		expectMessagesAllowance({ product: variantV1, included: 1800 });
 		expectMessagesAllowance({ product: variantV2, included: 1800 });
 		expect(migrations).toHaveLength(0);
+
+		await pushAllVersionsConfig({
+			baseIncluded: 500,
+			basePlanId,
+			ctx,
+			variantIncluded: 1800,
+			variantPlanId,
+		});
+	}));
+
+test(`${chalk.yellowBright("atmn all versions: base feature add stays idempotent after variant propagation")}`, () =>
+	runSerialTest(async () => {
+		const { basePlanId, ctx, variantPlanId } = await setupTwoVersions({
+			testId: "feature_add",
+		});
+
+		await pushAllVersionsConfig({
+			baseIncluded: 500,
+			basePlanId,
+			ctx,
+			includeAdmin: true,
+			migrationDrafts: { [basePlanId]: false, [variantPlanId]: false },
+			planIntents: {
+				[basePlanId]: "update_all_versions",
+				[variantPlanId]: "update_current",
+			},
+			variantIncluded: 1800,
+			variantPlanId,
+			variantPropagations: { [basePlanId]: [variantPlanId] },
+		});
+
+		await pushAllVersionsConfig({
+			baseIncluded: 500,
+			basePlanId,
+			ctx,
+			includeAdmin: true,
+			variantIncluded: 1800,
+			variantPlanId,
+		});
 	}));

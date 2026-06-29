@@ -1,4 +1,8 @@
-import type { DiffedCustomizePlanV1, FullProduct } from "@autumn/shared";
+import type {
+	DiffedCustomizePlanV1,
+	FullProduct,
+	UpdateVariantParams,
+} from "@autumn/shared";
 import type { ApiPlanV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -10,7 +14,12 @@ import {
 	variantSettingsPatchHasValues,
 	type VariantSettingsPatch,
 } from "../common/planTransformUtils.js";
+import {
+	validateDirectVariantControls,
+	variantCustomizeChanged,
+} from "../common/variantUpdateSource.js";
 import { updateProduct } from "../updateProduct.js";
+import { createPlanMigrationDraft } from "../updateProduct/createPlanMigrationDraft.js";
 import { updateOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const updateVariant = async ({
@@ -22,6 +31,7 @@ export const updateVariant = async ({
 	shouldVersion,
 	baseInternalProductId,
 	allVersions,
+	variantUpdate,
 }: {
 	ctx: AutumnContext;
 	variant: FullProduct;
@@ -31,10 +41,26 @@ export const updateVariant = async ({
 	shouldVersion: boolean;
 	baseInternalProductId?: string;
 	allVersions?: boolean;
+	variantUpdate?: UpdateVariantParams;
 }) => {
 	const currentPlan = await fullProductToApiPlanV1({
 		ctx,
 		product: variant,
+	});
+	const isDirectUpdate = variantUpdate
+		? variantCustomizeChanged({
+				currentCustomize: currentPlan.variant_details?.customize,
+				incomingCustomize: variantUpdate.customize,
+			})
+		: false;
+	validateDirectVariantControls({
+		isDirect: isDirectUpdate,
+		variantPlanId: variant.id,
+		hasControls: Boolean(
+			variantUpdate?.force_version ||
+				variantUpdate?.disable_version ||
+				variantUpdate?.create_migration,
+		),
 	});
 	const previewPlan =
 		targetPlan ??
@@ -58,6 +84,18 @@ export const updateVariant = async ({
 		baseInternalProductId,
 		allowVariantSettingsUpdate: true,
 	});
+
+	if (variantUpdate?.create_migration && isDirectUpdate && !shouldVersion) {
+		await createPlanMigrationDraft({
+			ctx,
+			current: variant,
+			fromPlan: currentPlan,
+			mode: "version",
+			planId: variant.id,
+			selectedVariantIds: [],
+			toPlan: previewPlan,
+		});
+	}
 
 	if (!allVersions) return;
 

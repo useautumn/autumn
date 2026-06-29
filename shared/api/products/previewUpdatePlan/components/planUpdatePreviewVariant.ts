@@ -17,6 +17,10 @@ export const PlanUpdatePreviewVariantSchema =
 			description:
 				"Whether this variant is included in update_variant_ids and would receive the base plan diff.",
 		}),
+		update_source: z.enum(["direct", "propagated"]).nullable().optional().meta({
+			description:
+				"Whether this variant update comes from changed variant customize or propagated base changes.",
+		}),
 		previous_attributes: z.record(z.string(), z.unknown()).nullable().meta({
 			description:
 				"Sparse map of non-price scalar variant plan fields whose values changed, holding their previous values. Null when there is no previous variant plan.",

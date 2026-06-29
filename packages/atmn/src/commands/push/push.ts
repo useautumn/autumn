@@ -52,9 +52,14 @@ import type {
 	PushAnalysis,
 	PushResult,
 	RemoteData,
+	VariantMigrationSelections,
 	VariantPropagationSelections,
+	VariantUpdateIntentSelections,
 } from "./types.js";
-import { getVariantPropagationPreviews } from "./variantPropagation.js";
+import {
+	getDirectVariantUpdatePreviews,
+	getVariantPropagationPreviews,
+} from "./variantPropagation.js";
 
 /**
  * Get the secret key for the current environment
@@ -647,11 +652,20 @@ function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
 	};
 }
 
-function toCatalogVariantParams(variant: Variant): Record<string, unknown> {
+function toCatalogVariantParams(
+	variant: Variant,
+	intent?: VariantUpdateIntentSelections[string],
+	createMigration = false,
+): Record<string, unknown> {
 	return {
 		variant_plan_id: variant.id,
 		name: variant.name,
 		customize: toApiCustomizePlan(variant.customize ?? {}),
+		...(intent === "create_version" ? { force_version: true } : {}),
+		...(intent === "update_current" ? { disable_version: true } : {}),
+		...(createMigration && intent === "update_current"
+			? { create_migration: true }
+			: {}),
 	};
 }
 
@@ -662,6 +676,9 @@ function toCatalogPlanParams(
 	createMigration = false,
 	latestVersionById: Map<string, number> = new Map(),
 	includePreviewDetails = false,
+	variantUpdateIntentSelections: VariantUpdateIntentSelections = {},
+	variantMigrationSelections: VariantMigrationSelections = {},
+	skippedPlanIds: Set<string> = new Set(),
 ): Record<string, unknown> {
 	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
 	const { description, id, ...rest } = apiPlan;
@@ -672,17 +689,42 @@ function toCatalogPlanParams(
 	const updateAllVersions = intent === "update_all_versions";
 	const shouldCreateMigration =
 		createMigration && (updateCurrent || updateAllVersions);
-	const configuredVariants = (plan.variants ?? []).map(toCatalogVariantParams);
+	const configuredVariants = (plan.variants ?? [])
+		.filter((variant) => !skippedPlanIds.has(variant.id))
+		.map((variant) =>
+			toCatalogVariantParams(
+				variant,
+				variantUpdateIntentSelections[variant.id],
+				variantMigrationSelections[variant.id] ?? false,
+			),
+		);
 	const configuredVariantsById = new Map(
 		configuredVariants.map((variant) => [variant.variant_plan_id, variant]),
 	);
+	const selectedPropagationVariants =
+		variants
+			?.filter((variant) => !skippedPlanIds.has(variant.variant_plan_id))
+			.map(
+				(variant) =>
+					configuredVariantsById.get(variant.variant_plan_id) ?? variant,
+			) ?? [];
+	const directVariantUpdates = configuredVariants.filter((variant) => {
+		const variantId = variant.variant_plan_id as string;
+		return (
+			variantUpdateIntentSelections[variantId] !== undefined ||
+			variantMigrationSelections[variantId] !== undefined
+		);
+	});
 	const variantUpdates =
 		variants === undefined
 			? configuredVariants
-			: variants.map(
-					(variant) =>
-						configuredVariantsById.get(variant.variant_plan_id) ?? variant,
-				);
+			: [
+					...new Map(
+						[...selectedPropagationVariants, ...directVariantUpdates].map(
+							(variant) => [variant.variant_plan_id, variant],
+						),
+					).values(),
+				];
 
 	return {
 		plan_id: id,
@@ -826,6 +868,8 @@ export function buildCatalogUpdateParams({
 	planUpdateIntentSelections = {},
 	planMigrationSelections = {},
 	variantPropagationSelections = {},
+	variantUpdateIntentSelections = {},
+	variantMigrationSelections = {},
 	includePreviewDetails = false,
 }: {
 	features: Feature[];
@@ -835,6 +879,8 @@ export function buildCatalogUpdateParams({
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
 	planMigrationSelections?: PlanMigrationSelections;
 	variantPropagationSelections?: VariantPropagationSelections;
+	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
+	variantMigrationSelections?: VariantMigrationSelections;
 	includePreviewDetails?: boolean;
 }): CatalogUpdateParams {
 	const sortedFeatures = [...features].sort((a, b) => {
@@ -843,6 +889,7 @@ export function buildCatalogUpdateParams({
 		return 0;
 	});
 	const latestVersionById = buildLatestPlanVersionById(plans);
+	const skippedPlanIdSet = new Set(skipPlanIds);
 
 	return {
 		features: sortedFeatures.map(toCatalogFeatureParams),
@@ -858,6 +905,9 @@ export function buildCatalogUpdateParams({
 					false,
 				latestVersionById,
 				includePreviewDetails,
+				variantUpdateIntentSelections,
+				variantMigrationSelections,
+				skippedPlanIdSet,
 			),
 		),
 		skip_deletions: false,
@@ -868,11 +918,25 @@ export function buildCatalogUpdateParams({
 	};
 }
 
+export const catalogFeatureChangeHasChanges = (
+	change: CatalogPreviewUpdateResponse["feature_changes"][number],
+): boolean => change.action !== "none";
+
+const catalogPlanVariantHasChanges = (
+	variant: CatalogPreviewUpdateResponse["plan_changes"][number]["variants"][number],
+): boolean => Boolean(variant.update_source);
+
+export const catalogPlanChangeHasChanges = (
+	change: CatalogPreviewUpdateResponse["plan_changes"][number],
+): boolean =>
+	change.action !== "none" ||
+	change.variants.some(catalogPlanVariantHasChanges);
+
 export const catalogPreviewHasChanges = (
 	preview: CatalogPreviewUpdateResponse,
 ): boolean =>
-	preview.feature_changes.some((change) => change.action !== "none") ||
-	preview.plan_changes.some((change) => change.action !== "none");
+	preview.feature_changes.some(catalogFeatureChangeHasChanges) ||
+	preview.plan_changes.some(catalogPlanChangeHasChanges);
 
 export function catalogPreviewToPushResult(
 	preview: CatalogPreviewUpdateResponse,
@@ -897,6 +961,10 @@ export function catalogPreviewToPushResult(
 			continue;
 		}
 
+		if (!catalogFeatureChangeHasChanges(change)) {
+			continue;
+		}
+
 		if (change.action === "create") {
 			result.featuresCreated.push(change.feature_id);
 		} else if (change.action === "update") {
@@ -913,6 +981,10 @@ export function catalogPreviewToPushResult(
 	}
 
 	for (const change of preview.plan_changes) {
+		if (!catalogPlanChangeHasChanges(change)) {
+			continue;
+		}
+
 		if (change.action === "created") {
 			result.plansCreated.push(change.plan_id);
 		} else if (change.action === "updated") {
@@ -930,6 +1002,16 @@ export function catalogPreviewToPushResult(
 		} else if (change.action === "skipped") {
 			result.plansSkipped.push(change.plan_id);
 		}
+
+		for (const variant of getDirectVariantUpdatePreviews({
+			planChange: change,
+		})) {
+			if (variant.versionable) {
+				result.plansVersioned.push(variant.plan_id);
+			} else {
+				result.plansUpdated.push(variant.plan_id);
+			}
+		}
 	}
 
 	return result;
@@ -943,6 +1025,8 @@ export async function previewCatalogPush({
 	planUpdateIntentSelections,
 	planMigrationSelections,
 	variantPropagationSelections,
+	variantUpdateIntentSelections,
+	variantMigrationSelections,
 }: {
 	features: Feature[];
 	plans: Plan[];
@@ -951,6 +1035,8 @@ export async function previewCatalogPush({
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
 	planMigrationSelections?: PlanMigrationSelections;
 	variantPropagationSelections?: VariantPropagationSelections;
+	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
+	variantMigrationSelections?: VariantMigrationSelections;
 }): Promise<{
 	params: CatalogUpdateParams;
 	preview: CatalogPreviewUpdateResponse;
@@ -964,6 +1050,8 @@ export async function previewCatalogPush({
 		planUpdateIntentSelections,
 		planMigrationSelections,
 		variantPropagationSelections,
+		variantUpdateIntentSelections,
+		variantMigrationSelections,
 		includePreviewDetails: true,
 	});
 	const preview = await previewUpdateCatalog({ secretKey, params });
@@ -982,6 +1070,8 @@ export async function pushCatalog({
 	planUpdateIntentSelections,
 	planMigrationSelections,
 	variantPropagationSelections,
+	variantUpdateIntentSelections,
+	variantMigrationSelections,
 	cwd,
 }: {
 	features: Feature[];
@@ -994,6 +1084,8 @@ export async function pushCatalog({
 	planUpdateIntentSelections?: PlanUpdateIntentSelections;
 	planMigrationSelections?: PlanMigrationSelections;
 	variantPropagationSelections?: VariantPropagationSelections;
+	variantUpdateIntentSelections?: VariantUpdateIntentSelections;
+	variantMigrationSelections?: VariantMigrationSelections;
 	cwd?: string;
 }): Promise<PushResult> {
 	const secretKey = getSecretKey();
@@ -1005,6 +1097,8 @@ export async function pushCatalog({
 		planUpdateIntentSelections,
 		planMigrationSelections,
 		variantPropagationSelections,
+		variantUpdateIntentSelections,
+		variantMigrationSelections,
 	});
 	const resolvedPreview =
 		preview ?? (await previewUpdateCatalog({ secretKey, params }));
@@ -1250,6 +1344,7 @@ export async function analyzePush(
 		featuresToDelete,
 		plansToCreate,
 		plansToUpdate,
+		variantsToUpdate: [],
 		plansToDelete,
 		archivedFeatures,
 		archivedPlans,

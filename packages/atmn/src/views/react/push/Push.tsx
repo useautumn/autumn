@@ -42,6 +42,7 @@ export function PushView({
 	const allPlans = [
 		...(push.analysis?.plansToCreate ?? []),
 		...(push.analysis?.plansToUpdate?.map((p) => p.plan) ?? []),
+		...(push.analysis?.variantsToUpdate?.map((p) => p.variant) ?? []),
 	];
 
 	return (

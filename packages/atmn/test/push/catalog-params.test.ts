@@ -137,3 +137,102 @@ test("buildCatalogUpdateParams can include preview detail flags", () => {
 		include_variants: true,
 	});
 });
+
+test("buildCatalogUpdateParams maps direct variant update-current migration controls", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				name: "Pro",
+				variants: [
+					{
+						id: "pro_annual",
+						name: "Pro Annual",
+						customize: { price: { amount: 200, interval: "year" } },
+					},
+				],
+			},
+		],
+		variantMigrationSelections: {
+			pro_annual: true,
+		},
+		variantUpdateIntentSelections: {
+			pro_annual: "update_current",
+		},
+	});
+
+	expect(params.plans[0]).toMatchObject({
+		plan_id: "pro",
+		variants: [
+			{
+				variant_plan_id: "pro_annual",
+				disable_version: true,
+				create_migration: true,
+			},
+		],
+	});
+});
+
+test("buildCatalogUpdateParams maps direct variant create-version controls", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				name: "Pro",
+				variants: [
+					{
+						id: "pro_annual",
+						name: "Pro Annual",
+						customize: { price: { amount: 200, interval: "year" } },
+					},
+				],
+			},
+		],
+		variantMigrationSelections: {
+			pro_annual: true,
+		},
+		variantUpdateIntentSelections: {
+			pro_annual: "create_version",
+		},
+	});
+
+	expect(params.plans[0]).toMatchObject({
+		plan_id: "pro",
+		variants: [
+			{
+				variant_plan_id: "pro_annual",
+				force_version: true,
+			},
+		],
+	});
+	expect(
+		(params.plans[0].variants as Record<string, unknown>[])[0],
+	).not.toHaveProperty("create_migration");
+});
+
+test("buildCatalogUpdateParams filters skipped direct variants", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				name: "Pro",
+				variants: [
+					{
+						id: "pro_annual",
+						name: "Pro Annual",
+						customize: { price: { amount: 200, interval: "year" } },
+					},
+				],
+			},
+		],
+		skipPlanIds: ["pro_annual"],
+		variantUpdateIntentSelections: {
+			pro_annual: "update_current",
+		},
+	});
+
+	expect(params.plans[0]).not.toHaveProperty("variants");
+});

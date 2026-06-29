@@ -1,8 +1,8 @@
 import {
 	ApiVersion,
 	ApiVersionClass,
-	type ApiFeatureV1,
 	dbToApiFeatureV1,
+	diffFeatureV1,
 	expandPathIncludes,
 	type Feature,
 	type FullProduct,
@@ -70,27 +70,6 @@ export const getFeatureUpdateBlockedReason = async ({
 			allFeatures: ctx.features,
 		}),
 	});
-};
-
-const valuesEqual = (left: unknown, right: unknown) =>
-	JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
-
-const previousFeatureAttributes = ({
-	current,
-	incoming,
-}: {
-	current: ApiFeatureV1;
-	incoming: ApiFeatureV1;
-}) => {
-	const previous: Record<string, unknown> = {};
-
-	for (const key of Object.keys(incoming) as (keyof ApiFeatureV1)[]) {
-		if (!valuesEqual(current[key], incoming[key])) {
-			previous[key] = current[key];
-		}
-	}
-
-	return Object.keys(previous).length > 0 ? previous : null;
 };
 
 const shouldExpandFeature = (ctx: AutumnContext) =>
@@ -164,12 +143,15 @@ export const previewFeature = async ({
 		updates: dbFeature,
 		products,
 	});
+	const previousAttributes = currentFeature
+		? diffFeatureV1({
+				from: currentFeature,
+				to: feature,
+			}).previous_attributes
+		: null;
 	const action = !existing
 		? "create"
-		: previousFeatureAttributes({
-				current: currentFeature!,
-				incoming: feature,
-			})
+		: previousAttributes
 			? "update"
 			: "none";
 	const featureChanges: PreviewUpdateFeatureResponse = {
@@ -178,12 +160,7 @@ export const previewFeature = async ({
 		will_archive: false,
 		blocked: blockedReason !== null,
 		blocked_reason: blockedReason,
-		previous_attributes: currentFeature
-			? previousFeatureAttributes({
-					current: currentFeature,
-					incoming: feature,
-				})
-			: null,
+		previous_attributes: previousAttributes,
 		...(shouldExpandFeature(ctx) ? { feature } : {}),
 	};
 

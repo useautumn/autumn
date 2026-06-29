@@ -10,6 +10,7 @@ import {
 	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	PlanUpdatePreviewSchema,
+	planUpdatePreviewHasDiff,
 	planDiffHasBillingChanges,
 } from "@autumn/shared";
 import { scopeExpandForCtx } from "@autumn/shared";
@@ -130,23 +131,7 @@ const planPreviewAction = ({
 	preview: PlanUpdatePreview;
 }): CatalogPlanPreview["action"] => {
 	if (!current) return "created";
-	const hasVariantChanges = preview.variants.some(
-		(variant) =>
-			variant.customize ||
-			variant.previous_attributes ||
-			variant.price_change ||
-			variant.item_changes.length > 0,
-	);
-	if (
-		preview.customize ||
-		preview.previous_attributes ||
-		preview.price_change ||
-		preview.item_changes.length > 0 ||
-		hasVariantChanges
-	) {
-		return "updated";
-	}
-	return "none";
+	return planUpdatePreviewHasDiff(preview) ? "updated" : "none";
 };
 
 const previewMigrationForInPlaceUpdate = async ({

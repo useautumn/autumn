@@ -280,6 +280,7 @@ export const updateVariants = async ({
 			shouldVersion,
 			baseInternalProductId: baseWasVersioned ? newBase.internal_id : undefined,
 			allVersions,
+			variantUpdate,
 		});
 	}
 

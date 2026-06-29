@@ -204,7 +204,7 @@ test(`${chalk.yellowBright("catalog: update targets exact historical plan versio
 		actions: [],
 	});
 
-	await autumnV2_2.catalog.update({
+	await autumnV2_2.post("/catalog.update", {
 		plans: [
 			{
 				plan_id: planId,
@@ -221,7 +221,7 @@ test(`${chalk.yellowBright("catalog: update targets exact historical plan versio
 		],
 	});
 
-	await autumnV2_2.catalog.update({
+	await autumnV2_2.post("/catalog.update", {
 		plans: [
 			{
 				plan_id: planId,
@@ -282,7 +282,7 @@ test(`${chalk.yellowBright("catalog: update can draft migration for exact histor
 		actions: [],
 	});
 
-	await autumnV2_2.catalog.update({
+	await autumnV2_2.post("/catalog.update", {
 		plans: [
 			{
 				plan_id: planId,
@@ -398,6 +398,24 @@ test(`${chalk.yellowBright("catalog: preview_update marks selected variant propa
 		plan_id: variantId,
 		name: "Annual",
 		will_apply: false,
+		update_source: "propagated",
+	});
+
+	const propagated = await autumnV2_2.post("/catalog.preview_update", {
+		plans: [
+			{
+				...planUpdate,
+				update_variant_ids: [variantId],
+			},
+		],
+	});
+	const propagatedVariant = propagated.plan_changes[0].variants[0];
+
+	expect(propagatedVariant).toMatchObject({
+		plan_id: variantId,
+		name: "Annual",
+		will_apply: true,
+		update_source: "propagated",
 	});
 
 	const selected = await autumnV2_2.post("/catalog.preview_update", {
@@ -419,6 +437,7 @@ test(`${chalk.yellowBright("catalog: preview_update marks selected variant propa
 		plan_id: variantId,
 		name: "Annual",
 		will_apply: true,
+		update_source: "direct",
 	});
 });
 
@@ -499,6 +518,802 @@ test(`${chalk.yellowBright("catalog: preview_update leaves no-op base variant pr
 		previous_attributes: null,
 		will_apply: false,
 	});
+	expect(variantChange.update_source).toBeUndefined();
+});
+
+test(`${chalk.yellowBright("catalog: preview_update marks variant-only customize updates as direct")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_preview_direct_variant_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, autumnV2_3 } = await initScenario({
+		customerId: `catalog-preview-direct-variant-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_3.plans.createVariant({
+		base_plan_id: planId,
+		variant_plan_id: variantId,
+		name: "Annual",
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: {
+							remove_items: [
+								{ feature_id: TestFeature.Messages, interval: "month" },
+							],
+							add_items: [
+								{
+									feature_id: TestFeature.Messages,
+									included: 1200,
+									reset: { interval: "year" },
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+	const planPreview = preview.plan_changes[0];
+	const variantPreview = planPreview.variants[0];
+
+	expect(planPreview.action).toBe("none");
+	expect(variantPreview).toMatchObject({
+		plan_id: variantId,
+		will_apply: true,
+		update_source: "direct",
+	});
+});
+
+test(`${chalk.yellowBright("catalog: variant-only item add previews direct and updates the variant")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_variant_only_add_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const customerId = `catalog-variant-only-add-${suffix}`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const annualCustomize = {
+		remove_items: [{ feature_id: TestFeature.Messages, interval: "month" }],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+	const updatedAnnualCustomize = {
+		...annualCustomize,
+		add_items: [
+			...annualCustomize.add_items,
+			{ feature_id: TestFeature.AdminRights },
+		],
+	};
+
+	const { autumnV2_2 } = await initScenario({
+		customerId,
+		setup: [
+			s.products({ list: [prod], prefix: "" }),
+			s.customer({ paymentMethod: "success" }),
+		],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+	await autumnV2_2.billing.attach({
+		customer_id: customerId,
+		plan_id: variantId,
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: updatedAnnualCustomize,
+					},
+				],
+			},
+		],
+	});
+	const planPreview = preview.plan_changes[0];
+	const variantPreview = planPreview.variants[0];
+
+	expect(planPreview).toMatchObject({
+		action: "none",
+		customize: null,
+		item_changes: [],
+	});
+	expect(variantPreview).toMatchObject({
+		plan_id: variantId,
+		has_customers: true,
+		versionable: true,
+		will_apply: true,
+		update_source: "direct",
+	});
+	expect(variantPreview.item_changes).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				action: "created",
+				feature_id: TestFeature.AdminRights,
+			}),
+		]),
+	);
+
+	const updateCurrentPreview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						disable_version: true,
+						customize: updatedAnnualCustomize,
+					},
+				],
+			},
+		],
+	});
+	expect(updateCurrentPreview.plan_changes[0].variants[0]).toMatchObject({
+		plan_id: variantId,
+		versionable: false,
+		will_apply: true,
+		update_source: "direct",
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: updatedAnnualCustomize,
+					},
+				],
+			},
+		],
+	});
+
+	const updatedVariant = await autumnV2_2.post("/plans.get", {
+		plan_id: variantId,
+	});
+	expect(updatedVariant.version).toBe(2);
+	expect(
+		updatedVariant.items.some(
+			(item: { feature_id: string }) =>
+				item.feature_id === TestFeature.AdminRights,
+		),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright("catalog: feature-only update does not create variant propagation candidates")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_feature_only_variant_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const featureId = `admin_${suffix}`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const annualCustomize = {
+		remove_items: [{ feature_id: TestFeature.Messages, interval: "month" }],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-feature-only-variant-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		features: [
+			{
+				feature_id: featureId,
+				name: "Admin",
+				type: "boolean",
+			},
+		],
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+					{ feature_id: featureId },
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		features: [
+			{
+				feature_id: featureId,
+				name: "Admin Updated",
+				type: "boolean",
+			},
+		],
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				include_variants: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+					{ feature_id: featureId },
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+	const planPreview = preview.plan_changes[0];
+	const variantPreview = planPreview.variants[0];
+
+	expect(preview.feature_changes).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				action: "update",
+				feature_id: featureId,
+			}),
+		]),
+	);
+	expect(planPreview).toMatchObject({
+		action: "none",
+		customize: null,
+		item_changes: [],
+	});
+	expect(variantPreview).toMatchObject({
+		plan_id: variantId,
+		customize: null,
+		item_changes: [],
+		will_apply: true,
+	});
+	expect(variantPreview.update_source).toBeUndefined();
+});
+
+test(`${chalk.yellowBright("catalog: clean re-push ignores historical variant propagation")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_clean_historical_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const annualCustomize = {
+		remove_items: [{ feature_id: TestFeature.Messages, interval: "month" }],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+	const currentPlan = {
+		plan_id: planId,
+		name: prod.name,
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 100,
+				reset: { interval: "month" },
+			},
+			{ feature_id: TestFeature.AdminRights },
+		],
+		variants: [
+			{
+				variant_plan_id: variantId,
+				name: "Annual",
+				customize: annualCustomize,
+			},
+		],
+	};
+
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-clean-historical-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+				],
+				variants: currentPlan.variants,
+			},
+		],
+	});
+	await autumnV2_2.catalog.update({
+		plans: [{ ...currentPlan, force_version: true }],
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				...currentPlan,
+				include_versions: true,
+				include_variants: true,
+			},
+		],
+	});
+	const planPreview = preview.plan_changes[0];
+	const variantPreviews = planPreview.variants.filter(
+		(variant: { plan_id: string }) => variant.plan_id === variantId,
+	);
+
+	expect(planPreview).toMatchObject({
+		action: "none",
+		customize: null,
+		item_changes: [],
+	});
+	expect(variantPreviews.length).toBeGreaterThan(1);
+	expect(
+		variantPreviews.every(
+			(variant: { update_source?: string | null }) =>
+				variant.update_source === undefined,
+		),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright("catalog: base disable_version propagates through selected variant customize")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_disable_variant_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const customerId = `catalog-disable-variant-${suffix}`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const annualCustomize = {
+		remove_items: [{ feature_id: TestFeature.Messages, interval: "month" }],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+
+	const { autumnV2_2 } = await initScenario({
+		customerId,
+		setup: [
+			s.products({ list: [prod], prefix: "" }),
+			s.customer({ paymentMethod: "success" }),
+		],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		features: [
+			{
+				feature_id: TestFeature.AdminRights,
+				name: "Admin",
+				type: "boolean",
+			},
+		],
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+	await autumnV2_2.billing.attach({
+		customer_id: customerId,
+		plan_id: variantId,
+	});
+
+	const updateParams = {
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				disable_version: true,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+					{ feature_id: TestFeature.AdminRights },
+				],
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	};
+
+	const preview = await autumnV2_2.catalog.previewUpdate(updateParams);
+	const variantPreview = preview.plan_changes[0].variants[0];
+	expect(preview.plan_changes[0]).toMatchObject({
+		action: "updated",
+		versionable: false,
+	});
+	expect(variantPreview).toMatchObject({
+		plan_id: variantId,
+		update_source: "propagated",
+		versionable: false,
+		will_apply: true,
+	});
+
+	await autumnV2_2.catalog.update(updateParams);
+
+	const [basePlan, variantPlan] = await Promise.all([
+		autumnV2_2.post("/plans.get", { plan_id: planId }),
+		autumnV2_2.post("/plans.get", { plan_id: variantId }),
+	]);
+	expect(basePlan.version).toBe(1);
+	expect(variantPlan.version).toBe(1);
+	expect(
+		variantPlan.items.some(
+			(item: { feature_id: string }) =>
+				item.feature_id === TestFeature.AdminRights,
+		),
+	).toBe(true);
+});
+
+test(`${chalk.yellowBright("catalog: preview_update marks unchanged variant customize with base item add as propagated")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_preview_variant_base_add_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const annualCustomize = {
+		remove_items: [
+			{
+				feature_id: TestFeature.Messages,
+				interval: "month",
+			},
+		],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-preview-variant-base-add-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.catalog.update({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+
+	const preview = await autumnV2_2.catalog.previewUpdate({
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 100,
+						reset: { interval: "month" },
+					},
+					{
+						feature_id: TestFeature.AdminRights,
+					},
+				],
+				include_variants: true,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: annualCustomize,
+					},
+				],
+			},
+		],
+	});
+	const planPreview = preview.plan_changes[0];
+	const variantPreview = planPreview.variants[0];
+
+	expect(planPreview.action).toBe("updated");
+	expect(variantPreview).toMatchObject({
+		plan_id: variantId,
+		will_apply: true,
+		update_source: "propagated",
+	});
+	expect(variantPreview.item_changes).toEqual(
+		expect.arrayContaining([
+			expect.objectContaining({
+				action: "created",
+				feature_id: TestFeature.AdminRights,
+			}),
+		]),
+	);
+});
+
+test(`${chalk.yellowBright("catalog: update creates a migration draft for a direct variant update")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_variant_migration_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId: `catalog-variant-migration-${suffix}`,
+		setup: [
+			s.products({ list: [prod], prefix: "" }),
+			s.customer({ paymentMethod: "success" }),
+		],
+		actions: [],
+	});
+
+	await autumnV2_2.post("/catalog.update", {
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize: {
+							remove_items: [
+								{ feature_id: TestFeature.Messages, interval: "month" },
+							],
+							add_items: [
+								{
+									feature_id: TestFeature.Messages,
+									included: 1200,
+									reset: { interval: "year" },
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+	await autumnV2_2.billing.attach({
+		customer_id: `catalog-variant-migration-${suffix}`,
+		plan_id: variantId,
+	});
+
+	await autumnV2_2.post("/catalog.update", {
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						disable_version: true,
+						create_migration: true,
+						customize: {
+							remove_items: [
+								{ feature_id: TestFeature.Messages, interval: "month" },
+							],
+							add_items: [
+								{
+									feature_id: TestFeature.Messages,
+									included: 2400,
+									reset: { interval: "year" },
+								},
+							],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	const migrations = await migrationRepo.get({ ctx });
+	const operation = migrations
+		.flatMap((migration) => migration.operations?.customer ?? [])
+		.find(
+			(candidate) =>
+				candidate.type === "update_plan" &&
+				candidate.plan_filter.plan_id === variantId,
+		);
+
+	expect(operation).toMatchObject({
+		type: "update_plan",
+		version: 1,
+		plan_filter: {
+			plan_id: variantId,
+			custom: false,
+		},
+	});
+});
+
+test(`${chalk.yellowBright("catalog: update rejects variant controls without direct customize changes")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_variant_controls_${suffix}`;
+	const variantId = `${planId}_annual`;
+	const prod = products.pro({
+		id: planId,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const customize = {
+		remove_items: [{ feature_id: TestFeature.Messages, interval: "month" }],
+		add_items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 1200,
+				reset: { interval: "year" },
+			},
+		],
+	};
+
+	const { autumnV2_2 } = await initScenario({
+		customerId: `catalog-variant-controls-${suffix}`,
+		setup: [s.products({ list: [prod], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.post("/catalog.update", {
+		plans: [
+			{
+				plan_id: planId,
+				name: prod.name,
+				variants: [
+					{
+						variant_plan_id: variantId,
+						name: "Annual",
+						customize,
+					},
+				],
+			},
+		],
+	});
+	const currentVariant = await autumnV2_2.post("/plans.get", {
+		plan_id: variantId,
+	});
+
+	const err = await catchErr(() =>
+		autumnV2_2.post("/catalog.update", {
+			plans: [
+				{
+					plan_id: planId,
+					name: prod.name,
+					variants: [
+						{
+							variant_plan_id: variantId,
+							name: "Annual",
+							disable_version: true,
+							create_migration: true,
+							customize: currentVariant.variant_details.customize,
+						},
+					],
+				},
+			],
+		}),
+	);
+
+	expect(err?.code).toBe(ErrCode.InvalidPropagationTarget);
 });
 
 test(`${chalk.yellowBright("catalog: preview_update includes auto-propagated variant settings")}`, async () => {

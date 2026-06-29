@@ -37,6 +37,7 @@ export interface PushPrompt {
 
 interface PlanVersioningPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
+	scope?: "plan" | "variant";
 	willVersion: boolean;
 	isArchived: boolean;
 	hasHistoricalVersions?: boolean;
@@ -62,6 +63,7 @@ interface PlanVariantPropagationGroupPromptInfo {
 
 interface PlanMigrationPromptInfo {
 	plan: Pick<Plan, "id" | "name">;
+	scope?: "plan" | "variant";
 }
 
 // Counter for unique prompt IDs
@@ -103,6 +105,7 @@ export function createPlanVersioningPrompt(
 		data: {
 			planId: info.plan.id,
 			planName: info.plan.name,
+			scope: info.scope ?? "plan",
 		},
 		options: [
 			{
@@ -144,6 +147,7 @@ export function createPlanMigrationPrompt(
 		data: {
 			planId: info.plan.id,
 			planName: info.plan.name,
+			scope: info.scope ?? "plan",
 		},
 		options: [
 			{

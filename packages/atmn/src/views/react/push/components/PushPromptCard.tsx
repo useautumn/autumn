@@ -50,23 +50,29 @@ export function PushPromptCard({
 				</PromptCard>
 			);
 
-		case "plan_versioning":
+		case "plan_versioning": {
+			const isVariant = getData<string>(prompt, "scope") === "variant";
+			const entityLabel = isVariant ? "Variant" : "Plan";
 			return (
 				<PromptCard
-					title="Save Plan Changes"
+					title={`Save ${entityLabel} Changes`}
 					icon="⚠"
 					options={prompt.options}
 					onBack={onBack}
 					onSelect={onRespond}
 				>
 					<Text>
-						Plan "{getData<string>(prompt, "planName")}" has customers on it.
+						{entityLabel} "{getData<string>(prompt, "planName")}" has customers
+						on it.
 					</Text>
 					<Text color="yellow">How should this apply?</Text>
 				</PromptCard>
 			);
+		}
 
-		case "plan_migration":
+		case "plan_migration": {
+			const isVariant = getData<string>(prompt, "scope") === "variant";
+			const entityLabel = isVariant ? "Variant" : "Plan";
 			return (
 				<PromptCard
 					title="Create Migration Draft?"
@@ -76,14 +82,15 @@ export function PushPromptCard({
 					onSelect={onRespond}
 				>
 					<Text>
-						Plan "{getData<string>(prompt, "planName")}" will be updated in
-						place.
+						{entityLabel} "{getData<string>(prompt, "planName")}" will be
+						updated in place.
 					</Text>
 					<Text color="gray">
 						Customers move only when you run the migration draft.
 					</Text>
 				</PromptCard>
 			);
+		}
 
 		case "plan_variant_propagation": {
 			const groupedVariants = getData<VariantPropagationOption[] | undefined>(

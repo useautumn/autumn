@@ -27,7 +27,9 @@ export function OverviewCard({ analysis, isLoading }: OverviewCardProps) {
 		analysis.featuresToCreate.length + analysis.featuresToUpdate.length;
 	const featuresToDelete = analysis.featuresToDelete.length;
 	const plansToPush =
-		analysis.plansToCreate.length + analysis.plansToUpdate.length;
+		analysis.plansToCreate.length +
+		analysis.plansToUpdate.length +
+		analysis.variantsToUpdate.length;
 	const plansToDelete = analysis.plansToDelete.length;
 
 	const warnings: string[] = [];
@@ -47,9 +49,14 @@ export function OverviewCard({ analysis, isLoading }: OverviewCardProps) {
 	const plansWithVersioning = analysis.plansToUpdate.filter(
 		(p) => p.willVersion,
 	);
-	if (plansWithVersioning.length > 0) {
+	const variantsWithVersioning = analysis.variantsToUpdate.filter(
+		(variant) => variant.willVersion,
+	);
+	const versioningCount =
+		plansWithVersioning.length + variantsWithVersioning.length;
+	if (versioningCount > 0) {
 		warnings.push(
-			`${plansWithVersioning.length} plan(s) will create new versions`,
+			`${versioningCount} plan(s) will create new versions`,
 		);
 	}
 

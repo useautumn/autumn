@@ -16,6 +16,8 @@ export {
 	analyzePush,
 	buildLatestPlanVersionById,
 	buildCatalogUpdateParams,
+	catalogFeatureChangeHasChanges,
+	catalogPlanChangeHasChanges,
 	catalogPreviewHasChanges,
 	catalogPreviewToPushResult,
 	checkFeatureDeleteInfo,
@@ -44,7 +46,10 @@ export type {
 	PushAnalysis,
 	PushResult,
 	RemoteData,
+	VariantUpdateInfo,
+	VariantMigrationSelections,
 	VariantPropagationSelections,
+	VariantUpdateIntentSelections,
 } from "./types.js";
 
 export {

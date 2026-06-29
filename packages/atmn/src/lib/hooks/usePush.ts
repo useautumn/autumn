@@ -6,6 +6,8 @@ import createJiti from "jiti";
 import { useCallback, useEffect, useState } from "react";
 import {
 	buildLatestPlanVersionById,
+	catalogFeatureChangeHasChanges,
+	catalogPlanChangeHasChanges,
 	catalogPreviewHasChanges,
 	createFeatureArchivedPrompt,
 	createFeatureDeletePrompt,
@@ -26,12 +28,17 @@ import {
 	type PushAnalysis,
 	type PushPrompt,
 	type PushResult,
+	type VariantMigrationSelections,
 	type VariantPropagationSelections,
+	type VariantUpdateIntentSelections,
 	pushCatalog,
 	unarchiveFeature as unarchiveFeatureApi,
 	unarchivePlan as unarchivePlanApi,
 } from "../../commands/push/index.js";
-import { getVariantPropagationPreviews } from "../../commands/push/variantPropagation.js";
+import {
+	getDirectVariantUpdatePreviews,
+	getVariantPropagationPreviews,
+} from "../../commands/push/variantPropagation.js";
 import type { Feature, Plan } from "../../compose/models/index.js";
 import type { CatalogPreviewUpdateResponse } from "../api/endpoints/index.js";
 import { formatError } from "../api/client.js";
@@ -81,6 +88,12 @@ interface LocalConfig {
 	features: Feature[];
 	plans: Plan[];
 }
+
+type PlanVariantInfo = Pick<Plan, "id" | "name">;
+
+type PlanWithVariants = Plan & {
+	variants?: PlanVariantInfo[];
+};
 
 const isVariantExport = (value: unknown): boolean =>
 	Boolean(
@@ -158,18 +171,56 @@ const findPromptResponse = ({
 	entityId,
 	promptQueue,
 	promptResponses,
+	scope,
 	typePrefix,
 }: {
 	entityId: string;
 	promptQueue: PushPrompt[];
 	promptResponses: Map<string, string>;
+	scope?: "plan" | "variant";
 	typePrefix: string;
 }) => {
 	const prompt = promptQueue.find(
 		(candidate) =>
-			candidate.type.startsWith(typePrefix) && candidate.entityId === entityId,
+			candidate.type.startsWith(typePrefix) &&
+			candidate.entityId === entityId &&
+			(scope === undefined || candidate.data.scope === scope),
 	);
 	return prompt ? promptResponses.get(prompt.id) : undefined;
+};
+
+const buildDirectVariantUpdatePrompts = ({
+	environment,
+	preview,
+}: {
+	environment: AppEnv;
+	preview: CatalogPreviewUpdateResponse;
+}): PushPrompt[] => {
+	const prompts: PushPrompt[] = [];
+
+	for (const planChange of preview.plan_changes) {
+		for (const variant of getDirectVariantUpdatePreviews({ planChange })) {
+			if (!variant.versionable) continue;
+			const plan = {
+				id: variant.plan_id,
+				name: variant.name ?? variant.plan_id,
+			};
+			prompts.push(
+				createPlanVersioningPrompt(
+					{
+						plan,
+						scope: "variant",
+						willVersion: variant.versionable,
+						isArchived: false,
+					},
+					environment,
+				),
+			);
+			prompts.push(createPlanMigrationPrompt({ plan, scope: "variant" }));
+		}
+	}
+
+	return prompts;
 };
 
 const buildVariantPropagationPrompts = ({
@@ -223,12 +274,20 @@ const catalogPreviewToAnalysis = ({
 	const remotePlansById = new Map(
 		remoteData.plans.map((plan) => [planTargetKey(plan), plan]),
 	);
+	const localVariantsById = new Map(
+		(plans as PlanWithVariants[]).flatMap((plan) =>
+			(plan.variants ?? []).map(
+				(variant) => [variant.id, variant] as const,
+			),
+		),
+	);
 	const analysis: PushAnalysis = {
 		featuresToCreate: [],
 		featuresToUpdate: [],
 		featuresToDelete: [],
 		plansToCreate: [],
 		plansToUpdate: [],
+		variantsToUpdate: [],
 		plansToDelete: [],
 		archivedFeatures: features.filter(
 			(feature) =>
@@ -244,7 +303,11 @@ const catalogPreviewToAnalysis = ({
 		const localFeature = localFeaturesById.get(change.feature_id);
 		if (change.action === "create" && localFeature) {
 			analysis.featuresToCreate.push(localFeature);
-		} else if (change.action === "update" && localFeature) {
+		} else if (
+			change.action === "update" &&
+			catalogFeatureChangeHasChanges(change) &&
+			localFeature
+		) {
 			analysis.featuresToUpdate.push(localFeature);
 		} else if (change.action === "remove") {
 			analysis.featuresToDelete.push({
@@ -261,7 +324,11 @@ const catalogPreviewToAnalysis = ({
 			indexedPlan?.id === change.plan_id ? indexedPlan : undefined;
 		if (change.action === "created" && localPlan) {
 			analysis.plansToCreate.push(localPlan);
-		} else if (change.action === "updated" && localPlan) {
+		} else if (
+			change.action === "updated" &&
+			catalogPlanChangeHasChanges(change) &&
+			localPlan
+		) {
 			const hasHistoricalVersions = planChangeHasHistoricalVersions({
 				planChange: change,
 			});
@@ -278,6 +345,19 @@ const catalogPreviewToAnalysis = ({
 				id: change.plan_id,
 				canDelete: !change.will_archive,
 				customerCount: change.will_archive ? 1 : 0,
+			});
+		}
+
+		for (const variant of getDirectVariantUpdatePreviews({
+			planChange: change,
+		})) {
+			const localVariant = localVariantsById.get(variant.plan_id);
+			analysis.variantsToUpdate.push({
+				variant: {
+					id: variant.plan_id,
+					name: localVariant?.name ?? variant.name ?? variant.plan_id,
+				},
+				willVersion: variant.versionable,
 			});
 		}
 	}
@@ -414,9 +494,15 @@ export function usePush(options?: UsePushOptions) {
 			for (const planInfo of analysisResult.plansToUpdate) {
 				if (planInfo.willVersion || planInfo.hasHistoricalVersions) {
 					prompts.push(createPlanVersioningPrompt(planInfo, environment));
-					prompts.push(createPlanMigrationPrompt(planInfo));
 				}
 			}
+
+			prompts.push(
+				...buildDirectVariantUpdatePrompts({
+					environment,
+					preview,
+				}),
+			);
 
 			prompts.push(
 				...buildVariantPropagationPrompts({
@@ -424,6 +510,12 @@ export function usePush(options?: UsePushOptions) {
 					preview,
 				}),
 			);
+
+			for (const planInfo of analysisResult.plansToUpdate) {
+				if (planInfo.willVersion || planInfo.hasHistoricalVersions) {
+					prompts.push(createPlanMigrationPrompt(planInfo));
+				}
+			}
 
 			// Feature deletions
 			for (const info of analysisResult.featuresToDelete) {
@@ -535,10 +627,21 @@ export function usePush(options?: UsePushOptions) {
 					entityId: planInfo.plan.id,
 					promptQueue,
 					promptResponses,
+					scope: "plan",
 					typePrefix: "plan_versioning",
 				}) === "skip"
 			) {
 				skipped.add(planInfo.plan.id);
+			}
+		}
+
+		for (const prompt of promptQueue) {
+			if (
+				prompt.type === "plan_versioning" &&
+				prompt.data.scope === "variant" &&
+				promptResponses.get(prompt.id) === "skip"
+			) {
+				skipped.add(prompt.entityId);
 			}
 		}
 
@@ -609,6 +712,7 @@ export function usePush(options?: UsePushOptions) {
 					entityId: planInfo.plan.id,
 					promptQueue,
 					promptResponses,
+					scope: "plan",
 					typePrefix: "plan_versioning",
 				});
 				if (
@@ -630,6 +734,7 @@ export function usePush(options?: UsePushOptions) {
 				entityId: planInfo.plan.id,
 				promptQueue,
 				promptResponses,
+				scope: "plan",
 				typePrefix: "plan_migration",
 			});
 			if (response !== undefined) {
@@ -638,6 +743,42 @@ export function usePush(options?: UsePushOptions) {
 		}
 		return selections;
 	}, [analysis, promptQueue, promptResponses]);
+
+	const getVariantUpdateIntentSelections =
+		useCallback((): VariantUpdateIntentSelections => {
+			const selections: VariantUpdateIntentSelections = {};
+			for (const prompt of promptQueue) {
+				if (
+					prompt.type !== "plan_versioning" ||
+					prompt.data.scope !== "variant"
+				) {
+					continue;
+				}
+				const response = promptResponses.get(prompt.id);
+				if (response === "create_version" || response === "update_current") {
+					selections[prompt.entityId] = response;
+				}
+			}
+			return selections;
+		}, [promptQueue, promptResponses]);
+
+	const getVariantMigrationSelections =
+		useCallback((): VariantMigrationSelections => {
+			const selections: VariantMigrationSelections = {};
+			for (const prompt of promptQueue) {
+				if (
+					prompt.type !== "plan_migration" ||
+					prompt.data.scope !== "variant"
+				) {
+					continue;
+				}
+				const response = promptResponses.get(prompt.id);
+				if (response !== undefined) {
+					selections[prompt.entityId] = response === "create_migration";
+				}
+			}
+			return selections;
+		}, [promptQueue, promptResponses]);
 
 	const pushFeaturesMutation = useMutation({
 		mutationFn: async (_config: LocalConfig) => {
@@ -708,6 +849,14 @@ export function usePush(options?: UsePushOptions) {
 					),
 				);
 			}
+			for (const variantInfo of analysis?.variantsToUpdate ?? []) {
+				setPlanProgress((prev) =>
+					new Map(prev).set(
+						variantInfo.variant.id,
+						skippedPlans.has(variantInfo.variant.id) ? "skipped" : "pushing",
+					),
+				);
+			}
 			for (const info of analysis?.plansToDelete ?? []) {
 				setPlanProgress((prev) =>
 					new Map(prev).set(
@@ -725,7 +874,9 @@ export function usePush(options?: UsePushOptions) {
 				planUpdateIntentSelections: getPlanUpdateIntentSelections(),
 				skipFeatureIds: skippedFeatureIds,
 				skipPlanIds: skippedPlanIds,
+				variantMigrationSelections: getVariantMigrationSelections(),
 				variantPropagationSelections: getVariantPropagationSelections(),
+				variantUpdateIntentSelections: getVariantUpdateIntentSelections(),
 			});
 		},
 		onSuccess: (finalResult) => {
@@ -782,7 +933,8 @@ export function usePush(options?: UsePushOptions) {
 			const versionPrompt = promptQueue.find(
 				(candidate) =>
 					candidate.type === "plan_versioning" &&
-					candidate.entityId === prompt.entityId,
+					candidate.entityId === prompt.entityId &&
+					candidate.data.scope === prompt.data.scope,
 			);
 			if (!versionPrompt) return false;
 			const response = responses.get(versionPrompt.id);

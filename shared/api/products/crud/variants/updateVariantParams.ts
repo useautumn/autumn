@@ -22,6 +22,10 @@ export const UpdateVariantParamsSchema = z.object({
 		description: "Force this variant update to create a new version.",
 		internal: true,
 	}),
+	create_migration: z.boolean().optional().meta({
+		description: "Create a migration draft for an in-place variant update.",
+		internal: true,
+	}),
 });
 
 export type UpdateVariantParams = z.infer<typeof UpdateVariantParamsSchema>;

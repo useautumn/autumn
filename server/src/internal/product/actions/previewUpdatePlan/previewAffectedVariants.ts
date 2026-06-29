@@ -1,3 +1,4 @@
+import { planUpdatePreviewHasDiff } from "@autumn/shared";
 import type {
 	ApiPlanV1,
 	DiffedCustomizePlanV1,
@@ -13,9 +14,16 @@ import {
 	applyDiffToVariantPlan,
 	type VariantSettingsPatch,
 } from "../common/planTransformUtils.js";
+import { resolveVariantUpdateSource } from "../common/variantUpdateSource.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { detectVariantConflicts } from "./detectVariantConflicts.js";
 import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
+
+const diffHasVersionableChanges = (diff: DiffedCustomizePlanV1): boolean =>
+	diff.price !== undefined ||
+	diff.add_items != null ||
+	diff.remove_items != null ||
+	diff.free_trial !== undefined;
 
 export const previewAffectedVariants = async ({
 	ctx,
@@ -37,15 +45,15 @@ export const previewAffectedVariants = async ({
 	variantUpdates?: UpdateVariantParams[];
 }): Promise<PlanUpdatePreviewVariant[]> => {
 	const { db, org, env, features } = ctx;
-	const updateByVariantId = new Map(
+	const variantUpdateById = new Map(
 		variantUpdates.map((variantUpdate) => [
 			variantUpdate.variant_plan_id,
-			variantUpdate.customize,
+			variantUpdate,
 		]),
 	);
 	const selectedVariantIds = new Set([
 		...(data.update_variant_ids ?? []),
-		...updateByVariantId.keys(),
+		...variantUpdateById.keys(),
 	]);
 
 	const family = await ProductService.listFull({
@@ -86,12 +94,12 @@ export const previewAffectedVariants = async ({
 				product: variant,
 				features,
 			});
-			const variantDiff = updateByVariantId.get(variant.id);
-			const previewPlan = variantDiff
+			const variantUpdate = variantUpdateById.get(variant.id);
+			const previewPlan = variantUpdate
 				? {
 						...applyDiffToVariantPlan({
 							plan: editedBasePlan,
-							diff: variantDiff,
+							diff: variantUpdate.customize,
 						}),
 						id: variant.id,
 						name: variant.name,
@@ -105,16 +113,21 @@ export const previewAffectedVariants = async ({
 				ctx,
 				product: variant,
 			});
+			const hasVersionableChanges =
+				diffHasVersionableChanges(diff) ||
+				(variantUpdate
+					? diffHasVersionableChanges(variantUpdate.customize)
+					: false);
+			const forceVariantVersion = variantUpdate?.force_version ?? data.force_version;
+			const disableVariantVersion =
+				variantUpdate?.disable_version || data.disable_version;
 			const versionable =
-				(isLatestVersion && data.force_version) ||
+				(isLatestVersion && forceVariantVersion) ||
 				(isLatestVersion &&
-					!data.disable_version &&
+					!disableVariantVersion &&
 					!data.all_versions &&
 					hasCustomers &&
-					(diff.price !== undefined ||
-						diff.add_items != null ||
-						diff.remove_items != null ||
-						diff.free_trial !== undefined));
+					hasVersionableChanges);
 			const conflicts = detectVariantConflicts({
 				currentBasePlan,
 				editedBasePlan,
@@ -122,21 +135,32 @@ export const previewAffectedVariants = async ({
 				variantPlan: currentPlan,
 				features,
 			});
+			const preview = buildCorePlanUpdatePreview({
+				ctx,
+				planId: variant.id,
+				current: currentPlan,
+				preview: previewPlan,
+				hasCustomers,
+				customerCount,
+				versionable,
+			});
+			const willApply =
+				selectedVariantIds.has(variant.id) &&
+				(data.all_versions || isLatestVersion);
+			const updateSource =
+				data.all_versions || isLatestVersion
+					? resolveVariantUpdateSource({
+							currentCustomize: currentPlan.variant_details?.customize,
+							incomingCustomize: variantUpdate?.customize,
+							hasPreviewDiff: planUpdatePreviewHasDiff(preview),
+						})
+					: null;
 			return {
-				...buildCorePlanUpdatePreview({
-					ctx,
-					planId: variant.id,
-					current: currentPlan,
-					preview: previewPlan,
-					hasCustomers,
-					customerCount,
-					versionable,
-				}),
+				...preview,
 				name: variant.name,
 				version: variant.version,
-				will_apply:
-					selectedVariantIds.has(variant.id) &&
-					(data.all_versions || isLatestVersion),
+				will_apply: willApply,
+				...(updateSource ? { update_source: updateSource } : {}),
 				conflicts,
 			};
 		}),
