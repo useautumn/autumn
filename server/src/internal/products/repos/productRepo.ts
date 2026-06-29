@@ -1,6 +1,7 @@
 import { type AppEnv, type ProductMetadata, products } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { listStripeReuseFamilyIds } from "./listStripeReuseFamilyIds.js";
 
 // Fans the write out to every version row (no stable cross-version id); `id`
 // must be the plan's current external id.
@@ -29,5 +30,6 @@ const updateMetadataByExternalId = async ({
 		);
 
 export const productRepo = {
+	listStripeReuseFamilyIds,
 	updateMetadataByExternalId,
 } as const;

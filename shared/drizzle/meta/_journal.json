@@ -232,6 +232,13 @@
       "when": 1782760749233,
       "tag": "0032_white_stone_men",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1782770925277,
+      "tag": "0033_dusty_crystal",
+      "breakpoints": true
     }
   ]
 }

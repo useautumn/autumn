@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_products_org_env_base_internal_product_id" ON "products" USING btree ("org_id","env","base_internal_product_id") WHERE "products"."base_internal_product_id" IS NOT NULL;
