@@ -8,6 +8,7 @@ export {
 	findPlanBillingControlWithProduct,
 	fullCustomerToPlanProducts,
 	fullSubjectToPlanProducts,
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	getPlanBillingControlProducts,
 	resolveBillingControl,
 	resolveBillingControlWithProduct,
