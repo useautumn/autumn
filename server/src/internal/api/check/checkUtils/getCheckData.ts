@@ -4,6 +4,7 @@ import {
 	ApiVersion,
 	type CheckParams,
 	type DbSpendLimit,
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
@@ -88,14 +89,12 @@ export const getCheckData = async ({
 	);
 
 	apiSubject = apiCustomer;
-	// Normalize percentage-typed plan spend limits to absolute units *before*
-	// the most-restrictive merge picks across plans, so a `200%` cap can't lose
-	// to a `1000` absolute cap on raw-number comparison.
 	const cusEntsForFeature = (featureId: string) =>
 		fullCustomerToCustomerEntitlements({
 			fullCustomer,
 			featureId,
 			entity: fullCustomer.entity,
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 		});
 	const normalizeSpendLimitForCompare = (
 		control: DbSpendLimit,
@@ -147,6 +146,7 @@ export const getCheckData = async ({
 				fullCustomer,
 				featureId,
 				entity: fullCustomer.entity,
+				inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 			}),
 		entityId: entity_id,
 	});

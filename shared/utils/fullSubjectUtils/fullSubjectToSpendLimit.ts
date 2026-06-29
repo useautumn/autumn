@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import { resolveSpendLimitOverageLimit } from "../cusEntUtils/index.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 import {
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	fullSubjectToPlanProducts,
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
@@ -29,16 +30,16 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 		const isMatch = (candidate: DbSpendLimit) =>
 			candidate.feature_id === featureId && candidate.overage_limit !== undefined;
 
-		// Compute cusEnts up front so percentage-typed plan spend limits can
-		// be resolved to absolute units *before* the most-restrictive merge
-		// compares them — otherwise e.g. a `200%` cap would lose to a `1000`
-		// absolute cap on raw-number comparison even when its resolved value
-		// is far higher.
 		const cusEnts = fullSubjectToCustomerEntitlements({
 			fullSubject,
 			featureIds: [featureId],
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 		});
 		const entityId = fullSubject.entity?.id ?? undefined;
+		const additionalAllowance =
+			fullSubject.aggregated_customer_entitlements?.find(
+				(entitlement) => entitlement.feature_id === featureId,
+			)?.allowance_total ?? 0;
 		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
 			if (control.limit_type !== "usage_percentage") return control;
 			return {
@@ -47,6 +48,7 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 					spendLimit: control,
 					cusEnts,
 					entityId,
+					additionalAllowance,
 				}),
 				limit_type: "absolute",
 			};
@@ -65,6 +67,7 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 				spendLimit,
 				cusEnts,
 				entityId,
+				additionalAllowance,
 			});
 
 			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.

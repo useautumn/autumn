@@ -4,6 +4,7 @@ import {
 	ApiVersion,
 	type CheckParams,
 	type DbSpendLimit,
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
@@ -95,14 +96,16 @@ export const getCheckDataV2 = async ({
 		includeAggregations: false,
 	});
 
-	// Normalize percentage-typed plan spend limits to absolute units *before*
-	// the most-restrictive merge picks across plans, so a `200%` cap can't lose
-	// to a `1000` absolute cap on raw-number comparison.
 	const cusEntsForFeature = (featureId: string) =>
 		fullSubjectToCustomerEntitlements({
 			fullSubject,
 			featureIds: [featureId],
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 		});
+	const additionalAllowanceForFeature = (featureId: string) =>
+		fullSubject.aggregated_customer_entitlements?.find(
+			(entitlement) => entitlement.feature_id === featureId,
+		)?.allowance_total ?? 0;
 	const normalizeSpendLimitForCompare = (
 		control: DbSpendLimit,
 	): DbSpendLimit => {
@@ -115,6 +118,7 @@ export const getCheckDataV2 = async ({
 				spendLimit: control,
 				cusEnts: cusEntsForFeature(control.feature_id),
 				entityId: entity_id,
+				additionalAllowance: additionalAllowanceForFeature(control.feature_id),
 			}),
 			limit_type: "absolute",
 		};
@@ -151,8 +155,10 @@ export const getCheckDataV2 = async ({
 			fullSubjectToCustomerEntitlements({
 				fullSubject,
 				featureIds: [featureId],
+				inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 			}),
 		entityId: entity_id,
+		additionalAllowanceForFeature,
 	});
 
 	const featureToUseMin = getFeatureToUseForCheck({

@@ -1,21 +1,10 @@
-/**
- * Multi-plan collapse for spend_limits across mixed `limit_type` values.
- *
- * `pickStricterSpendLimit` compares raw `overage_limit` numbers, so without
- * normalization a `200%` cap can lose to a `1000` absolute cap on the
- * 200<1000 raw comparison even when the resolved percentage cap is far
- * higher. `findPlanBillingControlWithProduct` accepts a `normalizeForCompare`
- * projection that resolves percentage caps to absolute units before invoking
- * the comparator; the original (un-normalized) control is still returned to
- * the caller so downstream resolution still sees `limit_type: "usage_percentage"`.
- */
-
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
 	type DbSpendLimit,
 	type FullCusProduct,
 	resolveBillingControlWithProduct,
+	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 
 const FEATURE = "messages";
@@ -59,9 +48,6 @@ const percent = (percentage: number): DbSpendLimit => ({
 
 describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_type", () => {
 	test("without normalization, a looser 200% cap wrongly beats a stricter $1000 absolute cap", () => {
-		// Raw comparator: 200 < 1000 -> picks 200% (a 200% cap of a 5000 allowance
-		// resolves to 10000 absolute, far looser than $1000). Captures the bug
-		// the normalizer fixes.
 		const cheap = planProduct({
 			id: "cp_absolute",
 			internalProductId: "prod_absolute",
@@ -131,8 +117,6 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 			normalizeForCompare,
 		});
 
-		// Picked control is the original — downstream resolveSpendLimitOverageLimit
-		// still sees the absolute cap directly.
 		expect(resolved?.control.limit_type).toBe("absolute");
 		expect(resolved?.control.overage_limit).toBe(1000);
 		expect(resolved?.customerProduct?.internal_product_id).toBe(
@@ -141,9 +125,6 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 	});
 
 	test("with normalization, a 50% cap of a 5000 allowance ($2500) correctly beats a $4000 absolute cap", () => {
-		// Mirror of the previous test: now the percent IS the stricter resolved
-		// cap. Raw comparison would have picked the percent here too (50 < 4000)
-		// but for the wrong reason.
 		const loose = planProduct({
 			id: "cp_loose",
 			internalProductId: "prod_loose",
@@ -192,9 +173,6 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 	});
 
 	test("unresolvable percent (no allowance) is treated as no-cap and absolute wins", () => {
-		// resolveSpendLimitOverageLimit returns undefined when denominator is 0;
-		// pickStricterSpendLimit's `?? Number.POSITIVE_INFINITY` then means the
-		// percent is the loosest possible cap, so any absolute cap wins.
 		const cheap = planProduct({
 			id: "cp_absolute",
 			internalProductId: "prod_absolute",
@@ -227,5 +205,15 @@ describe("findPlanBillingControlWithProduct — spend_limits with mixed limit_ty
 
 		expect(resolved?.control.limit_type).toBe("absolute");
 		expect(resolved?.control.overage_limit).toBe(50);
+	});
+
+	test("aggregate allowance contributes to percentage resolution", () => {
+		const resolved = resolveSpendLimitOverageLimit({
+			spendLimit: percent(50),
+			cusEnts: [],
+			additionalAllowance: 200,
+		});
+
+		expect(resolved).toBe(100);
 	});
 });

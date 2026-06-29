@@ -2,6 +2,7 @@ import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import { resolveSpendLimitOverageLimit } from "@utils/cusEntUtils";
 import {
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	fullCustomerToPlanProducts,
 	resolveBillingControl,
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
@@ -37,15 +38,11 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 			candidate.feature_id === featureId &&
 			candidate.overage_limit !== undefined;
 
-		// Compute cusEnts up front so percentage-typed plan spend limits can
-		// be resolved to absolute units *before* the most-restrictive merge
-		// compares them — otherwise e.g. a `200%` cap would lose to a `1000`
-		// absolute cap on raw-number comparison even when its resolved value
-		// is far higher.
 		const cusEnts = fullCustomerToCustomerEntitlements({
 			fullCustomer,
 			featureIds: [featureId],
 			entity,
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
 		});
 		const entityIdForResolve = entity?.id ?? entity?.internal_id ?? undefined;
 		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {

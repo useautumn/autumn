@@ -89,13 +89,7 @@ export const mergeCustomerBillingControlsForCheck = ({
 	entityApiSubject: ApiEntityV2;
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
-	/**
-	 * Optional projection that resolves a percentage-typed spend limit to an
-	 * absolute one so the most-restrictive merge across plans can compare
-	 * percent and absolute caps on the same axis. Pass when callers have the
-	 * customer's main-plan allowance available (typically via
-	 * `fullCustomerToCustomerEntitlements` + `resolveSpendLimitOverageLimit`).
-	 */
+	/** Normalizes spend limits only for most-restrictive plan comparisons. */
 	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): ApiEntityV2 => {
 	const entitySpendLimits =
@@ -159,11 +153,7 @@ export const mergePlanBillingControlsForCheck = ({
 }: {
 	customerApiSubject: ApiCustomerV5;
 	planCustomerProducts?: FullCusProduct[];
-	/**
-	 * Optional projection that resolves a percentage-typed spend limit to an
-	 * absolute one so the most-restrictive merge across plans can compare
-	 * percent and absolute caps on the same axis.
-	 */
+	/** Normalizes spend limits only for most-restrictive plan comparisons. */
 	normalizeSpendLimitForCompare?: (control: DbSpendLimit) => DbSpendLimit;
 }): ApiCustomerV5 => {
 	const customerSpendLimits =
