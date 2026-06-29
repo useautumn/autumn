@@ -98,7 +98,7 @@ export const createIngress = async ({
 	// output through the shared log sink, so during the RUN phase (Ink mounted) the
 	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
 	// for stdout.
-	const ingressCommand = await runDetached(sandbox, ["node", INGRESS_SCRIPT], {
+	const ingressCommand = await runDetached(sandbox, ["bun", INGRESS_SCRIPT], {
 		cwd: sandboxRepoRoot(),
 		onChunk: (text) =>
 			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`)),
