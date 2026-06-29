@@ -15,6 +15,7 @@
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "types": ["bun"],
     "jsx": "react-jsx",
 
     /* Linting */
