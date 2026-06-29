@@ -4,7 +4,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useEnv } from "@/utils/envUtils";
 
 export const PublishableKeySection = () => {
-	const { org } = useOrg();
+	const { org } = useOrg({ skipSandbox: false });
 	const env = useEnv();
 	return (
 		<div>
