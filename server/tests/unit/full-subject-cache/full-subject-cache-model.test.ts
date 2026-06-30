@@ -13,6 +13,7 @@ import {
 	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 	normalizedToCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 
 const buildNormalized = (): NormalizedFullSubject =>
 	({
@@ -184,6 +185,23 @@ describe("fullSubject cache model", () => {
 		});
 		expect(cached._schemaVersion).toBe(FULL_SUBJECT_CACHE_SCHEMA_VERSION);
 		expect(cached._cachedAt).toBeTypeOf("number");
+	});
+
+	test("sanitizes cached customer config without disable_overage_billing", () => {
+		const normalized = buildNormalized();
+		normalized.customer.config = { disable_pooled_balance: true };
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+
+		expect(() =>
+			sanitizeCachedFullSubject({ cachedFullSubject: cached }),
+		).not.toThrow();
+
+		const sanitized = sanitizeCachedFullSubject({ cachedFullSubject: cached });
+		expect(sanitized.customer.config?.disable_pooled_balance).toBe(true);
+		expect(sanitized.customer.config?.disable_overage_billing).toBeUndefined();
 	});
 
 	test("stores subject view epoch for entity subjects", () => {

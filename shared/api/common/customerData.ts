@@ -66,6 +66,10 @@ export const CustomerDataSchema = z
 					description:
 						"Whether to disable the shared customer-level pool for entities.",
 				}),
+				disable_overage_billing: z.boolean().optional().meta({
+					description:
+						"Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.",
+				}),
 			})
 			.optional()
 			.meta({

@@ -246,6 +246,13 @@
       "when": 1782836417268,
       "tag": "0034_ambiguous_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1782844933101,
+      "tag": "0035_boring_maggott",
+      "breakpoints": true
     }
   ]
 }
