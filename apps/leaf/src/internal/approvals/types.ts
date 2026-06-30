@@ -29,6 +29,10 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 		providerUserId: string;
 	}) => Promise<ChatApproval | undefined>;
+	authorizeApprovalClicker?: (input: {
+		approval: ChatApproval;
+		providerUserId: string;
+	}) => Promise<{ allowed: true } | { allowed: false; text: string }>;
 	editActionMessage: (input: {
 		content: ActionMessageContent;
 		event: ActionEvent;

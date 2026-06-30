@@ -118,6 +118,7 @@ export const runMessage = async ({
 						db,
 						orgId: org.id,
 						thread: effectiveThread,
+						userId: autumnUserId,
 					});
 				}
 				return Promise.resolve(undefined);

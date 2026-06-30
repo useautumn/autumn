@@ -258,6 +258,59 @@ describe("approval flow", () => {
 		expect(JSON.stringify(edits[1])).toContain("approved by <@U1>");
 	});
 
+	test("does not claim or run when the Slack approver lacks Autumn scopes", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const calls: string[] = [];
+		const replies: string[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "createPlan",
+			tool_args: { request: { plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "approve_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async () => {
+					calls.push("run");
+					return { result: {}, text: "ran" };
+				},
+				cancelApproval: async () => approval,
+				authorizeApprovalClicker: async () => ({
+					allowed: false,
+					text: "Missing plans:write.",
+				}),
+				claimApproval: async () => {
+					calls.push("claim");
+					return approval;
+				},
+				editActionMessage: async () => {
+					calls.push("edit");
+				},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postThreadReply: async ({ markdown }) => {
+					replies.push(markdown);
+				},
+			},
+		});
+
+		expect(calls).toEqual([]);
+		expect(replies).toEqual(["Missing plans:write."]);
+	});
+
 	test("shows the current state when a claim is rejected", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(

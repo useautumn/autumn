@@ -58,7 +58,13 @@ export const claudeManagedEngine: AgentEngine = {
 		const existingSession =
 			claudeManagedSession ??
 			(await perf.time("lookup_session", () =>
-				getClaudeManagedSession({ db, env, orgId: org.id, thread }),
+				getClaudeManagedSession({
+					db,
+					env,
+					orgId: org.id,
+					thread,
+					userId: autumnUserId,
+				}),
 			));
 
 		let sessionRef = existingSession;
@@ -115,6 +121,7 @@ export const claudeManagedEngine: AgentEngine = {
 					memoryStoreId,
 					orgId: org.id,
 					thread,
+					userId: autumnUserId,
 					vaultId,
 				}),
 			);

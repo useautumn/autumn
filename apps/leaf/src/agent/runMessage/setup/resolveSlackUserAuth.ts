@@ -35,7 +35,7 @@ const DENY_TEXT: Record<SlackAuthDenyReason, string> = {
 };
 
 export type SlackUserAuthResult =
-	| { ok: true; userId: string; role: string }
+	| { ok: true; userId: string; role: string; scopes: string[] }
 	| { ok: false; reason: SlackAuthDenyReason; text: string };
 
 // Bot ceiling, as a plain string set so we can probe arbitrary ScopeStrings.
@@ -125,5 +125,5 @@ export const resolveSlackUserAuth = async ({
 		event: "leaf.slack_user_auth_resolved",
 		data: { role, scope_count: supportedScopes.length },
 	});
-	return { ok: true, userId, role };
+	return { ok: true, userId, role, scopes: supportedScopes };
 };

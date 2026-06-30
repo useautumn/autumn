@@ -1,9 +1,18 @@
-import type { ChatApproval } from "@autumn/shared";
+import {
+	type ChatApproval,
+	Scopes,
+	chatInstallations,
+	checkScopes,
+	type RouteScopeRequirement,
+} from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
 import type { ActionEvent } from "chat";
 import {
 	isSlackAdminProvider,
 	validateSlackAdminAccess,
 } from "../../../slackAdmin/access.js";
+import { resolveSlackUserAuth } from "../../../../agent/runMessage/setup/resolveSlackUserAuth.js";
+import { decrypt } from "../../../../lib/crypto.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
@@ -24,10 +33,68 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	preview: approval?.preview ?? undefined,
 });
 
+const approvalScopeRequirements: Record<string, RouteScopeRequirement> = {
+	attach: [Scopes.Billing.Write],
+	createBalance: [Scopes.Balances.Write],
+	createPlan: [Scopes.Plans.Write],
+	createSchedule: [Scopes.Billing.Write],
+	updateCatalog: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },
+	updatePlan: [Scopes.Plans.Write],
+	updateSubscription: [Scopes.Billing.Write],
+};
+
+const authorizeSlackApprovalClicker = async ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}) => {
+	const required = approvalScopeRequirements[approval.tool_name];
+	if (!required || isSlackAdminProvider({ provider: approval.provider })) {
+		return { allowed: true } as const;
+	}
+
+	const installation = await db.query.chatInstallations.findFirst({
+		where: and(
+			eq(chatInstallations.provider, approval.provider),
+			eq(chatInstallations.workspace_id, approval.workspace_id),
+		),
+	});
+	if (!installation) {
+		return {
+			allowed: false,
+			text: "I couldn't verify your Slack workspace installation, so I can't approve this action.",
+		} as const;
+	}
+
+	const auth = await resolveSlackUserAuth({
+		botToken: decrypt(installation.bot_access_token),
+		installation,
+		logger: rootLogger,
+		orgId: approval.org_id,
+		slackUserId: providerUserId,
+	});
+	if (!auth.ok) {
+		return { allowed: false, text: auth.text } as const;
+	}
+
+	const { allowed, missing } = checkScopes(required, auth.scopes);
+	if (!allowed) {
+		return {
+			allowed: false,
+			text: `You don't have permission to approve ${detailsFromApproval({ approval }).toolName}. Missing: ${missing.join(", ")}.`,
+		} as const;
+	}
+
+	return { allowed: true } as const;
+};
+
 const defaultApprovalActionDeps: ApprovalActionDeps = {
 	resolveApproval,
 	cancelApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.cancel({ approvalId, db, providerUserId }),
+	authorizeApprovalClicker: authorizeSlackApprovalClicker,
 	claimApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.claim({ approvalId, db, providerUserId }),
 	editActionMessage: async ({ content, event }) => {
@@ -132,6 +199,24 @@ export const handleApprovalActionWithDeps = async ({
 				event: "leaf.approval_cancelled",
 				approval_id: approvalId,
 				tool: cancelled.tool_name,
+			});
+			return;
+		}
+
+		const authorization = await deps.authorizeApprovalClicker?.({
+			approval,
+			providerUserId,
+		});
+		if (authorization && !authorization.allowed) {
+			deps.logger.warn("Approval action denied by Autumn scopes", {
+				event: "leaf.approval_scope_denied",
+				approval_id: approvalId,
+				tool: approval.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await deps.postThreadReply({
+				event,
+				markdown: authorization.text,
 			});
 			return;
 		}
