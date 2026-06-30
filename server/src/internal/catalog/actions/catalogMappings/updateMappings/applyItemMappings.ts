@@ -43,9 +43,11 @@ export const applyItemMappings = ({
 					setPriceTarget({
 						targets: priceTargets,
 						price: entry.price,
+						product: context.product,
 						priceId: entry.price.id,
 						stripeProductId,
 						source: "item",
+						matchExistingStripePrice: true,
 					});
 				}
 			}

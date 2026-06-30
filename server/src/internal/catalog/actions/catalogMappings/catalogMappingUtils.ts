@@ -208,10 +208,12 @@ export const clearDependentStripePriceFields = ({
 	price,
 	stripeProductId,
 	stripePriceId,
+	stripeMeterId,
 }: {
 	price: Price;
 	stripeProductId: string | null;
 	stripePriceId?: string | null;
+	stripeMeterId?: string | null;
 }): Price["config"] => {
 	if (isFixedPrice(price)) {
 		const config = FixedPriceConfigSchema.parse(price.config);
@@ -227,11 +229,11 @@ export const clearDependentStripePriceFields = ({
 	return {
 		...config,
 		stripe_product_id: stripeProductId,
-		stripe_price_id: null,
+		stripe_price_id: stripePriceId ?? null,
 		stripe_empty_price_id: null,
 		stripe_placeholder_price_id: null,
 		stripe_prepaid_price_v2_id: null,
-		stripe_meter_id: null,
+		stripe_meter_id: stripeMeterId ?? null,
 		stripe_event_name: null,
 	};
 };

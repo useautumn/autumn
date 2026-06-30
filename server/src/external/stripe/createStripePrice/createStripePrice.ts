@@ -24,6 +24,8 @@ import { createStripeInArrearPrice } from "./createStripeInArrear";
 import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
 import { createStripePrepaid } from "./createStripePrepaid";
 
+const CREATE_STRIPE_EMPTY_PRICES = false;
+
 const checkCurStripePrice = async ({
 	price,
 	stripeCli,
@@ -83,19 +85,6 @@ const checkCurStripePrice = async ({
 		}
 	}
 
-	const getStripeEmptyPrice = async () => {
-		let stripeEmptyPrice: Stripe.Price | undefined;
-		if (!config.stripe_empty_price_id) {
-			stripeEmptyPrice = undefined;
-		} else {
-			stripeEmptyPrice = await getStripePrice({
-				stripeClient: stripeCli,
-				stripePriceId: config.stripe_empty_price_id,
-			});
-		}
-		return stripeEmptyPrice;
-	};
-
 	const getStripePrepaidPriceV2 = async () => {
 		let stripePrepaidPriceV2: Stripe.Price | undefined;
 		if (!config.stripe_prepaid_price_v2_id) {
@@ -110,15 +99,28 @@ const checkCurStripePrice = async ({
 		return stripePrepaidPriceV2;
 	};
 
+	const getStripeEmptyPrice = async () => {
+		let stripeEmptyPrice: Stripe.Price | undefined;
+		if (!config.stripe_empty_price_id) {
+			stripeEmptyPrice = undefined;
+		} else {
+			stripeEmptyPrice = await getStripePrice({
+				stripeClient: stripeCli,
+				stripePriceId: config.stripe_empty_price_id,
+			});
+		}
+		return stripeEmptyPrice;
+	};
+
 	const [stripeEmptyPrice, stripePrepaidPriceV2] = await Promise.all([
-		getStripeEmptyPrice(),
+		CREATE_STRIPE_EMPTY_PRICES ? getStripeEmptyPrice() : undefined,
 		getStripePrepaidPriceV2(),
 	]);
 
 	return {
 		stripePrice,
-		stripePrepaidPriceV2,
 		stripeEmptyPrice,
+		stripePrepaidPriceV2,
 		stripeProd,
 	};
 };
@@ -146,7 +148,7 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	const { stripePrice, stripePrepaidPriceV2, stripeProd, stripeEmptyPrice } =
+	const { stripePrice, stripeEmptyPrice, stripePrepaidPriceV2, stripeProd } =
 		await checkCurStripePrice({
 			price,
 			stripeCli,
@@ -257,12 +259,10 @@ export const createStripePriceIFNotExist = async ({
 			useCheckout,
 		});
 
-		if (!stripeEmptyPrice) {
+		if (CREATE_STRIPE_EMPTY_PRICES && !stripeEmptyPrice) {
 			try {
 				logger.info(`Creating stripe empty price`);
-				// console.log(`Product: ${config.stripe_product_id || stripeProd?.id}`);
 				const emptyPrice = await stripeCli.prices.create({
-					// product: stripeProd!.id,
 					product: config.stripe_product_id || product.processor?.id,
 					unit_amount: 0,
 					currency: org.default_currency || "usd",

@@ -14,8 +14,7 @@ type StripeResourceConfig = Partial<
 		| "stripe_product_id"
 		| "stripe_prepaid_price_v2_id"
 		| "stripe_meter_id"
-		| "stripe_placeholder_price_id"
-		| "stripe_empty_price_id",
+		| "stripe_placeholder_price_id",
 		string | null
 	>
 >;
@@ -72,8 +71,7 @@ export const priceHasMissingStripeResources = ({
 	return (
 		!hasUsableStripeId(config.stripe_price_id) ||
 		!hasUsableStripeId(config.stripe_product_id) ||
-		!hasUsableStripeId(config.stripe_meter_id) ||
-		!hasUsableStripeId(config.stripe_empty_price_id)
+		!hasUsableStripeId(config.stripe_meter_id)
 	);
 };
 

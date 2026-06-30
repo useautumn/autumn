@@ -1,13 +1,5 @@
-import {
-	atmnToStripeAmount,
-	BillingInterval,
-	FixedPriceConfigSchema,
-	isFixedPrice,
-	type Price,
-} from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
 
@@ -40,43 +32,6 @@ const runBatches = async <T, R>({
 	return results;
 };
 
-export const stripePriceMatchesFixedPrice = ({
-	stripePrice,
-	price,
-	stripeProductId: expectedStripeProductId,
-	currency,
-}: {
-	stripePrice: Stripe.Price;
-	price: Price;
-	stripeProductId: string;
-	currency: string;
-}) => {
-	if (!isFixedPrice(price)) return false;
-
-	const config = FixedPriceConfigSchema.parse(price.config);
-	if (config.interval === BillingInterval.OneOff) return false;
-	if (stripeProductId({ product: stripePrice.product }) !== expectedStripeProductId) {
-		return false;
-	}
-	if (!stripePrice.active) return false;
-	if (!stripePrice.recurring) return false;
-	if (stripePrice.currency.toLowerCase() !== currency.toLowerCase()) return false;
-	if (stripePrice.billing_scheme !== "per_unit") return false;
-
-	const recurring = billingIntervalToStripe({
-		interval: config.interval,
-		intervalCount: config.interval_count,
-	});
-	if (!recurring.interval) return false;
-
-	return (
-		stripePrice.unit_amount ===
-			atmnToStripeAmount({ amount: config.amount, currency }) &&
-		stripePrice.recurring.interval === recurring.interval &&
-		stripePrice.recurring.interval_count === recurring.interval_count
-	);
-};
-
 const listStripePricesForProduct = async ({
 	stripeCli,
 	stripeProductId,
@@ -102,6 +57,21 @@ const listStripePricesForProduct = async ({
 	}
 };
 
+const hydrateTieredStripePrices = async ({
+	stripeCli,
+	stripePrices,
+}: {
+	stripeCli: Stripe;
+	stripePrices: Stripe.Price[];
+}) =>
+	Promise.all(
+		stripePrices.map((stripePrice) =>
+			stripePrice.billing_scheme === "tiered"
+				? stripeCli.prices.retrieve(stripePrice.id, { expand: ["tiers"] })
+				: stripePrice,
+		),
+	);
+
 export const listExistingStripePricesByProduct = async ({
 	ctx,
 	stripeProductIds,
@@ -120,7 +90,13 @@ export const listExistingStripePricesByProduct = async ({
 		size: STRIPE_PRICE_LIST_CONCURRENCY,
 		run: async (stripeProductId) => ({
 			stripeProductId,
-			prices: await listStripePricesForProduct({ stripeCli, stripeProductId }),
+			prices: await hydrateTieredStripePrices({
+				stripeCli,
+				stripePrices: await listStripePricesForProduct({
+					stripeCli,
+					stripeProductId,
+				}),
+			}),
 		}),
 	});
 
@@ -129,23 +105,3 @@ export const listExistingStripePricesByProduct = async ({
 	}
 	return pricesByProduct;
 };
-
-export const findMatchingStripePriceForFixedPrice = ({
-	price,
-	stripeProductId,
-	stripePrices,
-	currency,
-}: {
-	price: Price;
-	stripeProductId: string;
-	stripePrices: Stripe.Price[];
-	currency: string;
-}) =>
-	stripePrices.find((stripePrice) =>
-		stripePriceMatchesFixedPrice({
-			stripePrice,
-			price,
-			stripeProductId,
-			currency,
-		}),
-	);

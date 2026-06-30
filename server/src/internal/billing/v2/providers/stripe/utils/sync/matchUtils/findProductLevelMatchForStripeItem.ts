@@ -3,8 +3,8 @@ import {
 	isFixedPrice,
 	type Price,
 } from "@autumn/shared";
+import { autumnBasePriceToStripePriceShape } from "../../matchUtils/autumnPriceShape";
 import {
-	autumnBasePriceToStripePriceShape,
 	stripeItemSnapshotToShape,
 	stripePriceShapesEqual,
 } from "../../matchUtils/stripePriceShape";

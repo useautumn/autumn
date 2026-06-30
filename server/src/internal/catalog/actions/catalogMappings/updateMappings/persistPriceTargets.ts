@@ -1,9 +1,11 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import type Stripe from "stripe";
 import {
+	findMatchingStripePriceForConsumablePrice,
 	findMatchingStripePriceForFixedPrice,
-	listExistingStripePricesByProduct,
-} from "./matchExistingStripeBasePrice.js";
+} from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/stripePriceMatchesAutumnPrice.js";
+import { listExistingStripePricesByProduct } from "./matchExistingStripeBasePrice.js";
 import {
 	resetStripePriceResources,
 	shouldResetStripePriceResources,
@@ -15,6 +17,40 @@ const shouldMatchExistingStripePrice = ({
 }: {
 	target: PriceTarget;
 }) => target.matchExistingStripePrice && Boolean(target.stripeProductId);
+
+const findMatchingStripePrice = ({
+	ctx,
+	target,
+	stripePrices,
+}: {
+	ctx: AutumnContext;
+	target: PriceTarget;
+	stripePrices: Stripe.Price[];
+}) => {
+	if (!target.stripeProductId || !shouldMatchExistingStripePrice({ target })) {
+		return null;
+	}
+
+	const currency = ctx.org.default_currency || "usd";
+	const fixedMatch = findMatchingStripePriceForFixedPrice({
+		price: target.price,
+		stripeProductId: target.stripeProductId,
+		stripePrices,
+		currency,
+	});
+	if (fixedMatch) {
+		return { stripePriceId: fixedMatch.id, stripeMeterId: null };
+	}
+
+	return findMatchingStripePriceForConsumablePrice({
+		price: target.price,
+		product: target.product,
+		stripeProductId: target.stripeProductId,
+		stripePrices,
+		currency,
+		org: ctx.org,
+	});
+};
 
 export const persistPriceTargets = async ({
 	ctx,
@@ -41,15 +77,13 @@ export const persistPriceTargets = async ({
 	});
 
 	for (const { priceId, target } of entries) {
-		const matchedStripePrice =
-			target.stripeProductId && shouldMatchExistingStripePrice({ target })
-				? findMatchingStripePriceForFixedPrice({
-						price: target.price,
-						stripeProductId: target.stripeProductId,
-						stripePrices: pricesByProduct.get(target.stripeProductId) ?? [],
-						currency: ctx.org.default_currency || "usd",
-					})
-				: undefined;
+		const matchedStripePrice = findMatchingStripePrice({
+			ctx,
+			target,
+			stripePrices: target.stripeProductId
+				? (pricesByProduct.get(target.stripeProductId) ?? [])
+				: [],
+		});
 
 		await PriceService.update({
 			db,
@@ -58,7 +92,8 @@ export const persistPriceTargets = async ({
 				config: resetStripePriceResources({
 					price: target.price,
 					target,
-					stripePriceId: matchedStripePrice?.id,
+					stripePriceId: matchedStripePrice?.stripePriceId,
+					stripeMeterId: matchedStripePrice?.stripeMeterId,
 				}),
 			},
 		});

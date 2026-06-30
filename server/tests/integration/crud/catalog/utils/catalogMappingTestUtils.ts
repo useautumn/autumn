@@ -136,6 +136,28 @@ export const expectFixedStripePriceId = ({
 	expect(config.stripe_price_id ?? null).toBe(stripePriceId);
 };
 
+export const expectUsageStripePriceResources = ({
+	price,
+	stripeProductId,
+	stripePriceId,
+	stripeMeterId,
+}: {
+	price: Price | undefined;
+	stripeProductId: string | null;
+	stripePriceId: string | null;
+	stripeMeterId: string | null;
+}) => {
+	expect(price).toBeDefined();
+	PriceSchema.parse(price);
+	if (isFixedPrice(price!)) {
+		throw new Error(`Expected usage price ${price!.id}`);
+	}
+	const config = UsagePriceConfigSchema.parse(price!.config);
+	expect(config.stripe_product_id ?? null).toBe(stripeProductId);
+	expect(config.stripe_price_id ?? null).toBe(stripePriceId);
+	expect(config.stripe_meter_id ?? null).toBe(stripeMeterId);
+};
+
 const getFixedStripeConfig = ({
 	price,
 	stripeProductId,

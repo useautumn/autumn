@@ -1,12 +1,14 @@
 import {
 	type CatalogUpdateMappingsParams,
 	ErrCode,
+	type FullProduct,
 	type Price,
 	RecaseError,
 } from "@autumn/shared";
 
 export type PriceTarget = {
 	price: Price;
+	product: FullProduct;
 	stripeProductId: string | null;
 	source: "plan" | "item";
 	resetStripeResources?: boolean;
@@ -55,6 +57,7 @@ export const assertUniquePlanMappings = ({
 export const setPriceTarget = ({
 	targets,
 	price,
+	product,
 	priceId,
 	stripeProductId,
 	source,
@@ -63,6 +66,7 @@ export const setPriceTarget = ({
 }: {
 	targets: PriceTargets;
 	price: Price;
+	product: FullProduct;
 	priceId: string;
 	stripeProductId: string | null;
 	source: PriceTarget["source"];
@@ -73,6 +77,7 @@ export const setPriceTarget = ({
 	if (!existing) {
 		targets.set(priceId, {
 			price,
+			product,
 			stripeProductId,
 			source,
 			resetStripeResources,
@@ -84,6 +89,7 @@ export const setPriceTarget = ({
 	if (existing.stripeProductId === stripeProductId) {
 		targets.set(priceId, {
 			...existing,
+			product,
 			resetStripeResources:
 				existing.resetStripeResources || resetStripeResources,
 			matchExistingStripePrice:
@@ -94,6 +100,7 @@ export const setPriceTarget = ({
 	if (existing.source === "plan" && source === "item") {
 		targets.set(priceId, {
 			price,
+			product,
 			stripeProductId,
 			source,
 			resetStripeResources,

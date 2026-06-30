@@ -47,6 +47,7 @@ export const applyPlanMappings = async ({
 				setPriceTarget({
 					targets: priceTargets,
 					price: context.basePrice,
+					product: context.product,
 					priceId: context.basePrice.id,
 					stripeProductId,
 					source: "plan",
