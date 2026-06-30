@@ -1,6 +1,5 @@
 import {
 	type FullProduct,
-	mapToProductV2,
 	notNullish,
 	type ProductV2,
 	type PreviewUpdatePlanParamsV2,
@@ -26,50 +25,19 @@ export const planWouldVersion = ({
 		return false;
 	}
 
-	const currentProductV2 = mapToProductV2({
-		product: current,
-		features: ctx.features,
-	});
-
 	const itemsExist = notNullish(updates.items) || "price" in updates;
 	const freeTrialProvided = "free_trial" in updates;
-	const billingControlsProvided = "billing_controls" in updates;
 
-	if (billingControlsProvided) {
-		const {
-			billingControlsSame,
-			itemsSame,
-			freeTrialsSame,
-			detailsSame,
-			configSame,
-			optionsSame,
-			metadataSame,
-		} = productsAreSame({
-			newProductV2: incoming,
-			curProductV2: currentProductV2,
-			features: ctx.features,
-		});
-
-		const onlyBillingControlsChanged =
-			!billingControlsSame &&
-			itemsSame &&
-			freeTrialsSame &&
-			detailsSame &&
-			configSame &&
-			optionsSame &&
-			metadataSame;
-
-		if (onlyBillingControlsChanged) return true;
-	}
-
+	// Billing controls (like other settings) patch in place across all versions
+	// and never version on their own.
 	if (itemsExist || freeTrialProvided) {
-		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: incoming,
 			curProductV1: current,
 			features: ctx.features,
 		});
 
-		return !(itemsSame && freeTrialsSame && billingControlsSame);
+		return !(itemsSame && freeTrialsSame);
 	}
 
 	return false;

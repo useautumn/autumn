@@ -265,60 +265,6 @@ export const updateProduct = async ({
 	const versionableCustomerProductExists =
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
-	const billingControlsProvided = "billing_controls" in productUpdates;
-
-	if (
-		versionableCustomerProductExists &&
-		!effectiveDisableVersion &&
-		!force_version &&
-		billingControlsProvided
-	) {
-		const {
-			billingControlsSame,
-			itemsSame,
-			freeTrialsSame,
-			detailsSame,
-			configSame,
-			optionsSame,
-			metadataSame,
-		} = productsAreSame({
-			newProductV2: newProductV2,
-			curProductV2,
-			features,
-		});
-
-		// Only take the billing-controls-only shortcut when nothing else changed;
-		// otherwise fall through so detail/default guards run on other fields.
-		const onlyBillingControlsChanged =
-			!billingControlsSame &&
-			itemsSame &&
-			freeTrialsSame &&
-			detailsSame &&
-			configSame &&
-			optionsSame &&
-			metadataSame;
-
-		if (onlyBillingControlsChanged) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-				baseInternalProductId: nextBaseInternalProductId,
-			});
-
-			const latestBase = await ProductService.getFull({
-				db,
-				idOrInternalId: newProduct.id,
-				orgId: org.id,
-				env,
-			});
-			await applyVariantUpdates({ latestBase });
-
-			return newProduct;
-		}
-	}
 
 	await handleUpdateProductDetails({
 		db,
@@ -367,13 +313,13 @@ export const updateProduct = async ({
 		!effectiveDisableVersion &&
 		(itemsExist || freeTrialProvided)
 	) {
-		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
 			features,
 		});
 
-		const productSame = itemsSame && freeTrialsSame && billingControlsSame;
+		const productSame = itemsSame && freeTrialsSame;
 
 		if (!productSame) {
 			const newProduct = await handleVersionProductV2({
