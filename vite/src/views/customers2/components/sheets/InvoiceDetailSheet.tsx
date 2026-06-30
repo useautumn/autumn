@@ -22,10 +22,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { notNullish } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeInvoiceLink,
@@ -93,7 +91,6 @@ export function InvoiceDetailSheet({
 	const env = useEnv();
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
-	const { data: sessionData } = useSession();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
 	const productGroups = useMemo(() => {
@@ -187,7 +184,6 @@ export function InvoiceDetailSheet({
 	const stripeConnectViewAsInvoiceLink =
 		invoiceIsStripe &&
 		isAdmin &&
-		notNullish(sessionData?.session?.impersonatedBy) &&
 		masterStripeAccount?.id &&
 		stripeAccount?.id
 			? getStripeConnectViewAsLink({

@@ -81,6 +81,8 @@ export const getApiCustomerBaseV2 = async ({
 		config: customer.config
 			? {
 					disable_pooled_balance: customer.config.disable_pooled_balance,
+					disable_overage_billing:
+						customer.config.disable_overage_billing,
 				}
 			: undefined,
 		processors: getCusProcessors({

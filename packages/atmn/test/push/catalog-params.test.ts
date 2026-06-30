@@ -138,6 +138,42 @@ test("buildCatalogUpdateParams can include preview detail flags", () => {
 	});
 });
 
+test("buildCatalogUpdateParams maps plan billing controls", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				name: "Pro",
+				billingControls: {
+					usage_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit: 1000,
+							interval: "month",
+						},
+					],
+				},
+			},
+		],
+	});
+
+	expect(params.plans[0]).toMatchObject({
+		plan_id: "pro",
+		billing_controls: {
+			usage_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit: 1000,
+					interval: "month",
+				},
+			],
+		},
+	});
+});
+
 test("buildCatalogUpdateParams maps direct variant update-current migration controls", () => {
 	const params = buildCatalogUpdateParams({
 		features: [],
