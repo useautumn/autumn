@@ -31,6 +31,12 @@ export const consumablePriceToStripeItem = ({
 		withEntity || apiVersion === ApiVersion.V1_Beta || fromVercel;
 
 	if (newUsageMethod && !isCheckout) {
+		if (!config.stripe_empty_price_id) {
+			return {
+				price: config.stripe_price_id,
+			};
+		}
+
 		return {
 			price: config.stripe_empty_price_id,
 			quantity: 0,
