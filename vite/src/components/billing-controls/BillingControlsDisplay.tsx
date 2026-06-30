@@ -246,29 +246,34 @@ export const SpendLimitRow = ({
 	featureNameById,
 	rowBadge,
 	onClick,
-}: EditableRowProps<DbSpendLimit>) => (
-	<RowButton enabled={spendLimit.enabled} onClick={onClick}>
-		<RowHeader
-			enabled={spendLimit.enabled}
-			name={getFeatureLabel({
-				featureId: spendLimit.feature_id,
-				featureNameById,
-			})}
-			badge={rowBadge}
-		/>
-		<RowMeta
-			entries={[
-				{
-					label: "Overage limit",
-					value:
-						spendLimit.overage_limit === undefined
-							? "none"
-							: spendLimit.overage_limit.toLocaleString(),
-				},
-			]}
-		/>
-	</RowButton>
-);
+}: EditableRowProps<DbSpendLimit>) => {
+	const isPercent = spendLimit.limit_type === "usage_percentage";
+	const overageLimitValue =
+		spendLimit.overage_limit === undefined
+			? "none"
+			: isPercent
+				? `${spendLimit.overage_limit.toLocaleString()}%`
+				: spendLimit.overage_limit.toLocaleString();
+
+	return (
+		<RowButton enabled={spendLimit.enabled} onClick={onClick}>
+			<RowHeader
+				enabled={spendLimit.enabled}
+				name={getFeatureLabel({
+					featureId: spendLimit.feature_id,
+					featureNameById,
+				})}
+				badge={rowBadge}
+			/>
+			<RowMeta
+				entries={[
+					{ label: "Type", value: isPercent ? "Usage %" : "Absolute" },
+					{ label: "Overage limit", value: overageLimitValue },
+				]}
+			/>
+		</RowButton>
+	);
+};
 
 export const UsageLimitRow = ({
 	item: usageLimit,

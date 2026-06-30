@@ -11,12 +11,14 @@ export const CreateVariantButton = () => {
 	const { products } = useProductsQuery();
 	const createVariant = useCreateVariant(product);
 
-	const isVariant = !!product.base_internal_product_id;
-	// base_id is only populated on products-list entries, not the store product.
-	const hasVariants = useMemo(
-		() => products.some((p) => p.base_id === product.id),
-		[products, product.id],
-	);
+	// base_id lives on the products-list entry, not the store product.
+	const { isVariant, hasVariants } = useMemo(() => {
+		const current = products.find((p) => p.id === product.id);
+		return {
+			isVariant: !!current?.base_id && current.base_id !== product.id,
+			hasVariants: products.some((p) => p.base_id === product.id),
+		};
+	}, [products, product.id]);
 
 	if (isVariant || hasVariants) return null;
 

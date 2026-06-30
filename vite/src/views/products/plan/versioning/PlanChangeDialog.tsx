@@ -48,8 +48,8 @@ import {
 } from "./buildMigrationDraft";
 import { buildMigrateTargets, MigrateTargetsStep } from "./MigrateTargetsStep";
 import {
-	buildSettingsChanges,
 	PlanSettingsChanges,
+	previousAttributesToSettingChanges,
 } from "./PlanSettingsChanges";
 import { PropagateVariantsStep } from "./PropagateVariantsStep";
 import { getPlanPriceChange } from "./planMigrationDiff";
@@ -104,6 +104,12 @@ const previewHasCustomersAcrossVersions = ({
 	preview.has_customers ||
 	(preview.other_versions ?? []).some((version) => version.has_customers);
 
+// Only item/price changes move existing customers; free-trial and billing-
+// controls edits version without a migration. Sourced from the backend preview.
+const entryHasMigratableDiff = (
+	entry: Pick<PlanUpdatePreview, "item_changes" | "price_change"> | undefined,
+) => (entry?.item_changes?.length ?? 0) > 0 || entry?.price_change !== undefined;
+
 const collectAllVersionMigrationTargets = ({
 	preview,
 	selectedVariantIds,
@@ -114,7 +120,10 @@ const collectAllVersionMigrationTargets = ({
 	if (!preview) return [];
 
 	const targets: AllVersionsUpdateMigrationTarget[] = [];
-	if (preview.customize && previewHasCustomersAcrossVersions({ preview })) {
+	if (
+		entryHasMigratableDiff(preview) &&
+		previewHasCustomersAcrossVersions({ preview })
+	) {
 		targets.push({ id: preview.plan_id, customize: preview.customize });
 	}
 
@@ -124,7 +133,8 @@ const collectAllVersionMigrationTargets = ({
 		);
 		const variantPreview = variantRows[0];
 		if (
-			variantPreview?.customize &&
+			variantPreview &&
+			entryHasMigratableDiff(variantPreview) &&
 			variantRows.some((row) => row.has_customers)
 		) {
 			targets.push({
@@ -202,14 +212,15 @@ export default function PlanChangeDialog({
 		);
 
 	const settingsChanges = useMemo(
-		() => buildSettingsChanges({ baseProduct, product }),
-		[baseProduct, product],
+		() => previousAttributesToSettingChanges(preview?.previous_attributes),
+		[preview],
 	);
-	// customize holds the billing/items/trial diff; billing_controls is versionable
-	// too but isn't in customize, so diff it directly. Everything else is metadata.
+	// customize holds the items/price/trial diff; billing_controls is versionable
+	// too but isn't in customize, so read it from previous_attributes. Everything
+	// else is metadata.
 	const billingControlsChanged =
-		JSON.stringify(baseProduct?.billing_controls ?? null) !==
-		JSON.stringify(product.billing_controls ?? null);
+		!!preview?.previous_attributes &&
+		"billing_controls" in preview.previous_attributes;
 	const isVersionableChange = !!preview?.customize || billingControlsChanged;
 	const isMetadataOnly = !!preview && !isVersionableChange;
 
@@ -237,10 +248,12 @@ export default function PlanChangeDialog({
 		[showScope, selectedVariantIds],
 	);
 
+	// Only item/price changes are migratable; billing-controls and free-trial
+	// edits version without ever moving existing customers.
+	const hasMigratableDiff = entryHasMigratableDiff(preview);
 	// Patch-in-place applies the change to the loaded version, so its existing
 	// customers need a migration. New-version intentionally grandfathers.
-	const baseNeedsMigration =
-		versionChoice === "update" && (preview?.versionable ?? false);
+	const baseNeedsMigration = versionChoice === "update" && hasMigratableDiff;
 	const allVersionsMigrationTargets = useMemo(
 		() =>
 			versionChoice === "all"
@@ -302,10 +315,12 @@ export default function PlanChangeDialog({
 	}, [isMetadataOnly, isLatest, versionChoice]);
 
 	// New grandfathers everyone; update/all patch live versions, so their
-	// existing customers are migration targets.
+	// existing customers are migration targets. Variants only migrate when
+	// there's a migratable diff to push (not for billing-controls-only edits).
 	const migrateNeeded =
 		(versionChoice === "update" &&
-			(baseNeedsMigration || effectiveVariantIds.length > 0)) ||
+			(baseNeedsMigration ||
+				(effectiveVariantIds.length > 0 && hasMigratableDiff))) ||
 		allVersionsMigrationTargets.length > 0;
 
 	const migrateTargets = useMemo(() => {
@@ -541,7 +556,13 @@ export default function PlanChangeDialog({
 
 							{step === "scope" && (
 								<div className="flex flex-col gap-2.5">
-									<FieldLabel>Apply to variants</FieldLabel>
+									<div className="flex flex-col gap-0.5">
+										<FieldLabel>Apply to variants</FieldLabel>
+										<span className="text-tertiary-foreground text-xs">
+											Select which variants receive this change. Unselected
+											variants stay as they are.
+										</span>
+									</div>
 									<PropagateVariantsStep
 										variants={variantConflicts}
 										selectedIds={selectedVariantIds}
@@ -603,7 +624,7 @@ export default function PlanChangeDialog({
 									<div className="flex flex-col gap-2.5">
 										<div className="flex flex-col gap-0.5">
 											<FieldLabel>Review &amp; confirm</FieldLabel>
-											<span className="text-xs text-muted-foreground">
+											<span className="text-tertiary-foreground text-xs">
 												{migrateSubtitle}
 											</span>
 										</div>

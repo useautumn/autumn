@@ -52,6 +52,10 @@ export const customerEntitlements = pgTable(
 		feature_id: text("feature_id"),
 
 		external_id: text("external_id"),
+
+		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
+		// stays sticky and the backfill cron only flips NULL -> true.
+		expired: boolean("expired"),
 	},
 	(table) => [
 		foreignKey({
@@ -104,6 +108,12 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		index("idx_customer_entitlements_next_reset_not_expired")
+			.on(table.next_reset_at)
+			.where(
+				sql`${table.expired} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
+			)
+			.concurrently(),
 	],
 );
 

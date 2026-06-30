@@ -2,6 +2,7 @@ import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import { resolveSpendLimitOverageLimit } from "@utils/cusEntUtils";
 import {
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	fullCustomerToPlanProducts,
 	resolveBillingControl,
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
@@ -37,23 +38,39 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 			candidate.feature_id === featureId &&
 			candidate.overage_limit !== undefined;
 
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureIds: [featureId],
+			entity,
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
+		});
+		const entityIdForResolve = entity?.id ?? entity?.internal_id ?? undefined;
+		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
+			if (control.limit_type !== "usage_percentage") return control;
+			return {
+				...control,
+				overage_limit: resolveSpendLimitOverageLimit({
+					spendLimit: control,
+					cusEnts,
+					entityId: entityIdForResolve,
+				}),
+				limit_type: "absolute",
+			};
+		};
+
 		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
 			controlKey: "spend_limits",
 			matches: isMatch,
+			normalizeForCompare,
 		});
 
 		if (spendLimit?.enabled) {
-			const cusEnts = fullCustomerToCustomerEntitlements({
-				fullCustomer,
-				featureIds: [featureId],
-				entity,
-			});
 			const resolved = resolveSpendLimitOverageLimit({
 				spendLimit,
 				cusEnts,
-				entityId: entity?.id ?? entity?.internal_id ?? undefined,
+				entityId: entityIdForResolve,
 			});
 
 			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.

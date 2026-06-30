@@ -5,12 +5,6 @@ export const getOrCreateCustomerGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const getOrCreateCustomerSpendLimitSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.union([z.boolean(), z.undefined()]).optional(),
-	overageLimit: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const getOrCreateCustomerOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -40,11 +34,13 @@ export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
 export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerUsageLimitOutboundSchema = z.object({
 	feature_id: z.string(),
+	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
 });
@@ -141,10 +137,22 @@ export const getOrCreateCustomerAutoTopupSchema = z.object({
 	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerLimitTypeSchema = closedEnumSchema;
+
+export const getOrCreateCustomerSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z
+		.union([getOrCreateCustomerLimitTypeSchema, z.undefined()])
+		.optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerUsageLimitIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerUsageLimitSchema = z.object({
 	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: getOrCreateCustomerUsageLimitIntervalSchema,
 });

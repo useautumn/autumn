@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import { resolveSpendLimitOverageLimit } from "../cusEntUtils/index.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 import {
+	DEFAULT_PLAN_CONTROL_STATUSES,
 	fullSubjectToPlanProducts,
 	resolveBillingControl,
 } from "./planBillingControlUtils.js";
@@ -29,23 +30,44 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 		const isMatch = (candidate: DbSpendLimit) =>
 			candidate.feature_id === featureId && candidate.overage_limit !== undefined;
 
+		const cusEnts = fullSubjectToCustomerEntitlements({
+			fullSubject,
+			featureIds: [featureId],
+			inStatuses: DEFAULT_PLAN_CONTROL_STATUSES,
+		});
+		const entityId = fullSubject.entity?.id ?? undefined;
+		const additionalAllowance =
+			fullSubject.aggregated_customer_entitlements?.find(
+				(entitlement) => entitlement.feature_id === featureId,
+			)?.allowance_total ?? 0;
+		const normalizeForCompare = (control: DbSpendLimit): DbSpendLimit => {
+			if (control.limit_type !== "usage_percentage") return control;
+			return {
+				...control,
+				overage_limit: resolveSpendLimitOverageLimit({
+					spendLimit: control,
+					cusEnts,
+					entityId,
+					additionalAllowance,
+				}),
+				limit_type: "absolute",
+			};
+		};
+
 		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
 			controlLists: [entitySpendLimits, customerSpendLimits],
 			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
 			controlKey: "spend_limits",
 			matches: isMatch,
+			normalizeForCompare,
 		});
 
 		if (spendLimit?.enabled) {
-			const cusEnts = fullSubjectToCustomerEntitlements({
-				fullSubject,
-				featureIds: [featureId],
-			});
-			const entityId = fullSubject.entity?.id ?? undefined;
 			const resolved = resolveSpendLimitOverageLimit({
 				spendLimit,
 				cusEnts,
 				entityId,
+				additionalAllowance,
 			});
 
 			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.

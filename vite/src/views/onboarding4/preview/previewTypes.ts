@@ -55,9 +55,11 @@ export interface PreviewProductItem {
 export function transformToPreviewProducts({
 	products,
 	features,
+	currency = "USD",
 }: {
 	products: AgentProduct[];
 	features: AgentFeature[];
+	currency?: string;
 }): PreviewProduct[] {
 	// Convert agent features to shared Feature type for display function
 	const sharedFeatures = features.map(agentFeatureToFeature);
@@ -66,7 +68,7 @@ export function transformToPreviewProducts({
 		// Convert to ProductV2 → FrontendProduct to use existing getBasePriceDisplay
 		const productV2 = agentProductToProductV2(product);
 		const frontendProduct = productV2ToFrontendProduct({ product: productV2 });
-		const basePrice = getBasePriceDisplay({ product: frontendProduct });
+		const basePrice = getBasePriceDisplay({ product: frontendProduct, currency });
 
 		// Normalize items for isOneOffProductV2 check (undefined → null for interval)
 		// This is needed because agentItemToProductItem may leave interval as undefined,
@@ -81,7 +83,7 @@ export function transformToPreviewProducts({
 		const featureItems = (product.items ?? [])
 			.filter((item) => item.feature_id)
 			.map((item) =>
-				transformToPreviewItem({ item, features, sharedFeatures }),
+				transformToPreviewItem({ item, features, sharedFeatures, currency }),
 			);
 
 		return {
@@ -106,10 +108,12 @@ function transformToPreviewItem({
 	item,
 	features,
 	sharedFeatures,
+	currency,
 }: {
 	item: AgentProductItem;
 	features: AgentFeature[];
 	sharedFeatures: Feature[];
+	currency: string;
 }): PreviewProductItem {
 	const agentFeature = features.find((f) => f.id === item.feature_id);
 	const featureName =
@@ -124,7 +128,7 @@ function transformToPreviewItem({
 	const displayResult = getProductItemDisplay({
 		item: productItem,
 		features: sharedFeatures,
-		currency: "USD",
+		currency,
 		fullDisplay: true,
 		amountFormatOptions: { currencyDisplay: "narrowSymbol" },
 	});

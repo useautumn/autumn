@@ -364,8 +364,12 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the overage spend limit is enabled.
             </DynamicParamField>
 
+            <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+              How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+            </DynamicParamField>
+
             <DynamicParamField body="overage_limit" type="number">
-              Maximum allowed overage spend for the target feature.
+              Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
             </DynamicParamField>
 
           </Expandable>
@@ -376,6 +380,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           <Expandable title="properties">
             <DynamicParamField body="feature_id" type="string" required>
               The feature this usage limit applies to.
+            </DynamicParamField>
+
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage limit is enabled.
             </DynamicParamField>
 
             <DynamicParamField body="limit" type="number" required>
@@ -469,8 +477,12 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the overage spend limit is enabled.
             </DynamicParamField>
 
+            <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+              How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+            </DynamicParamField>
+
             <DynamicParamField body="overage_limit" type="number">
-              Maximum allowed overage spend for the target feature.
+              Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
             </DynamicParamField>
 
           </Expandable>
@@ -481,6 +493,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           <Expandable title="properties">
             <DynamicParamField body="feature_id" type="string" required>
               The feature this usage limit applies to.
+            </DynamicParamField>
+
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage limit is enabled.
             </DynamicParamField>
 
             <DynamicParamField body="limit" type="number" required>

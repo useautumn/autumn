@@ -78,7 +78,9 @@ export const diffPlanV1PreviousAttributes = ({
 
 	for (const key of previousAttributeKeys) {
 		if (!valuesEqual(from[key], to[key])) {
-			previous[key] = from[key];
+			// Use null (not undefined) for added fields so the key survives JSON
+			// serialization and clients can still tell the field changed.
+			previous[key] = from[key] === undefined ? null : from[key];
 		}
 	}
 

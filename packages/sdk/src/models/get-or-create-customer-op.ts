@@ -75,6 +75,20 @@ export type GetOrCreateCustomerAutoTopup = {
   invoiceMode?: boolean | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const GetOrCreateCustomerLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type GetOrCreateCustomerLimitType = ClosedEnum<
+  typeof GetOrCreateCustomerLimitType
+>;
+
 export type GetOrCreateCustomerSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -85,7 +99,11 @@ export type GetOrCreateCustomerSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: GetOrCreateCustomerLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
 };
@@ -111,6 +129,10 @@ export type GetOrCreateCustomerUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -340,9 +362,15 @@ export function getOrCreateCustomerAutoTopupToJSON(
 }
 
 /** @internal */
+export const GetOrCreateCustomerLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerLimitType
+> = z.enum(GetOrCreateCustomerLimitType);
+
+/** @internal */
 export type GetOrCreateCustomerSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -354,11 +382,13 @@ export const GetOrCreateCustomerSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(GetOrCreateCustomerLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -383,6 +413,7 @@ export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
 /** @internal */
 export type GetOrCreateCustomerUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -394,6 +425,7 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
   }),
