@@ -107,11 +107,20 @@ const rollbackInvoiceAction = async ({
 		stripeCli,
 		stripeInvoice: expandedInvoice,
 	});
-	const refundableAmountInCents = charge
-		? charge.amount - charge.amount_refunded
-		: 0;
 
-	if (!charge || refundableAmountInCents <= 0) return;
+	if (!charge) {
+		throw new Error(
+			`[executeStripeBillingPlan] Cannot roll back paid invoice ${stripeInvoice.id}: no refundable charge found`,
+		);
+	}
+
+	const refundableAmountInCents = charge.amount - charge.amount_refunded;
+
+	if (refundableAmountInCents <= 0) {
+		throw new Error(
+			`[executeStripeBillingPlan] Cannot roll back paid invoice ${stripeInvoice.id}: no refundable amount remaining on charge ${charge.id}`,
+		);
+	}
 
 	await createRefundAndUpdateInvoice({
 		stripeCli,
