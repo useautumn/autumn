@@ -46,6 +46,7 @@ export const sendBillingUpdatedWebhook = async ({
 
 		// console.log("response", response);
 		// console.log("response", response);
+		// console.log("response", response);
 
 		if (!billingChangeResponseHasContent(response)) return;
 
