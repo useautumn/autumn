@@ -3,7 +3,8 @@ import { TableCell, TableRow } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { RoleSelect } from "@/components/v2/selects/RoleSelect";
-import { authClient, useSession } from "@/lib/auth-client";
+import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
+import { authClient } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
@@ -74,6 +75,7 @@ const MemberRoleSelect = ({
 export const OrgMembersList = () => {
 	const { memberships, isLoading, refetch } = useMemberships();
 	const { currentRole, isAdmin, userId } = useCurrentMembership();
+	const inNamedSandbox = useInNamedSandbox();
 
 	if (isLoading) return null;
 
@@ -85,7 +87,8 @@ export const OrgMembersList = () => {
 				const memberRole = member.role as Role;
 				const isSelf = user.id === userId;
 				const isOwnerUser = currentRole === "owner";
-				const canEdit = memberRole !== "owner" && (isAdmin || isSelf);
+				const canEdit =
+					memberRole !== "owner" && (isAdmin || isSelf) && !inNamedSandbox;
 				const canPromoteToOwner =
 					isOwnerUser && memberRole !== "owner" && canEdit;
 
@@ -108,9 +111,12 @@ export const OrgMembersList = () => {
 						</TableCell>
 						<TableCell className="pr-2">
 							<div className="flex justify-end">
-								{isAdmin && memberRole !== "owner" && !isSelf && (
-									<MemberRowToolbar membership={membership} />
-								)}
+								{isAdmin &&
+									memberRole !== "owner" &&
+									!isSelf &&
+									!inNamedSandbox && (
+										<MemberRowToolbar membership={membership} />
+									)}
 							</div>
 						</TableCell>
 					</TableRow>

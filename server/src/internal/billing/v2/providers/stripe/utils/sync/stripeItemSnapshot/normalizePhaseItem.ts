@@ -61,6 +61,10 @@ export const normalizePhaseItem = ({
 		stripe_price_id: stripePriceId,
 		stripe_product_id: stripeProductId,
 		unit_amount: expandedPrice?.unit_amount ?? null,
+		unit_amount_decimal:
+			expandedPrice?.unit_amount_decimal ??
+			expandedPrice?.unit_amount?.toString() ??
+			null,
 		currency: expandedPrice?.currency ?? null,
 		quantity: phaseItem.quantity ?? 1,
 		billing_scheme:
@@ -69,6 +73,7 @@ export const normalizePhaseItem = ({
 			(expandedPrice?.tiers_mode as "graduated" | "volume") ?? null,
 		tiers: expandedPrice ? extractTiers({ price: expandedPrice }) : null,
 		recurring_interval: expandedPrice?.recurring?.interval ?? null,
+		recurring_interval_count: expandedPrice?.recurring?.interval_count ?? null,
 		recurring_usage_type:
 			(expandedPrice?.recurring?.usage_type as "licensed" | "metered") ?? null,
 		metadata: phaseItem.metadata ?? {},

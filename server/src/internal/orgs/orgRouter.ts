@@ -49,6 +49,8 @@ import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStri
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
+import { handleResolveStripeProducts } from "./handlers/stripeHandlers/handleResolveStripeProducts.js";
+import { handleSearchStripeProducts } from "./handlers/stripeHandlers/handleSearchStripeProducts.js";
 
 export const internalOrgRouter = new Hono<HonoEnv>();
 
@@ -94,6 +96,8 @@ honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 honoOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
 honoOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
+honoOrgRouter.get("/stripe/products/search", ...handleSearchStripeProducts);
+honoOrgRouter.post("/stripe/products/resolve", ...handleResolveStripeProducts);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);

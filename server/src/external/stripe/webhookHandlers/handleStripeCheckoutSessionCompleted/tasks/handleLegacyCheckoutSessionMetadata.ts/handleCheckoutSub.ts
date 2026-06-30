@@ -1,7 +1,6 @@
 import { ApiVersion, BillingType, type UsagePriceConfig } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getEmptyPriceItem } from "@/external/stripe/priceToStripeItem/priceToStripeItem.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import {
@@ -10,6 +9,20 @@ import {
 } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { initSubscription } from "@/internal/subscriptions/utils/initSubscription.js";
+
+const getEmptyPriceReplacement = ({
+	arrearPrice,
+}: {
+	arrearPrice: AttachParams["prices"][number];
+}) => {
+	const config = arrearPrice.config as UsagePriceConfig;
+	if (!config.stripe_empty_price_id) return null;
+
+	return {
+		price: config.stripe_empty_price_id,
+		quantity: 0,
+	};
+};
 
 export const handleCheckoutSub = async ({
 	stripeCli,
@@ -74,22 +87,21 @@ export const handleCheckoutSub = async ({
 			(attachParams.internalEntityId ||
 				attachParams.apiVersion === ApiVersion.V1_Beta)
 		) {
+			const replacementItem = getEmptyPriceReplacement({ arrearPrice });
+
+			if (!replacementItem) {
+				attachParams.req?.logger.warn(
+					"checkout.completed: skipping empty price replacement because usage price has no empty Stripe price",
+					{ priceId: arrearPrice.id },
+				);
+				continue;
+			}
+
 			itemsUpdate.push({
 				id: item.id,
 				deleted: true,
 			});
-
-			const emptyPrice = (arrearPrice.config as UsagePriceConfig)
-				.stripe_empty_price_id;
-
-			itemsUpdate.push(
-				emptyPrice
-					? {
-							price: emptyPrice,
-							quantity: 0,
-						}
-					: (getEmptyPriceItem({ price: arrearPrice, org }) as any),
-			);
+			itemsUpdate.push(replacementItem);
 		}
 	}
 

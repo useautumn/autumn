@@ -114,6 +114,21 @@ export const getStripeInvoiceLink = ({
 	return `${baseUrl}${accountPath}${withTest}/invoices/${invoiceId}`;
 };
 
+export const getStripeProductLink = ({
+	productId,
+	env,
+	accountId,
+}: {
+	productId: string;
+	env: AppEnv;
+	accountId?: string;
+}) => {
+	const baseUrl = `https://dashboard.stripe.com`;
+	const accountPath = accountId ? `/${accountId}` : "";
+	const withTest = env === AppEnv.Live ? "" : "/test";
+	return `${baseUrl}${accountPath}${withTest}/products/${productId}`;
+};
+
 export const getStripeDashboardLink = ({
 	env,
 	accountId,
