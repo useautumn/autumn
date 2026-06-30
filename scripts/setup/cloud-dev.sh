@@ -18,6 +18,7 @@
 # Usage:
 #   bash scripts/setup/cloud-dev.sh              # provision + run `bun dw` (foreground)
 #   bash scripts/setup/cloud-dev.sh --services   # provision only, don't run the stack
+#   bash scripts/setup/cloud-dev.sh --down       # release the ngrok tunnel + Stripe webhook
 #
 set -euo pipefail
 
@@ -30,6 +31,16 @@ cd "$REPO_ROOT"
 
 SERVICES_ONLY=0
 [ "${1:-}" = "--services" ] && SERVICES_ONLY=1
+
+# Teardown the public tunnel + Stripe webhook endpoint and exit. `bun dw teardown`
+# refuses to act on the canonical worktree #1, so tunnel release lives here.
+if [ "${1:-}" = "--down" ]; then
+  bun scripts/setup/cloud-tunnel.ts down
+  exit 0
+fi
+
+TUNNEL_LOG="${HOME}/.autumn-agent/logs/tunnel.log"
+TUNNEL_STATE="${HOME}/.autumn-agent/tunnel-state.json"
 
 COMPOSE_FILE="docker/dev-services.compose.yml"
 COMPOSE_PROJECT="autumn-dev-services"
@@ -205,6 +216,33 @@ migrate_db() {
   done
 }
 
+# --- 5. public tunnel + Stripe webhooks --------------------------------------
+# Cursor Cloud VMs have no inbound public URL, so Stripe can't reach localhost.
+# If NGROK_AUTHTOKEN is set we open an ngrok tunnel to the server and (if a
+# Stripe platform key is set) register the Connect webhook at the tunnel URL.
+# This writes STRIPE_WEBHOOK_URL/STRIPE_WEBHOOK_SKIP_VERIFY (+ the fresh webhook
+# signing secret) into server/.env *before* the server boots.
+start_tunnel() {
+  if [ -z "${NGROK_AUTHTOKEN:-}" ]; then
+    log "NGROK_AUTHTOKEN not set — skipping tunnel; Stripe webhooks (attach/checkout/billing) will NOT be delivered."
+    log "  Add NGROK_AUTHTOKEN (+ optionally STRIPE_SANDBOX_SECRET_KEY/CLIENT_ID) in Cursor Cloud secrets, then re-run."
+    return
+  fi
+  mkdir -p "$(dirname "$TUNNEL_LOG")"
+  rm -f "$TUNNEL_STATE"
+  log "starting ngrok tunnel + Stripe webhook registration (background)"
+  nohup bun scripts/setup/cloud-tunnel.ts up >"$TUNNEL_LOG" 2>&1 &
+  disown || true
+  for _ in $(seq 1 60); do
+    if [ -f "$TUNNEL_STATE" ] && grep -q '"publicUrl"' "$TUNNEL_STATE" 2>/dev/null; then
+      log "tunnel public URL: $(grep -oE '"publicUrl": *"[^"]+"' "$TUNNEL_STATE" | head -1 | sed 's/.*"publicUrl": *"//;s/"$//')"
+      return
+    fi
+    sleep 0.5
+  done
+  log "tunnel did not report a public URL yet — check $TUNNEL_LOG (continuing)"
+}
+
 # --- main --------------------------------------------------------------------
 start_dev_services
 start_goaws
@@ -220,6 +258,8 @@ if [ "$SERVICES_ONLY" = "1" ]; then
   log "--services given; not starting the app. Run: bun scripts/dw/index.ts"
   exit 0
 fi
+
+start_tunnel
 
 log "starting the dev stack (bun dw → scripts/dev.ts) ..."
 exec bun scripts/dw/index.ts
