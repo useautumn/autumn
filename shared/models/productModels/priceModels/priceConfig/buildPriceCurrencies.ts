@@ -83,3 +83,61 @@ export const buildUsagePriceCurrencies = ({
 
 	return undefined;
 };
+
+// --- Read-back: stored config.currencies -> API-shaped additional_currencies ---
+
+// Fixed price: per-currency amount blocks -> flat additional_currencies.
+export const fixedCurrenciesToApi = (
+	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
+): { currency: string; amount: number }[] | undefined => {
+	if (!currencies) {
+		return undefined;
+	}
+	const entries = Object.entries(currencies);
+	if (entries.length === 0) {
+		return undefined;
+	}
+	return entries.map(([currency, block]) => ({
+		currency,
+		amount: block.amount ?? 0,
+	}));
+};
+
+// Usage price: per-currency usage_tiers -> per-tier additional_currencies arrays,
+// aligned by index to the base tiers (index i = the currencies for base tier i).
+export const usageCurrenciesToTiers = (
+	currencies: Record<string, PriceCurrencyConfig> | null | undefined,
+	tierCount: number,
+):
+	| { currency: string; amount: number; flat_amount?: number }[][]
+	| undefined => {
+	if (!currencies || tierCount <= 0) {
+		return undefined;
+	}
+	const entries = Object.entries(currencies);
+	if (entries.length === 0) {
+		return undefined;
+	}
+
+	const perTier: {
+		currency: string;
+		amount: number;
+		flat_amount?: number;
+	}[][] = Array.from({ length: tierCount }, () => []);
+
+	for (const [currency, block] of entries) {
+		(block.usage_tiers ?? []).forEach((tier, index) => {
+			if (index < tierCount) {
+				perTier[index].push({
+					currency,
+					amount: tier.amount,
+					...(tier.flat_amount !== undefined
+						? { flat_amount: tier.flat_amount }
+						: {}),
+				});
+			}
+		});
+	}
+
+	return perTier;
+};
