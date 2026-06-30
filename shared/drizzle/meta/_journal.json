@@ -239,6 +239,13 @@
       "when": 1782770925277,
       "tag": "0033_dusty_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782836417268,
+      "tag": "0034_ambiguous_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

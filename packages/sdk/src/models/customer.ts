@@ -124,6 +124,18 @@ export type CustomerAutoTopup = {
   invoiceMode?: boolean | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CustomerLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CustomerLimitType = OpenEnum<typeof CustomerLimitType>;
+
 export type CustomerSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -134,7 +146,11 @@ export type CustomerSpendLimit = {
    */
   enabled: boolean;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CustomerLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
 };
@@ -160,6 +176,10 @@ export type CustomerUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -647,7 +667,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const CustomerRewardsType = {
+export const CustomerDiscountType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -657,7 +677,7 @@ export const CustomerRewardsType = {
 /**
  * The type of reward
  */
-export type CustomerRewardsType = OpenEnum<typeof CustomerRewardsType>;
+export type CustomerDiscountType = OpenEnum<typeof CustomerDiscountType>;
 
 /**
  * How long the discount lasts
@@ -684,7 +704,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: CustomerRewardsType;
+  type: CustomerDiscountType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -958,6 +978,12 @@ export function customerAutoTopupFromJSON(
 }
 
 /** @internal */
+export const CustomerLimitType$inboundSchema: z.ZodMiniType<
+  CustomerLimitType,
+  unknown
+> = openEnums.inboundSchema(CustomerLimitType);
+
+/** @internal */
 export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
   CustomerSpendLimit,
   unknown
@@ -965,11 +991,13 @@ export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
+    limit_type: types.optional(CustomerLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
+      "limit_type": "limitType",
       "overage_limit": "overageLimit",
     });
   }),
@@ -998,6 +1026,7 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     feature_id: types.string(),
+    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CustomerUsageLimitInterval$inboundSchema,
     usage: types.optional(types.number()),
@@ -1591,10 +1620,10 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const CustomerRewardsType$inboundSchema: z.ZodMiniType<
-  CustomerRewardsType,
+export const CustomerDiscountType$inboundSchema: z.ZodMiniType<
+  CustomerDiscountType,
   unknown
-> = openEnums.inboundSchema(CustomerRewardsType);
+> = openEnums.inboundSchema(CustomerDiscountType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1607,7 +1636,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: CustomerRewardsType$inboundSchema,
+    type: CustomerDiscountType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),

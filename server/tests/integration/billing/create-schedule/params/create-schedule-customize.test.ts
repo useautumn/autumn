@@ -256,6 +256,72 @@ test.concurrent(
 	},
 );
 
+/**
+ * TDD regression for paid -> customized-free -> paid createSchedule phases.
+ *
+ * Red-failure mode: Stripe rejects the middle free phase with
+ * `Missing required param: phases[1][items]`.
+ *
+ * Green-success criteria: createSchedule succeeds, persists the free custom
+ * customer product, and the Stripe subscription schedule remains valid.
+ */
+test.concurrent(
+	`${chalk.yellowBright("create-schedule: supports a customized free phase between paid phases")}`,
+	async () => {
+		const base = products.base({
+			id: "create-schedule-free-gap",
+			items: [items.monthlyPrice()],
+		});
+
+		const { customerId, autumnV2_2, ctx } = await initScenario({
+			customerId: "create-schedule-free-gap",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base] }),
+			],
+			actions: [],
+		});
+
+		const now = Date.now();
+		const response = await autumnV2_2.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: now,
+					plans: [{ plan_id: base.id }],
+				},
+				{
+					starts_at: now + ms.days(30),
+					plans: [
+						{
+							plan_id: base.id,
+							customize: {
+								price: null,
+							},
+						},
+					],
+				},
+				{
+					starts_at: now + ms.days(60),
+					plans: [{ plan_id: base.id }],
+				},
+			],
+		});
+
+		expect(response.phases).toHaveLength(3);
+
+		const freeCustomerProductId = response.phases[1]!.customer_product_ids[0]!;
+		expect(
+			await getCustomerProductPriceAmounts({
+				ctx,
+				customerProductId: freeCustomerProductId,
+			}),
+		).toEqual([]);
+
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: preserves customize.items on created customer products")}`,
 	async () => {

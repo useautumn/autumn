@@ -16,7 +16,7 @@ export const TrackTokensParamsSchema = z.object({
 	}),
 	model_id: z.string().meta({
 		description:
-			"The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.",
+			"The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.",
 	}),
 	input_tokens: z.number().int().nonnegative().meta({
 		description:

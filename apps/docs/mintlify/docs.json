@@ -80,6 +80,7 @@
 						"group": "Configure Pricing",
 						"pages": [
 							"documentation/modelling-pricing/recurring",
+							"documentation/modelling-pricing/plan-variants",
 							"documentation/modelling-pricing/one-off-purchases",
 							"documentation/modelling-pricing/free-plans",
 							"documentation/modelling-pricing/credit-systems",
@@ -283,6 +284,7 @@
 						"pages": [
 							"api-reference/referrals/createReferralCode",
 							"api-reference/referrals/redeemReferralCode",
+							"api-reference/rewards/listRewards",
 							"api-reference/rewards/redeemRewardCode"
 						]
 					},

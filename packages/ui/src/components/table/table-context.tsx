@@ -53,6 +53,8 @@ export interface TableProps<T> {
 	/** For double-click actions (e.g. opening external links) */
 	onRowDoubleClick?: (row: T) => void;
 	rowClassName?: string;
+	/** Per-row className (e.g. to style nested/variant rows differently) */
+	getRowClassName?: (row: T) => string | undefined;
 	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;
 	flexibleTableColumns?: boolean;

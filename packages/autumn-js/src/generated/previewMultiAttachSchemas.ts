@@ -32,12 +32,6 @@ export const previewMultiAttachAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const previewMultiAttachSpendLimitSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.union([z.boolean(), z.undefined()]).optional(),
-	overageLimit: z.union([z.number(), z.undefined()]).optional(),
-});
-
 export const previewMultiAttachOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -255,11 +249,13 @@ export const previewMultiAttachAttachDiscountOutboundSchema = z.object({
 export const previewMultiAttachSpendLimitOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachUsageLimitOutboundSchema = z.object({
 	feature_id: z.string(),
+	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
 });
@@ -421,10 +417,22 @@ export const previewMultiAttachFreeTrialParamsSchema = z.object({
 
 export const previewMultiAttachRedirectModeSchema = closedEnumSchema;
 
+export const previewMultiAttachLimitTypeSchema = closedEnumSchema;
+
+export const previewMultiAttachSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z
+		.union([previewMultiAttachLimitTypeSchema, z.undefined()])
+		.optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const previewMultiAttachEntityDataIntervalSchema = closedEnumSchema;
 
 export const previewMultiAttachUsageLimitSchema = z.object({
 	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: previewMultiAttachEntityDataIntervalSchema,
 });
