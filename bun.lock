@@ -643,7 +643,7 @@
         "semver": "^7.7.2",
         "stripe": "catalog:",
         "svix": "^1.45.1",
-        "takumi-js": "rc",
+        "takumi-js": "1.0.0-rc.17",
         "tsc-alias": "^1.8.16",
         "ws": "^8.18.0",
         "zod": "^3.25.23",

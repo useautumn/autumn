@@ -24,6 +24,12 @@ export function verifySlackSignature({
 		return false;
 	}
 
+	// Fail closed: an empty secret would make the HMAC publicly computable.
+	if (!env.SLACK_SIGNING_SECRET) {
+		console.warn("[slack-unfurl] verify: ALU_SLACK_SIGNING_SECRET unset");
+		return false;
+	}
+
 	const ts = Number(timestamp);
 	if (!Number.isFinite(ts)) {
 		console.warn("[slack-unfurl] verify: non-numeric timestamp");

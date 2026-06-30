@@ -127,7 +127,7 @@ export type Expiry = {
    */
   type: ExpiryType;
   /**
-   * The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
+   * The number of `type` periods before the granted amount expires.
    */
   length: number | null;
 };

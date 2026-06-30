@@ -395,7 +395,10 @@ function mapToCard(
 					.join(", ") || "—",
 			status: invoice.status ?? null,
 			totalLabel: formatCurrency(invoice.total, invoice.currency),
-			createdAt: new Date(invoice.created_at).toISOString(),
+			createdAt:
+				invoice.created_at != null
+					? new Date(invoice.created_at).toISOString()
+					: "",
 		}));
 
 	return {

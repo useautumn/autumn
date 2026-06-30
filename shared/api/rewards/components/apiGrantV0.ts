@@ -10,10 +10,15 @@ export const ApiGrantV0Schema = z.object({
 		description:
 			"The amount of the feature granted, or null for boolean features.",
 	}),
-	expiry: makeDurationSchema(EntitlementDuration).nullable().meta({
-		description:
-			"How long the granted amount lasts before expiring, or null for a permanent grant.",
-	}),
+	expiry: makeDurationSchema(
+		EntitlementDuration,
+		"The number of `type` periods before the granted amount expires.",
+	)
+		.nullable()
+		.meta({
+			description:
+				"How long the granted amount lasts before expiring, or null for a permanent grant.",
+		}),
 });
 
 export type ApiGrantV0 = z.infer<typeof ApiGrantV0Schema>;

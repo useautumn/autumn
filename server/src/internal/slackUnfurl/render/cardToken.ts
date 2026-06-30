@@ -18,11 +18,16 @@ type CardClaims = { orgId: string; items: CardItem[] };
 const b64url = (input: string): string =>
 	Buffer.from(input).toString("base64url");
 
-const sign = (payload: string): string =>
-	createHmac("sha256", env.SLACK_SIGNING_SECRET)
+const sign = (payload: string): string => {
+	// Fail closed: an empty key would make the public card url forgeable.
+	if (!env.SLACK_SIGNING_SECRET) {
+		throw new Error("cardToken: ALU_SLACK_SIGNING_SECRET unset");
+	}
+	return createHmac("sha256", env.SLACK_SIGNING_SECRET)
 		.update(payload)
 		.digest("base64url")
 		.slice(0, 24);
+};
 
 export function signCardToken(claims: CardClaims): string {
 	const payload = b64url(JSON.stringify(claims));
@@ -30,10 +35,18 @@ export function signCardToken(claims: CardClaims): string {
 }
 
 export function verifyCardToken(token: string): CardClaims | null {
-	const [payload, sig] = token.split(".");
+	// Exactly `<payload>.<sig>` — extra delimiters would alias one card to many urls.
+	const parts = token.split(".");
+	if (parts.length !== 2) return null;
+	const [payload, sig] = parts;
 	if (!(payload && sig)) return null;
 
-	const expected = sign(payload);
+	let expected: string;
+	try {
+		expected = sign(payload);
+	} catch {
+		return null;
+	}
 	const a = Buffer.from(expected);
 	const b = Buffer.from(sig);
 	if (a.length !== b.length || !timingSafeEqual(a, b)) return null;

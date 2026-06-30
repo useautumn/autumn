@@ -12,7 +12,9 @@ const load = (): Record<string, string> => {
 	let map: Record<string, string> = {};
 	try {
 		const parsed = JSON.parse(env.SLACK_CHANNEL_ORG_MAP);
-		if (parsed && typeof parsed === "object") map = parsed;
+		if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+			map = parsed;
+		}
 	} catch {
 		// fall through to empty map
 	}

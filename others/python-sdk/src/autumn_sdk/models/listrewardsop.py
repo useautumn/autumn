@@ -238,7 +238,7 @@ class ExpiryTypedDict(TypedDict):
     type: ExpiryType
     r"""The unit of time the duration is measured in."""
     length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
+    r"""The number of `type` periods before the granted amount expires."""
 
 
 class Expiry(BaseModel):
@@ -246,7 +246,7 @@ class Expiry(BaseModel):
     r"""The unit of time the duration is measured in."""
 
     length: Nullable[float]
-    r"""The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever)."""
+    r"""The number of `type` periods before the granted amount expires."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

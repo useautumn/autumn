@@ -56,8 +56,12 @@ export async function handleLinkShared(
 	const links: Array<{ url: string } & ParsedCustomerLink> = [];
 	for (const link of event.links) {
 		const parsed = parseCustomerLink(link.url);
-		if (!parsed || seen.has(link.url)) continue;
-		seen.add(link.url);
+		if (!parsed) continue;
+		// Dedupe by the resolved customer, not the raw url — query-string variants
+		// of the same customer would otherwise each eat a card slot.
+		const key = `${parsed.env}:${parsed.customerId}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
 		links.push({ url: link.url, ...parsed });
 		if (links.length >= MAX_CARDS) break;
 	}
@@ -105,7 +109,11 @@ export async function handleLinkShared(
 	const card: UnfurlCard = {
 		url: resolved[0].url,
 		imageUrl: `${env.PUBLIC_BASE_URL}/slack-unfurl/cards/${token}.png?v=${hourBucket}`,
-		altText: resolved.map((link) => link.name).join(", "),
+		// Slack rejects image blocks whose alt_text exceeds 2000 chars.
+		altText: resolved
+			.map((link) => link.name)
+			.join(", ")
+			.slice(0, 2000),
 	};
 
 	await unfurlCards({

@@ -3,8 +3,9 @@
  * this module is imported by the main server, so a missing Slack secret must
  * NOT crash boot — handlers fail closed (401 / no-op) instead.
  *
- * `ALU_`-prefixed names win so they don't collide with any `SLACK_*` the server
- * vault already defines (e.g. leaf's app).
+ * Strictly `ALU_`-prefixed: the bare `SLACK_*` names belong to other apps in the
+ * shared vault (e.g. leaf), so reading them would silently sign/verify with the
+ * wrong app's secret.
  */
 const firstOf = (names: string[], fallback = ""): string => {
 	for (const name of names) {
@@ -15,16 +16,10 @@ const firstOf = (names: string[], fallback = ""): string => {
 };
 
 export const env = {
-	SLACK_SIGNING_SECRET: firstOf([
-		"ALU_SLACK_SIGNING_SECRET",
-		"SLACK_SIGNING_SECRET",
-	]),
-	SLACK_BOT_TOKEN: firstOf(["ALU_SLACK_BOT_TOKEN", "SLACK_BOT_TOKEN"]),
+	SLACK_SIGNING_SECRET: firstOf(["ALU_SLACK_SIGNING_SECRET"]),
+	SLACK_BOT_TOKEN: firstOf(["ALU_SLACK_BOT_TOKEN"]),
 	/** JSON map: { "<channel_id>": "<org_id>" }. The tenancy key. */
-	SLACK_CHANNEL_ORG_MAP: firstOf(
-		["ALU_SLACK_CHANNEL_ORG_MAP", "SLACK_CHANNEL_ORG_MAP"],
-		"{}",
-	),
+	SLACK_CHANNEL_ORG_MAP: firstOf(["ALU_SLACK_CHANNEL_ORG_MAP"], "{}"),
 	/** Host whose /customers/<id> links we unfurl. */
 	APP_HOST: process.env.APP_HOST ?? "app.useautumn.com",
 	/**
