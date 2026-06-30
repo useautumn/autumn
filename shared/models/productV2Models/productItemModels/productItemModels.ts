@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
+import {
+	AdditionalCurrencyPriceSchema,
+	AdditionalCurrencyTierSchema,
+} from "../../../api/products/components/additionalCurrencies.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
@@ -32,6 +36,13 @@ export const PriceTierSchema = z
 			description:
 				"A flat fee charged for this tier, in addition to the per-unit amount.",
 		}),
+		additional_currencies: z
+			.array(AdditionalCurrencyTierSchema)
+			.nullish()
+			.meta({
+				description:
+					"Per-currency amounts for this tier. Boundaries ('to') are shared across currencies.",
+			}),
 	})
 	.refine((val) => val.amount != null || val.flat_amount != null, {
 		message: "Either amount or flat_amount, or both must be defined",
@@ -134,6 +145,16 @@ export const ProductItemSchema = z.object({
 			"Tiered pricing for the product item. Not applicable for fixed price items.",
 	}),
 
+	// Multi-currency: the flat `price` above is in `base_currency`;
+	// `additional_currencies` holds the same flat price in other currencies.
+	base_currency: z.string().nullish().meta({
+		internal: true,
+	}),
+	additional_currencies: z.array(AdditionalCurrencyPriceSchema).nullish().meta({
+		description:
+			"Amounts in additional currencies for a flat-priced item. Tiered items carry per-currency amounts on each tier.",
+	}),
+
 	billing_units: z.number().nullish().meta({
 		description:
 			"The billing units of the product item (eg $1 for 30 credits).",
@@ -179,12 +200,9 @@ export const ProductItemSchema = z.object({
 	price_id: z.string().nullish().meta({
 		internal: true,
 	}),
-	price_interval: z
-		.enum(ProductItemInterval)
-		.nullish()
-		.meta({
-			internal: true,
-		}),
+	price_interval: z.enum(ProductItemInterval).nullish().meta({
+		internal: true,
+	}),
 	price_interval_count: z.number().nullish().meta({
 		internal: true,
 	}),

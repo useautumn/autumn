@@ -42,6 +42,7 @@
 			]
 		},
 		"shared": {
+			"entry": ["**/*.test.ts"],
 			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
