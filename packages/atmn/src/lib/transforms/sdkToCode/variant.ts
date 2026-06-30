@@ -109,12 +109,6 @@ const buildCustomizeCode = ({
 		lines.push(`\t\tfreeTrial: ${formatValue(customize.freeTrial)},`);
 	}
 
-	if (customize.billingControls !== undefined) {
-		lines.push(
-			`\t\tbillingControls: ${formatValue(customize.billingControls)},`,
-		);
-	}
-
 	return lines;
 };
 
