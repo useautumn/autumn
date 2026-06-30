@@ -120,6 +120,7 @@ export const SlackScopesSheet = ({
 							onChange={setScopes}
 							availableScopes={callerScopes}
 							resources={BOT_RESOURCES}
+							allowUnrestricted={false}
 							disabled={isSubmitting}
 						/>
 					)}
