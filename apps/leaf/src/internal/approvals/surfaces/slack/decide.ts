@@ -12,6 +12,7 @@ import {
 	validateSlackAdminAccess,
 } from "../../../slackAdmin/access.js";
 import { resolveSlackUserAuth } from "../../../../agent/runMessage/setup/resolveSlackUserAuth.js";
+import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { decrypt } from "../../../../lib/crypto.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
@@ -87,7 +88,14 @@ const authorizeSlackApprovalClicker = async ({
 		} as const;
 	}
 
-	return { allowed: true } as const;
+	const token = await getInstallationOAuthAccessToken({
+		installation,
+		env: approval.env,
+		orgId: approval.org_id,
+		userId: auth.userId,
+	});
+
+	return { allowed: true, token } as const;
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -266,6 +274,7 @@ export const handleApprovalActionWithDeps = async ({
 					editor.requestEdit();
 				},
 				providerUserId,
+				token: authorization?.allowed ? authorization.token : undefined,
 			});
 		} finally {
 			clearInterval(heartbeat);

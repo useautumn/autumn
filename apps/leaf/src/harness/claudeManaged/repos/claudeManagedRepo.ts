@@ -88,6 +88,16 @@ export const cmaRepo = {
 			);
 	},
 
+	deleteSessionById: async ({
+		db,
+		sessionId,
+	}: {
+		db: ChatDb;
+		sessionId: string;
+	}) => {
+		await db.delete(cmaSessions).where(eq(cmaSessions.session_id, sessionId));
+	},
+
 	getVaultId: async ({
 		chatInstallationId,
 		db,

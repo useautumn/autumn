@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ChatApproval } from "@autumn/shared";
+import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import {
 	approvalErrorResult,
@@ -9,11 +10,49 @@ import {
 	errorStatusLine,
 	toolStatusLine,
 } from "../../internal/approvals/utils/approvalProgress.js";
+import { db } from "../../lib/db.js";
+import { logger } from "../../lib/logger.js";
 import { claudeManagedConfig } from "./config.js";
+import { cmaRepo } from "./repos/claudeManagedRepo.js";
 import { driveSessionTurn } from "./session/driveSessionTurn.js";
 import { findSessionToolResult } from "./session/findSessionToolResult.js";
 
 const client = new Anthropic();
+
+const clearSuspendedTool = async ({
+	sessionId,
+	toolUseId,
+}: {
+	sessionId: string;
+	toolUseId: string;
+}) => {
+	try {
+		await cmaRepo.deleteSessionById({ db, sessionId });
+		await driveSessionTurn({
+			autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
+			client,
+			kickoff: () =>
+				client.beta.sessions.events.send(sessionId, {
+					events: [
+						{
+							deny_message:
+								"This approval was applied using the approver's Autumn permissions.",
+							result: "deny",
+							tool_use_id: toolUseId,
+							type: "user.tool_confirmation",
+						},
+					],
+				}),
+			sessionId,
+		});
+	} catch (error) {
+		logger.warn("Could not clear approved Claude Managed tool", {
+			event: "leaf.approval_clear_suspended_tool_failed",
+			data: { session_id: sessionId, tool_use_id: toolUseId },
+			error,
+		});
+	}
+};
 
 // Confirms an already-claimed tool in the idle Claude Managed session, then
 // returns its write result and any continuation text for the thread reply.
@@ -21,15 +60,32 @@ const client = new Anthropic();
 export const resumeClaudeManagedApproval = async ({
 	approval,
 	onProgress,
+	token,
 }: {
 	approval: ChatApproval;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
+	token?: string;
 }): Promise<ApprovalRunResult> => {
 	const sessionId = approval.run_id;
 	const toolUseId = approval.tool_call_id;
 	if (!(sessionId && toolUseId)) {
 		throw new Error("Approval is missing the session or tool-call id");
+	}
+	if (token) {
+		onProgress?.(toolStatusLine(approval.tool_name));
+		try {
+			const result = await executeAutumnMcpTool({
+				env: approval.env,
+				token,
+				toolName: approval.tool_name,
+				args: approval.tool_args,
+			});
+			void clearSuspendedTool({ sessionId, toolUseId });
+			return { result, text: "", toolName: approval.tool_name };
+		} catch (error) {
+			return approvalErrorResult(error);
+		}
 	}
 	const outcome = await driveSessionTurn({
 		autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
