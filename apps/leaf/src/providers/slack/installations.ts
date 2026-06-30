@@ -186,6 +186,7 @@ export const replaceInstallation = async ({
 			installation,
 			userId: state.userId,
 			agentScopes,
+			authMode,
 		});
 	});
 };

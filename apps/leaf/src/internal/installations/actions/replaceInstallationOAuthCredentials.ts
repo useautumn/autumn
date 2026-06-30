@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
 import {
 	AppEnv,
+	ChatAuthMode,
 	type ChatInstallation,
 	chatOAuthCredentials,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
@@ -352,19 +353,26 @@ export const replaceInstallationOAuthCredentials = async ({
 	installation,
 	userId,
 	agentScopes,
+	authMode,
 	orgId = installation.org_id,
 }: {
 	tx: ChatTransaction;
 	installation: ChatInstallation;
 	userId: string;
 	agentScopes?: string[];
+	authMode?: ChatAuthMode;
 	orgId?: string;
 }) => {
 	if (!userId) {
 		throw new Error("Missing user id for chat MCP OAuth credentials");
 	}
 
-	const scopes = resolveAgentScopes(agentScopes);
+	// Unrestricted installs intentionally mint a scope-less token: the route scope
+	// middleware treats empty scopes as full access, so every sender acts as admin.
+	const scopes =
+		authMode === ChatAuthMode.Unrestricted
+			? []
+			: resolveAgentScopes(agentScopes);
 	const config = getProviderOAuthConfig({ installation });
 
 	await ensureMcpOAuthClient({ tx, config });
