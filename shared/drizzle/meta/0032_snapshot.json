@@ -1,5 +1,5 @@
 {
-  "id": "2edc137b-07b8-4684-92f1-39cb39278bcb",
+  "id": "d0552dec-2a3a-45fe-9462-32eff307cf80",
   "prevId": "a419bdbc-4014-4ff2-be3b-6195f7029943",
   "version": "7",
   "dialect": "postgresql",
@@ -1619,12 +1619,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "expired": {
-          "name": "expired",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -1774,22 +1768,6 @@
           "isUnique": false,
           "where": "\"customer_entitlements\".\"customer_product_id\" IS NULL",
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_entitlements_next_reset_not_expired": {
-          "name": "idx_customer_entitlements_next_reset_not_expired",
-          "columns": [
-            {
-              "expression": "next_reset_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"customer_entitlements\".\"expired\" IS NOT TRUE AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -3698,6 +3676,13 @@
         },
         "model_markups": {
           "name": "model_markups",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "null"
+        },
+        "stripe_meter": {
+          "name": "stripe_meter",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false,

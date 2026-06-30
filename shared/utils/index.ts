@@ -40,6 +40,7 @@ export * from "./intervalUtils/priceIntervalUtils";
 // Org utils
 export * from "./orgUtils/convertOrgUtils";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
+export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
 
 // Product utils
