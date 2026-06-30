@@ -1,11 +1,21 @@
-import { z } from "zod/v4";
 import { Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { RCMappingService } from "../misc/RCMappingService";
+
+const FeatureQuantitySchema = z.object({
+	feature_id: z.string(),
+	quantity: z.number().optional(),
+});
 
 const MappingSchema = z.object({
 	autumn_product_id: z.string(),
 	revenuecat_product_ids: z.array(z.string()),
+	// Per-RC-id prepaid grants, keyed by revenuecat_product_id. Quantity in
+	// feature units (UI multiplies packs by billing_units before saving).
+	feature_quantities: z
+		.record(z.string(), z.array(FeatureQuantitySchema))
+		.optional(),
 });
 
 export const handleSaveRCMappings = createRoute({
@@ -28,6 +38,7 @@ export const handleSaveRCMappings = createRoute({
 						env,
 						autumn_product_id: mapping.autumn_product_id,
 						revenuecat_product_ids: mapping.revenuecat_product_ids,
+						feature_quantities: mapping.feature_quantities ?? null,
 					},
 				});
 			} else {
