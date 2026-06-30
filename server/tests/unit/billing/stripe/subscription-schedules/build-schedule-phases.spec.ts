@@ -445,6 +445,82 @@ describe(
 			});
 		});
 
+		describe(chalk.cyan("Free Gaps"), () => {
+			test("Premium → free gap → Pro uses a zero-dollar placeholder phase", () => {
+				const nowMs = Date.now();
+				const freeStartMs = nowMs + ONE_MONTH_MS;
+				const proStartMs = freeStartMs + ONE_MONTH_MS;
+
+				const premium = createProductWithAllPriceTypes({
+					productId: "premium",
+					productName: "Premium",
+					customerProductId: "cus_prod_premium",
+				});
+				const pro = createProductWithAllPriceTypes({
+					productId: "pro",
+					productName: "Pro",
+					customerProductId: "cus_prod_pro",
+				});
+
+				const premiumCustomerProduct = customerProducts.create({
+					id: "cus_prod_premium",
+					productId: "premium",
+					product: premium.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: premium.allPrices,
+						customerProductId: "cus_prod_premium",
+					}),
+					customerEntitlements: premium.allEntitlements,
+					options: premium.allOptions,
+					status: CusProductStatus.Active,
+					startsAt: nowMs,
+					endedAt: freeStartMs,
+				});
+				const proCustomerProduct = customerProducts.create({
+					id: "cus_prod_pro",
+					productId: "pro",
+					product: pro.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: pro.allPrices,
+						customerProductId: "cus_prod_pro",
+					}),
+					customerEntitlements: pro.allEntitlements,
+					options: pro.allOptions,
+					status: CusProductStatus.Scheduled,
+					startsAt: proStartMs,
+				});
+
+				const ctx = contexts.create({ features: [] });
+				const billingContext = contexts.createBilling({
+					customerProducts: [premiumCustomerProduct, proCustomerProduct],
+					fullProducts: [premium.product, pro.product],
+					currentEpochMs: nowMs,
+				});
+
+				const phases = buildStripePhasesUpdate({
+					ctx,
+					billingContext,
+					customerProducts: [premiumCustomerProduct, proCustomerProduct],
+				});
+
+				expect(phases).toHaveLength(3);
+				expectPhaseItems(phases[0].items!, getStripePriceIds(premium));
+				expect(phases[1].start_date).toBe(msToSeconds(freeStartMs));
+				expect(phases[1].end_date).toBe(msToSeconds(proStartMs));
+				expect(phases[1].items).toEqual([
+					expect.objectContaining({
+						quantity: 1,
+						metadata: { autumn_free_phase_placeholder: "true" },
+						price_data: expect.objectContaining({
+							product: "stripe_prod_premium",
+							unit_amount: 0,
+						}),
+					}),
+				]);
+				expectPhaseItems(phases[2].items!, getStripePriceIds(pro));
+			});
+		});
+
 		describe(chalk.cyan("Product Cancellation"), () => {
 			test("Premium → canceled (product ends)", () => {
 				const nowMs = Date.now();

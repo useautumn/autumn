@@ -2,6 +2,7 @@ import type { Invite, Role } from "@autumn/shared";
 import { Badge, TableCell, TableRow } from "@autumn/ui";
 import { isFuture } from "date-fns";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
+import { useInNamedSandbox } from "@/hooks/sandbox/useInNamedSandbox";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
 	SETTINGS_ROW_CLASS,
@@ -21,6 +22,7 @@ const COLUMNS = [
 export const OrgInvitesList = () => {
 	const { invites, isLoading } = useMemberships();
 	const { isAdmin } = useCurrentMembership();
+	const inNamedSandbox = useInNamedSandbox();
 
 	if (isLoading) return null;
 
@@ -60,7 +62,9 @@ export const OrgInvitesList = () => {
 						</TableCell>
 						<TableCell className="pr-2">
 							<div className="flex justify-end">
-								{isAdmin && <MemberRowToolbar invite={invite} />}
+								{isAdmin && !inNamedSandbox && (
+									<MemberRowToolbar invite={invite} />
+								)}
 							</div>
 						</TableCell>
 					</TableRow>

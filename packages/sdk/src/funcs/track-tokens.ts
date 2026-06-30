@@ -47,7 +47,7 @@ import { Result } from "../types/fp.js";
  * @param customerId - The ID of the customer.
  * @param entityId - The ID of the entity for entity-scoped balances. (optional)
  * @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
- * @param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+ * @param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
  * @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
  * @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
  * @param cacheReadTokens - Number of cached input tokens read. (optional)

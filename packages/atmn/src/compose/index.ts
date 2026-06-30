@@ -1,11 +1,16 @@
 import {
+	plan as basePlan,
+	billingControls,
 	feature,
 	item,
-	plan as basePlan,
 } from "./builders/builderFunctions.js";
 import { createVariant } from "./builders/variantFunctions.js";
 import type { Feature } from "./models/featureModels.js";
-import type { FreeTrial, PlanItem } from "./models/planModels.js";
+import type {
+	BillingControls,
+	FreeTrial,
+	PlanItem,
+} from "./models/planModels.js";
 import type {
 	CustomizePlan,
 	Plan,
@@ -13,9 +18,10 @@ import type {
 	Variant,
 } from "./models/variantModels.js";
 
-export { plan, feature, item };
+export { billingControls, plan, feature, item };
 
 export type {
+	BillingControls,
 	CustomizePlan,
 	Feature,
 	FreeTrial,

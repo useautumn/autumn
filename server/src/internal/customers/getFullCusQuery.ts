@@ -6,6 +6,7 @@ import {
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 
 const RECURRING_BILLING_INTERVALS = [
 	BillingInterval.Week,
@@ -605,6 +606,8 @@ export const getFullCusQuery = ({
     SELECT ${sql.join(selectFieldsChunks, sql``)}
     FROM customer_record cr
   `);
+
+	sqlChunks.push(planetScaleTag({ query: "getFullCustomer" }));
 
 	return sql.join(sqlChunks, sql``);
 };

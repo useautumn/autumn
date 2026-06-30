@@ -60,6 +60,31 @@ const searchStripeMeter = async ({
 	return stripeMeter;
 };
 
+const getFeatureStripeMeter = async ({
+	feature,
+	stripeCli,
+	logger,
+}: {
+	feature: Feature;
+	stripeCli: Stripe;
+	logger: any;
+}) => {
+	const featureStripeMeter = feature.stripe_meter;
+	if (!featureStripeMeter?.id || !featureStripeMeter.event_name) {
+		return null;
+	}
+
+	try {
+		return await stripeCli.billing.meters.retrieve(featureStripeMeter.id);
+	} catch (error) {
+		logger.warn?.(
+			`Feature ${feature.id} has Stripe meter ${featureStripeMeter.id}, but it could not be retrieved`,
+			error,
+		);
+		return null;
+	}
+};
+
 const getStripeMeter = async ({
 	product,
 	feature,
@@ -74,6 +99,15 @@ const getStripeMeter = async ({
 	logger: any;
 }) => {
 	const config = price.config as UsagePriceConfig;
+
+	const featureStripeMeter = await getFeatureStripeMeter({
+		feature,
+		stripeCli,
+		logger,
+	});
+	if (featureStripeMeter) {
+		return featureStripeMeter;
+	}
 
 	try {
 		const stripeMeter = await searchStripeMeter({
@@ -237,6 +271,7 @@ export const createStripeInArrearPrice = async ({
 	});
 
 	config.stripe_meter_id = meter.id;
+	config.stripe_event_name = meter.event_name;
 
 	const tiers = priceToInArrearTiers({
 		price,
@@ -294,6 +329,7 @@ export const createStripeInArrearPrice = async ({
 	config.stripe_price_id = stripePrice.id;
 	config.stripe_product_id = stripePrice.product as string;
 	config.stripe_meter_id = meter.id;
+	config.stripe_event_name = meter.event_name;
 
 	await PriceService.update({
 		db,

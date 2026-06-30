@@ -615,6 +615,22 @@ export class CusProductService {
 		return data;
 	}
 
+	static async hasByFreeTrialId({
+		db,
+		freeTrialId,
+	}: {
+		db: DrizzleCli;
+		freeTrialId: string;
+	}) {
+		const data = await db
+			.select({ id: customerProducts.id })
+			.from(customerProducts)
+			.where(eq(customerProducts.free_trial_id, freeTrialId))
+			.limit(1);
+
+		return data.length > 0;
+	}
+
 	static async deleteByProduct({
 		db,
 		productId,

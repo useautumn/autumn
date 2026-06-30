@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useMemberships = () => {
-	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
+	const { org } = useOrg();
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
 
 	const { data, error, isLoading, refetch } = useQuery({
-		queryKey: buildKey(["organization-members"]),
+		queryKey: ["organization-members", org?.id],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get("/organization/members");
 			return data;

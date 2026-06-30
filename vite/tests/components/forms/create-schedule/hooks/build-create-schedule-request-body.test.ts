@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature, ProductItem, ProductV2 } from "@autumn/shared";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, UsageModel } from "@autumn/shared";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -47,6 +47,7 @@ const featurePriceItem: ProductItem = {
 	interval: "month",
 	interval_count: 1,
 	included_usage: 1000,
+	usage_model: UsageModel.PayPerUse,
 } as ProductItem;
 
 const featureTieredItem: ProductItem = {
@@ -59,6 +60,7 @@ const featureTieredItem: ProductItem = {
 	interval: "month",
 	interval_count: 1,
 	included_usage: 10,
+	usage_model: UsageModel.PayPerUse,
 } as ProductItem;
 
 const freeFeatureItem: ProductItem = {

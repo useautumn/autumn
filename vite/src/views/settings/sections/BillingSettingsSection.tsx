@@ -30,6 +30,11 @@ const BILLING_TOGGLES = [
 		description: "Include line-item memos on Stripe invoices",
 	},
 	{
+		key: "disable_overage_billing",
+		label: "Disable overage billing",
+		description: "Stop posting usage overage line items to Stripe",
+	},
+	{
 		key: "entity_product",
 		label: "Entity products",
 		description: "Enable entity-level product assignments",

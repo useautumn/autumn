@@ -115,6 +115,10 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_free_trial_id")
+			.on(table.free_trial_id)
+			.where(sql`${table.free_trial_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_products_revenuecat_processor")
 			.on(table.internal_customer_id)
 			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
