@@ -144,10 +144,23 @@ export const handleNewFreeTrial = async ({
 		// Don't delete the old free trial when creating a new version
 		// The old version needs to keep its free trial for existing customers
 		if (!isCustom && curFreeTrial && !newVersion) {
-			await FreeTrialService.delete({
+			const isReferenced = await CusProductService.hasByFreeTrialId({
 				db,
-				id: curFreeTrial.id,
+				freeTrialId: curFreeTrial.id,
 			});
+
+			if (isReferenced) {
+				await FreeTrialService.update({
+					db,
+					freeTrialId: curFreeTrial.id,
+					update: { is_custom: true },
+				});
+			} else {
+				await FreeTrialService.delete({
+					db,
+					id: curFreeTrial.id,
+				});
+			}
 		}
 		return null;
 	}
