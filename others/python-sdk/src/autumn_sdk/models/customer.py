@@ -1230,7 +1230,7 @@ class TrialsUsed(BaseModel):
         return m
 
 
-CustomerRewardsType = Union[
+CustomerDiscountType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -1259,7 +1259,7 @@ class DiscountTypedDict(TypedDict):
     r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: CustomerRewardsType
+    type: CustomerDiscountType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -1286,7 +1286,7 @@ class Discount(BaseModel):
     name: str
     r"""The name of the discount or coupon"""
 
-    type: CustomerRewardsType
+    type: CustomerDiscountType
     r"""The type of reward"""
 
     discount_value: float

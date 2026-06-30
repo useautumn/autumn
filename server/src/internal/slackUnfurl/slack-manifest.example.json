@@ -1,0 +1,30 @@
+{
+	"display_information": {
+		"name": "ALU"
+	},
+	"features": {
+		"bot_user": {
+			"display_name": "Autumn's Link Unfurler",
+			"always_online": false
+		},
+		"unfurl_domains": ["app.useautumn.com"]
+	},
+	"oauth_config": {
+		"scopes": {
+			"bot": ["links:read", "links:write", "chat:write", "files:write"]
+		}
+	},
+	"settings": {
+		"event_subscriptions": {
+			"request_url": "https://api.useautumn.com/slack-unfurl/events",
+			"bot_events": ["link_shared"]
+		},
+		"interactivity": {
+			"is_enabled": true,
+			"request_url": "https://api.useautumn.com/slack-unfurl/interactions"
+		},
+		"org_deploy_enabled": false,
+		"socket_mode_enabled": false,
+		"is_hosted": false
+	}
+}
