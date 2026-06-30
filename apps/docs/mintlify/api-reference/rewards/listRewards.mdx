@@ -1,0 +1,199 @@
+---
+title: "List Rewards"
+openapi: "openapi POST /v1/rewards.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+Lists all rewards (coupons and feature grants) configured for your organization.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript List all rewards
+const rewards = await autumn.rewards.list();
+
+// Access coupons and feature grants
+const { coupons, featureGrants } = rewards;
+```
+
+</CodeGroup>
+
+### Response
+
+<DynamicResponseField name="coupons" type="object[]">
+  The list of coupons configured for the organization.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for the coupon.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      A human-readable name for the coupon.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="type" type="'percentage_discount' | 'fixed_discount' | 'invoice_credits'">
+      The type of discount: percentage_discount, fixed_discount, or invoice_credits.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="value" type="number">
+      The discount value. A percentage for percentage_discount, or an amount for fixed_discount / invoice_credits.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="duration" type="object">
+      How long the coupon applies once redeemed.
+      <Expandable title="properties">
+        <DynamicResponseField name="type" type="'once' | 'forever' | 'months'">
+          The duration type.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="length" type="number">
+          The number of months (only for type 'months').
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_ids" type="string[] | null">
+      The plan IDs the coupon applies to, or null when it applies to all plans.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="promo_codes" type="object[]">
+      The promo codes customers can use to redeem the coupon.
+      <Expandable title="properties">
+        <DynamicResponseField name="code" type="string">
+          The promo code string.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="global_max_redemption" type="number | null">
+          Maximum number of times this code can be redeemed across all customers, or null for unlimited.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="first_time_transaction" type="boolean">
+          Whether the code can only be used by customers making their first transaction.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      The Unix timestamp (in milliseconds) when the coupon was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="feature_grants" type="object[]">
+  The list of feature grants configured for the organization.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The unique identifier for the feature grant.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string | null">
+      A human-readable name for the feature grant.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="grants" type="object[]">
+      The feature grants awarded when the grant is redeemed.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          The ID of the feature to grant.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="included" type="number">
+          The amount of the feature to grant.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="expiry" type="object | null">
+          When the granted balance expires.
+          <Expandable title="properties">
+            <DynamicResponseField name="type" type="'day' | 'month' | 'year'">
+              The expiry duration type.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="length" type="number">
+              The number of duration units until expiry.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="promo_codes" type="object[]">
+      The promo codes customers can use to redeem the feature grant.
+      <Expandable title="properties">
+        <DynamicResponseField name="code" type="string">
+          The promo code string.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="max_uses" type="number | null">
+          Maximum number of times this code can be used, or null for unlimited.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      The Unix timestamp (in milliseconds) when the feature grant was created.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "coupons": [
+    {
+      "id": "summer_sale",
+      "name": "Summer Sale",
+      "type": "percentage_discount",
+      "value": 20,
+      "duration": {
+        "type": "months",
+        "length": 3
+      },
+      "plan_ids": ["pro", "starter"],
+      "promo_codes": [
+        {
+          "code": "SUMMER20",
+          "global_max_redemption": 100,
+          "first_time_transaction": false
+        }
+      ],
+      "created_at": 1718000000000
+    }
+  ],
+  "feature_grants": [
+    {
+      "id": "beta_credits_grant",
+      "name": "Beta Tester Credits",
+      "promo_codes": [
+        {
+          "code": "BETA2024",
+          "max_uses": 500
+        }
+      ],
+      "grants": [
+        {
+          "feature_id": "credits",
+          "included": 1000,
+          "expiry": {
+            "type": "month",
+            "length": 1
+          }
+        }
+      ],
+      "created_at": 1718000000000
+    }
+  ]
+}
+```
+</ResponseExample>

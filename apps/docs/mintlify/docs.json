@@ -279,14 +279,15 @@
 							"api-reference/features/deleteFeature"
 						]
 					},
-					{
-						"group": "Rewards & Referrals",
-						"pages": [
-							"api-reference/referrals/createReferralCode",
-							"api-reference/referrals/redeemReferralCode",
-							"api-reference/rewards/redeemRewardCode"
-						]
-					},
+				{
+					"group": "Rewards & Referrals",
+					"pages": [
+						"api-reference/referrals/createReferralCode",
+						"api-reference/referrals/redeemReferralCode",
+						"api-reference/rewards/listRewards",
+						"api-reference/rewards/redeemRewardCode"
+					]
+				},
 					{
 						"group": "Webhook Events",
 						"pages": [
