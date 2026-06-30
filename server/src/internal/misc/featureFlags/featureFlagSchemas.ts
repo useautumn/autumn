@@ -14,8 +14,7 @@ export const FeatureFlagConfigSchema = z.object({
 	maintenanceModes: MaintenanceModesSchema.default(() => ({
 		analytics: { disableRevenueMetrics: false },
 	})),
-	/** Per-org, per-customer override for skip_overage_submission. */
-	skipOverageSubmissionFlags: z
+	disableOverageBillingFlags: z
 		.record(z.string(), z.array(z.string()))
 		.default({}),
 });

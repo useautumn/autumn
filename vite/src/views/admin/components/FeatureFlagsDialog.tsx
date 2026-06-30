@@ -20,7 +20,7 @@ type FeatureFlagConfig = {
 			disableRevenueMetrics: boolean;
 		};
 	};
-	skipOverageSubmissionFlags: Record<string, string[]>;
+	disableOverageBillingFlags: Record<string, string[]>;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -29,7 +29,7 @@ type FeatureFlagConfig = {
 
 const DEFAULT_CONFIG: FeatureFlagConfig = {
 	maintenanceModes: { analytics: { disableRevenueMetrics: false } },
-	skipOverageSubmissionFlags: {},
+	disableOverageBillingFlags: {},
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
@@ -86,8 +86,6 @@ export function FeatureFlagsDialog({
 	const [jsonText, setJsonText] = useState("");
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
-
-	// Overage submission form state
 	const [newOrgId, setNewOrgId] = useState("");
 	const [newCustomerIds, setNewCustomerIds] = useState("");
 
@@ -112,9 +110,9 @@ export function FeatureFlagsDialog({
 							...(data.maintenanceModes?.analytics ?? {}),
 						},
 					},
-					skipOverageSubmissionFlags: {
-						...DEFAULT_CONFIG.skipOverageSubmissionFlags,
-						...(data.skipOverageSubmissionFlags ?? {}),
+					disableOverageBillingFlags: {
+						...DEFAULT_CONFIG.disableOverageBillingFlags,
+						...(data.disableOverageBillingFlags ?? {}),
 					},
 				};
 				setConfig(merged);
@@ -187,8 +185,9 @@ export function FeatureFlagsDialog({
 						...(parsed.maintenanceModes?.analytics ?? {}),
 					},
 				},
-				skipOverageSubmissionFlags:
-					parsed.skipOverageSubmissionFlags ?? prev.skipOverageSubmissionFlags,
+				disableOverageBillingFlags:
+					parsed.disableOverageBillingFlags ??
+					prev.disableOverageBillingFlags,
 			}));
 			setJsonError(null);
 		} catch {
@@ -222,7 +221,7 @@ export function FeatureFlagsDialog({
 		}
 	};
 
-	const addOverageEntry = () => {
+	const addDisableOverageBillingEntry = () => {
 		if (!newOrgId.trim() || !newCustomerIds.trim()) return;
 		const orgId = newOrgId.trim();
 		const customerIds = newCustomerIds
@@ -234,8 +233,8 @@ export function FeatureFlagsDialog({
 		setSyncSource("form");
 		setConfig((prev) => ({
 			...prev,
-			skipOverageSubmissionFlags: {
-				...prev.skipOverageSubmissionFlags,
+			disableOverageBillingFlags: {
+				...prev.disableOverageBillingFlags,
 				[orgId]: customerIds,
 			},
 		}));
@@ -243,12 +242,12 @@ export function FeatureFlagsDialog({
 		setNewCustomerIds("");
 	};
 
-	const removeOverageEntry = (orgId: string) => {
+	const removeDisableOverageBillingEntry = (orgId: string) => {
 		setSyncSource("form");
 		setConfig((prev) => {
-			const next = { ...prev.skipOverageSubmissionFlags };
+			const next = { ...prev.disableOverageBillingFlags };
 			delete next[orgId];
-			return { ...prev, skipOverageSubmissionFlags: next };
+			return { ...prev, disableOverageBillingFlags: next };
 		});
 	};
 
@@ -290,16 +289,16 @@ export function FeatureFlagsDialog({
 							/>
 
 							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
-								Skip Overage Submission
+								Disable Overage Billing
 							</div>
 							<div className="rounded-lg border border-border p-3 flex flex-col gap-2">
-								{Object.entries(config.skipOverageSubmissionFlags).length ===
+								{Object.entries(config.disableOverageBillingFlags).length ===
 									0 && (
 									<div className="text-xs text-tertiary-foreground italic">
 										No entries
 									</div>
 								)}
-								{Object.entries(config.skipOverageSubmissionFlags).map(
+								{Object.entries(config.disableOverageBillingFlags).map(
 									([orgId, customerIds]) => (
 										<div
 											key={orgId}
@@ -315,7 +314,9 @@ export function FeatureFlagsDialog({
 											</div>
 											<button
 												type="button"
-												onClick={() => removeOverageEntry(orgId)}
+												onClick={() =>
+													removeDisableOverageBillingEntry(orgId)
+												}
 												className="shrink-0 text-tertiary-foreground hover:text-red-500 transition-colors"
 											>
 												<svg
@@ -350,7 +351,7 @@ export function FeatureFlagsDialog({
 									<Button
 										variant="secondary"
 										size="sm"
-										onClick={addOverageEntry}
+										onClick={addDisableOverageBillingEntry}
 										disabled={!newOrgId.trim() || !newCustomerIds.trim()}
 									>
 										Add

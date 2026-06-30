@@ -1,5 +1,13 @@
+/**
+ * End-to-end integration test for the edge config override of overage billing.
+ *
+ * The edge config can disable Stripe overage line item creation for a specific
+ * org/customer pair while usage balances still reset normally.
+ */
+
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
+import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -9,21 +17,14 @@ import { timeout } from "@tests/utils/genUtils";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { db } from "@/db/initDrizzle";
-import { OrgService } from "@/internal/orgs/OrgService";
-import { expectCustomerFeatureCorrect } from "../billing/utils/expectCustomerFeatureCorrect";
+import { FeatureFlagConfigSchema } from "@/internal/misc/featureFlags/featureFlagSchemas";
+import {
+	getFeatureFlagConfigFromSource,
+	updateFullFeatureFlagConfig,
+} from "@/internal/misc/featureFlags/featureFlagStore";
 
-const runOverageRenewal = async ({
-	customerId,
-	orgDisableOverageBilling,
-	customerDisableOverageBilling,
-	expectedLatestTotal,
-}: {
-	customerId: string;
-	orgDisableOverageBilling: boolean;
-	customerDisableOverageBilling?: boolean;
-	expectedLatestTotal: number;
-}) => {
+test(`${chalk.yellowBright("disable overage billing: edge config disables Stripe overage and resets")}`, async () => {
+	const customerId = "disable-overage-edge-config";
 	const pro = products.pro({
 		id: "pro",
 		items: [items.consumableMessages({ includedUsage: 100 })],
@@ -32,35 +33,31 @@ const runOverageRenewal = async ({
 	const { ctx, autumnV1, testClockId } = await initScenario({
 		customerId,
 		setup: [
-			s.customer({
-				paymentMethod: "success",
-				data: {
-					config:
-						customerDisableOverageBilling === undefined
-							? undefined
-							: {
-									disable_overage_billing:
-										customerDisableOverageBilling,
-								},
-				},
-			}),
+			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
 		actions: [s.attach({ productId: pro.id })],
 	});
-	const originalConfig = ctx.org.config;
+
+	let originalConfig = FeatureFlagConfigSchema.parse({});
+	try {
+		originalConfig = await getFeatureFlagConfigFromSource();
+	} catch {
+		// S3 may return NoSuchKey; use defaults.
+	}
 
 	try {
-		await OrgService.update({
-			db,
-			orgId: ctx.org.id,
-			updates: {
-				config: {
-					...ctx.org.config,
-					disable_overage_billing: orgDisableOverageBilling,
+		await updateFullFeatureFlagConfig({
+			config: {
+				...originalConfig,
+				disableOverageBillingFlags: {
+					...originalConfig.disableOverageBillingFlags,
+					[ctx.org.id]: [customerId],
 				},
 			},
 		});
+
+		await timeout(15000);
 
 		const customerAfterAttach =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -74,6 +71,7 @@ const runOverageRenewal = async ({
 			feature_id: TestFeature.Messages,
 			value: 200,
 		});
+
 		await timeout(2000);
 
 		await advanceToNextInvoice({
@@ -87,7 +85,7 @@ const runOverageRenewal = async ({
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfterRenewal,
 			count: 2,
-			latestTotal: expectedLatestTotal,
+			latestTotal: 20,
 			latestInvoiceProductId: pro.id,
 		});
 
@@ -100,36 +98,6 @@ const runOverageRenewal = async ({
 		});
 		expect(customerAfterRenewal.features[TestFeature.Messages].balance).toBe(100);
 	} finally {
-		await OrgService.update({
-			db,
-			orgId: ctx.org.id,
-			updates: { config: originalConfig },
-		});
+		await updateFullFeatureFlagConfig({ config: originalConfig });
 	}
-};
-
-test(`${chalk.yellowBright("disable overage billing: org field skips Stripe overage and resets")}`, async () => {
-	await runOverageRenewal({
-		customerId: "disable-overage-org",
-		orgDisableOverageBilling: true,
-		expectedLatestTotal: 20,
-	});
-});
-
-test(`${chalk.yellowBright("disable overage billing: customer true skips Stripe overage and resets")}`, async () => {
-	await runOverageRenewal({
-		customerId: "disable-overage-customer-true",
-		orgDisableOverageBilling: false,
-		customerDisableOverageBilling: true,
-		expectedLatestTotal: 20,
-	});
-});
-
-test(`${chalk.yellowBright("disable overage billing: customer false overrides org true")}`, async () => {
-	await runOverageRenewal({
-		customerId: "disable-overage-customer-false",
-		orgDisableOverageBilling: true,
-		customerDisableOverageBilling: false,
-		expectedLatestTotal: 30,
-	});
 });

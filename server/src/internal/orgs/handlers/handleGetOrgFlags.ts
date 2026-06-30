@@ -7,9 +7,6 @@ export const handleGetOrgFlags = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const flags = getRuntimeFeatureFlags();
-		return c.json({
-			...flags,
-			skipOverageSubmissionFlags: undefined,
-		});
+		return c.json(flags);
 	},
 });
