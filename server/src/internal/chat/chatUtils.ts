@@ -1,4 +1,9 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import {
+	DEFAULT_SLACK_BOT_SCOPES,
+	ErrCode,
+	RecaseError,
+	SLACK_EMAIL_SCOPE,
+} from "@autumn/shared";
 
 export const slackProvider = "slack" as const;
 export const slackAdminProviderPrefix = "slack_admin" as const;
@@ -9,25 +14,9 @@ export const getSlackAdminProvider = ({
 	clientId?: string;
 } = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
-export const defaultSlackScopes = [
-	"app_mentions:read",
-	"assistant:write",
-	"channels:history",
-	"channels:read",
-	"chat:write",
-	"groups:history",
-	"groups:read",
-	"im:history",
-	"im:read",
-	"im:write",
-	"mpim:history",
-	"mpim:read",
-	"users:read",
-];
-
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
-	return defaultSlackScopes.filter((scope) => !granted.has(scope));
+	return DEFAULT_SLACK_BOT_SCOPES.filter((scope) => !granted.has(scope));
 };
 
 export const getRequiredChatEnv = (key: string) => {
@@ -48,7 +37,12 @@ export const getChatStateSecret = () =>
 	getRequiredChatEnv("ENCRYPTION_PASSWORD");
 
 export const createSlackInstallUrl = (state: string) => {
-	const scope = process.env.SLACK_BOT_SCOPES ?? defaultSlackScopes.join(",");
+	const configured = process.env.SLACK_BOT_SCOPES
+		? process.env.SLACK_BOT_SCOPES.split(",")
+				.map((scope) => scope.trim())
+				.filter(Boolean)
+		: [...DEFAULT_SLACK_BOT_SCOPES];
+	const scope = [...new Set([...configured, SLACK_EMAIL_SCOPE])].join(",");
 	const params = new URLSearchParams({
 		client_id: getRequiredChatEnv("SLACK_CLIENT_ID"),
 		scope,

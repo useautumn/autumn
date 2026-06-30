@@ -234,6 +234,7 @@ export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
 export * from "./utils/auth/getScopesForUserInOrg";
 export * from "./utils/auth/oauthScopeUtils";
+export * from "./utils/auth/slackScopes";
 export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";
 // Checkout Utils

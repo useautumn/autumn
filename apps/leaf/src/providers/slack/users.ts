@@ -1,9 +1,11 @@
-import { ChatAuthMode, type ChatInstallation } from "@autumn/shared";
+import {
+	ChatAuthMode,
+	type ChatInstallation,
+	SLACK_EMAIL_SCOPE,
+} from "@autumn/shared";
 import { z } from "zod";
 
 const SLACK_USERS_INFO_URL = "https://slack.com/api/users.info";
-
-export const SLACK_EMAIL_SCOPE = "users:read.email";
 
 export const installationHasEmailScope = ({
 	installation,
