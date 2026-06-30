@@ -20,4 +20,5 @@ export type StripeDiscountWithCoupon = {
 	firstTimeTransaction?: boolean;
 	minimumAmount?: number | null;
 	minimumAmountCurrency?: string | null;
+	minimumAmountsByCurrency?: Record<string, number>;
 };
