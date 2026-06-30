@@ -1,4 +1,5 @@
 import type { Feature, PlanItem } from "../../compose/models/index.js";
+import type { BillingControls } from "../../compose/models/billingControlModels.js";
 import type { Plan } from "../../compose/models/variantModels.js";
 
 /**
@@ -203,6 +204,108 @@ function validateFeatureReference({
 	];
 }
 
+function validateBillingControls({
+	billingControls,
+	features,
+	path,
+}: {
+	billingControls: BillingControls | undefined;
+	features: Feature[];
+	path: string;
+}): ValidationError[] {
+	if (!billingControls) return [];
+
+	const errors: ValidationError[] = [];
+	const spendLimitFeatureIds = new Set<string>();
+	const usageLimitFeatureIds = new Set<string>();
+	const overageAllowedFeatureIds = new Set<string>();
+
+	for (const [index, spendLimit] of (
+		billingControls.spendLimits ?? []
+	).entries()) {
+		if (spendLimit.featureId) {
+			errors.push(
+				...validateFeatureReference({
+					featureId: spendLimit.featureId,
+					features,
+					path: `${path} → billingControls.spendLimits[${index}]`,
+				}),
+			);
+
+			if (spendLimitFeatureIds.has(spendLimit.featureId)) {
+				errors.push({
+					path: `${path} → billingControls.spendLimits[${index}]`,
+					message: `Only one spend limit entry is allowed per featureId.`,
+				});
+			}
+			spendLimitFeatureIds.add(spendLimit.featureId);
+		}
+	}
+
+	for (const [index, usageLimit] of (
+		billingControls.usageLimits ?? []
+	).entries()) {
+		errors.push(
+			...validateFeatureReference({
+				featureId: usageLimit.featureId,
+				features,
+				path: `${path} → billingControls.usageLimits[${index}]`,
+			}),
+		);
+
+		if (usageLimitFeatureIds.has(usageLimit.featureId)) {
+			errors.push({
+				path: `${path} → billingControls.usageLimits[${index}]`,
+				message: `Only one usage limit entry is allowed per featureId.`,
+			});
+		}
+		usageLimitFeatureIds.add(usageLimit.featureId);
+	}
+
+	for (const [index, overageAllowed] of (
+		billingControls.overageAllowed ?? []
+	).entries()) {
+		errors.push(
+			...validateFeatureReference({
+				featureId: overageAllowed.featureId,
+				features,
+				path: `${path} → billingControls.overageAllowed[${index}]`,
+			}),
+		);
+
+		if (overageAllowedFeatureIds.has(overageAllowed.featureId)) {
+			errors.push({
+				path: `${path} → billingControls.overageAllowed[${index}]`,
+				message: `Only one overageAllowed entry is allowed per featureId.`,
+			});
+		}
+		overageAllowedFeatureIds.add(overageAllowed.featureId);
+	}
+
+	for (const [index, autoTopup] of (billingControls.autoTopups ?? []).entries()) {
+		errors.push(
+			...validateFeatureReference({
+				featureId: autoTopup.featureId,
+				features,
+				path: `${path} → billingControls.autoTopups[${index}]`,
+			}),
+		);
+	}
+
+	for (const [index, usageAlert] of (billingControls.usageAlerts ?? []).entries()) {
+		if (!usageAlert.featureId) continue;
+		errors.push(
+			...validateFeatureReference({
+				featureId: usageAlert.featureId,
+				features,
+				path: `${path} → billingControls.usageAlerts[${index}]`,
+			}),
+		);
+	}
+
+	return errors;
+}
+
 /**
  * Validate a plan has all required fields.
  */
@@ -268,6 +371,14 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 		}
 	}
 
+	errors.push(
+		...validateBillingControls({
+			billingControls: plan.billingControls,
+			features,
+			path: `plan "${planId}"`,
+		}),
+	);
+
 	for (const [variantIndex, variant] of (plan.variants ?? []).entries()) {
 		const variantPath = `plan "${planId}" → variants[${variantIndex}] (${variant.id})`;
 		for (const [itemIndex, item] of (
@@ -299,6 +410,13 @@ function validatePlan(plan: Plan, features: Feature[]): ValidationError[] {
 				}),
 			);
 		}
+		errors.push(
+			...validateBillingControls({
+				billingControls: variant.customize?.billingControls,
+				features,
+				path: variantPath,
+			}),
+		);
 	}
 
 	return errors;

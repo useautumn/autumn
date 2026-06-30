@@ -1,7 +1,5 @@
-import type {
-	CustomizePlanV1,
-	PlanItemFilter as ApiPlanItemFilter,
-} from "@autumn/shared";
+import type { CustomizePlanV1, PlanItemFilter as ApiPlanItemFilter } from "@autumn/shared";
+import type { BillingControls } from "./billingControlModels.js";
 import type { FreeTrial, Plan as BasePlan, PlanItem } from "./planModels.js";
 
 type ApiBasePrice = NonNullable<CustomizePlanV1["price"]>;
@@ -23,7 +21,7 @@ export type CustomizePlan = {
 	addItems?: PlanItem[];
 	removeItems?: PlanItemFilter[];
 	freeTrial?: FreeTrial | null;
-	billingControls?: CustomizePlanV1["billing_controls"];
+	billingControls?: BillingControls;
 };
 
 export type Variant = {

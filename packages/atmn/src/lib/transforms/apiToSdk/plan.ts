@@ -6,6 +6,7 @@ import type {
 	Variant,
 } from "../../../compose/models/variantModels.js";
 import type { ApiPlan } from "../../api/types/index.js";
+import { transformApiBillingControls } from "./billingControls.js";
 import { transformApiPlanItem } from "./planItem.js";
 import { createTransformer } from "./Transformer.js";
 
@@ -54,6 +55,8 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 						cardRequired: api.free_trial.card_required,
 					}
 				: undefined,
+
+		billingControls: (api) => transformApiBillingControls(api.billing_controls),
 	},
 });
 
@@ -129,7 +132,11 @@ const transformApiCustomizePlan = (
 				}
 			: {}),
 		...(customize.billing_controls !== undefined
-			? { billingControls: customize.billing_controls }
+			? {
+					billingControls: transformApiBillingControls(
+						customize.billing_controls,
+					),
+				}
 			: {}),
 	};
 

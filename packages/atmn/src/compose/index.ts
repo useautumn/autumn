@@ -12,10 +12,12 @@ import type {
 	PlanItemFilter,
 	Variant,
 } from "./models/variantModels.js";
+import type { BillingControls } from "./models/billingControlModels.js";
 
 export { plan, feature, item };
 
 export type {
+	BillingControls,
 	CustomizePlan,
 	Feature,
 	FreeTrial,

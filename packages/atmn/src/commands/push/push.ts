@@ -38,6 +38,7 @@ import {
 	transformFeatureToApi,
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
+import { transformBillingControlsToApi } from "../../lib/transforms/sdkToApi/billingControls.js";
 import { writeConfig } from "../pull/writeConfig.js";
 import type {
 	CatalogPreviewUpdateResponse,
@@ -647,7 +648,11 @@ function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
 				}
 			: {}),
 		...(customize.billingControls !== undefined
-			? { billing_controls: customize.billingControls }
+			? {
+					billing_controls: transformBillingControlsToApi(
+						customize.billingControls,
+					),
+				}
 			: {}),
 	};
 }

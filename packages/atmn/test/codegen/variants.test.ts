@@ -194,4 +194,63 @@ describe("variant config generation", () => {
 		expect(code).toContain("item({ featureId: engagementTracking.id }),");
 		expect(code).not.toContain("included: 0");
 	});
+
+	test("transformApiPlans maps variant customize billing controls to camelCase", () => {
+		const plans = transformApiPlans([
+			baseApiPlan({ id: "pro", name: "Pro" }),
+			baseApiPlan({
+				id: "pro_enterprise",
+				name: "Pro Enterprise",
+				variant_details: {
+					base_plan_id: "pro",
+					customize: {
+						billing_controls: {
+							spend_limits: [
+								{
+									feature_id: "messages",
+									enabled: true,
+									overage_limit: 100,
+								},
+							],
+						},
+					},
+				},
+			}),
+		]);
+
+		expect(plans[0]?.variants?.[0]?.customize?.billingControls).toEqual({
+			spendLimits: [
+				{
+					featureId: "messages",
+					enabled: true,
+					overageLimit: 100,
+				},
+			],
+		});
+	});
+
+	test("buildConfigFile emits plan-level billing controls", () => {
+		const plans: Plan[] = [
+			{
+				id: "pro",
+				name: "Pro",
+				items: [],
+				billingControls: {
+					spendLimits: [
+						{
+							featureId: "messages",
+							enabled: true,
+							overageLimit: 25,
+						},
+					],
+				},
+			},
+		];
+
+		const code = buildConfigFile([], plans);
+
+		expect(code).toContain("billingControls:");
+		expect(code).toContain("spendLimits:");
+		expect(code).toContain("overageLimit: 25");
+	});
 });

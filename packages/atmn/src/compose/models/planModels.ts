@@ -2,6 +2,7 @@
 // Generated from @autumn/shared schemas
 // Run `pnpm gen:atmn` to regenerate
 
+import type { BillingControls } from "./billingControlModels.js";
 import { z } from "zod/v4";
 
 export const UsageTierSchema = z.object({
@@ -347,6 +348,9 @@ export type Plan = {
 
   /** Free trial period before billing begins */
   freeTrial?: FreeTrial | null;
+
+  /** Plan-level billing controls used as customer defaults. */
+  billingControls?: BillingControls;
 
   /** Whether the plan is archived */
   archived?: boolean;
