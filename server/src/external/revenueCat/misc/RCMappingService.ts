@@ -1,10 +1,12 @@
 import {
 	type AppEnv,
-	type RevenuecatMapping,
+	type RevenuecatMappingInsert,
 	revenuecatMappings,
 } from "@shared/index";
 import { and, arrayContains, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
+
+export type RevenuecatFeatureQuantity = { feature_id: string; quantity?: number };
 
 export class RCMappingService {
 	/**
@@ -38,6 +40,46 @@ export class RCMappingService {
 		return mapping?.autumn_product_id ?? null;
 	}
 
+	/**
+	 * Resolve a RevenueCat product id to its Autumn product and the prepaid
+	 * feature quantities configured for that specific RC id (if any).
+	 */
+	static async resolveMapping({
+		db,
+		orgId,
+		env,
+		revenuecatProductId,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		revenuecatProductId: string;
+	}): Promise<{
+		autumnProductId: string;
+		featureQuantities?: RevenuecatFeatureQuantity[];
+	} | null> {
+		const [mapping] = await db
+			.select()
+			.from(revenuecatMappings)
+			.where(
+				and(
+					eq(revenuecatMappings.org_id, orgId),
+					eq(revenuecatMappings.env, env),
+					arrayContains(revenuecatMappings.revenuecat_product_ids, [
+						revenuecatProductId,
+					]),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		return {
+			autumnProductId: mapping.autumn_product_id,
+			featureQuantities: mapping.feature_quantities?.[revenuecatProductId],
+		};
+	}
+
 	static async getAll({
 		db,
 		orgId,
@@ -63,7 +105,7 @@ export class RCMappingService {
 		data,
 	}: {
 		db: DrizzleCli;
-		data: RevenuecatMapping;
+		data: RevenuecatMappingInsert;
 	}) {
 		return db
 			.insert(revenuecatMappings)
@@ -74,7 +116,10 @@ export class RCMappingService {
 					revenuecatMappings.env,
 					revenuecatMappings.autumn_product_id,
 				],
-				set: { revenuecat_product_ids: data.revenuecat_product_ids },
+				set: {
+					revenuecat_product_ids: data.revenuecat_product_ids,
+					feature_quantities: data.feature_quantities,
+				},
 			})
 			.returning();
 	}
@@ -114,7 +159,7 @@ export class RCMappingService {
 		orgId: string;
 		env: AppEnv;
 		autumnProductId: string;
-		data: Partial<RevenuecatMapping>;
+		data: Partial<RevenuecatMappingInsert>;
 	}) {
 		const mapping = await db
 			.update(revenuecatMappings)

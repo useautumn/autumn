@@ -21,6 +21,7 @@ export const handleInitialPurchase = async ({
 		product,
 		customer,
 		cusProducts,
+		featureQuantities,
 	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
@@ -47,6 +48,7 @@ export const handleInitialPurchase = async ({
 		ctx: customerCtx,
 		customer,
 		product,
+		featureQuantities,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (initial purchase)`);
