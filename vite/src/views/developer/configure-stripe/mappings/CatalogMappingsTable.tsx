@@ -38,7 +38,7 @@ export const CatalogMappingsTable = ({
 				<span className="w-[104px] shrink-0 text-right">Status</span>
 				<span className="w-4 shrink-0" />
 			</div>
-			<div className="divide-y divide-border/60">
+			<div className="-mx-2 max-h-[480px] divide-y divide-border/60 overflow-y-auto overflow-x-clip px-2">
 				{groups.map((group) => {
 					const planMapping = findPlanMapping({
 						mappings,

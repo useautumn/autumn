@@ -1,3 +1,4 @@
+import { isCustomerProductAddOn } from "@autumn/shared";
 import type {
 	FullCusProduct,
 	SyncParamsV1,
@@ -42,6 +43,21 @@ const matchedPlansByProductId = ({
 
 	return { ok: true, plansByProductId };
 };
+
+const linkedAddOnQuantity = ({
+	linkedCustomerProducts,
+	syncPlan,
+}: {
+	linkedCustomerProducts: FullCusProduct[];
+	syncPlan: SyncPlanInstance;
+}) =>
+	linkedCustomerProducts.filter((linkedProduct) => {
+		if (!isCustomerProductAddOn(linkedProduct)) return false;
+		if (linkedProduct.product.id !== syncPlan.plan_id) return false;
+		return syncPlan.entity_id
+			? linkedProduct.internal_entity_id === syncPlan.entity_id
+			: !linkedProduct.internal_entity_id;
+	}).length;
 
 export const buildIncrementalSyncParams = ({
 	match,
@@ -100,6 +116,21 @@ export const buildIncrementalSyncParams = ({
 				shouldSync: false,
 				reason: "unsupported_target",
 			};
+		}
+
+		if (matchedPlan.product.is_add_on === true) {
+			const linkedQuantity = linkedAddOnQuantity({
+				linkedCustomerProducts,
+				syncPlan,
+			});
+			const desiredQuantity = syncPlan.quantity ?? 1;
+			if (linkedQuantity < desiredQuantity) {
+				changedPlans.push({
+					...syncPlan,
+					quantity: desiredQuantity - linkedQuantity,
+				});
+			}
+			continue;
 		}
 
 		const target = matchedPlanToTargetGroupLink({ matchedPlan, syncPlan });

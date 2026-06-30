@@ -40,18 +40,33 @@ export const loadMappingContexts = async ({
 		});
 	}
 
+	const variants = await ProductService.listVariantsByParent({
+		db,
+		orgId: org.id,
+		env,
+		baseInternalProductIds: products.map((product) => product.internal_id),
+		returnAll: true,
+	});
+	const variantsByBaseInternalId = new Map<
+		string,
+		(typeof variants)[number][]
+	>();
+	for (const variant of variants) {
+		if (!variant.base_internal_product_id) continue;
+		const current =
+			variantsByBaseInternalId.get(variant.base_internal_product_id) ?? [];
+		current.push(variant);
+		variantsByBaseInternalId.set(variant.base_internal_product_id, current);
+	}
+
 	const contextsByPlanId: ContextsByPlanId = new Map();
 	for (const planId of planIds) {
 		const planProducts = productsByPlanId.get(planId) ?? [];
-		const variants = await ProductService.listVariantsByParent({
-			db,
-			orgId: org.id,
-			env,
-			baseInternalProductIds: planProducts.map((product) => product.internal_id),
-			returnAll: true,
-		});
+		const planVariants = planProducts.flatMap(
+			(product) => variantsByBaseInternalId.get(product.internal_id) ?? [],
+		);
 		const productsByInternalId = new Map(
-			[...planProducts, ...variants].map((product) => [
+			[...planProducts, ...planVariants].map((product) => [
 				product.internal_id,
 				product,
 			]),

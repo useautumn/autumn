@@ -13,6 +13,7 @@ import {
 	isFixedPrice,
 	type Price,
 	ProductItemFeatureType,
+	type ProductV2,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -395,6 +396,7 @@ export const setupSharedStripeProductFamily = async ({
 		customerId,
 		ctx: testCtx,
 		setup: [
+			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [base] }),
 		],
@@ -473,9 +475,11 @@ export const usageItemForFeature = ({
 export const setupSharedStripeFamilies = async ({
 	customerId,
 	families,
+	additionalProducts = [],
 }: {
 	customerId: string;
 	families: FamilySpec[];
+	additionalProducts?: ProductV2[];
 }) => {
 	const bases = families.map((family) =>
 		products.base({
@@ -496,8 +500,9 @@ export const setupSharedStripeFamilies = async ({
 		customerId,
 		ctx: testCtx,
 		setup: [
+			s.deleteCustomer({ customerId }),
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: bases, prefix: "" }),
+			s.products({ list: [...bases, ...additionalProducts], prefix: "" }),
 		],
 		actions: [],
 	});
@@ -630,4 +635,3 @@ export const addVariantBaseItemToSubscription = async ({
 	});
 	return retrieveStripeSubscription({ ctx, subscriptionId: subscription.id });
 };
-
