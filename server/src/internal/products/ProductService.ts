@@ -7,6 +7,7 @@ import {
 	type FullProduct,
 	freeTrials,
 	type Product,
+	ProductCatalogType,
 	ProductNotFoundError,
 	prices,
 	products,
@@ -59,25 +60,33 @@ const parseFreeTrials = ({
 	return product;
 };
 
+const getCatalogTypeFilter = (catalogType?: ProductCatalogType) =>
+	catalogType ? eq(products.catalog_type, catalogType) : undefined;
+
 export class ProductService {
 	static async getByFeature({
 		db,
 		internalFeatureId,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		internalFeatureId: string;
+		catalogType?: ProductCatalogType;
 	}) {
 		const fullProducts = (await db.query.products.findMany({
-			where: exists(
-				db
-					.select()
-					.from(entitlements)
-					.where(
-						and(
-							eq(entitlements.internal_product_id, products.internal_id),
-							eq(entitlements.internal_feature_id, internalFeatureId),
+			where: and(
+				getCatalogTypeFilter(catalogType),
+				exists(
+					db
+						.select()
+						.from(entitlements)
+						.where(
+							and(
+								eq(entitlements.internal_product_id, products.internal_id),
+								eq(entitlements.internal_feature_id, internalFeatureId),
+							),
 						),
-					),
+				),
 			),
 			with: {
 				entitlements: {
@@ -103,11 +112,13 @@ export class ProductService {
 		stripeProductIds,
 		orgId,
 		env,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		stripeProductIds: string[];
 		orgId: string;
 		env: AppEnv;
+		catalogType?: ProductCatalogType;
 	}) {
 		if (!stripeProductIds || stripeProductIds.length === 0)
 			return {} as Record<string, Product>;
@@ -120,6 +131,7 @@ export class ProductService {
 				)}])`,
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				getCatalogTypeFilter(catalogType),
 			),
 		})) as Product[];
 
@@ -217,6 +229,7 @@ export class ProductService {
 		group,
 		inIds,
 		onlyFree = false,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -224,11 +237,13 @@ export class ProductService {
 		group?: string;
 		inIds?: string[];
 		onlyFree?: boolean;
+		catalogType?: ProductCatalogType;
 	}) {
 		const prods = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				getCatalogTypeFilter(catalogType),
 				eq(products.is_default, true),
 				ne(products.archived, true),
 				group === "" || group === null
@@ -283,12 +298,14 @@ export class ProductService {
 		orgId,
 		env,
 		version,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		id: string;
 		orgId: string;
 		env: AppEnv;
 		version?: number;
+		catalogType?: ProductCatalogType;
 	}) {
 		return await db.query.products.findFirst({
 			where: and(
@@ -296,6 +313,7 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
+				getCatalogTypeFilter(catalogType),
 			),
 			orderBy: [desc(products.version)],
 		});
@@ -305,15 +323,17 @@ export class ProductService {
 		db,
 		orgId,
 		env,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
 		env: AppEnv;
+		catalogType?: ProductCatalogType;
 	}): Promise<
 		Array<{ internal_id: string; id: string; name: string; version: number }>
 	> {
 		return queryWithCache({
-			key: buildAllVersionsProductsCacheKey({ orgId, env }),
+			key: buildAllVersionsProductsCacheKey({ orgId, env, catalogType }),
 			ttl: PRODUCTS_CACHE_TTL,
 			fn: () =>
 				db
@@ -324,7 +344,13 @@ export class ProductService {
 						version: products.version,
 					})
 					.from(products)
-					.where(and(eq(products.org_id, orgId), eq(products.env, env))),
+					.where(
+						and(
+							eq(products.org_id, orgId),
+							eq(products.env, env),
+							getCatalogTypeFilter(catalogType),
+						),
+					),
 		});
 	}
 
@@ -337,6 +363,7 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -346,6 +373,7 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
+		catalogType?: ProductCatalogType;
 	}): Promise<FullProduct[]> {
 		// Use caching for simple queries (no inIds, returnAll, version, or excludeEnts)
 		const canCache = !inIds && !returnAll && !version && !excludeEnts;
@@ -355,10 +383,17 @@ export class ProductService {
 				key: buildProductsCacheKey({
 					orgId,
 					env,
-					queryParams: { archived },
+					queryParams: { archived, catalogType },
 				}),
 				ttl: PRODUCTS_CACHE_TTL,
-				fn: () => ProductService._listFullQuery({ db, orgId, env, archived }),
+				fn: () =>
+					ProductService._listFullQuery({
+						db,
+						orgId,
+						env,
+						archived,
+						catalogType,
+					}),
 			});
 		}
 
@@ -371,6 +406,7 @@ export class ProductService {
 			version,
 			excludeEnts,
 			archived,
+			catalogType,
 		});
 	}
 
@@ -383,6 +419,7 @@ export class ProductService {
 		version,
 		excludeEnts = false,
 		archived,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
@@ -392,6 +429,7 @@ export class ProductService {
 		version?: number;
 		excludeEnts?: boolean;
 		archived?: boolean;
+		catalogType?: ProductCatalogType;
 	}): Promise<FullProduct[]> {
 		// Optimization: Use a subquery to only fetch the latest version of each product
 		const latestVersionsSubquery =
@@ -408,6 +446,7 @@ export class ProductService {
 							and(
 								eq(products.org_id, orgId),
 								eq(products.env, env),
+								getCatalogTypeFilter(catalogType),
 								inIds ? inArray(products.id, inIds) : undefined,
 							),
 						)
@@ -419,6 +458,7 @@ export class ProductService {
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				getCatalogTypeFilter(catalogType),
 				inIds ? inArray(products.id, inIds) : undefined,
 				version ? eq(products.version, version) : undefined,
 				latestVersionsSubquery
@@ -483,12 +523,14 @@ export class ProductService {
 		orgId,
 		env,
 		returnAll = false,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		baseInternalProductIds: string[];
 		orgId: string;
 		env: AppEnv;
 		returnAll?: boolean;
+		catalogType?: ProductCatalogType;
 	}): Promise<FullProduct[]> {
 		if (baseInternalProductIds.length === 0) return [];
 
@@ -502,6 +544,7 @@ export class ProductService {
 				and(
 					eq(products.org_id, orgId),
 					eq(products.env, env),
+					getCatalogTypeFilter(catalogType),
 					inArray(products.base_internal_product_id, baseInternalProductIds),
 					ne(products.archived, true),
 				),
@@ -513,6 +556,7 @@ export class ProductService {
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
+				getCatalogTypeFilter(catalogType),
 				ne(products.archived, true),
 				inArray(products.base_internal_product_id, baseInternalProductIds),
 				returnAll
@@ -555,6 +599,7 @@ export class ProductService {
 		allowNotFound = false,
 		logResult = false,
 		logger,
+		catalogType,
 	}: {
 		db: DrizzleCli;
 		idOrInternalId: string;
@@ -564,6 +609,7 @@ export class ProductService {
 		allowNotFound?: boolean;
 		logResult?: boolean;
 		logger?: Logger;
+		catalogType?: ProductCatalogType;
 	}) {
 		const data = (await db.query.products.findFirst({
 			where: and(
@@ -574,6 +620,7 @@ export class ProductService {
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				version ? eq(products.version, version) : undefined,
+				getCatalogTypeFilter(catalogType),
 			),
 			orderBy: [desc(products.version)],
 			with: {

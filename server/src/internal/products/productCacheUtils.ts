@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type { AppEnv } from "@autumn/shared";
+import { type AppEnv, ProductCatalogType } from "@autumn/shared";
 import {
 	getConfiguredRegions,
 	getRegionalRedis,
@@ -9,7 +9,7 @@ import {
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
 /** Cache version - bump when cache schema changes to auto-invalidate old entries */
-const PRODUCTS_CACHE_VERSION = "1.0.0";
+const PRODUCTS_CACHE_VERSION = "1.1.0";
 
 /** TTL for products cache: 1 day */
 export const PRODUCTS_CACHE_TTL = 60 * 60 * 24;
@@ -61,15 +61,22 @@ export const buildProductsCacheKey = ({
 export const buildAllVersionsProductsCacheKey = ({
 	orgId,
 	env,
+	catalogType,
 }: {
 	orgId: string;
 	env: AppEnv;
+	catalogType?: ProductCatalogType;
 }) => {
-	return `${buildProductsCacheKeyPrefix({ orgId, env })}:all_versions`;
+	return `${buildProductsCacheKeyPrefix({ orgId, env })}:all_versions:${catalogType ?? "all"}`;
 };
 
 /** All possible archived query param values that can be cached */
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
+const CATALOG_TYPE_VARIANTS = [
+	undefined,
+	ProductCatalogType.Plan,
+	ProductCatalogType.License,
+] as const;
 
 /** Invalidates all products cache entries for an org/env across ALL regions */
 export const invalidateProductsCache = async ({
@@ -83,14 +90,18 @@ export const invalidateProductsCache = async ({
 
 	// Build all possible cache keys (deterministic based on archived param variants)
 	const keysToDelete = [
-		...ARCHIVED_VARIANTS.map((archived) =>
-			buildProductsCacheKey({
-				orgId,
-				env,
-				queryParams: archived !== undefined ? { archived } : undefined,
-			}),
+		...ARCHIVED_VARIANTS.flatMap((archived) =>
+			CATALOG_TYPE_VARIANTS.map((catalogType) =>
+				buildProductsCacheKey({
+					orgId,
+					env,
+					queryParams: { archived, catalogType },
+				}),
+			),
 		),
-		buildAllVersionsProductsCacheKey({ orgId, env }),
+		...CATALOG_TYPE_VARIANTS.map((catalogType) =>
+			buildAllVersionsProductsCacheKey({ orgId, env, catalogType }),
+		),
 	];
 
 	const regions = getConfiguredRegions();

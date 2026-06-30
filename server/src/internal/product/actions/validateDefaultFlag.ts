@@ -2,6 +2,7 @@ import {
 	type CreateProductV2Params,
 	ErrCode,
 	type FullProduct,
+	ProductCatalogType,
 	isDefaultTrial,
 	isDefaultTrialV2,
 	isFreeProductV2,
@@ -10,7 +11,7 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import {
 	getGroupToDefaults,
 	isFreeProduct,
@@ -30,7 +31,7 @@ const disableCurrentDefault = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
-	let defaultProds = await ProductService.listDefault({
+	let defaultProds = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		env,
@@ -55,7 +56,7 @@ const disableCurrentDefault = async ({
 		// 	logger.info(
 		// 		`Disabling trial on cur default trial product: ${curDefault.id}`,
 		// 	);
-		// 	await ProductService.updateByInternalId({
+		// 	await PlanService.updateByInternalId({
 		// 		db,
 		// 		internalId: curDefault.internal_id,
 		// 		update: { is_default: false },
@@ -70,7 +71,7 @@ const disableCurrentDefault = async ({
 		}
 		// if (curDefault) {
 		// 	logger.info(`Disabling trial on cur default product: ${curDefault.id}`);
-		// 	await ProductService.updateByInternalId({
+		// 	await PlanService.updateByInternalId({
 		// 		db,
 		// 		internalId: curDefault.internal_id,
 		// 		update: { is_default: false },
@@ -90,7 +91,7 @@ const validateLatestVersionCanBeDefault = async ({
 }) => {
 	if (body.is_default !== true || !curProduct) return;
 
-	const latestProduct = await ProductService.getFull({
+	const latestProduct = await PlanService.getFull({
 		db: ctx.db,
 		idOrInternalId: curProduct.id,
 		orgId: ctx.org.id,
@@ -116,6 +117,15 @@ export const validateDefaultFlag = async ({
 	body: CreateProductV2Params | UpdateProductV2Params;
 	curProduct?: FullProduct;
 }) => {
+	const catalogType = body.catalog_type ?? curProduct?.catalog_type;
+	if (body.is_default === true && catalogType === ProductCatalogType.License) {
+		throw new RecaseError({
+			message: "License products cannot be auto-enabled.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	if (body.is_default === true && curProduct?.base_internal_product_id != null) {
 		throw new RecaseError({
 			message: "Variants cannot be the default plan.",

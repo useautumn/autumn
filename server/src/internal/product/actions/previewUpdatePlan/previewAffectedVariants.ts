@@ -8,7 +8,7 @@ import type {
 	UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	applyDiffToVariantPlan,
@@ -56,7 +56,7 @@ export const previewAffectedVariants = async ({
 		...variantUpdateById.keys(),
 	]);
 
-	const family = await ProductService.listFull({
+	const family = await PlanService.listFull({
 		db,
 		orgId: org.id,
 		env,
@@ -64,7 +64,7 @@ export const previewAffectedVariants = async ({
 		returnAll: true,
 	});
 
-	const variants = await ProductService.listVariantsByParent({
+	const variants = await PlanService.listVariantsByParent({
 		db,
 		baseInternalProductIds: family.map((p) => p.internal_id),
 		orgId: org.id,

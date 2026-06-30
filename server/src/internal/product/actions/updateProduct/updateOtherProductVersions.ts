@@ -6,7 +6,7 @@ import type {
 	UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import {
 	applyDiffToVariantPlan,
 	buildProductUpdatesFromApiPlan,
@@ -25,7 +25,7 @@ const getOtherVersions = async ({
 	ctx: AutumnContext;
 	product: FullProduct;
 }) => {
-	const versions = await ProductService.listFull({
+	const versions = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,

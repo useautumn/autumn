@@ -10,7 +10,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	validateDirectVariantMigrationDraftUnsupported,
@@ -47,7 +47,7 @@ export const getVariantMigrationSnapshots = async ({
 }): Promise<VariantMigrationSnapshot[]> => {
 	if (variantIds.length === 0) return [];
 
-	const variants = await ProductService.listFull({
+	const variants = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,
@@ -148,7 +148,7 @@ export const createPlanMigrationDraft = async ({
 		return migration.id;
 	}
 
-	const baseVersions = await ProductService.listFull({
+	const baseVersions = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,

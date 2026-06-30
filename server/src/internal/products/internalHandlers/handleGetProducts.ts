@@ -1,6 +1,7 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { Scopes } from "@autumn/shared";
+import { ProductCatalogType, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { PlanService } from "@/internal/products/PlanService";
 import { ProductService } from "@/internal/products/ProductService";
 import { getGroupToDefaults } from "@/internal/products/productUtils";
 import { mapToProductV2 } from "@/internal/products/productV2Utils";
@@ -22,7 +23,7 @@ export const handleGetProducts = createRoute({
 		const { db, org, env, features } = c.get("ctx");
 		const { all_versions } = c.req.valid("query");
 
-		const products = await ProductService.listFull({
+		const products = await PlanService.listFull({
 			db,
 			orgId: org.id,
 			env,
@@ -44,7 +45,7 @@ export const handleGetProducts = createRoute({
 
 		// Variants store base_internal_product_id pointing at a specific (often older)
 		// version; resolve it to the stable public base id so the UI can group them.
-		const allVersions = await ProductService.listCachedAllVersions({
+		const allVersions = await PlanService.listCachedAllVersions({
 			db,
 			orgId: org.id,
 			env,
@@ -64,6 +65,44 @@ export const handleGetProducts = createRoute({
 				};
 			}),
 			groupToDefaults,
+		});
+	},
+});
+
+export const handleGetLicenseProducts = createRoute({
+	scopes: [Scopes.Plans.Read],
+	query: GetProductsQuerySchema,
+	handler: async (c) => {
+		const { db, org, env, features } = c.get("ctx");
+		const { all_versions } = c.req.valid("query");
+
+		const products = await ProductService.listFull({
+			db,
+			orgId: org.id,
+			env,
+			returnAll: all_versions,
+			catalogType: ProductCatalogType.License,
+		});
+		const allVersions = await ProductService.listCachedAllVersions({
+			db,
+			orgId: org.id,
+			env,
+			catalogType: ProductCatalogType.License,
+		});
+		const internalIdToPublicId = new Map(
+			allVersions.map((p) => [p.internal_id, p.id]),
+		);
+
+		return c.json({
+			products: products.map((p) => {
+				const productV2 = mapToProductV2({ product: p, features });
+				return {
+					...productV2,
+					base_id: p.base_internal_product_id
+						? (internalIdToPublicId.get(p.base_internal_product_id) ?? null)
+						: null,
+				};
+			}),
 		});
 	},
 });

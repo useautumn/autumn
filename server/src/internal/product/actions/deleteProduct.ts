@@ -2,6 +2,7 @@ import { ProductNotFoundError, products, RecaseError } from "@autumn/shared";
 import { and, desc, eq, lt } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
 const relinkVariantsBeforeDeletingBase = async ({
@@ -9,7 +10,7 @@ const relinkVariantsBeforeDeletingBase = async ({
 	product,
 }: {
 	ctx: AutumnContext;
-	product: Awaited<ReturnType<typeof ProductService.get>>;
+	product: Awaited<ReturnType<typeof PlanService.get>>;
 }) => {
 	if (!product || product.base_internal_product_id !== null) return;
 
@@ -48,7 +49,7 @@ export const deleteProduct = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	const product = await ProductService.get({
+	const product = await PlanService.get({
 		db,
 		id: productId,
 		orgId: org.id,

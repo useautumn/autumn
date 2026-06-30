@@ -1,6 +1,6 @@
 import { ErrCode, RecaseError, type FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 
 export const getVariantPropagationTargets = async ({
 	ctx,
@@ -26,7 +26,7 @@ export const getVariantPropagationTargets = async ({
 	}
 
 	const { db, org, env } = ctx;
-	const family = await ProductService.listFull({
+	const family = await PlanService.listFull({
 		db,
 		orgId: org.id,
 		env,
@@ -35,7 +35,7 @@ export const getVariantPropagationTargets = async ({
 	});
 
 	const baseInternalProductIds = family.map((p) => p.internal_id);
-	const variants = await ProductService.listVariantsByParent({
+	const variants = await PlanService.listVariantsByParent({
 		db,
 		baseInternalProductIds,
 		orgId: org.id,
@@ -50,7 +50,7 @@ export const getVariantPropagationTargets = async ({
 
 	const targetProducts =
 		propagateToVariants.length > 0
-			? await ProductService.listFull({
+			? await PlanService.listFull({
 					db,
 					orgId: org.id,
 					env,

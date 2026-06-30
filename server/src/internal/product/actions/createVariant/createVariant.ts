@@ -62,6 +62,7 @@ const getVariantCreateParams = ({
 	description: base.description,
 	is_add_on: base.is_add_on,
 	is_default: false,
+	catalog_type: base.catalog_type,
 	group: base.group,
 	items: getVariantItems({ base, features }),
 	free_trial: getCreateFreeTrial({ base }),
