@@ -27870,7 +27870,9 @@ paths:
                                         anyOf:
                                           - type: number
                                           - type: "null"
-                                        description: The number of `type` periods before the granted amount expires.
+                                        description: The number of `type` periods the duration lasts, or null when the
+                                          type has no length (e.g. one_off,
+                                          forever).
                                     required:
                                       - type
                                       - length

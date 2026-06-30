@@ -12725,7 +12725,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782831818488,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784041418488,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -25459,7 +25459,7 @@ paths:
                                         anyOf:
                                           - type: number
                                           - type: "null"
-                                        description: The number of `type` periods before the granted amount expires.
+                                        description: The number of `type` periods the duration lasts, or null when the type has no length (e.g. one_off, forever).
                                     required:
                                       - type
                                       - length
