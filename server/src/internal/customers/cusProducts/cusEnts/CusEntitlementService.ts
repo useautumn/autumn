@@ -335,6 +335,10 @@ export class CusEntService {
 				.limit(batchSize)
 				.offset(offset);
 
+			// Note: PlanetScale tag would be added here but Drizzle 0.43.1's unionAll
+			// doesn't support .comment() method. Tag will be added after Drizzle upgrade.
+			// Target tag: planetScaleTag({ query: "getActiveResetPassed" })
+
 			if (data.length === 0 || (limit && allResults.length >= limit)) {
 				hasMore = false;
 			} else {

@@ -138,3 +138,33 @@ export const buildConflictUpdateColumns = <T extends PgTable>(
 
 	return updateSet;
 };
+
+/**
+ * Format PlanetScale query tags for SQLCommenter.
+ * Tags are appended as SQL comments and parsed by PlanetScale for filtering in Insights.
+ *
+ * @param tags - Key-value pairs to add as query tags (e.g., { query: 'getFullCustomer', priority: 'high' })
+ * @returns SQL fragment with formatted comment
+ *
+ * @example
+ * ```ts
+ * const query = sql`SELECT * FROM customers WHERE id = ${id} ${planetScaleTag({ query: 'getFullCustomer' })}`;
+ * // Produces: SELECT * FROM customers WHERE id = $1 /*query='getFullCustomer'*\/
+ * ```
+ */
+export const planetScaleTag = (tags: Record<string, string>): SQL => {
+	// Sort keys alphabetically per SQLCommenter spec
+	const sortedKeys = Object.keys(tags).sort();
+
+	// Format as key='value' pairs
+	const tagPairs = sortedKeys
+		.map((key) => {
+			// URL-encode values and escape single quotes
+			const value = encodeURIComponent(tags[key]).replace(/'/g, "\\'");
+			return `${key}='${value}'`;
+		})
+		.join(",");
+
+	// Return SQL comment fragment
+	return sql.raw(`/*${tagPairs}*/`);
+};
