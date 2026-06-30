@@ -1,4 +1,5 @@
 import {
+	ChatAuthMode,
 	type ChatApproval,
 	Scopes,
 	chatInstallations,
@@ -16,6 +17,7 @@ import { getInstallationOAuthAccessToken } from "../../../installations/actions/
 import { decrypt } from "../../../../lib/crypto.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
+import { resolveInstallationAuthMode } from "../../../../providers/slack/users.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -67,6 +69,18 @@ const authorizeSlackApprovalClicker = async ({
 			allowed: false,
 			text: "I couldn't verify your Slack workspace installation, so I can't approve this action.",
 		} as const;
+	}
+
+	if (
+		resolveInstallationAuthMode({ installation }) !== ChatAuthMode.PerUser
+	) {
+		const token = await getInstallationOAuthAccessToken({
+			installation,
+			env: approval.env,
+			orgId: approval.org_id,
+			userId: installation.installed_by_user_id ?? undefined,
+		});
+		return { allowed: true, token } as const;
 	}
 
 	const auth = await resolveSlackUserAuth({
