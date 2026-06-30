@@ -21,7 +21,7 @@ import { setupCustomFullProduct } from "@/internal/billing/v2/setup/setupCustomF
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import { executeAutumnBillingPlan } from "../../execute/executeAutumnBillingPlan";
 import {
@@ -122,7 +122,7 @@ const processSyncMapping = async ({
 	);
 
 	// 2. Load the target Autumn product
-	const fullProduct = await ProductService.getFull({
+	const fullProduct = await PlanService.getFull({
 		db,
 		idOrInternalId: mapping.plan_id,
 		orgId: org.id,

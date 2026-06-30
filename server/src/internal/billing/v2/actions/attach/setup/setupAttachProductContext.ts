@@ -11,6 +11,10 @@ import {
 	BillingVersion,
 	cusProductToProduct,
 	isCustomizePlanPatchStyle,
+	isLicenseProduct,
+	ProductCatalogType,
+	RecaseError,
+	ErrCode,
 	type PatchContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -118,6 +122,15 @@ const resolveAttachProductContext = async ({
 		logResult: true,
 		logger: ctx.logger,
 	});
+
+	if (isLicenseProduct({ product: fullProduct })) {
+		throw new RecaseError({
+			message:
+				"License products cannot be attached directly. Assign licenses through the license APIs.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	if (fullCustomer) {
 		const patchProductContext = setupAttachPatchProductContext({

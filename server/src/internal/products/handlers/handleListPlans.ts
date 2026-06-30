@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../customers/CusService";
-import { ProductService } from "../ProductService";
+import { PlanService } from "../PlanService";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse";
 
 export const handleListPlans = createRoute({
@@ -29,7 +29,7 @@ export const handleListPlans = createRoute({
 		const startedAt = Date.now();
 
 		const [products, customer] = await Promise.all([
-			ProductService.listFull({
+			PlanService.listFull({
 				db,
 				orgId: org.id,
 				env,

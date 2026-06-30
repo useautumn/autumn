@@ -6,6 +6,7 @@ import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import { isCatalogPlanProduct } from "../productUtils/classifyProduct/classifyProductUtils.js";
 
 type Comparator = (left: never, right: never) => unknown;
 
@@ -45,6 +46,7 @@ export const getPlanBillingControlProducts = ({
 	customerProducts
 		.filter(
 			(customerProduct) =>
+				isCatalogPlanProduct({ product: customerProduct.product }) &&
 				inStatuses.includes(customerProduct.status) &&
 				appliesNow({ customerProduct, now }),
 		)
@@ -185,10 +187,15 @@ export const fullSubjectToPlanProducts = ({
 }) => [
 	...fullSubject.customer_products,
 	...(fullSubject.aggregated_customer_products ?? []),
-];
+].filter((customerProduct) =>
+	isCatalogPlanProduct({ product: customerProduct.product }),
+);
 
 export const fullCustomerToPlanProducts = ({
 	fullCustomer,
 }: {
 	fullCustomer: FullCustomer;
-}) => fullCustomer.customer_products ?? [];
+}) =>
+	(fullCustomer.customer_products ?? []).filter((customerProduct) =>
+		isCatalogPlanProduct({ product: customerProduct.product }),
+	);

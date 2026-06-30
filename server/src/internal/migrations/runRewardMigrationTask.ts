@@ -17,7 +17,7 @@ import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCo
 import type { JobName } from "@/queue/JobName.js";
 import type { Payloads } from "@/queue/queueUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
-import { ProductService } from "../products/ProductService.js";
+import { PlanService } from "../products/PlanService.js";
 import { PriceService } from "../products/prices/PriceService.js";
 import { tiersAreSame } from "../products/prices/priceInitUtils.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
@@ -135,7 +135,7 @@ export async function runRewardMigrationTask({
 			env: AppEnv;
 		} = payload;
 
-		const fullProduct = await ProductService.getFull({
+		const fullProduct = await PlanService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId,

@@ -11,7 +11,7 @@ import {
 import type { AddPlanOp } from "@autumn/shared/api/migrations/operations/customer/addPlan/index.js";
 import { initCusEntitlement } from "@/internal/customers/add-product/initCusEnt.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { OperationProcessor } from "../types/index.js";
@@ -23,7 +23,7 @@ export const processAddPlan: OperationProcessor<AddPlanOp> = async ({
 	plan,
 	projectedFullCustomer,
 }) => {
-	const product = await ProductService.getFull({
+	const product = await PlanService.getFull({
 		db: ctx.db,
 		idOrInternalId: op.plan_id,
 		orgId: ctx.org.id,

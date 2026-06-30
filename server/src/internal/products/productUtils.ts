@@ -17,6 +17,7 @@ import {
 	ProcessorType,
 	type Product,
 	ProductSchema,
+	ProductCatalogType,
 	pickBillingControlColumns,
 	isProductUpgrade as sharedIsProductUpgrade,
 	type UsagePriceConfig,
@@ -94,6 +95,7 @@ export const constructProduct = ({
 		description: productData.description ?? null,
 		is_add_on: productData.is_add_on,
 		is_default: productData.is_default,
+		catalog_type: productData.catalog_type ?? ProductCatalogType.Plan,
 		version: version,
 		group: productData.group || "",
 

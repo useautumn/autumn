@@ -22,7 +22,7 @@ import { VercelResourceService } from "@/external/vercel/services/VercelResource
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {
@@ -132,7 +132,7 @@ export const handleCreateResource = createRoute({
 		}
 
 		const loadProduct = async (planId: string): Promise<FullProduct> => {
-			const product = await ProductService.getFull({
+			const product = await PlanService.getFull({
 				db,
 				orgId,
 				env: appEnv,

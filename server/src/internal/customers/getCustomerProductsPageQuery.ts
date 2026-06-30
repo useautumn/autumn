@@ -2,6 +2,7 @@ import {
 	CusProductStatus,
 	CustomerProductKind,
 	type CustomerProductsCursorFields,
+	ProductCatalogType,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 
@@ -149,8 +150,9 @@ const buildFilters = ({
 
 	const kindFilter =
 		kind === undefined ? sql`` : sql`AND ${typeRankSql} = ${KIND_RANK[kind]}`;
+	const catalogFilter = sql`AND prod.catalog_type <> ${ProductCatalogType.License}`;
 
-	return sql`${statusFilter} ${entityFilter} ${kindFilter}`;
+	return sql`${statusFilter} ${entityFilter} ${kindFilter} ${catalogFilter}`;
 };
 
 export const getCustomerProductsPageQuery = ({
@@ -246,6 +248,7 @@ export const customerProductsSeedCte = ({
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			WHERE TRUE ${statusFilter}
+				AND prod.catalog_type <> ${ProductCatalogType.License}
 		),
 		products_seed AS MATERIALIZED (
 			SELECT

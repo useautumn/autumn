@@ -1,4 +1,4 @@
-import type { Price, Product } from "@autumn/shared";
+import { isCatalogPlanProduct, type Price, type Product } from "@autumn/shared";
 import type Stripe from "stripe";
 
 export enum SyncMatchPriority {
@@ -19,6 +19,9 @@ export type SyncMatchResult = {
 	product: Product | null;
 	price: (Price & { product: Product }) | null;
 };
+
+const isPlanPriceMatch = (match?: Price & { product: Product }) =>
+	!!match && isCatalogPlanProduct({ product: match.product });
 
 /**
  * Matches a Stripe subscription item to an Autumn price/product using a
@@ -48,7 +51,7 @@ export const matchSubscriptionItemToAutumn = ({
 	// Priority 1: Match by Stripe price ID
 	if (stripePriceId) {
 		const matched = priceByStripePriceId[stripePriceId];
-		if (matched) {
+		if (isPlanPriceMatch(matched)) {
 			return {
 				priority: SyncMatchPriority.StripePriceId,
 				matchMethod: "stripe_price_id",
@@ -61,7 +64,7 @@ export const matchSubscriptionItemToAutumn = ({
 	// Priority 2: Match by Stripe product ID on price config (usage/prepaid)
 	if (stripeProductId) {
 		const matched = priceByStripeProductId[stripeProductId];
-		if (matched) {
+		if (isPlanPriceMatch(matched)) {
 			return {
 				priority: SyncMatchPriority.StripeProductId,
 				matchMethod: "stripe_product_id",

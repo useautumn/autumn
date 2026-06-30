@@ -1,7 +1,7 @@
 import { AppEnv, Scopes, SyncRevenueCatSchema } from "@autumn/shared";
 import { syncProductsToRevenueCat } from "@/external/revenueCat/sync/syncRevenueCatProducts.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { validatePlatformOrg } from "../utils/validatePlatformOrg.js";
 
 /**
@@ -28,7 +28,7 @@ export const handleSyncRevenueCat = createRoute({
 
 		let productIds = product_ids;
 		if (!productIds) {
-			const products = await ProductService.listFull({
+			const products = await PlanService.listFull({
 				db,
 				orgId: org.id,
 				env: appEnv,

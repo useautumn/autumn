@@ -15,7 +15,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import { CusService } from "@/internal/customers/CusService.js";
 import type { InsertCusProductParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { ReferralResponseCodes } from "@/internal/rewards/rewardUtils.js";
@@ -48,7 +48,7 @@ export const triggerFreeProduct = async ({
 
 	const productId = rewardProgram.reward.free_product_id!;
 
-	const fullProduct = await ProductService.getFull({
+	const fullProduct = await PlanService.getFull({
 		db,
 		idOrInternalId: productId,
 		orgId: org.id,

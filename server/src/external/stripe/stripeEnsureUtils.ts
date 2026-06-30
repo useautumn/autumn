@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
 
 export async function ensureStripeProductsWithEnv({
@@ -11,7 +11,7 @@ export async function ensureStripeProductsWithEnv({
 	const { db, org, env, logger } = ctx;
 
 	// let existingStripeProducts = await stripe.products.list();
-	const fullProducts = await ProductService.listFull({
+	const fullProducts = await PlanService.listFull({
 		db,
 		orgId: org.id,
 		env,

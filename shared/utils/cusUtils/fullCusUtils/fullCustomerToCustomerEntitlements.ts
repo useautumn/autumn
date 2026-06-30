@@ -48,6 +48,10 @@ export const fullCustomerToCustomerEntitlements = ({
 		});
 	}
 
+	if (!entity) {
+		cusEnts = cusEnts.filter((cusEnt) => !isEntityCusEnt({ cusEnt }));
+	}
+
 	if (featureId) {
 		cusEnts = cusEnts.filter(
 			(cusEnt) => cusEnt.entitlement.feature.id === featureId,

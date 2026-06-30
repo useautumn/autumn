@@ -12,7 +12,7 @@ import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/verc
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 
 /**
  * Provisions a Vercel customer product via V2 attach.
@@ -48,7 +48,7 @@ export const provisionVercelCusProduct = async ({
 	const { db, org, env } = ctx;
 
 	// 1. Look up product (hoisted — reused by idempotency branch and free path)
-	const product = await ProductService.getFull({
+	const product = await PlanService.getFull({
 		db,
 		orgId: org.id,
 		env,

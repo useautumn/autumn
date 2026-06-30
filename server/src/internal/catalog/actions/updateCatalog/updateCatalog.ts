@@ -6,6 +6,8 @@ import {
 	type CreateProductV2Params,
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
+	isCatalogPlanProduct,
+	ProductCatalogType,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -35,6 +37,8 @@ import {
 	validateCatalogVariantUpdates,
 	validateCatalogVariantVersionTargets,
 } from "../validateCatalogVariantUpdates.js";
+
+type CatalogTypeParam = { catalog_type?: ProductCatalogType };
 
 const archiveProductVersions = async ({
 	ctx,
@@ -140,6 +144,8 @@ const upsertPlans = async ({
 			include_variants: _includeVariants,
 			...rest
 		} = planParams;
+		const catalogType =
+			(planParams as CatalogTypeParam).catalog_type ?? ProductCatalogType.Plan;
 		if (
 			skipPlanIds.has(plan_id) ||
 			(new_plan_id !== undefined && skipPlanIds.has(new_plan_id))
@@ -154,6 +160,7 @@ const upsertPlans = async ({
 			env,
 			version,
 			allowNotFound: true,
+			catalogType,
 		});
 
 		if (!current) {
@@ -174,6 +181,7 @@ const upsertPlans = async ({
 					idOrInternalId: plan_id,
 					orgId: org.id,
 					env,
+					catalogType,
 				});
 				await updateProduct({
 					ctx,
@@ -262,6 +270,7 @@ const upsertPlans = async ({
 			orgId: org.id,
 			env,
 			version: current.version,
+			catalogType,
 		});
 		if (!after) continue;
 		const toPlan = await getPlanResponse({
@@ -429,6 +438,9 @@ const resolveCatalogUpdateResponse = async ({
 				orgId: org.id,
 				env,
 				allowNotFound: true,
+				catalogType:
+					(planParams as CatalogTypeParam).catalog_type ??
+					ProductCatalogType.Plan,
 			});
 			return product
 				? getPlanResponse({ ctx, product, features: ctx.features })
@@ -473,14 +485,17 @@ export const updateCatalog = async ({
 		orgId: org.id,
 		env,
 	});
+	const plansBeforeUpdate = productsBeforeUpdate.filter((product) =>
+		isCatalogPlanProduct({ product }),
+	);
 	validateCatalogVariantVersionTargets({
 		params,
-		products: productsBeforeUpdate,
+		products: plansBeforeUpdate,
 	});
 	const replacePlanIds = params.skip_deletions
 		? []
 		: deriveReplacePlanRemovals({
-				products: productsBeforeUpdate,
+				products: plansBeforeUpdate,
 				plans: params.plans,
 			}).filter((removal) => !params.skip_plan_ids.includes(removal.planId));
 

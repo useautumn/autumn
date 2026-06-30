@@ -1,6 +1,6 @@
 import { ProductNotFoundError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 
 export const handleListPlanVariants = createRoute({
@@ -12,7 +12,7 @@ export const handleListPlanVariants = createRoute({
 		const productId = c.req.param().productId;
 		if (!productId) throw new ProductNotFoundError({ productId: "" });
 
-		const base = await ProductService.getFull({
+		const base = await PlanService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId: org.id,
@@ -21,7 +21,7 @@ export const handleListPlanVariants = createRoute({
 		if (!base) throw new ProductNotFoundError({ productId });
 
 		// Variants can be bound to any prior version's internal_id, so match the whole family.
-		const family = await ProductService.listFull({
+		const family = await PlanService.listFull({
 			db,
 			orgId: org.id,
 			env,
@@ -29,7 +29,7 @@ export const handleListPlanVariants = createRoute({
 			returnAll: true,
 		});
 
-		const variants = await ProductService.listVariantsByParent({
+		const variants = await PlanService.listVariantsByParent({
 			db,
 			baseInternalProductIds: family.map((p) => p.internal_id),
 			orgId: org.id,

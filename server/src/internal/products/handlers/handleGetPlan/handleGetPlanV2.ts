@@ -4,7 +4,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "../../ProductService.js";
+import { PlanService } from "../../PlanService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleGetPlanV2 = createRoute({
@@ -15,7 +15,7 @@ export const handleGetPlanV2 = createRoute({
 		const { plan_id, version } = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const fullProduct = await ProductService.getFull({
+		const fullProduct = await PlanService.getFull({
 			db: ctx.db,
 			idOrInternalId: plan_id,
 			orgId: ctx.org.id,

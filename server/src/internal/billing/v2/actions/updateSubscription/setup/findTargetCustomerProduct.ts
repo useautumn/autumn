@@ -4,8 +4,10 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	findPriceByFeatureId,
+	fullCustomerToPlanProducts,
 	isCusProductOnEntity,
 	isCustomerProductAddOn,
+	isLicenseCustomerProduct,
 	isCustomerProductMain,
 	isCustomerProductOneOff,
 	isCustomerProductPaidRecurring,
@@ -38,6 +40,14 @@ const PRODUCT_PRIORITY = [
 const getProductPriority = (cp: FullCusProduct): number => {
 	const index = PRODUCT_PRIORITY.findIndex((matches) => matches(cp));
 	return index === -1 ? PRODUCT_PRIORITY.length : index;
+};
+
+const rejectLicenseCustomerProduct = () => {
+	throw new RecaseError({
+		message: "Use the license assignment APIs to manage license products.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
 };
 
 /** Returns true if the customer product has prepaid options for ALL given feature IDs. */
@@ -142,7 +152,7 @@ export const findTargetCustomerProduct = async ({
 }): Promise<FullCusProduct> => {
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	const candidates = fullCustomer.customer_products.filter((cp) => {
+	const candidates = fullCustomerToPlanProducts({ fullCustomer }).filter((cp) => {
 		if (!RELEVANT_STATUSES.includes(cp.status)) return false;
 		return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
 	});
@@ -163,6 +173,9 @@ export const findTargetCustomerProduct = async ({
 			fallback &&
 			fallback.internal_customer_id === fullCustomer.internal_id
 		) {
+			if (isLicenseCustomerProduct({ customerProduct: fallback })) {
+				rejectLicenseCustomerProduct();
+			}
 			return fallback;
 		}
 	}

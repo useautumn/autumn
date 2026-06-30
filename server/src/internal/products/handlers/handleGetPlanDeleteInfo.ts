@@ -1,6 +1,7 @@
 import { AffectedResource, ProductNotFoundError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "../../customers/cusProducts/CusProdReadService.js";
+import { PlanService } from "../PlanService.js";
 import { ProductService } from "../ProductService.js";
 
 export const handleGetPlanDeleteInfo = createRoute({
@@ -11,7 +12,7 @@ export const handleGetPlanDeleteInfo = createRoute({
 		const { db, org, env } = ctx;
 		const { product_id } = c.req.param();
 
-		const product = await ProductService.get({
+		const product = await PlanService.get({
 			db,
 			id: product_id,
 			orgId: org.id,

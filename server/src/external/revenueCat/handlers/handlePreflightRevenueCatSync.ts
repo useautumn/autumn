@@ -5,7 +5,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import {
 	getRevenuecatAccessToken,
 	getRevenuecatProjectId,
@@ -109,7 +109,7 @@ export const handlePreflightRevenueCatSync = createRoute({
 
 		const rcCli = initRevenuecatCli({ projectId, accessToken });
 		const [products, rcProducts] = await Promise.all([
-			ProductService.listFull({ db, orgId: org.id, env }),
+			PlanService.listFull({ db, orgId: org.id, env }),
 			rcCli.listAllProducts(),
 		]);
 

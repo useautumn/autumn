@@ -6,7 +6,7 @@ import {
 	type FullEntitlement,
 	type FullProduct,
 } from "@autumn/shared";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import {
 	sortFullProducts,
@@ -61,7 +61,7 @@ export const getCheckPreview = async ({
 	const highestTierProd =
 		cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
 
-	const products: FullProduct[] = await ProductService.getByFeature({
+	const products: FullProduct[] = await PlanService.getByFeature({
 		db,
 		internalFeatureId: feature.internal_id,
 	});

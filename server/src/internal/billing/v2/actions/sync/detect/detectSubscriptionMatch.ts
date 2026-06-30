@@ -3,7 +3,7 @@ import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { rollupMatchedPlans } from "./rollupMatchedPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
@@ -40,7 +40,7 @@ export const detectSubscriptionMatch = async ({
 		nowSec,
 	});
 
-	const fullProducts = await ProductService.listFull({
+	const fullProducts = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,

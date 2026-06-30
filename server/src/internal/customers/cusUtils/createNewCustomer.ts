@@ -12,7 +12,7 @@ import {
 	priceToEnt,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
@@ -76,7 +76,7 @@ export const createNewCustomer = async ({
 		`Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
 	);
 
-	const defaultProds = await ProductService.listDefault({
+	const defaultProds = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		env,

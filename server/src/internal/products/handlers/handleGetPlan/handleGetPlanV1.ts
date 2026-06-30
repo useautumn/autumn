@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 const GetProductQuerySchema = z.object({
@@ -37,7 +37,7 @@ export const handleGetPlanV1 = createRoute({
 			});
 		}
 
-		const product = await ProductService.getFull({
+		const product = await PlanService.getFull({
 			db,
 			orgId: org.id,
 			env,

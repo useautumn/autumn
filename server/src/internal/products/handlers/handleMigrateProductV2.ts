@@ -10,7 +10,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
 import { constructMigrationJob } from "@/internal/migrations/migrationUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import {
 	getBillingType,
 	pricesOnlyOneOff,
@@ -34,7 +34,7 @@ export const handleMigrateProductV2 = createRoute({
 		const { from_product_id, from_version, to_product_id, to_version } = body;
 
 		// Get both products
-		const fromProduct = await ProductService.getFull({
+		const fromProduct = await PlanService.getFull({
 			db,
 			env,
 			orgId: org.id,
@@ -42,7 +42,7 @@ export const handleMigrateProductV2 = createRoute({
 			version: from_version,
 		});
 
-		const toProduct = await ProductService.getFull({
+		const toProduct = await PlanService.getFull({
 			db,
 			env,
 			orgId: org.id,

@@ -7,7 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { productToInsertParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct";
 
 /**
@@ -35,7 +35,7 @@ export const scheduleDefaultProduct = async ({
 	// Fetch default products if not provided
 	const defaults =
 		defaultProducts ??
-		(await ProductService.listDefault({
+		(await PlanService.listDefault({
 			db,
 			orgId: org.id,
 			env,

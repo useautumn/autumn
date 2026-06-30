@@ -1,6 +1,6 @@
 import { isFreeProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 
 export const getFreeDefaultProductByGroup = async ({
 	ctx,
@@ -10,7 +10,7 @@ export const getFreeDefaultProductByGroup = async ({
 	productGroup: string;
 }) => {
 	const { db, org, env } = ctx;
-	const defaultProducts = await ProductService.listDefault({
+	const defaultProducts = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		group: productGroup,

@@ -13,7 +13,7 @@ import { itemToPriceAndEnt } from "@autumn/shared/utils/productV2Utils/productIt
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { hashJson } from "@/utils/hash/hashJson.js";
 import type { PrepareModule } from "../../types/prepareModule.js";
@@ -119,7 +119,7 @@ const getMatchedProducts = async ({
 	ctx: AutumnContext;
 	op: UpdatePlanOp;
 }) => {
-	const products = await ProductService.listFull({
+	const products = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,

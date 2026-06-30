@@ -10,7 +10,7 @@ import {
 	getBillingInterval,
 	pricesOnlyOneOff,
 } from "@/internal/products/prices/priceUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import {
 	getRevenuecatAccessToken,
 	getRevenuecatProjectId,
@@ -304,7 +304,7 @@ export const syncProductsToRevenueCat = async ({
 	const results: ProductSyncResult[] = [];
 
 	for (const planId of productIds) {
-		const product = await ProductService.getFull({
+		const product = await PlanService.getFull({
 			db,
 			idOrInternalId: planId,
 			orgId: org.id,

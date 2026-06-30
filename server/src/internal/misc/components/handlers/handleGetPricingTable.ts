@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { isProductUpgrade } from "@/internal/products/productUtils.js";
@@ -25,7 +25,7 @@ export const handleGetPricingTable = createRoute({
 		const { customer_id: customerId } = c.req.valid("query");
 
 		const [products, customer] = await Promise.all([
-			ProductService.listFull({ db, orgId: org.id, env }),
+			PlanService.listFull({ db, orgId: org.id, env }),
 			(async () => {
 				if (!customerId) {
 					return undefined;

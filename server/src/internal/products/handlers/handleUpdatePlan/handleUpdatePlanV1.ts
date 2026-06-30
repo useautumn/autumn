@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
-import { ProductService } from "../../ProductService.js";
+import { PlanService } from "../../PlanService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleUpdatePlanV1 = createRoute({
@@ -66,7 +66,7 @@ export const handleUpdatePlanV1 = createRoute({
 		});
 
 		const latestProductId = v1_2Body.id || productId;
-		const newFullProduct = await ProductService.getFull({
+		const newFullProduct = await PlanService.getFull({
 			db,
 			idOrInternalId: latestProductId,
 			orgId: org.id,

@@ -1,5 +1,5 @@
 import { ms } from "@autumn/shared";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import type { CronContext } from "../utils/CronContext";
 import {
 	type ExpiredTrialRow,
@@ -31,7 +31,7 @@ const processRowsInBatches = async ({
 }: {
 	ctx: OrgEnvExpiredTrials["ctx"];
 	rows: ExpiredTrialRow[];
-	defaultProducts: Awaited<ReturnType<typeof ProductService.listDefault>>;
+	defaultProducts: Awaited<ReturnType<typeof PlanService.listDefault>>;
 }) => {
 	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
 		const batch = rows.slice(i, i + BATCH_SIZE);
@@ -92,7 +92,7 @@ export const runProductCron = async ({
 
 				if (standardRows.length === 0) continue;
 
-				const defaultProducts = await ProductService.listDefault({
+				const defaultProducts = await PlanService.listDefault({
 					db: ctx.db,
 					orgId: ctx.org.id,
 					env: ctx.env,

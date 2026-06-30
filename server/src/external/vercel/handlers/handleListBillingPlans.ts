@@ -16,7 +16,7 @@ import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
@@ -175,7 +175,7 @@ const listVercelPlansForOrg = async ({
 			? org.processor_configs?.vercel?.allowed_product_ids_live
 			: org.processor_configs?.vercel?.allowed_product_ids_sandbox) ?? [];
 
-	const products = await ProductService.listFull({
+	const products = await PlanService.listFull({
 		db,
 		orgId: org.id,
 		env,

@@ -19,6 +19,7 @@ const conformProductToSchema = (
 		name: product.name,
 		is_add_on: product.is_add_on,
 		is_default: product.is_default,
+		catalog_type: product.catalog_type,
 		group: product.group ?? "",
 		archived: product.archived ?? undefined,
 		items: product.items,
@@ -49,8 +50,16 @@ export const handleCopyProducts = async ({
 		await Promise.all([
 			FeatureService.list({ db, orgId: org.id, env: fromEnv }),
 			FeatureService.list({ db, orgId: org.id, env: toEnv }),
-			ProductService.listFull({ db, orgId: org.id, env: fromEnv }),
-			ProductService.listFull({ db, orgId: org.id, env: toEnv }),
+			ProductService.listFull({
+				db,
+				orgId: org.id,
+				env: fromEnv,
+			}),
+			ProductService.listFull({
+				db,
+				orgId: org.id,
+				env: toEnv,
+			}),
 		]);
 
 	const liveProductsV2 = liveProducts.map((p) =>

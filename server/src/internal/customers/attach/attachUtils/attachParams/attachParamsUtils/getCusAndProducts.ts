@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -29,7 +29,7 @@ const getProductsForAttach = async ({
 		// products: inputProducts,
 	} = attachBody;
 
-	const products = await ProductService.listFull({
+	const products = await PlanService.listFull({
 		db: ctx.db,
 		orgId: ctx.org.id,
 		env: ctx.env,

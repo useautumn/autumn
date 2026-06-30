@@ -10,6 +10,7 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { getEntsWithFeature } from "@server/internal/products/entitlements/entitlementUtils.js";
 import { handleNewFreeTrial } from "@server/internal/products/free-trials/freeTrialUtils.js";
+import { PlanService } from "@server/internal/products/PlanService.js";
 import { ProductService } from "@server/internal/products/ProductService.js";
 import { PriceService } from "@server/internal/products/prices/PriceService.js";
 import { handleNewProductItems } from "@server/internal/products/product-items/productItemUtils/handleNewProductItems.js";
@@ -62,7 +63,7 @@ export const handleVersionProductV2 = async ({
 }) => {
 	const { db, features } = ctx;
 
-	const latestForVersioning = await ProductService.getFull({
+	const latestForVersioning = await PlanService.getFull({
 		db,
 		idOrInternalId: latestProduct.id,
 		orgId: org.id,

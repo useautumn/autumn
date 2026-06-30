@@ -6,7 +6,7 @@ import {
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { scheduleDefaultProduct } from "@/internal/customers/cusProducts/cusProductUtils/scheduleDefaultProduct";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 
 /**
@@ -28,7 +28,7 @@ export const scheduleDefaultProducts = async ({
 	const scheduledByGroup = new Map<string, FullCusProduct>();
 
 	// Fetch default products upfront (optimization)
-	const defaultProducts = await ProductService.listDefault({
+	const defaultProducts = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		env,

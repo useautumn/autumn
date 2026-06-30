@@ -7,7 +7,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
 interface DefaultProductsContext {
@@ -27,7 +27,7 @@ const getOverrideAutoEnableProduct = async ({
 
 	if (!customerData?.auto_enable_plan_id) return undefined;
 
-	const plan = await ProductService.getFull({
+	const plan = await PlanService.getFull({
 		db,
 		orgId: org.id,
 		env,
@@ -88,7 +88,7 @@ export const setupDefaultProductsContext = async ({
 		};
 	}
 
-	const defaultProds = await ProductService.listDefault({
+	const defaultProds = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		env,

@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { mapToProductV2 } from "@/internal/products/productV2Utils";
 import { CusService } from "../CusService";
 import { ACTIVE_STATUSES } from "../cusProducts/CusProductService";
@@ -60,7 +60,7 @@ export const handleGetCustomerProduct = createRoute({
 
 		const product = cusProduct
 			? cusProductToProduct({ cusProduct })
-			: await ProductService.getFull({
+			: await PlanService.getFull({
 					db,
 					orgId: org.id,
 					env,

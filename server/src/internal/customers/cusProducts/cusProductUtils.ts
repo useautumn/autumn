@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { isDefaultTrialFullProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -25,7 +25,7 @@ export const getFreeDefaultProductByGroup = async ({
 	productGroup: string;
 }) => {
 	const { db, org, env } = ctx;
-	const defaultProducts = await ProductService.listDefault({
+	const defaultProducts = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		group: productGroup,
@@ -53,7 +53,7 @@ export const activateDefaultProduct = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 	// 1. Expire current product
-	const defaultProducts = await ProductService.listDefault({
+	const defaultProducts = await PlanService.listDefault({
 		db,
 		orgId: org.id,
 		env,

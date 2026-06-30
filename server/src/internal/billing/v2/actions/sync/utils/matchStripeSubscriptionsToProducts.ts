@@ -2,7 +2,7 @@ import type { AppEnv, FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import type {
 	SyncProposal,
@@ -219,7 +219,7 @@ export const matchStripeSubscriptionsToProducts = async ({
 			db,
 			stripeProductIds: allStripeProductIds,
 		}),
-		ProductService.getByStripeProductIds({
+		PlanService.getByStripeProductIds({
 			db,
 			stripeProductIds: allStripeProductIds,
 			orgId,

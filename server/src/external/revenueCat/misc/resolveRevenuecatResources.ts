@@ -11,7 +11,7 @@ import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
@@ -55,7 +55,7 @@ export const resolveRevenuecatResources = async ({
 	}
 
 	const [product, customer] = await Promise.all([
-		ProductService.getFull({
+		PlanService.getFull({
 			db,
 			orgId: org.id,
 			env,

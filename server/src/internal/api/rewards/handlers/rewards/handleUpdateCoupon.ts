@@ -12,7 +12,7 @@ import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
@@ -77,7 +77,7 @@ export const handleUpdateCoupon = createRoute({
 			const freeProductId =
 				rewardBody.free_product_id ?? reward.free_product_id;
 			if (freeProductId) {
-				const fullProduct = await ProductService.getFull({
+				const fullProduct = await PlanService.getFull({
 					db,
 					idOrInternalId: freeProductId,
 					orgId: org.id,

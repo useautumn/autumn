@@ -11,7 +11,7 @@ import {
 	type ReusePricesAndEntitlements,
 	setupPatchContext,
 } from "@/internal/billing/v2/setup/patch";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
 
@@ -61,7 +61,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 		hasRequestedVersion && (resetToCatalogVersion || changesVersion);
 
 	if (shouldLoadCatalogVersion) {
-		fullProduct = await ProductService.getFull({
+		fullProduct = await PlanService.getFull({
 			db: ctx.db,
 			idOrInternalId: targetCustomerProduct.product.id,
 			orgId: ctx.org.id,

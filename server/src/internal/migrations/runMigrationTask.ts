@@ -1,6 +1,6 @@
 import { type AppEnv, MigrationJobStep } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "../products/ProductService.js";
+import { PlanService } from "../products/PlanService.js";
 import { MigrationService } from "./MigrationService.js";
 import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js";
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
@@ -49,13 +49,13 @@ export const runMigrationTask = async ({
 
 		// Get from and to products
 		const [fromProduct, toProduct] = await Promise.all([
-			ProductService.getFull({
+			PlanService.getFull({
 				db,
 				idOrInternalId: migrationJob.from_internal_product_id,
 				orgId,
 				env,
 			}),
-			ProductService.getFull({
+			PlanService.getFull({
 				db,
 				idOrInternalId: migrationJob.to_internal_product_id,
 				orgId,

@@ -2,6 +2,7 @@ import {
 	type CatalogUpdateParams,
 	type Feature,
 	type FullProduct,
+	ProductCatalogType,
 	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -9,6 +10,7 @@ import { customerProductRepo } from "@/internal/customers/cusProducts/repos/inde
 import { ProductService } from "@/internal/products/ProductService.js";
 
 type ProposedFeature = { existing: Feature | null; dbFeature: Feature };
+type CatalogTypeParam = { catalog_type?: ProductCatalogType };
 
 export interface PreviewCatalogContext {
 	/** Latest version of every product, for feature-usage lookups. */
@@ -41,7 +43,11 @@ export const setupPreviewCatalogContext = async ({
 	const { db, org, env } = ctx;
 	const { features, plans } = params;
 
-	const products = await ProductService.listFull({ db, orgId: org.id, env });
+	const products = await ProductService.listFull({
+		db,
+		orgId: org.id,
+		env,
+	});
 	const latestByPlanId = new Map(
 		products.map((product) => [product.id, product]),
 	);
@@ -57,6 +63,8 @@ export const setupPreviewCatalogContext = async ({
 					env,
 					version: plan.version,
 					allowNotFound: true,
+					catalogType:
+						(plan as CatalogTypeParam).catalog_type ?? ProductCatalogType.Plan,
 				});
 			}
 			return latest ?? null;

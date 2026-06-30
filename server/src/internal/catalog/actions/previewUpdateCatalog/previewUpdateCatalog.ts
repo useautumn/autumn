@@ -12,6 +12,7 @@ import {
 	PlanUpdatePreviewSchema,
 	planUpdatePreviewHasDiff,
 	planDiffHasBillingChanges,
+	isCatalogPlanProduct,
 } from "@autumn/shared";
 import { scopeExpandForCtx } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -267,9 +268,12 @@ export const previewUpdateCatalog = async ({
 			ctx,
 			params: { ...params, plans: activePlans, features: activeFeatures },
 		});
+	const planProducts = products.filter((product) =>
+		isCatalogPlanProduct({ product }),
+	);
 	validateCatalogVariantVersionTargets({
 		params: { ...params, plans: activePlans },
-		products,
+		products: planProducts,
 	});
 	const planChangesCtx = scopeExpandForCtx({
 		ctx: { ...planCtx, expand: params.expand ?? [] },
@@ -282,7 +286,7 @@ export const previewUpdateCatalog = async ({
 
 	const missingPlanIds = skip_deletions
 		? []
-		: deriveReplacePlanIds({ products, plans }).filter(
+		: deriveReplacePlanIds({ products: planProducts, plans }).filter(
 				(planId) => !skipPlanIds.has(planId),
 			);
 	const missingFeatureIds = skip_deletions
@@ -291,7 +295,7 @@ export const previewUpdateCatalog = async ({
 				features: ctx.features,
 				desiredFeatures: features,
 			}).filter((featureId) => !skipFeatureIds.has(featureId));
-	const missingProducts = products.filter((product) =>
+	const missingProducts = planProducts.filter((product) =>
 		missingPlanIds.includes(product.id),
 	);
 	const missingPlanCustomerCounts = await Promise.all(

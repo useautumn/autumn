@@ -1,6 +1,6 @@
 import type { FullCustomer, FullProduct } from "@autumn/shared";
 import type Stripe from "stripe";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { getFullStripeSub } from "../../stripeSubUtils.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
@@ -23,7 +23,7 @@ export const setupStripeSubscriptionCreatedContext = async ({
 
 	const [subscription, candidateProducts] = await Promise.all([
 		getFullStripeSub({ stripeCli, stripeId: stripeObject.id }),
-		ProductService.listFull({ db, orgId: org.id, env }),
+		PlanService.listFull({ db, orgId: org.id, env }),
 	]);
 
 	return { subscription, fullCustomer, candidateProducts };

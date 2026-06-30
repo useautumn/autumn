@@ -17,7 +17,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "../../ProductService.js";
+import { PlanService } from "../../PlanService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
 
@@ -149,7 +149,7 @@ export const getPlanResponse = async ({
 	const resolvedBaseFullProduct =
 		baseFullProduct ??
 		(resolveBaseFullProduct && ctx && product.base_internal_product_id
-			? ((await ProductService.getFull({
+			? ((await PlanService.getFull({
 					db: ctx.db,
 					idOrInternalId: product.base_internal_product_id,
 					orgId: ctx.org.id,

@@ -9,7 +9,7 @@ import {
 import { z } from "zod/v4";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
@@ -109,7 +109,7 @@ export const handleCreateCoupon = createRoute({
 			getRewardCat(newReward) === RewardCategory.FreeProduct &&
 			newReward.free_product_id
 		) {
-			const fullProduct = await ProductService.getFull({
+			const fullProduct = await PlanService.getFull({
 				db,
 				idOrInternalId: newReward.free_product_id!,
 				orgId: org.id,

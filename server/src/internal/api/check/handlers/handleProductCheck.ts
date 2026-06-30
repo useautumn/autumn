@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
@@ -46,7 +46,7 @@ export const handleProductCheck = async ({
 			entityData: entity_data,
 			withEntities: true,
 		}),
-		ProductService.getFull({
+		PlanService.getFull({
 			db,
 			orgId: org.id,
 			env,

@@ -10,7 +10,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 
 export const handlePlanHasCustomersV2 = createRoute({
 	scopes: [Scopes.Plans.Read],
@@ -31,7 +31,7 @@ export const handlePlanHasCustomersV2 = createRoute({
 			throw new ProductNotFoundError({ productId: "" });
 		}
 
-		const product = await ProductService.getFull({
+		const product = await PlanService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId: org.id,

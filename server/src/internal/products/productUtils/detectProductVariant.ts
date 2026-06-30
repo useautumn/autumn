@@ -5,8 +5,9 @@ import type { Logger } from "pino";
 import { z } from "zod";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { nullish } from "@/utils/genUtils.js";
-import { ProductService } from "../ProductService.js";
+import { PlanService } from "../PlanService.js";
 import { invalidateProductsCache } from "../productCacheUtils.js";
+import { ProductService } from "../ProductService.js";
 
 const prompt = `Detect whether a given product (called "product_to_detect") is an interval variant of a base product from the list of existing products (called "existing_products").
 
@@ -36,7 +37,7 @@ export const detectBaseVariant = async ({
 	logger.info(`Detecting base variant for ${curProduct.id}`);
 	if (!process.env.ANTHROPIC_API_KEY) return;
 
-	const existingProducts = (await ProductService.listFull({
+	const existingProducts = (await PlanService.listFull({
 		db,
 		orgId: curProduct.org_id,
 		env: curProduct.env,

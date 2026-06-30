@@ -9,7 +9,7 @@ import { enrichVercelEventLogger } from "@/external/vercel/misc/vercelLogContext
 import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware";
 import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode";
 import { FeatureService } from "@/internal/features/FeatureService";
-import { ProductService } from "@/internal/products/ProductService";
+import { PlanService } from "@/internal/products/PlanService";
 import { logCaughtError } from "@/utils/logging/logCaughtError";
 
 export const processVercelInvoice = async ({
@@ -81,7 +81,7 @@ export const processVercelInvoice = async ({
 	}
 
 	// Get product for Vercel billing
-	const product = await ProductService.getFull({
+	const product = await PlanService.getFull({
 		db,
 		orgId: org.id,
 		env,

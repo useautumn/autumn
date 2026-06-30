@@ -12,7 +12,7 @@ import {
 	getVariantMigrationSnapshots,
 	validateNoDirectVariantMigrationDrafts,
 } from "../../../product/actions/updateProduct/createPlanMigrationDraft.js";
-import { ProductService } from "../../ProductService.js";
+import { PlanService } from "../../PlanService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleUpdatePlanV2 = createRoute({
@@ -36,7 +36,7 @@ export const handleUpdatePlanV2 = createRoute({
 		} = body;
 		const ctx = c.get("ctx");
 
-		const initialFullProduct = await ProductService.getFull({
+		const initialFullProduct = await PlanService.getFull({
 			db: ctx.db,
 			idOrInternalId: plan_id,
 			orgId: ctx.org.id,
@@ -94,7 +94,7 @@ export const handleUpdatePlanV2 = createRoute({
 		let responseFullProduct = null;
 		let migrationId: string | undefined;
 		if (fromPlan) {
-			const after = await ProductService.getFull({
+			const after = await PlanService.getFull({
 				db: ctx.db,
 				idOrInternalId: latestPlanId,
 				orgId: ctx.org.id,
@@ -126,7 +126,7 @@ export const handleUpdatePlanV2 = createRoute({
 		// created, newBase must be it — not the version that was edited.
 		const latestFullProduct =
 			responseFullProduct ??
-			(await ProductService.getFull({
+			(await PlanService.getFull({
 				db: ctx.db,
 				idOrInternalId: latestPlanId,
 				orgId: ctx.org.id,

@@ -9,7 +9,7 @@ import {
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PlanService } from "@/internal/products/PlanService.js";
 import { CusService } from "../CusService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
 import {
@@ -52,7 +52,7 @@ export const handleTransferProductV2 = createRoute({
 			withEntities: true,
 		});
 
-		const product = await ProductService.get({
+		const product = await PlanService.get({
 			id: product_id,
 			orgId: org.id,
 			env,
