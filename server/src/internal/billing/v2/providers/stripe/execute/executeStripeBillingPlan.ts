@@ -34,9 +34,18 @@ const rollbackInvoiceItems = async ({
 	if (!stripeInvoiceItems?.length) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	await Promise.all(
+	const results = await Promise.allSettled(
 		stripeInvoiceItems.map((item) => stripeCli.invoiceItems.del(item.id)),
 	);
+	const failedResults = results.filter(
+		(result): result is PromiseRejectedResult => result.status === "rejected",
+	);
+	if (failedResults.length) {
+		throw new AggregateError(
+			failedResults.map((result) => result.reason),
+			`[executeStripeBillingPlan] Failed to delete ${failedResults.length}/${stripeInvoiceItems.length} invoice item(s) after later Stripe action failed`,
+		);
+	}
 	ctx.logger.info(
 		`[executeStripeBillingPlan] Deleted ${stripeInvoiceItems.length} invoice item(s) after later Stripe action failed`,
 	);
@@ -127,6 +136,47 @@ const rollbackInvoiceAction = async ({
 	);
 };
 
+const rollbackAfterSubscriptionFailure = async ({
+	ctx,
+	billingContext,
+	invoiceResult,
+	stripeInvoiceItems,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	invoiceResult?: StripeBillingPlanResult;
+	stripeInvoiceItems?: Stripe.InvoiceItem[];
+}) => {
+	const rollbackErrors: unknown[] = [];
+	const runRollbackStep = async (
+		message: string,
+		rollback: () => Promise<void>,
+	) => {
+		try {
+			await rollback();
+		} catch (error) {
+			ctx.logger.error(message, { error });
+			rollbackErrors.push(error);
+		}
+	};
+
+	await runRollbackStep(
+		"[executeStripeBillingPlan] Failed to roll back invoice items after subscription action failed",
+		() => rollbackInvoiceItems({ ctx, stripeInvoiceItems }),
+	);
+	await runRollbackStep(
+		"[executeStripeBillingPlan] Failed to roll back invoice after subscription action failed",
+		() => rollbackInvoiceAction({ ctx, billingContext, invoiceResult }),
+	);
+
+	if (!rollbackErrors.length) return;
+
+	return new AggregateError(
+		rollbackErrors,
+		"[executeStripeBillingPlan] Failed to roll back Stripe side effects after subscription action failed",
+	);
+};
+
 export const executeStripeBillingPlan = async ({
 	ctx,
 	billingPlan,
@@ -209,20 +259,16 @@ export const executeStripeBillingPlan = async ({
 				billingContext,
 			});
 		} catch (error) {
-			try {
-				await rollbackInvoiceItems({ ctx, stripeInvoiceItems });
-			} catch (rollbackError) {
-				ctx.logger.error(
-					"[executeStripeBillingPlan] Failed to roll back invoice items after subscription action failed",
-					{ error: rollbackError },
-				);
-			}
-			try {
-				await rollbackInvoiceAction({ ctx, billingContext, invoiceResult });
-			} catch (rollbackError) {
-				ctx.logger.error(
-					"[executeStripeBillingPlan] Failed to roll back invoice after subscription action failed",
-					{ error: rollbackError },
+			const rollbackError = await rollbackAfterSubscriptionFailure({
+				ctx,
+				billingContext,
+				invoiceResult,
+				stripeInvoiceItems,
+			});
+			if (rollbackError) {
+				throw new AggregateError(
+					[error, rollbackError],
+					"[executeStripeBillingPlan] Subscription action failed and rollback was incomplete",
 				);
 			}
 			throw error;
