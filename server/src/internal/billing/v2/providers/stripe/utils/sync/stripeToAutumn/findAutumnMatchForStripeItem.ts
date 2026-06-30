@@ -3,6 +3,10 @@ import type {
 	ItemDiff,
 	ItemMatch,
 } from "@/internal/billing/v2/actions/sync/detect/types";
+import {
+	findProductLevelMatchForStripeItem,
+	type ProductLevelMatchCandidate,
+} from "../matchUtils/findProductLevelMatchForStripeItem";
 import { findStripeMatchForAutumnPrice } from "../matchUtils/findStripeMatchForAutumnPrice";
 import { findStripeMatchForAutumnProduct } from "../matchUtils/findStripeMatchForAutumnProduct";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
@@ -49,17 +53,46 @@ export const findAutumnMatchForStripeItem = ({
 		}
 	}
 
+	const productCandidates: ProductLevelMatchCandidate[] = [];
 	for (const product of fullProducts) {
 		const matched_on = findStripeMatchForAutumnProduct({
 			product,
 			stripeProductIds,
 		});
 		if (matched_on) {
+			productCandidates.push({ matched_on, product });
+		}
+	}
+
+	const productMatch = findProductLevelMatchForStripeItem({
+		item,
+		candidates: productCandidates,
+	});
+	if (productMatch) {
+		if (productMatch.basePrice) {
 			return {
 				stripe: item,
-				match: { kind: "autumn_product", matched_on, product },
+				match: {
+					kind: "autumn_price",
+					matched_on: {
+						type: "stripe_base_price_shape",
+						stripe_product_id: productMatch.matched_on.stripe_product_id,
+						stripe_price_id: item.stripe_price_id,
+					},
+					price: productMatch.basePrice,
+					product: productMatch.product,
+				},
 			};
 		}
+
+		return {
+			stripe: item,
+			match: {
+				kind: "autumn_product",
+				matched_on: productMatch.matched_on,
+				product: productMatch.product,
+			},
+		};
 	}
 
 	const noMatch: ItemMatch = { kind: "none" };
