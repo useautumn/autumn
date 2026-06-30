@@ -17,6 +17,7 @@ import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
+import { slackUnfurlRouter } from "./internal/slackUnfurl/slackUnfurlRouter.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
@@ -83,6 +84,11 @@ export const createHonoApp = () => {
 	app.get("/revenuecat/oauth_callback", handleRevenueCatOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
+
+	// Slack-unfurl (/slack-unfurl/*) — own prefix so it doesn't collide with the
+	// chat proxy's /slack/* (-> leaf). Slack-facing, auths via request signature,
+	// so mounted ahead of the org/auth middleware.
+	app.route("/slack-unfurl", slackUnfurlRouter);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
