@@ -81,6 +81,7 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 	},
 	config: {
 		disable_pooled_balance: false,
+		disable_overage_billing: false,
 	},
 };
 
@@ -106,6 +107,10 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 			disable_pooled_balance: z.boolean().optional().meta({
 				description:
 					"Whether to disable the shared customer-level pool for entities.",
+			}),
+			disable_overage_billing: z.boolean().optional().meta({
+				description:
+					"Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.",
 			}),
 		})
 		.optional()
