@@ -258,11 +258,6 @@ export const handleApprovalActionWithDeps = async ({
 				deps.editActionMessage({ content: renderRunningCard(), event }),
 		});
 		editor.requestEdit();
-		try {
-			await event.thread?.startTyping("Running the approved action…");
-		} catch {
-			// Typing status is cosmetic; never block the run on it.
-		}
 
 		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
 		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;

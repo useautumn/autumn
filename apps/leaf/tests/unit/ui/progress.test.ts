@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	createActionLogger,
 	createKeyedActionLogger,
+	formatTypingStatus,
 	type ReplyTarget,
 	startLoading,
 } from "../../../src/ui/progress.js";
@@ -10,6 +11,15 @@ type LoadingMock = Parameters<typeof createActionLogger>[0];
 type TargetMock = Parameters<typeof createActionLogger>[1];
 
 describe("progress action logger", () => {
+	test("caps typing status text to Slack's limit", () => {
+		const status = formatTypingStatus(
+			"This is a very long status line that Slack will reject as a loading message",
+		);
+
+		expect(status).toHaveLength(50);
+		expect(status.endsWith("...")).toBe(true);
+	});
+
 	test("uses neutral typing text for quiet follow-up loading", async () => {
 		const typing: string[] = [];
 		const target = {

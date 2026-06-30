@@ -213,6 +213,7 @@ describe("approval flow", () => {
 		const calls: string[] = [];
 		const edits: unknown[] = [];
 		const replies: string[] = [];
+		const typing: string[] = [];
 		const approval = {
 			env: AppEnv.Sandbox,
 			expires_at: Date.now() + 60_000,
@@ -223,6 +224,11 @@ describe("approval flow", () => {
 		const event = {
 			actionId: "approve_billing_action",
 			messageId: "message_1",
+			thread: {
+				startTyping: async (message: string) => {
+					typing.push(message);
+				},
+			},
 			threadId: "thread_1",
 			user: { userId: "U1" },
 			value: "approval_1",
@@ -253,6 +259,7 @@ describe("approval flow", () => {
 		});
 
 		expect(calls).toEqual(["claim", "edit", "run", "edit"]);
+		expect(typing).toEqual([]);
 		expect(replies).toEqual(["All done!"]);
 		expect(JSON.stringify(edits[1])).toContain("✅ Attached **pro**");
 		expect(JSON.stringify(edits[1])).toContain("approved by <@U1>");
