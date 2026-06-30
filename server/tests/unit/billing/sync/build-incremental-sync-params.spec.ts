@@ -252,12 +252,11 @@ describe("buildIncrementalSyncParams", () => {
 		});
 	});
 
-	test("rejects unsupported targets with no product group or add-on products", () => {
+	test("rejects unsupported targets with no product group", () => {
 		const noGroup = product({ id: "no_group", group: null });
 		const blankGroup = product({ id: "blank_group", group: "" });
-		const addOn = product({ id: "addon", isAddOn: true });
 
-		for (const unsupported of [noGroup, blankGroup, addOn]) {
+		for (const unsupported of [noGroup, blankGroup]) {
 			const { match, params } = draft({
 				matchedPlans: [matchedPlan({ product: unsupported })],
 			});
@@ -273,5 +272,49 @@ describe("buildIncrementalSyncParams", () => {
 				reason: "unsupported_target",
 			});
 		}
+	});
+
+	test("keeps add-ons when linked quantity is below desired quantity", () => {
+		const addOn = product({ id: "addon", isAddOn: true });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: addOn })],
+			syncPlans: [syncPlan({ productId: addOn.id, quantity: 3 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: addOn, id: "cp_addon_1" }),
+			],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params.phases?.[0]?.plans).toEqual([
+			{ expire_previous: true, plan_id: "addon", quantity: 2 },
+		]);
+	});
+
+	test("prunes add-ons when linked quantity already satisfies desired quantity", () => {
+		const addOn = product({ id: "addon", isAddOn: true });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: addOn })],
+			syncPlans: [syncPlan({ productId: addOn.id, quantity: 2 })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: addOn, id: "cp_addon_1" }),
+				linkedCustomerProduct({ product: addOn, id: "cp_addon_2" }),
+			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "no_changed_targets",
+		});
 	});
 });
