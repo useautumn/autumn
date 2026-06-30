@@ -19,6 +19,7 @@ import {
 	FeatureType,
 	type InvoiceRow,
 	InvoiceStatus,
+	ProductCatalogType,
 	ProcessorType,
 	type SubscriptionRow,
 } from "@autumn/shared";
@@ -145,6 +146,7 @@ const buildProduct = ({
 	env: ctx.env,
 	is_add_on: false,
 	is_default: false,
+	catalog_type: ProductCatalogType.Plan,
 	group: "db-fullsubject",
 	version: 1,
 	processor: null,
