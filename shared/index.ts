@@ -71,6 +71,8 @@ export * from "./models/leafModels/cmaSessionsTable";
 export * from "./models/leafModels/cmaVaultsTable";
 export * from "./models/leafModels/harnessSessionsTable";
 export * from "./models/leafModels/slackAdminThreadsTable";
+export * from "./models/licenseModels/licenseModels";
+export * from "./models/licenseModels/licenseTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";
 export * from "./utils/chatState";

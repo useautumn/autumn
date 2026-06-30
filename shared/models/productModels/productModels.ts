@@ -9,6 +9,7 @@ import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
 import { PriceSchema } from "./priceModels/priceModels";
 import { ProductConfigSchema } from "./productConfig/productConfig";
+import { ProductCatalogType } from "./productEnums";
 import { ProductMetadataSchema } from "./productMetadata";
 
 export const ProductSchema = z.object({
@@ -17,6 +18,7 @@ export const ProductSchema = z.object({
 	description: z.string().nullable(),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
+	catalog_type: z.nativeEnum(ProductCatalogType).optional(),
 	version: z.number(),
 	group: z.string(),
 
@@ -47,6 +49,7 @@ export const CreateProductSchema = z.object({
 		.default("Untitled Product"),
 	is_add_on: z.boolean().default(false),
 	is_default: z.boolean().default(false),
+	catalog_type: z.nativeEnum(ProductCatalogType).optional(),
 	version: z.number().optional().default(1),
 	group: z.string().optional().default(""),
 });
@@ -56,6 +59,7 @@ export const UpdateProductSchema = z.object({
 	name: z.string().min(1, "Product name cannot be empty").optional(),
 	is_add_on: z.boolean().optional(),
 	is_default: z.boolean().optional(),
+	catalog_type: z.nativeEnum(ProductCatalogType).optional(),
 	group: z.string().nullish(),
 	archived: z.boolean().optional(),
 	config: ProductConfigSchema.partial().optional(),

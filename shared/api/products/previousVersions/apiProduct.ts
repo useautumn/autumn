@@ -1,6 +1,7 @@
 import { AttachScenario } from "@models/checkModels/checkPreviewModels.js";
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
+import { ProductCatalogType } from "@models/productModels/productEnums.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialSchema } from "../apiFreeTrial.js";
 import { ApiProductItemV0Schema } from "../items/previousVersions/apiProductItemV0.js";
@@ -152,6 +153,11 @@ export const ApiProductSchema = z.object({
 	is_default: z
 		.boolean()
 		.describe("Whether the product is the default product"),
+
+	catalog_type: z
+		.nativeEnum(ProductCatalogType)
+		.optional()
+		.describe("Internal catalog role for product visibility"),
 
 	archived: z
 		.boolean({ message: "archived should be a boolean" })

@@ -34,6 +34,7 @@ export const productV2ToV1 = ({
 		name: productV2.name,
 		is_default: productV2.is_default,
 		is_add_on: productV2.is_add_on,
+		catalog_type: productV2.catalog_type,
 		entitlements: entitlementsRecord,
 		prices,
 		free_trial: productV2.free_trial,

@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { CustomerBillingControlsSchema } from "../cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ProductConfigSchema } from "../productModels/productConfig/productConfig.js";
+import { ProductCatalogType } from "../productModels/productEnums.js";
 import { ProductMetadataSchema } from "../productModels/productMetadata.js";
 import { ProductItemSchema } from "./productItemModels/productItemModels.js";
 
@@ -14,6 +15,7 @@ export const ProductV2Schema = z.object({
 	description: z.string().nullish(),
 	is_add_on: z.boolean(),
 	is_default: z.boolean(),
+	catalog_type: z.nativeEnum(ProductCatalogType).optional(),
 	version: z.number().default(1),
 	group: z.string().nullable(),
 	env: z.nativeEnum(AppEnv),

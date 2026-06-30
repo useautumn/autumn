@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	foreignKey,
 	index,
 	jsonb,
@@ -32,6 +33,7 @@ export const products = pgTable(
 		env: text().notNull(),
 		is_add_on: boolean("is_add_on").notNull().default(false),
 		is_default: boolean("is_default").notNull().default(false),
+		catalog_type: text("catalog_type").notNull().default("plan"),
 		group: text().default(""),
 		version: numeric({ mode: "number" }).notNull().default(1),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
@@ -56,6 +58,13 @@ export const products = pgTable(
 			table.env,
 			table.id,
 			table.version,
+		),
+		index("idx_products_org_env_catalog_id_version")
+			.on(table.org_id, table.env, table.catalog_type, table.id, table.version)
+			.concurrently(),
+		check(
+			"products_catalog_type_check",
+			sql`${table.catalog_type} in ('plan', 'license')`,
 		),
 		unique("unique_product").on(
 			table.org_id,

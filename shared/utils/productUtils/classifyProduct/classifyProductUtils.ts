@@ -1,9 +1,11 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
-import { type FullProduct, notNullish, nullish } from "../../../index.js";
+import { ProductCatalogType } from "../../../models/productModels/productEnums.js";
+import type { FullProduct } from "../../../models/productModels/productModels.js";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type { UsagePriceConfig } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { PriceType } from "../../../models/productModels/priceModels/priceEnums.js";
 import type { Price } from "../../../models/productModels/priceModels/priceModels.js";
+import { notNullish, nullish } from "../../utils.js";
 
 // TODO: Write unit tests for these functions (?)
 
@@ -49,4 +51,32 @@ export const isOneOffOrAddOnProduct = ({
 	product: FullProduct;
 }) => {
 	return isOneOffProduct({ prices: product.prices }) || product.is_add_on;
+};
+
+type CatalogTypedProduct = {
+	catalog_type?: ProductCatalogType | null;
+};
+
+export const isLicenseProduct = ({
+	product,
+}: {
+	product: CatalogTypedProduct;
+}) => {
+	return product.catalog_type === ProductCatalogType.License;
+};
+
+export const isCatalogPlanProduct = ({
+	product,
+}: {
+	product: CatalogTypedProduct;
+}) => {
+	return !isLicenseProduct({ product });
+};
+
+export const isLicenseCustomerProduct = ({
+	customerProduct,
+}: {
+	customerProduct: { product: CatalogTypedProduct };
+}) => {
+	return isLicenseProduct({ product: customerProduct.product });
 };

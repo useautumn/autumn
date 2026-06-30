@@ -1,6 +1,7 @@
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductCatalogType } from "@models/productModels/productEnums.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
@@ -88,6 +89,14 @@ export const CreateProductV2ParamsSchema = z
 			description: descriptions.is_default,
 		}),
 
+		catalog_type: z
+			.nativeEnum(ProductCatalogType)
+			.optional()
+			.meta({
+				internal: true,
+				description: "Internal catalog role for product visibility.",
+			}),
+
 		group: z.string().nullable().default("").meta({
 			description: descriptions.group,
 		}),
@@ -142,6 +151,10 @@ export const UpdateProductV2ParamsSchema = z.object({
 	}),
 	is_default: z.boolean().optional().meta({
 		description: descriptions.is_default,
+	}),
+	catalog_type: z.nativeEnum(ProductCatalogType).optional().meta({
+		internal: true,
+		description: "Internal catalog role for product visibility.",
 	}),
 	base_plan_id: z
 		.string()
