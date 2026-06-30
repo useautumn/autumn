@@ -7,6 +7,7 @@ import { decrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
+import { installationHasEmailScope } from "../../providers/slack/users.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
@@ -86,12 +87,13 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
-			// Resolve the Slack sender to their Autumn identity and a per-user
-			// scoped token. Admin installs keep the installer-scoped flow (the admin
-			// explicitly selects the target org). On any failure we deny here and
-			// never fall back to the shared installer token.
+			// Admin installs keep the installer-scoped flow. Legacy workspaces without
+			// users:read.email fall back to the shared installer token (undefined).
 			let autumnUserId: string | undefined;
-			if (!orgContext.admin) {
+			if (
+				!orgContext.admin &&
+				installationHasEmailScope({ installation: effectiveInstallation })
+			) {
 				const userAuth = await resolveSlackUserAuth({
 					botToken: decrypt(effectiveInstallation.bot_access_token),
 					installation: effectiveInstallation,
@@ -157,11 +159,16 @@ export const runMessage = async ({
 				},
 			});
 
+			// Legacy/admin installs resolve no per-user id; target the installer's
+			// credential explicitly rather than relying on an unordered findFirst.
 			const token = await getInstallationOAuthAccessToken({
 				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
-				userId: autumnUserId,
+				userId:
+					autumnUserId ??
+					effectiveInstallation.installed_by_user_id ??
+					undefined,
 			});
 
 			const agentTools =

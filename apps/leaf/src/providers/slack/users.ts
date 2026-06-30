@@ -1,6 +1,17 @@
+import type { ChatInstallation } from "@autumn/shared";
 import { z } from "zod";
 
 const SLACK_USERS_INFO_URL = "https://slack.com/api/users.info";
+
+export const SLACK_EMAIL_SCOPE = "users:read.email";
+
+// Legacy installs predating Phase 1 lack this scope, so callers fall back to the
+// shared installer token instead of denying until the workspace reconnects.
+export const installationHasEmailScope = ({
+	installation,
+}: {
+	installation: Pick<ChatInstallation, "scopes">;
+}): boolean => (installation.scopes ?? []).includes(SLACK_EMAIL_SCOPE);
 
 const slackUsersInfoSchema = z.object({
 	ok: z.boolean(),
