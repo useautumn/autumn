@@ -62,8 +62,11 @@ log "Installing base system packages via dnf"
 # NOTE: do NOT install `curl` — Amazon Linux 2023 ships `curl-minimal`, which
 # already provides /usr/bin/curl and CONFLICTS with the full `curl` package
 # (dnf errors out). curl-minimal handles the https downloads below, so use it.
+# python3/gcc-c++/make = node-gyp toolchain: better-sqlite3's prebuild-install
+# refuses Bun (oven-sh/bun#4290) and falls back to a source compile.
 sudo dnf install -y --setopt=install_weak_deps=False \
   tar gzip xz ca-certificates shadow-utils glibc-langpack-en \
+  python3 gcc-c++ make \
   >/dev/null
 
 # ---------------------------------------------------------------------------
