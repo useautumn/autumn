@@ -5,6 +5,10 @@ import type {
 } from "@autumn/shared";
 import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import {
+	previousAttributesToSettingChanges,
+	type SettingChange,
+} from "./PlanSettingsChanges";
 import { conflictSentence } from "./variantConflicts";
 
 export type MigrateTargetRow = {
@@ -13,6 +17,7 @@ export type MigrateTargetRow = {
 	isNew: boolean;
 	itemChanges: PlanUpdatePreviewItemChange[];
 	hasPriceChange: boolean;
+	settingChanges: SettingChange[];
 	customerCount: number;
 	conflicts: PlanUpdatePreviewVariantConflict[];
 };
@@ -50,6 +55,9 @@ export function buildMigrateTargets({
 			isNew: baseCreatesNewVersion,
 			itemChanges: preview.item_changes ?? [],
 			hasPriceChange: preview.price_change !== undefined,
+			settingChanges: previousAttributesToSettingChanges(
+				preview.previous_attributes,
+			),
 			customerCount: preview.customer_count,
 			conflicts: [],
 		},
@@ -60,6 +68,9 @@ export function buildMigrateTargets({
 					isNew: false,
 					itemChanges: version.item_changes ?? [],
 					hasPriceChange: version.price_change !== undefined,
+					settingChanges: previousAttributesToSettingChanges(
+						version.previous_attributes,
+					),
 					customerCount: version.customer_count,
 					conflicts: version.conflicts,
 				}))
@@ -99,6 +110,9 @@ export function buildMigrateTargets({
 					isNew: createsNewVersion,
 					itemChanges: entry.item_changes ?? [],
 					hasPriceChange: entry.price_change !== undefined,
+					settingChanges: previousAttributesToSettingChanges(
+						entry.previous_attributes,
+					),
 					customerCount: entry.customer_count,
 					conflicts: entry.conflicts,
 				};
@@ -159,6 +173,12 @@ function VersionBody({ row }: { row: MigrateTargetRow }) {
 					Base price change
 				</span>
 			)}
+			{row.settingChanges.map((change) => (
+				<div className="flex items-center gap-1.5 text-xs" key={change.key}>
+					<span className="font-medium text-foreground">{change.label}</span>
+					<span className="text-muted-foreground">{change.detail}</span>
+				</div>
+			))}
 			{!hasChanges && (
 				<span className="text-tertiary-foreground/70 text-xs italic">
 					No changes

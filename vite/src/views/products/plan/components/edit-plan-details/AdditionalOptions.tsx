@@ -43,12 +43,9 @@ export const AdditionalOptions = ({
 
 	if (!product.planType) return null;
 
-	const hasRecurringPrice = product.items.some((item) => item.interval);
 	const addOnDisabledReason = product.is_default
 		? "Cannot mark as add-on while auto-enable is active"
-		: product.planType !== "free" && !hasRecurringPrice
-			? "Add a recurring price to this plan before marking it as an add-on."
-			: undefined;
+		: undefined;
 
 	return (
 		<SheetSection withSeparator={withSeparator}>

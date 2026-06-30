@@ -2,10 +2,12 @@ import type { BillingContext, StripeDiscountWithCoupon } from "@autumn/shared";
 import {
 	customerProductsHaveDuplicateProductId,
 	type FullCusProduct,
+	isOneOffPrice,
 	msToSeconds,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { billingIntervalToStripe } from "@/external/stripe/stripePriceUtils";
 import { logPhase } from "@/external/stripe/subscriptionSchedules/utils/logStripeSchedulePhaseUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeItemSpecToPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
@@ -75,6 +77,44 @@ const customerProductsToPhaseItems = ({
 	);
 
 	return [...storedItems, ...inlineItems];
+};
+
+const buildFreePhasePlaceholderItem = ({
+	ctx,
+	customerProducts,
+}: {
+	ctx: AutumnContext;
+	customerProducts: FullCusProduct[];
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.Item | undefined => {
+	for (const customerProduct of customerProducts) {
+		const stripeProductId = customerProduct.product.processor?.id;
+		if (!stripeProductId) continue;
+
+		const recurringPrice = customerProduct.customer_prices.find(
+			({ price }) => !isOneOffPrice(price) && price.config.interval,
+		)?.price;
+		if (!recurringPrice) continue;
+
+		const recurring = billingIntervalToStripe({
+			interval: recurringPrice.config.interval,
+			intervalCount: recurringPrice.config.interval_count,
+		});
+		if (!recurring.interval) continue;
+
+		return {
+			price_data: {
+				product: stripeProductId,
+				unit_amount: 0,
+				currency: ctx.org.default_currency || "usd",
+				recurring: {
+					interval: recurring.interval,
+					interval_count: recurring.interval_count,
+				},
+			},
+			quantity: 1,
+			metadata: { autumn_free_phase_placeholder: "true" },
+		};
+	}
 };
 
 /**
@@ -217,6 +257,20 @@ export const buildStripePhasesUpdate = ({
 			phaseStartMs: startMs,
 			phaseEndMs: endMs,
 		});
+		if (
+			phaseItems.length === 0 &&
+			endMs &&
+			normalizedCustomerProducts.some(
+				(product) => product.starts_at < startMs,
+			) &&
+			normalizedCustomerProducts.some((product) => product.starts_at >= endMs)
+		) {
+			const placeholderItem = buildFreePhasePlaceholderItem({
+				ctx,
+				customerProducts: normalizedCustomerProducts,
+			});
+			if (placeholderItem) phaseItems.push(placeholderItem);
+		}
 
 		// Only set trial_end if trial extends into this phase
 		// Constraint: trial_end must be ≤ phase end_date

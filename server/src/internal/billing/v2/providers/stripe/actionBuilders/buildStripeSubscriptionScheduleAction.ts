@@ -281,7 +281,7 @@ export const buildStripeSubscriptionScheduleAction = ({
 
 	const customerProducts = relatedCustomerProducts.filter(
 		(customerProduct) =>
-			cp(customerProduct).paid().recurring().hasRelevantStatus().valid,
+			cp(customerProduct).recurring().hasRelevantStatus().valid,
 	);
 
 	// 2. Build phases

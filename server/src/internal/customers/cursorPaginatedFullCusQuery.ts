@@ -8,6 +8,7 @@ import {
 	type StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import {
 	cpStatusInClause,
 	customerProductsSeedCte,
@@ -260,5 +261,6 @@ export const getCursorPaginatedFullCusQuery = ({
 			${subscriptionsSelect}
 			${entitiesSelect}
 			${invoicesSelect}
+		${planetScaleTag({ query: "getCursorPaginatedFullCustomers" })}
 	`;
 };
