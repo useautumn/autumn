@@ -66,10 +66,19 @@ export const resolvePromotionCode = async ({
 			});
 		}
 
+		const [minimumCurrency, minimumCurrencyOption] = Object.entries(
+			promo.restrictions?.currency_options ?? {},
+		)[0] ?? [undefined, undefined];
+
 		return {
 			source: { coupon: couponRaw },
 			promotionCodeId: promo.id,
 			firstTimeTransaction: promo.restrictions?.first_time_transaction,
+			minimumAmount:
+				promo.restrictions?.minimum_amount ??
+				minimumCurrencyOption?.minimum_amount,
+			minimumAmountCurrency:
+				promo.restrictions?.minimum_amount_currency ?? minimumCurrency,
 		};
 	} catch (error) {
 		if (error instanceof RecaseError) throw error;

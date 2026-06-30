@@ -18,4 +18,6 @@ export type StripeDiscountWithCoupon = {
 	promotionCodeId?: string;
 	/** Promo code restricted to first-time transactions */
 	firstTimeTransaction?: boolean;
+	minimumAmount?: number | null;
+	minimumAmountCurrency?: string | null;
 };
