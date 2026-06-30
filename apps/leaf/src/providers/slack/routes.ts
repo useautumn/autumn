@@ -41,6 +41,7 @@ slackRoutes.get("/oauth/callback", async (c) => {
 				.split(",")
 				.filter(Boolean),
 			agentScopes: parsedState.scopes,
+			authMode: parsedState.mode,
 			installedByProviderUserId: oauth.authed_user?.id,
 		});
 		logger.info("[chat:slack] Installed", {

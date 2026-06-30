@@ -77,12 +77,15 @@ export const resolveSlackUserAuth = async ({
 	orgId: string;
 	slackUserId: string;
 }): Promise<SlackUserAuthResult> => {
-	const deny = (reason: SlackAuthDenyReason): SlackUserAuthResult => {
+	const deny = (
+		reason: SlackAuthDenyReason,
+		text: string = DENY_TEXT[reason],
+	): SlackUserAuthResult => {
 		logger.warn("Slack user auth denied", {
 			event: "leaf.slack_user_auth_denied",
 			data: { reason },
 		});
-		return { ok: false, reason, text: DENY_TEXT[reason] };
+		return { ok: false, reason, text };
 	};
 
 	const email = await fetchSlackUserEmail({ botToken, slackUserId });
@@ -92,7 +95,10 @@ export const resolveSlackUserAuth = async ({
 
 	const userId = await resolveAutumnUserIdByEmail(email);
 	if (!userId) {
-		return deny("no-autumn-user");
+		return deny(
+			"no-autumn-user",
+			`Sorry, your email address (${email}) was not found in the Autumn organization. Please ask an admin to invite you.`,
+		);
 	}
 
 	const { role, scopes } = await getScopesForUserInOrg({

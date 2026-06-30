@@ -1,4 +1,4 @@
-import type { ChatInstallation } from "@autumn/shared";
+import { ChatAuthMode, type ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
@@ -7,7 +7,7 @@ import { decrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import { installationHasEmailScope } from "../../providers/slack/users.js";
+import { resolveInstallationAuthMode } from "../../providers/slack/users.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
@@ -87,13 +87,14 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
-			// Admin installs keep the installer-scoped flow. Legacy workspaces without
-			// users:read.email fall back to the shared installer token (undefined).
+			// Admin installs keep the installer-scoped flow. Restricted/unrestricted
+			// installs share the installer token; only per-user resolves the sender.
 			let autumnUserId: string | undefined;
-			if (
+			const usePerUserAuth =
 				!orgContext.admin &&
-				installationHasEmailScope({ installation: effectiveInstallation })
-			) {
+				resolveInstallationAuthMode({ installation: effectiveInstallation }) ===
+					ChatAuthMode.PerUser;
+			if (usePerUserAuth) {
 				const userAuth = await resolveSlackUserAuth({
 					botToken: decrypt(effectiveInstallation.bot_access_token),
 					installation: effectiveInstallation,
