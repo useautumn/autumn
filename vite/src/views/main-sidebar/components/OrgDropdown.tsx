@@ -1,6 +1,7 @@
-import { Button, Skeleton } from "@autumn/ui";
+import { Badge, Button, Skeleton } from "@autumn/ui";
 import {
 	ChevronDown,
+	KeyRound,
 	Monitor,
 	Moon,
 	PanelRight,
@@ -11,6 +12,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
+import { useHasPasskey } from "@/hooks/common/useHasPasskey";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -46,7 +48,18 @@ export const OrgDropdown = () => {
 	const navigate = useNavigate();
 
 	const { data: orgsData } = useListOrganizations();
-	let orgs = Array.isArray(orgsData) ? orgsData : undefined;
+	// `/api/auth/organization/list` is hand-rolled in our server (see
+	// handleListAuthOrganizations.ts) so the response includes
+	// `requirePasskey` even though better-auth's plugin type doesn't
+	// know about it. Re-narrow once at the boundary instead of casting
+	// at every consumer.
+	let orgs = Array.isArray(orgsData)
+		? (orgsData as Array<{
+				id: string;
+				name: string;
+				requirePasskey?: boolean;
+			}>)
+		: undefined;
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 
 	if (activeOrganization && orgs) {
@@ -247,24 +260,48 @@ const SwitchOrgItem = ({
 	org,
 	setDropdownOpen,
 }: {
-	org: { id: string; name: string };
+	org: { id: string; name: string; requirePasskey?: boolean };
 	setDropdownOpen: (open: boolean) => void;
 }) => {
 	const [loading, setLoading] = useState(false);
 	const switchOrg = useOrgSwitch();
+	const { hasPasskey } = useHasPasskey();
+	// Server `beforeSessionUpdated` hook is the real backstop; we surface
+	// the gate up-front so the user gets an explanation instead of a
+	// silent no-op when the server rewrites the session away.
+	const gated = org.requirePasskey === true && !hasPasskey;
 
 	return (
 		<DropdownMenuItem
 			key={org.id}
 			onClick={async (e) => {
 				e.preventDefault();
+				if (gated) {
+					toast.error(
+						`${org.name} requires a passkey. Add one from account settings to continue.`,
+					);
+					setDropdownOpen(false);
+					return;
+				}
 				await switchOrg({ orgId: org.id, setLoading });
 				setDropdownOpen(false);
 			}}
 			shimmer={loading}
-			className="flex justify-between"
+			className={cn(
+				"flex items-center justify-between gap-2",
+				gated && "opacity-60",
+			)}
 		>
-			<span className={cn("text-muted-foreground")}>{org.name}</span>
+			<span className={cn("text-muted-foreground truncate")}>{org.name}</span>
+			{gated && (
+				<Badge
+					variant="muted"
+					className="gap-1 text-[10px] uppercase tracking-wide shrink-0"
+				>
+					<KeyRound size={10} />
+					Passkey
+				</Badge>
+			)}
 		</DropdownMenuItem>
 	);
 };

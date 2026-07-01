@@ -27,6 +27,11 @@ export const handleListAuthOrganizations = async (c: Context) => {
 			logo: organizations.logo,
 			createdAt: organizations.createdAt,
 			metadata: organizations.metadata,
+			// Surfaced so the client can disable selection of passkey-gated
+			// orgs in the org switcher (see useOrgAccess). Not part of the
+			// upstream better-auth Organization type — we hand-roll this
+			// route to override its default 100-member join cap anyway.
+			config: organizations.config,
 		})
 		.from(member)
 		.innerJoin(organizations, eq(member.organizationId, organizations.id))
@@ -38,5 +43,18 @@ export const handleListAuthOrganizations = async (c: Context) => {
 		)
 		.limit(AUTH_ORGANIZATION_LIST_LIMIT);
 
-	return c.json(orgs);
+	const sanitized = orgs.map((org) => ({
+		id: org.id,
+		name: org.name,
+		slug: org.slug,
+		logo: org.logo,
+		createdAt: org.createdAt,
+		metadata: org.metadata,
+		// Promote the single client-relevant config flag into a flat field so
+		// the rest of `config` (Stripe/feature-flag internals) stays inside
+		// the server boundary.
+		requirePasskey: org.config?.require_passkey === true,
+	}));
+
+	return c.json(sanitized);
 };

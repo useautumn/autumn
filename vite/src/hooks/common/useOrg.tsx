@@ -91,11 +91,43 @@ export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
 				return;
 			}
 
+			// Honor passkey-gating: only auto-pick orgs the user is actually
+			// allowed to land on. Otherwise the post-pick session.update hook
+			// would rewrite activeOrgId back to null and we'd loop here.
+			const passkeys = await authClient
+				.listPasskeys()
+				.catch(() => ({ data: [] as unknown[] }));
+			const hasPasskey = Array.isArray(passkeys.data)
+				? passkeys.data.length > 0
+				: false;
+			const typedOrgList = orgList as Array<{
+				id: string;
+				requirePasskey?: boolean;
+			}>;
+			const isAllowed = (orgId: string) => {
+				const entry = typedOrgList.find((o) => o.id === orgId);
+				if (!entry) return false;
+				if (entry.requirePasskey && !hasPasskey) return false;
+				return true;
+			};
+
 			const lastOrgId = getLastSwitchedOrgId();
-			const preferredOrg = lastOrgId
-				? orgList.find((o) => o.id === lastOrgId)
-				: null;
-			const targetOrgId = preferredOrg?.id ?? orgList[0].id;
+			const preferredOrg =
+				lastOrgId && isAllowed(lastOrgId)
+					? orgList.find((o) => o.id === lastOrgId)
+					: null;
+			const firstAllowed = typedOrgList.find((o) => isAllowed(o.id));
+			const targetOrgId = preferredOrg?.id ?? firstAllowed?.id;
+
+			if (!targetOrgId) {
+				// Every membership is passkey-gated and the user has no
+				// credential — there's nowhere to land them. Bounce to
+				// sign-in; they can hit the account page from there once a
+				// passkey is registered.
+				await authClient.signOut();
+				window.location.href = "/sign-in?passkey_required=1";
+				return;
+			}
 
 			await setActiveOrg(targetOrgId);
 			window.location.reload();

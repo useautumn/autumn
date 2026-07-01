@@ -45,6 +45,10 @@ export const OrgConfigSchema = z.object({
 	// When true, Stripe writes pass `automatic_tax: { enabled: true }`.
 	// Customer must have a tax-resolvable address.
 	automatic_tax: z.boolean().default(false),
+	// When true, the org won't accept session selection from a user that
+	// doesn't have at least one passkey credential. Only blocks org switch,
+	// not initial sign-in, because users can belong to multiple orgs.
+	require_passkey: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
