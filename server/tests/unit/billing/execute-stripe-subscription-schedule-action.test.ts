@@ -7,6 +7,7 @@ const mockState = {
 	createCalls: [] as unknown[],
 	releaseCalls: [] as unknown[],
 	updateCalls: [] as unknown[],
+	cusProductUpdates: [] as unknown[],
 };
 
 mock.module("@server/external/connect/createStripeCli", () => ({
@@ -51,13 +52,26 @@ mock.module(
 	}),
 );
 
-import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+mock.module("@/internal/customers/cusProducts/CusProductService", () => ({
+	CusProductService: {
+		updateByStripeScheduledId: async (params: unknown) => {
+			mockState.cusProductUpdates.push(params);
+		},
+	},
+}));
+
+import {
+	executeStripeSubscriptionScheduleAction,
+	restoreReleasedSubscriptionSchedule,
+} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 
 const ctx = {
+	db: {},
 	org: { id: "org_123" },
 	env: "sandbox",
 	logger: {
 		debug: mock(() => {}),
+		info: mock(() => {}),
 	},
 } as unknown as AutumnContext;
 
@@ -66,6 +80,7 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		mockState.createCalls = [];
 		mockState.releaseCalls = [];
 		mockState.updateCalls = [];
+		mockState.cusProductUpdates = [];
 	});
 
 	test("updates standalone future schedules without requiring a subscription id", async () => {
@@ -269,6 +284,49 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		expect(updateParams.params.phases?.[2]?.items?.[0]?.price).toBe(
 			"price_current_inline",
 		);
+	});
+
+	test("restoring a released schedule skips historical phases", async () => {
+		await restoreReleasedSubscriptionSchedule({
+			ctx,
+			billingContext: {
+				stripeSubscriptionSchedule: {
+					id: "sched_released",
+					subscription: "sub_123",
+					current_phase: { start_date: 1000, end_date: 2000 },
+					end_behavior: "release",
+					phases: [
+						{
+							start_date: 500,
+							end_date: 1000,
+							items: [{ price: { id: "price_past" }, quantity: 1 }],
+							proration_behavior: "none",
+						},
+						{
+							start_date: 1000,
+							end_date: 2000,
+							items: [{ price: { id: "price_current" }, quantity: 1 }],
+							proration_behavior: "none",
+						},
+						{
+							start_date: 2000,
+							end_date: 3000,
+							items: [{ price: { id: "price_future" }, quantity: 1 }],
+							proration_behavior: "none",
+						},
+					],
+				},
+			} as unknown as BillingContext,
+		});
+
+		const updateParams = mockState.updateCalls[0] as {
+			params: Stripe.SubscriptionScheduleUpdateParams;
+		};
+		const phases = updateParams.params.phases ?? [];
+
+		expect(phases).toHaveLength(2);
+		expect(phases.some((phase) => phase.start_date === 500)).toBe(false);
+		expect(mockState.cusProductUpdates).toHaveLength(1);
 	});
 });
 
