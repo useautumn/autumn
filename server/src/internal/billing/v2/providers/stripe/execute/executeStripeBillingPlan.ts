@@ -13,7 +13,10 @@ import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/provid
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
-import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import {
+	executeStripeSubscriptionScheduleAction,
+	restoreReleasedSubscriptionSchedule,
+} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import {
 	createRefundAndUpdateInvoice,
@@ -150,11 +153,13 @@ const rollbackAfterSubscriptionFailure = async ({
 	billingContext,
 	invoiceResult,
 	stripeInvoiceItems,
+	restoreSchedule,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	invoiceResult?: StripeBillingPlanResult;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
+	restoreSchedule?: () => Promise<void>;
 }) => {
 	const rollbackErrors: unknown[] = [];
 	const runRollbackStep = async (
@@ -177,6 +182,12 @@ const rollbackAfterSubscriptionFailure = async ({
 		"[executeStripeBillingPlan] Failed to roll back invoice after subscription action failed",
 		() => rollbackInvoiceAction({ ctx, billingContext, invoiceResult }),
 	);
+	if (restoreSchedule) {
+		await runRollbackStep(
+			"[executeStripeBillingPlan] Failed to restore released subscription schedule after subscription action failed",
+			restoreSchedule,
+		);
+	}
 
 	if (!rollbackErrors.length) return;
 
@@ -250,6 +261,7 @@ export const executeStripeBillingPlan = async ({
 	// For schedule release, we need to release first before updating subscription with cancel_at
 	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
 	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
+	let releasedSubscriptionSchedule = false;
 
 	if (isReleaseAction && !resumeAfterSubscriptionAction) {
 		await executeStripeSubscriptionScheduleAction({
@@ -258,6 +270,7 @@ export const executeStripeBillingPlan = async ({
 			subscriptionScheduleAction: stripeSubscriptionScheduleAction,
 			stripeSubscription,
 		});
+		releasedSubscriptionSchedule = true;
 	}
 
 	if (stripeSubscriptionAction && !resumeAfterSubscriptionAction) {
@@ -273,6 +286,14 @@ export const executeStripeBillingPlan = async ({
 				billingContext,
 				invoiceResult,
 				stripeInvoiceItems,
+				restoreSchedule: releasedSubscriptionSchedule
+					? () =>
+							restoreReleasedSubscriptionSchedule({
+								ctx,
+								billingContext,
+								stripeSubscription,
+							})
+					: undefined,
 			});
 			if (rollbackError) {
 				throw new AggregateError(

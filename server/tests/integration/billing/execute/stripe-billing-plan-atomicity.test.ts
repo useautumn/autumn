@@ -201,3 +201,161 @@ test.concurrent(
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
+
+test.concurrent(
+	chalk.yellowBright(
+		"stripe billing plan atomicity: failed subscription action restores released schedule",
+	),
+	async () => {
+		const customerId = `schedule-release-atomic-${Date.now()}`;
+
+		const premium = products.premium({
+			id: "schedule-release-premium",
+			items: [items.monthlyMessages({ includedUsage: 100_000 })],
+		});
+		const pro = products.pro({
+			id: "schedule-release-pro",
+			items: [items.monthlyMessages({ includedUsage: 5_000 })],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id }),
+				s.billing.attach({ productId: pro.id }),
+			],
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const stripeCustomerId = fullCustomer.processor?.id;
+		if (!stripeCustomerId) throw new Error("Missing Stripe customer");
+
+		const stripeCustomer = (await ctx.stripeCli.customers.retrieve(
+			stripeCustomerId,
+			{ expand: ["invoice_settings.default_payment_method"] },
+		)) as Stripe.Customer;
+		const paymentMethod = await getDefaultPaymentMethod({
+			stripeCli: ctx.stripeCli,
+			stripeCustomer,
+		});
+		const subscriptions = await ctx.stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+			status: "active",
+			limit: 1,
+		});
+		const subscription = subscriptions.data[0];
+		if (!subscription) throw new Error("Missing Stripe subscription");
+
+		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
+			subscription.id,
+			{ expand: ["schedule"] },
+		);
+		const stripeSubscriptionSchedule = stripeSubscription.schedule;
+		if (
+			!stripeSubscriptionSchedule ||
+			typeof stripeSubscriptionSchedule === "string"
+		) {
+			throw new Error("Missing expanded Stripe subscription schedule");
+		}
+
+		const coupon = await ctx.stripeCli.coupons.create({
+			percent_off: 50,
+			duration: "forever",
+		});
+		const promotionCode = await ctx.stripeCli.promotionCodes.create({
+			promotion: { type: "coupon", coupon: coupon.id },
+			code: `MINAMTSCHEDULE${Date.now()}`,
+			restrictions: {
+				minimum_amount: 100,
+				minimum_amount_currency: "usd",
+			},
+		});
+
+		const proFull = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: pro.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+
+		const billingContext = {
+			fullCustomer,
+			fullProducts: [proFull],
+			featureQuantities: [],
+			currentEpochMs: Date.now(),
+			billingCycleAnchorMs: "now",
+			resetCycleAnchorMs: "now",
+			billingVersion: fullCustomer.customer_products[0].billing_version,
+			stripeCustomer,
+			stripeSubscription,
+			stripeSubscriptionSchedule,
+			paymentMethod,
+			customPrices: [],
+			customEnts: [],
+			isCustom: false,
+			requestedBillingCycleAnchor: "now",
+		} satisfies BillingContext;
+		const billingPlan = {
+			autumn: {
+				customerId,
+				insertCustomerProducts: [],
+				lineItems: [],
+			},
+			stripe: {
+				subscriptionScheduleAction: {
+					type: "release",
+					stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+				},
+				subscriptionAction: {
+					type: "update",
+					stripeSubscriptionId: stripeSubscription.id,
+					params: {
+						discounts: [{ promotion_code: promotionCode.id }],
+						proration_behavior: "none",
+						payment_behavior: "error_if_incomplete",
+					},
+				},
+			},
+		} satisfies BillingPlan;
+
+		let executeError: unknown;
+		try {
+			await executeStripeBillingPlan({
+				ctx,
+				billingContext,
+				billingPlan,
+			});
+		} catch (error) {
+			executeError = error;
+		}
+
+		expect(executeError).toBeDefined();
+		expect((executeError as Error).message).toInclude("minimum_amount");
+
+		const releasedSchedule =
+			await ctx.stripeCli.subscriptionSchedules.retrieve(
+				stripeSubscriptionSchedule.id,
+			);
+		expect(releasedSchedule.status).toBe("released");
+
+		const restoredSubscription = await ctx.stripeCli.subscriptions.retrieve(
+			stripeSubscription.id,
+			{ expand: ["schedule"] },
+		);
+		const restoredSchedule = restoredSubscription.schedule;
+		if (!restoredSchedule || typeof restoredSchedule === "string") {
+			throw new Error("Missing restored Stripe subscription schedule");
+		}
+
+		expect(restoredSchedule.id).not.toBe(stripeSubscriptionSchedule.id);
+		expect(restoredSchedule.status).toBe("active");
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);

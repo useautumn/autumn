@@ -99,6 +99,9 @@ const buildAnchoredPhases = ({
 
 type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
 
+const getId = <T extends { id: string }>(value?: string | T | null) =>
+	typeof value === "string" ? value : value?.id;
+
 const reuseCurrentInlinePricesInFuturePhases = ({
 	phases,
 	stripeSubscription,
@@ -131,6 +134,34 @@ const reuseCurrentInlinePricesInFuturePhases = ({
 	});
 };
 
+const schedulePhaseToUpdatePhase = (
+	phase: Stripe.SubscriptionSchedule.Phase,
+): Stripe.SubscriptionScheduleUpdateParams.Phase => ({
+	start_date: phase.start_date,
+	end_date: phase.end_date,
+	items: phase.items.map((item) => ({
+		price: getId(item.price),
+		quantity: item.quantity,
+		...(item.metadata && { metadata: item.metadata }),
+		...(item.tax_rates?.length && {
+			tax_rates: item.tax_rates.map((taxRate) => getId(taxRate)!),
+		}),
+	})),
+	proration_behavior: phase.proration_behavior,
+	...(phase.billing_cycle_anchor && {
+		billing_cycle_anchor: phase.billing_cycle_anchor,
+	}),
+	...(phase.discounts?.length && {
+		discounts: phase.discounts.map((discount) => ({
+			...(getId(discount.coupon) && { coupon: getId(discount.coupon) }),
+			...(getId(discount.promotion_code) && {
+				promotion_code: getId(discount.promotion_code),
+			}),
+		})),
+	}),
+	...(phase.metadata && { metadata: phase.metadata }),
+});
+
 /**
  * Creates a schedule from an existing subscription and updates it with phases.
  * This is the standard pattern for both "create" and "update" actions.
@@ -160,6 +191,48 @@ const createScheduleFromSubscription = async ({
 		phases,
 		end_behavior: params.end_behavior,
 	});
+};
+
+export const restoreReleasedSubscriptionSchedule = async ({
+	ctx,
+	billingContext,
+	stripeSubscription,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	stripeSubscription?: Stripe.Subscription;
+}) => {
+	const releasedSchedule = billingContext.stripeSubscriptionSchedule;
+	const subscriptionId = getId(releasedSchedule?.subscription);
+
+	if (!releasedSchedule || !subscriptionId) {
+		throw new Error(
+			"[executeStripeBillingPlan] Cannot restore released subscription schedule: missing schedule snapshot",
+		);
+	}
+
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const restoredSchedule = await createScheduleFromSubscription({
+		stripeCli,
+		subscriptionId,
+		params: {
+			phases: releasedSchedule.phases.map(schedulePhaseToUpdatePhase),
+			end_behavior: releasedSchedule.end_behavior,
+		},
+		stripeSubscription,
+	});
+
+	await CusProductService.updateByStripeScheduledId({
+		db: ctx.db,
+		stripeScheduledId: releasedSchedule.id,
+		updates: {
+			scheduled_ids: [restoredSchedule.id],
+		},
+	});
+
+	ctx.logger.info(
+		`[executeStripeBillingPlan] Restored released subscription schedule ${releasedSchedule.id} as ${restoredSchedule.id} after later Stripe action failed`,
+	);
 };
 
 const getStandaloneScheduleDefaults = ({
