@@ -88,9 +88,20 @@ export const payForInvoice = async ({
 		const invoice = await stripeCli.invoices.pay(invoiceId, {
 			payment_method: paymentMethod?.id,
 		});
+		const paid = invoice.status === "paid";
+		const error = paid
+			? null
+			: new RecaseError({
+					message: `Invoice ${invoiceId} is ${invoice.status ?? "not paid"}`,
+					code: ErrCode.PayInvoiceFailed,
+					data: invoice,
+				});
+
+		if (!paid && errorOnFail) throw error;
+
 		return {
-			paid: true,
-			error: null,
+			paid,
+			error,
 			invoice,
 		};
 	} catch (error: any) {
