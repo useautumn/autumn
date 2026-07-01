@@ -12,12 +12,12 @@ type TargetMock = Parameters<typeof createActionLogger>[1];
 
 describe("progress action logger", () => {
 	test("caps typing status text to Slack's limit", () => {
-		const status = formatTypingStatus(
-			"This is a very long status line that Slack will reject as a loading message",
-		);
+		const input =
+			"This is a very long status line that Slack will reject as a loading message";
+		const status = formatTypingStatus(input);
 
 		expect(status).toHaveLength(50);
-		expect(status.endsWith("...")).toBe(true);
+		expect(status).toBe(`${input.slice(0, 47).trimEnd()}...`);
 	});
 
 	test("uses neutral typing text for quiet follow-up loading", async () => {
