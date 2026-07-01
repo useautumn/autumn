@@ -6,7 +6,7 @@ import {
 	type Organization,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { getDate, getMonth, setDate } from "date-fns";
+import { getDate, getDaysInMonth, getMonth, setDate } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 
@@ -66,7 +66,10 @@ export const getResetAtUpdate = async ({
 		const billingCycleAnchor = sub.billing_cycle_anchor * 1000;
 		const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
 
-		if (billingCycleDay > nextResetAtDay) {
+		if (
+			billingCycleDay > nextResetAtDay &&
+			billingCycleDay <= getDaysInMonth(nextResetAtDate)
+		) {
 			return setDate(nextResetAtDate, billingCycleDay).getTime();
 		}
 	} catch (error) {
