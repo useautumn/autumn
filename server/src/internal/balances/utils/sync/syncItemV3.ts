@@ -7,6 +7,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import { getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
@@ -239,7 +240,7 @@ export const syncItemV3 = async ({
 			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
-			})}::jsonb)`,
+			})}::jsonb) ${planetScaleTag({ query: "syncBalancesV3" })}`,
 		),
 	);
 
