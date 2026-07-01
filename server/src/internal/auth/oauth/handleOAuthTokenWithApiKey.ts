@@ -23,6 +23,7 @@ import {
 	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
+import { getRefreshTokenForConsentLookup } from "./tokenRequestFields.js";
 
 const getString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
@@ -115,17 +116,8 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
-const getRefreshToken = async (request: Request) => {
-	try {
-		const body = new URLSearchParams(await request.text());
-		return getString(body.get("refresh_token"));
-	} catch {
-		return null;
-	}
-};
-
 const getRefreshTokenConsentId = async (request: Request) => {
-	const refreshToken = await getRefreshToken(request);
+	const refreshToken = await getRefreshTokenForConsentLookup(request);
 	if (!refreshToken) return null;
 
 	const hashedToken = await hashOAuthToken(refreshToken);

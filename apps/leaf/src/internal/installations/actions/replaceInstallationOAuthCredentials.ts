@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
-import { UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	ChatAuthMode,
@@ -12,43 +11,30 @@ import {
 	oauthConsent,
 	oauthRefreshToken,
 } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
-import { isSlackAdminProvider } from "../../slackAdmin/access.js";
+import { resolveAgentScopes } from "./chatOAuthCredentialScopes.js";
+import {
+	getOAuthConsentMetadata,
+	getOAuthConsentMetadataKindFilter,
+	type OAuthConsentMetadata,
+} from "./oauthConsentMetadata.js";
 import {
 	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	AUTUMN_SLACK_OAUTH_CLIENT_ID,
 	AUTUMN_WEB_OAUTH_CLIENT_ID,
 } from "./upsertInstallationOAuthCredential.js";
 
+export { resolveAgentScopes } from "./chatOAuthCredentialScopes.js";
+
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
 const REFRESH_TOKEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
-const SLACK_ADMIN_CONSENT_KIND = "slack_admin";
 const SLACK_OAUTH_REDIRECT_URI = "slack://autumn-chat";
 // Programmatic provisioning never redirects, so this is only a stored value.
 const WEB_OAUTH_REDIRECT_URI = "https://app.useautumn.com/chat";
-
-type OAuthConsentMetadata =
-	| {
-			kind: typeof SLACK_ADMIN_CONSENT_KIND;
-			chatInstallationId: string;
-			createdByUserId: string;
-	  }
-	| {
-			kind: typeof UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
-			chatInstallationId: string;
-			createdByUserId: string;
-	  }
-	| Record<string, never>;
-
-const isSlackAdminInstallation = ({
-	installation,
-}: {
-	installation: ChatInstallation;
-}) => isSlackAdminProvider({ provider: installation.provider });
 
 type ProviderOAuthConfig = {
 	clientId: string;
@@ -63,7 +49,10 @@ const getProviderOAuthConfig = ({
 }: {
 	installation: ChatInstallation;
 }): ProviderOAuthConfig => {
-	if (isSlackAdminInstallation({ installation })) {
+	if (
+		installation.provider === "slack_admin" ||
+		installation.provider.startsWith("slack_admin:")
+	) {
 		return {
 			clientId: AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 			name: "Slack Admin",
@@ -86,29 +75,6 @@ const getProviderOAuthConfig = ({
 		redirectUri: SLACK_OAUTH_REDIRECT_URI,
 	};
 };
-
-const getOAuthConsentMetadata = ({
-	authMode,
-	installation,
-	userId,
-}: {
-	authMode?: ChatAuthMode;
-	installation: ChatInstallation;
-	userId: string;
-}): OAuthConsentMetadata =>
-	isSlackAdminInstallation({ installation })
-		? {
-				kind: SLACK_ADMIN_CONSENT_KIND,
-				chatInstallationId: installation.id,
-				createdByUserId: userId,
-			}
-		: authMode === ChatAuthMode.Unrestricted
-			? {
-					kind: UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
-					chatInstallationId: installation.id,
-					createdByUserId: userId,
-				}
-			: {};
 
 const tokenHash = ({ token }: { token: string }) => {
 	const hash = crypto.createHash("sha256").update(token).digest();
@@ -191,9 +157,7 @@ const upsertOAuthConsent = async ({
 				eq(oauthConsent.userId, userId),
 				eq(oauthConsent.referenceId, orgId),
 				eq(oauthConsent.env, env),
-				metadata?.kind === SLACK_ADMIN_CONSENT_KIND
-					? sql`${oauthConsent.metadata}->>'kind' = ${SLACK_ADMIN_CONSENT_KIND}`
-					: sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != ${SLACK_ADMIN_CONSENT_KIND}`,
+				getOAuthConsentMetadataKindFilter(metadata),
 			),
 		)
 		.limit(1);
@@ -328,40 +292,6 @@ const createCredentialForEnv = async ({
 				updated_at: credential.updated_at,
 			},
 		});
-};
-
-const defaultOAuthResourceScopeSet = new Set<string>(
-	DEFAULT_OAUTH_RESOURCE_SCOPES,
-);
-
-/**
- * Bound the requested scopes to the bot's ceiling.
- *
- * - `undefined` is the install/default path: grant the full default set.
- * - An explicit empty list is never the default set — it means a caller resolved
- *   *no* permissions (e.g. a denied Slack user that slipped past the guard), so we
- *   throw rather than silently mint full default scopes (which would fail open).
- * - A non-empty list is intersected with the ceiling; if nothing survives, the
- *   caller asked only for scopes the bot can never hold, so we throw too.
- */
-export const resolveAgentScopes = (agentScopes?: string[]) => {
-	if (agentScopes === undefined) {
-		return [...DEFAULT_OAUTH_RESOURCE_SCOPES];
-	}
-	if (agentScopes.length === 0) {
-		throw new Error(
-			"resolveAgentScopes: refusing to mint default scopes from an empty scope list",
-		);
-	}
-	const bounded = agentScopes.filter((scope) =>
-		defaultOAuthResourceScopeSet.has(scope),
-	);
-	if (bounded.length === 0) {
-		throw new Error(
-			"resolveAgentScopes: requested scopes are entirely outside the bot ceiling",
-		);
-	}
-	return bounded;
 };
 
 export const replaceInstallationOAuthCredentials = async ({

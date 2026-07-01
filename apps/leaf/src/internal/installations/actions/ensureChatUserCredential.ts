@@ -6,9 +6,10 @@ import {
 import { db } from "../../../lib/db.js";
 import { getChatOAuthCredentialByInstallationEnv } from "../repos/chatOAuthCredentialsRepo.js";
 import {
-	replaceInstallationOAuthCredentials,
 	resolveAgentScopes,
-} from "./replaceInstallationOAuthCredentials.js";
+	scopeSetsEqual,
+} from "./chatOAuthCredentialScopes.js";
+import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthCredentials.js";
 
 // Re-mint a refresh token this far before it dies so a turn never races expiry.
 const REFRESH_EXPIRY_SKEW_MS = 60 * 60 * 1000;
@@ -18,14 +19,6 @@ const REFRESH_EXPIRY_SKEW_MS = 60 * 60 * 1000;
 // selector; web: the app_env header), so every env's credential must be fresh —
 // gating on a single env would let a stale/missing sibling slip through.
 const CHAT_CREDENTIAL_ENVS = [AppEnv.Sandbox, AppEnv.Live] as const;
-
-const scopeSetsEqual = (a: string[], b: string[]) => {
-	if (a.length !== b.length) {
-		return false;
-	}
-	const set = new Set(a);
-	return b.every((scope) => set.has(scope));
-};
 
 const isCredentialStale = ({
 	credential,

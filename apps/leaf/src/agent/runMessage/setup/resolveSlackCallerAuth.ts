@@ -1,19 +1,14 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { ChatAuthMode, type ChatInstallation } from "@autumn/shared";
+import type { ChatInstallation } from "@autumn/shared";
 import { decrypt } from "../../../lib/crypto.js";
 import { resolveInstallationAuthMode } from "../../../providers/slack/users.js";
+import {
+	resolveSlackCallerAuthCore,
+	type SlackCallerAuthResult,
+} from "./resolveSlackCallerAuthCore.js";
 import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
 
-export type SlackCallerAuthResult =
-	| { usePerUser: false }
-	| {
-			usePerUser: true;
-			ok: true;
-			userId: string;
-			role: string;
-			scopes: string[];
-	  }
-	| { usePerUser: true; ok: false; text: string };
+export type { SlackCallerAuthResult };
 
 /**
  * Single seam for "does this Slack sender need per-user resolution, and if so
@@ -35,29 +30,16 @@ export const resolveSlackCallerAuth = async ({
 	// PerUser; only the caller (runMessage) knows about that admin bypass.
 	skipPerUser?: boolean;
 	slackUserId: string;
-}): Promise<SlackCallerAuthResult> => {
-	const usePerUser =
-		!skipPerUser &&
-		resolveInstallationAuthMode({ installation }) === ChatAuthMode.PerUser;
-	if (!usePerUser) {
-		return { usePerUser: false };
-	}
-
-	const auth = await resolveSlackUserAuth({
-		botToken: decrypt(installation.bot_access_token),
+}): Promise<SlackCallerAuthResult> =>
+	resolveSlackCallerAuthCore({
+		deps: {
+			decrypt,
+			resolveInstallationAuthMode,
+			resolveSlackUserAuth,
+		},
 		installation,
 		logger,
 		orgId,
+		skipPerUser,
 		slackUserId,
 	});
-	if (!auth.ok) {
-		return { usePerUser: true, ok: false, text: auth.text };
-	}
-	return {
-		usePerUser: true,
-		ok: true,
-		role: auth.role,
-		scopes: auth.scopes,
-		userId: auth.userId,
-	};
-};
