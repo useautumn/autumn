@@ -12,7 +12,10 @@ import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
-import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
+import {
+	didStripeSubscriptionActionApply,
+	executeStripeSubscriptionAction,
+} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import {
 	executeStripeSubscriptionScheduleAction,
 	restoreReleasedSubscriptionSchedule,
@@ -92,7 +95,9 @@ const rollbackInvoiceAction = async ({
 		stripeInvoice.status === "open" ||
 		stripeInvoice.status === "uncollectible"
 	) {
-		const voidedInvoice = await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+		const voidedInvoice = await stripeCli.invoices.voidInvoice(
+			stripeInvoice.id,
+		);
 		await invoiceActions.updateFromStripe({
 			ctx,
 			customerId,
@@ -202,11 +207,13 @@ export const executeStripeBillingPlan = async ({
 	billingPlan,
 	billingContext,
 	resumeAfter,
+	resumeInvoice,
 }: {
 	ctx: AutumnContext;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
 	resumeAfter?: StripeBillingStage;
+	resumeInvoice?: Stripe.Invoice;
 }): Promise<StripeBillingPlanResult> => {
 	const {
 		subscriptionAction: stripeSubscriptionAction,
@@ -227,7 +234,9 @@ export const executeStripeBillingPlan = async ({
 	}
 
 	// Collect results from each stage
-	let invoiceResult: StripeBillingPlanResult | undefined;
+	let invoiceResult: StripeBillingPlanResult | undefined = resumeInvoice
+		? { stripeInvoice: resumeInvoice }
+		: undefined;
 	let subscriptionResult: StripeBillingPlanResult | undefined;
 	let stripeSubscription = billingContext.stripeSubscription;
 
@@ -281,6 +290,10 @@ export const executeStripeBillingPlan = async ({
 				billingContext,
 			});
 		} catch (error) {
+			if (didStripeSubscriptionActionApply(error)) {
+				throw error;
+			}
+
 			const rollbackError = await rollbackAfterSubscriptionFailure({
 				ctx,
 				billingContext,

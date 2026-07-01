@@ -102,6 +102,9 @@ type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
 const getId = <T extends { id: string }>(value?: string | T | null) =>
 	typeof value === "string" ? value : value?.id;
 
+const getIds = <T extends { id: string }>(values?: (string | T)[] | null) =>
+	values?.map((value) => getId(value)!).filter(Boolean);
+
 const reuseCurrentInlinePricesInFuturePhases = ({
 	phases,
 	stripeSubscription,
@@ -134,37 +137,188 @@ const reuseCurrentInlinePricesInFuturePhases = ({
 	});
 };
 
+const scheduleDiscountToUpdateDiscount = (
+	discount: Pick<
+		Stripe.SubscriptionSchedule.Phase.Discount,
+		"coupon" | "promotion_code"
+	>,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.Discount => ({
+	...(getId(discount.coupon) && { coupon: getId(discount.coupon) }),
+	...(getId(discount.promotion_code) && {
+		promotion_code: getId(discount.promotion_code),
+	}),
+});
+
+const scheduleAddInvoiceItemToUpdateItem = (
+	item: Stripe.SubscriptionSchedule.Phase.AddInvoiceItem,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.AddInvoiceItem => ({
+	price: getId(item.price),
+	quantity: item.quantity ?? undefined,
+	...(item.metadata && { metadata: item.metadata }),
+	...(item.period && { period: item.period }),
+	...(item.discounts?.length && {
+		discounts: item.discounts.map(scheduleDiscountToUpdateDiscount),
+	}),
+	...(item.tax_rates?.length && {
+		tax_rates: getIds(item.tax_rates),
+	}),
+});
+
+const schedulePhaseItemToUpdateItem = (
+	item: Stripe.SubscriptionSchedule.Phase.Item,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.Item => ({
+	price: getId(item.price),
+	quantity: item.quantity,
+	...(item.billing_thresholds?.usage_gte !== null &&
+		item.billing_thresholds?.usage_gte !== undefined && {
+			billing_thresholds: {
+				usage_gte: item.billing_thresholds.usage_gte,
+			},
+		}),
+	...(item.discounts?.length && {
+		discounts: item.discounts.map(scheduleDiscountToUpdateDiscount),
+	}),
+	...(item.metadata && { metadata: item.metadata }),
+	...(item.tax_rates?.length && {
+		tax_rates: getIds(item.tax_rates),
+	}),
+	...(item.trial && {
+		trial: {
+			type: item.trial.type,
+			...(item.trial.converts_to?.length && {
+				converts_to: item.trial.converts_to,
+			}),
+		},
+	}),
+});
+
+const scheduleInvoiceSettingsToUpdateSettings = (
+	invoiceSettings: Stripe.SubscriptionSchedule.Phase.InvoiceSettings,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.InvoiceSettings => ({
+	...(invoiceSettings.account_tax_ids?.length && {
+		account_tax_ids: getIds(invoiceSettings.account_tax_ids),
+	}),
+	...(invoiceSettings.days_until_due !== null && {
+		days_until_due: invoiceSettings.days_until_due,
+	}),
+	...(invoiceSettings.issuer && {
+		issuer: {
+			type: invoiceSettings.issuer.type,
+			...(getId(invoiceSettings.issuer.account) && {
+				account: getId(invoiceSettings.issuer.account),
+			}),
+		},
+	}),
+});
+
+const scheduleAutomaticTaxToUpdateAutomaticTax = (
+	automaticTax: Stripe.SubscriptionSchedule.Phase.AutomaticTax,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.AutomaticTax => ({
+	enabled: automaticTax.enabled,
+	...(automaticTax.liability && {
+		liability: {
+			type: automaticTax.liability.type,
+			...(getId(automaticTax.liability.account) && {
+				account: getId(automaticTax.liability.account),
+			}),
+		},
+	}),
+});
+
+const scheduleTransferDataToUpdateTransferData = (
+	transferData: Stripe.SubscriptionSchedule.Phase.TransferData,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.TransferData => ({
+	destination: getId(transferData.destination)!,
+	...(transferData.amount_percent !== null && {
+		amount_percent: transferData.amount_percent,
+	}),
+});
+
+const scheduleTrialSettingsToUpdateTrialSettings = (
+	trialSettings: Stripe.SubscriptionSchedule.Phase.TrialSettings,
+): Stripe.SubscriptionScheduleUpdateParams.Phase.TrialSettings => ({
+	...(trialSettings.end_behavior && {
+		end_behavior: {
+			...(trialSettings.end_behavior.prorate_up_front && {
+				prorate_up_front: trialSettings.end_behavior.prorate_up_front,
+			}),
+		},
+	}),
+});
+
 const schedulePhaseToUpdatePhase = (
 	phase: Stripe.SubscriptionSchedule.Phase,
 ): Stripe.SubscriptionScheduleUpdateParams.Phase => ({
 	start_date: phase.start_date,
 	end_date: phase.end_date,
-	items: phase.items.map((item) => ({
-		price: getId(item.price),
-		quantity: item.quantity,
-		...(item.metadata && { metadata: item.metadata }),
-		...(item.tax_rates?.length && {
-			tax_rates: item.tax_rates.map((taxRate) => getId(taxRate)!),
-		}),
-	})),
+	items: phase.items.map(schedulePhaseItemToUpdateItem),
+	...(phase.add_invoice_items?.length && {
+		add_invoice_items: phase.add_invoice_items.map(
+			scheduleAddInvoiceItemToUpdateItem,
+		),
+	}),
+	...(phase.application_fee_percent !== null && {
+		application_fee_percent: phase.application_fee_percent,
+	}),
+	...(phase.automatic_tax && {
+		automatic_tax: scheduleAutomaticTaxToUpdateAutomaticTax(
+			phase.automatic_tax,
+		),
+	}),
 	proration_behavior: phase.proration_behavior,
 	...(phase.billing_cycle_anchor && {
 		billing_cycle_anchor: phase.billing_cycle_anchor,
 	}),
-	...(phase.discounts?.length && {
-		discounts: phase.discounts.map((discount) => ({
-			...(getId(discount.coupon) && { coupon: getId(discount.coupon) }),
-			...(getId(discount.promotion_code) && {
-				promotion_code: getId(discount.promotion_code),
+	...(phase.billing_thresholds && {
+		billing_thresholds: {
+			...(phase.billing_thresholds.amount_gte !== null && {
+				amount_gte: phase.billing_thresholds.amount_gte,
 			}),
-		})),
+			...(phase.billing_thresholds.reset_billing_cycle_anchor !== null && {
+				reset_billing_cycle_anchor:
+					phase.billing_thresholds.reset_billing_cycle_anchor,
+			}),
+		},
+	}),
+	...(phase.collection_method && {
+		collection_method: phase.collection_method,
+	}),
+	...(phase.currency && { currency: phase.currency }),
+	...(getId(phase.default_payment_method) && {
+		default_payment_method: getId(phase.default_payment_method),
+	}),
+	...(phase.default_tax_rates?.length && {
+		default_tax_rates: getIds(phase.default_tax_rates),
+	}),
+	...(phase.description !== null && { description: phase.description }),
+	...(phase.discounts?.length && {
+		discounts: phase.discounts.map(scheduleDiscountToUpdateDiscount),
+	}),
+	...(phase.invoice_settings && {
+		invoice_settings: scheduleInvoiceSettingsToUpdateSettings(
+			phase.invoice_settings,
+		),
 	}),
 	...(phase.metadata && { metadata: phase.metadata }),
+	...(getId(phase.on_behalf_of) && { on_behalf_of: getId(phase.on_behalf_of) }),
+	...(phase.pause_collection && { pause_collection: phase.pause_collection }),
+	...(phase.transfer_data && {
+		transfer_data: scheduleTransferDataToUpdateTransferData(
+			phase.transfer_data,
+		),
+	}),
+	...(phase.trial_continuation && {
+		trial_continuation: phase.trial_continuation,
+	}),
+	...(phase.trial_end !== null && { trial_end: phase.trial_end }),
+	...(phase.trial_settings && {
+		trial_settings: scheduleTrialSettingsToUpdateTrialSettings(
+			phase.trial_settings,
+		),
+	}),
 });
 
-const getRestorableSchedulePhases = (
-	schedule: Stripe.SubscriptionSchedule,
-) => {
+const getRestorableSchedulePhases = (schedule: Stripe.SubscriptionSchedule) => {
 	const currentPhaseStart = schedule.current_phase?.start_date;
 	if (!currentPhaseStart) return schedule.phases;
 

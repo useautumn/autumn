@@ -23,6 +23,25 @@ import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertM
 import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 import { getDeferredBillingMetadataExpiresAt } from "./getDeferredBillingMetadataExpiresAt";
 
+const stripeSubscriptionActionApplied = Symbol(
+	"stripeSubscriptionActionApplied",
+);
+
+export const didStripeSubscriptionActionApply = (error: unknown) =>
+	Boolean(
+		error &&
+		typeof error === "object" &&
+		(error as Record<PropertyKey, unknown>)[stripeSubscriptionActionApplied],
+	);
+
+const markStripeSubscriptionActionApplied = (error: unknown) => {
+	if (error && typeof error === "object") {
+		(error as Record<PropertyKey, unknown>)[stripeSubscriptionActionApplied] =
+			true;
+	}
+	return error;
+};
+
 export const executeStripeSubscriptionAction = async ({
 	ctx,
 	billingPlan,
@@ -60,133 +79,137 @@ export const executeStripeSubscriptionAction = async ({
 
 	if (error) throw error;
 
-	stripeSubscription = updatedStripeSubscription;
+	try {
+		stripeSubscription = updatedStripeSubscription;
 
-	let latestStripeInvoice = getLatestInvoiceFromSubscriptionAction({
-		stripeSubscription,
-		subscriptionAction,
-		billingContext,
-	});
-
-	latestStripeInvoice = await applyTemplateToDraft({
-		ctx,
-		stripeCli,
-		invoice: latestStripeInvoice,
-		footer: billingContext.invoiceMode?.footer,
-		memo: billingContext.invoiceMode?.memo,
-	});
-
-	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
-	// or the public invoice_mode.finalize for the other actions (updateSubscription,
-	// multiAttach, createSchedule) that don't wire setupFinalizeFirstInvoice.
-	const shouldFinalize =
-		billingContext.shouldFinalizeFirstInvoice ??
-		billingContext.invoiceMode?.finalizeInvoice ??
-		false;
-
-	if (
-		latestStripeInvoice &&
-		shouldFinalize &&
-		latestStripeInvoice.status === "draft"
-	) {
-		logger.debug(`[execSubAction] Finalizing invoice`);
-		latestStripeInvoice = await finalizeStripeInvoice({
-			stripeCli,
-			invoiceId: latestStripeInvoice.id,
-		});
-	}
-
-	// Determine required action from invoice payment intent status (only if open)
-	const requiredAction =
-		latestStripeInvoice?.status === "open"
-			? await getRequiredActionFromSubscriptionInvoice({
-					stripeClient: stripeCli,
-					invoiceId: latestStripeInvoice!.id,
-					hasPaymentMethod: Boolean(billingContext.paymentMethod),
-					invoiceMode: billingContext.invoiceMode ?? undefined,
-					enablePlanImmediately: billingContext.enablePlanImmediately,
-				})
-			: undefined;
-
-	const deferBillingPlan = latestStripeInvoice
-		? shouldDeferBillingPlan({
-				billingContext,
-				latestStripeInvoice,
-				requiredAction,
-			})
-		: false;
-
-	let autumnInvoice: Invoice | undefined;
-	if (latestStripeInvoice) {
-		logger.debug(`[execSubAction] Upserting invoice from billing`);
-		autumnInvoice = await invoiceActions.upsertFromStripe({
-			ctx,
-			stripeInvoice: latestStripeInvoice,
-			fullCustomer: billingContext.fullCustomer,
-			fullProducts: billingContext.fullProducts,
-		});
-	}
-
-	addStripeSubscriptionIdToBillingPlan({
-		autumnBillingPlan: billingPlan.autumn,
-		stripeSubscriptionId: stripeSubscription.id,
-	});
-
-	// Add subscription to DB
-	logger.debug(`[execSubAction] Upserting subscription from billing`);
-	await upsertSubscriptionFromBilling({
-		ctx,
-		stripeSubscription,
-	});
-
-	if (deferBillingPlan) {
-		logger.debug(`[execSubAction] Inserting metadata from billing plan`);
-
-		// Required if we resume after and carry out subscription schedule action
-		const deferredBillingContext = {
-			...billingContext,
+		let latestStripeInvoice = getLatestInvoiceFromSubscriptionAction({
 			stripeSubscription,
-		};
-
-		const deferredInvoiceMode = isDeferredInvoiceMode({
+			subscriptionAction,
 			billingContext,
 		});
 
-		await insertMetadataFromBillingPlan({
+		latestStripeInvoice = await applyTemplateToDraft({
 			ctx,
-			billingPlan,
-			billingContext: deferredBillingContext,
-			stripeInvoice: latestStripeInvoice,
-			expiresAt: getDeferredBillingMetadataExpiresAt({
-				deferredInvoiceMode,
-				paymentMethod: billingContext.paymentMethod,
-			}),
-			resumeAfter: StripeBillingStage.SubscriptionAction,
+			stripeCli,
+			invoice: latestStripeInvoice,
+			footer: billingContext.invoiceMode?.footer,
+			memo: billingContext.invoiceMode?.memo,
 		});
 
-		return {
-			stripeInvoice: latestStripeInvoice,
-			stripeSubscription,
-			deferred: true,
-			requiredAction,
-			autumnInvoice,
-		};
-	}
+		// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
+		// or the public invoice_mode.finalize for the other actions (updateSubscription,
+		// multiAttach, createSchedule) that don't wire setupFinalizeFirstInvoice.
+		const shouldFinalize =
+			billingContext.shouldFinalizeFirstInvoice ??
+			billingContext.invoiceMode?.finalizeInvoice ??
+			false;
 
-	// If the stripe subscription is canceled, remove the subscription from the billing plan
-	if (isStripeSubscriptionCanceled(stripeSubscription)) {
-		logger.debug(`[execSubAction] removing subscription from billing plan`);
-		removeStripeSubscriptionIdFromBillingPlan({
+		if (
+			latestStripeInvoice &&
+			shouldFinalize &&
+			latestStripeInvoice.status === "draft"
+		) {
+			logger.debug(`[execSubAction] Finalizing invoice`);
+			latestStripeInvoice = await finalizeStripeInvoice({
+				stripeCli,
+				invoiceId: latestStripeInvoice.id,
+			});
+		}
+
+		// Determine required action from invoice payment intent status (only if open)
+		const requiredAction =
+			latestStripeInvoice?.status === "open"
+				? await getRequiredActionFromSubscriptionInvoice({
+						stripeClient: stripeCli,
+						invoiceId: latestStripeInvoice!.id,
+						hasPaymentMethod: Boolean(billingContext.paymentMethod),
+						invoiceMode: billingContext.invoiceMode ?? undefined,
+						enablePlanImmediately: billingContext.enablePlanImmediately,
+					})
+				: undefined;
+
+		const deferBillingPlan = latestStripeInvoice
+			? shouldDeferBillingPlan({
+					billingContext,
+					latestStripeInvoice,
+					requiredAction,
+				})
+			: false;
+
+		let autumnInvoice: Invoice | undefined;
+		if (latestStripeInvoice) {
+			logger.debug(`[execSubAction] Upserting invoice from billing`);
+			autumnInvoice = await invoiceActions.upsertFromStripe({
+				ctx,
+				stripeInvoice: latestStripeInvoice,
+				fullCustomer: billingContext.fullCustomer,
+				fullProducts: billingContext.fullProducts,
+			});
+		}
+
+		addStripeSubscriptionIdToBillingPlan({
 			autumnBillingPlan: billingPlan.autumn,
 			stripeSubscriptionId: stripeSubscription.id,
 		});
 
-		stripeSubscription = undefined;
-	}
+		// Add subscription to DB
+		logger.debug(`[execSubAction] Upserting subscription from billing`);
+		await upsertSubscriptionFromBilling({
+			ctx,
+			stripeSubscription,
+		});
 
-	return {
-		stripeSubscription,
-		stripeInvoice: latestStripeInvoice,
-		autumnInvoice,
-	};
+		if (deferBillingPlan) {
+			logger.debug(`[execSubAction] Inserting metadata from billing plan`);
+
+			// Required if we resume after and carry out subscription schedule action
+			const deferredBillingContext = {
+				...billingContext,
+				stripeSubscription,
+			};
+
+			const deferredInvoiceMode = isDeferredInvoiceMode({
+				billingContext,
+			});
+
+			await insertMetadataFromBillingPlan({
+				ctx,
+				billingPlan,
+				billingContext: deferredBillingContext,
+				stripeInvoice: latestStripeInvoice,
+				expiresAt: getDeferredBillingMetadataExpiresAt({
+					deferredInvoiceMode,
+					paymentMethod: billingContext.paymentMethod,
+				}),
+				resumeAfter: StripeBillingStage.SubscriptionAction,
+			});
+
+			return {
+				stripeInvoice: latestStripeInvoice,
+				stripeSubscription,
+				deferred: true,
+				requiredAction,
+				autumnInvoice,
+			};
+		}
+
+		// If the stripe subscription is canceled, remove the subscription from the billing plan
+		if (isStripeSubscriptionCanceled(stripeSubscription)) {
+			logger.debug(`[execSubAction] removing subscription from billing plan`);
+			removeStripeSubscriptionIdFromBillingPlan({
+				autumnBillingPlan: billingPlan.autumn,
+				stripeSubscriptionId: stripeSubscription.id,
+			});
+
+			stripeSubscription = undefined;
+		}
+
+		return {
+			stripeSubscription,
+			stripeInvoice: latestStripeInvoice,
+			autumnInvoice,
+		};
+	} catch (error) {
+		throw markStripeSubscriptionActionApplied(error);
+	}
 };
