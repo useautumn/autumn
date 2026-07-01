@@ -193,6 +193,22 @@ const runAndReply = async ({
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
 	const ticker = createStatusTicker(target);
+	let publicStatusStarted = false;
+	const startThinking = () => {
+		publicStatusStarted = true;
+		ticker.thinking();
+	};
+	const postPrivateCompletionNotice = async () => {
+		if (!publicStatusStarted || target.isDM) return;
+		try {
+			await target.post({ markdown: "_I replied privately._" });
+		} catch (error) {
+			logger.warn("Could not post private completion notice", {
+				event: "leaf.slack_private_completion_notice_failed",
+				error,
+			});
+		}
+	};
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const installation = await findSlackInstallationForWorkspace({
@@ -246,16 +262,21 @@ const runAndReply = async ({
 			const card = bootstrapLoading;
 			bootstrapLoading = null;
 			await finishLoading(target, card, "Autumn started.");
-			ticker.thinking();
+			startThinking();
 		};
-		run = registerRun({ key: runKey, kind: "message" });
-		// Follow-ups have no bootstrap card, so the status starts right away.
-		if (isFollowUp) {
-			ticker.thinking();
-		}
-		const logAction = (message: string) => ticker.activity(message);
-		const logKeyed = ({ message }: { key: string; message: string }) =>
+		run = registerRun({
+			key: runKey,
+			kind: "message",
+			ownerProviderUserId: providerUserId,
+		});
+		const logAction = (message: string) => {
+			publicStatusStarted = true;
 			ticker.activity(message);
+		};
+		const logKeyed = ({ message }: { key: string; message: string }) => {
+			publicStatusStarted = true;
+			ticker.activity(message);
+		};
 		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
@@ -276,7 +297,7 @@ const runAndReply = async ({
 			onAgentReady: completeBootstrap,
 			onApprovalsSuperseded: (approvals) =>
 				editSupersededApprovalCards({ approvals, logger, target }),
-			onThinking: ticker.thinking,
+			onThinking: startThinking,
 			onTurnComplete: async (turnText) => {
 				await target.post({ markdown: turnText });
 			},
@@ -322,7 +343,20 @@ const runAndReply = async ({
 		if (postedApproval) return;
 
 		await finishLoading(target, loading, "Done.");
-		await target.post({ markdown: output.text || "Done." });
+
+		if (output.ephemeral) {
+			await finishLoading(target, bootstrapLoading, "Request handled privately.");
+			bootstrapLoading = null;
+			ticker.stop();
+			await postPrivateCompletionNotice();
+			await target.postEphemeral(
+				providerUserId,
+				{ markdown: output.text || "Done." },
+				{ fallbackToDM: true },
+			);
+		} else {
+			await target.post({ markdown: output.text || "Done." });
+		}
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {

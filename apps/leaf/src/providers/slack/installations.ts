@@ -3,6 +3,7 @@ import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
 	apiKeys,
+	type ChatAuthMode,
 	type ChatInstallation,
 	type ChatInstallState,
 	type ChatProvider,
@@ -13,8 +14,8 @@ import {
 	organizations,
 } from "@autumn/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
-import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
 import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
+import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
@@ -128,6 +129,7 @@ export const replaceInstallation = async ({
 	botAccessToken,
 	scopes,
 	agentScopes,
+	authMode,
 	installedByProviderUserId,
 }: {
 	state: ChatInstallState;
@@ -138,6 +140,7 @@ export const replaceInstallation = async ({
 	botAccessToken: string;
 	scopes: string[];
 	agentScopes?: string[];
+	authMode?: ChatAuthMode;
 	installedByProviderUserId?: string;
 }) => {
 	const sameOrg = and(
@@ -169,6 +172,7 @@ export const replaceInstallation = async ({
 				bot_user_id: botUserId,
 				bot_access_token: encrypt(botAccessToken),
 				scopes,
+				auth_mode: authMode,
 				default_env: state.env,
 				installed_by_user_id: state.userId,
 				installed_by_provider_user_id: installedByProviderUserId,
@@ -182,6 +186,7 @@ export const replaceInstallation = async ({
 			installation,
 			userId: state.userId,
 			agentScopes,
+			authMode,
 		});
 	});
 };

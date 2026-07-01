@@ -54,6 +54,7 @@ export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
 export * from "./models/attachModels/attachPreviewModels";
 export * from "./models/authModels/membership";
+export * from "./models/chatModels/chatEnums";
 export * from "./models/chatModels/chatTable";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
@@ -231,7 +232,9 @@ export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
 export * from "./utils/auth/autumnOAuthScopes";
+export * from "./utils/auth/getScopesForUserInOrg";
 export * from "./utils/auth/oauthScopeUtils";
+export * from "./utils/auth/slackScopes";
 export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";
 // Checkout Utils

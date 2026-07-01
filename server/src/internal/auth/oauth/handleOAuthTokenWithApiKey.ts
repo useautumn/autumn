@@ -4,6 +4,7 @@ import {
 	getOAuthResourceScopes,
 	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
+	UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
 } from "@autumn/auth/oauth";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
@@ -22,6 +23,7 @@ import {
 	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
+import { getRefreshTokenForConsentLookup } from "./tokenRequestFields.js";
 
 const getString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
@@ -114,17 +116,8 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
-const getRefreshToken = async (request: Request) => {
-	try {
-		const body = new URLSearchParams(await request.text());
-		return getString(body.get("refresh_token"));
-	} catch {
-		return null;
-	}
-};
-
 const getRefreshTokenConsentId = async (request: Request) => {
-	const refreshToken = await getRefreshToken(request);
+	const refreshToken = await getRefreshTokenForConsentLookup(request);
 	if (!refreshToken) return null;
 
 	const hashedToken = await hashOAuthToken(refreshToken);
@@ -154,6 +147,26 @@ const getUniqueOAuthConsentId = async ({
 	return consents.length === 1 ? consents[0]!.id : null;
 };
 
+const isUnrestrictedChatOAuthConsentMetadata = (metadata: unknown) =>
+	!!metadata &&
+	typeof metadata === "object" &&
+	!Array.isArray(metadata) &&
+	(metadata as Record<string, unknown>).kind ===
+		UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
+
+const allowsScopeLessOAuthToken = async ({
+	oauthConsentId,
+}: {
+	oauthConsentId: string | null;
+}) => {
+	if (!oauthConsentId) return false;
+	const metadata = await oauthConsentRepo.getMetadataById({
+		db,
+		consentId: oauthConsentId,
+	});
+	return isUnrestrictedChatOAuthConsentMetadata(metadata);
+};
+
 // better-auth issues a stateless JWT access token whenever a `resource`
 // (audience) is present, which never lands in oauth_access_token and so can't
 // be validated by handleOAuthMiddleware or linked to a consent. Drop `resource`
@@ -181,8 +194,12 @@ const stripResourceParam = async (request: Request): Promise<Request> => {
 
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
-	const refreshTokenConsentId = await getRefreshTokenConsentId(c.req.raw.clone());
-	const response = await auth.handler(await stripResourceParam(c.req.raw.clone()));
+	const refreshTokenConsentId = await getRefreshTokenConsentId(
+		c.req.raw.clone(),
+	);
+	const response = await auth.handler(
+		await stripResourceParam(c.req.raw.clone()),
+	);
 	if (!response.ok) return response;
 
 	let body: Record<string, unknown>;
@@ -217,15 +234,25 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				userId: tokenRecord.userId,
 			}));
 		tokenRecord.oauthConsentId = oauthConsentId;
-		if (tokenRecord.scopes.length === 0) {
+		const isMcpClient = await isMcpOAuthClient({
+			clientId: tokenRecord.clientId,
+			db,
+			resource: resource ?? undefined,
+		});
+		const isScopeLessChatToken =
+			tokenRecord.scopes.length === 0 &&
+			isMcpClient &&
+			(await allowsScopeLessOAuthToken({ oauthConsentId }));
+		if (tokenRecord.scopes.length === 0 && !isScopeLessChatToken) {
 			throw new RecaseError({
 				message: "OAuth token has no scopes",
 				code: ErrCode.InvalidRequest,
 				statusCode: 401,
 			});
 		}
-		const issuedScopes =
-			tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
+		const issuedScopes = isScopeLessChatToken
+			? []
+			: tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
 				? (parsedRequestedScopes ?? tokenRecord.scopes)
 				: await getOAuthConsentScopeGrant({
 						db,
@@ -262,11 +289,6 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				});
 			}
 		}
-		const isMcpClient = await isMcpOAuthClient({
-			clientId: tokenRecord.clientId,
-			db,
-			resource: resource ?? undefined,
-		});
 		if (isMcpClient && !tokenRecord.oauthConsentId) {
 			throw new RecaseError({
 				message: "OAuth token consent is ambiguous",
