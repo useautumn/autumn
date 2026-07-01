@@ -1,5 +1,7 @@
 import {
 	type AppEnv,
+	ErrCode,
+	RecaseError,
 	type RevenuecatMappingInsert,
 	revenuecatMappings,
 } from "@shared/index";
@@ -58,7 +60,7 @@ export class RCMappingService {
 		autumnProductId: string;
 		featureQuantities?: RevenuecatFeatureQuantity[];
 	} | null> {
-		const [mapping] = await db
+		const matches = await db
 			.select()
 			.from(revenuecatMappings)
 			.where(
@@ -70,8 +72,21 @@ export class RCMappingService {
 					]),
 				),
 			)
-			.limit(1);
+			.limit(2);
 
+		// A RC SKU mapped to >1 Autumn product is ambiguous — fail loudly rather
+		// than provisioning against an arbitrarily-picked product.
+		if (matches.length > 1) {
+			throw new RecaseError({
+				message: `RevenueCat product ${revenuecatProductId} is mapped to multiple Autumn products (${matches
+					.map((m) => m.autumn_product_id)
+					.join(", ")}). Resolve the ambiguous mapping before syncing.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const [mapping] = matches;
 		if (!mapping) return null;
 
 		return {

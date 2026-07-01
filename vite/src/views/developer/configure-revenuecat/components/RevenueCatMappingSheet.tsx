@@ -1,4 +1,8 @@
-import { getPrepaidDisplayQuantity, type ProductV2 } from "@autumn/shared";
+import {
+	getPrepaidDisplayQuantity,
+	type ProductV2,
+	UsageModel,
+} from "@autumn/shared";
 import {
 	FormLabel,
 	IconButton,
@@ -25,7 +29,17 @@ import {
 } from "@/hooks/queries/revcat/useRCMappings";
 import { useRCProducts } from "@/hooks/queries/revcat/useRCProducts";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { getPrepaidItems } from "@/utils/product/productItemUtils";
+
+// Metered / usage-based feature-price items bill at runtime, which the RC attach
+// path (no_billing_changes) can't collect. Only prepaid feature-prices are
+// supported, so exclude products carrying any non-prepaid feature-price item.
+const hasUnsupportedUsagePrice = (product: ProductV2): boolean =>
+	product.items?.some(
+		(item) =>
+			isFeaturePriceItem(item) && item.usage_model !== UsageModel.Prepaid,
+	) ?? false;
 
 interface PrepaidFeature {
 	featureId: string;
@@ -343,7 +357,9 @@ export function RevenueCatMappingSheet({
 				productMap.set(product.id, product);
 			}
 		}
-		return Array.from(productMap.values());
+		return Array.from(productMap.values()).filter(
+			(product) => !hasUnsupportedUsagePrice(product),
+		);
 	}, [allProducts]);
 
 	// productId -> prepaid features (featureId + billing units). Presence here
@@ -468,6 +484,11 @@ export function RevenueCatMappingSheet({
 			featureId: string,
 			packs: number | undefined,
 		) => {
+			// Reject NaN / negatives so we never store an invalid prepaid quantity.
+			const safePacks =
+				packs === undefined || !Number.isFinite(packs) || packs < 0
+					? undefined
+					: packs;
 			setMappings((prev) =>
 				prev.map((mapping) =>
 					mapping.autumnProductId === autumnProductId
@@ -477,7 +498,7 @@ export function RevenueCatMappingSheet({
 									...mapping.featurePacks,
 									[revenueCatProductId]: {
 										...(mapping.featurePacks[revenueCatProductId] ?? {}),
-										[featureId]: packs,
+										[featureId]: safePacks,
 									},
 								},
 							}

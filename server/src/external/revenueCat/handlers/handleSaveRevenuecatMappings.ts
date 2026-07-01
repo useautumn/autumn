@@ -5,7 +5,7 @@ import { RCMappingService } from "../misc/RCMappingService";
 
 const FeatureQuantitySchema = z.object({
 	feature_id: z.string(),
-	quantity: z.number().optional(),
+	quantity: z.number().nonnegative().optional(),
 });
 
 const MappingSchema = z.object({
