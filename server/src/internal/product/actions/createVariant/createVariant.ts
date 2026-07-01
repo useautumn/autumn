@@ -4,16 +4,15 @@ import {
 	type CreateVariantParamsV2,
 	ErrCode,
 	type FullProduct,
-	ProcessorType,
 	RecaseError,
 	billingControlsFromColumns,
-	copyStripeResourcesToMatchingPrice,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import { createProduct } from "../createProduct.js";
 
 const getVariantItems = ({
@@ -72,46 +71,6 @@ const getVariantCreateParams = ({
 	create_in_stripe: false,
 	base_internal_product_id: base.internal_id,
 });
-
-const copyBaseStripeResourcesToVariant = async ({
-	ctx,
-	base,
-	variant,
-}: {
-	ctx: AutumnContext;
-	base: FullProduct;
-	variant: FullProduct;
-}) => {
-	if (
-		base.processor?.type === ProcessorType.Stripe &&
-		base.processor.id &&
-		variant.processor?.id !== base.processor.id
-	) {
-		variant.processor = base.processor;
-		await ProductService.updateByInternalId({
-			db: ctx.db,
-			internalId: variant.internal_id,
-			update: { processor: base.processor },
-		});
-	}
-
-	for (const targetPrice of variant.prices) {
-		const { copiedFields } = copyStripeResourcesToMatchingPrice({
-			targetPrice,
-			candidatePrices: base.prices,
-			targetEntitlements: variant.entitlements,
-			candidateEntitlements: base.entitlements,
-		});
-
-		if (copiedFields.length > 0) {
-			await PriceService.update({
-				db: ctx.db,
-				id: targetPrice.id,
-				update: { config: targetPrice.config },
-			});
-		}
-	}
-};
 
 export const createVariant = async ({
 	ctx,
@@ -176,11 +135,13 @@ export const createVariant = async ({
 		env,
 	});
 
-	await copyBaseStripeResourcesToVariant({
+	await applyStripeResourceReuseForProduct({
 		ctx,
-		base,
-		variant,
+		product: variant,
+		candidateProducts: [base],
 	});
+
+	await applyStripeReuseFromVariantFamilies({ ctx, products: [variant] });
 
 	await initProductInStripe({ ctx, product: variant });
 

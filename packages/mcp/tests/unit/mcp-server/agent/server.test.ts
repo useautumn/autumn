@@ -160,8 +160,9 @@ describe("Autumn MCP server", () => {
 		expect(conceptsText).toContain("actual balance source");
 		expect(conceptsText).toContain("Auto top-ups are customer-level only");
 		expect(conceptsText).toContain("Never use `auto_enable: true`");
-		expect(conceptsText).toContain('no concept of "variants"');
-		expect(conceptsText).toContain("`pro_monthly` or `pro_annual`");
+		expect(conceptsText).toContain("Variants group related plans");
+		expect(conceptsText).toContain("variant_details.customize");
+		expect(conceptsText).toContain("Annual interval variant");
 		expect(conceptsText).toContain("Do not create duplicate features");
 		expect(conceptsText).toContain("`monthly_tokens` and `one_time_tokens`");
 		expect(conceptsText).toContain("Boolean plan items cannot be paid today");
@@ -192,7 +193,7 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain("## Target resolution");
 		expect(billingText).toContain("## Action selection");
 		expect(billingText).toContain("## Param checklist");
-		expect(billingText).toContain("## Customizations");
+		expect(billingText).toContain("## Billing customizations");
 		expect(billingText).toContain("## Timing and schedules");
 		expect(billingText).toContain("## Billing behavior");
 		expect(billingText).toContain("## Preview and approval");
@@ -210,9 +211,9 @@ describe("Autumn MCP server", () => {
 			billingText.indexOf("## Param checklist"),
 		);
 		expect(billingText.indexOf("## Param checklist")).toBeLessThan(
-			billingText.indexOf("## Customizations"),
+			billingText.indexOf("## Billing customizations"),
 		);
-		expect(billingText.indexOf("## Customizations")).toBeLessThan(
+		expect(billingText.indexOf("## Billing customizations")).toBeLessThan(
 			billingText.indexOf("## Timing and schedules"),
 		);
 		expect(billingText.indexOf("## Timing and schedules")).toBeLessThan(
@@ -254,9 +255,12 @@ describe("Autumn MCP server", () => {
 			"Once approved, apply the exact previewed billing action",
 		);
 		expect(billingText).toContain(
-			"Never use `customize.items` (PUT-style full replacement) or `update_items`",
+			"For general `customize` patch rules and examples",
 		);
-		expect(billingText).toContain("Change prepaid to usage-based");
+		expect(conceptsText).toContain(
+			"Plan item changes are PATCH-style: use `add_items` and `remove_items`",
+		);
+		expect(conceptsText).toContain("Change prepaid to usage-based");
 		expect(billingText).toContain('plan_schedule: "immediate"');
 		expect(billingText).toContain("dateToEpochMilliseconds");
 		expect(billingText).toContain('`starts_at: "now"`');
@@ -294,7 +298,7 @@ describe("Autumn MCP server", () => {
 		expect(billingText).toContain("`feature_quantities.quantity` is inclusive");
 		expect(
 			billingText.match(
-				/ask the user whether they want to customize the base price/g,
+				/ask whether they want to customize the base price/g,
 			) ?? [],
 		).toHaveLength(1);
 		expect(billingText).toContain("Enterprise or custom placeholder plan");

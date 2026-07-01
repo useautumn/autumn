@@ -368,13 +368,13 @@ export const updateProduct = async ({
 		!effectiveDisableVersion &&
 		(itemsExist || freeTrialProvided)
 	) {
-		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
 			features,
 		});
 
-		const productSame = itemsSame && freeTrialsSame && billingControlsSame;
+		const productSame = itemsSame && freeTrialsSame;
 
 		if (!productSame) {
 			const newProduct = await handleVersionProductV2({

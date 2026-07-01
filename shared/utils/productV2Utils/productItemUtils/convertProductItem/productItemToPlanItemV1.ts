@@ -1,4 +1,3 @@
-import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { PlanExpand } from "@api/products/components/planExpand.js";
 import {
 	type ApiPlanItemV1,
@@ -24,6 +23,7 @@ import {
 	itemToBillingIntervalCount,
 	itemToEntIntervalCount,
 } from "../itemIntervalUtils.js";
+import { itemToBillingMethod } from "../matchPlanItem.js";
 import { addIncludedToTiers } from "../tierUtils.js";
 import { itemIntvToResetIntv } from "./planItemIntervals.js";
 
@@ -82,10 +82,12 @@ const itemToPlanFeaturePrice = ({
 			: undefined;
 
 	// V1 schema uses billing_method, NOT usage_model
-	const billingMethod =
-		item.usage_model === UsageModel.PayPerUse
-			? BillingMethod.UsageBased
-			: BillingMethod.Prepaid;
+	const billingMethod = itemToBillingMethod({ item });
+	if (!billingMethod) {
+		throw new InternalError({
+			message: `Missing billing method for item ${item.feature_id}`,
+		});
+	}
 
 	return {
 		amount: price ?? undefined,

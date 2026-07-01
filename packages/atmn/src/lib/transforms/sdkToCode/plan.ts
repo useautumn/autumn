@@ -75,6 +75,12 @@ export function buildPlanCode(
 		lines.push(`\tfreeTrial: ${formatValue(plan.freeTrial)},`);
 	}
 
+	if (plan.billingControls) {
+		lines.push(
+			`\tbillingControls: billingControls(${formatValue(plan.billingControls)}),`,
+		);
+	}
+
 	lines.push(`});`);
 
 	return lines.join("\n");

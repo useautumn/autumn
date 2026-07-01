@@ -42,7 +42,6 @@ CREATE TABLE "plan_license" (
 );
 --> statement-breakpoint
 ALTER TABLE "products" ADD COLUMN "catalog_type" text DEFAULT 'plan' NOT NULL;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_catalog_type_check" CHECK ("products"."catalog_type" in ('plan', 'license'));--> statement-breakpoint
 ALTER TABLE "license_assignments" ADD CONSTRAINT "license_assignments_pool_fkey" FOREIGN KEY ("license_pool_id") REFERENCES "public"."license_pools"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "license_assignments" ADD CONSTRAINT "license_assignments_customer_fkey" FOREIGN KEY ("internal_customer_id") REFERENCES "public"."customers"("internal_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "license_assignments" ADD CONSTRAINT "license_assignments_entity_fkey" FOREIGN KEY ("internal_entity_id") REFERENCES "public"."entities"("internal_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -70,4 +69,5 @@ CREATE INDEX CONCURRENTLY "idx_license_pools_org_env_customer" ON "license_pools
 CREATE INDEX CONCURRENTLY "idx_plan_license_parent" ON "plan_license" USING btree ("parent_internal_product_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_plan_license_license" ON "plan_license" USING btree ("license_internal_product_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_plan_license_org_env" ON "plan_license" USING btree ("org_id","env");--> statement-breakpoint
-CREATE INDEX CONCURRENTLY "idx_products_org_env_catalog_id_version" ON "products" USING btree ("org_id","env","catalog_type","id","version");
+CREATE INDEX CONCURRENTLY "idx_products_org_env_catalog_id_version" ON "products" USING btree ("org_id","env","catalog_type","id","version");--> statement-breakpoint
+ALTER TABLE "products" ADD CONSTRAINT "products_catalog_type_check" CHECK ("products"."catalog_type" in ('plan', 'license'));

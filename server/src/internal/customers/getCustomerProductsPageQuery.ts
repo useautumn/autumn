@@ -5,6 +5,7 @@ import {
 	ProductCatalogType,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
@@ -195,6 +196,7 @@ export const getCustomerProductsPageQuery = ({
 		${cursorPredicate}
 		${customerProductsOrderBy}
 		LIMIT ${fetchLimit}
+		${planetScaleTag({ query: "getCustomerProductsPage" })}
 	`;
 };
 
@@ -212,6 +214,7 @@ export const getCustomerProductsCountQuery = ({
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
+		${planetScaleTag({ query: "getCustomerProductsCount" })}
 	`;
 };
 

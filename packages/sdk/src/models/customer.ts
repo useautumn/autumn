@@ -667,7 +667,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const CustomerRewardsType = {
+export const CustomerDiscountType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -677,7 +677,7 @@ export const CustomerRewardsType = {
 /**
  * The type of reward
  */
-export type CustomerRewardsType = OpenEnum<typeof CustomerRewardsType>;
+export type CustomerDiscountType = OpenEnum<typeof CustomerDiscountType>;
 
 /**
  * How long the discount lasts
@@ -704,7 +704,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: CustomerRewardsType;
+  type: CustomerDiscountType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -1620,10 +1620,10 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const CustomerRewardsType$inboundSchema: z.ZodMiniType<
-  CustomerRewardsType,
+export const CustomerDiscountType$inboundSchema: z.ZodMiniType<
+  CustomerDiscountType,
   unknown
-> = openEnums.inboundSchema(CustomerRewardsType);
+> = openEnums.inboundSchema(CustomerDiscountType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1636,7 +1636,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: CustomerRewardsType$inboundSchema,
+    type: CustomerDiscountType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),

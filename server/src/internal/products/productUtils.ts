@@ -43,6 +43,7 @@ import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { ProductService } from "./ProductService.js";
 import { PriceService } from "./prices/PriceService.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
+import { applyStripeResourceReuseForProduct } from "./stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
 	const latestProducts = products.reduce((acc: any, product: any) => {
@@ -522,6 +523,8 @@ export const initProductInStripe = async ({
 	product: FullProduct;
 }): Promise<undefined> => {
 	const { org, env, logger, db } = ctx;
+	await applyStripeResourceReuseForProduct({ ctx, product });
+
 	if (env === AppEnv.Live) return;
 	if (!isStripeConnected({ org, env })) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;

@@ -91,6 +91,11 @@ function generatePlanWithVariantsCode({
 	return [basePlanCode, ...variantCodes].join("\n\n");
 }
 
+const ensureBillingControlsImport = (importText: string) => {
+	if (/\bbillingControls\b/.test(importText)) return importText;
+	return importText.replace(/\{/, "{ billingControls,");
+};
+
 /**
  * Update autumn.config.ts in place
  *
@@ -113,6 +118,7 @@ export async function updateConfigInPlace(
 	}
 
 	const parsed = parseExistingConfig(configPath);
+	const includeBillingControls = plans.some((plan) => plan.billingControls);
 	const result: UpdateResult = {
 		featuresUpdated: 0,
 		featuresAdded: 0,
@@ -240,6 +246,11 @@ export async function updateConfigInPlace(
 			// Check if this is the atmn import
 			if (/from\s+['"]atmn['"]/.test(importText)) {
 				hasAtmnImport = true;
+				if (includeBillingControls) {
+					outputBlocks.push(ensureBillingControlsImport(importText));
+					lastImportBlockIndex = outputBlocks.length - 1;
+					continue;
+				}
 			}
 			outputBlocks.push(importText);
 			lastImportBlockIndex = outputBlocks.length - 1;
@@ -301,7 +312,7 @@ export async function updateConfigInPlace(
 
 	// Add atmn import if missing
 	if (!hasAtmnImport) {
-		const atmnImport = buildImports();
+		const atmnImport = buildImports({ includeBillingControls });
 		if (lastImportBlockIndex >= 0) {
 			// Insert after the last import
 			outputBlocks.splice(lastImportBlockIndex + 1, 0, atmnImport);

@@ -13823,7 +13823,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782758219833,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783967819833,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -23843,7 +23843,7 @@ paths:
         from the customer's entitlements if omitted — only required when a
         customer has multiple AI credit systems. (optional)
 
-        @param modelId - The AI model as '<provider>/<model>' (e.g.
+        @param modelId - The AI model as '[provider]/[model]' (e.g.
         'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider
         is the first path segment and must match a provider + model key in
         models.dev.
@@ -23903,7 +23903,7 @@ paths:
                     customer has multiple AI credit systems.
                 model_id:
                   type: string
-                  description: The AI model as '<provider>/<model>' (e.g.
+                  description: The AI model as '[provider]/[model]' (e.g.
                     'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o').
                     The provider is the first path segment and must match a
                     provider + model key in models.dev.
@@ -27649,6 +27649,239 @@ paths:
                     customer_id: <string>
                     reward_id: <string>
       x-speakeasy-name-override: redeemCode
+      parameters:
+        - *a1
+  /v1/rewards.list:
+    post:
+      operationId: listRewards
+      description: List the coupons and feature grants configured for the org.
+      tags:
+        - rewards
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RewardsListParams
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for the coupon.
+                        name:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A human-readable name for the coupon.
+                        type:
+                          enum:
+                            - percentage_discount
+                            - fixed_discount
+                            - invoice_credits
+                          type: string
+                          description: "The type of discount: percentage_discount, fixed_discount, or
+                            invoice_credits."
+                        value:
+                          type: number
+                          description: The discount value. A percentage for percentage_discount, or an
+                            amount for fixed_discount / invoice_credits.
+                        duration:
+                          type: object
+                          properties:
+                            type:
+                              enum:
+                                - one_off
+                                - months
+                                - forever
+                              type: string
+                              description: The unit of time the duration is measured in.
+                            length:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: The number of `type` periods the duration lasts, or null when the
+                                type has no length (e.g. one_off, forever).
+                          required:
+                            - type
+                            - length
+                          description: How long the coupon applies once redeemed.
+                        plan_ids:
+                          anyOf:
+                            - type: array
+                              items:
+                                type: string
+                            - type: "null"
+                          description: The plan IDs the coupon applies to, or null when it applies to all
+                            plans.
+                        promo_codes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              code:
+                                type: string
+                                description: The promo code customers enter to redeem the coupon.
+                              global_max_redemption:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Maximum number of times this promo code can be redeemed across all
+                                  customers, or null for unlimited.
+                              first_time_transaction:
+                                anyOf:
+                                  - type: boolean
+                                  - type: "null"
+                                description: Whether this promo code can only be applied to a customer's first
+                                  transaction.
+                            required:
+                              - code
+                          description: The promo codes customers can use to redeem the coupon.
+                        created_at:
+                          type: number
+                          description: The Unix timestamp (in milliseconds) when the coupon was created.
+                      required:
+                        - id
+                        - type
+                        - value
+                        - duration
+                        - plan_ids
+                        - promo_codes
+                        - created_at
+                      examples:
+                        - id: summer_sale
+                          name: Summer Sale
+                          type: percentage_discount
+                          value: 20
+                          duration:
+                            type: months
+                            length: 3
+                          plan_ids:
+                            - pro
+                            - starter
+                          promo_codes:
+                            - code: SUMMER20
+                              global_max_redemption: 100
+                              first_time_transaction: false
+                          created_at: 1718000000000
+                    description: The list of coupons configured for the organization.
+                  feature_grants:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for the feature grant.
+                        name:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: A human-readable name for the feature grant.
+                        grants:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature ID this grant applies to.
+                              included:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: The amount of the feature granted, or null for boolean features.
+                              expiry:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      type:
+                                        enum:
+                                          - day
+                                          - week
+                                          - month
+                                          - year
+                                        type: string
+                                        description: The unit of time the duration is measured in.
+                                      length:
+                                        anyOf:
+                                          - type: number
+                                          - type: "null"
+                                        description: The number of `type` periods the duration lasts, or null when the
+                                          type has no length (e.g. one_off,
+                                          forever).
+                                    required:
+                                      - type
+                                      - length
+                                  - type: "null"
+                                description: How long the granted amount lasts before expiring, or null for a
+                                  permanent grant.
+                            required:
+                              - feature_id
+                              - included
+                              - expiry
+                          description: The feature grants awarded when the grant is redeemed.
+                        promo_codes:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              code:
+                                type: string
+                                description: The promo code customers enter to redeem the feature grant.
+                              max_uses:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: Maximum number of times this promo code can be redeemed, or null
+                                  for unlimited.
+                            required:
+                              - code
+                              - max_uses
+                          description: The promo codes customers can use to redeem the feature grant.
+                        created_at:
+                          type: number
+                          description: The Unix timestamp (in milliseconds) when the feature grant was
+                            created.
+                      required:
+                        - id
+                        - grants
+                        - promo_codes
+                        - created_at
+                      examples:
+                        - id: beta_credits_grant
+                          name: Beta Tester Credits
+                          promo_codes:
+                            - code: BETA2024
+                              max_uses: 500
+                          grants:
+                            - feature_id: credits
+                              included: 1000
+                              expiry:
+                                type: month
+                                length: 1
+                          created_at: 1718000000000
+                    description: The list of feature grants configured for the organization.
+                required:
+                  - coupons
+                  - feature_grants
+                examples:
+                  - coupons: []
+                    feature_grants: []
+      x-speakeasy-name-override: list
       parameters:
         - *a1
   /v1/rewards.redeem:

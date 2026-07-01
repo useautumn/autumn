@@ -1,28 +1,30 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { AppEnv, ProcessorType } from "@autumn/shared";
-import { Button, Dialog } from "@autumn/ui";
+import {
+	Button,
+	Dialog,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+	useDropdownShortcut,
+} from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
+	SlidersHorizontalIcon,
 	SubtractIcon,
 	TicketIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useDropdownShortcut } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -113,6 +115,17 @@ export function CustomerActions() {
 					>
 						<PencilSimpleIcon />
 						Edit customer
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() => {
+							setSheet({ type: "customer-config-edit" });
+							setActionsOpen(false);
+						}}
+						className="flex gap-2"
+						shortcut="g"
+					>
+						<SlidersHorizontalIcon />
+						Edit config
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => setCreateEntityOpen(true)}

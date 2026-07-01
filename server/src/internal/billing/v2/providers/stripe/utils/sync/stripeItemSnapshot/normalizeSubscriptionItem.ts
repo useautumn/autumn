@@ -45,12 +45,15 @@ export const normalizeSubscriptionItem = ({
 		stripe_price_id: stripePriceId,
 		stripe_product_id: stripeProductId,
 		unit_amount: price.unit_amount ?? null,
+		unit_amount_decimal:
+			price.unit_amount_decimal ?? price.unit_amount?.toString() ?? null,
 		currency: price.currency ?? null,
 		quantity: stripeItem.quantity ?? 1,
 		billing_scheme: (price.billing_scheme as "per_unit" | "tiered") ?? null,
 		tiers_mode: (price.tiers_mode as "graduated" | "volume") ?? null,
 		tiers: extractTiers({ price }),
 		recurring_interval: price.recurring?.interval ?? null,
+		recurring_interval_count: price.recurring?.interval_count ?? null,
 		recurring_usage_type:
 			(price.recurring?.usage_type as "licensed" | "metered") ?? null,
 		metadata: stripeItem.metadata ?? {},

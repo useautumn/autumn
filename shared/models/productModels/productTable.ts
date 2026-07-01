@@ -62,6 +62,10 @@ export const products = pgTable(
 		index("idx_products_org_env_catalog_id_version")
 			.on(table.org_id, table.env, table.catalog_type, table.id, table.version)
 			.concurrently(),
+		index("idx_products_org_env_base_internal_product_id")
+			.on(table.org_id, table.env, table.base_internal_product_id)
+			.where(sql`${table.base_internal_product_id} IS NOT NULL`)
+			.concurrently(),
 		check(
 			"products_catalog_type_check",
 			sql`${table.catalog_type} in ('plan', 'license')`,

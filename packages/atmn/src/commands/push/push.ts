@@ -7,6 +7,10 @@ import type {
 	PlanItemFilter,
 	Variant,
 } from "../../compose/models/index.js";
+import type {
+	CatalogPreviewUpdateResponse,
+	CatalogUpdateParams,
+} from "../../lib/api/endpoints/index.js";
 import {
 	archiveFeature as archiveFeatureApi,
 	archivePlan as archivePlanApi,
@@ -34,15 +38,11 @@ import {
 	transformApiPlans,
 } from "../../lib/transforms/apiToSdk/index.js";
 import {
-	transformPlanItem,
 	transformFeatureToApi,
+	transformPlanItem,
 	transformPlanToApi,
 } from "../../lib/transforms/sdkToApi/index.js";
 import { writeConfig } from "../pull/writeConfig.js";
-import type {
-	CatalogPreviewUpdateResponse,
-	CatalogUpdateParams,
-} from "../../lib/api/endpoints/index.js";
 import type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
@@ -553,6 +553,10 @@ function normalizePlanForCompare(plan: Plan): Record<string, unknown> {
 		};
 	}
 
+	if (plan.billingControls != null) {
+		result.billingControls = plan.billingControls;
+	}
+
 	if (plan.items != null && plan.items.length > 0) {
 		result.items = [...plan.items]
 			.sort((a, b) => a.featureId.localeCompare(b.featureId))
@@ -646,9 +650,6 @@ function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
 						: null,
 				}
 			: {}),
-		...(customize.billingControls !== undefined
-			? { billing_controls: customize.billingControls }
-			: {}),
 	};
 }
 
@@ -683,9 +684,7 @@ function toCatalogPlanParams(
 	const apiPlan = transformPlanToApi(plan) as Record<string, unknown>;
 	const { description, id, ...rest } = apiPlan;
 	const historical = isHistoricalPlan({ latestVersionById, plan });
-	const updateCurrent =
-		historical ||
-		intent === "update_current";
+	const updateCurrent = historical || intent === "update_current";
 	const updateAllVersions = intent === "update_all_versions";
 	const shouldCreateMigration =
 		createMigration && (updateCurrent || updateAllVersions);
@@ -786,9 +785,7 @@ function collectSkippedPropagationVariantIds({
 				variantPropagationSelections[selectionKey] ??
 				variantPropagationSelections[planChange.plan_id] ??
 				[]
-			).map(
-				(variant) => variant.variant_plan_id,
-			),
+			).map((variant) => variant.variant_plan_id),
 		);
 
 		const localPlan =
