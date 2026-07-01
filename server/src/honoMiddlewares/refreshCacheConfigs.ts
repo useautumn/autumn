@@ -143,6 +143,11 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		method: "POST",
 		url: "/customers.update",
 	}),
+
+	route({
+		method: "POST",
+		url: "/dfu.flash",
+	}),
 ];
 
 export const getRefreshCacheRouteConfig = ({

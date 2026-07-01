@@ -14,6 +14,8 @@ export * from "./checkout/prevVersions/checkoutResponseV0";
 export * from "./common/index";
 export * from "./createSchedule/createScheduleParamsV0";
 export * from "./createSchedule/createScheduleResponse";
+// DFU (customer imaging / live migration)
+export * from "./dfu/dfuFlashParams";
 export * from "./openBillingPortal/openBillingPortalParamsV1";
 export * from "./openBillingPortal/openBillingPortalResponse";
 // Setup Payment
