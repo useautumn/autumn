@@ -18,6 +18,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import {
+	constructAiCreditSystem,
 	constructBooleanFeature,
 	constructCreditSystem,
 	constructMeteredFeature,
@@ -47,6 +48,7 @@ const { db } = initDrizzle();
 const MSG_FEATURE = "copy_messages";
 const DASH_FEATURE = "copy_dashboard";
 const CREDIT_FEATURE = "copy_credits";
+const AI_CREDIT_FEATURE = "copy_ai_credits";
 const PRODUCT_ID = "copy_pro";
 
 const suffix = crypto.randomUUID().slice(0, 8);
@@ -131,6 +133,20 @@ const seedSourceSandbox = async (sourceOrg: Organization) => {
 	await createFeature({
 		ctx: { ...seedCtx, features: afterMetered },
 		data: credits,
+		skipGenerateDisplay: true,
+	});
+
+	const aiCredits = constructAiCreditSystem({
+		featureId: AI_CREDIT_FEATURE,
+		orgId: sourceOrg.id,
+		env: AppEnv.Sandbox,
+		modelMarkups: {
+			"anthropic/claude-3-5-haiku-20241022": { markup: 20 },
+		},
+	});
+	await createFeature({
+		ctx: { ...seedCtx, features: afterMetered },
+		data: aiCredits,
 		skipGenerateDisplay: true,
 	});
 
@@ -219,7 +235,7 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 
 		// All three feature types copied across the org boundary.
 		expect(targetFeatures.map((f) => f.id).sort()).toEqual(
-			[CREDIT_FEATURE, DASH_FEATURE, MSG_FEATURE].sort(),
+			[AI_CREDIT_FEATURE, CREDIT_FEATURE, DASH_FEATURE, MSG_FEATURE].sort(),
 		);
 
 		// The product copied, and its items still reference the copied features.
@@ -300,6 +316,27 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		expect(caught).toBeInstanceOf(RecaseError);
 		expect((caught as RecaseError).code).toBe(ErrCode.OrgNotFound);
 		expect((caught as RecaseError).statusCode).toBe(404);
+	});
+
+	test("rejects a self-copy (same source and target) with a 400", async () => {
+		if (!source) throw new Error("source not provisioned");
+
+		let caught: unknown;
+		try {
+			await copySandboxForOrg({
+				db,
+				ctx: baseCtx,
+				masterOrg: defaultCtx.org,
+				fromSandboxId: source.id,
+				toSandboxId: source.id,
+			});
+		} catch (error) {
+			caught = error;
+		}
+
+		expect(caught).toBeInstanceOf(RecaseError);
+		expect((caught as RecaseError).code).toBe(ErrCode.InvalidRequest);
+		expect((caught as RecaseError).statusCode).toBe(400);
 	});
 });
 
