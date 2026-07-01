@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ChatApproval } from "@autumn/shared";
+import type { AppEnv, ChatApproval } from "@autumn/shared";
 import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import {
@@ -20,14 +20,18 @@ import { findSessionToolResult } from "./session/findSessionToolResult.js";
 const client = new Anthropic();
 
 const clearSuspendedTool = async ({
+	env,
+	orgId,
 	sessionId,
 	toolUseId,
 }: {
+	env: AppEnv;
+	orgId: string;
 	sessionId: string;
 	toolUseId: string;
 }) => {
 	try {
-		await cmaRepo.deleteSessionById({ db, sessionId });
+		await cmaRepo.deleteSessionById({ db, env, orgId, sessionId });
 		await driveSessionTurn({
 			autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
 			client,
@@ -81,7 +85,12 @@ export const resumeClaudeManagedApproval = async ({
 				toolName: approval.tool_name,
 				args: approval.tool_args,
 			});
-			void clearSuspendedTool({ sessionId, toolUseId });
+			void clearSuspendedTool({
+				env: approval.env,
+				orgId: approval.org_id,
+				sessionId,
+				toolUseId,
+			});
 			return { result, text: "", toolName: approval.tool_name };
 		} catch (error) {
 			return approvalErrorResult(error);

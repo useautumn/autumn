@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	RecaseError,
 	SLACK_EMAIL_SCOPE,
+	SLACK_USERS_READ_SCOPE,
 } from "@autumn/shared";
 
 export const slackProvider = "slack" as const;
@@ -42,7 +43,9 @@ export const createSlackInstallUrl = (state: string) => {
 				.map((scope) => scope.trim())
 				.filter(Boolean)
 		: [...DEFAULT_SLACK_BOT_SCOPES];
-	const scope = [...new Set([...configured, SLACK_EMAIL_SCOPE])].join(",");
+	const scope = [
+		...new Set([...configured, SLACK_USERS_READ_SCOPE, SLACK_EMAIL_SCOPE]),
+	].join(",");
 	const params = new URLSearchParams({
 		client_id: getRequiredChatEnv("SLACK_CLIENT_ID"),
 		scope,

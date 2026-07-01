@@ -53,13 +53,31 @@ const authorizeSlackApprovalClicker = async ({
 	approval: ChatApproval;
 	providerUserId: string;
 }) => {
-	const required = approvalScopeRequirements[approval.tool_name];
-	if (!required || isSlackAdminProvider({ provider: approval.provider })) {
+	// Slack-admin approvals are gated upstream by validateSlackAdminAccess, not
+	// by the clicker's own Autumn scopes.
+	if (isSlackAdminProvider({ provider: approval.provider })) {
 		return { allowed: true } as const;
+	}
+
+	// Every approval-gated (destructive) tool must declare a scope requirement.
+	// An unlisted tool means a new destructive tool shipped without one, so fail
+	// closed rather than let any workspace member approve an unchecked action.
+	const required = approvalScopeRequirements[approval.tool_name];
+	if (!required) {
+		rootLogger.warn("Approval tool missing scope requirement", {
+			event: "leaf.approval_scope_requirement_missing",
+			tool: approval.tool_name,
+			data: { org_id: approval.org_id, provider: approval.provider },
+		});
+		return {
+			allowed: false,
+			text: `I can't determine the permissions required to approve ${detailsFromApproval({ approval }).toolName}, so I won't run it.`,
+		} as const;
 	}
 
 	const installation = await db.query.chatInstallations.findFirst({
 		where: and(
+			eq(chatInstallations.org_id, approval.org_id),
 			eq(chatInstallations.provider, approval.provider),
 			eq(chatInstallations.workspace_id, approval.workspace_id),
 		),

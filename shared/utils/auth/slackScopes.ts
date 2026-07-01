@@ -1,3 +1,4 @@
+export const SLACK_USERS_READ_SCOPE = "users:read";
 export const SLACK_EMAIL_SCOPE = "users:read.email";
 
 export const DEFAULT_SLACK_BOT_SCOPES: readonly string[] = [
@@ -14,6 +15,6 @@ export const DEFAULT_SLACK_BOT_SCOPES: readonly string[] = [
 	"im:write",
 	"mpim:history",
 	"mpim:read",
-	"users:read",
+	SLACK_USERS_READ_SCOPE,
 	SLACK_EMAIL_SCOPE,
 ];

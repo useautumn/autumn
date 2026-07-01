@@ -60,23 +60,27 @@ export const fetchSlackUserEmail = async ({
 	const url = new URL(SLACK_USERS_INFO_URL);
 	url.searchParams.set("user", slackUserId);
 
-	const response = await fetch(url, {
-		headers: { Authorization: `Bearer ${botToken}` },
-	});
-	if (!response.ok) {
+	try {
+		const response = await fetch(url, {
+			headers: { Authorization: `Bearer ${botToken}` },
+		});
+		if (!response.ok) {
+			return null;
+		}
+
+		const parsed = slackUsersInfoSchema.safeParse(await response.json());
+		if (!(parsed.success && parsed.data.ok) || !parsed.data.user) {
+			return null;
+		}
+
+		const { user } = parsed.data;
+		if (user.deleted || user.is_bot) {
+			return null;
+		}
+
+		const email = user.profile?.email?.trim();
+		return email ? email : null;
+	} catch {
 		return null;
 	}
-
-	const parsed = slackUsersInfoSchema.safeParse(await response.json());
-	if (!(parsed.success && parsed.data.ok) || !parsed.data.user) {
-		return null;
-	}
-
-	const { user } = parsed.data;
-	if (user.deleted || user.is_bot) {
-		return null;
-	}
-
-	const email = user.profile?.email?.trim();
-	return email ? email : null;
 };

@@ -90,12 +90,24 @@ export const cmaRepo = {
 
 	deleteSessionById: async ({
 		db,
+		env,
+		orgId,
 		sessionId,
 	}: {
 		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
 		sessionId: string;
 	}) => {
-		await db.delete(cmaSessions).where(eq(cmaSessions.session_id, sessionId));
+		await db
+			.delete(cmaSessions)
+			.where(
+				and(
+					eq(cmaSessions.org_id, orgId),
+					eq(cmaSessions.env, env),
+					eq(cmaSessions.session_id, sessionId),
+				),
+			);
 	},
 
 	getVaultId: async ({

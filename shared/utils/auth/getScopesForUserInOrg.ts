@@ -61,7 +61,9 @@ export async function getScopesForUserInOrg({
 
 	const rawRole = membership.role;
 	const canonicalRole: Role | undefined =
-		rawRole in ROLE_SCOPES ? (rawRole as Role) : undefined;
+		Object.prototype.hasOwnProperty.call(ROLE_SCOPES, rawRole)
+			? (rawRole as Role)
+			: undefined;
 
 	if (!canonicalRole) {
 		console.warn(
