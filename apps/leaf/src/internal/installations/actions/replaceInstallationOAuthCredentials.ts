@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
+import { UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND } from "@autumn/auth/oauth";
 import {
 	AppEnv,
 	ChatAuthMode,
@@ -33,6 +34,11 @@ const WEB_OAUTH_REDIRECT_URI = "https://app.useautumn.com/chat";
 type OAuthConsentMetadata =
 	| {
 			kind: typeof SLACK_ADMIN_CONSENT_KIND;
+			chatInstallationId: string;
+			createdByUserId: string;
+	  }
+	| {
+			kind: typeof UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
 			chatInstallationId: string;
 			createdByUserId: string;
 	  }
@@ -82,9 +88,11 @@ const getProviderOAuthConfig = ({
 };
 
 const getOAuthConsentMetadata = ({
+	authMode,
 	installation,
 	userId,
 }: {
+	authMode?: ChatAuthMode;
 	installation: ChatInstallation;
 	userId: string;
 }): OAuthConsentMetadata =>
@@ -94,7 +102,13 @@ const getOAuthConsentMetadata = ({
 				chatInstallationId: installation.id,
 				createdByUserId: userId,
 			}
-		: {};
+		: authMode === ChatAuthMode.Unrestricted
+			? {
+					kind: UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
+					chatInstallationId: installation.id,
+					createdByUserId: userId,
+				}
+			: {};
 
 const tokenHash = ({ token }: { token: string }) => {
 	const hash = crypto.createHash("sha256").update(token).digest();
@@ -217,6 +231,7 @@ const createCredentialForEnv = async ({
 	tx,
 	installation,
 	config,
+	authMode,
 	env,
 	orgId,
 	userId,
@@ -225,6 +240,7 @@ const createCredentialForEnv = async ({
 	tx: ChatTransaction;
 	installation: ChatInstallation;
 	config: ProviderOAuthConfig;
+	authMode?: ChatAuthMode;
 	env: AppEnv;
 	orgId: string;
 	userId: string;
@@ -238,7 +254,7 @@ const createCredentialForEnv = async ({
 	const refreshTokenExpiresAt = now + REFRESH_TOKEN_TTL_MS;
 	const refreshTokenId = `oauth_refresh_${crypto.randomUUID().replace(/-/g, "")}`;
 	const accessTokenId = `oauth_access_${crypto.randomUUID().replace(/-/g, "")}`;
-	const metadata = getOAuthConsentMetadata({ installation, userId });
+	const metadata = getOAuthConsentMetadata({ authMode, installation, userId });
 	const consentId = await upsertOAuthConsent({
 		tx,
 		env,
@@ -380,6 +396,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
+		authMode,
 		env: AppEnv.Sandbox,
 		orgId,
 		userId,
@@ -389,6 +406,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
+		authMode,
 		env: AppEnv.Live,
 		orgId,
 		userId,
