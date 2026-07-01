@@ -98,7 +98,6 @@ export const runMessage = async ({
 			});
 			if (callerAuth.usePerUser) {
 				if (!callerAuth.ok) {
-					await onAgentReady?.();
 					return {
 						env: getDefaultChatEnv(),
 						text: callerAuth.text,
