@@ -90,6 +90,7 @@ export const ErrCode = {
 	CustomerEntitlementNotFound: "customer_entitlement_not_found",
 	MultipleCustomersFound: "multiple_customers_found",
 	InvalidUpdateCustomerParams: "invalid_update_customer_params",
+	CurrencyMismatch: "currency_mismatch",
 
 	// Stripe errors...?
 	CreateStripeProductFailed: "create_stripe_product_failed",

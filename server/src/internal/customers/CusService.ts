@@ -29,6 +29,7 @@ import {
 	getTableColumns,
 	ilike,
 	inArray,
+	isNull,
 	or,
 	sql,
 	type Table,
@@ -751,6 +752,31 @@ export class CusService {
 			// biome-ignore lint/complexity/noUselessCatch: hello
 			throw error;
 		}
+	}
+
+	// Sets currency only when still null, so concurrent first-paid attaches can't
+	// clobber each other (a locked-to-different currency is already blocked upstream).
+	static async lockCurrencyIfUnset({
+		ctx,
+		internalCustomerId,
+		currency,
+	}: {
+		ctx: RepoContext;
+		internalCustomerId: string;
+		currency: string;
+	}) {
+		const { db, org, env } = ctx;
+		await db
+			.update(customers)
+			.set({ currency })
+			.where(
+				and(
+					eq(customers.internal_id, internalCustomerId),
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+					isNull(customers.currency),
+				),
+			);
 	}
 
 	static async deleteByInternalId({

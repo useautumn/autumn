@@ -110,6 +110,7 @@ export const createNewCustomer = async ({
 					type: "stripe",
 				}
 			: undefined,
+		currency: parsedCustomer.currency?.toLowerCase() || null,
 	};
 
 	// Check if stripeCli exists

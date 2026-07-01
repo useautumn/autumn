@@ -1,9 +1,7 @@
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
-import {
-	DbBillingControlsSchema,
-} from "./billingControls/customerBillingControls.js";
+import { DbBillingControlsSchema } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
 	id: z.string().nullish(), // given by user
@@ -20,6 +18,7 @@ export const CustomerSchema = z.object({
 	processors: ExternalProcessorsSchema.nullish(),
 	metadata: z.record(z.any(), z.any()).nullish().default({}),
 	send_email_receipts: z.boolean().default(false),
+	currency: z.string().nullish(),
 	...DbBillingControlsSchema.shape,
 	config: z
 		.object({
@@ -79,6 +78,7 @@ export const CreateCustomerSchema = z.object({
 	stripe_id: z.string().nullish(),
 	processors: ExternalProcessorsSchema.nullish(),
 	send_email_receipts: z.boolean().default(false),
+	currency: z.string().nullish(),
 });
 
 export type CreateCustomer = z.infer<typeof CreateCustomerSchema>;

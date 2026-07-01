@@ -56,6 +56,11 @@ export const CustomerDataSchema = z
 			description: "Whether to send email receipts to this customer",
 		}),
 
+		currency: z.string().nullish().meta({
+			description:
+				"Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.",
+		}),
+
 		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the customer (auto top-ups, etc.)",
 		}),

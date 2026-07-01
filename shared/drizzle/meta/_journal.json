@@ -225,6 +225,13 @@
       "when": 1782573840271,
       "tag": "0031_absent_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1782827315856,
+      "tag": "0032_flimsy_yellow_claw",
+      "breakpoints": true
     }
   ]
 }
