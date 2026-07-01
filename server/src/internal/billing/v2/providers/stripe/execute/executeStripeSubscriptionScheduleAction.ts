@@ -162,6 +162,15 @@ const schedulePhaseToUpdatePhase = (
 	...(phase.metadata && { metadata: phase.metadata }),
 });
 
+const getRestorableSchedulePhases = (
+	schedule: Stripe.SubscriptionSchedule,
+) => {
+	const currentPhaseStart = schedule.current_phase?.start_date;
+	if (!currentPhaseStart) return schedule.phases;
+
+	return schedule.phases.filter((phase) => phase.end_date > currentPhaseStart);
+};
+
 /**
  * Creates a schedule from an existing subscription and updates it with phases.
  * This is the standard pattern for both "create" and "update" actions.
@@ -216,7 +225,9 @@ export const restoreReleasedSubscriptionSchedule = async ({
 		stripeCli,
 		subscriptionId,
 		params: {
-			phases: releasedSchedule.phases.map(schedulePhaseToUpdatePhase),
+			phases: getRestorableSchedulePhases(releasedSchedule).map(
+				schedulePhaseToUpdatePhase,
+			),
 			end_behavior: releasedSchedule.end_behavior,
 		},
 		stripeSubscription,

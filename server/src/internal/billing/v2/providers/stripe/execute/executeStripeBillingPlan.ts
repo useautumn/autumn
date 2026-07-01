@@ -63,10 +63,13 @@ const rollbackInvoiceAction = async ({
 	billingContext: BillingContext;
 	invoiceResult?: StripeBillingPlanResult;
 }) => {
-	const stripeInvoice = invoiceResult?.stripeInvoice;
-	if (!stripeInvoice) return;
+	const invoiceId = invoiceResult?.stripeInvoice?.id;
+	if (!invoiceId) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeInvoice = await stripeCli.invoices.retrieve(invoiceId, {
+		expand: ["payments.data.payment.payment_intent"],
+	});
 	const customerId = billingContext.fullCustomer.id ?? "";
 
 	if (stripeInvoice.status === "draft") {
@@ -103,12 +106,9 @@ const rollbackInvoiceAction = async ({
 
 	if (stripeInvoice.status !== "paid") return;
 
-	const expandedInvoice = await stripeCli.invoices.retrieve(stripeInvoice.id, {
-		expand: ["payments.data.payment.payment_intent"],
-	});
 	const charge = await resolveChargeFromInvoice({
 		stripeCli,
-		stripeInvoice: expandedInvoice,
+		stripeInvoice,
 	});
 
 	if (!charge) {
