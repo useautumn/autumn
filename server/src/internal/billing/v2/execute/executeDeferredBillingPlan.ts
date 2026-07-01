@@ -45,7 +45,6 @@ export const executeDeferredBillingPlan = async ({
 		billingPlan,
 		billingContext,
 		resumeAfter,
-		resumeInvoice: stripeInvoice,
 	});
 
 	if (stripeSubscription) {

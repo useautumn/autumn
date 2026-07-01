@@ -7,7 +7,6 @@ const mockState = {
 	createCalls: [] as unknown[],
 	releaseCalls: [] as unknown[],
 	updateCalls: [] as unknown[],
-	cusProductUpdates: [] as unknown[],
 };
 
 mock.module("@server/external/connect/createStripeCli", () => ({
@@ -52,26 +51,13 @@ mock.module(
 	}),
 );
 
-mock.module("@/internal/customers/cusProducts/CusProductService", () => ({
-	CusProductService: {
-		updateByStripeScheduledId: async (params: unknown) => {
-			mockState.cusProductUpdates.push(params);
-		},
-	},
-}));
-
-import {
-	executeStripeSubscriptionScheduleAction,
-	restoreReleasedSubscriptionSchedule,
-} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 
 const ctx = {
-	db: {},
 	org: { id: "org_123" },
 	env: "sandbox",
 	logger: {
 		debug: mock(() => {}),
-		info: mock(() => {}),
 	},
 } as unknown as AutumnContext;
 
@@ -80,7 +66,6 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		mockState.createCalls = [];
 		mockState.releaseCalls = [];
 		mockState.updateCalls = [];
-		mockState.cusProductUpdates = [];
 	});
 
 	test("updates standalone future schedules without requiring a subscription id", async () => {
@@ -284,77 +269,6 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		expect(updateParams.params.phases?.[2]?.items?.[0]?.price).toBe(
 			"price_current_inline",
 		);
-	});
-
-	test("restoring a released schedule skips historical phases", async () => {
-		await restoreReleasedSubscriptionSchedule({
-			ctx,
-			billingContext: {
-				stripeSubscriptionSchedule: {
-					id: "sched_released",
-					subscription: "sub_123",
-					current_phase: { start_date: 1000, end_date: 2000 },
-					end_behavior: "release",
-					phases: [
-						{
-							start_date: 500,
-							end_date: 1000,
-							items: [{ price: { id: "price_past" }, quantity: 1 }],
-							proration_behavior: "none",
-						},
-						{
-							start_date: 1000,
-							end_date: 2000,
-							add_invoice_items: [
-								{
-									price: { id: "price_phase_invoice_item" },
-									quantity: 1,
-									tax_rates: [{ id: "txr_invoice_item" }],
-								},
-							],
-							application_fee_percent: 12.5,
-							automatic_tax: { enabled: true, liability: { type: "self" } },
-							default_tax_rates: [{ id: "txr_phase" }],
-							invoice_settings: {
-								account_tax_ids: [{ id: "txi_phase" }],
-								days_until_due: 10,
-								issuer: { type: "self" },
-							},
-							items: [{ price: { id: "price_current" }, quantity: 1 }],
-							proration_behavior: "none",
-							trial_end: 1500,
-						},
-						{
-							start_date: 2000,
-							end_date: 3000,
-							items: [{ price: { id: "price_future" }, quantity: 1 }],
-							proration_behavior: "none",
-						},
-					],
-				},
-			} as unknown as BillingContext,
-		});
-
-		const updateParams = mockState.updateCalls[0] as {
-			params: Stripe.SubscriptionScheduleUpdateParams;
-		};
-		const phases = updateParams.params.phases ?? [];
-
-		expect(phases).toHaveLength(2);
-		expect(phases.some((phase) => phase.start_date === 500)).toBe(false);
-		expect(phases[0]?.add_invoice_items?.[0]?.price).toBe(
-			"price_phase_invoice_item",
-		);
-		expect(phases[0]?.add_invoice_items?.[0]?.tax_rates).toEqual([
-			"txr_invoice_item",
-		]);
-		expect(phases[0]?.application_fee_percent).toBe(12.5);
-		expect(phases[0]?.automatic_tax?.enabled).toBe(true);
-		expect(phases[0]?.default_tax_rates).toEqual(["txr_phase"]);
-		expect(phases[0]?.invoice_settings?.account_tax_ids).toEqual(["txi_phase"]);
-		expect(phases[0]?.invoice_settings?.days_until_due).toBe(10);
-		expect(phases[0]?.trial_end).toBe(1500);
-		expect(mockState.cusProductUpdates).toHaveLength(1);
 	});
 });
 

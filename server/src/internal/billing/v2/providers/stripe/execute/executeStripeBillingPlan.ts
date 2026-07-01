@@ -12,14 +12,8 @@ import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
-import {
-	didStripeSubscriptionActionApply,
-	executeStripeSubscriptionAction,
-} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
-import {
-	executeStripeSubscriptionScheduleAction,
-	restoreReleasedSubscriptionSchedule,
-} from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
+import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import {
 	createRefundAndUpdateInvoice,
@@ -66,13 +60,10 @@ const rollbackInvoiceAction = async ({
 	billingContext: BillingContext;
 	invoiceResult?: StripeBillingPlanResult;
 }) => {
-	const invoiceId = invoiceResult?.stripeInvoice?.id;
-	if (!invoiceId) return;
+	const stripeInvoice = invoiceResult?.stripeInvoice;
+	if (!stripeInvoice) return;
 
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const stripeInvoice = await stripeCli.invoices.retrieve(invoiceId, {
-		expand: ["payments.data.payment.payment_intent"],
-	});
 	const customerId = billingContext.fullCustomer.id ?? "";
 
 	if (stripeInvoice.status === "draft") {
@@ -95,9 +86,7 @@ const rollbackInvoiceAction = async ({
 		stripeInvoice.status === "open" ||
 		stripeInvoice.status === "uncollectible"
 	) {
-		const voidedInvoice = await stripeCli.invoices.voidInvoice(
-			stripeInvoice.id,
-		);
+		const voidedInvoice = await stripeCli.invoices.voidInvoice(stripeInvoice.id);
 		await invoiceActions.updateFromStripe({
 			ctx,
 			customerId,
@@ -111,9 +100,12 @@ const rollbackInvoiceAction = async ({
 
 	if (stripeInvoice.status !== "paid") return;
 
+	const expandedInvoice = await stripeCli.invoices.retrieve(stripeInvoice.id, {
+		expand: ["payments.data.payment.payment_intent"],
+	});
 	const charge = await resolveChargeFromInvoice({
 		stripeCli,
-		stripeInvoice,
+		stripeInvoice: expandedInvoice,
 	});
 
 	if (!charge) {
@@ -158,13 +150,11 @@ const rollbackAfterSubscriptionFailure = async ({
 	billingContext,
 	invoiceResult,
 	stripeInvoiceItems,
-	restoreSchedule,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	invoiceResult?: StripeBillingPlanResult;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
-	restoreSchedule?: () => Promise<void>;
 }) => {
 	const rollbackErrors: unknown[] = [];
 	const runRollbackStep = async (
@@ -187,12 +177,6 @@ const rollbackAfterSubscriptionFailure = async ({
 		"[executeStripeBillingPlan] Failed to roll back invoice after subscription action failed",
 		() => rollbackInvoiceAction({ ctx, billingContext, invoiceResult }),
 	);
-	if (restoreSchedule) {
-		await runRollbackStep(
-			"[executeStripeBillingPlan] Failed to restore released subscription schedule after subscription action failed",
-			restoreSchedule,
-		);
-	}
 
 	if (!rollbackErrors.length) return;
 
@@ -207,13 +191,11 @@ export const executeStripeBillingPlan = async ({
 	billingPlan,
 	billingContext,
 	resumeAfter,
-	resumeInvoice,
 }: {
 	ctx: AutumnContext;
 	billingPlan: BillingPlan;
 	billingContext: BillingContext;
 	resumeAfter?: StripeBillingStage;
-	resumeInvoice?: Stripe.Invoice;
 }): Promise<StripeBillingPlanResult> => {
 	const {
 		subscriptionAction: stripeSubscriptionAction,
@@ -234,9 +216,7 @@ export const executeStripeBillingPlan = async ({
 	}
 
 	// Collect results from each stage
-	let invoiceResult: StripeBillingPlanResult | undefined = resumeInvoice
-		? { stripeInvoice: resumeInvoice }
-		: undefined;
+	let invoiceResult: StripeBillingPlanResult | undefined;
 	let subscriptionResult: StripeBillingPlanResult | undefined;
 	let stripeSubscription = billingContext.stripeSubscription;
 
@@ -270,7 +250,6 @@ export const executeStripeBillingPlan = async ({
 	// For schedule release, we need to release first before updating subscription with cancel_at
 	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
 	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
-	let releasedSubscriptionSchedule = false;
 
 	if (isReleaseAction && !resumeAfterSubscriptionAction) {
 		await executeStripeSubscriptionScheduleAction({
@@ -279,7 +258,6 @@ export const executeStripeBillingPlan = async ({
 			subscriptionScheduleAction: stripeSubscriptionScheduleAction,
 			stripeSubscription,
 		});
-		releasedSubscriptionSchedule = true;
 	}
 
 	if (stripeSubscriptionAction && !resumeAfterSubscriptionAction) {
@@ -290,23 +268,11 @@ export const executeStripeBillingPlan = async ({
 				billingContext,
 			});
 		} catch (error) {
-			if (didStripeSubscriptionActionApply(error)) {
-				throw error;
-			}
-
 			const rollbackError = await rollbackAfterSubscriptionFailure({
 				ctx,
 				billingContext,
 				invoiceResult,
 				stripeInvoiceItems,
-				restoreSchedule: releasedSubscriptionSchedule
-					? () =>
-							restoreReleasedSubscriptionSchedule({
-								ctx,
-								billingContext,
-								stripeSubscription,
-							})
-					: undefined,
 			});
 			if (rollbackError) {
 				throw new AggregateError(
