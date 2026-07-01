@@ -5,7 +5,7 @@ import {
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { format, getDate, getMonth, setDate } from "date-fns";
+import { format, getDate, getDaysInMonth, getMonth, setDate } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -74,7 +74,10 @@ export const getStripeSubscriptionAnchor = async ({
 	const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
 	const nextResetDay = getDate(nextResetAtDate);
 
-	if (billingCycleDay > nextResetDay) {
+	if (
+		billingCycleDay > nextResetDay &&
+		billingCycleDay <= getDaysInMonth(nextResetAtDate)
+	) {
 		nextResetAtDate = setDate(nextResetAtDate, billingCycleDay);
 		return nextResetAtDate.getTime();
 	} else {
