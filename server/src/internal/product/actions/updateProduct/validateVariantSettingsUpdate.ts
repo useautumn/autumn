@@ -12,6 +12,7 @@ const variantSettingsFields = [
 	"is_add_on",
 	"is_default",
 	"config",
+	"billing_controls",
 	"metadata",
 ] as const satisfies readonly (keyof UpdateProductV2Params)[];
 
@@ -26,7 +27,7 @@ const normalizeVariantSettingValue = ({
 	// Treat "" and null/undefined as the same empty description; the editor sends
 	// "" while a description-less plan stores null, which isn't a real change.
 	if (field === "description") return value || null;
-	if (["config", "metadata"].includes(field)) {
+	if (["config", "billing_controls", "metadata"].includes(field)) {
 		return JSON.stringify(value ?? {});
 	}
 	return value;

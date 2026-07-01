@@ -234,3 +234,55 @@ test.concurrent(`${chalk.yellowBright("customer config: updating billing_control
 	expect(uncached.config?.disable_pooled_balance).toBe(true);
 	expect(uncached.billing_controls?.spend_limits).toEqual([]);
 });
+
+test.concurrent(`${chalk.yellowBright("customer config: customers.update RPC patches disable_overage_billing")}`, async () => {
+	const customerId = "customer-config-disable-overage-rpc";
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	const before = await autumnV2_1.post("/customers.get", {
+		customer_id: customerId,
+	});
+	expect(before.config?.disable_overage_billing).toBeUndefined();
+
+	await autumnV2_1.customers.updateRpc(customerId, {
+		config: { disable_overage_billing: true },
+	});
+
+	const enabled = await autumnV2_1.post("/customers.get", {
+		customer_id: customerId,
+	});
+	expect(enabled.config?.disable_overage_billing).toBe(true);
+
+	await autumnV2_1.customers.updateRpc(customerId, {
+		config: { disable_pooled_balance: true },
+	});
+
+	const pooled = await autumnV2_1.post("/customers.get", {
+		customer_id: customerId,
+	});
+	expect(pooled.config?.disable_overage_billing).toBe(true);
+	expect(pooled.config?.disable_pooled_balance).toBe(true);
+
+	await autumnV2_1.customers.updateRpc(customerId, {
+		config: { disable_overage_billing: false },
+	});
+
+	const disabled = await autumnV2_1.post("/customers.get", {
+		customer_id: customerId,
+	});
+	expect(disabled.config?.disable_overage_billing).toBe(false);
+	expect(disabled.config?.disable_pooled_balance).toBe(true);
+
+	const getOrCreate = await autumnV2_1.post("/customers.get_or_create", {
+		customer_id: customerId,
+	});
+	expect(getOrCreate.config?.disable_overage_billing).toBe(false);
+
+	const fromDb = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	expect(fromDb.config?.disable_overage_billing).toBe(false);
+	expect(fromDb.config?.disable_pooled_balance).toBe(true);
+});

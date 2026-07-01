@@ -161,8 +161,20 @@ function VersionStatusBadges({
 	);
 }
 
-function VersionBody({ row }: { row: MigrateTargetRow }) {
-	const hasChanges = row.itemChanges.length > 0 || row.hasPriceChange;
+function VersionBody({
+	row,
+	showSettings,
+}: {
+	row: MigrateTargetRow;
+	showSettings: boolean;
+}) {
+	// Settings (config, billing controls, …) are a global metadata patch shared by
+	// every version, so the mixed-change view surfaces them once above the targets.
+	const settingChanges = showSettings ? row.settingChanges : [];
+	const hasChanges =
+		row.itemChanges.length > 0 ||
+		row.hasPriceChange ||
+		settingChanges.length > 0;
 	return (
 		<div className="flex flex-col gap-1.5">
 			{row.itemChanges.length > 0 && (
@@ -173,7 +185,7 @@ function VersionBody({ row }: { row: MigrateTargetRow }) {
 					Base price change
 				</span>
 			)}
-			{row.settingChanges.map((change) => (
+			{settingChanges.map((change) => (
 				<div className="flex items-center gap-1.5 text-xs" key={change.key}>
 					<span className="font-medium text-foreground">{change.label}</span>
 					<span className="text-muted-foreground">{change.detail}</span>
@@ -199,9 +211,11 @@ function VersionBody({ row }: { row: MigrateTargetRow }) {
 export function MigrateTargetsStep({
 	targets,
 	showCustomers = true,
+	showSettings = true,
 }: {
 	targets: MigrateTarget[];
 	showCustomers?: boolean;
+	showSettings?: boolean;
 }) {
 	if (targets.length === 0) {
 		return (
@@ -233,7 +247,7 @@ export function MigrateTargetsStep({
 							</div>
 						</div>
 						{singleRow ? (
-							<VersionBody row={target.rows[0]} />
+							<VersionBody row={target.rows[0]} showSettings={showSettings} />
 						) : (
 							<div className="flex flex-col gap-2">
 								{target.rows.map((row) => (
@@ -242,7 +256,7 @@ export function MigrateTargetsStep({
 											row={row}
 											showCustomers={showCustomers}
 										/>
-										<VersionBody row={row} />
+										<VersionBody row={row} showSettings={showSettings} />
 									</div>
 								))}
 							</div>

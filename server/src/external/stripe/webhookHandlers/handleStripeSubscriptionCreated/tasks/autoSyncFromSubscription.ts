@@ -1,20 +1,14 @@
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync.js";
+import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams.js";
 import { isAutumnCheckoutSubscription } from "@/internal/billing/v2/actions/sync/utils/isAutumnCheckoutSubscription.js";
 import { shouldSkipSubscriptionSync } from "../../common/subscriptionSync/shouldSkipSubscriptionSync.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
 /**
- * On Stripe subscription create, run detection on the new subscription and
- * (when safe) execute a syncV2 to materialize the matching Autumn customer
- * products.
- *
- * Eligibility is gated by `canAutoSync` — conservative defaults: any
- * unmatched Stripe item, custom feature price, plan warning, or
- * unresolvable base price aborts auto-sync. Custom BASE prices are
- * accepted (handled via `customize.price`).
+ * Custom base prices can auto-sync; custom feature prices and unresolved items
+ * still abort via canAutoSync.
  */
 export const autoSyncFromSubscription = async ({
 	ctx,

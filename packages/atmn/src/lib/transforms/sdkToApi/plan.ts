@@ -20,6 +20,7 @@ export interface ApiPlanParams {
 		duration_length: number;
 		card_required: boolean;
 	};
+	billing_controls?: Plan["billingControls"];
 }
 
 export interface ApiPlanItemParams {
@@ -193,6 +194,10 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 			duration_length: plan.freeTrial.durationLength,
 			card_required: plan.freeTrial.cardRequired,
 		};
+	}
+
+	if (plan.billingControls !== undefined) {
+		result.billing_controls = plan.billingControls;
 	}
 
 	return result;

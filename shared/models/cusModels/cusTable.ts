@@ -17,6 +17,7 @@ import { organizations } from "../orgModels/orgTable.js";
 
 export type CustomerConfig = {
 	disable_pooled_balance?: boolean;
+	disable_overage_billing?: boolean;
 };
 
 export type CustomerProcessor = {

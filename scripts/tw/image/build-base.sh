@@ -62,8 +62,10 @@ log "Installing base system packages via dnf"
 # NOTE: do NOT install `curl` — Amazon Linux 2023 ships `curl-minimal`, which
 # already provides /usr/bin/curl and CONFLICTS with the full `curl` package
 # (dnf errors out). curl-minimal handles the https downloads below, so use it.
+# python3/gcc-c++/make are needed when native deps fall back to node-gyp.
 sudo dnf install -y --setopt=install_weak_deps=False \
   tar gzip xz ca-certificates shadow-utils glibc-langpack-en \
+  python3 gcc-c++ make \
   >/dev/null
 
 # ---------------------------------------------------------------------------
