@@ -30,8 +30,11 @@ const clearSuspendedTool = async ({
 	sessionId: string;
 	toolUseId: string;
 }) => {
+	// The tool already ran out-of-band under the approver's token. First resolve
+	// the idle session's pending tool with a deny so it isn't left hanging, then
+	// always drop our session row so the next turn starts fresh instead of
+	// resuming a tool we've already applied — even if the deny fails.
 	try {
-		await cmaRepo.deleteSessionById({ db, env, orgId, sessionId });
 		await driveSessionTurn({
 			autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
 			client,
@@ -50,11 +53,21 @@ const clearSuspendedTool = async ({
 			sessionId,
 		});
 	} catch (error) {
-		logger.warn("Could not clear approved Claude Managed tool", {
+		logger.warn("Could not notify suspended Claude Managed tool", {
 			event: "leaf.approval_clear_suspended_tool_failed",
 			data: { session_id: sessionId, tool_use_id: toolUseId },
 			error,
 		});
+	} finally {
+		try {
+			await cmaRepo.deleteSessionById({ db, env, orgId, sessionId });
+		} catch (error) {
+			logger.warn("Could not delete resolved Claude Managed session", {
+				event: "leaf.approval_delete_session_failed",
+				data: { session_id: sessionId, tool_use_id: toolUseId },
+				error,
+			});
+		}
 	}
 };
 

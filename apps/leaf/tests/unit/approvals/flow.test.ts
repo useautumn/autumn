@@ -265,7 +265,7 @@ describe("approval flow", () => {
 		expect(JSON.stringify(edits[1])).toContain("approved by <@U1>");
 	});
 
-	test("does not claim or run when the Slack approver lacks Autumn scopes", async () => {
+	test("releases the claim and does not run when the Slack approver lacks Autumn scopes", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
 			"../../../src/internal/approvals/surfaces/slack/decide.js"
@@ -303,6 +303,10 @@ describe("approval flow", () => {
 					calls.push("claim");
 					return approval;
 				},
+				releaseApproval: async () => {
+					calls.push("release");
+					return approval;
+				},
 				editActionMessage: async () => {
 					calls.push("edit");
 				},
@@ -314,7 +318,9 @@ describe("approval flow", () => {
 			},
 		});
 
-		expect(calls).toEqual([]);
+		// Claim wins first, then authorization denies and releases it back to
+		// pending; the write never runs and no card edit happens.
+		expect(calls).toEqual(["claim", "release"]);
 		expect(replies).toEqual(["Missing plans:write."]);
 	});
 

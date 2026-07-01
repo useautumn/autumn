@@ -17,7 +17,12 @@ export const getSlackAdminProvider = ({
 
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
-	return DEFAULT_SLACK_BOT_SCOPES.filter((scope) => !granted.has(scope));
+	// The email scope is optional: it only enables per-user permission matching,
+	// so a working install shouldn't be told it *must* reconnect just because it
+	// predates that scope. Reconnecting to add it stays available in the dashboard.
+	return DEFAULT_SLACK_BOT_SCOPES.filter(
+		(scope) => scope !== SLACK_EMAIL_SCOPE && !granted.has(scope),
+	);
 };
 
 export const getRequiredChatEnv = (key: string) => {

@@ -137,6 +137,8 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	authorizeApprovalClicker: authorizeSlackApprovalClicker,
 	claimApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.claim({ approvalId, db, providerUserId }),
+	releaseApproval: ({ approvalId, providerUserId }) =>
+		chatApprovalRepo.release({ approvalId, db, providerUserId }),
 	editActionMessage: async ({ content, event }) => {
 		await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 	},
@@ -243,11 +245,29 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
+		// Claim first so exactly one click wins — and so a lost race or a click on
+		// an already-decided approval never runs the (per-user) authorization,
+		// which makes a Slack API call and mints a credential.
+		const claimed = await deps.claimApproval({ approvalId, providerUserId });
+		if (!claimed) {
+			deps.logger.warn("Approval claim rejected", {
+				event: "leaf.approval_claim_rejected",
+				approval_id: approvalId,
+			});
+			await editToCurrentStatus();
+			return;
+		}
+
+		// Now that we own the claim, authorize this clicker against their Autumn
+		// scopes. On denial, release the claim so another authorized user can still
+		// approve; the card hasn't been edited yet, so it stays on the pending
+		// approval buttons.
 		const authorization = await deps.authorizeApprovalClicker?.({
-			approval,
+			approval: claimed,
 			providerUserId,
 		});
 		if (authorization && !authorization.allowed) {
+			await deps.releaseApproval?.({ approvalId, providerUserId });
 			deps.logger.warn("Approval action denied by Autumn scopes", {
 				event: "leaf.approval_scope_denied",
 				approval_id: approvalId,
@@ -258,17 +278,6 @@ export const handleApprovalActionWithDeps = async ({
 				event,
 				markdown: authorization.text,
 			});
-			return;
-		}
-
-		// Claim first so exactly one click wins, then acknowledge in place.
-		const claimed = await deps.claimApproval({ approvalId, providerUserId });
-		if (!claimed) {
-			deps.logger.warn("Approval claim rejected", {
-				event: "leaf.approval_claim_rejected",
-				approval_id: approvalId,
-			});
-			await editToCurrentStatus();
 			return;
 		}
 		const details = detailsFromApproval({ approval: claimed });
