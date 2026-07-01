@@ -207,7 +207,7 @@ export const syncItemV4 = async ({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
 				usage_window_updates: usageWindowEntries,
-			})}::jsonb) ${planetScaleTag({ query: "syncBalancesV4" })}`,
+			})}::jsonb) ${planetScaleTag({ query: "syncItemV4" })}`,
 		),
 	);
 

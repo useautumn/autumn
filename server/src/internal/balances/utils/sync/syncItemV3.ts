@@ -240,7 +240,7 @@ export const syncItemV3 = async ({
 			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
-			})}::jsonb) ${planetScaleTag({ query: "syncBalancesV3" })}`,
+			})}::jsonb) ${planetScaleTag({ query: "syncItemV3" })}`,
 		),
 	);
 
