@@ -51,8 +51,14 @@ export const dispatchThreadMessage = async ({
 			await active.requestStop({ byUserId: providerUserId, reason: "user" });
 			return;
 		}
+		// Only the sender who started the run may inject a live follow-up. A
+		// different Slack user's message must fall through to a new run so it
+		// goes through per-user authorization — otherwise their text would run
+		// inside the owner's already-authenticated session, executing under the
+		// owner's scopes without the sender ever being authorized.
 		const injectable =
 			active.kind === "message" &&
+			active.ownerProviderUserId === providerUserId &&
 			!hasAttachments &&
 			active.pendingTurns < MAX_PENDING_TURNS;
 		if (injectable) {

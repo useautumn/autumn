@@ -65,6 +65,7 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
+	rewardsListContract,
 	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
 
@@ -125,6 +126,7 @@ balancesTrackTokens: balancesTrackTokensContract,
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	rewardsList: rewardsListContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform

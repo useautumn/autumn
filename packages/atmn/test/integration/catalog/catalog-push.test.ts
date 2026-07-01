@@ -2,7 +2,10 @@
 
 import { expect, test } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
-import type { AttachParamsV1Input } from "@autumn/shared";
+import {
+	type AttachParamsV1Input,
+	billingControlsFromColumns,
+} from "@autumn/shared";
 import chalk from "chalk";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
 import { ProductService } from "../../../../../server/src/internal/products/ProductService.js";
@@ -251,6 +254,49 @@ export const variantRefreshAnnual = variantRefreshBase.variant({
 });
 `;
 
+const billingControlsPushConfig = ({
+	basePlanId,
+	variantPlanId,
+}: {
+	basePlanId: string;
+	variantPlanId: string;
+}) => `import { billingControls, feature, item, plan } from 'atmn';
+
+export const messages = feature({
+\tid: 'messages',
+\tname: 'Messages',
+\ttype: 'metered',
+\tconsumable: true,
+});
+
+export const billingControlsBase = plan({
+\tid: '${basePlanId}',
+\tname: 'Billing Controls Base',
+\titems: [
+\t\titem({
+\t\t\tfeatureId: messages.id,
+\t\t\tincluded: 100,
+\t\t\treset: { interval: 'month' },
+\t\t}),
+\t],
+\tbillingControls: billingControls({
+\t\tusage_limits: [
+\t\t\t{
+\t\t\t\tfeature_id: messages.id,
+\t\t\t\tenabled: true,
+\t\t\t\tlimit: 80,
+\t\t\t\tinterval: 'month',
+\t\t\t},
+\t\t],
+\t}),
+});
+
+export const billingControlsAnnual = billingControlsBase.variant({
+\tid: '${variantPlanId}',
+\tname: 'Billing Controls Annual',
+});
+`;
+
 const pullConfig = async ({
 	args = ["--force", "--no-declaration-file"],
 	secretKey,
@@ -445,6 +491,47 @@ test(`${chalk.yellowBright("atmn catalog push: refreshes skipped variant diffs w
 			(entitlement) => entitlement.feature.id === TestFeature.AdminRights,
 		),
 	).toBe(false);
+});
+
+test(`${chalk.yellowBright("atmn catalog push: creates plan billing controls and inherited variant controls")}`, async () => {
+	const basePlanId = "atmn_billing_controls_base";
+	const variantPlanId = "atmn_billing_controls_annual";
+	const ctx = await createCleanAtmnIntegrationContext();
+	const workspace = await prepareAtmnIntegrationWorkspace({
+		secretKey: ctx.orgSecretKey,
+	});
+
+	await writeFile(
+		workspace.configPath,
+		billingControlsPushConfig({ basePlanId, variantPlanId }),
+	);
+	await pushConfig(workspace);
+
+	const baseAfter = await ProductService.getFull({
+		db: ctx.db,
+		env: ctx.env,
+		idOrInternalId: basePlanId,
+		orgId: ctx.org.id,
+	});
+	const variantAfter = await ProductService.getFull({
+		db: ctx.db,
+		env: ctx.env,
+		idOrInternalId: variantPlanId,
+		orgId: ctx.org.id,
+	});
+	const expectedControls = {
+		usage_limits: [
+			{
+				feature_id: TestFeature.Messages,
+				enabled: true,
+				limit: 80,
+				interval: "month",
+			},
+		],
+	};
+
+	expect(billingControlsFromColumns(baseAfter)).toEqual(expectedControls);
+	expect(billingControlsFromColumns(variantAfter)).toEqual(expectedControls);
 });
 
 test(`${chalk.yellowBright("atmn catalog push: missing clean plan and feature are deleted")}`, async () => {

@@ -720,7 +720,7 @@ class Autumn(BaseSDK):
         Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
 
         :param customer_id: The ID of the customer.
-        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param model_id: The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
         :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
         :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
         :param entity_id: The ID of the entity for entity-scoped balances.
@@ -853,7 +853,7 @@ class Autumn(BaseSDK):
         Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
 
         :param customer_id: The ID of the customer.
-        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param model_id: The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
         :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
         :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
         :param entity_id: The ID of the entity for entity-scoped balances.

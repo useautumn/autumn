@@ -227,7 +227,7 @@ const response = await client.trackTokens({
 @param customerId - The ID of the customer.
 @param entityId - The ID of the entity for entity-scoped balances. (optional)
 @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
-@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
 @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
 @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
 @param cacheReadTokens - Number of cached input tokens read. (optional)
@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782758219833,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783967819833,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -768,6 +768,7 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 ### [Rewards](docs/sdks/rewards/README.md)
 
+* [list](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeemCode](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 
 </details>
@@ -851,7 +852,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782758219833,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783967819833,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1315,6 +1316,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+- [`rewardsList`](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
@@ -1362,7 +1364,7 @@ const response = await client.trackTokens({
 @param customerId - The ID of the customer.
 @param entityId - The ID of the entity for entity-scoped balances. (optional)
 @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
-@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
 @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
 @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
 @param cacheReadTokens - Number of cached input tokens read. (optional)

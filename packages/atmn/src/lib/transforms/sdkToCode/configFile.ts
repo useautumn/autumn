@@ -31,7 +31,11 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 	);
 
 	// Add imports
-	sections.push(buildImports());
+	sections.push(
+		buildImports({
+			includeBillingControls: plans.some((plan) => plan.billingControls),
+		}),
+	);
 	sections.push("");
 
 	// Add features
@@ -57,9 +61,7 @@ export function buildConfigFile(features: Feature[], plans: Plan[]): string {
 						variant: planVariant,
 						features,
 						featureVarMap,
-						varNameOverride: variantVarMap.get(
-							versionedCodegenId(planVariant),
-						),
+						varNameOverride: variantVarMap.get(versionedCodegenId(planVariant)),
 					}),
 				);
 				sections.push("");

@@ -31,7 +31,7 @@ export type TrackTokensParams = {
    */
   featureId?: string | undefined;
   /**
-   * The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+   * The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
    */
   modelId: string;
   /**

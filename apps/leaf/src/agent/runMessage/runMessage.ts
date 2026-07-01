@@ -31,6 +31,12 @@ const TIMEOUT_BACKSTOP_GRACE_MS = 20_000;
 type RunMessageOutput = AgentOutput & {
 	installation?: ChatInstallation;
 	org?: { id: string; slug?: string };
+	/**
+	 * Deliver `text` as an ephemeral message visible only to the sender rather
+	 * than posting it in the thread. Used for per-user auth denials so we don't
+	 * echo the sender's email (or their lack of access) to the whole channel.
+	 */
+	ephemeral?: boolean;
 };
 
 /** Entry point for one chat message: staged ctx build, then engine dispatch. */
@@ -104,7 +110,11 @@ export const runMessage = async ({
 				});
 				if (!userAuth.ok) {
 					await onAgentReady?.();
-					return { env: getDefaultChatEnv(), text: userAuth.text };
+					return {
+						env: getDefaultChatEnv(),
+						text: userAuth.text,
+						ephemeral: true,
+					};
 				}
 				autumnUserId = userAuth.userId;
 			}

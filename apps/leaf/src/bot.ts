@@ -248,7 +248,11 @@ const runAndReply = async ({
 			await finishLoading(target, card, "Autumn started.");
 			ticker.thinking();
 		};
-		run = registerRun({ key: runKey, kind: "message" });
+		run = registerRun({
+			key: runKey,
+			kind: "message",
+			ownerProviderUserId: providerUserId,
+		});
 		// Follow-ups have no bootstrap card, so the status starts right away.
 		if (isFollowUp) {
 			ticker.thinking();
@@ -322,7 +326,17 @@ const runAndReply = async ({
 		if (postedApproval) return;
 
 		await finishLoading(target, loading, "Done.");
-		await target.post({ markdown: output.text || "Done." });
+		// Auth denials are private to the sender — post them ephemerally so we
+		// never echo their email/access status into a shared channel thread.
+		if (output.ephemeral) {
+			await target.postEphemeral(
+				providerUserId,
+				{ markdown: output.text || "Done." },
+				{ fallbackToDM: true },
+			);
+		} else {
+			await target.post({ markdown: output.text || "Done." });
+		}
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {
