@@ -261,6 +261,6 @@ export const getCursorPaginatedFullCusQuery = ({
 			${subscriptionsSelect}
 			${entitiesSelect}
 			${invoicesSelect}
-		${planetScaleTag({ query: "getCursorPaginatedFullCustomers" })}
+		${planetScaleTag({ query: "getCursorPaginatedFullCusQuery" })}
 	`;
 };
