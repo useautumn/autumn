@@ -29,6 +29,7 @@ import {
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, pushPage } from "@/utils/genUtils";
 import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
@@ -51,13 +52,15 @@ export const ProductListRowToolbar = ({
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
 	const activeSandbox = useActiveSandbox();
-	const { sandboxes } = useSandboxesQuery({ enabled: !!activeSandbox });
+	const env = useEnv();
+	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
+	const { sandboxes } = useSandboxesQuery({ enabled: inNamedSandbox });
 	const copySandbox = useCopySandbox();
 
 	const otherSandboxes = sandboxes.filter((s) => s.id !== activeSandbox?.id);
 
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
-		if (!activeSandbox) return;
+		if (!inNamedSandbox || !activeSandbox) return;
 		setDropdownOpen(false);
 		try {
 			await copySandbox.mutateAsync({
@@ -182,10 +185,10 @@ export const ProductListRowToolbar = ({
 							>
 								Production
 							</DropdownMenuItem>
-							{activeSandbox && otherSandboxes.length > 0 && (
+							{inNamedSandbox && otherSandboxes.length > 0 && (
 								<DropdownMenuSeparator />
 							)}
-							{activeSandbox &&
+							{inNamedSandbox &&
 								otherSandboxes.map((s) => (
 									<DropdownMenuItem
 										key={s.id}

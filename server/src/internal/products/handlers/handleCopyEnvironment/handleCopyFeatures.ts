@@ -42,7 +42,9 @@ export const handleCopyFeatures = async ({
 		(f) => f.type === FeatureType.Boolean || f.type === FeatureType.Metered,
 	);
 	const creditSystemFeatures = fromFeatures.filter(
-		(f) => f.type === FeatureType.CreditSystem,
+		(f) =>
+			f.type === FeatureType.CreditSystem ||
+			f.type === FeatureType.AiCreditSystem,
 	);
 
 	// First, process boolean and metered features

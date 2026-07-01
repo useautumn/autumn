@@ -127,6 +127,7 @@ export const CopySandboxDialog = ({
 						<CopySandboxChecklist
 							isLoading={isLoading}
 							items={products}
+							kind="plan"
 							onToggle={(id) => toggle("products", id)}
 							title="Plans"
 							deselected={deselected.products}
@@ -134,6 +135,7 @@ export const CopySandboxDialog = ({
 						<CopySandboxChecklist
 							isLoading={isLoading}
 							items={features}
+							kind="feature"
 							onToggle={(id) => toggle("features", id)}
 							title="Features"
 							deselected={deselected.features}

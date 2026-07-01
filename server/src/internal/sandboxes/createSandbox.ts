@@ -34,7 +34,7 @@ export const assertDashboardActor = ({
 }): User => {
 	if (authType !== AuthType.Dashboard || !user) {
 		throw new RecaseError({
-			message: "Sandboxes can only be created from the dashboard",
+			message: "Sandboxes can only be managed from the dashboard",
 			code: ErrCode.InvalidRequest,
 			statusCode: 401,
 		});

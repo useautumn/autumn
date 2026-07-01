@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	type CreateProductV2Params,
+	type Feature,
 	mapToProductV2,
 	type Organization,
 	type ProductV2,
@@ -51,6 +52,7 @@ export const handleCopyProducts = async ({
 	toOrg,
 	toEnv,
 	productIds,
+	fromFeatures: providedFromFeatures,
 }: {
 	ctx: AutumnContext;
 	fromOrg: Organization;
@@ -58,12 +60,14 @@ export const handleCopyProducts = async ({
 	toOrg: Organization;
 	toEnv: AppEnv;
 	productIds?: string[];
+	fromFeatures?: Feature[];
 }) => {
 	const { db } = ctx;
 
 	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
-			FeatureService.list({ db, orgId: fromOrg.id, env: fromEnv }),
+			providedFromFeatures ??
+				FeatureService.list({ db, orgId: fromOrg.id, env: fromEnv }),
 			FeatureService.list({ db, orgId: toOrg.id, env: toEnv }),
 			ProductService.listFull({ db, orgId: fromOrg.id, env: fromEnv }),
 			ProductService.listFull({ db, orgId: toOrg.id, env: toEnv }),

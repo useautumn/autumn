@@ -1,4 +1,4 @@
-import { type Feature, FeatureType } from "@autumn/shared";
+import { AppEnv, type Feature, FeatureType } from "@autumn/shared";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,6 +19,7 @@ import {
 	useSandboxesQuery,
 } from "@/hooks/queries/useSandboxesQuery";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
@@ -29,7 +30,9 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const activeSandbox = useActiveSandbox();
-	const { sandboxes } = useSandboxesQuery({ enabled: !!activeSandbox });
+	const env = useEnv();
+	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
+	const { sandboxes } = useSandboxesQuery({ enabled: inNamedSandbox });
 	const copySandbox = useCopySandbox();
 
 	const otherSandboxes = sandboxes.filter((s) => s.id !== activeSandbox?.id);
@@ -37,7 +40,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 	const isCreditSystem = feature.type === FeatureType.CreditSystem;
 
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
-		if (!activeSandbox) return;
+		if (!inNamedSandbox || !activeSandbox) return;
 		setDropdownOpen(false);
 		try {
 			await copySandbox.mutateAsync({
@@ -81,7 +84,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 					<ToolbarButton />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className="text-muted-foreground" align="end">
-					{activeSandbox && otherSandboxes.length > 0 && (
+					{inNamedSandbox && otherSandboxes.length > 0 && (
 						<>
 							<DropdownMenuSub>
 								<DropdownMenuSubTrigger className="flex items-center gap-2 text-xs">

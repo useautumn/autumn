@@ -1,8 +1,10 @@
 import {
 	AppEnv,
+	ErrCode,
 	FeatureType,
 	mapToProductV2,
 	type Organization,
+	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -40,6 +42,14 @@ export const copySandboxForOrg = async ({
 	productIds?: string[];
 	featureIds?: string[];
 }): Promise<{ fromSandbox: Organization; toSandbox: Organization }> => {
+	if (fromSandboxId === toSandboxId) {
+		throw new RecaseError({
+			message: "Source and target sandboxes must be different",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	// Authorize the caller for BOTH sandboxes. Either resolution failing folds
 	// into a uniform 404 so ownership/existence can't be probed.
 	const [fromSandbox, toSandbox] = await Promise.all([
@@ -113,6 +123,7 @@ export const copySandboxForOrg = async ({
 		toOrg: toSandbox,
 		toEnv,
 		productIds: productIdsToCopy,
+		fromFeatures,
 	});
 
 	await invalidateProductsCache({ orgId: toSandbox.id, env: toEnv });

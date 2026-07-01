@@ -3,12 +3,14 @@ import type { CatalogItem } from "@/hooks/queries/useSandboxCatalogQuery";
 
 export const CopySandboxChecklist = ({
 	title,
+	kind,
 	items,
 	deselected,
 	onToggle,
 	isLoading,
 }: {
 	title: string;
+	kind: string;
 	items: CatalogItem[];
 	deselected: Set<string>;
 	onToggle: (id: string) => void;
@@ -26,12 +28,12 @@ export const CopySandboxChecklist = ({
 			{items.map((item) => (
 				<label
 					className="flex cursor-pointer select-none items-center gap-2 text-sm"
-					htmlFor={`copy-item-${item.id}`}
+					htmlFor={`copy-item-${kind}-${item.id}`}
 					key={item.id}
 				>
 					<Checkbox
 						checked={!deselected.has(item.id)}
-						id={`copy-item-${item.id}`}
+						id={`copy-item-${kind}-${item.id}`}
 						onCheckedChange={() => onToggle(item.id)}
 					/>
 					<span className="truncate">{item.name}</span>
