@@ -3,6 +3,7 @@ import {
 	orgDisableStripeWrites,
 	ProcessorType,
 } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
 import {
 	type ExpandedStripeCustomer,
@@ -35,7 +36,21 @@ export const getOrCreateStripeCustomer = async ({
 		expandTax: resolvedOptions.expandTax,
 	});
 
-	if (currentStripeCustomer) return currentStripeCustomer;
+	if (currentStripeCustomer) {
+		if (
+			customer.email &&
+			currentStripeCustomer.email !== customer.email &&
+			!orgDisableStripeWrites({ ctx })
+		) {
+			const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+			await stripeCli.customers.update(currentStripeCustomer.id, {
+				email: customer.email,
+			});
+			return { ...currentStripeCustomer, email: customer.email };
+		}
+
+		return currentStripeCustomer;
+	}
 
 	if (orgDisableStripeWrites({ ctx })) return undefined;
 
