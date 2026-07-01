@@ -140,12 +140,16 @@ export const getCheckDataV2 = async ({
 			customerApiSubject: apiCustomer,
 			planCustomerProducts: fullSubject.customer_products,
 			normalizeSpendLimitForCompare,
+			fullSubject,
+			features: ctx.features,
 		});
 	} else {
 		evaluationApiSubject = mergePlanBillingControlsForCheck({
 			customerApiSubject: evaluationApiSubject as ApiCustomerV5,
 			planCustomerProducts: fullSubject.customer_products,
 			normalizeSpendLimitForCompare,
+			fullSubject,
+			features: ctx.features,
 		});
 	}
 
