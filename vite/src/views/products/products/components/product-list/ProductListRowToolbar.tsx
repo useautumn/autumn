@@ -1,5 +1,15 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
-import { ToolbarButton } from "@autumn/ui";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+	ToolbarButton,
+} from "@autumn/ui";
 import {
 	ArchiveIcon,
 	ArrowCounterClockwiseIcon,
@@ -8,21 +18,18 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	type SandboxSummary,
+	useCopySandbox,
+	useSandboxesQuery,
+} from "@/hooks/queries/useSandboxesQuery";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { pushPage } from "@/utils/genUtils";
+import { getBackendErr, pushPage } from "@/utils/genUtils";
 import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
 
@@ -43,6 +50,26 @@ export const ProductListRowToolbar = ({
 	const { counts, invalidate: invalidateProducts } = useProductsQuery();
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const activeSandbox = useActiveSandbox();
+	const { sandboxes } = useSandboxesQuery({ enabled: !!activeSandbox });
+	const copySandbox = useCopySandbox();
+
+	const otherSandboxes = sandboxes.filter((s) => s.id !== activeSandbox?.id);
+
+	const handleCopyToSandbox = async (target: SandboxSummary) => {
+		if (!activeSandbox) return;
+		setDropdownOpen(false);
+		try {
+			await copySandbox.mutateAsync({
+				fromSandboxId: activeSandbox.id,
+				toSandboxId: target.id,
+				productIds: [product.id],
+			});
+			toast.success(`Copied ${product.name} to ${target.name}`);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to copy plan"));
+		}
+	};
 
 	const isVariant = !!product.base_internal_product_id;
 
@@ -155,6 +182,23 @@ export const ProductListRowToolbar = ({
 							>
 								Production
 							</DropdownMenuItem>
+							{activeSandbox && otherSandboxes.length > 0 && (
+								<DropdownMenuSeparator />
+							)}
+							{activeSandbox &&
+								otherSandboxes.map((s) => (
+									<DropdownMenuItem
+										key={s.id}
+										className="flex gap-2"
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											handleCopyToSandbox(s);
+										}}
+									>
+										{s.name}
+									</DropdownMenuItem>
+								))}
 						</DropdownMenuSubContent>
 					</DropdownMenuSub>
 					{!isVariant && !product.archived && (

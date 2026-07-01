@@ -193,6 +193,7 @@ export const createSandboxForOrg = async ({
 		createMembership: false,
 		sandboxColor: color ?? DEFAULT_SANDBOX_COLOR,
 		sandboxIcon: icon ?? DEFAULT_SANDBOX_ICON,
+		config: masterOrg.config,
 	});
 
 	try {

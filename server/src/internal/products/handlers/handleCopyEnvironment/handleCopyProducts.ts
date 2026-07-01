@@ -50,22 +50,30 @@ export const handleCopyProducts = async ({
 	fromEnv,
 	toOrg,
 	toEnv,
+	productIds,
 }: {
 	ctx: AutumnContext;
 	fromOrg: Organization;
 	fromEnv: AppEnv;
 	toOrg: Organization;
 	toEnv: AppEnv;
+	productIds?: string[];
 }) => {
 	const { db } = ctx;
 
-	const [fromFeatures, toFeatures, fromProducts, toProducts] =
+	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
 			FeatureService.list({ db, orgId: fromOrg.id, env: fromEnv }),
 			FeatureService.list({ db, orgId: toOrg.id, env: toEnv }),
 			ProductService.listFull({ db, orgId: fromOrg.id, env: fromEnv }),
 			ProductService.listFull({ db, orgId: toOrg.id, env: toEnv }),
 		]);
+
+	// undefined => copy every product (original behavior); a list (incl. empty)
+	// => only those ids.
+	const fromProducts = productIds
+		? fromProductsAll.filter((p) => productIds.includes(p.id))
+		: fromProductsAll;
 
 	const toProductsV2 = toProducts.map((p) =>
 		mapToProductV2({ product: p, features: toFeatures }),

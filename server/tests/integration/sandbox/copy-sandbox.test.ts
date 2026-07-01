@@ -53,6 +53,7 @@ const suffix = crypto.randomUUID().slice(0, 8);
 
 let source: Organization | undefined;
 let target: Organization | undefined;
+const extraTargets: Organization[] = [];
 
 const baseCtx = { ...defaultCtx } as AutumnContext;
 
@@ -167,7 +168,7 @@ beforeAll(async () => {
 }, 180_000);
 
 afterAll(async () => {
-	for (const created of [source, target]) {
+	for (const created of [source, target, ...extraTargets]) {
 		if (created) {
 			await deletePlatformSubOrg({
 				db,
@@ -300,4 +301,100 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 		expect((caught as RecaseError).code).toBe(ErrCode.OrgNotFound);
 		expect((caught as RecaseError).statusCode).toBe(404);
 	});
+});
+
+describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
+	const freshTarget = async (label: string) => {
+		const dst = await insertSandboxSubOrg({
+			masterOrgId: defaultCtx.org.id,
+			name: `copy-sel-${label}-${suffix}`,
+		});
+		extraTargets.push(dst);
+		return dst;
+	};
+
+	test("productIds copies only that product plus the features it references", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshTarget("prod");
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+			productIds: [PRODUCT_ID],
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dstProducts = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+
+		// The one product copied; its referenced features (dashboard + messages)
+		// auto-included; the unrelated credit system is NOT pulled in.
+		expect(dstProducts.map((p) => p.id)).toEqual([PRODUCT_ID]);
+		expect(features.map((f) => f.id).sort()).toEqual(
+			[DASH_FEATURE, MSG_FEATURE].sort(),
+		);
+	}, 180_000);
+
+	test("featureIds copies only those features and no products", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshTarget("feat");
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+			featureIds: [DASH_FEATURE],
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dstProducts = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+
+		expect(features.map((f) => f.id)).toEqual([DASH_FEATURE]);
+		expect(dstProducts.length).toBe(0);
+	}, 180_000);
+
+	test("a credit-system featureId pulls in the metered feature it references", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshTarget("credit");
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+			featureIds: [CREDIT_FEATURE],
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+
+		// Credit system + the metered feature its schema references, nothing else.
+		expect(features.map((f) => f.id).sort()).toEqual(
+			[CREDIT_FEATURE, MSG_FEATURE].sort(),
+		);
+	}, 180_000);
 });

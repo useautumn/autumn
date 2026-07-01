@@ -1,13 +1,25 @@
 import { type Feature, FeatureType } from "@autumn/shared";
-import { ToolbarButton } from "@autumn/ui";
-import { ArchiveRestore, Delete, Pen } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
+	ToolbarButton,
 } from "@autumn/ui";
+import { ArchiveRestore, Copy, Delete, Pen } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import {
+	type SandboxSummary,
+	useCopySandbox,
+	useSandboxesQuery,
+} from "@/hooks/queries/useSandboxesQuery";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
+import { getBackendErr } from "@/utils/genUtils";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
 import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";
@@ -16,8 +28,28 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [updateOpen, setUpdateOpen] = useState(false);
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const activeSandbox = useActiveSandbox();
+	const { sandboxes } = useSandboxesQuery({ enabled: !!activeSandbox });
+	const copySandbox = useCopySandbox();
+
+	const otherSandboxes = sandboxes.filter((s) => s.id !== activeSandbox?.id);
 
 	const isCreditSystem = feature.type === FeatureType.CreditSystem;
+
+	const handleCopyToSandbox = async (target: SandboxSummary) => {
+		if (!activeSandbox) return;
+		setDropdownOpen(false);
+		try {
+			await copySandbox.mutateAsync({
+				fromSandboxId: activeSandbox.id,
+				toSandboxId: target.id,
+				featureIds: [feature.id],
+			});
+			toast.success(`Copied ${feature.name} to ${target.name}`);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to copy feature"));
+		}
+	};
 
 	const deleteText = feature.archived ? "Unarchive" : "Delete";
 	const DeleteIcon = feature.archived ? ArchiveRestore : Delete;
@@ -49,6 +81,32 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 					<ToolbarButton />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent className="text-muted-foreground" align="end">
+					{activeSandbox && otherSandboxes.length > 0 && (
+						<>
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger className="flex items-center gap-2 text-xs">
+									<Copy size={12} className="text-tertiary-foreground" />
+									Copy to
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									{otherSandboxes.map((s) => (
+										<DropdownMenuItem
+											key={s.id}
+											className="flex items-center text-xs"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												handleCopyToSandbox(s);
+											}}
+										>
+											{s.name}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							<DropdownMenuSeparator />
+						</>
+					)}
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {

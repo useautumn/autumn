@@ -186,3 +186,35 @@ export const useDeleteSandbox = () => {
 		},
 	});
 };
+
+export const useCopySandbox = () => {
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			fromSandboxId,
+			toSandboxId,
+			productIds,
+			featureIds,
+		}: {
+			fromSandboxId: string;
+			toSandboxId: string;
+			productIds?: string[];
+			featureIds?: string[];
+		}) => {
+			await axiosInstance.post("/v1/sandboxes.copy", {
+				fromSandboxId,
+				toSandboxId,
+				productIds,
+				featureIds,
+			});
+		},
+		// Copy overwrites the target's whole catalog, so refresh any open plan/feature views.
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["products"] });
+			queryClient.invalidateQueries({ queryKey: ["product_counts"] });
+			queryClient.invalidateQueries({ queryKey: ["features"] });
+		},
+	});
+};

@@ -10,6 +10,10 @@ import {
 const CopySandboxSchema = z.object({
 	fromSandboxId: z.string().min(1),
 	toSandboxId: z.string().min(1),
+	// Omit both to copy the whole catalog; pass either to copy only those items
+	// (selected products pull in the features they reference).
+	productIds: z.array(z.string()).optional(),
+	featureIds: z.array(z.string()).optional(),
 });
 
 /**
@@ -30,7 +34,8 @@ export const handleCopySandbox = createRoute({
 		assertNotSandboxContext(masterOrg);
 		assertDashboardActor({ authType, user });
 
-		const { fromSandboxId, toSandboxId } = c.req.valid("json");
+		const { fromSandboxId, toSandboxId, productIds, featureIds } =
+			c.req.valid("json");
 
 		if (fromSandboxId === toSandboxId) {
 			throw new RecaseError({
@@ -46,6 +51,8 @@ export const handleCopySandbox = createRoute({
 			masterOrg,
 			fromSandboxId,
 			toSandboxId,
+			productIds,
+			featureIds,
 		});
 
 		return c.json({ success: true });
