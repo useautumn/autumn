@@ -253,6 +253,13 @@
       "when": 1782844933101,
       "tag": "0035_boring_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782907607380,
+      "tag": "0036_remarkable_spirit",
+      "breakpoints": true
     }
   ]
 }

@@ -7,7 +7,10 @@ import {
 	RecaseError,
 } from "@shared/index";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
-import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import {
+	type RevenuecatFeatureQuantity,
+	RCMappingService,
+} from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -35,16 +38,20 @@ export const resolveRevenuecatResources = async ({
 	product: FullProduct;
 	customer: FullCustomer;
 	cusProducts: FullCusProduct[];
+	featureQuantities?: RevenuecatFeatureQuantity[];
 }> => {
 	const { db, org, env } = ctx;
 
-	// Look up Autumn product ID from RevenueCat mapping
-	const autumnProductId = await RCMappingService.getAutumnProductId({
+	// Look up Autumn product ID + prepaid grants from the RevenueCat mapping
+	const mapping = await RCMappingService.resolveMapping({
 		db,
 		orgId: org.id,
 		env,
 		revenuecatProductId,
 	});
+
+	const autumnProductId = mapping?.autumnProductId ?? null;
+	const featureQuantities = mapping?.featureQuantities;
 
 	if (!autumnProductId) {
 		throw new RecaseError({
@@ -112,5 +119,5 @@ export const resolveRevenuecatResources = async ({
 		customerId: ctx.customerId,
 	});
 
-	return { ctx: routedCtx, product, customer, cusProducts };
+	return { ctx: routedCtx, product, customer, cusProducts, featureQuantities };
 };
