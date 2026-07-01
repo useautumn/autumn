@@ -1,18 +1,16 @@
-import { ChatAuthMode, type ChatInstallation } from "@autumn/shared";
+import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
-import { decrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import { resolveInstallationAuthMode } from "../../providers/slack/users.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
-import { resolveSlackUserAuth } from "./setup/resolveSlackUserAuth.js";
+import { resolveSlackCallerAuth } from "./setup/resolveSlackCallerAuth.js";
 import { getDefaultChatEnv, selectChatEnv } from "./setup/selectChatEnv.js";
 import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
@@ -96,27 +94,23 @@ export const runMessage = async ({
 			// Admin installs keep the installer-scoped flow. Restricted/unrestricted
 			// installs share the installer token; only per-user resolves the sender.
 			let autumnUserId: string | undefined;
-			const usePerUserAuth =
-				!orgContext.admin &&
-				resolveInstallationAuthMode({ installation: effectiveInstallation }) ===
-					ChatAuthMode.PerUser;
-			if (usePerUserAuth) {
-				const userAuth = await resolveSlackUserAuth({
-					botToken: decrypt(effectiveInstallation.bot_access_token),
-					installation: effectiveInstallation,
-					logger,
-					orgId: org.id,
-					slackUserId: providerUserId,
-				});
-				if (!userAuth.ok) {
+			const callerAuth = await resolveSlackCallerAuth({
+				installation: effectiveInstallation,
+				logger,
+				orgId: org.id,
+				skipPerUser: orgContext.admin,
+				slackUserId: providerUserId,
+			});
+			if (callerAuth.usePerUser) {
+				if (!callerAuth.ok) {
 					await onAgentReady?.();
 					return {
 						env: getDefaultChatEnv(),
-						text: userAuth.text,
+						text: callerAuth.text,
 						ephemeral: true,
 					};
 				}
-				autumnUserId = userAuth.userId;
+				autumnUserId = callerAuth.userId;
 			}
 
 			const preparedPromise = prepareAttachmentMessage({

@@ -1,30 +1,30 @@
 import {
-	ChatAuthMode,
 	type ChatApproval,
-	Scopes,
 	chatInstallations,
 	checkScopes,
 	type RouteScopeRequirement,
+	Scopes,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
 import type { ActionEvent } from "chat";
+import { and, eq } from "drizzle-orm";
+import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
+import { db } from "../../../../lib/db.js";
+import { logger as rootLogger } from "../../../../lib/logger.js";
+import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
+import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import {
 	isSlackAdminProvider,
 	validateSlackAdminAccess,
 } from "../../../slackAdmin/access.js";
-import { resolveSlackUserAuth } from "../../../../agent/runMessage/setup/resolveSlackUserAuth.js";
-import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
-import { decrypt } from "../../../../lib/crypto.js";
-import { db } from "../../../../lib/db.js";
-import { logger as rootLogger } from "../../../../lib/logger.js";
-import { resolveInstallationAuthMode } from "../../../../providers/slack/users.js";
-import { approvalStatusCard } from "../../../../ui/blocks.js";
-import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
+import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type { ApprovalActionDeps, ApprovalCardStatus } from "../../types.js";
-import { approvalErrorResult, isErrorResult } from "../../utils/approvalErrors.js";
+import {
+	approvalErrorResult,
+	isErrorResult,
+} from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
-import { resolveApproval } from "../../actions/resolveApproval.js";
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -89,9 +89,13 @@ const authorizeSlackApprovalClicker = async ({
 		} as const;
 	}
 
-	if (
-		resolveInstallationAuthMode({ installation }) !== ChatAuthMode.PerUser
-	) {
+	const callerAuth = await resolveSlackCallerAuth({
+		installation,
+		logger: rootLogger,
+		orgId: approval.org_id,
+		slackUserId: providerUserId,
+	});
+	if (!callerAuth.usePerUser) {
 		const token = await getInstallationOAuthAccessToken({
 			installation,
 			env: approval.env,
@@ -101,18 +105,11 @@ const authorizeSlackApprovalClicker = async ({
 		return { allowed: true, token } as const;
 	}
 
-	const auth = await resolveSlackUserAuth({
-		botToken: decrypt(installation.bot_access_token),
-		installation,
-		logger: rootLogger,
-		orgId: approval.org_id,
-		slackUserId: providerUserId,
-	});
-	if (!auth.ok) {
-		return { allowed: false, text: auth.text } as const;
+	if (!callerAuth.ok) {
+		return { allowed: false, text: callerAuth.text } as const;
 	}
 
-	const { allowed, missing } = checkScopes(required, auth.scopes);
+	const { allowed, missing } = checkScopes(required, callerAuth.scopes);
 	if (!allowed) {
 		return {
 			allowed: false,
@@ -124,7 +121,7 @@ const authorizeSlackApprovalClicker = async ({
 		installation,
 		env: approval.env,
 		orgId: approval.org_id,
-		userId: auth.userId,
+		userId: callerAuth.userId,
 	});
 
 	return { allowed: true, token } as const;
@@ -262,9 +259,13 @@ export const handleApprovalActionWithDeps = async ({
 		// scopes. On denial, release the claim so another authorized user can still
 		// approve; the card hasn't been edited yet, so it stays on the pending
 		// approval buttons.
-		let authorization: Awaited<
-			ReturnType<NonNullable<ApprovalActionDeps["authorizeApprovalClicker"]>>
-		> | undefined;
+		let authorization:
+			| Awaited<
+					ReturnType<
+						NonNullable<ApprovalActionDeps["authorizeApprovalClicker"]>
+					>
+			  >
+			| undefined;
 		try {
 			authorization = await deps.authorizeApprovalClicker?.({
 				approval: claimed,

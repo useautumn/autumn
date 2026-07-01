@@ -35,11 +35,13 @@ const executeAutumnMcpToolLazy: ExecuteAutumnTool = async (input) => {
 const deleteResolvedSession = async ({
 	env,
 	orgId,
+	providerUserId,
 	sessionId,
 	toolUseId,
 }: {
 	env: AppEnv;
 	orgId: string;
+	providerUserId: string;
 	sessionId: string;
 	toolUseId: string;
 }) => {
@@ -48,16 +50,22 @@ const deleteResolvedSession = async ({
 	} catch (error) {
 		logger.warn("Could not delete resolved Claude Managed session", {
 			event: "leaf.approval_delete_session_failed",
-			data: { session_id: sessionId, tool_use_id: toolUseId },
+			data: {
+				session_id: sessionId,
+				tool_use_id: toolUseId,
+				provider_user_id: providerUserId,
+			},
 			error,
 		});
 	}
 };
 
 const notifySuspendedToolDenied = async ({
+	providerUserId,
 	sessionId,
 	toolUseId,
 }: {
+	providerUserId: string;
 	sessionId: string;
 	toolUseId: string;
 }) => {
@@ -84,7 +92,11 @@ const notifySuspendedToolDenied = async ({
 	} catch (error) {
 		logger.warn("Could not notify suspended Claude Managed tool", {
 			event: "leaf.approval_clear_suspended_tool_failed",
-			data: { session_id: sessionId, tool_use_id: toolUseId },
+			data: {
+				session_id: sessionId,
+				tool_use_id: toolUseId,
+				provider_user_id: providerUserId,
+			},
 			error,
 		});
 	}
@@ -105,6 +117,7 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 	approval,
 	deps = defaultResumeDeps,
 	onProgress,
+	providerUserId,
 	token,
 }: {
 	approval: ChatApproval;
@@ -133,10 +146,12 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 			await deps.deleteResolvedSession({
 				env: approval.env,
 				orgId: approval.org_id,
+				providerUserId,
 				sessionId,
 				toolUseId,
 			});
 			void deps.notifySuspendedToolDenied({
+				providerUserId,
 				sessionId,
 				toolUseId,
 			});
