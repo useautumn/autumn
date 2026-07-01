@@ -10,10 +10,6 @@ import { ensureChatUserCredential } from "../../../internal/installations/action
 import { db } from "../../../lib/db.js";
 import { fetchSlackUserEmail } from "../../../providers/slack/users.js";
 
-/**
- * Why a Slack sender could not be authorized. Each maps to a user-facing message;
- * minting only ever happens on the success branch, so a denied user gets no token.
- */
 type SlackAuthDenyReason =
 	| "slack-email-unavailable"
 	| "no-autumn-user"
@@ -41,11 +37,6 @@ export type SlackUserAuthResult =
 // Bot ceiling, as a plain string set so we can probe arbitrary ScopeStrings.
 const OAUTH_CEILING = new Set<string>(DEFAULT_OAUTH_RESOURCE_SCOPES);
 
-/**
- * Resolve the unique Autumn user whose email matches the Slack email
- * (case-insensitive, no fuzzy matching). `user.email` is unique, but if the DB
- * collation ever yields more than one match we deny rather than guess.
- */
 const resolveAutumnUserIdByEmail = async (
 	email: string,
 ): Promise<string | null> => {
@@ -57,13 +48,6 @@ const resolveAutumnUserIdByEmail = async (
 	return matches.length === 1 ? matches[0].id : null;
 };
 
-/**
- * Phase 1 Slack identity: resolve the message sender to their Autumn user and
- * scopes via their Slack email, then mint/refresh a per-user MCP OAuth credential
- * bound to those scopes. On success the caller fetches the token with the returned
- * `userId`; on any failure the caller denies with `text` and never falls back to
- * the installer/shared token.
- */
 export const resolveSlackUserAuth = async ({
 	botToken,
 	installation,
