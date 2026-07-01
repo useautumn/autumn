@@ -13,6 +13,12 @@ import {
 // Re-mint a refresh token this far before it dies so a turn never races expiry.
 const REFRESH_EXPIRY_SKEW_MS = 60 * 60 * 1000;
 
+// The envs replaceInstallationOAuthCredentials always mints together. Which one a
+// turn actually consumes is only resolved after this runs (Slack: the env
+// selector; web: the app_env header), so every env's credential must be fresh —
+// gating on a single env would let a stale/missing sibling slip through.
+const CHAT_CREDENTIAL_ENVS = [AppEnv.Sandbox, AppEnv.Live] as const;
+
 const scopeSetsEqual = (a: string[], b: string[]) => {
 	if (a.length !== b.length) {
 		return false;
@@ -43,6 +49,10 @@ const isCredentialStale = ({
  * token is expiring. Shared by the web (dashboard) and Slack per-user flows so a
  * user's chat token never exceeds their resolved Autumn privileges.
  *
+ * The staleness gate spans every env (see CHAT_CREDENTIAL_ENVS), because the env
+ * the turn will consume isn't known here — reminting when any env is missing or
+ * stale keeps sandbox and live in lockstep instead of trusting one as a proxy.
+ *
  * `userScopes` must be non-empty — `resolveAgentScopes` throws on `[]` rather than
  * fail open to the default set, so callers must deny unauthorized users first.
  */
@@ -57,15 +67,23 @@ export const ensureChatUserCredential = async ({
 	userId: string;
 	userScopes: string[];
 }): Promise<void> => {
-	const credential = await getChatOAuthCredentialByInstallationEnv({
-		db,
-		chatInstallationId: installation.id,
-		env: AppEnv.Sandbox,
-		orgId,
-		userId,
-	});
 	const desiredScopes = resolveAgentScopes(userScopes);
-	if (!credential || isCredentialStale({ credential, desiredScopes })) {
+	const credentials = await Promise.all(
+		CHAT_CREDENTIAL_ENVS.map((env) =>
+			getChatOAuthCredentialByInstallationEnv({
+				db,
+				chatInstallationId: installation.id,
+				env,
+				orgId,
+				userId,
+			}),
+		),
+	);
+	const needsRemint = credentials.some(
+		(credential) =>
+			!credential || isCredentialStale({ credential, desiredScopes }),
+	);
+	if (needsRemint) {
 		await db.transaction((tx) =>
 			replaceInstallationOAuthCredentials({
 				tx,
