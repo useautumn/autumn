@@ -15,12 +15,6 @@ export type ActiveRun = {
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
-	/**
-	 * Provider user id (e.g. Slack) of the sender who started this run. Live
-	 * follow-ups are only injected for this same sender; a different user's
-	 * message must start its own run so it goes through per-user authorization
-	 * rather than executing under the owner's credential.
-	 */
 	ownerProviderUserId: string;
 	pendingTurns: number;
 	requestStop: (input: {

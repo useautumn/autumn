@@ -3,11 +3,6 @@ import { and, eq } from "drizzle-orm";
 import { member } from "../../db/auth-schema";
 import { ROLE_SCOPES, type Role, type ScopeString } from "../scopeDefinitions";
 
-/**
- * Minimal structural shape of a Drizzle client needed to read a membership row.
- * Both the server (`node-postgres`) and leaf (`postgres-js`) clients satisfy it,
- * so neither package has to depend on the other's concrete db type.
- */
 type ScopeResolverDb = {
 	query: {
 		member: {
@@ -39,10 +34,9 @@ export async function getScopesForUserInOrg({
 	}
 
 	const rawRole = membership.role;
-	const canonicalRole: Role | undefined =
-		Object.prototype.hasOwnProperty.call(ROLE_SCOPES, rawRole)
-			? (rawRole as Role)
-			: undefined;
+	const canonicalRole: Role | undefined = Object.hasOwn(ROLE_SCOPES, rawRole)
+		? (rawRole as Role)
+		: undefined;
 
 	if (!canonicalRole) {
 		console.warn(

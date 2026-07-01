@@ -326,8 +326,7 @@ const runAndReply = async ({
 		if (postedApproval) return;
 
 		await finishLoading(target, loading, "Done.");
-		// Auth denials are private to the sender — post them ephemerally so we
-		// never echo their email/access status into a shared channel thread.
+
 		if (output.ephemeral) {
 			await target.postEphemeral(
 				providerUserId,

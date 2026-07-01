@@ -42,14 +42,6 @@ const slackUsersInfoSchema = z.object({
 		.optional(),
 });
 
-/**
- * Read a Slack user's email via the Web API using the workspace bot token.
- * Requires the `users:read.email` scope (added to the Slack manifest).
- *
- * Returns the trimmed email, or `null` when it cannot be read — the API failed,
- * the scope is missing, or the user is a bot / deleted / has no email. Callers
- * treat `null` as "deny": Phase 1 never falls back to a shared token.
- */
 export const fetchSlackUserEmail = async ({
 	botToken,
 	slackUserId,
