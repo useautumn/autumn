@@ -19,6 +19,7 @@ export const handleNonRenewingPurchase = async ({
 		ctx: customerCtx,
 		product,
 		customer,
+		featureQuantities,
 	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: event.product_id,
@@ -37,6 +38,7 @@ export const handleNonRenewingPurchase = async ({
 		ctx: customerCtx,
 		customer,
 		product,
+		featureQuantities,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (non-renewing purchase)`);

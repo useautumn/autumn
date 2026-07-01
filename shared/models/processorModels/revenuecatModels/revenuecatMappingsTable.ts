@@ -1,6 +1,12 @@
 import type { AppEnv } from "@models/genModels/genEnums";
 import { organizations } from "@models/orgModels/orgTable.js";
-import { foreignKey, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import {
+	foreignKey,
+	jsonb,
+	pgTable,
+	primaryKey,
+	text,
+} from "drizzle-orm/pg-core";
 
 export const revenuecatMappings = pgTable(
 	"revenuecat_mappings",
@@ -12,6 +18,11 @@ export const revenuecatMappings = pgTable(
 			.array()
 			.notNull()
 			.default([]),
+		// Per-RC-id prepaid grants, keyed by revenuecat_product_id. Quantity is in
+		// feature units; attach divides by billing_units. Absent = plain attach.
+		feature_quantities: jsonb("feature_quantities").$type<
+			Record<string, Array<{ feature_id: string; quantity?: number }>>
+		>(),
 	},
 	(table) => [
 		primaryKey({
@@ -27,3 +38,4 @@ export const revenuecatMappings = pgTable(
 );
 
 export type RevenuecatMapping = typeof revenuecatMappings.$inferSelect;
+export type RevenuecatMappingInsert = typeof revenuecatMappings.$inferInsert;

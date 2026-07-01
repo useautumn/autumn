@@ -32,11 +32,13 @@ export const provisionRevenueCatCusProduct = async ({
 	customer,
 	product,
 	revenuecatMetadata,
+	featureQuantities,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
 	product: FullProduct;
 	revenuecatMetadata?: Record<string, string>;
+	featureQuantities?: Array<{ feature_id: string; quantity?: number }>;
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
@@ -63,6 +65,9 @@ export const provisionRevenueCatCusProduct = async ({
 			// than scheduling downgrades end-of-cycle like Stripe-style attaches.
 			plan_schedule: "immediate",
 			...(revenuecatMetadata ? { metadata: revenuecatMetadata } : {}),
+			...(featureQuantities?.length
+				? { feature_quantities: featureQuantities }
+				: {}),
 		},
 		contextOverride,
 		skipAutumnCheckout: true,
