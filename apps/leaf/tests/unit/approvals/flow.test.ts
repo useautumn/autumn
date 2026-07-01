@@ -147,6 +147,76 @@ describe("approval flow", () => {
 		).toBe(true);
 	});
 
+	test("direct token approvals fail MCP isError results after deleting the suspended session", async () => {
+		setLeafTestEnv();
+		const { resumeClaudeManagedApprovalWithDeps } = await import(
+			"../../../src/harness/claudeManaged/approval.js"
+		);
+		const calls: string[] = [];
+		let resolveDelete: (() => void) | undefined;
+		const deleteGate = new Promise<void>((resolve) => {
+			resolveDelete = resolve;
+		});
+		const approval = {
+			env: AppEnv.Sandbox,
+			org_id: "org_1",
+			run_id: "session_1",
+			tool_call_id: "tool_1",
+			tool_name: "attach",
+			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
+		} as unknown as ChatApproval;
+
+		let settled = false;
+		const run = resumeClaudeManagedApprovalWithDeps({
+			approval,
+			providerUserId: "U1",
+			token: "am_oauth_clicker",
+			deps: {
+				executeTool: async () => {
+					calls.push("execute");
+					return {
+						isError: true,
+						content: [{ type: "text", text: "Tool failed" }],
+					};
+				},
+				deleteResolvedSession: async () => {
+					calls.push("delete:start");
+					await deleteGate;
+					calls.push("delete:end");
+				},
+				notifySuspendedToolDenied: async () => {
+					calls.push("notify");
+				},
+				driveSessionTurn: async () => {
+					throw new Error("should not drive the live session");
+				},
+				findSessionToolResult: async () => {
+					throw new Error("should not recover session history");
+				},
+			},
+		}).then((result) => {
+			settled = true;
+			return result;
+		});
+
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(calls).toEqual(["execute", "delete:start"]);
+		expect(settled).toBe(false);
+
+		resolveDelete?.();
+		const result = await run;
+
+		expect(result).toEqual({ error: true, message: "Tool failed" });
+		expect(calls).toEqual([
+			"execute",
+			"delete:start",
+			"delete:end",
+			"notify",
+		]);
+	});
+
 	test("edits the approval message to failed when the approved tool fails", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
@@ -322,6 +392,69 @@ describe("approval flow", () => {
 		// pending; the write never runs and no card edit happens.
 		expect(calls).toEqual(["claim", "release"]);
 		expect(replies).toEqual(["Missing plans:write."]);
+	});
+
+	test("releases the claim and does not run when Slack approver authorization throws", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const calls: string[] = [];
+		const replies: string[] = [];
+		const edits: unknown[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "createPlan",
+			tool_args: { request: { plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "approve_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async () => {
+					calls.push("run");
+					return { result: {}, text: "ran" };
+				},
+				cancelApproval: async () => approval,
+				authorizeApprovalClicker: async () => {
+					calls.push("authorize");
+					throw new Error("auth exploded");
+				},
+				claimApproval: async () => {
+					calls.push("claim");
+					return approval;
+				},
+				releaseApproval: async () => {
+					calls.push("release");
+					return approval;
+				},
+				editActionMessage: async ({ content }) => {
+					calls.push("edit");
+					edits.push(content);
+				},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postThreadReply: async ({ markdown }) => {
+					calls.push("reply");
+					replies.push(markdown);
+				},
+			},
+		});
+
+		expect(calls).toEqual(["claim", "authorize", "release", "reply"]);
+		expect(edits).toEqual([]);
+		expect(replies).toEqual([
+			"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
+		]);
 	});
 
 	test("passes the authorized Slack approver token to the approval resolver", async () => {

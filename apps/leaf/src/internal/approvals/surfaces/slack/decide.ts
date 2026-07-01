@@ -262,10 +262,29 @@ export const handleApprovalActionWithDeps = async ({
 		// scopes. On denial, release the claim so another authorized user can still
 		// approve; the card hasn't been edited yet, so it stays on the pending
 		// approval buttons.
-		const authorization = await deps.authorizeApprovalClicker?.({
-			approval: claimed,
-			providerUserId,
-		});
+		let authorization: Awaited<
+			ReturnType<NonNullable<ApprovalActionDeps["authorizeApprovalClicker"]>>
+		> | undefined;
+		try {
+			authorization = await deps.authorizeApprovalClicker?.({
+				approval: claimed,
+				providerUserId,
+			});
+		} catch (error) {
+			await deps.releaseApproval?.({ approvalId, providerUserId });
+			deps.logger.error("[chat] Approval authorization failed", error, {
+				event: "leaf.approval_authorization_failed",
+				approval_id: approvalId,
+				tool: claimed.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await deps.postThreadReply({
+				event,
+				markdown:
+					"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
+			});
+			return;
+		}
 		if (authorization && !authorization.allowed) {
 			await deps.releaseApproval?.({ approvalId, providerUserId });
 			deps.logger.warn("Approval action denied by Autumn scopes", {
