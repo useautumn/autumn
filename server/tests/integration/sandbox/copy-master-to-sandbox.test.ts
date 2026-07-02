@@ -234,4 +234,24 @@ describe("copy a plan from the master org into a named sandbox", () => {
 		}
 		expect(thrown).toBe(true);
 	}, 120_000);
+
+	test("a requested plan absent from the source is rejected, not a silent no-op", async () => {
+		if (!master || !sub) throw new Error("orgs not provisioned");
+
+		let thrown = false;
+		try {
+			await copySandboxForOrg({
+				db,
+				ctx: baseCtx,
+				masterOrg: master,
+				fromOrg: master,
+				fromEnv: AppEnv.Sandbox,
+				toSandboxId: sub.id,
+				productIds: [`missing_${suffix}`],
+			});
+		} catch {
+			thrown = true;
+		}
+		expect(thrown).toBe(true);
+	}, 120_000);
 });

@@ -194,17 +194,20 @@ export const useCopySandbox = () => {
 	return useMutation({
 		mutationFn: async ({
 			fromSandboxId,
+			fromMaster,
 			toSandboxId,
 			productIds,
 			featureIds,
 		}: {
-			fromSandboxId: string;
+			fromSandboxId?: string;
+			fromMaster?: true;
 			toSandboxId: string;
 			productIds?: string[];
 			featureIds?: string[];
 		}) => {
 			await axiosInstance.post("/v1/sandboxes.copy", {
 				fromSandboxId,
+				fromMaster,
 				toSandboxId,
 				productIds,
 				featureIds,

@@ -70,6 +70,15 @@ export const copySandboxForOrg = async ({
 		sourceOrg = await getOwnedSandbox({ db, masterOrg, sandboxId: fromSandboxId });
 		fromEnv = AppEnv.Sandbox;
 	} else if (fromOrg && fromEnvArg) {
+		// The only non-sandbox source is the caller's own master org; never copy
+		// from an unrelated org into a sandbox this master owns.
+		if (fromOrg.id !== masterOrg.id) {
+			throw new RecaseError({
+				message: "Invalid copy source",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 		sourceOrg = fromOrg;
 		fromEnv = fromEnvArg;
 	} else {
@@ -101,6 +110,20 @@ export const copySandboxForOrg = async ({
 			orgId: sourceOrg.id,
 			env: fromEnv,
 		});
+
+		// A requested product that isn't in the source would otherwise no-op and
+		// still toast success; surface it instead.
+		const sourceProductIds = new Set(fromProducts.map((p) => p.id));
+		const missing = requestedProductIds.filter(
+			(id) => !sourceProductIds.has(id),
+		);
+		if (missing.length > 0) {
+			throw new RecaseError({
+				message: `Plan${missing.length > 1 ? "s" : ""} not found in source: ${missing.join(", ")}`,
+				code: ErrCode.ProductNotFound,
+				statusCode: 404,
+			});
+		}
 
 		const wantedFeatureIds = new Set(featureIds ?? []);
 		for (const product of fromProducts) {
