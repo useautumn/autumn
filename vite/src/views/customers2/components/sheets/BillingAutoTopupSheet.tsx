@@ -9,7 +9,9 @@ import {
 	type FullCustomer,
 	formatAmount,
 	fullCustomerToCustomerEntitlements,
-	isPrepaidCustomerEntitlement,
+	isOneOffPrice,
+	isPrepaidPrice,
+	isVolumeBasedCusEnt,
 	PurchaseLimitInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -116,9 +118,25 @@ export function BillingAutoTopupSheet() {
 			featureId,
 		});
 
-		const prepaidCusEnt = cusEnts.find((cusEnt: FullCusEntWithFullCusProduct) =>
-			isPrepaidCustomerEntitlement(cusEnt),
-		);
+		const isOneOffPrepaid = (cusEnt: FullCusEntWithFullCusProduct) => {
+			const cusPrice = cusEntToCusPrice({ cusEnt });
+			return (
+				cusPrice &&
+				isOneOffPrice(cusPrice.price) &&
+				isPrepaidPrice(cusPrice.price) &&
+				!isVolumeBasedCusEnt(cusEnt)
+			);
+		};
+
+		// Mirror the backend's resolution for customer-level auto-topups: the
+		// most recently attached product's one-off prepaid price is charged.
+		const prepaidCusEnt = cusEnts
+			.filter(isOneOffPrepaid)
+			.sort(
+				(left, right) =>
+					(right.customer_product?.created_at ?? 0) -
+					(left.customer_product?.created_at ?? 0),
+			)[0];
 
 		if (!prepaidCusEnt) return { hasPrice: false as const };
 

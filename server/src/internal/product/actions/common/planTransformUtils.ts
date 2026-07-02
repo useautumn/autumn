@@ -1,10 +1,10 @@
 import {
+	type ApiPlanV1,
 	apiPlan,
 	applyDiff,
 	composeMatchKey,
-	diffPlanV1,
-	type ApiPlanV1,
 	type DiffedCustomizePlanV1,
+	diffPlanV1,
 	type FullProduct,
 	type UpdatePlanParams,
 	type UpdateProductV2Params,
@@ -76,6 +76,13 @@ export const getVariantSettingsPatch = ({
 
 	return patch;
 };
+
+// Variants own their name; base→variant propagation must never overwrite it.
+// Same-plan version propagation still uses the full patch, name included.
+export const omitVariantOwnedSettings = ({
+	name: _name,
+	...rest
+}: VariantSettingsPatch): VariantSettingsPatch => rest;
 
 const hasVariantSettingsPatch = (patch: VariantSettingsPatch): boolean =>
 	Object.keys(patch).length > 0;

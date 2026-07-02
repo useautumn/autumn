@@ -42,7 +42,6 @@ import {
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import {
-	type AllVersionsUpdateMigrationTarget,
 	buildInPlaceUpdatePlanParams,
 	buildPreviewUpdatePlanParams,
 } from "./buildMigrationDraft";
@@ -96,56 +95,43 @@ function ConfirmInput({
 	);
 }
 
-const previewHasCustomersAcrossVersions = ({
-	preview,
-}: {
-	preview: Pick<PlanUpdatePreview, "has_customers" | "other_versions">;
-}) =>
-	preview.has_customers ||
-	(preview.other_versions ?? []).some((version) => version.has_customers);
-
-// Only item/price changes move existing customers; free-trial edits version
-// without a migration. Sourced from the backend preview.
-const entryHasMigratableDiff = (
-	entry: Pick<PlanUpdatePreview, "item_changes" | "price_change"> | undefined,
+// A version needs a migration only when it has customers to move AND a
+// migratable diff (item/price changes; free-trial edits version without one).
+const entryNeedsMigration = (
+	entry: Pick<
+		PlanUpdatePreview,
+		"item_changes" | "price_change" | "has_customers"
+	>,
 ) =>
-	(entry?.item_changes?.length ?? 0) > 0 || entry?.price_change !== undefined;
+	entry.has_customers &&
+	((entry.item_changes?.length ?? 0) > 0 || entry.price_change !== undefined);
 
-const collectAllVersionMigrationTargets = ({
+const hasMigrationTargets = ({
 	preview,
 	selectedVariantIds,
+	versionChoice,
 }: {
 	preview: PlanUpdatePreview | undefined;
 	selectedVariantIds: string[];
-}): AllVersionsUpdateMigrationTarget[] => {
-	if (!preview) return [];
+	versionChoice: VersionChoice;
+}): boolean => {
+	// New-version grandfathers everyone; update/all patch live versions.
+	if (!preview || versionChoice === "new") return false;
+	const includeHistorical = versionChoice === "all";
 
-	const targets: AllVersionsUpdateMigrationTarget[] = [];
-	if (
-		entryHasMigratableDiff(preview) &&
-		previewHasCustomersAcrossVersions({ preview })
-	) {
-		targets.push({ id: preview.plan_id, customize: preview.customize });
-	}
+	const baseEntries = [
+		preview,
+		...(includeHistorical ? (preview.other_versions ?? []) : []),
+	];
+	if (baseEntries.some(entryNeedsMigration)) return true;
 
-	for (const variantId of selectedVariantIds) {
-		const variantRows = preview.variants.filter(
-			(variant) => variant.plan_id === variantId,
-		);
-		const variantPreview = variantRows[0];
-		if (
-			variantPreview &&
-			entryHasMigratableDiff(variantPreview) &&
-			variantRows.some((row) => row.has_customers)
-		) {
-			targets.push({
-				id: variantPreview.plan_id,
-				customize: variantPreview.customize,
-			});
-		}
-	}
-
-	return targets;
+	return selectedVariantIds.some((variantId) => {
+		const entries = preview.variants
+			.filter((variant) => variant.plan_id === variantId)
+			.sort((a, b) => b.version - a.version);
+		const candidates = includeHistorical ? entries : entries.slice(0, 1);
+		return candidates.some(entryNeedsMigration);
+	});
 };
 
 export default function PlanChangeDialog({
@@ -245,21 +231,16 @@ export default function PlanChangeDialog({
 		[showScope, selectedVariantIds],
 	);
 
-	// Only item/price changes are migratable; free-trial edits version without
-	// ever moving existing customers.
-	const hasMigratableDiff = entryHasMigratableDiff(preview);
-	// Patch-in-place applies the change to the loaded version, so its existing
-	// customers need a migration. New-version intentionally grandfathers.
-	const baseNeedsMigration = versionChoice === "update" && hasMigratableDiff;
-	const allVersionsMigrationTargets = useMemo(
+	// Existing customers only need migrating when a patched version actually
+	// changes and has customers on it.
+	const migrateNeeded = useMemo(
 		() =>
-			versionChoice === "all"
-				? collectAllVersionMigrationTargets({
-						preview,
-						selectedVariantIds: effectiveVariantIds,
-					})
-				: [],
-		[versionChoice, preview, effectiveVariantIds],
+			hasMigrationTargets({
+				preview,
+				selectedVariantIds: effectiveVariantIds,
+				versionChoice,
+			}),
+		[preview, effectiveVariantIds, versionChoice],
 	);
 
 	const variantConflicts = useMemo<VariantConflictInfo[]>(
@@ -310,15 +291,6 @@ export default function PlanChangeDialog({
 			setVersionChoice("update");
 		}
 	}, [isMetadataOnly, isLatest, versionChoice]);
-
-	// New grandfathers everyone; update/all patch live versions, so their
-	// existing customers are migration targets. Variants only migrate when
-	// there's a migratable diff to push (not for billing-controls-only edits).
-	const migrateNeeded =
-		(versionChoice === "update" &&
-			(baseNeedsMigration ||
-				(effectiveVariantIds.length > 0 && hasMigratableDiff))) ||
-		allVersionsMigrationTargets.length > 0;
 
 	const migrateTargets = useMemo(() => {
 		if (!preview) return [];
@@ -648,7 +620,9 @@ export default function PlanChangeDialog({
 																</span>
 															</div>
 															<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
-																<PlanSettingsChanges changes={settingsChanges} />
+																<PlanSettingsChanges
+																	changes={settingsChanges}
+																/>
 															</div>
 														</div>
 													)}
