@@ -98,6 +98,12 @@ export type RequestContext = {
 		useReplica?: boolean;
 		mockVercelApi?: boolean;
 		allowVercelTestOidc?: boolean;
+		mockRevenueCat?: boolean;
+		revenueCat?: {
+			subscriptions?: unknown[];
+			purchases?: unknown[];
+			products?: unknown[];
+		};
 	};
 };
 

@@ -50,6 +50,7 @@ export const handleInitialPurchase = async ({
 		customer,
 		product,
 		featureQuantities,
+		appUserId: app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (initial purchase)`);

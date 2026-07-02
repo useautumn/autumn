@@ -40,6 +40,7 @@ export const handleNonRenewingPurchase = async ({
 		customer,
 		product,
 		featureQuantities,
+		appUserId: event.app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (non-renewing purchase)`);

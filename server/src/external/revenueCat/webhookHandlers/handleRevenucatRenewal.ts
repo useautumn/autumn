@@ -117,6 +117,7 @@ export const handleRenewal = async ({
 		ctx: customerCtx,
 		customer,
 		product,
+		appUserId: app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (renewal transition)`);
