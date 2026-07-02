@@ -7,7 +7,7 @@ export const CopySandboxChecklist = ({
 	kind,
 	items,
 	deselected,
-	forced,
+	forcedBy,
 	onToggle,
 	isLoading,
 }: {
@@ -15,7 +15,7 @@ export const CopySandboxChecklist = ({
 	kind: string;
 	items: CatalogItem[];
 	deselected: Set<string>;
-	forced?: Set<string>;
+	forcedBy?: Map<string, string[]>;
 	onToggle: (id: string) => void;
 	isLoading: boolean;
 }) => {
@@ -29,7 +29,8 @@ export const CopySandboxChecklist = ({
 				<span className="text-muted-foreground text-xs">None</span>
 			)}
 			{items.map((item) => {
-				const isForced = forced?.has(item.id) ?? false;
+				const requiredBy = forcedBy?.get(item.id) ?? [];
+				const isForced = requiredBy.length > 0;
 				return (
 					<label
 						className={cn(
@@ -41,17 +42,22 @@ export const CopySandboxChecklist = ({
 					>
 						<Checkbox
 							checked={isForced || !deselected.has(item.id)}
+							className={cn(isForced && "opacity-40")}
 							disabled={isForced}
 							id={`copy-item-${kind}-${item.id}`}
 							onCheckedChange={() => onToggle(item.id)}
 						/>
-						<span className="truncate">{item.name}</span>
+						<span
+							className={cn("truncate", isForced && "text-muted-foreground")}
+						>
+							{item.name}
+						</span>
 						<span className="truncate text-muted-foreground text-xs">
 							{item.id}
 						</span>
 						{isForced && (
 							<span className="ml-auto shrink-0 text-muted-foreground text-xs">
-								required by a plan
+								required by {requiredBy.join(", ")}
 							</span>
 						)}
 					</label>
