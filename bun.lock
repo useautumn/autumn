@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "autumn",
@@ -235,7 +236,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "1.1.9",
+      "version": "1.1.12",
       "bin": {
         "atmn": "dist/cli.js",
       },

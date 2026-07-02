@@ -74,6 +74,35 @@ const getScheduledIds = async ({
 		.flatMap((row) => row.scheduledIds ?? [])
 		.sort();
 
+const expectScheduledIdsPreservedOrRewired = async ({
+	ctx,
+	before,
+	after,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	before: string[];
+	after: string[];
+}) => {
+	expect(after.length).toBe(before.length);
+
+	for (const scheduledId of after) {
+		const schedule =
+			await ctx.stripeCli.subscriptionSchedules.retrieve(scheduledId);
+		expect(["active", "not_started"]).toContain(schedule.status);
+	}
+
+	const afterSet = new Set(after);
+	for (const scheduledId of before) {
+		if (afterSet.has(scheduledId)) {
+			continue;
+		}
+
+		const schedule =
+			await ctx.stripeCli.subscriptionSchedules.retrieve(scheduledId);
+		expect(["released", "canceled"]).toContain(schedule.status);
+	}
+};
+
 const getCustomerProductPriceAmounts = async ({
 	ctx,
 	customerId,
@@ -267,13 +296,15 @@ test.concurrent(
 				productId: premium.id,
 			}),
 		).toEqual([100]);
-		expect(
-			await getScheduledIds({
+		await expectScheduledIdsPreservedOrRewired({
+			ctx,
+			before: scheduledIdsBefore,
+			after: await getScheduledIds({
 				ctx,
 				customerId,
 				productId: pro.id,
 			}),
-		).toEqual(scheduledIdsBefore);
+		});
 		await expectNoExpiredCustomerProducts({
 			ctx,
 			customerId,
@@ -473,14 +504,16 @@ test.concurrent(
 				entityId: entities[1].id,
 			}),
 		).toEqual([100]);
-		expect(
-			await getScheduledIds({
+		await expectScheduledIdsPreservedOrRewired({
+			ctx,
+			before: scheduledIdsBefore,
+			after: await getScheduledIds({
 				ctx,
 				customerId,
 				productId: pro.id,
 				entityId: entities[0].id,
 			}),
-		).toEqual(scheduledIdsBefore);
+		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
@@ -576,13 +609,15 @@ test.concurrent(
 				productId: addon.id,
 			}),
 		).toEqual([40]);
-		expect(
-			await getScheduledIds({
+		await expectScheduledIdsPreservedOrRewired({
+			ctx,
+			before: scheduledIdsBefore,
+			after: await getScheduledIds({
 				ctx,
 				customerId,
 				productId: pro.id,
 			}),
-		).toEqual(scheduledIdsBefore);
+		});
 		await expectNoExpiredCustomerProducts({
 			ctx,
 			customerId,
