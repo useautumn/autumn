@@ -14,13 +14,13 @@ export const getSlackAdminProvider = ({
 	clientId?: string;
 } = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
+/** Scopes that enable extra features but don't require a reconnect when absent. */
+const OPTIONAL_SLACK_SCOPES: readonly string[] = [SLACK_EMAIL_SCOPE];
+
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
-	// The email scope is optional: it only enables per-user permission matching,
-	// so a working install shouldn't be told it *must* reconnect just because it
-	// predates that scope. Reconnecting to add it stays available in the dashboard.
 	return DEFAULT_SLACK_BOT_SCOPES.filter(
-		(scope) => scope !== SLACK_EMAIL_SCOPE && !granted.has(scope),
+		(scope) => !(OPTIONAL_SLACK_SCOPES.includes(scope) || granted.has(scope)),
 	);
 };
 
@@ -41,11 +41,24 @@ export const getChatStateSecret = () =>
 	process.env.BETTER_AUTH_SECRET ??
 	getRequiredChatEnv("ENCRYPTION_PASSWORD");
 
+const parseSlackBotScopesEnv = (raw: string) => {
+	const scopes = raw
+		.split(",")
+		.map((scope) => scope.trim())
+		.filter(Boolean);
+	if (scopes.length === 0) {
+		throw new RecaseError({
+			message: "SLACK_BOT_SCOPES is set but contains no valid scopes",
+			code: ErrCode.InvalidRequest,
+			statusCode: 500,
+		});
+	}
+	return scopes;
+};
+
 export const createSlackInstallUrl = (state: string) => {
 	const configured = process.env.SLACK_BOT_SCOPES
-		? process.env.SLACK_BOT_SCOPES.split(",")
-				.map((scope) => scope.trim())
-				.filter(Boolean)
+		? parseSlackBotScopesEnv(process.env.SLACK_BOT_SCOPES)
 		: [...DEFAULT_SLACK_BOT_SCOPES];
 	const scope = [
 		...new Set([...configured, SLACK_USERS_READ_SCOPE, SLACK_EMAIL_SCOPE]),
