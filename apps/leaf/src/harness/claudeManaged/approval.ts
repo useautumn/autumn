@@ -136,16 +136,13 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 		sessionId,
 	});
 	const text = outcome.textParts.join("\n\n");
-	// Only the confirmed tool's own result counts — never another tool's (a bare
-	// `.at(-1)` could bind the wrong output). If it's absent, history recovery
-	// below looks it up by toolUseId.
+	// Match by toolUseId — a bare `.at(-1)` could bind another tool's output.
 	let writeResult = outcome.toolResults?.find(
 		(result) => result.id === toolUseId,
 	);
 
-	// The live stream can crash after the MCP write ran but before we captured its
-	// result. Recover the result from session history so a lost result isn't
-	// misreported as a failure (and retried into a double-write).
+	// Recover from session history so a crash after the write isn't misreported
+	// as a failure and retried into a double-write.
 	if (!writeResult) {
 		const recovered = await deps.findSessionToolResult({
 			client,
@@ -161,18 +158,15 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 		}
 	}
 
-	// The captured write result is the source of truth. A clean result means the
-	// write succeeded — even if the session crashed afterwards (e.g. while
-	// generating follow-up text), which is just noise. A captured error result
-	// means the tool ran and failed — terminal.
+	// The captured write result is the source of truth, even if the session
+	// crashed after the write (that's just noise).
 	if (writeResult) {
 		if (isErrorResult(writeResult.output)) {
 			return approvalErrorResult(writeResult.output);
 		}
 		return { result: writeResult.output, text, toolName: writeResult.name };
 	}
-	// No result anywhere — the write never ran. Retryable, so the approval stays
-	// pending and the user can apply again.
+	// No result anywhere — the write never ran, so the approval stays retryable.
 	if (outcome.errorMessage) {
 		return approvalErrorResult(outcome.errorMessage, { retryable: true });
 	}

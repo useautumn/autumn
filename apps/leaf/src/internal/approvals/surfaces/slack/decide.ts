@@ -40,15 +40,12 @@ const authorizeSlackApprovalClicker = async ({
 	approval: ChatApproval;
 	providerUserId: string;
 }) => {
-	// Slack-admin approvals are gated upstream by validateSlackAdminAccess, not
-	// by the clicker's own Autumn scopes.
+	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
 	if (isSlackAdminProvider({ provider: approval.provider })) {
 		return { allowed: true } as const;
 	}
 
-	// Every approval-gated (destructive) tool must declare a scope requirement.
-	// An unlisted tool means a new destructive tool shipped without one, so fail
-	// closed rather than let any workspace member approve an unchecked action.
+	// A gated tool without a declared scope requirement fails closed.
 	const required = approvalScopeRequirements[approval.tool_name];
 	if (!required) {
 		rootLogger.warn("Approval tool missing scope requirement", {
@@ -83,8 +80,7 @@ const authorizeSlackApprovalClicker = async ({
 		slackUserId: providerUserId,
 	});
 	if (!callerAuth.usePerUser) {
-		// Restricted/unrestricted installs already run the session under the
-		// installer token, so resume in-session without minting a separate token.
+		// The session already runs under the installer token; no approver token needed.
 		return { allowed: true } as const;
 	}
 
@@ -225,9 +221,7 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// Claim first so exactly one click wins — and so a lost race or a click on
-		// an already-decided approval never runs the (per-user) authorization,
-		// which makes a Slack API call and mints a credential.
+		// Claim first so exactly one click wins; losers never reach authorization.
 		const claimed = await deps.claimApproval({ approvalId, providerUserId });
 		if (!claimed) {
 			deps.logger.warn("Approval claim rejected", {
@@ -238,10 +232,7 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// Now that we own the claim, authorize this clicker against their Autumn
-		// scopes. On denial, release the claim so another authorized user can still
-		// approve; the card hasn't been edited yet, so it stays on the pending
-		// approval buttons.
+		// On denial, release the claim so another authorized user can still approve.
 		let authorization:
 			| Awaited<
 					ReturnType<

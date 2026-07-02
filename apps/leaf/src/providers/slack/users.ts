@@ -89,8 +89,7 @@ const EMAIL_CACHE_MAX_ENTRIES = 10_000;
 type CachedEmail = { email: string | null; expiresAt: number };
 const emailCache = new Map<string, CachedEmail>();
 
-// Drop expired entries first, then oldest insertion-order entries if still over
-// the cap, so the cache can't grow unbounded across installations/users.
+/** Drops expired entries first, then oldest-inserted, to keep the cache bounded. */
 const evictEmailCache = (now: number) => {
 	for (const [key, entry] of emailCache) {
 		if (entry.expiresAt <= now) {
@@ -110,8 +109,7 @@ const evictEmailCache = (now: number) => {
 	}
 };
 
-// Slack emails effectively never change, so cache successful lookups and stable
-// negative user states. Transient Slack/API failures are not cached.
+/** Caches hits and stable misses (bot/deleted/no email); transient failures are not cached. */
 export const fetchSlackUserEmailCached = async ({
 	botToken,
 	installationId,
@@ -136,8 +134,7 @@ export const fetchSlackUserEmailCached = async ({
 		emailCache.set(cacheKey, {
 			email: lookup.email,
 			expiresAt:
-				now +
-				(lookup.email ? EMAIL_CACHE_TTL_MS : EMAIL_NEGATIVE_CACHE_TTL_MS),
+				now + (lookup.email ? EMAIL_CACHE_TTL_MS : EMAIL_NEGATIVE_CACHE_TTL_MS),
 		});
 		if (emailCache.size > EMAIL_CACHE_MAX_ENTRIES) {
 			evictEmailCache(now);
