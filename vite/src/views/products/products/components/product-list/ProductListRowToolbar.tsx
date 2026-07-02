@@ -24,7 +24,6 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	type SandboxSummary,
 	useCopySandbox,
-	useSandboxesQuery,
 } from "@/hooks/queries/useSandboxesQuery";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
@@ -37,9 +36,11 @@ import { CopyProductDialog } from "../CopyProductDialog";
 export const ProductListRowToolbar = ({
 	product,
 	onDeleteClick,
+	sandboxes,
 }: {
 	product: ProductV2;
 	onDeleteClick?: (product: ProductV2) => void;
+	sandboxes: SandboxSummary[];
 }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
@@ -56,7 +57,6 @@ export const ProductListRowToolbar = ({
 	// Only a Sandbox-env view with an active sandbox is a real named-sandbox
 	// context; activeSandbox can be stale on a production route (no header sent).
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
-	const { sandboxes } = useSandboxesQuery({ enabled: true });
 	const copySandbox = useCopySandbox();
 
 	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;

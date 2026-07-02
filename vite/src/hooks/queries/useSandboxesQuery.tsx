@@ -192,26 +192,16 @@ export const useCopySandbox = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({
-			fromSandboxId,
-			fromMaster,
-			toSandboxId,
-			productIds,
-			featureIds,
-		}: {
-			fromSandboxId?: string;
-			fromMaster?: true;
-			toSandboxId: string;
-			productIds?: string[];
-			featureIds?: string[];
-		}) => {
-			await axiosInstance.post("/v1/sandboxes.copy", {
-				fromSandboxId,
-				fromMaster,
-				toSandboxId,
-				productIds,
-				featureIds,
-			});
+		// Source is exactly one of fromSandboxId / fromMaster — a union so bad
+		// combos fail to compile instead of hitting a guaranteed server 400.
+		mutationFn: async (
+			input: ({ fromSandboxId: string } | { fromMaster: true }) & {
+				toSandboxId: string;
+				productIds?: string[];
+				featureIds?: string[];
+			},
+		) => {
+			await axiosInstance.post("/v1/sandboxes.copy", input);
 		},
 		// Copy overwrites the target's whole catalog, so refresh any open plan/feature views.
 		onSuccess: () => {
