@@ -70,7 +70,7 @@ type ResumeClaudeManagedApprovalWithDepsInput = {
 	deps?: typeof defaultResumeDeps;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
-	token?: string;
+	approverToken?: string;
 };
 
 /** Resumes an approved Claude Managed write; finalization stays in resolveApproval. */
@@ -79,7 +79,7 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 	deps = defaultResumeDeps,
 	onProgress,
 	providerUserId,
-	token,
+	approverToken,
 }: ResumeClaudeManagedApprovalWithDepsInput): Promise<ApprovalRunResult> => {
 	const sessionId = approval.run_id;
 	const toolUseId = approval.tool_call_id;
@@ -88,12 +88,12 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 	}
 	// Per-user approvals run the tool out-of-band under the approver's own token,
 	// then release the asker's suspended session via a deny so it stays usable.
-	if (token) {
+	if (approverToken) {
 		onProgress?.(toolStatusLine(approval.tool_name));
 		try {
 			const result = await deps.executeTool({
 				env: approval.env,
-				token,
+				token: approverToken,
 				toolName: approval.tool_name,
 				args: approval.tool_args,
 			});

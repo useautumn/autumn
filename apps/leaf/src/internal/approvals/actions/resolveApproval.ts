@@ -14,12 +14,12 @@ export const resolveApproval = async ({
 	approval,
 	onProgress,
 	providerUserId,
-	token,
+	approverToken,
 }: {
 	approval: ChatApproval;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
-	token?: string;
+	approverToken?: string;
 }): Promise<ApprovalRunResult> => {
 	const harness =
 		(approval.harness as AgentHarnessName | null) ??
@@ -39,7 +39,7 @@ export const resolveApproval = async ({
 
 	let result: ApprovalRunResult;
 	try {
-		result = await resume({ approval, onProgress, providerUserId, token });
+		result = await resume({ approval, onProgress, providerUserId, approverToken });
 	} catch (error) {
 		// A thrown resumer error means the write never ran — keep the approval
 		// pending so the user can retry.

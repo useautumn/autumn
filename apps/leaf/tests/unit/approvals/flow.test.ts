@@ -147,7 +147,7 @@ describe("approval flow", () => {
 		).toBe(true);
 	});
 
-	test("direct token approvals fail MCP isError results and release the suspended session via deny", async () => {
+	test("direct approver token approvals fail MCP isError results and release the suspended session via deny", async () => {
 		setLeafTestEnv();
 		const { resumeClaudeManagedApprovalWithDeps } = await import(
 			"../../../src/harness/claudeManaged/approval.js"
@@ -166,7 +166,7 @@ describe("approval flow", () => {
 		const resultPromise = resumeClaudeManagedApprovalWithDeps({
 			approval,
 			providerUserId: "U1",
-			token: "am_oauth_clicker",
+			approverToken: "am_oauth_clicker",
 			deps: {
 				executeTool: async () => {
 					calls.push("execute");
@@ -445,7 +445,7 @@ describe("approval flow", () => {
 		const { handleApprovalActionWithDeps } = await import(
 			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
-		let resolverToken: string | undefined;
+		let resolverApproverToken: string | undefined;
 		const approval = {
 			env: AppEnv.Sandbox,
 			expires_at: Date.now() + 60_000,
@@ -464,14 +464,14 @@ describe("approval flow", () => {
 		await handleApprovalActionWithDeps({
 			event,
 			deps: {
-				resolveApproval: async ({ token }) => {
-					resolverToken = token;
+				resolveApproval: async ({ approverToken }) => {
+					resolverApproverToken = approverToken;
 					return { result: {}, text: "" };
 				},
 				cancelApproval: async () => approval,
 				authorizeApprovalClicker: async () => ({
 					allowed: true,
-					token: "am_oauth_clicker",
+					approverToken: "am_oauth_clicker",
 				}),
 				claimApproval: async () => approval,
 				editActionMessage: async () => {},
@@ -481,7 +481,7 @@ describe("approval flow", () => {
 			},
 		});
 
-		expect(resolverToken).toBe("am_oauth_clicker");
+		expect(resolverApproverToken).toBe("am_oauth_clicker");
 	});
 
 	test("shows the current state when a claim is rejected", async () => {

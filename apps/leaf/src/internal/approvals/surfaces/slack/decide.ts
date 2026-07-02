@@ -100,14 +100,14 @@ const authorizeSlackApprovalClicker = async ({
 		} as const;
 	}
 
-	const token = await getInstallationOAuthAccessToken({
+	const approverToken = await getInstallationOAuthAccessToken({
 		installation,
 		env: approval.env,
 		orgId: approval.org_id,
 		userId: callerAuth.userId,
 	});
 
-	return { allowed: true, token } as const;
+	return { allowed: true, approverToken } as const;
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -313,7 +313,9 @@ export const handleApprovalActionWithDeps = async ({
 					editor.requestEdit();
 				},
 				providerUserId,
-				token: authorization?.allowed ? authorization.token : undefined,
+				approverToken: authorization?.allowed
+					? authorization.approverToken
+					: undefined,
 			});
 		} finally {
 			clearInterval(heartbeat);
