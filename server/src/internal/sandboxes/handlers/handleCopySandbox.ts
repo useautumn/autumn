@@ -12,7 +12,9 @@ const CopySandboxSchema = z
 		// Source is exactly one of: another owned sandbox (fromSandboxId), or the
 		// master org's current env — default sandbox / production — via fromMaster.
 		fromSandboxId: z.string().min(1).optional(),
-		fromMaster: z.literal(true).optional(),
+		// boolean (not z.literal(true)) so clients that serialize `false` instead
+		// of omitting still parse; the refine treats falsy as "no master source".
+		fromMaster: z.boolean().optional(),
 		toSandboxId: z.string().min(1),
 		// Omit both to copy the whole catalog; pass either to copy only those items
 		// (selected products pull in the features they reference).

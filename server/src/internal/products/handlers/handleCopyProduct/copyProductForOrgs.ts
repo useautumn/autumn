@@ -137,7 +137,7 @@ export const copyProductForOrgs = async ({
 
 			if (toFeature && fromFeature.type !== toFeature.type) {
 				throw new RecaseError({
-					message: `Feature ${fromFeature.name} exists in ${toEnv}, but has a different config. Please match them then try again.`,
+					message: `Feature ${fromFeature.name} exists in ${toEnv} with a different type. Please match them then try again.`,
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});
