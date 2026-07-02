@@ -8,8 +8,6 @@ import {
 } from "./resolveSlackCallerAuthCore.js";
 import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
 
-export type { SlackCallerAuthResult };
-
 /**
  * Single seam for "does this Slack sender need per-user resolution, and if so
  * are they authorized" — shared by the message path (runMessage) and the
@@ -26,8 +24,6 @@ export const resolveSlackCallerAuth = async ({
 	installation: ChatInstallation;
 	logger: AutumnLogger;
 	orgId: string;
-	// Admin installs keep the installer-scoped flow even when the auth mode is
-	// PerUser; only the caller (runMessage) knows about that admin bypass.
 	skipPerUser?: boolean;
 	slackUserId: string;
 }): Promise<SlackCallerAuthResult> =>
