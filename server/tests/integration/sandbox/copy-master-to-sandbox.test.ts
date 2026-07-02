@@ -2,9 +2,11 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	type CreateProductV2Params,
+	ErrCode,
 	type Organization,
 	type OrgConfig,
 	organizations,
+	RecaseError,
 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -220,7 +222,7 @@ describe("copy a plan from the master org into a named sandbox", () => {
 	test("a copy with no source specified is rejected", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
-		let thrown = false;
+		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
 				db,
@@ -229,16 +231,17 @@ describe("copy a plan from the master org into a named sandbox", () => {
 				toSandboxId: sub.id,
 				productIds: [SBX_PLAN],
 			});
-		} catch {
-			thrown = true;
+		} catch (error) {
+			thrown = error;
 		}
-		expect(thrown).toBe(true);
+		expect(thrown).toBeInstanceOf(RecaseError);
+		expect((thrown as RecaseError).code).toBe(ErrCode.InvalidRequest);
 	}, 120_000);
 
 	test("a requested plan absent from the source is rejected, not a silent no-op", async () => {
 		if (!master || !sub) throw new Error("orgs not provisioned");
 
-		let thrown = false;
+		let thrown: unknown;
 		try {
 			await copySandboxForOrg({
 				db,
@@ -249,9 +252,10 @@ describe("copy a plan from the master org into a named sandbox", () => {
 				toSandboxId: sub.id,
 				productIds: [`missing_${suffix}`],
 			});
-		} catch {
-			thrown = true;
+		} catch (error) {
+			thrown = error;
 		}
-		expect(thrown).toBe(true);
+		expect(thrown).toBeInstanceOf(RecaseError);
+		expect((thrown as RecaseError).code).toBe(ErrCode.ProductNotFound);
 	}, 120_000);
 });
