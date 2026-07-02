@@ -11,20 +11,64 @@ export const previewAttachFeatureQuantityRequestSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewAttachAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const previewAttachItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachItemToSchema = z.union([z.number(), z.string()]);
+
+export const previewAttachItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const previewAttachItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachAddItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
 });
 
 export const previewAttachAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const previewAttachAddItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const previewAttachAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachAddItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const previewAttachInvoiceModeSchema = z.object({
@@ -154,10 +198,21 @@ export const previewAttachFeatureQuantityRequestOutboundSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewAttachAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachItemResetOutboundSchema = z.object({
@@ -165,19 +220,42 @@ export const previewAttachItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
-export const previewAttachItemTierOutboundSchema = z.object({
-	to: z.union([z.number(), z.string()]),
+export const previewAttachItemTierAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewAttachItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -224,19 +302,43 @@ export const previewAttachAddItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachAddItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachAddItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
+export const previewAttachAddItemTierAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.union([z.number(), z.undefined()]).optional(),
+		flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	});
+
 export const previewAttachAddItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAddItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachAddItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAddItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachAddItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -297,6 +399,68 @@ export const previewAttachFreeTrialParamsOutboundSchema = z.object({
 	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const previewAttachPurchaseLimitOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.number(),
+	limit: z.number(),
+});
+
+export const previewAttachAutoTopupOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchase_limit: z
+		.union([previewAttachPurchaseLimitOutboundSchema, z.undefined()])
+		.optional(),
+	invoice_mode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const previewAttachSpendLimitOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
+	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachUsageLimitOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	limit: z.number(),
+	interval: z.string(),
+});
+
+export const previewAttachUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewAttachOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
+export const previewAttachBillingControlsOutboundSchema = z.object({
+	auto_topups: z
+		.union([z.array(previewAttachAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+	spend_limits: z
+		.union([z.array(previewAttachSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_limits: z
+		.union([z.array(previewAttachUsageLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_alerts: z
+		.union([z.array(previewAttachUsageAlertOutboundSchema), z.undefined()])
+		.optional(),
+	overage_allowed: z
+		.union([z.array(previewAttachOverageAllowedOutboundSchema), z.undefined()])
+		.optional(),
+});
+
 export const previewAttachCustomizeOutboundSchema = z.object({
 	price: z
 		.union([previewAttachBasePriceOutboundSchema, z.undefined()])
@@ -315,6 +479,9 @@ export const previewAttachCustomizeOutboundSchema = z.object({
 		.union([previewAttachFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billing_controls: z
+		.union([previewAttachBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewAttachInvoiceModeOutboundSchema = z.object({
@@ -394,6 +561,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -408,6 +576,9 @@ export const previewAttachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: previewAttachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(previewAttachAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const previewAttachItemResetIntervalSchema = closedEnumSchema;
@@ -425,6 +596,9 @@ export const previewAttachItemBillingMethodSchema = closedEnumSchema;
 
 export const previewAttachItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(previewAttachItemAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachItemTierSchema), z.undefined()])
 		.optional(),
@@ -485,6 +659,12 @@ export const previewAttachAddItemBillingMethodSchema = closedEnumSchema;
 
 export const previewAttachAddItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachAddItemAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachAddItemTierSchema), z.undefined()])
 		.optional(),
@@ -569,6 +749,71 @@ export const previewAttachFreeTrialParamsSchema = z.object({
 	onEnd: z.union([previewAttachOnEndSchema, z.undefined()]).optional(),
 });
 
+export const previewAttachPurchaseLimitIntervalSchema = closedEnumSchema;
+
+export const previewAttachPurchaseLimitSchema = z.object({
+	interval: previewAttachPurchaseLimitIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.number(),
+});
+
+export const previewAttachAutoTopupSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([previewAttachPurchaseLimitSchema, z.undefined()])
+		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const previewAttachLimitTypeSchema = closedEnumSchema;
+
+export const previewAttachSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z.union([previewAttachLimitTypeSchema, z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewAttachUsageLimitIntervalSchema = closedEnumSchema;
+
+export const previewAttachUsageLimitSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limit: z.number(),
+	interval: previewAttachUsageLimitIntervalSchema,
+});
+
+export const previewAttachThresholdTypeSchema = closedEnumSchema;
+
+export const previewAttachUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: previewAttachThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
+export const previewAttachBillingControlsSchema = z.object({
+	autoTopups: z
+		.union([z.array(previewAttachAutoTopupSchema), z.undefined()])
+		.optional(),
+	spendLimits: z
+		.union([z.array(previewAttachSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(previewAttachUsageLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(previewAttachUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(previewAttachOverageAllowedSchema), z.undefined()])
+		.optional(),
+});
+
 export const previewAttachCustomizeSchema = z.object({
 	price: z
 		.union([previewAttachBasePriceSchema, z.undefined()])
@@ -587,6 +832,9 @@ export const previewAttachCustomizeSchema = z.object({
 		.union([previewAttachFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	billingControls: z
+		.union([previewAttachBillingControlsSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewAttachProrationBehaviorSchema = closedEnumSchema;
@@ -645,6 +893,7 @@ export const previewAttachParamsSchema = z.object({
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({

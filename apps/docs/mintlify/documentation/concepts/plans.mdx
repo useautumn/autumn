@@ -15,6 +15,30 @@ When you create a plan, you can set its price:
 - **Variable** - there is no fixed price for this plan. The plan is priced purely based on feature usage or quantity purchased.
 
 
+## Multiple Currencies
+
+Plan prices are in your organization's default currency. To sell the same plan in other currencies, add `additional_currencies` wherever a price is defined - the base price, a priced feature, or each tier of a tiered price:
+
+```json
+{
+  "plan_id": "pro",
+  "price": {
+    "amount": 20,
+    "interval": "month",
+    "additional_currencies": [
+      { "currency": "eur", "amount": 18 },
+      { "currency": "gbp", "amount": 16 }
+    ]
+  }
+}
+```
+
+Each amount is set explicitly per currency - Autumn does not apply exchange rates. Tier boundaries stay the same across currencies; only the amounts differ.
+
+Each customer is billed in a single currency. You can set it when creating the customer, pass it on their first `attach`, or let it default to your organization's currency. Once a customer has paid in a currency, they're locked to it (Stripe requires this), and attaching a plan that doesn't offer a price in their currency fails with a `currency_mismatch` error.
+
+Under the hood, Autumn creates a separate Stripe price per currency under the same Stripe product, on demand when a customer first attaches in that currency.
+
 ## Plan Features
 
 Plans are made up of a list of [features](/documentation/concepts/features). These can be:

@@ -53,6 +53,17 @@ export type PreviewUpdatePriceInterval = ClosedEnum<
   typeof PreviewUpdatePriceInterval
 >;
 
+export type PreviewUpdateAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -69,6 +80,10 @@ export type PreviewUpdateBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<PreviewUpdateAdditionalCurrency> | undefined;
 };
 
 /**
@@ -106,12 +121,44 @@ export type PreviewUpdateItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewUpdateItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewUpdateItemTo = number | string;
+
+export type PreviewUpdateItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewUpdateItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewUpdateItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewUpdateItemTierBehavior = {
@@ -162,6 +209,10 @@ export type PreviewUpdateItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<PreviewUpdateItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -341,12 +392,44 @@ export type PreviewUpdateAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewUpdateAddItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewUpdateAddItemTo = number | string;
+
+export type PreviewUpdateAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewUpdateAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewUpdateAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewUpdateAddItemTierBehavior = {
@@ -397,6 +480,12 @@ export type PreviewUpdateAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<PreviewUpdateAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -664,6 +753,209 @@ export type PreviewUpdateFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const PreviewUpdatePurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type PreviewUpdatePurchaseLimitInterval = ClosedEnum<
+  typeof PreviewUpdatePurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type PreviewUpdatePurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: PreviewUpdatePurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type PreviewUpdateAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: PreviewUpdatePurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const PreviewUpdateLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type PreviewUpdateLimitType = ClosedEnum<typeof PreviewUpdateLimitType>;
+
+export type PreviewUpdateSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: PreviewUpdateLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const PreviewUpdateUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type PreviewUpdateUsageLimitInterval = ClosedEnum<
+  typeof PreviewUpdateUsageLimitInterval
+>;
+
+export type PreviewUpdateUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: PreviewUpdateUsageLimitInterval;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const PreviewUpdateThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type PreviewUpdateThresholdType = ClosedEnum<
+  typeof PreviewUpdateThresholdType
+>;
+
+export type PreviewUpdateUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: PreviewUpdateThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type PreviewUpdateOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type PreviewUpdateBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<PreviewUpdateAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<PreviewUpdateSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<PreviewUpdateUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PreviewUpdateUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<PreviewUpdateOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type PreviewUpdateCustomize = {
@@ -687,6 +979,10 @@ export type PreviewUpdateCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: PreviewUpdateFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: PreviewUpdateBillingControls | undefined;
 };
 
 /**
@@ -1266,10 +1562,38 @@ export const PreviewUpdatePriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdatePriceInterval);
 
 /** @internal */
+export type PreviewUpdateAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewUpdateAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAdditionalCurrency$Outbound,
+  PreviewUpdateAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewUpdateAdditionalCurrencyToJSON(
+  previewUpdateAdditionalCurrency: PreviewUpdateAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAdditionalCurrency$outboundSchema.parse(
+      previewUpdateAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewUpdateAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1281,10 +1605,14 @@ export const PreviewUpdateBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: PreviewUpdatePriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewUpdateAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1333,6 +1661,31 @@ export function previewUpdateItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewUpdateItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemAdditionalCurrency$Outbound,
+  PreviewUpdateItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewUpdateItemAdditionalCurrencyToJSON(
+  previewUpdateItemAdditionalCurrency: PreviewUpdateItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewUpdateItemAdditionalCurrency$outboundSchema.parse(
+      previewUpdateItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1350,10 +1703,49 @@ export function previewUpdateItemToToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateItemTierAdditionalCurrency$Outbound,
+    PreviewUpdateItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewUpdateItemTierAdditionalCurrencyToJSON(
+  previewUpdateItemTierAdditionalCurrency:
+    PreviewUpdateItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewUpdateItemTierAdditionalCurrency$outboundSchema.parse(
+      previewUpdateItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewUpdateItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1365,10 +1757,14 @@ export const PreviewUpdateItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewUpdateItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1399,6 +1795,9 @@ export const PreviewUpdateItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewUpdateItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewUpdateItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewUpdateItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1415,6 +1814,9 @@ export const PreviewUpdateItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewUpdateItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => PreviewUpdateItemTier$outboundSchema)),
     ),
@@ -1427,6 +1829,7 @@ export const PreviewUpdateItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1606,6 +2009,33 @@ export function previewUpdateAddItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateAddItemAdditionalCurrency$Outbound,
+    PreviewUpdateAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function previewUpdateAddItemAdditionalCurrencyToJSON(
+  previewUpdateAddItemAdditionalCurrency:
+    PreviewUpdateAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemAdditionalCurrency$outboundSchema.parse(
+      previewUpdateAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1623,10 +2053,49 @@ export function previewUpdateAddItemToToJSON(
 }
 
 /** @internal */
+export type PreviewUpdateAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewUpdateAddItemTierAdditionalCurrency$Outbound,
+    PreviewUpdateAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewUpdateAddItemTierAdditionalCurrencyToJSON(
+  previewUpdateAddItemTierAdditionalCurrency:
+    PreviewUpdateAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemTierAdditionalCurrency$outboundSchema.parse(
+      previewUpdateAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewUpdateAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1638,10 +2107,14 @@ export const PreviewUpdateAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewUpdateAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1672,6 +2145,9 @@ export const PreviewUpdateAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewUpdateAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewUpdateAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewUpdateAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1688,9 +2164,12 @@ export const PreviewUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => PreviewUpdateAddItemTier$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewUpdateAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      PreviewUpdateAddItemTier$outboundSchema
+    ))),
     tierBehavior: z.optional(PreviewUpdateAddItemTierBehavior$outboundSchema),
     interval: PreviewUpdateAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1700,6 +2179,7 @@ export const PreviewUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1980,12 +2460,298 @@ export function previewUpdateFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const PreviewUpdatePurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdatePurchaseLimitInterval
+> = z.enum(PreviewUpdatePurchaseLimitInterval);
+
+/** @internal */
+export type PreviewUpdatePurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const PreviewUpdatePurchaseLimit$outboundSchema: z.ZodMiniType<
+  PreviewUpdatePurchaseLimit$Outbound,
+  PreviewUpdatePurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: PreviewUpdatePurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function previewUpdatePurchaseLimitToJSON(
+  previewUpdatePurchaseLimit: PreviewUpdatePurchaseLimit,
+): string {
+  return JSON.stringify(
+    PreviewUpdatePurchaseLimit$outboundSchema.parse(previewUpdatePurchaseLimit),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: PreviewUpdatePurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAutoTopup$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAutoTopup$Outbound,
+  PreviewUpdateAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => PreviewUpdatePurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function previewUpdateAutoTopupToJSON(
+  previewUpdateAutoTopup: PreviewUpdateAutoTopup,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAutoTopup$outboundSchema.parse(previewUpdateAutoTopup),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateLimitType
+> = z.enum(PreviewUpdateLimitType);
+
+/** @internal */
+export type PreviewUpdateSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateSpendLimit$outboundSchema: z.ZodMiniType<
+  PreviewUpdateSpendLimit$Outbound,
+  PreviewUpdateSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(PreviewUpdateLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function previewUpdateSpendLimitToJSON(
+  previewUpdateSpendLimit: PreviewUpdateSpendLimit,
+): string {
+  return JSON.stringify(
+    PreviewUpdateSpendLimit$outboundSchema.parse(previewUpdateSpendLimit),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateUsageLimitInterval
+> = z.enum(PreviewUpdateUsageLimitInterval);
+
+/** @internal */
+export type PreviewUpdateUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const PreviewUpdateUsageLimit$outboundSchema: z.ZodMiniType<
+  PreviewUpdateUsageLimit$Outbound,
+  PreviewUpdateUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: PreviewUpdateUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewUpdateUsageLimitToJSON(
+  previewUpdateUsageLimit: PreviewUpdateUsageLimit,
+): string {
+  return JSON.stringify(
+    PreviewUpdateUsageLimit$outboundSchema.parse(previewUpdateUsageLimit),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateThresholdType
+> = z.enum(PreviewUpdateThresholdType);
+
+/** @internal */
+export type PreviewUpdateUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateUsageAlert$outboundSchema: z.ZodMiniType<
+  PreviewUpdateUsageAlert$Outbound,
+  PreviewUpdateUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: PreviewUpdateThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function previewUpdateUsageAlertToJSON(
+  previewUpdateUsageAlert: PreviewUpdateUsageAlert,
+): string {
+  return JSON.stringify(
+    PreviewUpdateUsageAlert$outboundSchema.parse(previewUpdateUsageAlert),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewUpdateOverageAllowed$outboundSchema: z.ZodMiniType<
+  PreviewUpdateOverageAllowed$Outbound,
+  PreviewUpdateOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewUpdateOverageAllowedToJSON(
+  previewUpdateOverageAllowed: PreviewUpdateOverageAllowed,
+): string {
+  return JSON.stringify(
+    PreviewUpdateOverageAllowed$outboundSchema.parse(
+      previewUpdateOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateBillingControls$Outbound = {
+  auto_topups?: Array<PreviewUpdateAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<PreviewUpdateSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<PreviewUpdateUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<PreviewUpdateUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<PreviewUpdateOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateBillingControls$outboundSchema: z.ZodMiniType<
+  PreviewUpdateBillingControls$Outbound,
+  PreviewUpdateBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => PreviewUpdateAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PreviewUpdateSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => PreviewUpdateUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => PreviewUpdateUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => PreviewUpdateOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function previewUpdateBillingControlsToJSON(
+  previewUpdateBillingControls: PreviewUpdateBillingControls,
+): string {
+  return JSON.stringify(
+    PreviewUpdateBillingControls$outboundSchema.parse(
+      previewUpdateBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateCustomize$Outbound = {
   price?: PreviewUpdateBasePrice$Outbound | null | undefined;
   items?: Array<PreviewUpdateItemPlanItem$Outbound> | undefined;
   add_items?: Array<PreviewUpdateAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<PreviewUpdatePlanItemFilter$Outbound> | undefined;
   free_trial?: PreviewUpdateFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: PreviewUpdateBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -2009,12 +2775,16 @@ export const PreviewUpdateCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => PreviewUpdateFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => PreviewUpdateBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );

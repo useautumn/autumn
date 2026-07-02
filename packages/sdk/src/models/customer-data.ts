@@ -67,6 +67,18 @@ export type CustomerDataAutoTopup = {
   invoiceMode?: boolean | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const CustomerDataLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type CustomerDataLimitType = ClosedEnum<typeof CustomerDataLimitType>;
+
 export type CustomerDataSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -77,7 +89,11 @@ export type CustomerDataSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: CustomerDataLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
 };
@@ -103,6 +119,10 @@ export type CustomerDataUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -236,6 +256,10 @@ export type CustomerData = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
+  /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: CustomerDataBillingControls | undefined;
@@ -325,9 +349,15 @@ export function customerDataAutoTopupToJSON(
 }
 
 /** @internal */
+export const CustomerDataLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataLimitType
+> = z.enum(CustomerDataLimitType);
+
+/** @internal */
 export type CustomerDataSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -339,11 +369,13 @@ export const CustomerDataSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(CustomerDataLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -365,6 +397,7 @@ export const CustomerDataUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CustomerDataUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -376,6 +409,7 @@ export const CustomerDataUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CustomerDataUsageLimitInterval$outboundSchema,
   }),
@@ -556,6 +590,7 @@ export type CustomerData$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: CustomerDataBillingControls$Outbound | undefined;
   config?: CustomerDataConfig$Outbound | undefined;
 };
@@ -574,6 +609,7 @@ export const CustomerData$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => CustomerDataBillingControls$outboundSchema),
     ),

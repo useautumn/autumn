@@ -50,6 +50,17 @@ export const AttachPriceInterval = {
  */
 export type AttachPriceInterval = ClosedEnum<typeof AttachPriceInterval>;
 
+export type AttachAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -66,6 +77,10 @@ export type AttachBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<AttachAdditionalCurrency> | undefined;
 };
 
 /**
@@ -103,12 +118,42 @@ export type AttachItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type AttachItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type AttachItemTo = number | string;
+
+export type AttachItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type AttachItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?: Array<AttachItemTierAdditionalCurrency> | undefined;
 };
 
 export const AttachItemTierBehavior = {
@@ -157,6 +202,10 @@ export type AttachItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<AttachItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -332,12 +381,42 @@ export type AttachAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type AttachAddItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type AttachAddItemTo = number | string;
+
+export type AttachAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type AttachAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?: Array<AttachAddItemTierAdditionalCurrency> | undefined;
 };
 
 export const AttachAddItemTierBehavior = {
@@ -388,6 +467,10 @@ export type AttachAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<AttachAddItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -653,6 +736,207 @@ export type AttachFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const AttachPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type AttachPurchaseLimitInterval = ClosedEnum<
+  typeof AttachPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type AttachPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: AttachPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type AttachAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: AttachPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const AttachLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type AttachLimitType = ClosedEnum<typeof AttachLimitType>;
+
+export type AttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: AttachLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const AttachUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type AttachUsageLimitInterval = ClosedEnum<
+  typeof AttachUsageLimitInterval
+>;
+
+export type AttachUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: AttachUsageLimitInterval;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const AttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type AttachThresholdType = ClosedEnum<typeof AttachThresholdType>;
+
+export type AttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: AttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type AttachOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type AttachBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<AttachAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<AttachSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<AttachUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<AttachUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<AttachOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type AttachCustomize = {
@@ -676,6 +960,10 @@ export type AttachCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: AttachFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: AttachBillingControls | undefined;
 };
 
 /**
@@ -905,6 +1193,10 @@ export type AttachParams = {
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
   taxRateId?: string | undefined;
+  /**
+   * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
 };
 
 /**
@@ -1024,10 +1316,34 @@ export const AttachPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachPriceInterval);
 
 /** @internal */
+export type AttachAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const AttachAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  AttachAdditionalCurrency$Outbound,
+  AttachAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function attachAdditionalCurrencyToJSON(
+  attachAdditionalCurrency: AttachAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    AttachAdditionalCurrency$outboundSchema.parse(attachAdditionalCurrency),
+  );
+}
+
+/** @internal */
 export type AttachBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?: Array<AttachAdditionalCurrency$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1039,10 +1355,14 @@ export const AttachBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: AttachPriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => AttachAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1087,6 +1407,31 @@ export function attachItemResetToJSON(
 }
 
 /** @internal */
+export type AttachItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const AttachItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  AttachItemAdditionalCurrency$Outbound,
+  AttachItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function attachItemAdditionalCurrencyToJSON(
+  attachItemAdditionalCurrency: AttachItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    AttachItemAdditionalCurrency$outboundSchema.parse(
+      attachItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1100,10 +1445,47 @@ export function attachItemToToJSON(attachItemTo: AttachItemTo): string {
 }
 
 /** @internal */
+export type AttachItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const AttachItemTierAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  AttachItemTierAdditionalCurrency$Outbound,
+  AttachItemTierAdditionalCurrency
+> = z.pipe(
+  z.object({
+    currency: z.string(),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function attachItemTierAdditionalCurrencyToJSON(
+  attachItemTierAdditionalCurrency: AttachItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    AttachItemTierAdditionalCurrency$outboundSchema.parse(
+      attachItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<AttachItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1115,10 +1497,14 @@ export const AttachItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => AttachItemTierAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1145,6 +1531,9 @@ export const AttachItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type AttachItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<AttachItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<AttachItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1161,6 +1550,9 @@ export const AttachItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => AttachItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(z.array(z.lazy(() => AttachItemTier$outboundSchema))),
     tierBehavior: z.optional(AttachItemTierBehavior$outboundSchema),
     interval: AttachItemPriceInterval$outboundSchema,
@@ -1171,6 +1563,7 @@ export const AttachItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1344,6 +1737,31 @@ export function attachAddItemResetToJSON(
 }
 
 /** @internal */
+export type AttachAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const AttachAddItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  AttachAddItemAdditionalCurrency$Outbound,
+  AttachAddItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function attachAddItemAdditionalCurrencyToJSON(
+  attachAddItemAdditionalCurrency: AttachAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    AttachAddItemAdditionalCurrency$outboundSchema.parse(
+      attachAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1359,10 +1777,47 @@ export function attachAddItemToToJSON(
 }
 
 /** @internal */
+export type AttachAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddItemTierAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  AttachAddItemTierAdditionalCurrency$Outbound,
+  AttachAddItemTierAdditionalCurrency
+> = z.pipe(
+  z.object({
+    currency: z.string(),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function attachAddItemTierAdditionalCurrencyToJSON(
+  attachAddItemTierAdditionalCurrency: AttachAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    AttachAddItemTierAdditionalCurrency$outboundSchema.parse(
+      attachAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type AttachAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<AttachAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1374,10 +1829,14 @@ export const AttachAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => AttachAddItemTierAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1408,6 +1867,9 @@ export const AttachAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type AttachAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<AttachAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<AttachAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1424,6 +1886,9 @@ export const AttachAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => AttachAddItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(z.array(z.lazy(() => AttachAddItemTier$outboundSchema))),
     tierBehavior: z.optional(AttachAddItemTierBehavior$outboundSchema),
     interval: AttachAddItemPriceInterval$outboundSchema,
@@ -1434,6 +1899,7 @@ export const AttachAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1696,12 +2162,290 @@ export function attachFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const AttachPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachPurchaseLimitInterval
+> = z.enum(AttachPurchaseLimitInterval);
+
+/** @internal */
+export type AttachPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const AttachPurchaseLimit$outboundSchema: z.ZodMiniType<
+  AttachPurchaseLimit$Outbound,
+  AttachPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: AttachPurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachPurchaseLimitToJSON(
+  attachPurchaseLimit: AttachPurchaseLimit,
+): string {
+  return JSON.stringify(
+    AttachPurchaseLimit$outboundSchema.parse(attachPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type AttachAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: AttachPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const AttachAutoTopup$outboundSchema: z.ZodMiniType<
+  AttachAutoTopup$Outbound,
+  AttachAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(z.lazy(() => AttachPurchaseLimit$outboundSchema)),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function attachAutoTopupToJSON(
+  attachAutoTopup: AttachAutoTopup,
+): string {
+  return JSON.stringify(AttachAutoTopup$outboundSchema.parse(attachAutoTopup));
+}
+
+/** @internal */
+export const AttachLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof AttachLimitType
+> = z.enum(AttachLimitType);
+
+/** @internal */
+export type AttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const AttachSpendLimit$outboundSchema: z.ZodMiniType<
+  AttachSpendLimit$Outbound,
+  AttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(AttachLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function attachSpendLimitToJSON(
+  attachSpendLimit: AttachSpendLimit,
+): string {
+  return JSON.stringify(
+    AttachSpendLimit$outboundSchema.parse(attachSpendLimit),
+  );
+}
+
+/** @internal */
+export const AttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachUsageLimitInterval
+> = z.enum(AttachUsageLimitInterval);
+
+/** @internal */
+export type AttachUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const AttachUsageLimit$outboundSchema: z.ZodMiniType<
+  AttachUsageLimit$Outbound,
+  AttachUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: AttachUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function attachUsageLimitToJSON(
+  attachUsageLimit: AttachUsageLimit,
+): string {
+  return JSON.stringify(
+    AttachUsageLimit$outboundSchema.parse(attachUsageLimit),
+  );
+}
+
+/** @internal */
+export const AttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof AttachThresholdType
+> = z.enum(AttachThresholdType);
+
+/** @internal */
+export type AttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const AttachUsageAlert$outboundSchema: z.ZodMiniType<
+  AttachUsageAlert$Outbound,
+  AttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: AttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function attachUsageAlertToJSON(
+  attachUsageAlert: AttachUsageAlert,
+): string {
+  return JSON.stringify(
+    AttachUsageAlert$outboundSchema.parse(attachUsageAlert),
+  );
+}
+
+/** @internal */
+export type AttachOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const AttachOverageAllowed$outboundSchema: z.ZodMiniType<
+  AttachOverageAllowed$Outbound,
+  AttachOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function attachOverageAllowedToJSON(
+  attachOverageAllowed: AttachOverageAllowed,
+): string {
+  return JSON.stringify(
+    AttachOverageAllowed$outboundSchema.parse(attachOverageAllowed),
+  );
+}
+
+/** @internal */
+export type AttachBillingControls$Outbound = {
+  auto_topups?: Array<AttachAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<AttachSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<AttachUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<AttachUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<AttachOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const AttachBillingControls$outboundSchema: z.ZodMiniType<
+  AttachBillingControls$Outbound,
+  AttachBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => AttachAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => AttachSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => AttachUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => AttachUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => AttachOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function attachBillingControlsToJSON(
+  attachBillingControls: AttachBillingControls,
+): string {
+  return JSON.stringify(
+    AttachBillingControls$outboundSchema.parse(attachBillingControls),
+  );
+}
+
+/** @internal */
 export type AttachCustomize$Outbound = {
   price?: AttachBasePrice$Outbound | null | undefined;
   items?: Array<AttachItemPlanItem$Outbound> | undefined;
   add_items?: Array<AttachAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<AttachPlanItemFilter$Outbound> | undefined;
   free_trial?: AttachFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: AttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1721,12 +2465,16 @@ export const AttachCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => AttachFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => AttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );
@@ -1933,6 +2681,7 @@ export type AttachParams$Outbound = {
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
+  currency?: string | undefined;
 };
 
 /** @internal */
@@ -1978,6 +2727,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
+    currency: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {

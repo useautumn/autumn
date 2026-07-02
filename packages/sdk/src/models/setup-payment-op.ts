@@ -51,6 +51,17 @@ export type SetupPaymentPriceInterval = ClosedEnum<
   typeof SetupPaymentPriceInterval
 >;
 
+export type SetupPaymentAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -67,6 +78,10 @@ export type SetupPaymentBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<SetupPaymentAdditionalCurrency> | undefined;
 };
 
 /**
@@ -104,12 +119,44 @@ export type SetupPaymentItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type SetupPaymentItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type SetupPaymentItemTo = number | string;
+
+export type SetupPaymentItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type SetupPaymentItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const SetupPaymentItemTierBehavior = {
@@ -160,6 +207,10 @@ export type SetupPaymentItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<SetupPaymentItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -339,12 +390,44 @@ export type SetupPaymentAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type SetupPaymentAddItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type SetupPaymentAddItemTo = number | string;
+
+export type SetupPaymentAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type SetupPaymentAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const SetupPaymentAddItemTierBehavior = {
@@ -395,6 +478,12 @@ export type SetupPaymentAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -662,6 +751,209 @@ export type SetupPaymentFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const SetupPaymentPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type SetupPaymentPurchaseLimitInterval = ClosedEnum<
+  typeof SetupPaymentPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type SetupPaymentPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: SetupPaymentPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type SetupPaymentAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: SetupPaymentPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const SetupPaymentLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type SetupPaymentLimitType = ClosedEnum<typeof SetupPaymentLimitType>;
+
+export type SetupPaymentSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: SetupPaymentLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const SetupPaymentUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type SetupPaymentUsageLimitInterval = ClosedEnum<
+  typeof SetupPaymentUsageLimitInterval
+>;
+
+export type SetupPaymentUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: SetupPaymentUsageLimitInterval;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const SetupPaymentThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type SetupPaymentThresholdType = ClosedEnum<
+  typeof SetupPaymentThresholdType
+>;
+
+export type SetupPaymentUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: SetupPaymentThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type SetupPaymentOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type SetupPaymentBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<SetupPaymentAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<SetupPaymentSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<SetupPaymentUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<SetupPaymentUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<SetupPaymentOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type SetupPaymentCustomize = {
@@ -685,6 +977,10 @@ export type SetupPaymentCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: SetupPaymentFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: SetupPaymentBillingControls | undefined;
 };
 
 /**
@@ -843,6 +1139,10 @@ export type SetupPaymentParams = {
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
   taxRateId?: string | undefined;
+  /**
+   * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
 };
 
 /**
@@ -903,10 +1203,38 @@ export const SetupPaymentPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentPriceInterval);
 
 /** @internal */
+export type SetupPaymentAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  SetupPaymentAdditionalCurrency$Outbound,
+  SetupPaymentAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function setupPaymentAdditionalCurrencyToJSON(
+  setupPaymentAdditionalCurrency: SetupPaymentAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -918,10 +1246,14 @@ export const SetupPaymentBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: SetupPaymentPriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => SetupPaymentAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -970,6 +1302,31 @@ export function setupPaymentItemResetToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemAdditionalCurrency$Outbound,
+  SetupPaymentItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function setupPaymentItemAdditionalCurrencyToJSON(
+  setupPaymentItemAdditionalCurrency: SetupPaymentItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemAdditionalCurrency$outboundSchema.parse(
+      setupPaymentItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemTo$Outbound = number | string;
 
 /** @internal */
@@ -987,10 +1344,49 @@ export function setupPaymentItemToToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentItemTierAdditionalCurrency$Outbound,
+    SetupPaymentItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function setupPaymentItemTierAdditionalCurrencyToJSON(
+  setupPaymentItemTierAdditionalCurrency:
+    SetupPaymentItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemTierAdditionalCurrency$outboundSchema.parse(
+      setupPaymentItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1002,10 +1398,14 @@ export const SetupPaymentItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      SetupPaymentItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1036,6 +1436,9 @@ export const SetupPaymentItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<SetupPaymentItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1052,6 +1455,9 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => SetupPaymentItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => SetupPaymentItemTier$outboundSchema)),
     ),
@@ -1064,6 +1470,7 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1241,6 +1648,32 @@ export function setupPaymentAddItemResetToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemAdditionalCurrency$Outbound,
+    SetupPaymentAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function setupPaymentAddItemAdditionalCurrencyToJSON(
+  setupPaymentAddItemAdditionalCurrency: SetupPaymentAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1258,10 +1691,49 @@ export function setupPaymentAddItemToToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemTierAdditionalCurrency$Outbound,
+    SetupPaymentAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function setupPaymentAddItemTierAdditionalCurrencyToJSON(
+  setupPaymentAddItemTierAdditionalCurrency:
+    SetupPaymentAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemTierAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1273,10 +1745,14 @@ export const SetupPaymentAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      SetupPaymentAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1307,6 +1783,9 @@ export const SetupPaymentAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<SetupPaymentAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1323,6 +1802,11 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(
+        z.lazy(() => SetupPaymentAddItemAdditionalCurrency$outboundSchema),
+      ),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => SetupPaymentAddItemTier$outboundSchema)),
     ),
@@ -1335,6 +1819,7 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1613,12 +2098,296 @@ export function setupPaymentFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const SetupPaymentPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentPurchaseLimitInterval
+> = z.enum(SetupPaymentPurchaseLimitInterval);
+
+/** @internal */
+export type SetupPaymentPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const SetupPaymentPurchaseLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentPurchaseLimit$Outbound,
+  SetupPaymentPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: SetupPaymentPurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function setupPaymentPurchaseLimitToJSON(
+  setupPaymentPurchaseLimit: SetupPaymentPurchaseLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentPurchaseLimit$outboundSchema.parse(setupPaymentPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: SetupPaymentPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAutoTopup$outboundSchema: z.ZodMiniType<
+  SetupPaymentAutoTopup$Outbound,
+  SetupPaymentAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => SetupPaymentPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function setupPaymentAutoTopupToJSON(
+  setupPaymentAutoTopup: SetupPaymentAutoTopup,
+): string {
+  return JSON.stringify(
+    SetupPaymentAutoTopup$outboundSchema.parse(setupPaymentAutoTopup),
+  );
+}
+
+/** @internal */
+export const SetupPaymentLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentLimitType
+> = z.enum(SetupPaymentLimitType);
+
+/** @internal */
+export type SetupPaymentSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentSpendLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentSpendLimit$Outbound,
+  SetupPaymentSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(SetupPaymentLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function setupPaymentSpendLimitToJSON(
+  setupPaymentSpendLimit: SetupPaymentSpendLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentSpendLimit$outboundSchema.parse(setupPaymentSpendLimit),
+  );
+}
+
+/** @internal */
+export const SetupPaymentUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentUsageLimitInterval
+> = z.enum(SetupPaymentUsageLimitInterval);
+
+/** @internal */
+export type SetupPaymentUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const SetupPaymentUsageLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageLimit$Outbound,
+  SetupPaymentUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: SetupPaymentUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function setupPaymentUsageLimitToJSON(
+  setupPaymentUsageLimit: SetupPaymentUsageLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageLimit$outboundSchema.parse(setupPaymentUsageLimit),
+  );
+}
+
+/** @internal */
+export const SetupPaymentThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentThresholdType
+> = z.enum(SetupPaymentThresholdType);
+
+/** @internal */
+export type SetupPaymentUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUsageAlert$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageAlert$Outbound,
+  SetupPaymentUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: SetupPaymentThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function setupPaymentUsageAlertToJSON(
+  setupPaymentUsageAlert: SetupPaymentUsageAlert,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageAlert$outboundSchema.parse(setupPaymentUsageAlert),
+  );
+}
+
+/** @internal */
+export type SetupPaymentOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const SetupPaymentOverageAllowed$outboundSchema: z.ZodMiniType<
+  SetupPaymentOverageAllowed$Outbound,
+  SetupPaymentOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function setupPaymentOverageAllowedToJSON(
+  setupPaymentOverageAllowed: SetupPaymentOverageAllowed,
+): string {
+  return JSON.stringify(
+    SetupPaymentOverageAllowed$outboundSchema.parse(setupPaymentOverageAllowed),
+  );
+}
+
+/** @internal */
+export type SetupPaymentBillingControls$Outbound = {
+  auto_topups?: Array<SetupPaymentAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<SetupPaymentSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<SetupPaymentUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<SetupPaymentUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<SetupPaymentOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const SetupPaymentBillingControls$outboundSchema: z.ZodMiniType<
+  SetupPaymentBillingControls$Outbound,
+  SetupPaymentBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => SetupPaymentAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => SetupPaymentSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => SetupPaymentUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => SetupPaymentUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => SetupPaymentOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function setupPaymentBillingControlsToJSON(
+  setupPaymentBillingControls: SetupPaymentBillingControls,
+): string {
+  return JSON.stringify(
+    SetupPaymentBillingControls$outboundSchema.parse(
+      setupPaymentBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCustomize$Outbound = {
   price?: SetupPaymentBasePrice$Outbound | null | undefined;
   items?: Array<SetupPaymentItemPlanItem$Outbound> | undefined;
   add_items?: Array<SetupPaymentAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<SetupPaymentPlanItemFilter$Outbound> | undefined;
   free_trial?: SetupPaymentFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: SetupPaymentBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1642,12 +2411,16 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => SetupPaymentFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => SetupPaymentBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );
@@ -1807,6 +2580,7 @@ export type SetupPaymentParams$Outbound = {
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
+  currency?: string | undefined;
 };
 
 /** @internal */
@@ -1847,6 +2621,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
+    currency: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {

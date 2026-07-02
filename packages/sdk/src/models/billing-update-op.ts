@@ -52,6 +52,17 @@ export type BillingUpdatePriceInterval = ClosedEnum<
   typeof BillingUpdatePriceInterval
 >;
 
+export type BillingUpdateAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -68,6 +79,10 @@ export type BillingUpdateBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<BillingUpdateAdditionalCurrency> | undefined;
 };
 
 /**
@@ -105,12 +120,44 @@ export type BillingUpdateItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type BillingUpdateItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type BillingUpdateItemTo = number | string;
+
+export type BillingUpdateItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type BillingUpdateItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<BillingUpdateItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const BillingUpdateItemTierBehavior = {
@@ -161,6 +208,10 @@ export type BillingUpdateItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<BillingUpdateItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -340,12 +391,44 @@ export type BillingUpdateAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type BillingUpdateAddItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type BillingUpdateAddItemTo = number | string;
+
+export type BillingUpdateAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type BillingUpdateAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<BillingUpdateAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const BillingUpdateAddItemTierBehavior = {
@@ -396,6 +479,12 @@ export type BillingUpdateAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<BillingUpdateAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -663,6 +752,209 @@ export type BillingUpdateFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const BillingUpdatePurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type BillingUpdatePurchaseLimitInterval = ClosedEnum<
+  typeof BillingUpdatePurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type BillingUpdatePurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: BillingUpdatePurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type BillingUpdateAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: BillingUpdatePurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const BillingUpdateLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type BillingUpdateLimitType = ClosedEnum<typeof BillingUpdateLimitType>;
+
+export type BillingUpdateSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: BillingUpdateLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const BillingUpdateUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type BillingUpdateUsageLimitInterval = ClosedEnum<
+  typeof BillingUpdateUsageLimitInterval
+>;
+
+export type BillingUpdateUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: BillingUpdateUsageLimitInterval;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const BillingUpdateThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type BillingUpdateThresholdType = ClosedEnum<
+  typeof BillingUpdateThresholdType
+>;
+
+export type BillingUpdateUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: BillingUpdateThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type BillingUpdateOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type BillingUpdateBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<BillingUpdateAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<BillingUpdateSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<BillingUpdateUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<BillingUpdateUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<BillingUpdateOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type BillingUpdateCustomize = {
@@ -686,6 +978,10 @@ export type BillingUpdateCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: BillingUpdateFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: BillingUpdateBillingControls | undefined;
 };
 
 /**
@@ -982,10 +1278,38 @@ export const BillingUpdatePriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdatePriceInterval);
 
 /** @internal */
+export type BillingUpdateAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const BillingUpdateAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  BillingUpdateAdditionalCurrency$Outbound,
+  BillingUpdateAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function billingUpdateAdditionalCurrencyToJSON(
+  billingUpdateAdditionalCurrency: BillingUpdateAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    BillingUpdateAdditionalCurrency$outboundSchema.parse(
+      billingUpdateAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<BillingUpdateAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -997,10 +1321,14 @@ export const BillingUpdateBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: BillingUpdatePriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => BillingUpdateAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1049,6 +1377,31 @@ export function billingUpdateItemResetToJSON(
 }
 
 /** @internal */
+export type BillingUpdateItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const BillingUpdateItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemAdditionalCurrency$Outbound,
+  BillingUpdateItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function billingUpdateItemAdditionalCurrencyToJSON(
+  billingUpdateItemAdditionalCurrency: BillingUpdateItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    BillingUpdateItemAdditionalCurrency$outboundSchema.parse(
+      billingUpdateItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1066,10 +1419,49 @@ export function billingUpdateItemToToJSON(
 }
 
 /** @internal */
+export type BillingUpdateItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateItemTierAdditionalCurrency$Outbound,
+    BillingUpdateItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function billingUpdateItemTierAdditionalCurrencyToJSON(
+  billingUpdateItemTierAdditionalCurrency:
+    BillingUpdateItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    BillingUpdateItemTierAdditionalCurrency$outboundSchema.parse(
+      billingUpdateItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<BillingUpdateItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1081,10 +1473,14 @@ export const BillingUpdateItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      BillingUpdateItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1115,6 +1511,9 @@ export const BillingUpdateItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type BillingUpdateItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<BillingUpdateItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<BillingUpdateItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1131,6 +1530,9 @@ export const BillingUpdateItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => BillingUpdateItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => BillingUpdateItemTier$outboundSchema)),
     ),
@@ -1143,6 +1545,7 @@ export const BillingUpdateItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1322,6 +1725,33 @@ export function billingUpdateAddItemResetToJSON(
 }
 
 /** @internal */
+export type BillingUpdateAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const BillingUpdateAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateAddItemAdditionalCurrency$Outbound,
+    BillingUpdateAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function billingUpdateAddItemAdditionalCurrencyToJSON(
+  billingUpdateAddItemAdditionalCurrency:
+    BillingUpdateAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemAdditionalCurrency$outboundSchema.parse(
+      billingUpdateAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1339,10 +1769,49 @@ export function billingUpdateAddItemToToJSON(
 }
 
 /** @internal */
+export type BillingUpdateAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    BillingUpdateAddItemTierAdditionalCurrency$Outbound,
+    BillingUpdateAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function billingUpdateAddItemTierAdditionalCurrencyToJSON(
+  billingUpdateAddItemTierAdditionalCurrency:
+    BillingUpdateAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemTierAdditionalCurrency$outboundSchema.parse(
+      billingUpdateAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<BillingUpdateAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1354,10 +1823,14 @@ export const BillingUpdateAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      BillingUpdateAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1388,6 +1861,9 @@ export const BillingUpdateAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type BillingUpdateAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<BillingUpdateAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<BillingUpdateAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1404,9 +1880,12 @@ export const BillingUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => BillingUpdateAddItemTier$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      BillingUpdateAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      BillingUpdateAddItemTier$outboundSchema
+    ))),
     tierBehavior: z.optional(BillingUpdateAddItemTierBehavior$outboundSchema),
     interval: BillingUpdateAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1416,6 +1895,7 @@ export const BillingUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1696,12 +2176,298 @@ export function billingUpdateFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const BillingUpdatePurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdatePurchaseLimitInterval
+> = z.enum(BillingUpdatePurchaseLimitInterval);
+
+/** @internal */
+export type BillingUpdatePurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const BillingUpdatePurchaseLimit$outboundSchema: z.ZodMiniType<
+  BillingUpdatePurchaseLimit$Outbound,
+  BillingUpdatePurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: BillingUpdatePurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function billingUpdatePurchaseLimitToJSON(
+  billingUpdatePurchaseLimit: BillingUpdatePurchaseLimit,
+): string {
+  return JSON.stringify(
+    BillingUpdatePurchaseLimit$outboundSchema.parse(billingUpdatePurchaseLimit),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: BillingUpdatePurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAutoTopup$outboundSchema: z.ZodMiniType<
+  BillingUpdateAutoTopup$Outbound,
+  BillingUpdateAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => BillingUpdatePurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function billingUpdateAutoTopupToJSON(
+  billingUpdateAutoTopup: BillingUpdateAutoTopup,
+): string {
+  return JSON.stringify(
+    BillingUpdateAutoTopup$outboundSchema.parse(billingUpdateAutoTopup),
+  );
+}
+
+/** @internal */
+export const BillingUpdateLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateLimitType
+> = z.enum(BillingUpdateLimitType);
+
+/** @internal */
+export type BillingUpdateSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateSpendLimit$outboundSchema: z.ZodMiniType<
+  BillingUpdateSpendLimit$Outbound,
+  BillingUpdateSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(BillingUpdateLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function billingUpdateSpendLimitToJSON(
+  billingUpdateSpendLimit: BillingUpdateSpendLimit,
+): string {
+  return JSON.stringify(
+    BillingUpdateSpendLimit$outboundSchema.parse(billingUpdateSpendLimit),
+  );
+}
+
+/** @internal */
+export const BillingUpdateUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateUsageLimitInterval
+> = z.enum(BillingUpdateUsageLimitInterval);
+
+/** @internal */
+export type BillingUpdateUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const BillingUpdateUsageLimit$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageLimit$Outbound,
+  BillingUpdateUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: BillingUpdateUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function billingUpdateUsageLimitToJSON(
+  billingUpdateUsageLimit: BillingUpdateUsageLimit,
+): string {
+  return JSON.stringify(
+    BillingUpdateUsageLimit$outboundSchema.parse(billingUpdateUsageLimit),
+  );
+}
+
+/** @internal */
+export const BillingUpdateThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateThresholdType
+> = z.enum(BillingUpdateThresholdType);
+
+/** @internal */
+export type BillingUpdateUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const BillingUpdateUsageAlert$outboundSchema: z.ZodMiniType<
+  BillingUpdateUsageAlert$Outbound,
+  BillingUpdateUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: BillingUpdateThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function billingUpdateUsageAlertToJSON(
+  billingUpdateUsageAlert: BillingUpdateUsageAlert,
+): string {
+  return JSON.stringify(
+    BillingUpdateUsageAlert$outboundSchema.parse(billingUpdateUsageAlert),
+  );
+}
+
+/** @internal */
+export type BillingUpdateOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const BillingUpdateOverageAllowed$outboundSchema: z.ZodMiniType<
+  BillingUpdateOverageAllowed$Outbound,
+  BillingUpdateOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function billingUpdateOverageAllowedToJSON(
+  billingUpdateOverageAllowed: BillingUpdateOverageAllowed,
+): string {
+  return JSON.stringify(
+    BillingUpdateOverageAllowed$outboundSchema.parse(
+      billingUpdateOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateBillingControls$Outbound = {
+  auto_topups?: Array<BillingUpdateAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<BillingUpdateSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<BillingUpdateUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<BillingUpdateUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<BillingUpdateOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const BillingUpdateBillingControls$outboundSchema: z.ZodMiniType<
+  BillingUpdateBillingControls$Outbound,
+  BillingUpdateBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => BillingUpdateAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => BillingUpdateSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => BillingUpdateUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => BillingUpdateUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => BillingUpdateOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function billingUpdateBillingControlsToJSON(
+  billingUpdateBillingControls: BillingUpdateBillingControls,
+): string {
+  return JSON.stringify(
+    BillingUpdateBillingControls$outboundSchema.parse(
+      billingUpdateBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type BillingUpdateCustomize$Outbound = {
   price?: BillingUpdateBasePrice$Outbound | null | undefined;
   items?: Array<BillingUpdateItemPlanItem$Outbound> | undefined;
   add_items?: Array<BillingUpdateAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<BillingUpdatePlanItemFilter$Outbound> | undefined;
   free_trial?: BillingUpdateFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: BillingUpdateBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1725,12 +2491,16 @@ export const BillingUpdateCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => BillingUpdateFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => BillingUpdateBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );

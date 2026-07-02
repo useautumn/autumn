@@ -53,6 +53,17 @@ export type PreviewAttachPriceInterval = ClosedEnum<
   typeof PreviewAttachPriceInterval
 >;
 
+export type PreviewAttachAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -69,6 +80,10 @@ export type PreviewAttachBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<PreviewAttachAdditionalCurrency> | undefined;
 };
 
 /**
@@ -106,12 +121,44 @@ export type PreviewAttachItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewAttachItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewAttachItemTo = number | string;
+
+export type PreviewAttachItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewAttachItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewAttachItemTierBehavior = {
@@ -162,6 +209,10 @@ export type PreviewAttachItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<PreviewAttachItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -341,12 +392,44 @@ export type PreviewAttachAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewAttachAddItemAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewAttachAddItemTo = number | string;
+
+export type PreviewAttachAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter ISO currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewAttachAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewAttachAddItemTierBehavior = {
@@ -397,6 +480,12 @@ export type PreviewAttachAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -664,6 +753,209 @@ export type PreviewAttachFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const PreviewAttachPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type PreviewAttachPurchaseLimitInterval = ClosedEnum<
+  typeof PreviewAttachPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type PreviewAttachPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: PreviewAttachPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type PreviewAttachAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: PreviewAttachPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const PreviewAttachLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type PreviewAttachLimitType = ClosedEnum<typeof PreviewAttachLimitType>;
+
+export type PreviewAttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: PreviewAttachLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const PreviewAttachUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type PreviewAttachUsageLimitInterval = ClosedEnum<
+  typeof PreviewAttachUsageLimitInterval
+>;
+
+export type PreviewAttachUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: PreviewAttachUsageLimitInterval;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const PreviewAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type PreviewAttachThresholdType = ClosedEnum<
+  typeof PreviewAttachThresholdType
+>;
+
+export type PreviewAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: PreviewAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type PreviewAttachOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type PreviewAttachBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<PreviewAttachAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<PreviewAttachSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<PreviewAttachUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PreviewAttachUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<PreviewAttachOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type PreviewAttachCustomize = {
@@ -687,6 +979,10 @@ export type PreviewAttachCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: PreviewAttachFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: PreviewAttachBillingControls | undefined;
 };
 
 /**
@@ -920,6 +1216,10 @@ export type PreviewAttachParams = {
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
   taxRateId?: string | undefined;
+  /**
+   * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -1326,10 +1626,38 @@ export const PreviewAttachPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachPriceInterval);
 
 /** @internal */
+export type PreviewAttachAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewAttachAdditionalCurrency$Outbound,
+  PreviewAttachAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewAttachAdditionalCurrencyToJSON(
+  previewAttachAdditionalCurrency: PreviewAttachAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAdditionalCurrency$outboundSchema.parse(
+      previewAttachAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1341,10 +1669,14 @@ export const PreviewAttachBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: PreviewAttachPriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewAttachAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1393,6 +1725,31 @@ export function previewAttachItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewAttachItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewAttachItemAdditionalCurrency$Outbound,
+  PreviewAttachItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewAttachItemAdditionalCurrencyToJSON(
+  previewAttachItemAdditionalCurrency: PreviewAttachItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachItemAdditionalCurrency$outboundSchema.parse(
+      previewAttachItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1410,10 +1767,49 @@ export function previewAttachItemToToJSON(
 }
 
 /** @internal */
+export type PreviewAttachItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachItemTierAdditionalCurrency$Outbound,
+    PreviewAttachItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewAttachItemTierAdditionalCurrencyToJSON(
+  previewAttachItemTierAdditionalCurrency:
+    PreviewAttachItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachItemTierAdditionalCurrency$outboundSchema.parse(
+      previewAttachItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1425,10 +1821,14 @@ export const PreviewAttachItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1459,6 +1859,9 @@ export const PreviewAttachItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewAttachItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1475,6 +1878,9 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewAttachItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => PreviewAttachItemTier$outboundSchema)),
     ),
@@ -1487,6 +1893,7 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1666,6 +2073,33 @@ export function previewAttachAddItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewAttachAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachAddItemAdditionalCurrency$Outbound,
+    PreviewAttachAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function previewAttachAddItemAdditionalCurrencyToJSON(
+  previewAttachAddItemAdditionalCurrency:
+    PreviewAttachAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAddItemAdditionalCurrency$outboundSchema.parse(
+      previewAttachAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1683,10 +2117,49 @@ export function previewAttachAddItemToToJSON(
 }
 
 /** @internal */
+export type PreviewAttachAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachAddItemTierAdditionalCurrency$Outbound,
+    PreviewAttachAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewAttachAddItemTierAdditionalCurrencyToJSON(
+  previewAttachAddItemTierAdditionalCurrency:
+    PreviewAttachAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAddItemTierAdditionalCurrency$outboundSchema.parse(
+      previewAttachAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1698,10 +2171,14 @@ export const PreviewAttachAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1732,6 +2209,9 @@ export const PreviewAttachAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewAttachAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1748,9 +2228,12 @@ export const PreviewAttachAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => PreviewAttachAddItemTier$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemTier$outboundSchema
+    ))),
     tierBehavior: z.optional(PreviewAttachAddItemTierBehavior$outboundSchema),
     interval: PreviewAttachAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1760,6 +2243,7 @@ export const PreviewAttachAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -2040,12 +2524,298 @@ export function previewAttachFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const PreviewAttachPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachPurchaseLimitInterval
+> = z.enum(PreviewAttachPurchaseLimitInterval);
+
+/** @internal */
+export type PreviewAttachPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const PreviewAttachPurchaseLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachPurchaseLimit$Outbound,
+  PreviewAttachPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: PreviewAttachPurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function previewAttachPurchaseLimitToJSON(
+  previewAttachPurchaseLimit: PreviewAttachPurchaseLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachPurchaseLimit$outboundSchema.parse(previewAttachPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type PreviewAttachAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: PreviewAttachPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const PreviewAttachAutoTopup$outboundSchema: z.ZodMiniType<
+  PreviewAttachAutoTopup$Outbound,
+  PreviewAttachAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => PreviewAttachPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function previewAttachAutoTopupToJSON(
+  previewAttachAutoTopup: PreviewAttachAutoTopup,
+): string {
+  return JSON.stringify(
+    PreviewAttachAutoTopup$outboundSchema.parse(previewAttachAutoTopup),
+  );
+}
+
+/** @internal */
+export const PreviewAttachLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachLimitType
+> = z.enum(PreviewAttachLimitType);
+
+/** @internal */
+export type PreviewAttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachSpendLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachSpendLimit$Outbound,
+  PreviewAttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(PreviewAttachLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+    });
+  }),
+);
+
+export function previewAttachSpendLimitToJSON(
+  previewAttachSpendLimit: PreviewAttachSpendLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachSpendLimit$outboundSchema.parse(previewAttachSpendLimit),
+  );
+}
+
+/** @internal */
+export const PreviewAttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachUsageLimitInterval
+> = z.enum(PreviewAttachUsageLimitInterval);
+
+/** @internal */
+export type PreviewAttachUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const PreviewAttachUsageLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachUsageLimit$Outbound,
+  PreviewAttachUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: PreviewAttachUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewAttachUsageLimitToJSON(
+  previewAttachUsageLimit: PreviewAttachUsageLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachUsageLimit$outboundSchema.parse(previewAttachUsageLimit),
+  );
+}
+
+/** @internal */
+export const PreviewAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachThresholdType
+> = z.enum(PreviewAttachThresholdType);
+
+/** @internal */
+export type PreviewAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const PreviewAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  PreviewAttachUsageAlert$Outbound,
+  PreviewAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: PreviewAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function previewAttachUsageAlertToJSON(
+  previewAttachUsageAlert: PreviewAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    PreviewAttachUsageAlert$outboundSchema.parse(previewAttachUsageAlert),
+  );
+}
+
+/** @internal */
+export type PreviewAttachOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewAttachOverageAllowed$outboundSchema: z.ZodMiniType<
+  PreviewAttachOverageAllowed$Outbound,
+  PreviewAttachOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewAttachOverageAllowedToJSON(
+  previewAttachOverageAllowed: PreviewAttachOverageAllowed,
+): string {
+  return JSON.stringify(
+    PreviewAttachOverageAllowed$outboundSchema.parse(
+      previewAttachOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewAttachBillingControls$Outbound = {
+  auto_topups?: Array<PreviewAttachAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<PreviewAttachSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<PreviewAttachUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<PreviewAttachUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<PreviewAttachOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const PreviewAttachBillingControls$outboundSchema: z.ZodMiniType<
+  PreviewAttachBillingControls$Outbound,
+  PreviewAttachBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => PreviewAttachAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PreviewAttachSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => PreviewAttachUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => PreviewAttachUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => PreviewAttachOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function previewAttachBillingControlsToJSON(
+  previewAttachBillingControls: PreviewAttachBillingControls,
+): string {
+  return JSON.stringify(
+    PreviewAttachBillingControls$outboundSchema.parse(
+      previewAttachBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachCustomize$Outbound = {
   price?: PreviewAttachBasePrice$Outbound | null | undefined;
   items?: Array<PreviewAttachItemPlanItem$Outbound> | undefined;
   add_items?: Array<PreviewAttachAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<PreviewAttachPlanItemFilter$Outbound> | undefined;
   free_trial?: PreviewAttachFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: PreviewAttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -2069,12 +2839,16 @@ export const PreviewAttachCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => PreviewAttachFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => PreviewAttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );
@@ -2293,6 +3067,7 @@ export type PreviewAttachParams$Outbound = {
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
+  currency?: string | undefined;
 };
 
 /** @internal */
@@ -2345,6 +3120,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
+    currency: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {

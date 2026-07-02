@@ -57,6 +57,21 @@ PreviewMultiAttachPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class PreviewMultiAttachAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class PreviewMultiAttachAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class PreviewMultiAttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -66,6 +81,10 @@ class PreviewMultiAttachBasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[
+        List[PreviewMultiAttachAdditionalCurrencyTypedDict]
+    ]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class PreviewMultiAttachBasePrice(BaseModel):
@@ -80,9 +99,12 @@ class PreviewMultiAttachBasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[List[PreviewMultiAttachAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -146,6 +168,21 @@ class PreviewMultiAttachReset(BaseModel):
         return m
 
 
+class PreviewMultiAttachItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class PreviewMultiAttachItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 PreviewMultiAttachToTypedDict = TypeAliasType(
     "PreviewMultiAttachToTypedDict", Union[float, str]
 )
@@ -154,10 +191,44 @@ PreviewMultiAttachToTypedDict = TypeAliasType(
 PreviewMultiAttachTo = TypeAliasType("PreviewMultiAttachTo", Union[float, str])
 
 
+class PreviewMultiAttachTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: NotRequired[Any]
+    amount: NotRequired[Any]
+    flat_amount: NotRequired[Any]
+
+
+class PreviewMultiAttachTierAdditionalCurrency(BaseModel):
+    currency: Optional[Any] = None
+
+    amount: Optional[Any] = None
+
+    flat_amount: Optional[Any] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["currency", "amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PreviewMultiAttachTierTypedDict(TypedDict):
     to: PreviewMultiAttachToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[PreviewMultiAttachTierAdditionalCurrencyTypedDict]
+    ]
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class PreviewMultiAttachTier(BaseModel):
@@ -167,9 +238,14 @@ class PreviewMultiAttachTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[List[PreviewMultiAttachTierAdditionalCurrency]] = (
+        None
+    )
+    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
+        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -217,6 +293,10 @@ class PreviewMultiAttachPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[
+        List[PreviewMultiAttachItemAdditionalCurrencyTypedDict]
+    ]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[PreviewMultiAttachTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PreviewMultiAttachTierBehavior]
@@ -240,6 +320,11 @@ class PreviewMultiAttachPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[List[PreviewMultiAttachItemAdditionalCurrency]] = (
+        None
+    )
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[PreviewMultiAttachTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -259,6 +344,7 @@ class PreviewMultiAttachPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -735,13 +821,22 @@ PreviewMultiAttachRedirectMode = Literal[
 r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
 
 
+PreviewMultiAttachLimitType = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
 class PreviewMultiAttachSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[PreviewMultiAttachLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
 
 class PreviewMultiAttachSpendLimit(BaseModel):
@@ -751,12 +846,15 @@ class PreviewMultiAttachSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[PreviewMultiAttachLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -787,6 +885,8 @@ class PreviewMultiAttachUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: PreviewMultiAttachEntityDataInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
 
 
 class PreviewMultiAttachUsageLimit(BaseModel):
@@ -798,6 +898,25 @@ class PreviewMultiAttachUsageLimit(BaseModel):
 
     interval: PreviewMultiAttachEntityDataInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 PreviewMultiAttachThresholdType = Literal[

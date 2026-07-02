@@ -300,6 +300,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [createSchedule](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -309,7 +310,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782399908997,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783609508997,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783003342852,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784212942852,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -397,6 +398,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -514,6 +516,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param createInStripe - Whether to create the customer in Stripe (optional)
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
@@ -842,6 +845,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingCreateSchedule`](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -851,7 +855,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782399908997,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783609508997,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783003342852,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784212942852,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -940,6 +944,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+@param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -1104,6 +1109,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param createInStripe - Whether to create the customer in Stripe (optional)
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
+@param currency - Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency. (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)

@@ -183,6 +183,20 @@ openapi: "api/openapi.yml webhook billing.updated"
                   Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                 </ParamField>
 
+                <ParamField body="additional_currencies" type="object[]">
+                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
+                  <Expandable title="properties">
+                    <ParamField body="currency" type="string" required>
+                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
+                    </ParamField>
+
+                    <ParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
                 <ParamField body="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
@@ -191,6 +205,23 @@ openapi: "api/openapi.yml webhook billing.updated"
                     <ParamField body="amount" type="number" required />
 
                     <ParamField body="flat_amount" type="number" />
+
+                    <ParamField body="additional_currencies" type="object[]">
+                      <Expandable title="properties">
+                        <ParamField body="currency" type="string" required>
+                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
+                        </ParamField>
+
+                        <ParamField body="amount" type="number">
+                          Per-unit amount for this tier in this currency.
+                        </ParamField>
+
+                        <ParamField body="flat_amount" type="number">
+                          Flat amount for this tier in this currency, if the tier uses one.
+                        </ParamField>
+
+                      </Expandable>
+                    </ParamField>
 
                   </Expandable>
                 </ParamField>

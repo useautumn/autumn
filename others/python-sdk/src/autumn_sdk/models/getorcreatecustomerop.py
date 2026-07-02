@@ -144,13 +144,22 @@ class GetOrCreateCustomerAutoTopup(BaseModel):
         return m
 
 
+GetOrCreateCustomerLimitType = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
 class GetOrCreateCustomerSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[GetOrCreateCustomerLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
 
 class GetOrCreateCustomerSpendLimit(BaseModel):
@@ -160,12 +169,15 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[GetOrCreateCustomerLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -196,6 +208,8 @@ class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: GetOrCreateCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
 
 
 class GetOrCreateCustomerUsageLimit(BaseModel):
@@ -207,6 +221,25 @@ class GetOrCreateCustomerUsageLimit(BaseModel):
 
     interval: GetOrCreateCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 GetOrCreateCustomerThresholdType = Literal[
@@ -401,6 +434,8 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    currency: NotRequired[Nullable[str]]
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[GetOrCreateCustomerBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[GetOrCreateCustomerConfigTypedDict]
@@ -436,6 +471,9 @@ class GetOrCreateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    currency: OptionalNullable[str] = UNSET
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
+
     billing_controls: Optional[GetOrCreateCustomerBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -457,13 +495,22 @@ class GetOrCreateCustomerParams(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
+                "currency",
                 "billing_controls",
                 "config",
                 "expand",
             ]
         )
         nullable_fields = set(
-            ["customer_id", "name", "email", "fingerprint", "metadata", "stripe_id"]
+            [
+                "customer_id",
+                "name",
+                "email",
+                "fingerprint",
+                "metadata",
+                "stripe_id",
+                "currency",
+            ]
         )
         serialized = handler(self)
         m = {}

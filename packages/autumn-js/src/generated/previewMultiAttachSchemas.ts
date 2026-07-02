@@ -5,12 +5,34 @@ export const previewMultiAttachGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const previewMultiAttachItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewMultiAttachToSchema = z.union([z.number(), z.string()]);
+
+export const previewMultiAttachTierAdditionalCurrencySchema = z.object({
+	currency: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
+	flatAmount: z.union([z.any(), z.undefined()]).optional(),
+});
 
 export const previewMultiAttachTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewMultiAttachTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewMultiAttachPlanFeatureQuantitySchema = z.object({
@@ -30,12 +52,6 @@ export const previewMultiAttachInvoiceModeSchema = z.object({
 export const previewMultiAttachAttachDiscountSchema = z.object({
 	rewardId: z.union([z.string(), z.undefined()]).optional(),
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
-});
-
-export const previewMultiAttachSpendLimitSchema = z.object({
-	featureId: z.union([z.string(), z.undefined()]).optional(),
-	enabled: z.union([z.boolean(), z.undefined()]).optional(),
-	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachOverageAllowedSchema = z.object({
@@ -136,10 +152,21 @@ export const previewMultiAttachInvoiceCreditsSchema = z.object({
 	currency: z.string(),
 });
 
+export const previewMultiAttachAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewMultiAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewMultiAttachAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewMultiAttachResetOutboundSchema = z.object({
@@ -147,19 +174,42 @@ export const previewMultiAttachResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewMultiAttachToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
+export const previewMultiAttachTierAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
+	flat_amount: z.union([z.any(), z.undefined()]).optional(),
+});
+
 export const previewMultiAttachTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewMultiAttachTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewMultiAttachPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewMultiAttachItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewMultiAttachTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -255,11 +305,13 @@ export const previewMultiAttachAttachDiscountOutboundSchema = z.object({
 export const previewMultiAttachSpendLimitOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.boolean(),
+	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachUsageLimitOutboundSchema = z.object({
 	feature_id: z.string(),
+	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
 });
@@ -319,6 +371,9 @@ export const previewMultiAttachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: previewMultiAttachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(previewMultiAttachAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachResetIntervalSchema = closedEnumSchema;
@@ -336,6 +391,12 @@ export const previewMultiAttachBillingMethodSchema = closedEnumSchema;
 
 export const previewMultiAttachPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewMultiAttachItemAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewMultiAttachTierSchema), z.undefined()])
 		.optional(),
@@ -421,10 +482,22 @@ export const previewMultiAttachFreeTrialParamsSchema = z.object({
 
 export const previewMultiAttachRedirectModeSchema = closedEnumSchema;
 
+export const previewMultiAttachLimitTypeSchema = closedEnumSchema;
+
+export const previewMultiAttachSpendLimitSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	limitType: z
+		.union([previewMultiAttachLimitTypeSchema, z.undefined()])
+		.optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+});
+
 export const previewMultiAttachEntityDataIntervalSchema = closedEnumSchema;
 
 export const previewMultiAttachUsageLimitSchema = z.object({
 	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: previewMultiAttachEntityDataIntervalSchema,
 });
