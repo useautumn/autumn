@@ -1,4 +1,5 @@
 import {
+	currentRegion,
 	getConfiguredRegions,
 	getRegionalRedis,
 	redis,
@@ -53,13 +54,15 @@ export const clearSecretKeyCache = async ({
 	logger?: Pick<Console, "error" | "warn">;
 }) => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
-	const regions = getConfiguredRegions();
-	console.log(`[clearSecretKeyCache DEBUG] Clearing key ${cacheKey.substring(0, 20)}... from ${regions.length} regions: ${regions.join(', ')}`);
+	const configuredRegions = getConfiguredRegions();
+	
+	// CRITICAL: Always include currentRegion to ensure the primary cache is cleared.
+	// getConfiguredRegions() may not include currentRegion if AWS_REGION differs
+	// from the hardcoded ALL_REGIONS list (e.g., us-east-1 vs [us-east-2, us-west-2]).
+	const regions = Array.from(new Set([currentRegion, ...configuredRegions]));
 	
 	const deletePromises = regions.map(async (region) => {
 		const regionalRedis = getRegionalRedis(region);
-
-		console.log(`[clearSecretKeyCache DEBUG] Region ${region}: status=${regionalRedis.status}`);
 
 		if (regionalRedis.status !== "ready") {
 			logger.warn(`[clearSecretKeyCache] ${region}: not_ready`);
@@ -71,13 +74,10 @@ export const clearSecretKeyCache = async ({
 			regionalRedis,
 		);
 
-		console.log(`[clearSecretKeyCache DEBUG] Region ${region}: deleted=${deleted}`);
-
 		if (deleted === null) {
 			logger.warn(`[clearSecretKeyCache] ${region}: delete_failed`);
 		}
 	});
 
 	await Promise.all(deletePromises);
-	console.log(`[clearSecretKeyCache DEBUG] Finished clearing key from all regions`);
 };
