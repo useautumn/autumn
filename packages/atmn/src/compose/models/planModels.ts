@@ -4,15 +4,42 @@
 
 import { z } from "zod/v4";
 
+export const AdditionalCurrencySchema = z.object({
+  currency: z.string().meta({
+    description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+    }),
+  amount: z.number().meta({
+    description: "Amount in this currency.",
+    }),
+});
+
+export const AdditionalCurrencyTierSchema = z.object({
+  currency: z.string().meta({
+    description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+    }),
+  amount: z.number().optional().meta({
+    description: "Per-unit amount for this tier in this currency.",
+    }),
+  flatAmount: z.number().optional().meta({
+    description: "Flat amount for this tier in this currency.",
+    }),
+});
+
 export const UsageTierSchema = z.object({
   to: z.union([z.number(), z.literal("inf")]),
   amount: z.number(),
+  additionalCurrencies: z.array(AdditionalCurrencyTierSchema).optional().meta({
+    description: "Per-tier amounts in additional currencies.",
+    }),
 });
 
 const BasePriceParamsSchema = z.object({
   amount: z.number(),
   interval: z.union([z.literal("one_off"), z.literal("week"), z.literal("month"), z.literal("quarter"), z.literal("semi_annual"), z.literal("year")]),
   intervalCount: z.number().optional(),
+  additionalCurrencies: z.array(AdditionalCurrencySchema).optional().meta({
+    description: "Base price amounts in additional currencies.",
+    }),
 });
 
 const idRegex = /^[a-zA-Z0-9_-]+$/;
@@ -53,6 +80,10 @@ export const PlanItemSchema = z.object({
     tiers: z.array(UsageTierSchema).optional().meta({
     description:
     "Tiered pricing.  Either 'amount' or 'tiers' is required.",
+    }),
+    additionalCurrencies: z.array(AdditionalCurrencySchema).optional().meta({
+    description:
+    "Flat price amounts in additional currencies. Tiered prices carry these per tier instead.",
     }),
     tier_behavior: z.union([z.literal("graduated"), z.literal("volume")]).optional(),
     
@@ -240,12 +271,32 @@ type PriceBaseFields = {
   maxPurchase?: number;
 };
 
+/** Amount in an additional billing currency */
+export type AdditionalCurrency = {
+  /** Three-letter ISO currency code (e.g. 'eur', 'gbp') */
+  currency: string;
+  /** Amount in this currency */
+  amount: number;
+};
+
+/** Per-tier amount in an additional billing currency */
+export type AdditionalCurrencyTier = {
+  /** Three-letter ISO currency code (e.g. 'eur', 'gbp') */
+  currency: string;
+  /** Per-unit amount for this tier in this currency */
+  amount?: number;
+  /** Flat amount for this tier in this currency */
+  flatAmount?: number;
+};
+
 // Price with flat amount (no tiers)
 type PriceWithAmount = PriceBaseFields & {
   /** Price amount */
   amount: number;
   /** Cannot have tiers when using flat amount */
   tiers?: never;
+  /** Flat price amounts in additional currencies */
+  additionalCurrencies?: AdditionalCurrency[];
 };
 
 // Price with tiered pricing (no flat amount)
@@ -253,9 +304,16 @@ type PriceWithTiers = PriceBaseFields & {
   /** Cannot have flat amount when using tiers */
   amount?: never;
   /** Tiered pricing structure based on usage ranges */
-  tiers: Array<{ to: number | "inf"; amount: number }>;
+  tiers: Array<{
+    to: number | "inf";
+    amount: number;
+    /** Per-tier amounts in additional currencies */
+    additionalCurrencies?: AdditionalCurrencyTier[];
+  }>;
   /** Required when tiers is defined: how tiers are applied */
   tierBehaviour: "graduated" | "volume";
+  /** Tiered prices carry additional currencies per tier, not at price level */
+  additionalCurrencies?: never;
 };
 
 // Price must have either amount OR tiers (not both, not neither)
@@ -340,7 +398,10 @@ export type Plan = {
     amount: number;
 
     /** Billing frequency */
-    interval: PlanPriceInterval;  }
+    interval: PlanPriceInterval;
+
+    /** Base price amounts in additional currencies */
+    additionalCurrencies?: AdditionalCurrency[];  }
 
   /** Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. */
   items?: PlanItem[];

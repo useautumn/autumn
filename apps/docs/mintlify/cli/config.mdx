@@ -128,6 +128,7 @@ Plans combine features with pricing to create your subscription tiers, add-ons, 
   Base subscription price:
   - `amount: number` -- price amount (eg, `20` for $20)
   - `interval: string` -- `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`
+  - `additionalCurrencies?: array` -- amounts in [other currencies](/documentation/concepts/plans#multiple-currencies), eg `[{ currency: 'eur', amount: 18 }]`
 </ParamField>
 
 <ParamField body="items" type="array">
@@ -251,6 +252,10 @@ item({
 
 <ParamField body="tiers" type="array">
   Tiered pricing. Each entry: `{ to: number | "inf", amount: number }`. Mutually exclusive with `amount`.
+</ParamField>
+
+<ParamField body="additionalCurrencies" type="array">
+  Amounts in [other currencies](/documentation/concepts/plans#multiple-currencies). For flat prices: `[{ currency: 'eur', amount: 0.09 }]` at the price level. For tiered prices, set per tier: `{ to: 1000, amount: 0.01, additionalCurrencies: [{ currency: 'eur', amount: 0.009 }] }`.
 </ParamField>
 
 <ParamField body="billingMethod" type="enum" required>

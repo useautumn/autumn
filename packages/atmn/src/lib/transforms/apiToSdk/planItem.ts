@@ -55,16 +55,35 @@ export const planItemTransformer = createTransformer<
 
 			return {
 				amount: api.price.amount,
-				tiers: api.price.tiers?.map(
-					(tier: { to: number | "inf"; amount: number; flat_amount?: number }) => {
-					const t = tier as { to: number | "inf"; amount: number; flat_amount?: number };
+				tiers: api.price.tiers?.map((tier) => {
+					const t = tier as {
+						to: number | "inf";
+						amount: number;
+						flat_amount?: number;
+						additional_currencies?: Array<{
+							currency: string;
+							amount?: number;
+							flat_amount?: number;
+						}>;
+					};
 					return {
 						to: t.to,
 						amount: t.amount,
 						...(t.flat_amount !== undefined && { flatAmount: t.flat_amount }),
+						...(t.additional_currencies?.length && {
+							additionalCurrencies: t.additional_currencies.map((entry) => ({
+								currency: entry.currency,
+								...(entry.amount !== undefined && { amount: entry.amount }),
+								...(entry.flat_amount !== undefined && {
+									flatAmount: entry.flat_amount,
+								}),
+							})),
+						}),
 					};
-					},
-				),
+				}),
+				...(api.price.additional_currencies?.length && {
+					additionalCurrencies: api.price.additional_currencies,
+				}),
 				billingUnits: api.price.billing_units,
 				maxPurchase: api.price.max_purchase ?? undefined,
 				billingMethod: api.price.billing_method,
