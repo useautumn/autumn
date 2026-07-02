@@ -1,6 +1,7 @@
 import type { CustomerFilter, MigrationFilter } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import { CustomerPreview, useCustomerCount } from "./filters/CustomerPreview";
 import { FilterForm } from "./filters/FilterForm";
 import { type StepId, StepIndicator } from "./StepIndicator";
@@ -24,12 +25,14 @@ export function FilterStep({
 	step,
 	onStepChange,
 	onNext,
+	headerActions,
 }: {
 	form: FormInstance;
 	filter: MigrationFilter;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
 	onNext: () => void;
+	headerActions?: ReactNode;
 }) {
 	const customerFilter = filter.customer ?? {};
 	const customerCount = useCustomerCount(customerFilter);
@@ -39,6 +42,7 @@ export function FilterStep({
 	return (
 		<div className="flex flex-col gap-4">
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				{headerActions}
 				<Button
 					variant="primary"
 					size="default"

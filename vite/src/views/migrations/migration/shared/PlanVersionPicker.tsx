@@ -17,6 +17,10 @@ import { makePlanKey, parsePlanKey } from "../filters/filterRowTypes";
 
 const MAX_VISIBLE_CHIPS = 3;
 
+const normalizePlanKeys = (keys: string[]) => [
+	...new Set(keys.map((key) => key.trim()).filter(Boolean)),
+];
+
 /**
  * Multi-select plan picker. A selection is either a whole plan (any version,
  * key `"<id>"`) or a specific version (key `"<id>:<v>"`). Whole-plan and
@@ -35,38 +39,41 @@ export function PlanVersionPicker({
 }) {
 	const { products } = useProductsQuery();
 	const versionCounts = getVersionCounts(products);
+	const selectedKeys = normalizePlanKeys(values);
 
 	const uniquePlans = products.filter(
 		(plan, index) => products.findIndex((p) => p.id === plan.id) === index,
 	);
 	const nameById = new Map(uniquePlans.map((plan) => [plan.id, plan.name]));
 
-	const isWhole = (planId: string) => values.includes(planId);
+	const isWhole = (planId: string) => selectedKeys.includes(planId);
 	const isVersion = (planId: string, version: number) =>
-		values.includes(makePlanKey({ planId, version }));
+		selectedKeys.includes(makePlanKey({ planId, version }));
 
 	const toggleWhole = (planId: string) => {
 		if (isWhole(planId)) {
-			onChange(values.filter((key) => key !== planId));
+			onChange(selectedKeys.filter((key) => key !== planId));
 			return;
 		}
 		// Whole plan supersedes any pinned versions of the same plan.
-		const cleared = values.filter((key) => parsePlanKey(key).planId !== planId);
+		const cleared = selectedKeys.filter(
+			(key) => parsePlanKey(key).planId !== planId,
+		);
 		onChange([...cleared, planId]);
 	};
 
 	const toggleVersion = (planId: string, version: number) => {
 		const key = makePlanKey({ planId, version });
-		if (values.includes(key)) {
-			onChange(values.filter((existing) => existing !== key));
+		if (selectedKeys.includes(key)) {
+			onChange(selectedKeys.filter((existing) => existing !== key));
 			return;
 		}
 		// A specific version supersedes the whole-plan pick.
-		onChange([...values.filter((existing) => existing !== planId), key]);
+		onChange([...selectedKeys.filter((existing) => existing !== planId), key]);
 	};
 
 	const removeKey = (key: string) =>
-		onChange(values.filter((existing) => existing !== key));
+		onChange(selectedKeys.filter((existing) => existing !== key));
 
 	const chipLabel = (key: string) => {
 		const { planId, version } = parsePlanKey(key);
@@ -78,11 +85,11 @@ export function PlanVersionPicker({
 		<div className={cn("min-w-0", className)}>
 			<DropdownMenu defaultOpen={defaultOpen}>
 				<DropdownMenuTrigger className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 overflow-hidden rounded-xl px-3 input-base input-state-open-tiny text-sm">
-					{values.length === 0 ? (
+					{selectedKeys.length === 0 ? (
 						<span className="text-tertiary-foreground">Select plans...</span>
 					) : (
 						<>
-							{values.slice(0, MAX_VISIBLE_CHIPS).map((key) => (
+							{selectedKeys.slice(0, MAX_VISIBLE_CHIPS).map((key) => (
 								<span
 									className="flex h-4.5 max-w-48 shrink-0 items-center gap-0.5 rounded border border-border bg-accent px-1 text-[10px] text-foreground"
 									key={key}
@@ -107,9 +114,9 @@ export function PlanVersionPicker({
 									</span>
 								</span>
 							))}
-							{values.length > MAX_VISIBLE_CHIPS && (
+							{selectedKeys.length > MAX_VISIBLE_CHIPS && (
 								<span className="shrink-0 px-1 text-sm text-tertiary-foreground">
-									+{values.length - MAX_VISIBLE_CHIPS}
+									+{selectedKeys.length - MAX_VISIBLE_CHIPS}
 								</span>
 							)}
 						</>

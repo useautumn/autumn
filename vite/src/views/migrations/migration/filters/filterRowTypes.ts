@@ -6,9 +6,7 @@ export type FilterField =
 	| "custom"
 	| "paid"
 	| "recurring"
-	| "price"
-	| "item_feature_id"
-	| "item_unlimited";
+	| "price";
 
 export type FilterOperator =
 	| "is"
@@ -41,8 +39,6 @@ export const FILTER_FIELD_OPTIONS: {
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
 	{ value: "price", label: "Base Price" },
-	{ value: "item_feature_id", label: "Feature" },
-	{ value: "item_unlimited", label: "Unlimited" },
 ];
 
 type OperatorOption = { value: FilterOperator; label: string };
@@ -85,8 +81,6 @@ export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
 	price: NULLABLE_ONLY,
-	item_feature_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
-	item_unlimited: BOOLEAN_ONLY,
 };
 
 function stringMatcherToRule(
@@ -124,32 +118,6 @@ function stringMatcherToRule(
 	return { field, operator: "is", values: [] };
 }
 
-export function ruleToStringMatcher(rule: FilterRule): StringMatcher {
-	if (
-		rule.operator === "in" ||
-		(rule.operator === "is" && rule.values.length > 1)
-	)
-		return { $in: rule.values };
-
-	const val = rule.values[0];
-	switch (rule.operator) {
-		case "is":
-			return val ?? "";
-		case "is_not":
-			return { $ne: val ?? "" };
-		case "in":
-			return { $in: rule.values };
-		case "not_in":
-			return { $nin: rule.values };
-		case "regex":
-			return { $regex: val ?? "" };
-		case "starts_with":
-			return { $startsWith: val ?? "" };
-		default:
-			return val ?? "";
-	}
-}
-
 function booleanRule(field: FilterField, value: boolean): FilterRule {
 	return { field, operator: "is", values: [String(value)] };
 }
@@ -168,11 +136,12 @@ const PLAN_KEY_SEPARATOR = ":";
 export type PlanSelection = { planId: string; version?: number };
 
 export function parsePlanKey(key: string): PlanSelection {
-	const separatorIndex = key.lastIndexOf(PLAN_KEY_SEPARATOR);
-	if (separatorIndex === -1) return { planId: key };
-	const version = Number.parseInt(key.slice(separatorIndex + 1), 10);
-	if (Number.isNaN(version)) return { planId: key };
-	return { planId: key.slice(0, separatorIndex), version };
+	const normalized = key.trim();
+	const separatorIndex = normalized.lastIndexOf(PLAN_KEY_SEPARATOR);
+	if (separatorIndex === -1) return { planId: normalized };
+	const version = Number.parseInt(normalized.slice(separatorIndex + 1), 10);
+	if (Number.isNaN(version)) return { planId: normalized };
+	return { planId: normalized.slice(0, separatorIndex), version };
 }
 
 export function makePlanKey({ planId, version }: PlanSelection): string {
@@ -193,7 +162,9 @@ function selectionToFilter({ planId, version }: PlanSelection): PlanFilter {
  * `{ plan_id, version }` branches (each compiles to a single bound EXISTS).
  */
 export function planKeysToFilter(keys: string[]): PlanFilter {
-	const selections = keys.map(parsePlanKey);
+	const selections = [...new Set(keys.map((key) => key.trim()).filter(Boolean))]
+		.map(parsePlanKey);
+	if (selections.length === 0) return {};
 	if (selections.every((s) => s.version === undefined)) {
 		const ids = selections.map((s) => s.planId);
 		return { plan_id: ids.length === 1 ? ids[0] : { $in: ids } };
@@ -304,22 +275,6 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 
 	const priceRule = nullableToRule("price", filter.price);
 	if (priceRule) mainRules.push(priceRule);
-
-	if (filter.item !== undefined) {
-		const inner =
-			typeof filter.item === "object" && filter.item !== null
-				? filter.item
-				: {};
-
-		const featureRule = stringMatcherToRule(
-			"item_feature_id",
-			inner.feature_id as StringMatcher | undefined,
-		);
-		if (featureRule) mainRules.push(featureRule);
-
-		if (inner.unlimited !== undefined)
-			mainRules.push(booleanRule("item_unlimited", Boolean(inner.unlimited)));
-	}
 
 	const groups: FilterGroupData[] =
 		mainRules.length > 0 ? [{ rules: mainRules }] : [];

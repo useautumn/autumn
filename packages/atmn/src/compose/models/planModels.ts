@@ -193,6 +193,10 @@ export const PlanItemSchema = z.object({
 			max: z.number().optional().meta({
 				description: "Max rollover units. Omit for unlimited rollover.",
 			}),
+			max_percentage: z.number().optional().meta({
+				description:
+					"Max rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.",
+			}),
 			expiry_duration_type: z
 				.union([z.literal("month"), z.literal("forever")])
 				.meta({
@@ -325,8 +329,10 @@ type ProrationConfig = {
 
 // Rollover configuration
 type RolloverConfig = {
-	/** Maximum amount that can roll over (null for unlimited) */
-	max: number | null;
+	/** Maximum amount that can roll over (null for unlimited). Mutually exclusive with maxPercentage. */
+	max?: number | null;
+	/** Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max. */
+	maxPercentage?: number | null;
 	/** How long rollover lasts before expiring */
 	expiryDurationType: RolloverExpiryDurationType;
 	/** Duration length for rollover expiry */
@@ -372,7 +378,7 @@ type PriceWithTiers = PriceBaseFields & {
 	/** Cannot have flat amount when using tiers */
 	amount?: never;
 	/** Tiered pricing structure based on usage ranges */
-	tiers: Array<{ to: number | "inf"; amount: number }>;
+	tiers: Array<{ to: number | "inf"; amount: number; flatAmount?: number }>;
 	/** Required when tiers is defined: how tiers are applied */
 	tierBehavior: "graduated" | "volume";
 };
