@@ -10,7 +10,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { productToLicenseCustomize } from "./licenseCustomizeUtils";
 import { runWithErrorToast } from "./runWithErrorToast";
-import { useLicenseQuantityStore } from "./useLicenseQuantityStore";
+import { useLicenseDraftStore } from "./useLicenseDraftStore";
 
 /**
  * Seeds the inline editor with the license's effective items and persists edits
@@ -38,16 +38,19 @@ export const useLicenseCustomize = ({
 
 	const save = (draftProduct: FrontendProduct) =>
 		runWithErrorToast(async () => {
-			// Read the quantity draft imperatively at save time so editing it
-			// doesn't re-render this card on every keystroke.
+			// Read the drafts imperatively at save time so editing them doesn't
+			// re-render this card on every keystroke.
+			const draft = useLicenseDraftStore.getState().drafts[license.id];
 			const includedQuantity =
-				useLicenseQuantityStore.getState().drafts[license.id] ??
-				planLicense.included_quantity;
+				draft?.includedQuantity ?? planLicense.included_quantity;
+			const pooledFeatureIds =
+				draft?.pooledFeatureIds ?? planLicense.pooled_feature_ids;
 			await setPlanLicense.mutateAsync({
 				parent_plan_id: parentPlanId,
 				license_plan_id: license.id,
 				included_quantity: includedQuantity,
 				allow_extra_quantity: planLicense.allow_extra_quantity,
+				pooled_feature_ids: pooledFeatureIds,
 				customize: productToLicenseCustomize({
 					product: draftProduct,
 					features,

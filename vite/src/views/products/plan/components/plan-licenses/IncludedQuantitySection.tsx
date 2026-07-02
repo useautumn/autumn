@@ -3,9 +3,9 @@ import { Input } from "@autumn/ui";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
-	useIsLicenseQuantitySeeded,
-	useLicenseQuantityStore,
-} from "./useLicenseQuantityStore";
+	useIsLicenseDraftSeeded,
+	useLicenseDraftStore,
+} from "./useLicenseDraftStore";
 
 const DIGITS_ONLY = /^\d*$/;
 
@@ -16,9 +16,11 @@ const DIGITS_ONLY = /^\d*$/;
  */
 export function IncludedQuantitySection() {
 	const { product } = useProduct();
-	const draft = useLicenseQuantityStore((s) => s.drafts[product.id]);
-	const setDraft = useLicenseQuantityStore((s) => s.set);
-	const isSeeded = useIsLicenseQuantitySeeded(product.id);
+	const draft = useLicenseDraftStore(
+		(s) => s.drafts[product.id]?.includedQuantity,
+	);
+	const patchDraft = useLicenseDraftStore((s) => s.patch);
+	const isSeeded = useIsLicenseDraftSeeded(product.id);
 
 	if (!isLicenseProduct({ product }) || !isSeeded) return null;
 
@@ -31,7 +33,9 @@ export function IncludedQuantitySection() {
 				onChange={(e) => {
 					const raw = e.target.value;
 					if (!DIGITS_ONLY.test(raw)) return;
-					setDraft(product.id, raw === "" ? undefined : Number(raw));
+					patchDraft(product.id, {
+						includedQuantity: raw === "" ? undefined : Number(raw),
+					});
 				}}
 				className="w-24"
 				aria-label="Included quantity"

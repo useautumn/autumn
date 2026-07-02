@@ -1,15 +1,5 @@
-import {
-	type FrontendProduct,
-	type PlanLicense,
-	type ProductV2,
-	sortPlanItems,
-} from "@autumn/shared";
-import { useEffect, useRef } from "react";
-import {
-	useHasPlanChanges,
-	useProduct,
-	useSheet,
-} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import type { FrontendProduct, PlanLicense, ProductV2 } from "@autumn/shared";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
@@ -19,11 +9,7 @@ import {
 	LicenseCardDim,
 	LicenseSheetPortal,
 } from "./LicenseSheetPortal";
-import {
-	useLicenseQuantity,
-	useLicenseQuantityStore,
-} from "./useLicenseQuantityStore";
-import { useLicenseSaveRegistry } from "./useLicenseSaveRegistry";
+import { useLicensePlanCardLifecycle } from "./useLicensePlanCardLifecycle";
 import { useIsLicenseSheetOpen } from "./useLicenseSheetStore";
 
 export function LicensePlanCardEditor({
@@ -35,62 +21,10 @@ export function LicensePlanCardEditor({
 	license: ProductV2;
 	onSave: (product: FrontendProduct) => Promise<boolean>;
 }) {
-	const { product } = useProduct();
-	const { sheetType, itemDraft } = useSheet();
+	const { sheetType } = useSheet();
 	const globalSheetOpen = useSheetStore((s) => s.type !== null);
 	const anyLicenseSheetOpen = useIsLicenseSheetOpen();
-
-	const includedQuantity = useLicenseQuantity(
-		license.id,
-		planLicense.included_quantity,
-	);
-	const quantityChanged = includedQuantity !== planLicense.included_quantity;
-	const hasChanges = useHasPlanChanges() || quantityChanged;
-
-	// Register this license's pending save with the plan-level save bar, so saving
-	// the plan persists every dirty license too (one save for everything). The
-	// draft is read through a ref at save time, so only `dirty` need re-register.
-	const register = useLicenseSaveRegistry((s) => s.register);
-	const unregister = useLicenseSaveRegistry((s) => s.unregister);
-	const seedQuantity = useLicenseQuantityStore((s) => s.set);
-	const clearQuantity = useLicenseQuantityStore((s) => s.clear);
-	const saveRef = useRef<() => Promise<boolean>>(async () => true);
-	saveRef.current = async () => {
-		const success = await onSave({
-			...product,
-			items: sortPlanItems({ items: product.items }),
-		});
-		if (success) {
-			// Commit so the card stops reading as dirty; the quantity draft falls
-			// back to the refetched persisted value.
-			itemDraft.commit();
-			seedQuantity(license.id, undefined);
-		}
-		return success;
-	};
-
-	const discardRef = useRef<() => void>(() => {});
-	discardRef.current = () => {
-		itemDraft.discard();
-		seedQuantity(license.id, planLicense.included_quantity);
-	};
-
-	// Bridge this license to the plan-level save bar: seed its included-quantity
-	// draft and register its save (dirty state + a ref-read save), releasing both
-	// on unmount so the save bar tracks exactly the mounted licenses.
-	useEffect(() => {
-		seedQuantity(license.id, planLicense.included_quantity);
-		return () => clearQuantity(license.id);
-	}, [license.id, planLicense.included_quantity, seedQuantity, clearQuantity]);
-
-	useEffect(() => {
-		register(license.id, {
-			dirty: hasChanges,
-			save: () => saveRef.current(),
-			discard: () => discardRef.current(),
-		});
-		return () => unregister(license.id);
-	}, [license.id, hasChanges, register, unregister]);
+	useLicensePlanCardLifecycle({ planLicense, license, onSave });
 
 	// This license is the active editor when its own sheet is open. When some
 	// other editor's sheet is open (the parent plan, or a sibling license), dim

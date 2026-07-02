@@ -23,6 +23,7 @@ import {
 	cleanTiersForMode,
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
+import { PooledFeatureSection } from "../plan-licenses/PooledFeatureSection";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { BillingType } from "./BillingType";
 import { IncludedUsage } from "./IncludedUsage";
@@ -207,6 +208,8 @@ export function EditPlanFeatureSheet({
 								<PricedFeatureSettings />
 							</SheetSection>
 						)}
+
+						<PooledFeatureSection />
 
 						<AdvancedSettings />
 					</>

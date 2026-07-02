@@ -42,6 +42,7 @@ export const LinkLicenseMenuItem = () => {
 					license_plan_id: licensePlanId,
 					included_quantity: 1,
 					allow_extra_quantity: false,
+					pooled_feature_ids: [],
 				}),
 			"Failed to link license",
 		);

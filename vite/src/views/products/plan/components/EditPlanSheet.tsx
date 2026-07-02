@@ -1,4 +1,4 @@
-import { productV2ToBasePrice } from "@autumn/shared";
+import { isLicenseProduct, productV2ToBasePrice } from "@autumn/shared";
 import {
 	useProduct,
 	useSheet,
@@ -21,6 +21,9 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 		product.planType === "paid" &&
 		!basePrice?.price &&
 		product.basePriceType !== "usage";
+	// Auto-enable/add-on and the advanced settings are plan concepts; the
+	// backend rejects them on license products.
+	const showPlanOnlySettings = !isLicenseProduct({ product });
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -34,9 +37,9 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 				)}
 				<MainDetailsSection />
 				<IncludedQuantitySection />
-				<AdditionalOptions />
+				{showPlanOnlySettings && <AdditionalOptions />}
 
-				{!showAdvanced && <MoreSettingsSection />}
+				{showPlanOnlySettings && !showAdvanced && <MoreSettingsSection />}
 			</div>
 
 			<PlanSheetFooterContainer sheetType={sheetType} />
