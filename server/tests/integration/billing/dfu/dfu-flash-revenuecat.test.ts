@@ -222,7 +222,7 @@ test.concurrent(
 			products: [mockProduct({ internalId, storeId })],
 			subscriptions: [
 				mockSubscription({
-					id: "sub_dfu_rc_expired",
+					id: "rcsub_dfu_rc_expired",
 					internalProductId: internalId,
 					status: "expired",
 					periodEndsAt: now - THIRTY_DAYS_MS,
@@ -301,7 +301,7 @@ test.concurrent(
 			products: [mockProduct({ internalId, storeId })],
 			subscriptions: [
 				mockSubscription({
-					id: "sub_dfu_rc_precedence",
+					id: "rcsub_dfu_rc_precedence",
 					internalProductId: internalId,
 					status: "expired",
 					periodEndsAt: now - THIRTY_DAYS_MS,
@@ -442,7 +442,7 @@ test.concurrent(
 			products: [mockProduct({ internalId, storeId })],
 			subscriptions: [
 				mockSubscription({
-					id: "sub_dfu_rc_seed",
+					id: "rcsub_dfu_rc_seed",
 					internalProductId: internalId,
 					status: "active",
 				}),

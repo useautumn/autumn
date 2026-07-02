@@ -107,6 +107,49 @@ const callFlash = async (
 	}
 };
 
+// Standalone test-mode Stripe customer (real cus_...) so flashed processor ids resolve.
+const createRealStripeCustomer = async (
+	ctx: TestContext,
+	{ email }: { email: string },
+): Promise<string> => {
+	const customer = await ctx.stripeCli.customers.create({
+		email,
+		payment_method: "pm_card_visa",
+		invoice_settings: { default_payment_method: "pm_card_visa" },
+	});
+	return customer.id;
+};
+
+// Real test-mode Stripe customer + subscription (real cus_.../sub_...) for flashed billables.
+const createRealStripeSub = async (
+	ctx: TestContext,
+	{
+		email,
+		amount = 1000,
+		interval = "month",
+		customerId,
+	}: {
+		email: string;
+		amount?: number;
+		interval?: "month" | "year";
+		customerId?: string;
+	},
+): Promise<{ customerId: string; subscriptionId: string }> => {
+	const stripeCustomerId =
+		customerId ?? (await createRealStripeCustomer(ctx, { email }));
+	const price = await ctx.stripeCli.prices.create({
+		unit_amount: amount,
+		currency: "usd",
+		recurring: { interval },
+		product_data: { name: `dfu-flash-${email}` },
+	});
+	const sub = await ctx.stripeCli.subscriptions.create({
+		customer: stripeCustomerId,
+		items: [{ price: price.id }],
+	});
+	return { customerId: stripeCustomerId, subscriptionId: sub.id };
+};
+
 // ── Scenario A: route + validation + Stripe recurring mid-cycle usage (contract 1,2,3) ──
 test.concurrent(
 	`${chalk.yellowBright("dfu.flash: Stripe recurring plan applies mid-cycle usage")}`,
@@ -117,19 +160,22 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_a" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_a" },
+					link: { subscription_id: subscriptionId },
 					phases: [
 						{
 							starts_at: "now",
@@ -267,7 +313,7 @@ test.concurrent(
 			items: [items.prepaidMessages({ includedUsage: 0 })],
 		});
 
-		const { autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ testClock: false }),
@@ -276,13 +322,16 @@ test.concurrent(
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_c" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_c_stripe" },
+					link: { subscription_id: subscriptionId },
 					phases: [
 						{
 							starts_at: "now",
@@ -352,19 +401,22 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_d" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_d" },
+					link: { subscription_id: subscriptionId },
 					// `plan` shorthand — equivalent to phases:[{ starts_at:"now", plans:[plan] }].
 					plan: { plan_id: pro.id, status: "expired" },
 				},
@@ -395,19 +447,22 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV1, autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV1, autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_e" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_e" },
+					link: { subscription_id: subscriptionId },
 					phases: [
 						{
 							starts_at: "now",
@@ -458,19 +513,26 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2 } = await initScenario({
+		const { autumnV2_2, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+		const { subscriptionId: entitySubscriptionId } = await createRealStripeSub(
+			ctx,
+			{ email: `${customerId}@example.com`, customerId: stripeCustomerId },
+		);
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_f" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_f" },
+					link: { subscription_id: subscriptionId },
 					phases: [
 						{
 							starts_at: "now",
@@ -486,7 +548,7 @@ test.concurrent(
 					billables: [
 						{
 							processor: "stripe",
-							link: { subscription_id: "sub_dfu_f_entity" },
+							link: { subscription_id: entitySubscriptionId },
 							phases: [
 								{
 									starts_at: "now",
@@ -517,19 +579,22 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_plan" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_plan" },
+					link: { subscription_id: subscriptionId },
 					// Singular `plan` — normalized to phases:[{ starts_at:"now", plans:[plan] }].
 					plan: {
 						plan_id: pro.id,
@@ -565,19 +630,22 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2, autumnV2_3 } = await initScenario({
+		const { autumnV2_2, autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_both" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
 				{
 					processor: "stripe",
-					link: { subscription_id: "sub_dfu_both" },
+					link: { subscription_id: subscriptionId },
 					plan: { plan_id: pro.id, status: "active" },
 					phases: [
 						{
@@ -611,17 +679,20 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
-		const { autumnV2_2 } = await initScenario({
+		const { autumnV2_2, ctx } = await initScenario({
 			customerId,
 			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
 			actions: [],
 		});
 
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
 		const payload = {
 			customer_id: customerId,
-			processors: [{ type: "stripe", id: "cus_stripe_dfu_neither" }],
+			processors: [{ type: "stripe", id: stripeCustomerId }],
 			billables: [
-				{ processor: "stripe", link: { subscription_id: "sub_dfu_neither" } },
+				{ processor: "stripe", link: { subscription_id: subscriptionId } },
 			],
 		};
 
@@ -630,6 +701,114 @@ test.concurrent(
 		expect(flashRes.errorCode).toBe("invalid_inputs");
 		expect(flashRes.errorMessage ?? "").toContain("`plan` or `phases`");
 		expect(flashRes.result).toBeNull();
+	},
+);
+
+// ── Response: flash returns the freshly-imaged customer (contract: fresh, not stale) ──
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: response returns the fresh imaged customer with correct balance")}`,
+	async () => {
+		const customerId = "dfu-flash-returns-fresh-customer";
+		const pro = products.pro({
+			id: "dfu-fresh-customer-pro",
+			items: [items.monthlyMessages({ includedUsage: 15_000_000 })],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
+		const payload = {
+			customer_id: customerId,
+			processors: [{ type: "stripe", id: stripeCustomerId }],
+			billables: [
+				{
+					processor: "stripe",
+					link: { subscription_id: subscriptionId },
+					phases: [
+						{
+							starts_at: "now",
+							plans: [
+								{
+									plan_id: pro.id,
+									status: "active",
+									balances: [
+										{ feature_id: TestFeature.Messages, usage: 5_000_000 },
+									],
+								},
+							],
+						},
+					],
+				},
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_3 as FlashClient, payload);
+
+		// Response carries a fresh customer reflecting the just-imaged plan + balance.
+		const customer = flashRes.result?.customer as ApiCustomerV5 | null;
+		expect(customer).toBeTruthy();
+		await expectCustomerProducts({
+			customer: customer as ApiCustomerV5,
+			active: [pro.id],
+		});
+		expectBalanceCorrect({
+			customer: customer as ApiCustomerV5,
+			featureId: TestFeature.Messages,
+			remaining: 10_000_000,
+			usage: 5_000_000,
+		});
+	},
+);
+
+// ── Response: dry_run returns customer: null and persists nothing ──
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: dry_run returns customer null and writes nothing")}`,
+	async () => {
+		const customerId = "dfu-flash-dry-run-customer";
+		const pro = products.pro({
+			id: "dfu-dry-run-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const { customerId: stripeCustomerId, subscriptionId } =
+			await createRealStripeSub(ctx, { email: `${customerId}@example.com` });
+
+		const payload = {
+			customer_id: customerId,
+			dry_run: true,
+			processors: [{ type: "stripe", id: stripeCustomerId }],
+			billables: [
+				{
+					processor: "stripe",
+					link: { subscription_id: subscriptionId },
+					phases: [
+						{
+							starts_at: "now",
+							plans: [{ plan_id: pro.id, status: "active" }],
+						},
+					],
+				},
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_3 as FlashClient, payload);
+		expect(flashRes.result?.customer).toBeNull();
+
+		// Nothing persisted: the plan is not present on a fresh fetch.
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		await expectCustomerProducts({ customer, notPresent: [pro.id] });
 	},
 );
 
