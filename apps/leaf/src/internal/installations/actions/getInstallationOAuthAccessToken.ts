@@ -23,6 +23,23 @@ const getTokenEndpoint = () =>
 
 const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
 
+const resolveCredentialUserId = ({
+	installation,
+	userId,
+}: {
+	installation: ChatInstallation;
+	userId?: string;
+}) => {
+	const credentialUserId = userId ?? installation.installed_by_user_id;
+	if (!credentialUserId) {
+		throw new Error(
+			"Missing installer user id for chat MCP OAuth credentials",
+		);
+	}
+
+	return credentialUserId;
+};
+
 export const getInstallationOAuthAccessToken = async ({
 	installation,
 	env,
@@ -32,9 +49,12 @@ export const getInstallationOAuthAccessToken = async ({
 	installation: ChatInstallation;
 	env: AppEnv;
 	orgId?: string;
-	// Web chat resolves a per-user credential; Slack omits it.
+	// Web/per-user chat passes the caller. Installer-scoped installs fall back to
+	// the installer so credential lookup never drops the user_id predicate.
 	userId?: string;
 }) => {
+	const credentialUserId = resolveCredentialUserId({ installation, userId });
+
 	if (isSlackAdminProvider({ provider: installation.provider })) {
 		const access = validateSlackAdminAccess({
 			workspaceId: installation.workspace_id,
@@ -49,7 +69,7 @@ export const getInstallationOAuthAccessToken = async ({
 		chatInstallationId: installation.id,
 		env,
 		orgId,
-		userId,
+		userId: credentialUserId,
 	});
 
 	if (
@@ -61,7 +81,7 @@ export const getInstallationOAuthAccessToken = async ({
 				tx,
 				installation,
 				orgId,
-				userId: installation.installed_by_user_id ?? "",
+				userId: credentialUserId,
 			});
 		});
 
@@ -70,6 +90,7 @@ export const getInstallationOAuthAccessToken = async ({
 			chatInstallationId: installation.id,
 			env,
 			orgId,
+			userId: credentialUserId,
 		});
 	}
 

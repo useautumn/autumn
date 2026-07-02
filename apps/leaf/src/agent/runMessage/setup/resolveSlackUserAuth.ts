@@ -22,6 +22,9 @@ type AutumnUserMatch =
 	| { kind: "single"; userId: string }
 	| { kind: "ambiguous" };
 
+const missingOrgUserText = ({ email }: { email: string }) =>
+	`Sorry, we couldn't find any user in the Autumn organization with the email address ${email} and cannot fetch your permissions. Please ask an admin to add you to the organization on Autumn.`;
+
 const resolveAutumnUserIdByEmail = async (
 	email: string,
 ): Promise<AutumnUserMatch> => {
@@ -93,10 +96,7 @@ export const resolveSlackUserAuth = async ({
 		return deny("ambiguous-autumn-user");
 	}
 	if (match.kind === "none") {
-		return deny(
-			"no-autumn-user",
-			`Sorry, your email address (${email}) was not found in the Autumn organization. Please ask an admin to invite you.`,
-		);
+		return deny("no-autumn-user", missingOrgUserText({ email }));
 	}
 	const userId = match.userId;
 
@@ -106,7 +106,7 @@ export const resolveSlackUserAuth = async ({
 		organizationId: orgId,
 	});
 	if (role === null) {
-		return deny("not-a-member");
+		return deny("not-a-member", missingOrgUserText({ email }));
 	}
 	if (scopes.length === 0) {
 		return deny("invalid-role");

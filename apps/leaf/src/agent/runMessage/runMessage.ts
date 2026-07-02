@@ -159,14 +159,18 @@ export const runMessage = async ({
 
 			// Legacy/admin installs resolve no per-user id; target the installer's
 			// credential explicitly rather than relying on an unordered findFirst.
+			const tokenUserId =
+				autumnUserId ?? effectiveInstallation.installed_by_user_id;
+			if (!tokenUserId) {
+				throw new Error(
+					"Missing installer user id for chat MCP OAuth credentials",
+				);
+			}
 			const token = await getInstallationOAuthAccessToken({
 				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
-				userId:
-					autumnUserId ??
-					effectiveInstallation.installed_by_user_id ??
-					undefined,
+				userId: tokenUserId,
 			});
 
 			const agentTools =
