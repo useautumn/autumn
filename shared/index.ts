@@ -185,6 +185,7 @@ export * from "./models/productModels/intervals/productItemInterval";
 export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/priceModels/priceConfig/buildPriceCurrencies";
+export * from "./models/productModels/priceModels/priceConfig/priceCurrencyView";
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
 // Price Models
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";

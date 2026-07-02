@@ -47,6 +47,13 @@ export type UsageTier = z.infer<typeof UsageTierSchema>;
 export const PriceCurrencyConfigSchema = z.object({
 	amount: z.number().nullish(),
 	usage_tiers: z.array(UsageTierSchema).nullish(),
+
+	// Per-currency Stripe price ids (created lazily at billing, Decision A-prime).
+	// stripe_product_id / stripe_meter_id / stripe_event_name stay shared on the base config.
+	stripe_price_id: z.string().nullish(),
+	stripe_empty_price_id: z.string().nullish(),
+	stripe_placeholder_price_id: z.string().nullish(),
+	stripe_prepaid_price_v2_id: z.string().nullish(),
 });
 
 export type PriceCurrencyConfig = z.infer<typeof PriceCurrencyConfigSchema>;
