@@ -1,38 +1,16 @@
-import {
-	CopyProductParamsSchema,
-	CreateFeatureSchema,
-	ErrCode,
-	ProductAlreadyExistsError,
-	Scopes,
-} from "@autumn/shared";
+import { AuthType, CopyProductParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
-import { copyProduct } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "../../../../utils/genUtils";
-
-const initNewFeature = ({
-	data,
-	orgId,
-	env,
-}: {
-	data: any;
-	orgId: string;
-	env: any;
-}) => {
-	return {
-		...data,
-		org_id: orgId,
-		env,
-		created_at: Date.now(),
-		internal_id: generateId("fe"),
-	};
-};
+import { SANDBOX_ORG_HEADER } from "@/honoMiddlewares/sandboxAccess.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { copyProductForOrgs } from "./copyProductForOrgs.js";
 
 /**
  * Route: POST /v1/products/:productId/copy - Copy a product
+ *
+ * Same-org env-copy by default. From a named sandbox (a dashboard session acting
+ * via `x-sandbox-org-id`), it promotes into the MASTER org's env instead — so
+ * "Copy to Production" reaches real production rather than the sub-org's own
+ * unviewable Live env. A sandbox API key (non-dashboard) keeps same-org copy.
  */
 export const handleCopyProductV2 = createRoute({
 	scopes: [Scopes.Plans.Write],
@@ -41,112 +19,31 @@ export const handleCopyProductV2 = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		const { db, logger, org, env: fromEnv } = ctx;
+		const { db, logger, org, env: fromEnv, authType } = ctx;
 		const { product_id: fromProductId } = c.req.param();
 		const { env: toEnv, id: toId, name: toName } = body;
 
-		if (fromEnv === toEnv && fromProductId === toId) {
-			throw new RecaseError({
-				message: `Product ID ${toId} already exists in ${toEnv}`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+		const promoting =
+			authType === AuthType.Dashboard &&
+			org.is_sandbox === true &&
+			!!c.req.header(SANDBOX_ORG_HEADER) &&
+			!!org.created_by;
 
-		// 1. Check if product exists in target environment
-		const toProduct = await ProductService.get({
+		const toOrg = promoting
+			? await OrgService.get({ db, orgId: org.created_by as string })
+			: org;
+
+		await copyProductForOrgs({
 			db,
-			id: toId,
-			orgId: org.id,
-			env: toEnv,
-		});
-
-		if (toProduct) {
-			throw new ProductAlreadyExistsError({
-				productId: toId,
-				message: `Product ${toId} already exists in ${toEnv}`,
-			});
-		}
-
-		// 2. Get source product and features from both environments
-		const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
-			ProductService.getFull({
-				db,
-				idOrInternalId: fromProductId,
-				orgId: org.id,
-				env: fromEnv,
-			}),
-			FeatureService.list({
-				db,
-				orgId: org.id,
-				env: fromEnv,
-			}),
-			FeatureService.list({
-				db,
-				orgId: org.id,
-				env: toEnv,
-			}),
-		]);
-
-		if (fromFullProduct) {
-			fromFullProduct.is_default = false;
-		}
-
-		const featureIdsToCopy = fromFullProduct.entitlements.map(
-			(e) => e.feature.id,
-		);
-
-		// 3. Sync features between environments if copying across environments
-		if (fromEnv !== toEnv) {
-			for (const fromFeature of fromFeatures.filter((f) =>
-				featureIdsToCopy.includes(f.id),
-			)) {
-				const toFeature = toFeatures.find((f) => f.id === fromFeature.id);
-
-				if (toFeature && fromFeature.type !== toFeature.type) {
-					throw new RecaseError({
-						message: `Feature ${fromFeature.name} exists in ${toEnv}, but has a different config. Please match them then try again.`,
-						code: ErrCode.InvalidRequest,
-						statusCode: 400,
-					});
-				}
-
-				if (!toFeature) {
-					const res = await FeatureService.insert({
-						db,
-						data: initNewFeature({
-							data: CreateFeatureSchema.parse(fromFeature),
-							orgId: org.id,
-							env: toEnv,
-						}),
-						logger,
-					});
-
-					toFeatures.push(res![0]);
-				}
-			}
-		}
-
-		// 4. Copy product
-		await copyProduct({
-			db,
-			product: fromFullProduct,
-			toOrgId: org.id,
+			logger,
+			fromOrg: org,
+			fromEnv,
+			toOrg,
+			toEnv,
+			fromProductId,
 			toId,
 			toName,
-			fromEnv,
-			toEnv,
-			toFeatures,
-			fromFeatures,
-			org,
-			logger,
 		});
-
-		// Invalidate cache for target environment (and source if same org)
-		await invalidateProductsCache({ orgId: org.id, env: toEnv });
-		if (fromEnv !== toEnv) {
-			await invalidateProductsCache({ orgId: org.id, env: fromEnv });
-		}
 
 		return c.json({ message: "Product copied" });
 	},

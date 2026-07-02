@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -39,8 +40,13 @@ export const CopyProductDialog = ({
 }) => {
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance({ env });
+	const activeSandbox = useActiveSandbox();
 	const { refetch } = useProductsQuery();
 	const navigate = useNavigate();
+
+	// Inside a named sandbox, "Copy to Sandbox/Production" promotes into the
+	// master org (a different org), so a same-env same-id copy isn't a collision.
+	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
 
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState(product.name);
@@ -60,8 +66,9 @@ export const CopyProductDialog = ({
 			else toast.error("ID cannot be empty");
 			return;
 		}
-		// 2. If env is the same and id is same, throw error
-		if (env === effectiveEnv && id === product.id) {
+		// 2. Same-org same-env copy with an unchanged id would collide (skip this
+		// when promoting from a named sandbox — the target is the master org).
+		if (!inNamedSandbox && env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
 		}
@@ -87,12 +94,12 @@ export const CopyProductDialog = ({
 
 			if (onSuccess) {
 				await onSuccess(copiedProduct);
-			} else if (env === effectiveEnv) {
-				// Only navigate if copying to the same environment
+			} else if (!inNamedSandbox && env === effectiveEnv) {
+				// Same-org duplicate lands in this view; a promote goes to another
+				// org, so don't navigate to a same-id plan in the current context.
 				navigateTo(`/products/${id}`, navigate);
 			}
 		} catch (error: unknown) {
-			console.log("Error copying product", error);
 			toast.error(getBackendErr(error as AxiosError, "Failed to copy plan"));
 		} finally {
 			setLoading(false);

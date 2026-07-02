@@ -325,6 +325,11 @@ export const processMessage = async ({
 		}
 	};
 
+	// Queue dwell = SQS SentTimestamp → processing start. Total message age:
+	// includes prior delivery attempts on retry (SentTimestamp never resets).
+	const sentAtMs = Number(message.Attributes?.SentTimestamp);
+	const receiveCount = Number(message.Attributes?.ApproximateReceiveCount);
+
 	try {
 		await withWorkerSpan({
 			workflowName: job.name,
@@ -333,6 +338,14 @@ export const processMessage = async ({
 				org_id: job.data?.orgId,
 				env: job.data?.env,
 				customer_id: job.data?.customerId,
+			},
+			attributes: {
+				...(Number.isFinite(sentAtMs) && {
+					"queue.dwell_ms": Math.max(0, Date.now() - sentAtMs),
+				}),
+				...(Number.isFinite(receiveCount) && {
+					"queue.receive_count": receiveCount,
+				}),
 			},
 			fn: executeJob,
 		});
