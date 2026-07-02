@@ -10,8 +10,6 @@ import { PriceService } from "@server/internal/products/prices/PriceService";
 import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
-// Zero-amount licensed price paired with an in-arrear price (checkout flows).
-// Non-fatal on failure, matching the original inline behavior.
 export const createStripeEmptyPrice = async ({
 	db,
 	stripeCli,

@@ -171,8 +171,6 @@ export const createStripePriceIFNotExist = async ({
 
 	const config = price.config! as UsagePriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
-	// Default to the price's base currency (not the live org default) so a
-	// no-currency call always resolves as base even if the org default drifted.
 	const currency = (
 		targetCurrency ??
 		config.base_currency ??
@@ -181,11 +179,9 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	// Defense-in-depth behind the attach currency guard: without real per-currency
-	// amounts (an id-only block doesn't count) creators would silently fall back to
-	// base amounts and mint a wrong-amount price in the target currency.
 	const isFixed =
-		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff;
+		billingType === BillingType.FixedCycle ||
+		billingType === BillingType.OneOff;
 	if (!priceHasCurrencyAmounts({ config, currency, orgDefault, isFixed })) {
 		throw new Error(
 			`Price ${price.id} has no '${currency}' amounts in config.currencies — cannot create a Stripe price in that currency`,

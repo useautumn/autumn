@@ -27,10 +27,12 @@ const paidUsageUsd = price({
 
 const run = ({
 	customerCurrency = null,
+	stripeCurrency = null,
 	prices,
 	requested,
 }: {
 	customerCurrency?: string | null;
+	stripeCurrency?: string | null;
 	prices: Price[];
 	requested?: string;
 }) =>
@@ -38,6 +40,7 @@ const run = ({
 		ctx,
 		billingContext: {
 			fullCustomer: { currency: customerCurrency },
+			stripeCustomer: stripeCurrency ? { currency: stripeCurrency } : null,
 			attachProduct: { name: "Pro", prices },
 		} as unknown as AttachBillingContext,
 		params: { currency: requested } as AttachParamsV1,
@@ -94,5 +97,40 @@ describe("handleCurrencyMismatchErrors", () => {
 		expect(() =>
 			run({ customerCurrency: "usd", prices: [paidUsd], requested: "USD" }),
 		).not.toThrow();
+	});
+
+	test("an id-only currency block does not count as an offered currency", () => {
+		const idOnlyEur = price({
+			type: "fixed",
+			amount: 10,
+			base_currency: "usd",
+			currencies: { eur: { stripe_price_id: "price_eur" } },
+		});
+		expect(() => run({ prices: [idOnlyEur], requested: "eur" })).toThrow(
+			/does not offer/i,
+		);
+	});
+
+	test("a usage price needs non-empty per-currency usage_tiers to offer a currency", () => {
+		const emptyTiersEur = price({
+			type: "usage",
+			usage_tiers: [{ to: "inf", amount: 0.5 }],
+			base_currency: "usd",
+			currencies: { eur: { usage_tiers: [] } },
+		});
+		expect(() => run({ prices: [emptyTiersEur], requested: "eur" })).toThrow(
+			/does not offer/i,
+		);
+	});
+
+	test("legacy null-currency customer is locked by Stripe's customer currency", () => {
+		expect(() =>
+			run({
+				customerCurrency: null,
+				stripeCurrency: "usd",
+				prices: [paidWithEur],
+				requested: "eur",
+			}),
+		).toThrow(/locked/i);
 	});
 });

@@ -31,8 +31,6 @@ export const createStripeFixedPrice = async ({
 }) => {
 	const config = price.config as FixedPriceConfig;
 	const orgDefault = (org.default_currency || "usd").toLowerCase();
-	// Default to the price's base currency (not the live org default) so a
-	// no-currency call always resolves as base even if the org default drifted.
 	const currency = (
 		targetCurrency ??
 		config.base_currency ??

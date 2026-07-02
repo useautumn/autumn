@@ -82,7 +82,6 @@ describe("priceToInArrearTiers per-currency", () => {
 			entitlement,
 			org,
 		});
-		// free leading tier for the allowance
 		expect(tiers[0]).toEqual({ unit_amount: 0, up_to: 100 });
 		expect(tiers[1].unit_amount_decimal).toBe("10");
 		expect(tiers[1].up_to).toBe(1100);
@@ -103,7 +102,6 @@ describe("priceToInArrearTiers per-currency", () => {
 		expect(tiers[1].unit_amount_decimal).toBe("9");
 		expect(tiers[1].up_to).toBe(1100);
 		expect(tiers[2].unit_amount_decimal).toBe("7");
-		// the shift must not leak into the persisted config
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		expect((price.config as any).usage_tiers[0].to).toBe(1000);
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
@@ -196,7 +194,6 @@ describe("createStripeInArrearPrice per-currency", () => {
 		const config = price.config as any;
 		expect(config.currencies.eur.stripe_price_id).toBe("price_eur");
 		expect(config.stripe_price_id).toBeNull();
-		// meter + product ids stay shared/top-level
 		expect(config.stripe_meter_id).toBe("meter_1");
 		expect(config.stripe_product_id).toBe("prod_shared");
 	});

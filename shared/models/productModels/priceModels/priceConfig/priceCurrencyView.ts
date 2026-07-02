@@ -6,9 +6,6 @@ export type CurrencyStripeIdSlot =
 	| "stripe_placeholder_price_id"
 	| "stripe_prepaid_price_v2_id";
 
-// The subset of a fixed/usage price config the per-currency view reads or mutates.
-// The base currency lives in the top-level fields; additional currencies live in
-// `currencies[ccy]`. Product / meter / event ids are shared and stay top-level only.
 export type CurrencyAwarePriceConfig = {
 	amount?: number | null;
 	usage_tiers?: UsageTier[] | null;
@@ -35,7 +32,6 @@ export const isBaseCurrency = ({
 }): boolean =>
 	currency.toLowerCase() === resolveBaseCurrency({ config, orgDefault });
 
-/** The amount / usage_tiers to bill for `currency`: base config, or the per-currency override block. */
 export const priceConfigForCurrency = ({
 	config,
 	currency,
@@ -52,8 +48,23 @@ export const priceConfigForCurrency = ({
 	return { amount: block?.amount, usage_tiers: block?.usage_tiers };
 };
 
-/** Whether billable amounts exist for `currency`: always true for base; for others the
- *  block must carry a real amount (fixed) or non-empty usage_tiers — an ID-only block doesn't count. */
+export const priceAmountsForCurrency = ({
+	config,
+	currency,
+}: {
+	config: CurrencyAwarePriceConfig;
+	currency?: string | null;
+}): Pick<PriceCurrencyConfig, "amount" | "usage_tiers"> => {
+	if (!currency) {
+		return { amount: config.amount, usage_tiers: config.usage_tiers };
+	}
+	return priceConfigForCurrency({
+		config,
+		currency,
+		orgDefault: config.base_currency ?? currency,
+	});
+};
+
 export const priceHasCurrencyAmounts = ({
 	config,
 	currency,
@@ -71,7 +82,6 @@ export const priceHasCurrencyAmounts = ({
 	return isFixed ? block.amount != null : !!block.usage_tiers?.length;
 };
 
-/** Reads a Stripe id slot for `currency`: top-level for the base currency, else the per-currency block. */
 export const getPriceCurrencyStripeId = ({
 	config,
 	currency,
@@ -89,8 +99,6 @@ export const getPriceCurrencyStripeId = ({
 	return config.currencies?.[currency.toLowerCase()]?.[slot] ?? undefined;
 };
 
-/** Writes a Stripe id slot for `currency` (mutates `config`): top-level for base, else the per-currency block.
- *  A nullish id clears the slot; on a non-base currency with no existing block it is a no-op (no empty block). */
 export const setPriceCurrencyStripeId = ({
 	config,
 	currency,

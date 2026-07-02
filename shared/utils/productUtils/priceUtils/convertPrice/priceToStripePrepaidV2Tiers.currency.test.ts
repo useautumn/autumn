@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-// Front-load the barrel to avoid the circular-import TDZ in priceUtils/index.ts.
 import "@autumn/shared";
 import type { Organization } from "../../../../models/orgModels/orgTable.js";
 import type { Entitlement } from "../../../../models/productModels/entModels/entModels.js";

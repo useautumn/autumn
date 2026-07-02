@@ -280,6 +280,7 @@ export const setupAttachBillingContext = async ({
 			customer: fullCustomer,
 			org: ctx.org,
 			requested: params.currency,
+			stripeCurrency: stripeCustomer?.currency,
 		}),
 		featureQuantities,
 		transitionConfig,

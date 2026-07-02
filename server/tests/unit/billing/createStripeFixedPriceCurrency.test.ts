@@ -111,15 +111,12 @@ describe("createStripeFixedPrice per-currency", () => {
 		expect((price.config as any).currencies.eur.stripe_price_id).toBe(
 			"price_eur",
 		);
-		// top-level slot stays untouched for a non-base currency
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		expect((price.config as any).stripe_price_id).toBeNull();
 	});
 
 	test("no currency arg defaults to the config base currency, not the live org default", async () => {
 		const { cli, calls } = makeStripeCli("price_gbp", "prod_shared");
-		// base_currency gbp while the org default is usd: a legacy no-currency call
-		// must resolve as base (gbp, top-level), not create a usd price.
 		const price = fixedPrice({ baseCurrency: "gbp" });
 
 		await createStripeFixedPrice({

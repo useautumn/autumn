@@ -6,9 +6,16 @@ export const resolveCustomerCurrency = ({
 	customer,
 	org,
 	requested,
+	stripeCurrency,
 }: {
 	customer?: Pick<Customer, "currency"> | null;
 	org: Organization;
 	requested?: string | null;
+	stripeCurrency?: string | null;
 }): string =>
-	(requested || customer?.currency || orgToCurrency({ org })).toLowerCase();
+	(
+		requested ||
+		customer?.currency ||
+		stripeCurrency ||
+		orgToCurrency({ org })
+	).toLowerCase();

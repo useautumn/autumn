@@ -122,7 +122,6 @@ export const priceToInArrearTiers = ({
 		config.base_currency ??
 		orgDefault
 	).toLowerCase();
-	// Cloned so the allowance shift below never mutates the persisted config.
 	const usageTiers = structuredClone(
 		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
 			config.usage_tiers,

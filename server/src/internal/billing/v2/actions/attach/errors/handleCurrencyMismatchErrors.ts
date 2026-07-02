@@ -2,10 +2,12 @@ import {
 	type AttachBillingContext,
 	type AttachParamsV1,
 	ErrCode,
+	isFixedPrice,
 	isFreeProduct,
 	notNullish,
 	orgToCurrency,
 	type Price,
+	priceHasCurrencyAmounts,
 	RecaseError,
 	resolveCustomerCurrency,
 } from "@autumn/shared";
@@ -32,10 +34,39 @@ const priceOffersCurrency = ({
 	price: Price;
 	currency: string;
 	orgDefault: string;
-}): boolean => {
-	const base = (price.config.base_currency ?? orgDefault).toLowerCase();
-	if (base === currency) return true;
-	return notNullish(price.config.currencies?.[currency]);
+}): boolean =>
+	priceHasCurrencyAmounts({
+		config: price.config,
+		currency,
+		orgDefault,
+		isFixed: isFixedPrice(price),
+	});
+
+export const assertPlanOffersCurrency = ({
+	ctx,
+	prices,
+	planName,
+	currency,
+}: {
+	ctx: AutumnContext;
+	prices: Price[];
+	planName: string;
+	currency: string;
+}) => {
+	if (isFreeProduct({ prices })) return;
+
+	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
+	const planMissesCurrency = prices
+		.filter(priceCharges)
+		.some((price) => !priceOffersCurrency({ price, currency, orgDefault }));
+
+	if (planMissesCurrency) {
+		throw new RecaseError({
+			code: ErrCode.CurrencyMismatch,
+			message: `Plan '${planName}' does not offer a price in ${currency.toUpperCase()}`,
+			statusCode: 400,
+		});
+	}
 };
 
 /**
@@ -57,8 +88,10 @@ export const handleCurrencyMismatchErrors = ({
 	// Free / auto-enabled plans neither need nor lock a currency.
 	if (isFreeProduct({ prices })) return;
 
-	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
-	const locked = fullCustomer.currency?.toLowerCase() || null;
+	const locked =
+		(
+			fullCustomer.currency ?? billingContext.stripeCustomer?.currency
+		)?.toLowerCase() || null;
 	const requested = params.currency?.toLowerCase() || null;
 	const resolved =
 		billingContext.currency ??
@@ -66,6 +99,7 @@ export const handleCurrencyMismatchErrors = ({
 			customer: fullCustomer,
 			org: ctx.org,
 			requested: params.currency,
+			stripeCurrency: billingContext.stripeCustomer?.currency,
 		});
 
 	// A locked customer cannot switch currencies (Stripe forbids it anyway).
@@ -78,18 +112,10 @@ export const handleCurrencyMismatchErrors = ({
 	}
 
 	// Every charging price must offer the resolved currency (no FX fallback).
-	const planMissesCurrency = prices
-		.filter(priceCharges)
-		.some(
-			(price) =>
-				!priceOffersCurrency({ price, currency: resolved, orgDefault }),
-		);
-
-	if (planMissesCurrency) {
-		throw new RecaseError({
-			code: ErrCode.CurrencyMismatch,
-			message: `Plan '${attachProduct.name}' does not offer a price in ${resolved.toUpperCase()}`,
-			statusCode: 400,
-		});
-	}
+	assertPlanOffersCurrency({
+		ctx,
+		prices,
+		planName: attachProduct.name,
+		currency: resolved,
+	});
 };

@@ -106,7 +106,6 @@ describe("createStripeArrearProrated per-currency", () => {
 		expect(priceCreates).toHaveLength(2);
 		expect(priceCreates[0].currency).toBe("eur");
 		expect(priceCreates[0].unit_amount_decimal).toBe("900");
-		// placeholder metered price also in eur
 		expect(priceCreates[1].currency).toBe("eur");
 
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing

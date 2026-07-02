@@ -95,7 +95,6 @@ export const createStripePrepaid = async ({
 		config.base_currency ??
 		orgDefault
 	).toLowerCase();
-	// Amounts for the target currency; never persisted back into the base config.
 	const currencyTiers =
 		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
 		config.usage_tiers;

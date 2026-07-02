@@ -108,7 +108,6 @@ describe("createStripePrepaid per-currency", () => {
 			unit_amount_decimal: string;
 			up_to: number | "inf";
 		}[];
-		// tier.amount 10 → "1000" (cents), up_to 1000/100 units → 10
 		expect(tiers[0].unit_amount_decimal).toBe("1000");
 		expect(tiers[0].up_to).toBe(10);
 		expect(tiers[1].unit_amount_decimal).toBe("800");
@@ -146,7 +145,6 @@ describe("createStripePrepaid per-currency", () => {
 		);
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		expect((price.config as any).stripe_price_id).toBeNull();
-		// per-currency amounts must never overwrite the persisted base tiers
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		expect((price.config as any).usage_tiers[0].amount).toBe(10);
 	});
@@ -157,7 +155,6 @@ describe("createStripePrepaid per-currency", () => {
 			interval: BillingInterval.OneOff,
 			currencies: { eur: { usage_tiers: [{ to: -1, amount: 7 }] } },
 		});
-		// one-off reads tiers[0] directly; give base a single tier too
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		(price.config as any).usage_tiers = [{ to: -1, amount: 8 }];
 

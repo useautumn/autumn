@@ -2,13 +2,16 @@ import {
 	AppEnv,
 	type AutumnBillingPlan,
 	type BillingContext,
+	billingContextToCurrency,
 	copyStripeResourcesToMatchingPrice,
 	cusProductToProduct,
 	type FullProduct,
+	getPriceCurrencyStripeId,
 	isFixedPrice,
 	isFreeProduct,
 	isPrepaidPrice,
 	nullish,
+	orgToCurrency,
 	type Price,
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
@@ -131,6 +134,9 @@ export const initStripeResourcesForBillingPlan = async ({
 	const { insertCustomerProducts } = autumnBillingPlan;
 	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
 
+	const currency = billingContextToCurrency({ org, billingContext });
+	const orgDefault = orgToCurrency({ org }).toLowerCase();
+
 	const newProducts = insertCustomerProducts.flatMap((customerProduct) =>
 		cusProductToProduct({ cusProduct: customerProduct }),
 	);
@@ -161,9 +167,23 @@ export const initStripeResourcesForBillingPlan = async ({
 			prices: product.prices.filter(
 				(price) =>
 					shouldInitializeStripePrice({ price }) &&
-					(nullish(price.config.stripe_price_id) ||
+					(nullish(
+						getPriceCurrencyStripeId({
+							config: price.config,
+							currency,
+							orgDefault,
+							slot: "stripe_price_id",
+						}),
+					) ||
 						(isPrepaidPrice(price) &&
-							nullish(price.config.stripe_prepaid_price_v2_id))),
+							nullish(
+								getPriceCurrencyStripeId({
+									config: price.config,
+									currency,
+									orgDefault,
+									slot: "stripe_prepaid_price_v2_id",
+								}),
+							))),
 			),
 		}))
 		.filter(
@@ -210,6 +230,7 @@ export const initStripeResourcesForBillingPlan = async ({
 					product,
 					internalEntityId,
 					useCheckout: false,
+					currency,
 				}),
 			);
 		}

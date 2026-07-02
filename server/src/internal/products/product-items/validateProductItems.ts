@@ -56,6 +56,20 @@ const validateProductItem = ({
 		});
 	}
 
+	const hasAdditionalCurrencies =
+		(item.additional_currencies?.length ?? 0) > 0 ||
+		(item.tiers?.some(
+			(tier) => (tier.additional_currencies?.length ?? 0) > 0,
+		) ??
+			false);
+	if (hasAdditionalCurrencies && nullish(item.base_currency)) {
+		throw new RecaseError({
+			message: `'base_currency' is required when 'additional_currencies' are set`,
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	// 2. If amount is set, it must be greater than 0
 	// if (notNullish(item.price) && item.price <= 0) {
 	// 	throw new RecaseError({

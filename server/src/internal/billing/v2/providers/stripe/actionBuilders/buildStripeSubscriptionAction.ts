@@ -52,6 +52,7 @@ export const buildStripeSubscriptionAction = ({
 
 	const oneOffItemSpecs = billingPlanToOneOffStripeItemSpecs({
 		ctx,
+		billingContext,
 		autumnBillingPlan,
 	});
 

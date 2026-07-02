@@ -98,7 +98,6 @@ describe("createStripePrepaidPriceV2 per-currency", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: test config narrowing
 		const config = price.config as any;
 		expect(config.currencies.eur.stripe_prepaid_price_v2_id).toBe("price_eur");
-		// base v2 slot untouched
 		expect(config.stripe_prepaid_price_v2_id).toBeUndefined();
 	});
 
