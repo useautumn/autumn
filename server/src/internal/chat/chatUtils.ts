@@ -1,10 +1,9 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import {
 	DEFAULT_SLACK_BOT_SCOPES,
-	ErrCode,
-	RecaseError,
 	SLACK_EMAIL_SCOPE,
 	SLACK_USERS_READ_SCOPE,
-} from "@autumn/shared";
+} from "@autumn/shared/utils/auth/slackScopes";
 
 export const slackProvider = "slack" as const;
 export const slackAdminProviderPrefix = "slack_admin" as const;

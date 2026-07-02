@@ -1,13 +1,15 @@
 import {
 	AppEnv,
-	CHAT_AUTH_MODES,
-	ChatAuthMode,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
 	ErrCode,
 	isOAuthResourceScope,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
+import {
+	CHAT_AUTH_MODES,
+	ChatAuthMode,
+} from "@autumn/shared/models/chatModels/chatEnums";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ChatService } from "../ChatService.js";

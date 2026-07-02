@@ -14,10 +14,10 @@ import crypto from "node:crypto";
 import {
 	AppEnv,
 	type ChatInstallState,
-	DEFAULT_SLACK_BOT_SCOPES,
 	member,
 	organizations,
 } from "@autumn/shared";
+import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import { eq } from "drizzle-orm";
 import { db } from "../src/lib/db.js";
 import { replaceInstallation } from "../src/providers/slack/installations.js";

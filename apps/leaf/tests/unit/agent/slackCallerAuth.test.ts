@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
-import { AppEnv, ChatAuthMode, type ChatInstallation } from "@autumn/shared";
+import { AppEnv, type ChatInstallation } from "@autumn/shared";
+import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { resolveSlackCallerAuth } from "../../../src/agent/runMessage/setup/resolveSlackCallerAuth.js";
 import { resolveSlackUserAuth } from "../../../src/agent/runMessage/setup/resolveSlackUserAuth.js";
 

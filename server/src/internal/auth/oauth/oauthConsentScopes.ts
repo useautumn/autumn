@@ -4,11 +4,11 @@ import {
 } from "@autumn/auth/oauth";
 import {
 	ErrCode,
-	getScopesForUserInOrg,
 	getRequestedOAuthResourceScopes,
 	isScopeSubset,
 	RecaseError,
 } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOAuthConsentScopeGrant = async ({

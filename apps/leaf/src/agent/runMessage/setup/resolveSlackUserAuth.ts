@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import {
 	type ChatInstallation,
-	getScopesForUserInOrg,
 	user as userTable,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -14,9 +14,6 @@ import {
 	type SlackAuthDenyReason,
 	type SlackUserAuthResult,
 } from "./slackUserAuthTypes.js";
-
-export type { SlackUserAuthResult } from "./slackUserAuthTypes.js";
-
 type AutumnUserMatch =
 	| { kind: "none" }
 	| { kind: "single"; userId: string }

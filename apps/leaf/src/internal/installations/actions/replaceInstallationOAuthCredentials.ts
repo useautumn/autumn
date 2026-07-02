@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
 import {
 	AppEnv,
-	ChatAuthMode,
 	type ChatInstallation,
 	chatOAuthCredentials,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
@@ -11,6 +10,7 @@ import {
 	oauthConsent,
 	oauthRefreshToken,
 } from "@autumn/shared";
+import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
@@ -26,9 +26,6 @@ import {
 	AUTUMN_SLACK_OAUTH_CLIENT_ID,
 	AUTUMN_WEB_OAUTH_CLIENT_ID,
 } from "./upsertInstallationOAuthCredential.js";
-
-export { resolveAgentScopes } from "./chatOAuthCredentialScopes.js";
-
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;

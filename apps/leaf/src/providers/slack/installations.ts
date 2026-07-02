@@ -3,7 +3,6 @@ import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
 	apiKeys,
-	type ChatAuthMode,
 	type ChatInstallation,
 	type ChatInstallState,
 	type ChatProvider,
@@ -13,6 +12,7 @@ import {
 	oauthRefreshToken,
 	organizations,
 } from "@autumn/shared";
+import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";

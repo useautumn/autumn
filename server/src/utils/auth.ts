@@ -2,11 +2,11 @@ import "dotenv/config";
 import {
 	ALL_SCOPES,
 	ac,
-	getScopesForUserInOrg,
 	invitation,
 	roles,
 	schemas,
 } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { type BetterAuthOptions, betterAuth, type User } from "better-auth";

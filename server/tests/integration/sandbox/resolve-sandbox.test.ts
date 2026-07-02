@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
 import {
 	AppEnv,
-	getScopesForUserInOrg,
 	member,
 	organizations,
 	user,
 } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";

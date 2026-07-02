@@ -1,11 +1,10 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { ChatAuthMode, type ChatInstallation } from "@autumn/shared";
+import type { ChatInstallation } from "@autumn/shared";
+import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { decrypt } from "../../../lib/crypto.js";
 import { resolveInstallationAuthMode } from "../../../providers/slack/users.js";
-import {
-	resolveSlackUserAuth,
-	type SlackUserAuthResult,
-} from "./resolveSlackUserAuth.js";
+import { resolveSlackUserAuth } from "./resolveSlackUserAuth.js";
+import type { SlackUserAuthResult } from "./slackUserAuthTypes.js";
 
 export type SlackCallerAuthResult =
 	| { usePerUser: false }

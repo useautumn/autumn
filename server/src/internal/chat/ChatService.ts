@@ -2,12 +2,12 @@ import { randomUUID } from "node:crypto";
 import {
 	AppEnv,
 	apiKeys,
-	type ChatAuthMode,
 	chatInstallations,
 	chatOAuthCredentials,
 	chatThreadContexts,
 	createChatInstallState,
 } from "@autumn/shared";
+import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

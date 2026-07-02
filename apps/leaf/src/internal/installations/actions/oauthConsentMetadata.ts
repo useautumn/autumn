@@ -1,9 +1,6 @@
 import { UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND } from "@autumn/auth/oauth";
-import {
-	ChatAuthMode,
-	type ChatInstallation,
-	oauthConsent,
-} from "@autumn/shared";
+import { type ChatInstallation, oauthConsent } from "@autumn/shared";
+import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { sql } from "drizzle-orm";
 import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
 

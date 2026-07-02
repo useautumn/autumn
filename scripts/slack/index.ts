@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared";
+import { DEFAULT_SLACK_BOT_SCOPES } from "@autumn/shared/utils/auth/slackScopes";
 import chalk from "chalk";
 import inquirer from "inquirer";
 
