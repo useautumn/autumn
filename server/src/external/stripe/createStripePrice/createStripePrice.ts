@@ -3,8 +3,8 @@ import {
 	type EntitlementWithFeature,
 	type FullProduct,
 	getPriceCurrencyStripeId,
-	isBaseCurrency,
 	type Price,
+	priceHasCurrencyAmounts,
 	priceUtils,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
@@ -17,11 +17,11 @@ import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/
 import { assertNoPreviewStripeIdsOnProduct } from "@/external/stripe/previewStripeResourceIds.js";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
 	createStripeArrearProrated,
 	createStripeMeteredPrice,
 } from "./createStripeArrearProrated";
+import { createStripeEmptyPrice } from "./createStripeEmptyPrice";
 import { createStripeFixedPrice } from "./createStripeFixedPrice";
 import { createStripeInArrearPrice } from "./createStripeInArrear";
 import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered";
@@ -181,15 +181,14 @@ export const createStripePriceIFNotExist = async ({
 
 	const billingType = getBillingType(price.config!);
 
-	// Only fixed / one-off creators are currency-aware so far (Phase 2c). Fail loud
-	// rather than silently create a non-fixed price in the base slot/currency.
-	if (
-		!isBaseCurrency({ config, currency, orgDefault }) &&
-		billingType !== BillingType.FixedCycle &&
-		billingType !== BillingType.OneOff
-	) {
+	// Defense-in-depth behind the attach currency guard: without real per-currency
+	// amounts (an id-only block doesn't count) creators would silently fall back to
+	// base amounts and mint a wrong-amount price in the target currency.
+	const isFixed =
+		billingType === BillingType.FixedCycle || billingType === BillingType.OneOff;
+	if (!priceHasCurrencyAmounts({ config, currency, orgDefault, isFixed })) {
 		throw new Error(
-			`Per-currency Stripe price creation for billing type '${billingType}' is not yet implemented (multi-currency Phase 2d)`,
+			`Price ${price.id} has no '${currency}' amounts in config.currencies — cannot create a Stripe price in that currency`,
 		);
 	}
 
@@ -252,6 +251,7 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				curStripeProd: stripeProd,
+				currency,
 			});
 		}
 
@@ -262,11 +262,18 @@ export const createStripePriceIFNotExist = async ({
 				price,
 				product,
 				currentStripeProduct: stripeProd ?? undefined,
+				currency,
 			});
 		}
 	}
 
 	if (billingType === BillingType.InArrearProrated) {
+		const placeholderPriceId = getPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_placeholder_price_id",
+		});
 		if (!stripePrice) {
 			logger.info(`Creating stripe in arrear prorated product`);
 			await createStripeArrearProrated({
@@ -277,8 +284,9 @@ export const createStripePriceIFNotExist = async ({
 				product,
 				org,
 				curStripeProd: stripeProd,
+				currency,
 			});
-		} else if (!config.stripe_placeholder_price_id) {
+		} else if (!placeholderPriceId) {
 			logger.info(`Creating stripe placeholder price`);
 			const placeholderPrice = await createStripeMeteredPrice({
 				stripeCli,
@@ -286,8 +294,15 @@ export const createStripePriceIFNotExist = async ({
 				entitlements,
 				product,
 				org,
+				currency,
 			});
-			config.stripe_placeholder_price_id = placeholderPrice.id;
+			setPriceCurrencyStripeId({
+				config,
+				currency,
+				orgDefault,
+				slot: "stripe_placeholder_price_id",
+				id: placeholderPrice.id,
+			});
 			await PriceService.update({
 				db,
 				id: price.id!,
@@ -309,36 +324,19 @@ export const createStripePriceIFNotExist = async ({
 			curStripeProduct: stripeProd,
 			internalEntityId,
 			useCheckout,
+			currency,
 		});
 
 		if (!stripeEmptyPrice) {
-			try {
-				logger.info(`Creating stripe empty price`);
-				// console.log(`Product: ${config.stripe_product_id || stripeProd?.id}`);
-				const emptyPrice = await stripeCli.prices.create({
-					// product: stripeProd!.id,
-					product: config.stripe_product_id || product.processor?.id,
-					unit_amount: 0,
-					currency: org.default_currency || "usd",
-					recurring: {
-						...(billingIntervalToStripe({
-							interval: price.config!.interval!,
-							intervalCount: price.config!.interval_count!,
-						}) as any),
-					},
-				});
-
-				config.stripe_empty_price_id = emptyPrice.id;
-				await PriceService.update({
-					db,
-					id: price.id!,
-					update: { config },
-				});
-			} catch (error) {
-				logger.error(`Error creating stripe empty price!`, {
-					error,
-				});
-			}
+			await createStripeEmptyPrice({
+				db,
+				stripeCli,
+				price,
+				product,
+				org,
+				logger,
+				currency,
+			});
 		}
 	}
 };

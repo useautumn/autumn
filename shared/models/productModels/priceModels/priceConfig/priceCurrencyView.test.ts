@@ -4,6 +4,7 @@ import {
 	getPriceCurrencyStripeId,
 	isBaseCurrency,
 	priceConfigForCurrency,
+	priceHasCurrencyAmounts,
 	setPriceCurrencyStripeId,
 } from "./priceCurrencyView.js";
 
@@ -211,5 +212,88 @@ describe("setPriceCurrencyStripeId", () => {
 			id: undefined,
 		});
 		expect(config.currencies).toBeUndefined();
+	});
+});
+
+describe("priceHasCurrencyAmounts", () => {
+	const base = { base_currency: "usd" };
+
+	test("always true for the base currency", () => {
+		expect(
+			priceHasCurrencyAmounts({
+				config: base,
+				currency: "usd",
+				orgDefault: "usd",
+				isFixed: true,
+			}),
+		).toBe(true);
+	});
+
+	test("false when the currency block is missing", () => {
+		expect(
+			priceHasCurrencyAmounts({
+				config: base,
+				currency: "eur",
+				orgDefault: "usd",
+				isFixed: true,
+			}),
+		).toBe(false);
+	});
+
+	test("false for an id-only block (no amounts)", () => {
+		const config: CurrencyAwarePriceConfig = {
+			...base,
+			currencies: { eur: { stripe_price_id: "price_eur" } },
+		};
+		expect(
+			priceHasCurrencyAmounts({
+				config,
+				currency: "eur",
+				orgDefault: "usd",
+				isFixed: true,
+			}),
+		).toBe(false);
+		expect(
+			priceHasCurrencyAmounts({
+				config,
+				currency: "eur",
+				orgDefault: "usd",
+				isFixed: false,
+			}),
+		).toBe(false);
+	});
+
+	test("fixed requires amount; usage requires non-empty usage_tiers", () => {
+		const config: CurrencyAwarePriceConfig = {
+			...base,
+			currencies: {
+				eur: { amount: 9 },
+				gbp: { usage_tiers: [{ to: -1, amount: 8 }] },
+			},
+		};
+		expect(
+			priceHasCurrencyAmounts({
+				config,
+				currency: "eur",
+				orgDefault: "usd",
+				isFixed: true,
+			}),
+		).toBe(true);
+		expect(
+			priceHasCurrencyAmounts({
+				config,
+				currency: "eur",
+				orgDefault: "usd",
+				isFixed: false,
+			}),
+		).toBe(false);
+		expect(
+			priceHasCurrencyAmounts({
+				config,
+				currency: "gbp",
+				orgDefault: "usd",
+				isFixed: false,
+			}),
+		).toBe(true);
 	});
 });

@@ -52,6 +52,25 @@ export const priceConfigForCurrency = ({
 	return { amount: block?.amount, usage_tiers: block?.usage_tiers };
 };
 
+/** Whether billable amounts exist for `currency`: always true for base; for others the
+ *  block must carry a real amount (fixed) or non-empty usage_tiers — an ID-only block doesn't count. */
+export const priceHasCurrencyAmounts = ({
+	config,
+	currency,
+	orgDefault,
+	isFixed,
+}: {
+	config: CurrencyAwarePriceConfig;
+	currency: string;
+	orgDefault: string;
+	isFixed: boolean;
+}): boolean => {
+	if (isBaseCurrency({ config, currency, orgDefault })) return true;
+	const block = config.currencies?.[currency.toLowerCase()];
+	if (!block) return false;
+	return isFixed ? block.amount != null : !!block.usage_tiers?.length;
+};
+
 /** Reads a Stripe id slot for `currency`: top-level for the base currency, else the per-currency block. */
 export const getPriceCurrencyStripeId = ({
 	config,

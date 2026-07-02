@@ -5,38 +5,34 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	priceConfigForCurrency,
 	priceToStripeTiersMode,
+	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
+	type UsageTier,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
-import { orgToCurrency } from "@server/internal/orgs/orgUtils";
 import { PriceService } from "@server/internal/products/prices/PriceService";
 import { getPriceEntitlement } from "@server/internal/products/prices/priceUtils";
 import type Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils";
 
 const prepaidToStripeTiers = ({
-	price,
-	org,
+	usageTiers,
+	billingUnits,
+	currency,
 }: {
-	price: Price;
-	org: Organization;
+	usageTiers: UsageTier[];
+	billingUnits: number | null | undefined;
+	currency: string;
 }) => {
-	const usageConfig = structuredClone(price.config) as UsagePriceConfig;
-
-	const billingUnits = usageConfig.billing_units;
-	// const numFree = entitlement.allowance
-	//   ? Math.round(entitlement.allowance! / billingUnits!)
-	//   : 0;
-
 	const tiers: any[] = [];
 
-	for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-		const tier = usageConfig.usage_tiers[i];
+	for (const tier of usageTiers) {
 		const amount = atmnToStripeAmountDecimal({
 			amount: tier.amount,
-			currency: org.default_currency || undefined,
+			currency,
 		});
 		const upTo =
 			tier.to === -1 || tier.to === TierInfinite
@@ -51,7 +47,7 @@ const prepaidToStripeTiers = ({
 		if (tier.flat_amount) {
 			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
 				amount: tier.flat_amount,
-				currency: org.default_currency || undefined,
+				currency,
 			});
 		}
 
@@ -69,6 +65,7 @@ export const createStripePrepaid = async ({
 	entitlements,
 	curStripeProd,
 	stripeCli,
+	currency: targetCurrency,
 }: {
 	db: DrizzleCli;
 	price: Price;
@@ -77,6 +74,7 @@ export const createStripePrepaid = async ({
 	entitlements: EntitlementWithFeature[];
 	curStripeProd: Stripe.Product | null;
 	stripeCli: Stripe;
+	currency?: string;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -91,6 +89,16 @@ export const createStripePrepaid = async ({
 	}
 
 	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
+	// Amounts for the target currency; never persisted back into the base config.
+	const currencyTiers =
+		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
+		config.usage_tiers;
 
 	const productName = `${product.name} - ${relatedEnt.feature.name}`;
 
@@ -105,23 +113,26 @@ export const createStripePrepaid = async ({
 	// 2. If billing interval is one off
 	let stripePrice = null;
 	if (price.config!.interval === BillingInterval.OneOff) {
-		const amount = config.usage_tiers[0].amount;
+		const amount = currencyTiers[0].amount;
 
 		const unitAmountDecimalStr = atmnToStripeAmountDecimal({
 			amount,
-			currency: org.default_currency || undefined,
+			currency,
 		});
 
 		stripePrice = await stripeCli.prices.create({
 			...productData,
 			unit_amount_decimal: unitAmountDecimalStr,
-			currency: orgToCurrency({ org }),
+			currency,
 		});
 
 		config.stripe_product_id = stripePrice.product as string;
-		config.stripe_price_id = stripePrice.id;
 	} else {
-		const tiers = prepaidToStripeTiers({ price, org });
+		const tiers = prepaidToStripeTiers({
+			usageTiers: currencyTiers,
+			billingUnits: config.billing_units,
+			currency,
+		});
 		const tiersMode = priceToStripeTiersMode({ price });
 
 		let priceAmountData = {};
@@ -139,7 +150,7 @@ export const createStripePrepaid = async ({
 
 		stripePrice = await stripeCli.prices.create({
 			...productData,
-			currency: orgToCurrency({ org }),
+			currency,
 			...priceAmountData,
 			recurring: {
 				...(recurringData as any),
@@ -147,9 +158,16 @@ export const createStripePrepaid = async ({
 			nickname: `Autumn Price (${relatedEnt.feature.name})`,
 		});
 
-		config.stripe_price_id = stripePrice.id;
 		config.stripe_product_id = stripePrice.product as string;
 	}
+
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+		id: stripePrice.id,
+	});
 
 	// New config
 	price.config = config;
