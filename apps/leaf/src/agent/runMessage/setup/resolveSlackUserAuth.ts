@@ -8,11 +8,12 @@ import {
 import { sql } from "drizzle-orm";
 import { ensureChatUserCredential } from "../../../internal/installations/actions/ensureChatUserCredential.js";
 import { db } from "../../../lib/db.js";
-import { fetchSlackUserEmail } from "../../../providers/slack/users.js";
+import { fetchSlackUserEmailCached } from "../../../providers/slack/users.js";
 
 type SlackAuthDenyReason =
 	| "slack-email-unavailable"
 	| "no-autumn-user"
+	| "ambiguous-autumn-user"
 	| "not-a-member"
 	| "invalid-role"
 	| "no-supported-scopes";
@@ -22,6 +23,8 @@ const DENY_TEXT: Record<SlackAuthDenyReason, string> = {
 		"I couldn't read your Slack email, so I can't verify your Autumn permissions. The workspace may need to reconnect the Autumn app to grant the new permission — please ask a workspace admin to reconnect Autumn.",
 	"no-autumn-user":
 		"I couldn't find an Autumn account matching your Slack email. Sign in to Autumn with the same email address, or ask an admin to invite you.",
+	"ambiguous-autumn-user":
+		"Multiple Autumn accounts share your Slack email, so I can't tell which one is you. Ask an admin to resolve the duplicate accounts before I can act on your behalf.",
 	"not-a-member":
 		"Your Autumn account isn't a member of this workspace's Autumn organization, so I can't act on your behalf here. Ask an admin to add you.",
 	"invalid-role":
@@ -37,15 +40,26 @@ export type SlackUserAuthResult =
 // Bot ceiling, as a plain string set so we can probe arbitrary ScopeStrings.
 const OAUTH_CEILING = new Set<string>(DEFAULT_OAUTH_RESOURCE_SCOPES);
 
+type AutumnUserMatch =
+	| { kind: "none" }
+	| { kind: "single"; userId: string }
+	| { kind: "ambiguous" };
+
 const resolveAutumnUserIdByEmail = async (
 	email: string,
-): Promise<string | null> => {
+): Promise<AutumnUserMatch> => {
 	const matches = await db.query.user.findMany({
 		where: sql`lower(${userTable.email}) = ${email.toLowerCase()}`,
 		columns: { id: true },
 		limit: 2,
 	});
-	return matches.length === 1 ? matches[0].id : null;
+	if (matches.length === 0) {
+		return { kind: "none" };
+	}
+	if (matches.length > 1) {
+		return { kind: "ambiguous" };
+	}
+	return { kind: "single", userId: matches[0].id };
 };
 
 export const resolveSlackUserAuth = async ({
@@ -72,18 +86,26 @@ export const resolveSlackUserAuth = async ({
 		return { ok: false, reason, text };
 	};
 
-	const email = await fetchSlackUserEmail({ botToken, slackUserId });
+	const email = await fetchSlackUserEmailCached({
+		botToken,
+		installationId: installation.id,
+		slackUserId,
+	});
 	if (!email) {
 		return deny("slack-email-unavailable");
 	}
 
-	const userId = await resolveAutumnUserIdByEmail(email);
-	if (!userId) {
+	const match = await resolveAutumnUserIdByEmail(email);
+	if (match.kind === "ambiguous") {
+		return deny("ambiguous-autumn-user");
+	}
+	if (match.kind === "none") {
 		return deny(
 			"no-autumn-user",
 			`Sorry, your email address (${email}) was not found in the Autumn organization. Please ask an admin to invite you.`,
 		);
 	}
+	const userId = match.userId;
 
 	const { role, scopes } = await getScopesForUserInOrg({
 		db,

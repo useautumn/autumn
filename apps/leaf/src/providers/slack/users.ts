@@ -76,3 +76,62 @@ export const fetchSlackUserEmail = async ({
 		return null;
 	}
 };
+
+const EMAIL_CACHE_TTL_MS = 10 * 60 * 1000;
+const EMAIL_CACHE_MAX_ENTRIES = 10_000;
+
+type CachedEmail = { email: string; expiresAt: number };
+const emailCache = new Map<string, CachedEmail>();
+
+// Drop expired entries first, then oldest insertion-order entries if still over
+// the cap, so the cache can't grow unbounded across installations/users.
+const evictEmailCache = (now: number) => {
+	for (const [key, entry] of emailCache) {
+		if (entry.expiresAt <= now) {
+			emailCache.delete(key);
+		}
+	}
+	let overflow = emailCache.size - EMAIL_CACHE_MAX_ENTRIES;
+	if (overflow <= 0) {
+		return;
+	}
+	for (const key of emailCache.keys()) {
+		emailCache.delete(key);
+		overflow -= 1;
+		if (overflow <= 0) {
+			break;
+		}
+	}
+};
+
+// Slack emails effectively never change, so cache successful lookups to avoid a
+// users.info call on every message. Failures/null are never cached so transient
+// Slack errors retry on the next message.
+export const fetchSlackUserEmailCached = async ({
+	botToken,
+	installationId,
+	slackUserId,
+}: {
+	botToken: string;
+	installationId: string;
+	slackUserId: string;
+}): Promise<string | null> => {
+	const cacheKey = `${installationId}:${slackUserId}`;
+	const now = Date.now();
+	const cached = emailCache.get(cacheKey);
+	if (cached) {
+		if (cached.expiresAt > now) {
+			return cached.email;
+		}
+		emailCache.delete(cacheKey);
+	}
+
+	const email = await fetchSlackUserEmail({ botToken, slackUserId });
+	if (email) {
+		emailCache.set(cacheKey, { email, expiresAt: now + EMAIL_CACHE_TTL_MS });
+		if (emailCache.size > EMAIL_CACHE_MAX_ENTRIES) {
+			evictEmailCache(now);
+		}
+	}
+	return email;
+};
