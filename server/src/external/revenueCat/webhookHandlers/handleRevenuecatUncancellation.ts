@@ -23,6 +23,7 @@ export const handleUncancellation = async ({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id ?? original_app_user_id,
+		originalAppUserId: original_app_user_id,
 	});
 
 	const cusProduct = cusProducts.find(

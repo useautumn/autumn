@@ -16,7 +16,7 @@ export const handleBillingIssue = async ({
 	ctx: RevenueCatWebhookContext;
 }) => {
 	const { logger } = ctx;
-	const { product_id, app_user_id } = event;
+	const { product_id, app_user_id, original_app_user_id } = event;
 
 	const {
 		ctx: customerCtx,
@@ -27,6 +27,7 @@ export const handleBillingIssue = async ({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
+		originalAppUserId: original_app_user_id,
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

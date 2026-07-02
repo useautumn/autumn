@@ -17,6 +17,8 @@ export const VercelProcessorSchema = z.object({
  */
 export const ExternalProcessorsSchema = z.object({
 	vercel: VercelProcessorSchema.optional(),
+	// Internal-only: matches RC webhooks by app_user_id. Never gates the API response.
+	revenuecat: z.object({ id: z.string() }).optional(),
 });
 
 /**

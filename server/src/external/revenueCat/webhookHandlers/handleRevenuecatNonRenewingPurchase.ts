@@ -24,6 +24,7 @@ export const handleNonRenewingPurchase = async ({
 		ctx,
 		revenuecatProductId: event.product_id,
 		customerId: event.app_user_id,
+		originalAppUserId: event.original_app_user_id,
 	});
 
 	if (!oneOffOrAddOn({ product, prices: product.prices })) {

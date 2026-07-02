@@ -872,4 +872,40 @@ export class CusService {
 			})) as FullCustomer;
 		}
 	}
+
+	static async getByRevenueCatAppUserId({
+		ctx,
+		appUserId,
+		withEntities = false,
+		withSubs = false,
+	}: {
+		ctx: AutumnContext;
+		appUserId: string;
+		withEntities?: boolean;
+		withSubs?: boolean;
+	}): Promise<FullCustomer | null> {
+		const { db, org, env } = ctx;
+
+		const results = await db
+			.select()
+			.from(customers as unknown as Table)
+			.where(
+				and(
+					eq(customers.org_id, org.id),
+					eq(customers.env, env),
+					sql`${customers.processors}->'revenuecat'->>'id' = ${appUserId}`,
+				),
+			)
+			.limit(1);
+
+		const customer = results[0] ?? null;
+		if (!customer) return null;
+
+		return (await CusService.getFull({
+			ctx,
+			idOrInternalId: customer.internal_id,
+			withEntities,
+			withSubs,
+		})) as FullCustomer;
+	}
 }
