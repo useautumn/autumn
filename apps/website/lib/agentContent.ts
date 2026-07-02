@@ -1,6 +1,6 @@
 import { getAlogDocBySlug, getAllAlogDocs } from "@/lib/alogUtils";
 import { getAllPosts, getPostBySlug } from "@/lib/blogUtils";
-import { PRIVACY_EFFECTIVE_DATE, privacyTerms } from "@/lib/privacyContent";
+import { TERMS_EFFECTIVE_DATE, termsOfService } from "@/lib/termsContent";
 import { SITE_URL } from "@/lib/seo";
 
 export type AgentKind = "alog" | "blog";
@@ -191,19 +191,19 @@ export function buildHomeMarkdown(): string {
   return `${lines.join("\n").trim()}\n`;
 }
 
-export function buildPrivacyMarkdown(): string {
+export function buildTermsMarkdown(): string {
   const lines: string[] = [
     "# Terms of Service",
     "",
-    `Autumn (Rebase, Inc.) — Effective Date: ${PRIVACY_EFFECTIVE_DATE}`,
+    `Autumn (Recase, Inc.) — Effective Date: ${TERMS_EFFECTIVE_DATE}`,
     "",
   ];
 
-  for (const term of privacyTerms) {
+  for (const term of termsOfService) {
     lines.push(`## ${term.title}`, "", term.content, "");
   }
 
-  lines.push("---", `Source: ${SITE_URL}/privacy`);
+  lines.push("---", `Source: ${SITE_URL}/terms`);
 
   return `${lines.join("\n").trim()}\n`;
 }
