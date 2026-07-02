@@ -81,21 +81,24 @@ export const billingPlanToPreviewResponse = async ({
 
 	const autumnBillingPlan = billingPlan.autumn;
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
+	const currency = orgToCurrency({ org: ctx.org });
 
 	const {
 		immediateLineItems,
 		previewLineItems,
 		subtotal,
 		total: lineItemsTotal,
-	} = billingPlanToImmediatePreview({ billingPlan });
+	} = billingPlanToImmediatePreview({
+		billingContext,
+		billingPlan,
+		currency,
+	});
 
 	const total = applyPreviewAdjustmentsToTotal({
 		subtotal,
 		total: lineItemsTotal,
 		billingPlan,
 	});
-
-	const currency = orgToCurrency({ org: ctx.org });
 
 	// Get next cycle object
 	const { nextCycle: rawNextCycle, debug: nextCycleDebug } =

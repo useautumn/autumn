@@ -197,6 +197,7 @@ export const startPollingLoop = async ({
 			MaxNumberOfMessages: 10,
 			WaitTimeSeconds: 20,
 			VisibilityTimeout: 30,
+			MessageSystemAttributeNames: ["SentTimestamp", "ApproximateReceiveCount"],
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
