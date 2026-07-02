@@ -410,6 +410,27 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		expect(dstProducts.length).toBe(0);
 	}, 180_000);
 
+	test("a requested featureId absent from the source is rejected", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshTarget("missing-feat");
+
+		let thrown: unknown;
+		try {
+			await copySandboxForOrg({
+				db,
+				ctx: baseCtx,
+				masterOrg: defaultCtx.org,
+				fromSandboxId: source.id,
+				toSandboxId: dst.id,
+				featureIds: ["does_not_exist"],
+			});
+		} catch (error) {
+			thrown = error;
+		}
+		expect(thrown).toBeInstanceOf(RecaseError);
+		expect((thrown as RecaseError).code).toBe(ErrCode.FeatureNotFound);
+	}, 180_000);
+
 	test("a credit-system featureId pulls in the metered feature it references", async () => {
 		if (!source) throw new Error("source not provisioned");
 		const dst = await freshTarget("credit");

@@ -67,7 +67,11 @@ export const copySandboxForOrg = async ({
 	let sourceOrg: Organization;
 	let fromEnv: AppEnv;
 	if (fromSandboxId) {
-		sourceOrg = await getOwnedSandbox({ db, masterOrg, sandboxId: fromSandboxId });
+		sourceOrg = await getOwnedSandbox({
+			db,
+			masterOrg,
+			sandboxId: fromSandboxId,
+		});
 		fromEnv = AppEnv.Sandbox;
 	} else if (fromOrg && fromEnvArg) {
 		// The only non-sandbox source is the caller's own master org; never copy
@@ -111,21 +115,34 @@ export const copySandboxForOrg = async ({
 			env: fromEnv,
 		});
 
-		// A requested product that isn't in the source would otherwise no-op and
-		// still toast success; surface it instead.
+		// A requested product/feature that isn't in the source would otherwise
+		// no-op and still toast success; surface it instead.
 		const sourceProductIds = new Set(fromProducts.map((p) => p.id));
-		const missing = requestedProductIds.filter(
+		const missingProducts = requestedProductIds.filter(
 			(id) => !sourceProductIds.has(id),
 		);
-		if (missing.length > 0) {
+		if (missingProducts.length > 0) {
 			throw new RecaseError({
-				message: `Plan${missing.length > 1 ? "s" : ""} not found in source: ${missing.join(", ")}`,
+				message: `Plan${missingProducts.length > 1 ? "s" : ""} not found in source: ${missingProducts.join(", ")}`,
 				code: ErrCode.ProductNotFound,
 				statusCode: 404,
 			});
 		}
 
-		const wantedFeatureIds = new Set(featureIds ?? []);
+		const requestedFeatureIds = featureIds ?? [];
+		const sourceFeatureIds = new Set(fromFeatures.map((f) => f.id));
+		const missingFeatures = requestedFeatureIds.filter(
+			(id) => !sourceFeatureIds.has(id),
+		);
+		if (missingFeatures.length > 0) {
+			throw new RecaseError({
+				message: `Feature${missingFeatures.length > 1 ? "s" : ""} not found in source: ${missingFeatures.join(", ")}`,
+				code: ErrCode.FeatureNotFound,
+				statusCode: 404,
+			});
+		}
+
+		const wantedFeatureIds = new Set(requestedFeatureIds);
 		for (const product of fromProducts) {
 			if (!requestedProductIds.includes(product.id)) continue;
 			const { items } = mapToProductV2({ product, features: fromFeatures });

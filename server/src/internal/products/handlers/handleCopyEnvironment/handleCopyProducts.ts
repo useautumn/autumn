@@ -64,6 +64,9 @@ export const handleCopyProducts = async ({
 }) => {
 	const { db } = ctx;
 
+	// Feature-only copy: nothing to read or map on the product side.
+	if (productIds?.length === 0) return;
+
 	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
 			providedFromFeatures ??
