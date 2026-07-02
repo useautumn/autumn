@@ -75,7 +75,7 @@ const upsertFullCustomer = async ({
 		if (revenueCatIdentity && !existing.processors?.revenuecat?.id) {
 			const processors = {
 				...existing.processors,
-				revenuecat: { id: revenueCatIdentity.id },
+				revenuecat: { id: revenueCatIdentity.id, aliases: [] },
 			};
 			await CusService.update({
 				ctx,
@@ -97,7 +97,7 @@ const upsertFullCustomer = async ({
 			fingerprint: params.customer_data?.fingerprint,
 			stripe_id: stripeIdentity?.id,
 			processors: revenueCatIdentity
-				? { revenuecat: { id: revenueCatIdentity.id } }
+				? { revenuecat: { id: revenueCatIdentity.id, aliases: [] } }
 				: undefined,
 			send_email_receipts: false,
 		},

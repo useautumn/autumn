@@ -21,77 +21,114 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
 /**
- * Seed `processors.revenuecat.id = app_user_id` on a customer resolved via the
- * customer_id fallback. Only-if-absent, never overwrites, never writes the
- * original id. Fire-and-forget: must never block or throw the webhook.
+ * Maintain the customer's RC identity alias set. Every RC id ever seen for this
+ * customer is kept: `id` is the primary (set once on first seed, NEVER updated),
+ * `aliases` accumulates every other id (append-only, deduped, never removed).
+ * On first seed `id = app_user_id`, `aliases = [original_app_user_id?]`.
+ * Fire-and-forget: must never block or throw the webhook.
  */
-const backfillRevenueCatProcessorId = ({
+const accumulateRevenueCatAliases = ({
 	ctx,
 	customer,
 	appUserId,
+	originalAppUserId,
 }: {
 	ctx: RevenueCatWebhookContext;
 	customer: FullCustomer;
 	appUserId: string;
+	originalAppUserId?: string;
 }) => {
 	const resolvedCustomerId = customer.id ?? customer.internal_id;
+	const hasOriginal = Boolean(
+		originalAppUserId && originalAppUserId !== appUserId,
+	);
+	const incomingIds = [
+		appUserId,
+		...(hasOriginal ? [originalAppUserId as string] : []),
+	];
 
-	if (customer.processors?.revenuecat?.id) {
+	const existing = customer.processors?.revenuecat;
+
+	// First seed: no RC identity yet. Primary id = app_user_id.
+	if (!existing?.id) {
+		const nextRevenuecat = {
+			id: appUserId,
+			aliases: hasOriginal ? [originalAppUserId as string] : [],
+		};
+		void writeRevenueCatIdentity({
+			ctx,
+			customer,
+			nextRevenuecat,
+			logExtras: {
+				rc_alias_seeded: true,
+				seeded_id: appUserId,
+				alias_count: nextRevenuecat.aliases.length,
+				resolved_customer_id: resolvedCustomerId,
+			},
+			successMessage: "Seeded RevenueCat identity alias set",
+		});
+		return;
+	}
+
+	// Append: keep id, add any incoming id not already known.
+	const knownIds = new Set<string>([existing.id, ...(existing.aliases ?? [])]);
+	const toAppend = incomingIds.filter((incoming) => !knownIds.has(incoming));
+
+	if (toAppend.length === 0) return;
+
+	const nextAliases = [...(existing.aliases ?? []), ...toAppend];
+	void writeRevenueCatIdentity({
+		ctx,
+		customer,
+		nextRevenuecat: { id: existing.id, aliases: nextAliases },
+		logExtras: {
+			rc_alias_appended: true,
+			appended_ids: toAppend,
+			alias_count: nextAliases.length,
+			resolved_customer_id: resolvedCustomerId,
+		},
+		successMessage: "Appended RevenueCat alias(es)",
+	});
+};
+
+const writeRevenueCatIdentity = async ({
+	ctx,
+	customer,
+	nextRevenuecat,
+	logExtras,
+	successMessage,
+}: {
+	ctx: RevenueCatWebhookContext;
+	customer: FullCustomer;
+	nextRevenuecat: { id: string; aliases: string[] };
+	logExtras: Record<string, unknown>;
+	successMessage: string;
+}) => {
+	try {
+		await CusService.update({
+			ctx,
+			idOrInternalId: customer.internal_id,
+			update: {
+				processors: {
+					...(customer.processors ?? {}),
+					revenuecat: nextRevenuecat,
+				},
+			},
+		});
+		ctx.logger.child({ context: { extras: logExtras } }).info(successMessage);
+	} catch (error) {
 		ctx.logger
 			.child({
 				context: {
 					extras: {
-						rc_self_migration: true,
-						seeded: false,
-						reason: "already_set",
-						resolved_customer_id: resolvedCustomerId,
+						...logExtras,
+						rc_alias_write_failed: true,
+						error: error instanceof Error ? error.message : String(error),
 					},
 				},
 			})
-			.info("RevenueCat processors key already set; skipping backfill");
-		return;
+			.error("Failed to write RevenueCat identity alias set");
 	}
-
-	void (async () => {
-		try {
-			await CusService.update({
-				ctx,
-				idOrInternalId: customer.internal_id,
-				update: {
-					processors: {
-						...(customer.processors ?? {}),
-						revenuecat: { id: appUserId },
-					},
-				},
-			});
-			ctx.logger
-				.child({
-					context: {
-						extras: {
-							rc_self_migration: true,
-							seeded: true,
-							seeded_value: appUserId,
-							resolved_customer_id: resolvedCustomerId,
-						},
-					},
-				})
-				.info("Backfilled RevenueCat processors key");
-		} catch (error) {
-			ctx.logger
-				.child({
-					context: {
-						extras: {
-							rc_self_migration: true,
-							seeded: false,
-							reason: "error",
-							resolved_customer_id: resolvedCustomerId,
-							error: error instanceof Error ? error.message : String(error),
-						},
-					},
-				})
-				.error("Failed to backfill RevenueCat processors key");
-		}
-	})();
 };
 
 /**
@@ -203,6 +240,12 @@ const resolveRevenueCatCustomer = async ({
 				},
 			})
 			.info("Resolved RevenueCat customer via processors key");
+		accumulateRevenueCatAliases({
+			ctx,
+			customer: processorMatch,
+			appUserId,
+			originalAppUserId,
+		});
 		return processorMatch;
 	}
 
@@ -219,10 +262,11 @@ const resolveRevenueCatCustomer = async ({
 				},
 			})
 			.info("Resolved RevenueCat customer via customer_id fallback");
-		backfillRevenueCatProcessorId({
+		accumulateRevenueCatAliases({
 			ctx,
 			customer: customerIdMatch,
 			appUserId,
+			originalAppUserId,
 		});
 		return customerIdMatch;
 	}
@@ -240,7 +284,12 @@ const resolveRevenueCatCustomer = async ({
 		withEntities: true,
 		customerData: {
 			email: idIsValid ? undefined : appUserId,
-			processors: { revenuecat: { id: appUserId } },
+			processors: {
+				revenuecat: {
+					id: appUserId,
+					aliases: hasOriginal ? [originalAppUserId as string] : [],
+				},
+			},
 		},
 	});
 

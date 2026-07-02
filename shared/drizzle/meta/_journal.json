@@ -267,6 +267,13 @@
       "when": 1782989626750,
       "tag": "0037_fast_betty_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1782994932810,
+      "tag": "0038_chunky_madame_hydra",
+      "breakpoints": true
     }
   ]
 }

@@ -97,13 +97,15 @@ const mapProduct = async ({
 const seedProcessorsRevenueCatId = async ({
 	customerId,
 	revenueCatId,
+	aliases = [],
 }: {
 	customerId: string;
 	revenueCatId: string;
+	aliases?: string[];
 }) => {
 	await ctx.db
 		.update(customers)
-		.set({ processors: { revenuecat: { id: revenueCatId } } })
+		.set({ processors: { revenuecat: { id: revenueCatId, aliases } } })
 		.where(eq(customers.id, customerId));
 };
 
@@ -288,9 +290,13 @@ test.concurrent(
 		);
 		expect(productIds).toContain(proMonthly.id);
 
-		// The processors key is NEVER updated to the aliased/current id.
-		const after = await getCustomerByCustomerId(customerId);
+		// Primary id is NEVER updated; the aliased/current id is APPENDED to aliases.
+		const after = await pollUntil(
+			() => getCustomerByCustomerId(customerId),
+			(c) => Boolean(c?.processors?.revenuecat?.aliases?.includes(realId)),
+		);
 		expect(after?.processors?.revenuecat?.id).toBe(anonId);
+		expect(after?.processors?.revenuecat?.aliases).toContain(realId);
 	},
 );
 
@@ -341,9 +347,10 @@ test.concurrent(
 			(c) => c?.processors?.revenuecat?.id === customerId,
 		);
 		expect(afterFirst?.processors?.revenuecat?.id).toBe(customerId);
+		expect(afterFirst?.processors?.revenuecat?.aliases).toEqual([]);
 
 		// Second webhook: aliased so current id differs, original == seeded id.
-		// Must NOT clobber the already-present processors key.
+		// Primary id must NOT change; the new id is APPENDED to aliases.
 		expectWebhookSuccess(
 			await newRcClient().renewal({
 				productId: RC_PRODUCT_ID,
@@ -353,13 +360,35 @@ test.concurrent(
 			}),
 		);
 
-		// Give any (incorrect) write a chance to land, then assert it did not.
-		await new Promise((r) => setTimeout(r, 1500));
-		const afterSecond = await getCustomerByCustomerId(customerId);
+		const afterSecond = await pollUntil(
+			() => getCustomerByCustomerId(customerId),
+			(c) =>
+				Boolean(
+					c?.processors?.revenuecat?.aliases?.includes("rc-backfill-aliased"),
+				),
+		);
 		expect(afterSecond?.processors?.revenuecat?.id).toBe(customerId);
-		expect(afterSecond?.processors?.revenuecat?.id).not.toBe(
+		expect(afterSecond?.processors?.revenuecat?.aliases).toContain(
 			"rc-backfill-aliased",
 		);
+
+		// A repeat of the same webhook does NOT duplicate the alias.
+		expectWebhookSuccess(
+			await newRcClient().renewal({
+				productId: RC_PRODUCT_ID,
+				appUserId: "rc-backfill-aliased",
+				originalAppUserId: customerId,
+				originalTransactionId: "rc_backfill_tx_001",
+			}),
+		);
+		await new Promise((r) => setTimeout(r, 1500));
+		const afterRepeat = await getCustomerByCustomerId(customerId);
+		expect(afterRepeat?.processors?.revenuecat?.id).toBe(customerId);
+		const aliasOccurrences =
+			afterRepeat?.processors?.revenuecat?.aliases?.filter(
+				(a) => a === "rc-backfill-aliased",
+			) ?? [];
+		expect(aliasOccurrences).toHaveLength(1);
 	},
 );
 
@@ -452,5 +481,69 @@ test.concurrent(
 
 		const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.processors?.revenuecat).toBeUndefined();
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TEST 7: Alias-set — resolves via an id in `aliases` (id ≠ app_user_id),
+// primary id is never touched.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("rc dual-key: resolves customer when app_user_id is in aliases (not the primary id)")}`,
+	async () => {
+		const customerId = "rc-aliasset-cus";
+		const primaryId = "rc-aliasset-primary";
+		const aliasId = "rc-aliasset-alias";
+		const RC_PRODUCT_ID = "com.app.rc_aliasset_pro";
+		const proMonthly = rcProMonthly({ id: "rc-aliasset-pro" });
+
+		await setupRevenueCatOrg();
+
+		await initScenario({
+			customerId,
+			setup: [
+				s.deleteCustomer({ customerId }),
+				s.deleteCustomer({ customerId: primaryId }),
+				s.deleteCustomer({ customerId: aliasId }),
+				s.customer({ testClock: false, skipWebhooks: true }),
+				s.products({ list: [proMonthly] }),
+			],
+			actions: [],
+		});
+
+		await mapProduct({
+			autumnProductId: proMonthly.id,
+			revenuecatProductId: RC_PRODUCT_ID,
+		});
+		// Primary id is one value; the incoming webhook app_user_id lives in aliases.
+		await seedProcessorsRevenueCatId({
+			customerId,
+			revenueCatId: primaryId,
+			aliases: [aliasId],
+		});
+
+		expectWebhookSuccess(
+			await newRcClient().initialPurchase({
+				productId: RC_PRODUCT_ID,
+				appUserId: aliasId,
+				originalTransactionId: "rc_aliasset_tx_001",
+			}),
+		);
+
+		const dbCustomer = await getCustomerByCustomerId(customerId);
+		expect(dbCustomer).toBeTruthy();
+		const productIds = await pollUntil(
+			() => activeRcProductIds(dbCustomer!.internal_id),
+			(ids) => ids.includes(proMonthly.id),
+		);
+		expect(productIds).toContain(proMonthly.id);
+
+		// No stray customer, primary id unchanged, alias set unchanged (no dup).
+		const strayCustomer = await getCustomerByCustomerId(aliasId);
+		expect(strayCustomer).toBeUndefined();
+		const after = await getCustomerByCustomerId(customerId);
+		expect(after?.processors?.revenuecat?.id).toBe(primaryId);
+		expect(after?.processors?.revenuecat?.aliases).toEqual([aliasId]);
 	},
 );

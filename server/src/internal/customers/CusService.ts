@@ -893,7 +893,7 @@ export class CusService {
 				and(
 					eq(customers.org_id, org.id),
 					eq(customers.env, env),
-					sql`${customers.processors}->'revenuecat'->>'id' = ${appUserId}`,
+					sql`(${customers.processors}->'revenuecat'->>'id' = ${appUserId} OR ${customers.processors}->'revenuecat'->'aliases' ? ${appUserId})`,
 				),
 			)
 			.limit(1);
