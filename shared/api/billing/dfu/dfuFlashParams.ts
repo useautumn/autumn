@@ -22,19 +22,39 @@ const BillableProcessorSchema = z.union([
 ]);
 
 const FlashCustomerDataSchema = z.object({
-	name: z.string().optional(),
-	email: z.string().optional(),
-	fingerprint: z.string().optional(),
+	name: z
+		.string()
+		.optional()
+		.meta({ description: "Display name for the customer." }),
+	email: z
+		.string()
+		.optional()
+		.meta({ description: "Email address for the customer." }),
+	fingerprint: z
+		.string()
+		.optional()
+		.meta({ description: "Anti-fraud fingerprint for the customer." }),
 });
 
 const FlashProcessorIdentitySchema = z.object({
-	type: ProcessorTypeSchema,
-	id: z.string(),
+	type: ProcessorTypeSchema.meta({
+		description: "The processor this identity belongs to.",
+	}),
+	id: z.string().meta({
+		description:
+			"The customer's id in that processor (Stripe customer id, or RevenueCat app_user_id).",
+	}),
 });
 
 const FlashLinkSchema = z.object({
-	subscription_id: z.string().optional(),
-	schedule_id: z.string().optional(),
+	subscription_id: z.string().optional().meta({
+		description:
+			"Existing processor subscription id this billable is adopted from.",
+	}),
+	schedule_id: z.string().optional().meta({
+		description:
+			"Existing processor subscription-schedule id this billable is adopted from.",
+	}),
 });
 
 const FlashStartingAfterSchema = z
@@ -48,8 +68,15 @@ const FlashBalanceFilterSchema = z.object({
 	interval: z
 		.enum(["hour", "day", "week", "month", "year"])
 		.nullable()
-		.optional(),
-	billing_behavior: z.enum(["included", "prepaid"]).optional(),
+		.optional()
+		.meta({
+			description:
+				"Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).",
+		}),
+	billing_behavior: z.enum(["included", "prepaid"]).optional().meta({
+		description:
+			"Selects the included vs prepaid entitlement line when a feature has both.",
+	}),
 });
 
 const FlashRolloverSchema = z
@@ -60,22 +87,44 @@ const FlashRolloverSchema = z
 	.meta({ internal: true });
 
 const FlashBalanceSchema = z.object({
-	feature_id: z.string(),
-	filter: FlashBalanceFilterSchema.optional(),
-	usage: z.number().optional(),
-	balance: z.number().optional(),
-	next_reset_at: z.number().optional(),
+	feature_id: z
+		.string()
+		.meta({ description: "The feature whose balance is being set." }),
+	filter: FlashBalanceFilterSchema.optional().meta({
+		description:
+			"Disambiguates which entitlement line to target when the feature has multiple.",
+	}),
+	usage: z.number().optional().meta({
+		description:
+			"Units already consumed; remaining balance is derived from the plan allowance minus this.",
+	}),
+	balance: z.number().optional().meta({
+		description:
+			"Explicit remaining balance override (mutually exclusive with usage).",
+	}),
+	next_reset_at: z
+		.number()
+		.optional()
+		.meta({ description: "Unix ms timestamp of this line's next reset." }),
 	rollover: FlashRolloverSchema.optional(),
 });
 
 const FlashFeatureQuantitySchema = z.object({
-	feature_id: z.string(),
-	quantity: z.number(),
+	feature_id: z
+		.string()
+		.meta({ description: "The prepaid feature being quantified." }),
+	quantity: z
+		.number()
+		.meta({ description: "Purchased quantity for this prepaid feature." }),
 });
 
 const FlashPlanSchema = z.object({
-	plan_id: z.string(),
-	version: z.number().optional(),
+	plan_id: z
+		.string()
+		.meta({ description: "The Autumn plan to attach to the customer." }),
+	version: z.number().optional().meta({
+		description: "Specific plan version to attach; defaults to the latest.",
+	}),
 	status: z
 		.enum(["active", "trialing", "past_due", "canceled", "expired"])
 		.optional()
@@ -83,12 +132,21 @@ const FlashPlanSchema = z.object({
 			description:
 				"Set the status of the plan to be flashed. Active if undefined.",
 		}),
-	quantity: z.number().optional(),
-	feature_quantities: z.array(FlashFeatureQuantitySchema).optional(),
+	quantity: z
+		.number()
+		.optional()
+		.meta({ description: "Seat/unit quantity for the plan." }),
+	feature_quantities: z
+		.array(FlashFeatureQuantitySchema)
+		.optional()
+		.meta({ description: "Purchased prepaid quantities per feature." }),
 	customize: z.record(z.string(), z.unknown()).optional().meta({
 		internal: true,
 	}),
-	balances: z.array(FlashBalanceSchema).optional(),
+	balances: z
+		.array(FlashBalanceSchema)
+		.optional()
+		.meta({ description: "Per-feature balances to image onto the plan." }),
 });
 
 const FlashPhaseSchema = z.object({
@@ -99,12 +157,24 @@ const FlashPhaseSchema = z.object({
 
 const FlashBillableSchema = z
 	.object({
-		processor: BillableProcessorSchema,
-		link: FlashLinkSchema.optional(),
-		billing_cycle_anchor: z.number().optional(),
+		processor: BillableProcessorSchema.meta({
+			description:
+				"The processor that owns this billable (stripe, revenuecat, or none).",
+		}),
+		link: FlashLinkSchema.optional().meta({
+			description:
+				"Existing processor billing object this billable is adopted from; omit for paid one-offs.",
+		}),
+		billing_cycle_anchor: z.number().optional().meta({
+			description:
+				"Unix ms billing anchor shared by co-billed plans on this billable.",
+		}),
 		// `plan` is the public single-plan path; `phases` is exclusive with it but
 		// stays internal until multi-phase/scheduled imaging is fully implemented.
-		plan: FlashPlanSchema.optional(),
+		plan: FlashPlanSchema.optional().meta({
+			description:
+				"The single plan on this billable (provide either plan or phases, not both).",
+		}),
 		phases: z.array(FlashPhaseSchema).optional().meta({ internal: true }),
 	})
 	.superRefine((billable, ctx) => {
@@ -135,29 +205,56 @@ export const DfuFlashParamsSchema = z.object({
 	customer_id: z.string().meta({
 		description: "Autumn customer to image into.",
 	}),
-	customer_data: FlashCustomerDataSchema.optional(),
-	processors: z.array(FlashProcessorIdentitySchema),
-	billables: z.array(FlashBillableSchema),
+	customer_data: FlashCustomerDataSchema.optional().meta({
+		description: "Optional identity fields to upsert if the customer is new.",
+	}),
+	processors: z.array(FlashProcessorIdentitySchema).meta({
+		description:
+			"The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).",
+	}),
+	billables: z.array(FlashBillableSchema).meta({
+		description:
+			"The billing objects (subscriptions, one-offs) to image, each carrying its plan.",
+	}),
 	entities: z.array(FlashEntitySchema).optional().meta({
 		internal: true,
 	}),
-	dry_run: z.boolean().optional(),
+	dry_run: z.boolean().optional().meta({
+		description:
+			"If true, validate and compute without persisting; returns what would be flashed.",
+	}),
 });
 
 export const DfuFlashedPlanSchema = z.object({
-	plan_id: z.string(),
-	processor: z.string(),
-	customer_product_id: z.string().nullable(),
-	status: z.string(),
-	skipped: z.boolean(),
-	reason: z.string().optional(),
+	plan_id: z.string().meta({ description: "The plan that was imaged." }),
+	processor: z
+		.string()
+		.meta({ description: "The processor that owns the imaged plan." }),
+	customer_product_id: z.string().nullable().meta({
+		description: "The created (or existing) customer product id, if any.",
+	}),
+	status: z
+		.string()
+		.meta({ description: "The resulting status of the imaged plan." }),
+	skipped: z.boolean().meta({
+		description:
+			"True if an active plan already existed and this one was left untouched.",
+	}),
+	reason: z
+		.string()
+		.optional()
+		.meta({ description: "Why the plan was skipped, when applicable." }),
 });
 
 export const DfuFlashResultSchema = z.object({
-	customer_id: z.string(),
-	flashed: z.array(DfuFlashedPlanSchema),
+	customer_id: z.string().meta({ description: "The imaged customer's id." }),
+	flashed: z
+		.array(DfuFlashedPlanSchema)
+		.meta({ description: "Per-plan outcome of the flash." }),
 	// Freshly-read imaged customer; null for dry_run since nothing is persisted.
-	customer: ApiCustomerV5Schema.nullable(),
+	customer: ApiCustomerV5Schema.nullable().meta({
+		description: "The freshly-read imaged customer; null for dry_run.",
+	}),
 });
 
 export type FlashCustomerData = z.infer<typeof FlashCustomerDataSchema>;

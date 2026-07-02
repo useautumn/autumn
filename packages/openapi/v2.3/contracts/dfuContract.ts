@@ -25,18 +25,11 @@ export const dfuFlashContract = oc
 						{
 							processor: "stripe",
 							link: { subscription_id: "sub_123" },
-							phases: [
-								{
-									starts_at: "now",
-									plans: [
-										{
-											plan_id: "pro",
-											status: "active",
-											balances: [{ feature_id: "messages", usage: 10 }],
-										},
-									],
-								},
-							],
+							plan: {
+								plan_id: "pro",
+								status: "active",
+								balances: [{ feature_id: "messages", usage: 10 }],
+							},
 						},
 					],
 				},
