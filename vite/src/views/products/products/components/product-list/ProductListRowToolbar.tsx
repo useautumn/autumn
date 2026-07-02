@@ -53,18 +53,22 @@ export const ProductListRowToolbar = ({
 	const axiosInstance = useAxiosInstance();
 	const activeSandbox = useActiveSandbox();
 	const env = useEnv();
+	// Only a Sandbox-env view with an active sandbox is a real named-sandbox
+	// context; activeSandbox can be stale on a production route (no header sent).
 	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
-	const { sandboxes } = useSandboxesQuery({ enabled: inNamedSandbox });
+	const { sandboxes } = useSandboxesQuery({ enabled: true });
 	const copySandbox = useCopySandbox();
 
-	const otherSandboxes = sandboxes.filter((s) => s.id !== activeSandbox?.id);
+	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
+	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
 
 	const handleCopyToSandbox = async (target: SandboxSummary) => {
-		if (!inNamedSandbox || !activeSandbox) return;
 		setDropdownOpen(false);
 		try {
 			await copySandbox.mutateAsync({
-				fromSandboxId: activeSandbox.id,
+				...(inNamedSandbox && activeSandbox
+					? { fromSandboxId: activeSandbox.id }
+					: { fromMaster: true }),
 				toSandboxId: target.id,
 				productIds: [product.id],
 			});
@@ -185,23 +189,20 @@ export const ProductListRowToolbar = ({
 							>
 								Production
 							</DropdownMenuItem>
-							{inNamedSandbox && otherSandboxes.length > 0 && (
-								<DropdownMenuSeparator />
-							)}
-							{inNamedSandbox &&
-								otherSandboxes.map((s) => (
-									<DropdownMenuItem
-										key={s.id}
-										className="flex gap-2"
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-											handleCopyToSandbox(s);
-										}}
-									>
-										{s.name}
-									</DropdownMenuItem>
-								))}
+							{otherSandboxes.length > 0 && <DropdownMenuSeparator />}
+							{otherSandboxes.map((s) => (
+								<DropdownMenuItem
+									key={s.id}
+									className="flex gap-2"
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										handleCopyToSandbox(s);
+									}}
+								>
+									{s.name}
+								</DropdownMenuItem>
+							))}
 						</DropdownMenuSubContent>
 					</DropdownMenuSub>
 					{!isVariant && !product.archived && (
