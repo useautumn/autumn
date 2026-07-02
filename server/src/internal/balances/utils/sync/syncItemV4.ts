@@ -6,6 +6,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
@@ -206,7 +207,7 @@ export const syncItemV4 = async ({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
 				usage_window_updates: usageWindowEntries,
-			})}::jsonb)`,
+			})}::jsonb) ${planetScaleTag({ query: "syncItemV4" })}`,
 		),
 	);
 

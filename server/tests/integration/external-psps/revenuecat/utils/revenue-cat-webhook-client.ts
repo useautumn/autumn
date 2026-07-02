@@ -47,7 +47,7 @@ export class RevenueCatWebhookClient {
 		orgId,
 		env,
 		webhookSecret,
-		baseUrl = "http://localhost:8080",
+		baseUrl = process.env.AUTUMN_TEST_BASE_URL || "http://localhost:8080",
 	}: RevenueCatWebhookClientConfig) {
 		this.orgId = orgId;
 		this.env = env;

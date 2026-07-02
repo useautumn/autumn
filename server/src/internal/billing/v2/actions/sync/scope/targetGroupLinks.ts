@@ -17,14 +17,16 @@ const targetGroupKey = ({
 	group: string;
 }) => `${internalEntityId ?? "customer"}:${group}`;
 
+/**
+ * Missing/blank group is itself a valid group key (the implicit "default"
+ * group most catalogs use) -- it is NOT ambiguous on its own. Ambiguity only
+ * exists when two non-add-on products collide on the same entity+group key.
+ */
 const normalizeProductGroup = ({
 	group,
 }: {
 	group?: string | null;
-}): string | null => {
-	if (group == null || group === "") return null;
-	return group;
-};
+}): string => group ?? "";
 
 export const matchedPlanToTargetGroupLink = ({
 	matchedPlan,
@@ -35,7 +37,6 @@ export const matchedPlanToTargetGroupLink = ({
 }): TargetGroupLink | null => {
 	if (matchedPlan.product.is_add_on === true) return null;
 	const group = normalizeProductGroup({ group: matchedPlan.product.group });
-	if (!group) return null;
 
 	return {
 		key: targetGroupKey({ internalEntityId: syncPlan.entity_id, group }),
@@ -56,8 +57,6 @@ export const linkedCustomerProductsToTargetGroupMap = ({
 		if (linkedProduct.product.is_add_on === true) continue;
 
 		const group = normalizeProductGroup({ group: linkedProduct.product.group });
-		if (!group) return { ok: false };
-
 		const key = targetGroupKey({
 			internalEntityId: linkedProduct.internal_entity_id,
 			group,
