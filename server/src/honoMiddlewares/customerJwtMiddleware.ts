@@ -21,10 +21,6 @@ import RecaseError from "@/utils/errorUtils.js";
  * allowlisted data + analytics routes; refresh tokens reach ONLY keys.refresh.
  * Anything else is 403 by virtue of not being listed — bidirectional aud
  * isolation.
- *
- * The analytics routes (events.list / events.aggregate) are read-only and stay
- * scoped to the token's own customer: `customer_id` is force-set below so a
- * caller can ONLY query their own events, never another customer's.
  */
 const ACCESS_ROUTES = new Set([
 	"POST /v1/check",
