@@ -85,10 +85,10 @@ export const CopySandboxDialog = ({
 				productIds: checkedProductIds,
 				featureIds: checkedFeatureIds,
 			});
-			toast.success(`Copied plans & features into ${target.name}`);
+			toast.success(`Imported plans & features into ${target.name}`);
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to copy sandbox"));
+			toast.error(getBackendErr(error, "Failed to import"));
 		}
 	};
 
@@ -96,9 +96,9 @@ export const CopySandboxDialog = ({
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="bg-card">
 				<DialogHeader>
-					<DialogTitle>Copy into {target.name}</DialogTitle>
+					<DialogTitle>Import into {target.name}</DialogTitle>
 					<DialogDescription>
-						Copy plans and features from another sandbox into{" "}
+						Import plans and features from another sandbox into{" "}
 						<span className="font-bold">{target.name}</span>. Existing items
 						with a matching ID are overwritten; features used by a selected plan
 						are always included.
@@ -152,7 +152,7 @@ export const CopySandboxDialog = ({
 						isLoading={copySandbox.isPending}
 						onClick={handleCopy}
 					>
-						Copy
+						Import
 					</Button>
 				</DialogFooter>
 			</DialogContent>

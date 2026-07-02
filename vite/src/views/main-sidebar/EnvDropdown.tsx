@@ -9,7 +9,7 @@ import {
 	DropdownMenuSeparator,
 	Skeleton,
 } from "@autumn/ui";
-import { Check, Copy, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Import, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
@@ -186,7 +186,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 									</button>
 									{sandboxes.length > 1 && (
 										<button
-											aria-label={`Copy into ${sandbox.name}`}
+											aria-label={`Import into ${sandbox.name}`}
 											className="text-muted-foreground transition-colors hover:text-foreground"
 											onClick={(e) => {
 												e.stopPropagation();
@@ -195,7 +195,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 											}}
 											type="button"
 										>
-											<Copy size={12} className="!h-3 w-3" />
+											<Import size={12} className="!h-3 w-3" />
 										</button>
 									)}
 									<button
