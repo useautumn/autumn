@@ -1,4 +1,9 @@
-import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
+import {
+	FeatureType,
+	isAnyCreditSystem,
+	isLicenseProduct,
+	TierBehavior,
+} from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -160,9 +165,11 @@ export function EditPlanFeatureSheet({
 
 				{feature?.type !== FeatureType.Boolean && (
 					<>
-						<SheetSection title="Feature Type">
-							<BillingType />
-						</SheetSection>
+						{!isLicenseProduct({ product }) && (
+							<SheetSection title="Feature Type">
+								<BillingType />
+							</SheetSection>
+						)}
 
 						<SheetSection
 							title={`Grant Amount ${isFeaturePrice ? "(optional)" : ""}`}

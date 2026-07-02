@@ -6,7 +6,7 @@ import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import {
-	CustomizePlanV1Schema,
+	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "../common/customizePlan/customizePlanV1";
 
@@ -18,11 +18,16 @@ export enum StartingAfterDuration {
 // update_items is internal / not prod-ready — omit it from the schedule customize
 // surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
-	CustomizePlanV1Schema.omit({
+	CustomizePlanV1BaseSchema.omit({
 		free_trial: true,
+		licenses: true,
 		update_items: true,
 	}).strict(),
-	{ includeFreeTrial: false, includeUpdateItems: false },
+	{
+		includeFreeTrial: false,
+		includeUpdateItems: false,
+		includeLicenses: false,
+	},
 );
 
 export const CreateSchedulePlanSchema = z.object({

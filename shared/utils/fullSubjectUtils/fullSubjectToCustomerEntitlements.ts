@@ -46,14 +46,12 @@ export const fullSubjectToCustomerEntitlements = ({
 		);
 	}
 
-	if (fullSubject.entity) {
-		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
-			cusEntMatchesEntity({
-				cusEnt: customerEntitlement,
-				entity: fullSubject.entity,
-			}),
-		);
-	}
+	customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
+		cusEntMatchesEntity({
+			cusEnt: customerEntitlement,
+			entity: fullSubject.entity,
+		}),
+	);
 
 	const now = Date.now();
 	customerEntitlements = customerEntitlements.filter(

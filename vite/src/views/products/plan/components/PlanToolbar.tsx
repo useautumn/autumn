@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { CopyProductDialog } from "../../products/components/CopyProductDialog";
 import { DeletePlanDialog } from "./DeletePlanDialog";
+import { LinkLicenseMenuItem } from "./plan-licenses/LinkLicenseMenuItem";
 
 export const PlanToolbar = () => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -52,6 +53,7 @@ export const PlanToolbar = () => {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					<LinkLicenseMenuItem />
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {

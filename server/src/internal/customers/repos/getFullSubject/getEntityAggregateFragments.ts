@@ -1,4 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
+import { ProductCatalogType } from "@autumn/shared";
 import { getEntityOptionsAggregateFragments } from "./getEntityOptionsAggregateFragments.js";
 
 /**
@@ -76,8 +77,10 @@ export const getEntityAggregateFragments = ({
 		entity_cus_products AS (
 			SELECT cp.*
 			FROM customer_products cp
+			JOIN products prod ON prod.internal_id = cp.internal_product_id
 			WHERE cp.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
 				AND cp.internal_entity_id IS NOT NULL
+				AND prod.catalog_type <> ${ProductCatalogType.License}
 				${statusFilter}
 		),
 

@@ -9,6 +9,7 @@ import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
+import { LicenseListTable } from "./LicenseListTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 
@@ -269,6 +270,10 @@ export function ProductListTable() {
 								</Table.Content>
 							</Table.Container>
 						</Table.Provider>
+
+						<LicenseListTable
+							showArchivedProducts={queryStates.showArchivedProducts}
+						/>
 					</div>
 				</>
 			) : (

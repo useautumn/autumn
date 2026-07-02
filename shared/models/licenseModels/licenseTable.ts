@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	foreignKey,
 	index,
 	integer,
@@ -62,6 +63,47 @@ export const planLicenses = pgTable(
 	],
 );
 
+export const customerProductLicenses = pgTable(
+	"customer_product_license",
+	{
+		id: text().primaryKey().notNull(),
+		org_id: text("org_id").notNull(),
+		env: text().notNull(),
+		parent_customer_product_id: text("parent_customer_product_id").notNull(),
+		license_internal_product_id: text("license_internal_product_id").notNull(),
+		included_quantity: integer("included_quantity").notNull().default(0),
+		allow_extra_quantity: boolean("allow_extra_quantity")
+			.notNull()
+			.default(false),
+		customize: jsonb().$type<LicenseCustomize | null>(),
+		metadata: jsonb().$type<Record<string, unknown>>().default({}),
+		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.parent_customer_product_id],
+			foreignColumns: [customerProducts.id],
+			name: "customer_product_license_parent_cp_fkey",
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.license_internal_product_id],
+			foreignColumns: [products.internal_id],
+			name: "customer_product_license_license_product_fkey",
+		}).onDelete("cascade"),
+		unique("unique_customer_product_license").on(
+			table.parent_customer_product_id,
+			table.license_internal_product_id,
+		),
+		index("idx_customer_product_license_license")
+			.on(table.license_internal_product_id)
+			.concurrently(),
+		index("idx_customer_product_license_org_env")
+			.on(table.org_id, table.env)
+			.concurrently(),
+	],
+);
+
 export const licensePools = pgTable(
 	"license_pools",
 	{
@@ -70,7 +112,8 @@ export const licensePools = pgTable(
 		env: text().notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
 		parent_customer_product_id: text("parent_customer_product_id").notNull(),
-		plan_license_id: text("plan_license_id").notNull(),
+		plan_license_id: text("plan_license_id"),
+		customer_product_license_id: text("customer_product_license_id"),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
 		license_customer_product_id: text("license_customer_product_id"),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -93,6 +136,11 @@ export const licensePools = pgTable(
 			name: "license_pools_plan_license_fkey",
 		}).onDelete("cascade"),
 		foreignKey({
+			columns: [table.customer_product_license_id],
+			foreignColumns: [customerProductLicenses.id],
+			name: "license_pools_customer_product_license_fkey",
+		}).onDelete("cascade"),
+		foreignKey({
 			columns: [table.license_internal_product_id],
 			foreignColumns: [products.internal_id],
 			name: "license_pools_license_product_fkey",
@@ -106,6 +154,14 @@ export const licensePools = pgTable(
 			table.parent_customer_product_id,
 			table.plan_license_id,
 		),
+		unique("unique_custom_license_pool").on(
+			table.parent_customer_product_id,
+			table.customer_product_license_id,
+		),
+		check(
+			"license_pools_source_check",
+			sql`(${table.plan_license_id} IS NULL) <> (${table.customer_product_license_id} IS NULL)`,
+		),
 		index("idx_license_pools_customer")
 			.on(table.internal_customer_id)
 			.concurrently(),
@@ -114,6 +170,9 @@ export const licensePools = pgTable(
 			.concurrently(),
 		index("idx_license_pools_license_product")
 			.on(table.license_internal_product_id)
+			.concurrently(),
+		index("idx_license_pools_customer_product_license")
+			.on(table.customer_product_license_id)
 			.concurrently(),
 		index("idx_license_pools_customer_license")
 			.on(table.internal_customer_id, table.license_internal_product_id)
@@ -200,6 +259,10 @@ export const licenseAssignments = pgTable(
 
 export type DbPlanLicense = typeof planLicenses.$inferSelect;
 export type InsertPlanLicense = typeof planLicenses.$inferInsert;
+export type DbCustomerProductLicense =
+	typeof customerProductLicenses.$inferSelect;
+export type InsertCustomerProductLicense =
+	typeof customerProductLicenses.$inferInsert;
 export type DbLicensePool = typeof licensePools.$inferSelect;
 export type InsertLicensePool = typeof licensePools.$inferInsert;
 export type DbLicenseAssignment = typeof licenseAssignments.$inferSelect;

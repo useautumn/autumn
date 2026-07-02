@@ -1,6 +1,7 @@
 import type {
 	CancelAction,
 	CarryOverUsages,
+	CustomizePlanLicense,
 	Entitlement,
 	FullCusProduct,
 	FullCustomerEntitlement,
@@ -36,6 +37,7 @@ export type PatchContext = {
 		fromCustomerEntitlementId: string;
 		toEntitlementId: string;
 	}[];
+	customLicenses?: CustomizePlanLicense[];
 };
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

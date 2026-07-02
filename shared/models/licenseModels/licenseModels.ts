@@ -23,38 +23,12 @@ export const PlanLicenseSchema = z.object({
 	updated_at: z.number(),
 });
 
-export const LicensePoolSchema = z.object({
-	id: z.string(),
-	org_id: z.string(),
-	env: z.string(),
-	internal_customer_id: z.string(),
-	parent_customer_product_id: z.string(),
-	plan_license_id: z.string(),
-	license_internal_product_id: z.string(),
-	license_customer_product_id: z.string().nullable(),
-	created_at: z.number(),
-	updated_at: z.number(),
-});
-
-export const LicenseAssignmentSchema = z.object({
-	id: z.string(),
-	org_id: z.string(),
-	env: z.string(),
-	license_pool_id: z.string(),
-	internal_customer_id: z.string(),
-	internal_entity_id: z.string(),
-	license_internal_product_id: z.string(),
-	provisioned_customer_product_id: z.string().nullable(),
-	started_at: z.number(),
-	ended_at: z.number().nullable(),
-	metadata: z.record(z.string(), z.unknown()).nullish(),
-});
-
 export const LicenseAssignParamsSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string(),
 	plan_id: z.string(),
 	version: z.number().optional(),
+	pool_id: z.string().optional(),
 	parent_subscription_id: z.string().optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -66,6 +40,10 @@ export const SetPlanLicenseParamsSchema = z.object({
 	allow_extra_quantity: z.boolean().default(false),
 	customize: LicenseCustomizeSchema.nullish().optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const CustomizePlanLicenseSchema = SetPlanLicenseParamsSchema.omit({
+	parent_plan_id: true,
 });
 
 export const ListPlanLicensesParamsSchema = z.object({
@@ -104,16 +82,6 @@ export const LicenseInventorySchema = z.object({
 	available: z.number(),
 });
 
-export const LicenseAssignmentResponseSchema = z.object({
-	id: z.string(),
-	license_product_id: z.string(),
-	entity_id: z.string(),
-	started_at: z.number(),
-	ended_at: z.number().nullable(),
-	metadata: z.record(z.string(), z.unknown()).nullish(),
-	inventory: LicenseInventorySchema.optional(),
-});
-
 export const LicensePoolResponseSchema = z.object({
 	pool_id: z.string(),
 	license_product_id: z.string(),
@@ -132,10 +100,9 @@ export const LicensePoolResponseSchema = z.object({
 
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
-export type LicensePool = z.infer<typeof LicensePoolSchema>;
-export type LicenseAssignment = z.infer<typeof LicenseAssignmentSchema>;
 export type LicenseAssignParams = z.infer<typeof LicenseAssignParamsSchema>;
 export type SetPlanLicenseParams = z.infer<typeof SetPlanLicenseParamsSchema>;
+export type CustomizePlanLicense = z.infer<typeof CustomizePlanLicenseSchema>;
 export type ListPlanLicensesParams = z.infer<
 	typeof ListPlanLicensesParamsSchema
 >;
@@ -147,7 +114,4 @@ export type LicenseListPoolsParams = z.infer<
 	typeof LicenseListPoolsParamsSchema
 >;
 export type LicenseUpdateParams = z.infer<typeof LicenseUpdateParamsSchema>;
-export type LicenseAssignmentResponse = z.infer<
-	typeof LicenseAssignmentResponseSchema
->;
 export type LicensePoolResponse = z.infer<typeof LicensePoolResponseSchema>;

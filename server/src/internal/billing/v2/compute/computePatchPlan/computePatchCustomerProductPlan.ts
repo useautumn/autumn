@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
@@ -45,12 +46,21 @@ export const computePatchCustomerProductPlan = ({
 		includeArrearLineItems:
 			updateSubscriptionContext.chargeExistingOverages === true,
 	});
+	const previousParentCustomerProduct =
+		patchContext.mode === "new"
+			? patchContext.originalCustomerProduct
+			: undefined;
 
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
 		customPrices: patchContext.customPrices,
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
+		customLicenses: buildCustomLicenseChanges({
+			parentCustomerProduct: finalCustomerProduct,
+			previousParentCustomerProduct,
+			licenses: patchContext.customLicenses,
+		}),
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({

@@ -35,8 +35,8 @@ const toAnchorCandidate = (
 ): AnchorCandidate => ({
 	id: customerEntitlement.id,
 	is_entity_scoped:
-		customerEntitlement.internal_entity_id !== null ||
-		customerEntitlement.customer_product?.internal_entity_id !== null,
+		customerEntitlement.internal_entity_id != null ||
+		customerEntitlement.customer_product?.internal_entity_id != null,
 	is_add_on: customerEntitlement.customer_product?.product.is_add_on ?? false,
 	is_plan_backed: customerEntitlement.customer_product != null,
 	status_rank: customerProductStatusToAnchorRank(

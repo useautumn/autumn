@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { transitionLicenseAssignmentsForParents } from "@/internal/licenses/actions/transitionLicenseAssignments";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -80,6 +81,12 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fromCustomerProduct: customerProduct,
 			fullCustomer,
 		});
+
+	await transitionLicenseAssignmentsForParents({
+		ctx,
+		customerId: fullCustomer.id || fullCustomer.internal_id,
+		parentCustomerProductIds: [customerProduct.id],
+	});
 
 	return { updates, activatedCustomerProduct, insertedCustomerProduct };
 };

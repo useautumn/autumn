@@ -15,6 +15,7 @@ export const assignLicense = async ({
 	entityId,
 	planId,
 	version,
+	poolId,
 	parentSubscriptionId,
 	metadata,
 }: {
@@ -23,6 +24,7 @@ export const assignLicense = async ({
 	entityId: string;
 	planId: string;
 	version?: number;
+	poolId?: string;
 	parentSubscriptionId?: string;
 	metadata?: Record<string, unknown>;
 }) => {
@@ -71,23 +73,23 @@ export const assignLicense = async ({
 			customerProducts: fullCustomer.customer_products,
 		});
 
-		const { pool, planLicense } = await resolveAssignableLicensePool({
+		const { pool, licenseDefinition } = await resolveAssignableLicensePool({
 			ctx: txCtx,
 			fullCustomer,
 			licenseProduct,
 			planId,
+			poolId,
 			parentSubscriptionId,
 		});
 
-		const provisionedCusProduct = await insertProvisionedLicenseCustomerProduct(
-			{
+		const provisionedCustomerProduct =
+			await insertProvisionedLicenseCustomerProduct({
 				ctx: txCtx,
 				fullCustomer,
 				licenseProduct,
-				planLicense,
+				licenseDefinition,
 				internalEntityId: entity.internal_id,
-			},
-		);
+			});
 
 		const [assignment] = await tx
 			.insert(licenseAssignments)
@@ -99,7 +101,7 @@ export const assignLicense = async ({
 				internal_customer_id: fullCustomer.internal_id,
 				internal_entity_id: entity.internal_id,
 				license_internal_product_id: licenseProduct.internal_id,
-				provisioned_customer_product_id: provisionedCusProduct.id,
+				provisioned_customer_product_id: provisionedCustomerProduct.id,
 				started_at: Date.now(),
 				ended_at: null,
 				metadata: metadata ?? {},

@@ -2,6 +2,7 @@ import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuanti
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
+import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
@@ -19,6 +20,9 @@ const MultiAttachCustomizePlanSchema = z
 		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 			description: "Override the items in the plan.",
 		}),
+		licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+			description: "Override the licenses in the plan.",
+		}),
 	})
 	.optional();
 
@@ -29,7 +33,7 @@ export const MultiAttachPlanSchema = z.object({
 	}),
 	customize: MultiAttachCustomizePlanSchema.meta({
 		description:
-			"Customize the plan to attach. Can override the price or items.",
+			"Customize the plan to attach. Can override the price, items, or licenses.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:

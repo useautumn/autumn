@@ -19,6 +19,7 @@ import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/erro
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
 import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
@@ -102,4 +103,9 @@ export const handleAttachV2Errors = async ({
 
 	// 13. Revert trial errors (card_required + revert, missing existing plan)
 	handleRevertTrialErrors({ billingContext });
+
+	await validateCustomLicenseChanges({
+		ctx,
+		customLicenses: autumnBillingPlan.customLicenses,
+	});
 };

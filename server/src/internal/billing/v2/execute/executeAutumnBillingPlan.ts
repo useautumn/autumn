@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeLicenseAssignmentLifecycle } from "@/internal/billing/v2/execute/executeAutumnActions/executeLicenseAssignmentLifecycle";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -13,6 +14,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
+import { syncCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
@@ -93,6 +95,11 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
+	await syncCustomLicenseChanges({
+		ctx,
+		customLicenses: autumnBillingPlan.customLicenses,
+	});
+
 	await replaceScheduledPhaseCustomerProductIds({
 		ctx,
 		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
@@ -123,6 +130,11 @@ export const executeAutumnBillingPlan = async ({
 			cusProductId: deleteCustomerProduct.id,
 		});
 	}
+
+	await executeLicenseAssignmentLifecycle({
+		ctx,
+		autumnBillingPlan,
+	});
 
 	// 5. Update entitlement balances
 	await updateCustomerEntitlements({

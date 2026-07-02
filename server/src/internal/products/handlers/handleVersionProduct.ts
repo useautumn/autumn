@@ -3,9 +3,11 @@ import {
 	CreateProductV2ParamsSchema,
 	type FullProduct,
 	type Organization,
-	products,
 	type ProductV2,
+	planLicenses,
+	products,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { getEntsWithFeature } from "@server/internal/products/entitlements/entitlementUtils.js";
@@ -21,7 +23,37 @@ import {
 } from "@server/internal/products/productUtils.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
+import { generateId } from "@server/utils/genUtils.js";
 import { and, eq, ne } from "drizzle-orm";
+
+const copyPlanLicensesToNewVersion = async ({
+	db,
+	fromInternalProductId,
+	toInternalProductId,
+}: {
+	db: DrizzleCli;
+	fromInternalProductId: string;
+	toInternalProductId: string;
+}) => {
+	const planLicenseRows = await db
+		.select()
+		.from(planLicenses)
+		.where(eq(planLicenses.parent_internal_product_id, fromInternalProductId));
+
+	if (planLicenseRows.length === 0) {
+		return;
+	}
+
+	await db.insert(planLicenses).values(
+		planLicenseRows.map((row) => ({
+			...row,
+			id: generateId("plan_lic"),
+			parent_internal_product_id: toInternalProductId,
+			created_at: Date.now(),
+			updated_at: Date.now(),
+		})),
+	);
+};
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
@@ -140,6 +172,12 @@ export const handleVersionProductV2 = async ({
 	await PriceService.insert({
 		db,
 		data: customPrices,
+	});
+
+	await copyPlanLicensesToNewVersion({
+		db,
+		fromInternalProductId: latestProduct.internal_id,
+		toInternalProductId: newProduct.internal_id,
 	});
 
 	// Handle new free trial (create new)

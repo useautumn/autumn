@@ -8,7 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
-import { PlanService } from "@/internal/products/PlanService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 export type UpdateProductContext = {
@@ -33,7 +33,7 @@ export const setupUpdateProductContext = async ({
 	const { db, org, env, features } = ctx;
 	const getFullProduct = async () => {
 		if (initialFullProduct) return initialFullProduct;
-		return PlanService.getFull({
+		return ProductService.getFull({
 			db,
 			idOrInternalId: productId,
 			orgId: org.id,

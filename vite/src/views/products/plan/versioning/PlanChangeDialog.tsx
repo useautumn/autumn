@@ -41,6 +41,7 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { saveAllLicenses } from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
 	type AllVersionsUpdateMigrationTarget,
 	buildInPlaceUpdatePlanParams,
@@ -420,6 +421,9 @@ export default function PlanChangeDialog({
 				axiosInstance,
 				updateParams,
 			);
+			// The save bar early-returns into this dialog, so dirty licenses are
+			// persisted here too (failures toast their own error).
+			await saveAllLicenses();
 			markSaved();
 			toast.success(
 				versionChoice === "new"
@@ -648,7 +652,9 @@ export default function PlanChangeDialog({
 																</span>
 															</div>
 															<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
-																<PlanSettingsChanges changes={settingsChanges} />
+																<PlanSettingsChanges
+																	changes={settingsChanges}
+																/>
 															</div>
 														</div>
 													)}

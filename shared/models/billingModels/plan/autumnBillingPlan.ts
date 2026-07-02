@@ -1,6 +1,7 @@
 import { CustomLineItemSchema } from "@api/billing/common/customLineItem";
 import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymentParamsV1";
 import type { InsertCustomerEntitlement } from "@autumn/shared";
+import { CustomizePlanLicenseSchema } from "../../licenseModels/licenseModels";
 import {
 	type AppEnv,
 	BillingVersion,
@@ -102,6 +103,15 @@ export const AutumnBillingPlanSchema = z.object({
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
+	customLicenses: z
+		.array(
+			z.object({
+				parentCustomerProductId: z.string(),
+				previousParentCustomerProductId: z.string().optional(),
+				licenses: z.array(CustomizePlanLicenseSchema),
+			}),
+		)
+		.optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

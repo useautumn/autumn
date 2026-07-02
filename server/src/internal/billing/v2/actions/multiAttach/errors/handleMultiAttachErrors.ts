@@ -1,6 +1,8 @@
-import type { MultiAttachBillingContext } from "@autumn/shared";
+import type { BillingPlan, MultiAttachBillingContext } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 
@@ -28,5 +30,18 @@ export const handleMultiAttachErrors = async ({
 		db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,
 		subscriptionIds: billingContext.productContexts.map((pc) => pc.externalId),
+	});
+};
+
+export const handleMultiAttachLicenseErrors = async ({
+	ctx,
+	billingPlan,
+}: {
+	ctx: AutumnContext;
+	billingPlan: BillingPlan;
+}) => {
+	await validateCustomLicenseChanges({
+		ctx,
+		customLicenses: billingPlan.autumn.customLicenses,
 	});
 };

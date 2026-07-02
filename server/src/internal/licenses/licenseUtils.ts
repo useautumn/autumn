@@ -26,12 +26,12 @@ export const getLicenseProduct = (
 	ProductService.getFull({ ...args, catalogType: ProductCatalogType.License });
 
 export const getPaidQuantity = ({
-	cusProduct,
+	customerProduct,
 }: {
-	cusProduct?: { status: string | null; quantity: number | null } | null;
+	customerProduct?: { status: string | null; quantity: number | null } | null;
 }) =>
-	cusProduct?.status === CusProductStatus.Active
-		? (cusProduct.quantity ?? 0)
+	customerProduct?.status === CusProductStatus.Active
+		? (customerProduct.quantity ?? 0)
 		: 0;
 
 export const parentCustomerProducts = alias(

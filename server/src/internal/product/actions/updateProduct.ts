@@ -26,10 +26,10 @@ import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";
-import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
@@ -240,7 +240,7 @@ export const updateProduct = async ({
 	if (Object.keys(productUpdates).length === 0) {
 		await applyBasePlanLink();
 		const latestProduct = basePlanIdProvided
-			? await PlanService.getFull({
+			? await ProductService.getFull({
 					db,
 					idOrInternalId: fullProduct.id,
 					orgId: org.id,
@@ -309,7 +309,7 @@ export const updateProduct = async ({
 				baseInternalProductId: nextBaseInternalProductId,
 			});
 
-			const latestBase = await PlanService.getFull({
+			const latestBase = await ProductService.getFull({
 				db,
 				idOrInternalId: newProduct.id,
 				orgId: org.id,
@@ -353,7 +353,7 @@ export const updateProduct = async ({
 			env,
 			baseInternalProductId: nextBaseInternalProductId,
 		});
-		const latestBase = await PlanService.getFull({
+		const latestBase = await ProductService.getFull({
 			db,
 			idOrInternalId: newProduct.id,
 			orgId: org.id,
@@ -386,7 +386,7 @@ export const updateProduct = async ({
 				baseInternalProductId: nextBaseInternalProductId,
 			});
 
-			const latestBase = await PlanService.getFull({
+			const latestBase = await ProductService.getFull({
 				db,
 				idOrInternalId: newProduct.id,
 				orgId: org.id,
@@ -420,7 +420,7 @@ export const updateProduct = async ({
 	await applyBasePlanLink();
 
 	// New full product
-	let newFullProduct = await PlanService.getFull({
+	let newFullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: latestProductId,
 		orgId: org.id,
@@ -441,7 +441,7 @@ export const updateProduct = async ({
 			internalProductId: fullProduct.internal_id,
 			isCustom: false,
 		});
-		newFullProduct = await PlanService.getFull({
+		newFullProduct = await ProductService.getFull({
 			db,
 			idOrInternalId: latestProductId,
 			orgId: org.id,

@@ -9,6 +9,7 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
+import { SheetPanelHost } from "@/views/products/plan/components/SheetPanelHost";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
 import { InlineEditorProvider } from "./InlineEditorContext";
@@ -115,6 +116,7 @@ function InlinePlanEditorContent({
 				<SheetOverlay inline />
 
 				<ProductSheets />
+				<SheetPanelHost />
 			</div>
 		</motion.div>
 	);

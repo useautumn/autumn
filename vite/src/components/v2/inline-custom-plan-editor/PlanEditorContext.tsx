@@ -28,7 +28,7 @@ type SetProduct = (
 	product: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
 ) => void;
 
-interface ProductContextValue {
+export interface ProductContextValue {
 	product: FrontendProduct;
 	setProduct: SetProduct;
 	initialProduct?: FrontendProduct;
@@ -287,6 +287,11 @@ export function useHasPlanChanges() {
 
 		const versionsSame = product.version === initialProduct.version;
 
-		return !(itemsSame && freeTrialsSame && billingControlsSame && versionsSame);
+		return !(
+			itemsSame &&
+			freeTrialsSame &&
+			billingControlsSame &&
+			versionsSame
+		);
 	}, [context?.itemDraft, product, initialProduct, features]);
 }

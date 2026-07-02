@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -79,6 +80,14 @@ export const computeImmediateMultiProductPlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: billingContext.trialContext?.customFreeTrial,
+		customLicenses: billingContext.productContexts.flatMap(
+			(productContext, index) =>
+				buildCustomLicenseChanges({
+					parentCustomerProduct: insertCustomerProducts[index],
+					previousParentCustomerProduct: productContext.currentCustomerProduct,
+					licenses: productContext.customLicenses,
+				}),
+		),
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,

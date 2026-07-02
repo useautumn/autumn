@@ -283,6 +283,7 @@ const buildCustomerProduct = ({
 	scheduled_ids: null,
 	quantity: 1,
 	is_custom: false,
+	license_set_customized: false,
 	customer_id: customer.id ?? null,
 	entity_id: entityId,
 	billing_version: BillingVersion.V2,

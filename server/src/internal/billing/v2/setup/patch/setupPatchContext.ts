@@ -200,6 +200,7 @@ export const setupPatchContext = ({
 		],
 		customEntitlements: [...updateNewEntitlements, ...customEntitlements],
 		updateItemCarryLinks,
+		customLicenses: params.customize?.licenses,
 	};
 
 	return patchContext;

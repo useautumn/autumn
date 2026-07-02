@@ -4,7 +4,10 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
-import { CustomizePlanV1Schema } from "../billing/common/customizePlan/customizePlanV1.js";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../billing/common/customizePlan/customizePlanV1.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
@@ -49,9 +52,13 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-const VariantCustomizeSchema = CustomizePlanV1Schema.omit({
-	items: true,
-});
+const VariantCustomizeSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
 
 export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({

@@ -9,8 +9,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getLicenseAssignmentResponse } from "../licenseResponseUtils.js";
 import { getLicenseProduct } from "../licenseUtils.js";
 
@@ -92,7 +92,15 @@ export const unassignLicense = async ({
 		entityId,
 		planId,
 	});
-	if (!assignment) return assignment;
+	if (!assignment) {
+		throw new RecaseError({
+			message: assignmentId
+				? `License assignment ${assignmentId} not found.`
+				: "License assignment not found.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 404,
+		});
+	}
 
 	const customer = await ctx.db.query.customers.findFirst({
 		where: (table, { eq }) =>

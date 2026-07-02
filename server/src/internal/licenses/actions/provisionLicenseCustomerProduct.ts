@@ -1,5 +1,4 @@
 import {
-	type DbPlanLicense,
 	CusProductStatus,
 	type FullCustomer,
 	type FullProduct,
@@ -10,17 +9,18 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 import { insertCustomItems } from "@/internal/customers/attach/attachUtils/insertCustomItems.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import type { LicenseDefinition } from "./customerProductLicenseActions.js";
 
 const resolveLicenseProductForPlan = async ({
 	ctx,
 	licenseProduct,
-	planLicense,
+	licenseDefinition,
 }: {
 	ctx: AutumnContext;
 	licenseProduct: FullProduct;
-	planLicense: DbPlanLicense;
+	licenseDefinition: LicenseDefinition;
 }) => {
-	const customize = planLicense.customize;
+	const customize = licenseDefinition.customize;
 	if (!customize) {
 		return { licenseProduct, customPrices: [], customEnts: [] };
 	}
@@ -41,19 +41,19 @@ export const insertProvisionedLicenseCustomerProduct = async ({
 	ctx,
 	fullCustomer,
 	licenseProduct,
-	planLicense,
+	licenseDefinition,
 	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	licenseProduct: FullProduct;
-	planLicense: DbPlanLicense;
+	licenseDefinition: LicenseDefinition;
 	internalEntityId: string;
 }) => {
 	const effective = await resolveLicenseProductForPlan({
 		ctx,
 		licenseProduct,
-		planLicense,
+		licenseDefinition,
 	});
 	if (effective.customPrices.length > 0 || effective.customEnts.length > 0) {
 		await insertCustomItems({

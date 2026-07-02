@@ -29,7 +29,7 @@ export const BillingParamsBaseV1Schema = z.object({
 	}),
 	customize: CustomizePlanV1Schema.optional().meta({
 		description:
-			"Customize the plan to attach. Can override the price, items, free trial, or a combination.",
+			"Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination.",
 	}),
 
 	invoice_mode: InvoiceModeParamsSchema.optional().meta({

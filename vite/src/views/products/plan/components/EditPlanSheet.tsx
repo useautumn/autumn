@@ -8,6 +8,7 @@ import { PlanSheetFooterContainer } from "@/components/v2/sheets/PlanSheetFooter
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
 import { MoreSettingsSection } from "./edit-plan-details/MoreSettingsSection";
+import { IncludedQuantitySection } from "./plan-licenses/IncludedQuantitySection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product } = useProduct();
@@ -32,6 +33,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 					/>
 				)}
 				<MainDetailsSection />
+				<IncludedQuantitySection />
 				<AdditionalOptions />
 
 				{!showAdvanced && <MoreSettingsSection />}

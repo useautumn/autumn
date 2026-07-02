@@ -1,4 +1,5 @@
 import {
+	customerProductLicenses,
 	customerProducts,
 	ErrCode,
 	entities,
@@ -12,7 +13,11 @@ import {
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getPaidQuantity, parentCustomerProducts } from "../licenseUtils.js";
+import {
+	getPaidQuantity,
+	isLicensePoolParentStatus,
+	parentCustomerProducts,
+} from "../licenseUtils.js";
 import { ensurePoolsForCustomerProducts } from "./ensureLicensePools.js";
 
 const validateEntity = ({
@@ -59,12 +64,17 @@ export const listLicensePools = async ({
 		.select({
 			pool: licensePools,
 			planLicense: planLicenses,
+			customerProductLicense: customerProductLicenses,
 			licenseProduct: products,
 			parentCustomerProduct: parentCustomerProducts,
 			paidCustomerProduct: customerProducts,
 		})
 		.from(licensePools)
-		.innerJoin(planLicenses, eq(licensePools.plan_license_id, planLicenses.id))
+		.leftJoin(planLicenses, eq(licensePools.plan_license_id, planLicenses.id))
+		.leftJoin(
+			customerProductLicenses,
+			eq(licensePools.customer_product_license_id, customerProductLicenses.id),
+		)
 		.innerJoin(
 			products,
 			eq(licensePools.license_internal_product_id, products.internal_id),
@@ -114,37 +124,51 @@ export const listLicensePools = async ({
 		assignmentsByPoolId.set(assignment.assignment.license_pool_id, existing);
 	}
 
-	return poolRows.map(
-		({
-			pool,
-			planLicense,
-			licenseProduct,
-			parentCustomerProduct,
-			paidCustomerProduct,
-		}) => {
-			const poolAssignments = assignmentsByPoolId.get(pool.id) ?? [];
-			const paidQuantity = getPaidQuantity({ cusProduct: paidCustomerProduct });
-			const assigned = poolAssignments.length;
+	return poolRows
+		.filter(({ parentCustomerProduct }) =>
+			isLicensePoolParentStatus({ status: parentCustomerProduct.status }),
+		)
+		.map(
+			({
+				pool,
+				planLicense,
+				customerProductLicense,
+				licenseProduct,
+				parentCustomerProduct,
+				paidCustomerProduct,
+			}) => {
+				const licenseDefinition = planLicense ?? customerProductLicense;
+				if (!licenseDefinition) return null;
 
-			return {
-				pool_id: pool.id,
-				license_product_id: licenseProduct.id,
-				license_product_name: licenseProduct.name,
-				parent_subscription_id:
-					parentCustomerProduct.subscription_ids?.[0] ?? undefined,
-				inventory: {
-					included_quantity: planLicense.included_quantity,
-					paid_quantity: paidQuantity,
-					assigned,
-					available: planLicense.included_quantity + paidQuantity - assigned,
-				},
-				assignments: poolAssignments.map(({ assignment, entity_id }) => ({
-					assignment_id: assignment.id,
-					entity_id,
+				const poolAssignments = assignmentsByPoolId.get(pool.id) ?? [];
+				const paidQuantity = getPaidQuantity({
+					customerProduct: paidCustomerProduct,
+				});
+				const assigned = poolAssignments.length;
+
+				return {
+					pool_id: pool.id,
 					license_product_id: licenseProduct.id,
-					started_at: assignment.started_at,
-				})),
-			};
-		},
-	);
+					license_product_name: licenseProduct.name,
+					parent_subscription_id:
+						parentCustomerProduct.external_id ??
+						parentCustomerProduct.subscription_ids?.[0] ??
+						undefined,
+					inventory: {
+						included_quantity: licenseDefinition.included_quantity,
+						paid_quantity: paidQuantity,
+						assigned,
+						available:
+							licenseDefinition.included_quantity + paidQuantity - assigned,
+					},
+					assignments: poolAssignments.map(({ assignment, entity_id }) => ({
+						assignment_id: assignment.id,
+						entity_id,
+						license_product_id: licenseProduct.id,
+						started_at: assignment.started_at,
+					})),
+				};
+			},
+		)
+		.filter((pool) => pool !== null);
 };

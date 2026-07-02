@@ -3,8 +3,8 @@ import {
 	isCatalogPlanProduct,
 	type LicenseCustomize,
 	planLicenses,
-	RecaseError,
 	products,
+	RecaseError,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";

@@ -13,7 +13,6 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
@@ -21,6 +20,11 @@ import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
+import {
+	discardAllLicenses,
+	saveAllLicenses,
+	useHasLicenseChanges,
+} from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -37,7 +41,9 @@ export const SaveChangesBar = ({
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
-	const hasChanges = useHasChanges();
+	const planHasChanges = useHasChanges();
+	const licenseHasChanges = useHasLicenseChanges();
+	const hasChanges = planHasChanges || licenseHasChanges;
 	const { features = [] } = useFeaturesQuery();
 	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
@@ -73,7 +79,7 @@ export const SaveChangesBar = ({
 		// 	return;
 		// }
 
-		if (!isOnboarding) {
+		if (!isOnboarding && planHasChanges) {
 			if (isCountsLoading) {
 				toast.error("Plan counts are loading");
 				return;
@@ -115,19 +121,28 @@ export const SaveChangesBar = ({
 				basePriceType: "usage",
 			});
 		}
-		const result = await updateProduct({
-			axiosInstance,
-			productId: product.id,
-			product,
-			version: product.version,
-			onSuccess: async () => {
-				await queryRefetch();
-				await Promise.all([invalidateProduct(), invalidateProducts()]);
-			},
-		});
 
-		// Only show success toast if update was successful
-		if (result) {
+		// Save the plan (when changed) and every dirty license together, so one
+		// action persists everything on the page.
+		const [planSaved, licensesSaved] = await Promise.all([
+			planHasChanges
+				? updateProduct({
+						axiosInstance,
+						productId: product.id,
+						product,
+						version: product.version,
+						onSuccess: async () => {
+							await queryRefetch();
+							await Promise.all([invalidateProduct(), invalidateProducts()]);
+						},
+					})
+				: Promise.resolve(true),
+			saveAllLicenses(),
+		]);
+
+		// License failures already toast their own error, so only the combined
+		// success gets a toast here.
+		if (planSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}
 
@@ -139,6 +154,7 @@ export const SaveChangesBar = ({
 		if (baseProduct) {
 			setProduct(baseProduct);
 		}
+		discardAllLicenses();
 		// If we're editing or creating a feature, go back to edit-plan
 		// if (sheetType === "edit-feature" || sheetType === "new-feature") {
 		// 	setSheet({ type: "edit-plan", itemId: null });

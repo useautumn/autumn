@@ -18,6 +18,7 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
+import { transitionLicenseAssignmentsForParents } from "@/internal/licenses/actions/transitionLicenseAssignments.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
@@ -143,6 +144,16 @@ export const handleMultiAttachFlow = async ({
 			updates: {
 				status: CusProductStatus.Expired,
 			},
+		});
+	}
+
+	if (expireCusProducts.length > 0) {
+		await transitionLicenseAssignmentsForParents({
+			ctx,
+			customerId: attachParams.customer.id || attachParams.customer.internal_id,
+			parentCustomerProductIds: expireCusProducts.map(
+				(cusProduct) => cusProduct.id,
+			),
 		});
 	}
 

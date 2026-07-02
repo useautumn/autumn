@@ -1,15 +1,19 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,
+	type AttachParamsV1Input,
 	type CheckResponseV3,
 	ErrCode,
+	customerProductLicenses,
 	fullCustomerToFullSubject,
 	fullSubjectToApiCustomerProducts,
+	licensePools,
 	type LicensePoolResponse,
 	type ProductV2,
 	ProductCatalogType,
 	ProductErrorCode,
 	type TrackResponseV3,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -19,19 +23,23 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 
 const makeParentProduct = ({
 	id = "license-parent",
 	messageGrant,
 	includeDashboard = true,
+	group,
 }: {
 	id?: string;
 	messageGrant?: number;
 	includeDashboard?: boolean;
+	group?: string;
 } = {}) =>
 	products.base({
 		id,
+		group,
 		items: [
 			...(includeDashboard ? [items.dashboard()] : []),
 			...(messageGrant
@@ -110,6 +118,454 @@ const getBalanceBreakdown = (
 	response: CheckResponseV3 | TrackResponseV3,
 	planId: string,
 ) => response.balance?.breakdown?.find((item) => item.plan_id === planId);
+
+test(
+	`${chalk.yellowBright("licenses-custom: attach customize.licenses overrides base plan licenses")}`,
+	async () => {
+		const parent = makeParentProduct({ id: "lic-custom-attach-parent" });
+		const baseLicense = makeLicenseProduct({ id: "lic-custom-attach-base" });
+		const customLicense = makeLicenseProduct({
+			id: "lic-custom-attach-seat",
+		});
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "lic-custom-attach",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [parent, baseLicense, customLicense] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/licenses.set_plan_license", {
+			parent_plan_id: parent.id,
+			license_plan_id: baseLicense.id,
+			included_quantity: 1,
+		});
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: {
+				licenses: [
+					{
+						license_plan_id: customLicense.id,
+						included_quantity: 2,
+					},
+				],
+			},
+		});
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list).toHaveLength(1);
+		expect(pools.list[0]).toMatchObject({
+			license_product_id: customLicense.id,
+			inventory: { included_quantity: 2, assigned: 0, available: 2 },
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: empty customize.licenses suppresses inherited licenses")}`,
+	async () => {
+		const parent = makeParentProduct({ id: "lic-custom-empty-parent" });
+		const license = makeLicenseProduct({ id: "lic-custom-empty-seat" });
+		const { customerId, entities, autumnV2_2 } = await initScenario({
+			customerId: "lic-custom-empty",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/licenses.set_plan_license", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included_quantity: 1,
+		});
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: { licenses: [] },
+		});
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list).toEqual([]);
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.post("/licenses.assign", {
+					customer_id: customerId,
+					entity_id: entities[0].id,
+					plan_id: license.id,
+				}),
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: preview validates but does not persist license override")}`,
+	async () => {
+		const { customerId, autumnV2_2, ctx, parent, license } =
+			await setupAssignedLicense({
+				customerId: "lic-custom-preview",
+				includedQuantity: 1,
+			});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>({
+					customer_id: customerId,
+					plan_id: parent.id,
+					customize: { licenses: [] },
+				}),
+		});
+
+		await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: {
+				licenses: [
+					{
+						license_plan_id: license.id,
+						included_quantity: 1,
+					},
+				],
+			},
+		});
+
+		const customRows = await ctx.db.query.customerProductLicenses.findMany({
+			where: eq(
+				customerProductLicenses.license_internal_product_id,
+				license.internal_id!,
+			),
+		});
+		expect(customRows).toHaveLength(0);
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: billing.update syncs license override onto existing parent")}`,
+	async () => {
+		const { customerId, entities, autumnV2_2, ctx, parent, license } =
+			await setupAssignedLicense({
+				customerId: "lic-custom-update-existing",
+				includedQuantity: 2,
+				entityCount: 2,
+			});
+
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: {
+				licenses: [
+					{
+						license_plan_id: license.id,
+						included_quantity: 2,
+					},
+				],
+			},
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const parentCustomerProduct = fullCustomer.customer_products.find(
+			(customerProduct) => customerProduct.product.id === parent.id,
+		);
+		expect(parentCustomerProduct?.license_set_customized).toBe(true);
+
+		const customRows = await ctx.db.query.customerProductLicenses.findMany({
+			where: eq(
+				customerProductLicenses.parent_customer_product_id,
+				parentCustomerProduct!.id,
+			),
+		});
+		expect(customRows).toHaveLength(1);
+
+		const customPools = await ctx.db.query.licensePools.findMany({
+			where: and(
+				eq(licensePools.parent_customer_product_id, parentCustomerProduct!.id),
+				isNotNull(licensePools.customer_product_license_id),
+			),
+		});
+		expect(customPools).toHaveLength(1);
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list[0]).toMatchObject({
+			license_product_id: license.id,
+			inventory: { included_quantity: 2, assigned: 1, available: 1 },
+		});
+
+		await autumnV2_2.post("/licenses.assign", {
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			plan_id: license.id,
+		});
+		const poolsAfterSecondAssign = (await autumnV2_2.post(
+			"/licenses.list_pools",
+			{ customer_id: customerId },
+		)) as { list: LicensePoolResponse[] };
+		expect(poolsAfterSecondAssign.list[0]).toMatchObject({
+			license_product_id: license.id,
+			inventory: { included_quantity: 2, assigned: 2, available: 0 },
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: attach transition moves assignments to custom pool")}`,
+	async () => {
+		const group = "lic-custom-switch-group";
+		const firstParent = makeParentProduct({
+			id: "lic-custom-switch-first",
+			group,
+		});
+		const secondParent = makeParentProduct({
+			id: "lic-custom-switch-second",
+			group,
+		});
+		const license = makeLicenseProduct({ id: "lic-custom-switch-seat" });
+		const { customerId, entities, autumnV2_2, ctx } = await initScenario({
+			customerId: "lic-custom-switch",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [firstParent, secondParent, license] }),
+			],
+			actions: [s.billing.attach({ productId: firstParent.id })],
+		});
+
+		await autumnV2_2.post("/licenses.set_plan_license", {
+			parent_plan_id: firstParent.id,
+			license_plan_id: license.id,
+			included_quantity: 1,
+		});
+		await autumnV2_2.post("/licenses.assign", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: secondParent.id,
+			customize: {
+				licenses: [
+					{
+						license_plan_id: license.id,
+						included_quantity: 1,
+					},
+				],
+			},
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+		});
+		const secondCustomerProduct = fullCustomer.customer_products.find(
+			(customerProduct) => customerProduct.product.id === secondParent.id,
+		);
+		expect(secondCustomerProduct?.license_set_customized).toBe(true);
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list).toHaveLength(1);
+		expect(pools.list[0]).toMatchObject({
+			license_product_id: license.id,
+			inventory: { included_quantity: 1, assigned: 1, available: 0 },
+			assignments: [{ entity_id: entities[0].id }],
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: attach transition blocks unsafe license removal")}`,
+	async () => {
+		const group = "lic-custom-switch-reduce-group";
+		const firstParent = makeParentProduct({
+			id: "lic-custom-switch-reduce-first",
+			group,
+		});
+		const secondParent = makeParentProduct({
+			id: "lic-custom-switch-reduce-second",
+			group,
+		});
+		const license = makeLicenseProduct({ id: "lic-custom-switch-reduce-seat" });
+		const { customerId, entities, autumnV2_2 } = await initScenario({
+			customerId: "lic-custom-switch-reduce",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [firstParent, secondParent, license] }),
+			],
+			actions: [s.billing.attach({ productId: firstParent.id })],
+		});
+
+		await autumnV2_2.post("/licenses.set_plan_license", {
+			parent_plan_id: firstParent.id,
+			license_plan_id: license.id,
+			included_quantity: 1,
+		});
+		await autumnV2_2.post("/licenses.assign", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: secondParent.id,
+					customize: { licenses: [] },
+				}),
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: multi_attach provisions custom license pool")}`,
+	async () => {
+		const parent = makeParentProduct({ id: "lic-custom-multi-parent" });
+		const license = makeLicenseProduct({ id: "lic-custom-multi-seat" });
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "lic-custom-multi",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/licenses.set_plan_license", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included_quantity: 1,
+		});
+		await autumnV2_2.billing.multiAttach({
+			customer_id: customerId,
+			plans: [
+				{
+					plan_id: parent.id,
+					customize: {
+						licenses: [
+							{
+								license_plan_id: license.id,
+								included_quantity: 2,
+							},
+						],
+					},
+				},
+			],
+		});
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list).toHaveLength(1);
+		expect(pools.list[0]).toMatchObject({
+			license_product_id: license.id,
+			inventory: { included_quantity: 2, assigned: 0, available: 2 },
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: active assignments block unsafe custom reductions")}`,
+	async () => {
+		const { customerId, autumnV2_2, parent, license } = await setupAssignedLicense({
+			customerId: "lic-custom-reduce-block",
+			includedQuantity: 1,
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+					autumnV2_2.billing.update({
+						customer_id: customerId,
+						plan_id: parent.id,
+						customize: { licenses: [] },
+					}),
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+					autumnV2_2.billing.update({
+						customer_id: customerId,
+						plan_id: parent.id,
+						customize: {
+						licenses: [
+							{
+								license_plan_id: license.id,
+								included_quantity: 0,
+							},
+						],
+					},
+				}),
+		});
+	},
+);
+
+test(
+	`${chalk.yellowBright("licenses-custom: custom license edits affect future assignments only")}`,
+	async () => {
+		const { customerId, entities, autumnV2_2, parent, license } =
+			await setupAssignedLicense({
+				customerId: "lic-custom-future-only",
+				includedQuantity: 2,
+				entityCount: 2,
+			});
+
+		await autumnV2_2.billing.update({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: {
+				licenses: [
+					{
+						license_plan_id: license.id,
+						included_quantity: 2,
+						customize: {
+							items: [itemsV2.monthlyMessages({ included: 50 })],
+						},
+					},
+				],
+			},
+		});
+		await autumnV2_2.post("/licenses.assign", {
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			plan_id: license.id,
+		});
+
+		const firstEntity = await autumnV2_2.check<CheckResponseV3>({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+		});
+		const secondEntity = await autumnV2_2.check<CheckResponseV3>({
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			feature_id: TestFeature.Messages,
+		});
+		expect(firstEntity.balance?.granted).toBe(25);
+		expect(secondEntity.balance?.granted).toBe(50);
+	},
+);
 
 test(
 	`${chalk.yellowBright("licenses-edge: provisioned license stays entity-level internally and hidden from API products")}`,

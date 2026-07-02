@@ -10,13 +10,18 @@ import { ProductSheets } from "../ProductSheets";
 import { SHEET_ANIMATION } from "../planAnimations";
 import { EditPlanHeader } from "./EditPlanHeader";
 import PlanCard from "./plan-card/PlanCard";
+import { LicensePlanCards } from "./plan-licenses/LicensePlanCards";
+import { useIsLicenseSheetOpen } from "./plan-licenses/useLicenseSheetStore";
 import { SaveChangesBar } from "./SaveChangesBar";
+import { SheetPanelHost } from "./SheetPanelHost";
 import { VariantPlanCards } from "./VariantPlanCards";
 
 export const PlanEditor = () => {
 	const isMobile = useIsMobile();
 	const { sheetType } = useSheet();
-	const isSheetOpen = sheetType !== null;
+	const isLicenseSheetOpen = useIsLicenseSheetOpen();
+	const isSheetOpen = sheetType !== null || isLicenseSheetOpen;
+	const isCusPlanEditor = useIsCusPlanEditor();
 
 	return (
 		<div className="flex w-full h-full overflow-hidden relative">
@@ -35,16 +40,13 @@ export const PlanEditor = () => {
 						<EditPlanHeader />
 					</div>
 					<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-4 sm:px-10 gap-4">
-						{useIsCusPlanEditor() && <CustomerPlanInfoBox />}
+						{isCusPlanEditor && <CustomerPlanInfoBox />}
 						<PlanCard />
+						{!isCusPlanEditor && <LicensePlanCards />}
 						<VariantPlanCards />
 					</div>
 					<div onClick={(e) => e.stopPropagation()}>
-						{useIsCusPlanEditor() ? (
-							<CustomerPlanEditorBar />
-						) : (
-							<SaveChangesBar />
-						)}
+						{isCusPlanEditor ? <CustomerPlanEditorBar /> : <SaveChangesBar />}
 					</div>
 				</div>
 			</motion.div>
@@ -52,6 +54,7 @@ export const PlanEditor = () => {
 			<SheetOverlay inline />
 
 			<ProductSheets />
+			<SheetPanelHost />
 		</div>
 	);
 };

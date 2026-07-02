@@ -14,6 +14,7 @@ import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/act
 import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { transitionLicenseAssignmentsForParents } from "@/internal/licenses/actions/transitionLicenseAssignments";
 
 export const processExpiredTrialRow = async ({
 	ctx,
@@ -71,6 +72,12 @@ export const processExpiredTrialRow = async ({
 		updates: {
 			status: CusProductStatus.Expired,
 		},
+	});
+
+	await transitionLicenseAssignmentsForParents({
+		ctx,
+		customerId: fullCustomer.id || fullCustomer.internal_id,
+		parentCustomerProductIds: [trialFullCusProduct.id],
 	});
 
 	await deleteCachedFullCustomer({

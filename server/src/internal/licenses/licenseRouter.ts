@@ -13,7 +13,15 @@ import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
-import { LicenseService } from "./LicenseService.js";
+import { assignLicense } from "./actions/assignLicense.js";
+import { listLicenseAssignments } from "./actions/listLicenseAssignments.js";
+import { listLicensePools } from "./actions/listLicensePools.js";
+import {
+	listPlanLicenses,
+	setPlanLicense,
+} from "./actions/planLicenseActions.js";
+import { unassignLicense } from "./actions/unassignLicense.js";
+import { updateLicenseProduct } from "./actions/updateLicenseProduct.js";
 import { getLicenseAssignmentResponse } from "./licenseResponseUtils.js";
 
 export const licenseRpcRouter = new Hono<HonoEnv>();
@@ -41,12 +49,13 @@ const handleAssignLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const assignment = await LicenseService.assign({
+		const assignment = await assignLicense({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			planId: body.plan_id,
 			version: body.version,
+			poolId: body.pool_id,
 			parentSubscriptionId: body.parent_subscription_id,
 			metadata: body.metadata,
 		});
@@ -63,7 +72,7 @@ const handleUnassignLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const assignment = await LicenseService.unassign({
+		const assignment = await unassignLicense({
 			ctx,
 			assignmentId: body.assignment_id,
 			customerId: body.customer_id,
@@ -81,7 +90,7 @@ const handleListLicenseAssignments = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const assignments = await LicenseService.listAssignments({
+		const assignments = await listLicenseAssignments({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
@@ -99,7 +108,7 @@ const handleListLicensePools = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const pools = await LicenseService.listPools({
+		const pools = await listLicensePools({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
@@ -115,7 +124,7 @@ const handleSetPlanLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const planLicense = await LicenseService.setPlanLicense({
+		const planLicense = await setPlanLicense({
 			ctx,
 			parentPlanId: body.parent_plan_id,
 			licensePlanId: body.license_plan_id,
@@ -135,7 +144,7 @@ const handleListPlanLicenses = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const planLicenses = await LicenseService.listPlanLicenses({
+		const planLicenses = await listPlanLicenses({
 			ctx,
 			parentPlanId: body.parent_plan_id,
 		});
@@ -151,7 +160,7 @@ const handleUpdateLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { license_plan_id, version, ...updates } = c.req.valid("json");
-		const product = await LicenseService.update({
+		const product = await updateLicenseProduct({
 			ctx,
 			licensePlanId: license_plan_id,
 			version,

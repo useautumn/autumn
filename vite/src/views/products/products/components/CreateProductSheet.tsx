@@ -1,4 +1,8 @@
-import { type ProductV2, productV2ToBasePrice } from "@autumn/shared";
+import {
+	ProductCatalogType,
+	type ProductV2,
+	productV2ToBasePrice,
+} from "@autumn/shared";
 import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -8,6 +12,7 @@ import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
@@ -25,12 +30,16 @@ function CreateProductSheet({
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
 	isAddOn = false,
+	catalogType = ProductCatalogType.Plan,
 }: {
 	onSuccess?: (newProduct: ProductV2) => Promise<void>;
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
 	isAddOn?: boolean;
+	catalogType?: ProductCatalogType;
 }) {
+	const isLicense = catalogType === ProductCatalogType.License;
+
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
 
@@ -46,12 +55,15 @@ function CreateProductSheet({
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
 	const { invalidate, products } = useProductsQuery();
+	const { invalidate: invalidateLicenses } = useLicenseProductsQuery({
+		enabled: false,
+	});
 
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
 
 		if (!productName) {
-			toast.error("Plan name is required");
+			toast.error(`${isLicense ? "License" : "Plan"} name is required`);
 			return;
 		}
 
@@ -63,6 +75,7 @@ function CreateProductSheet({
 			);
 
 			invalidate();
+			if (isLicense) invalidateLicenses();
 
 			if (onSuccess) {
 				await onSuccess(newProduct);
@@ -71,7 +84,12 @@ function CreateProductSheet({
 			}
 			setOpen(false);
 		} catch (error) {
-			toast.error(getBackendErr(error as AxiosError, "Failed to create plan"));
+			toast.error(
+				getBackendErr(
+					error as AxiosError,
+					`Failed to create ${isLicense ? "license" : "plan"}`,
+				),
+			);
 		}
 		setLoading(false);
 	};
@@ -88,26 +106,36 @@ function CreateProductSheet({
 			setProduct({
 				...DEFAULT_PRODUCT,
 				is_add_on: isAddOn,
-				is_default: isFirstPlan && !isAddOn,
+				is_default: isFirstPlan && !isAddOn && !isLicense,
+				catalog_type: catalogType,
 			});
 		}
-	}, [open, reset, setProduct, isAddOn, isFirstPlan]);
+	}, [open, reset, setProduct, isAddOn, isFirstPlan, isLicense, catalogType]);
+
+	const headerTitle = isLicense
+		? "Create License"
+		: isAddOn
+			? "Create Add-on Plan"
+			: "Create Plan";
+
+	const headerDescription = isLicense
+		? "Create a license subplan that can be offered on a plan and assigned to entities"
+		: isAddOn
+			? "Create a new add-on plan that can be purchased alongside base plans"
+			: "Create a new free or paid plan for your application";
+
+	const submitLabel = isLicense
+		? "Create license"
+		: isAddOn
+			? "Create add-on plan"
+			: "Create plan";
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			{/* <SheetTrigger asChild>
-				<Button variant="add" className="w-full">
-					Plan
-				</Button>
-			</SheetTrigger> */}
 			<SheetContent className="flex flex-col overflow-hidden bg-background">
 				<SheetHeader
-					title={isAddOn ? "Create Add-on Plan" : "Create Plan"}
-					description={
-						isAddOn
-							? "Create a new add-on plan that can be purchased alongside base plans"
-							: "Create a new free or paid plan for your application"
-					}
+					title={headerTitle}
+					description={headerDescription}
 					noSeparator={true}
 				/>
 
@@ -142,7 +170,7 @@ function CreateProductSheet({
 						metaShortcut="enter"
 						isLoading={loading}
 					>
-						{isAddOn ? "Create add-on plan" : "Create plan"}
+						{submitLabel}
 					</ShortcutButton>
 				</SheetFooter>
 			</SheetContent>

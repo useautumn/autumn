@@ -1,8 +1,8 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
-	customerProducts as customerProductsTable,
 	type customerProducts,
+	customerProducts as customerProductsTable,
 } from "@autumn/shared";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";

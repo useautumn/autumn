@@ -37,6 +37,17 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
+const hasOnlyLicenseCustomize = ({
+	params,
+}: {
+	params: UpdateSubscriptionV1Params;
+}) => {
+	const customize = params.customize;
+	if (!customize || customize.licenses === undefined) return false;
+
+	return Object.keys(customize).every((key) => key === "licenses");
+};
+
 /**
  * Fetch the context for updating a subscription
  * @param ctx - The context
@@ -82,11 +93,13 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
-	const billingRelatedFields = Object.keys(params).filter((key) =>
-		FIELDS_WITH_BILLING_CHANGES.includes(
+	const licenseOnlyCustomize = hasOnlyLicenseCustomize({ params });
+	const billingRelatedFields = Object.keys(params).filter((key) => {
+		if (key === "customize" && licenseOnlyCustomize) return false;
+		return FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
-		),
-	);
+		);
+	});
 
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||

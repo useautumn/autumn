@@ -8,6 +8,7 @@ import type { RepoContext } from "@/db/repoContext.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { transitionLicenseAssignmentsForParents } from "@/internal/licenses/actions/transitionLicenseAssignments.js";
 import { batchUpdateCustomerProducts } from "../repos/batchUpdateCustomerProducts.js";
 import type { OneOffCustomerProductResult } from "./oneOffCustomerProductResult.js";
 
@@ -26,7 +27,7 @@ export const expireOneOffCustomerProductResults = async ({
 			org: Organization;
 			env: AppEnv;
 			customerProductIds: Set<string>;
-			customerIds: Set<string>;
+			customerProductIdsByCustomerId: Map<string, string[]>;
 		}
 	>();
 
@@ -36,10 +37,18 @@ export const expireOneOffCustomerProductResults = async ({
 			org: result.org,
 			env: result.customer.env,
 			customerProductIds: new Set<string>(),
-			customerIds: new Set<string>(),
+			customerProductIdsByCustomerId: new Map<string, string[]>(),
 		};
 		group.customerProductIds.add(result.customer_product.id);
-		if (result.customer.id) group.customerIds.add(result.customer.id);
+		if (result.customer.id) {
+			const customerProductIds =
+				group.customerProductIdsByCustomerId.get(result.customer.id) ?? [];
+			customerProductIds.push(result.customer_product.id);
+			group.customerProductIdsByCustomerId.set(
+				result.customer.id,
+				customerProductIds,
+			);
+		}
 		grouped.set(key, group);
 	}
 
@@ -60,8 +69,19 @@ export const expireOneOffCustomerProductResults = async ({
 			})),
 		});
 
+		for (const [
+			customerId,
+			customerProductIds,
+		] of group.customerProductIdsByCustomerId) {
+			await transitionLicenseAssignmentsForParents({
+				ctx: repoContext as unknown as AutumnContext,
+				customerId,
+				parentCustomerProductIds: customerProductIds,
+			});
+		}
+
 		await Promise.all(
-			[...group.customerIds].map((customerId) =>
+			[...group.customerProductIdsByCustomerId.keys()].map((customerId) =>
 				deleteCachedFullCustomer({
 					ctx: repoContext as unknown as AutumnContext,
 					customerId,

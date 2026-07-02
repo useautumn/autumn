@@ -1,4 +1,5 @@
 import {
+	customerProductLicenses,
 	customerProducts,
 	ErrCode,
 	type FullCustomer,
@@ -21,18 +22,21 @@ export const resolveAssignableLicensePool = async ({
 	fullCustomer,
 	licenseProduct,
 	planId,
+	poolId,
 	parentSubscriptionId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	licenseProduct: FullProduct;
 	planId: string;
+	poolId?: string;
 	parentSubscriptionId?: string;
 }) => {
 	const poolRows = await ctx.db
 		.select({
 			pool: licensePools,
 			planLicense: planLicenses,
+			customerProductLicense: customerProductLicenses,
 			paidCustomerProduct: customerProducts,
 			parentCustomerProduct: parentCustomerProducts,
 		})
@@ -41,7 +45,11 @@ export const resolveAssignableLicensePool = async ({
 			parentCustomerProducts,
 			eq(licensePools.parent_customer_product_id, parentCustomerProducts.id),
 		)
-		.innerJoin(planLicenses, eq(licensePools.plan_license_id, planLicenses.id))
+		.leftJoin(planLicenses, eq(licensePools.plan_license_id, planLicenses.id))
+		.leftJoin(
+			customerProductLicenses,
+			eq(licensePools.customer_product_license_id, customerProductLicenses.id),
+		)
 		.leftJoin(
 			customerProducts,
 			eq(licensePools.license_customer_product_id, customerProducts.id),
@@ -55,9 +63,11 @@ export const resolveAssignableLicensePool = async ({
 					licensePools.license_internal_product_id,
 					licenseProduct.internal_id,
 				),
+				poolId ? eq(licensePools.id, poolId) : undefined,
 				parentSubscriptionId
 					? or(
 							eq(licensePools.parent_customer_product_id, parentSubscriptionId),
+							eq(parentCustomerProducts.external_id, parentSubscriptionId),
 							arrayContains(parentCustomerProducts.subscription_ids, [
 								parentSubscriptionId,
 							]),
@@ -83,16 +93,25 @@ export const resolveAssignableLicensePool = async ({
 			statusCode: 400,
 		});
 	}
-	if (activePoolRows.length > 1 && !parentSubscriptionId) {
+	if (activePoolRows.length > 1 && !parentSubscriptionId && !poolId) {
 		throw new RecaseError({
 			message:
-				"Multiple license pools match this license. Provide parent_subscription_id.",
+				"Multiple license pools match this license. Provide pool_id or parent_subscription_id.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
 
-	const { pool, planLicense, paidCustomerProduct } = activePoolRows[0];
+	const { pool, planLicense, customerProductLicense, paidCustomerProduct } =
+		activePoolRows[0];
+	const licenseDefinition = planLicense ?? customerProductLicense;
+	if (!licenseDefinition) {
+		throw new RecaseError({
+			message: `No license definition found for ${planId}.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 	const [{ value: assigned }] = await ctx.db
 		.select({ value: count() })
 		.from(licenseAssignments)
@@ -103,9 +122,9 @@ export const resolveAssignableLicensePool = async ({
 			),
 		);
 	const available =
-		planLicense.included_quantity +
+		licenseDefinition.included_quantity +
 		getPaidQuantity({
-			cusProduct: paidCustomerProduct,
+			customerProduct: paidCustomerProduct,
 		}) -
 		assigned;
 
@@ -117,5 +136,5 @@ export const resolveAssignableLicensePool = async ({
 		});
 	}
 
-	return { pool, planLicense };
+	return { pool, licenseDefinition };
 };
