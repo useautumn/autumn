@@ -1,11 +1,12 @@
 import {
 	type AppEnv,
 	EntInterval,
+	getCycleEnd,
 	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { format, getDate, getDaysInMonth, getMonth, setDate } from "date-fns";
+import { format, getDate, getMonth } from "date-fns";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -19,16 +20,19 @@ const shortDurations: string[] = [
 export const getStripeSubscriptionAnchor = async ({
 	db,
 	cusEnt,
+	curResetAt,
 	nextResetAt,
 }: {
 	db: DrizzleCli;
 	cusEnt: ResetCusEnt;
+	curResetAt: number;
 	nextResetAt: number;
 }) => {
 	const entInterval = cusEnt.entitlement?.interval;
+	if (!entInterval) return nextResetAt;
 	if (entInterval && shortDurations.includes(entInterval)) return nextResetAt;
 
-	let nextResetAtDate = new UTCDate(nextResetAt);
+	const nextResetAtDate = new UTCDate(nextResetAt);
 
 	// Only check Stripe anchor on edge dates (28th Feb, 30th of month)
 	const nextResetAtDay = getDate(nextResetAtDate);
@@ -63,6 +67,10 @@ export const getStripeSubscriptionAnchor = async ({
 	const billingCycleAnchor = sub.billing_cycle_anchor * 1000;
 	console.log("Checking billing cycle anchor");
 	console.log(
+		"Current reset at    ",
+		format(new UTCDate(curResetAt), "dd MMM yyyy HH:mm:ss"),
+	);
+	console.log(
 		"Next reset at       ",
 		format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
 	);
@@ -71,16 +79,11 @@ export const getStripeSubscriptionAnchor = async ({
 		format(new UTCDate(billingCycleAnchor), "dd MMM yyyy HH:mm:ss"),
 	);
 
-	const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
-	const nextResetDay = getDate(nextResetAtDate);
-
-	if (
-		billingCycleDay > nextResetDay &&
-		billingCycleDay <= getDaysInMonth(nextResetAtDate)
-	) {
-		nextResetAtDate = setDate(nextResetAtDate, billingCycleDay);
-		return nextResetAtDate.getTime();
-	} else {
-		return nextResetAt;
-	}
+	const stripeAlignedResetAt = getCycleEnd({
+		anchor: billingCycleAnchor,
+		interval: entInterval,
+		intervalCount: cusEnt.entitlement.interval_count ?? 1,
+		now: curResetAt,
+	});
+	return Math.max(nextResetAt, stripeAlignedResetAt);
 };

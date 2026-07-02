@@ -3,10 +3,11 @@ import {
 	type EntInterval,
 	EntInterval as EntIntervalEnum,
 	type FullCusProduct,
+	getCycleEnd,
 	type Organization,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { getDate, getDaysInMonth, getMonth, setDate } from "date-fns";
+import { getDate, getMonth } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 
@@ -64,14 +65,13 @@ export const getResetAtUpdate = async ({
 		const sub = await stripeCli.subscriptions.retrieve(subId);
 
 		const billingCycleAnchor = sub.billing_cycle_anchor * 1000;
-		const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
-
-		if (
-			billingCycleDay > nextResetAtDay &&
-			billingCycleDay <= getDaysInMonth(nextResetAtDate)
-		) {
-			return setDate(nextResetAtDate, billingCycleDay).getTime();
-		}
+		const stripeAlignedResetAt = getCycleEnd({
+			anchor: billingCycleAnchor,
+			interval,
+			intervalCount,
+			now: curResetAt,
+		});
+		return Math.max(nextResetAt, stripeAlignedResetAt);
 	} catch (error) {
 		console.log(`[Lazy Reset] WARNING: Failed to check sub anchor: ${error}`);
 	}
