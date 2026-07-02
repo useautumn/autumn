@@ -6,11 +6,11 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
-import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
-import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
-import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
 import { presentApproval } from "./internal/approvals/surfaces/slack/present.js";
+import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
+import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
+import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { dispatchThreadMessage } from "./internal/runs/runCoordinator.js";
 import {
@@ -193,21 +193,8 @@ const runAndReply = async ({
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
 	const ticker = createStatusTicker(target);
-	let publicStatusStarted = false;
 	const startThinking = () => {
-		publicStatusStarted = true;
 		ticker.thinking();
-	};
-	const postPrivateCompletionNotice = async () => {
-		if (!publicStatusStarted || target.isDM) return;
-		try {
-			await target.post({ markdown: "_I replied privately._" });
-		} catch (error) {
-			logger.warn("Could not post private completion notice", {
-				event: "leaf.slack_private_completion_notice_failed",
-				error,
-			});
-		}
 	};
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
@@ -270,11 +257,9 @@ const runAndReply = async ({
 			ownerProviderUserId: providerUserId,
 		});
 		const logAction = (message: string) => {
-			publicStatusStarted = true;
 			ticker.activity(message);
 		};
 		const logKeyed = ({ message }: { key: string; message: string }) => {
-			publicStatusStarted = true;
 			ticker.activity(message);
 		};
 		run.logAction = logAction;
@@ -344,19 +329,7 @@ const runAndReply = async ({
 
 		await finishLoading(target, loading, "Done.");
 
-		if (output.ephemeral) {
-			await finishLoading(target, bootstrapLoading, "Request handled privately.");
-			bootstrapLoading = null;
-			ticker.stop();
-			await postPrivateCompletionNotice();
-			await target.postEphemeral(
-				providerUserId,
-				{ markdown: output.text || "Done." },
-				{ fallbackToDM: true },
-			);
-		} else {
-			await target.post({ markdown: output.text || "Done." });
-		}
+		await target.post({ markdown: output.text || "Done." });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",
 			data: {

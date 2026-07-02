@@ -29,7 +29,6 @@ const TIMEOUT_BACKSTOP_GRACE_MS = 20_000;
 type RunMessageOutput = AgentOutput & {
 	installation?: ChatInstallation;
 	org?: { id: string; slug?: string };
-	ephemeral?: boolean;
 };
 
 /** Entry point for one chat message: staged ctx build, then engine dispatch. */
@@ -98,10 +97,10 @@ export const runMessage = async ({
 			});
 			if (callerAuth.usePerUser) {
 				if (!callerAuth.ok) {
+					await onAgentReady?.();
 					return {
 						env: getDefaultChatEnv(),
 						text: callerAuth.text,
-						ephemeral: true,
 					};
 				}
 				autumnUserId = callerAuth.userId;
