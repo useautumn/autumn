@@ -210,7 +210,7 @@ afterAll(async () => {
 			}).catch(() => {});
 		}
 	}
-});
+}, 180_000);
 
 describe("promote product from a named sandbox to the master org", () => {
 	test("promotes a plan into master Live, not the sub-org's own Live", async () => {

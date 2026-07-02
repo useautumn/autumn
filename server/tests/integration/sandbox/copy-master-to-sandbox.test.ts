@@ -134,7 +134,7 @@ afterAll(async () => {
 			}).catch(() => {});
 		}
 	}
-});
+}, 180_000);
 
 describe("copy a plan from the master org into a named sandbox", () => {
 	test("from the default sandbox (master Sandbox env)", async () => {

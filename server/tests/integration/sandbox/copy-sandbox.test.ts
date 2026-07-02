@@ -194,7 +194,7 @@ afterAll(async () => {
 			}).catch(() => {});
 		}
 	}
-});
+}, 180_000);
 
 describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", () => {
 	test("copies the source sandbox's features + product into the target sandbox", async () => {

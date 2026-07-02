@@ -207,6 +207,7 @@ export const useCopySandbox = () => {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["products"] });
 			queryClient.invalidateQueries({ queryKey: ["product_counts"] });
+			queryClient.invalidateQueries({ queryKey: ["product"] });
 			queryClient.invalidateQueries({ queryKey: ["features"] });
 		},
 	});
