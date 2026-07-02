@@ -53,8 +53,13 @@ export const clearSecretKeyCache = async ({
 	logger?: Pick<Console, "error" | "warn">;
 }) => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
-	const deletePromises = getConfiguredRegions().map(async (region) => {
+	const regions = getConfiguredRegions();
+	console.log(`[clearSecretKeyCache DEBUG] Clearing key ${cacheKey.substring(0, 20)}... from ${regions.length} regions: ${regions.join(', ')}`);
+	
+	const deletePromises = regions.map(async (region) => {
 		const regionalRedis = getRegionalRedis(region);
+
+		console.log(`[clearSecretKeyCache DEBUG] Region ${region}: status=${regionalRedis.status}`);
 
 		if (regionalRedis.status !== "ready") {
 			logger.warn(`[clearSecretKeyCache] ${region}: not_ready`);
@@ -66,10 +71,13 @@ export const clearSecretKeyCache = async ({
 			regionalRedis,
 		);
 
+		console.log(`[clearSecretKeyCache DEBUG] Region ${region}: deleted=${deleted}`);
+
 		if (deleted === null) {
 			logger.warn(`[clearSecretKeyCache] ${region}: delete_failed`);
 		}
 	});
 
 	await Promise.all(deletePromises);
+	console.log(`[clearSecretKeyCache DEBUG] Finished clearing key from all regions`);
 };
