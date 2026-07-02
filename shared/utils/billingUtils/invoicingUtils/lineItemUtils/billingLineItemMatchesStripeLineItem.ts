@@ -1,5 +1,6 @@
 import type { LineItem } from "@models/billingModels/lineItem/lineItem";
 import type { FixedPriceConfig } from "@models/productModels/priceModels/priceConfig/fixedPriceConfig";
+import { getAllPriceStripeIds } from "@models/productModels/priceModels/priceConfig/priceCurrencyView";
 import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type Stripe from "stripe";
 
@@ -89,11 +90,11 @@ export const billingLineItemMatchesStripeLineItem = ({
 		const config = lineItem.context.price.config as
 			| UsagePriceConfig
 			| FixedPriceConfig;
-		if (
-			config.stripe_price_id === stripePriceId ||
-			("stripe_prepaid_price_v2_id" in config &&
-				config.stripe_prepaid_price_v2_id === stripePriceId)
-		) {
+		const matchableIds = getAllPriceStripeIds({
+			config,
+			slots: ["stripe_price_id", "stripe_prepaid_price_v2_id"],
+		});
+		if (matchableIds.includes(stripePriceId)) {
 			return LineItemMatchPriority.StripePriceId;
 		}
 	}

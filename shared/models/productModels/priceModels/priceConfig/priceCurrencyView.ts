@@ -82,6 +82,25 @@ export const priceHasCurrencyAmounts = ({
 	return isFixed ? block.amount != null : !!block.usage_tiers?.length;
 };
 
+const MATCHABLE_SLOTS: CurrencyStripeIdSlot[] = [
+	"stripe_price_id",
+	"stripe_empty_price_id",
+	"stripe_prepaid_price_v2_id",
+];
+
+export const getAllPriceStripeIds = ({
+	config,
+	slots = MATCHABLE_SLOTS,
+}: {
+	config: CurrencyAwarePriceConfig;
+	slots?: CurrencyStripeIdSlot[];
+}): string[] => {
+	const blocks = [config, ...Object.values(config.currencies ?? {})];
+	return blocks.flatMap((block) =>
+		slots.map((slot) => block[slot]).filter((id): id is string => !!id),
+	);
+};
+
 export const getPriceCurrencyStripeId = ({
 	config,
 	currency,

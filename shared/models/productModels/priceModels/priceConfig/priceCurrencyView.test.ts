@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	type CurrencyAwarePriceConfig,
+	getAllPriceStripeIds,
 	getPriceCurrencyStripeId,
 	isBaseCurrency,
 	priceConfigForCurrency,
@@ -212,6 +213,38 @@ describe("setPriceCurrencyStripeId", () => {
 			id: undefined,
 		});
 		expect(config.currencies).toBeUndefined();
+	});
+});
+
+describe("getAllPriceStripeIds", () => {
+	test("collects top-level and per-currency ids across all currencies", () => {
+		const config: CurrencyAwarePriceConfig = {
+			base_currency: "usd",
+			stripe_price_id: "price_usd",
+			stripe_empty_price_id: "price_usd_empty",
+			currencies: {
+				eur: {
+					stripe_price_id: "price_eur",
+					stripe_prepaid_price_v2_id: "price_eur_v2",
+				},
+				gbp: { stripe_price_id: "price_gbp" },
+			},
+		};
+		expect(getAllPriceStripeIds({ config }).sort()).toEqual(
+			[
+				"price_eur",
+				"price_eur_v2",
+				"price_gbp",
+				"price_usd",
+				"price_usd_empty",
+			].sort(),
+		);
+	});
+
+	test("single-currency config returns just the top-level ids", () => {
+		expect(
+			getAllPriceStripeIds({ config: { stripe_price_id: "price_usd" } }),
+		).toEqual(["price_usd"]);
 	});
 });
 
