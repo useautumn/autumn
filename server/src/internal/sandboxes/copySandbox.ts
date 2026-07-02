@@ -30,6 +30,8 @@ export const copySandboxForOrg = async ({
 	ctx,
 	masterOrg,
 	fromSandboxId,
+	fromOrg,
+	fromEnv: fromEnvArg,
 	toSandboxId,
 	productIds,
 	featureIds,
@@ -37,12 +39,14 @@ export const copySandboxForOrg = async ({
 	db: DrizzleCli;
 	ctx: AutumnContext;
 	masterOrg: Organization;
-	fromSandboxId: string;
+	fromSandboxId?: string;
+	fromOrg?: Organization;
+	fromEnv?: AppEnv;
 	toSandboxId: string;
 	productIds?: string[];
 	featureIds?: string[];
 }): Promise<{ fromSandbox: Organization; toSandbox: Organization }> => {
-	if (fromSandboxId === toSandboxId) {
+	if (fromSandboxId && fromSandboxId === toSandboxId) {
 		throw new RecaseError({
 			message: "Source and target sandboxes must be different",
 			code: ErrCode.InvalidRequest,
@@ -50,18 +54,36 @@ export const copySandboxForOrg = async ({
 		});
 	}
 
-	// Authorize the caller for BOTH sandboxes. Either resolution failing folds
-	// into a uniform 404 so ownership/existence can't be probed.
-	const [fromSandbox, toSandbox] = await Promise.all([
-		getOwnedSandbox({ db, masterOrg, sandboxId: fromSandboxId }),
-		getOwnedSandbox({ db, masterOrg, sandboxId: toSandboxId }),
-	]);
+	// Target is always an owned named sandbox. Source is either another owned
+	// sandbox or — for a copy started from the default sandbox / production — the
+	// master org at the caller's current env. Ownership failures fold into a
+	// uniform 404 so ids/ownership can't be probed.
+	const toSandbox = await getOwnedSandbox({
+		db,
+		masterOrg,
+		sandboxId: toSandboxId,
+	});
 
-	const fromEnv = AppEnv.Sandbox;
+	let sourceOrg: Organization;
+	let fromEnv: AppEnv;
+	if (fromSandboxId) {
+		sourceOrg = await getOwnedSandbox({ db, masterOrg, sandboxId: fromSandboxId });
+		fromEnv = AppEnv.Sandbox;
+	} else if (fromOrg && fromEnvArg) {
+		sourceOrg = fromOrg;
+		fromEnv = fromEnvArg;
+	} else {
+		throw new RecaseError({
+			message: "No copy source specified",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const toEnv = AppEnv.Sandbox;
 
 	const [fromFeatures, toFeatures] = await Promise.all([
-		FeatureService.list({ db, orgId: fromSandbox.id, env: fromEnv }),
+		FeatureService.list({ db, orgId: sourceOrg.id, env: fromEnv }),
 		FeatureService.list({ db, orgId: toSandbox.id, env: toEnv }),
 	]);
 
@@ -76,7 +98,7 @@ export const copySandboxForOrg = async ({
 		const requestedProductIds = productIds ?? [];
 		const fromProducts = await ProductService.listFull({
 			db,
-			orgId: fromSandbox.id,
+			orgId: sourceOrg.id,
 			env: fromEnv,
 		});
 
@@ -118,7 +140,7 @@ export const copySandboxForOrg = async ({
 
 	await handleCopyProducts({
 		ctx,
-		fromOrg: fromSandbox,
+		fromOrg: sourceOrg,
 		fromEnv,
 		toOrg: toSandbox,
 		toEnv,
@@ -128,5 +150,5 @@ export const copySandboxForOrg = async ({
 
 	await invalidateProductsCache({ orgId: toSandbox.id, env: toEnv });
 
-	return { fromSandbox, toSandbox };
+	return { fromSandbox: sourceOrg, toSandbox };
 };

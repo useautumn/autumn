@@ -7,34 +7,42 @@ import {
 	assertNotSandboxContext,
 } from "../createSandbox.js";
 
-const CopySandboxSchema = z.object({
-	fromSandboxId: z.string().min(1),
-	toSandboxId: z.string().min(1),
-	// Omit both to copy the whole catalog; pass either to copy only those items
-	// (selected products pull in the features they reference).
-	productIds: z.array(z.string()).optional(),
-	featureIds: z.array(z.string()).optional(),
-});
+const CopySandboxSchema = z
+	.object({
+		// Source is exactly one of: another owned sandbox (fromSandboxId), or the
+		// master org's current env — default sandbox / production — via fromMaster.
+		fromSandboxId: z.string().min(1).optional(),
+		fromMaster: z.literal(true).optional(),
+		toSandboxId: z.string().min(1),
+		// Omit both to copy the whole catalog; pass either to copy only those items
+		// (selected products pull in the features they reference).
+		productIds: z.array(z.string()).optional(),
+		featureIds: z.array(z.string()).optional(),
+	})
+	.refine((d) => (d.fromSandboxId ? 1 : 0) + (d.fromMaster ? 1 : 0) === 1, {
+		message: "Provide exactly one of fromSandboxId or fromMaster",
+	});
 
 /**
  * POST /sandboxes.copy
  *
- * Dashboard-only RPC that copies plans (products) + features from one named
- * sandbox into another. Both must be sandbox sub-orgs owned by the caller's
- * master org; ownership is enforced inside copySandboxForOrg via the 404-masking
- * getOwnedSandbox check, so a non-owned source or target reads as a 404.
+ * Dashboard-only RPC that copies plans (products) + features into a named
+ * sandbox. The source is another owned sandbox, or — via fromMaster — the master
+ * org at the caller's current env (so you can seed a sandbox from the default
+ * sandbox or from production). Ownership is enforced inside copySandboxForOrg via
+ * the 404-masking getOwnedSandbox check, so a non-owned endpoint reads as a 404.
  */
 export const handleCopySandbox = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: CopySandboxSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org: masterOrg, user, authType } = ctx;
+		const { db, org: masterOrg, env, user, authType } = ctx;
 
 		assertNotSandboxContext(masterOrg);
 		assertDashboardActor({ authType, user });
 
-		const { fromSandboxId, toSandboxId, productIds, featureIds } =
+		const { fromSandboxId, fromMaster, toSandboxId, productIds, featureIds } =
 			c.req.valid("json");
 
 		if (fromSandboxId === toSandboxId) {
@@ -50,6 +58,8 @@ export const handleCopySandbox = createRoute({
 			ctx,
 			masterOrg,
 			fromSandboxId,
+			fromOrg: fromMaster ? masterOrg : undefined,
+			fromEnv: fromMaster ? env : undefined,
 			toSandboxId,
 			productIds,
 			featureIds,
