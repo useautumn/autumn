@@ -1,5 +1,5 @@
 {
-  "id": "9752c818-a9ad-4388-9575-caf315031ce2",
+  "id": "442bd3fe-6549-429e-ac25-0bb5f05dc192",
   "prevId": "ba26c994-a166-4a27-a112-805583f32edb",
   "version": "7",
   "dialect": "postgresql",
@@ -828,12 +828,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "auth_mode": {
-          "name": "auth_mode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "default_env": {
           "name": "default_env",
@@ -7029,6 +7023,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'"
+        },
+        "feature_quantities": {
+          "name": "feature_quantities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
