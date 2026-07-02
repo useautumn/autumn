@@ -8,6 +8,8 @@ import { z } from "zod/v4";
 
 const ProcessorTypeSchema = z.union([
 	z.literal("stripe"),
+	// RevenueCat processor `id` is the customer's `app_user_id`.
+	z.literal("revenuecat"),
 	z.literal("vercel").meta({ internal: true }),
 ]);
 

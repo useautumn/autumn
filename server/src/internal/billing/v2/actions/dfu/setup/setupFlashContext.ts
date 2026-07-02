@@ -18,6 +18,10 @@ import { createNewCustomer } from "@/internal/customers/cusUtils/createNewCustom
 import { ProductService } from "@/internal/products/ProductService";
 import { resolveProcessorType } from "../compute/resolvers/processorResolver";
 import {
+	hydrateRevenueCatBillables,
+	type RevenueCatHydration,
+} from "./hydrate/hydrateRevenueCatBillable";
+import {
 	hydrateStripeBillables,
 	type StripeHydration,
 } from "./hydrate/hydrateStripeBillable";
@@ -34,6 +38,7 @@ export type FlashPlanContext = {
 	isRecurring: boolean;
 	existingActiveCustomerProduct?: FullCusProduct;
 	stripeHydration?: StripeHydration;
+	revenueCatHydration?: RevenueCatHydration;
 };
 
 export type FlashContext = {
@@ -52,6 +57,10 @@ const upsertFullCustomer = async ({
 	ctx: AutumnContext;
 	params: DfuFlashParams;
 }): Promise<FullCustomer> => {
+	const revenueCatIdentity = params.processors.find(
+		(p) => p.type === "revenuecat",
+	);
+
 	const existing = await CusService.getFull({
 		ctx,
 		idOrInternalId: params.customer_id,
@@ -60,7 +69,23 @@ const upsertFullCustomer = async ({
 		withSubs: true,
 		allowNotFound: true,
 	});
-	if (existing) return existing;
+	if (existing) {
+		// Self-migration: seed the RC app_user_id so Phase 1 webhooks resolve this
+		// customer by it. Only-if-absent — never clobber an existing value.
+		if (revenueCatIdentity && !existing.processors?.revenuecat?.id) {
+			const processors = {
+				...existing.processors,
+				revenuecat: { id: revenueCatIdentity.id },
+			};
+			await CusService.update({
+				ctx,
+				idOrInternalId: existing.id ?? existing.internal_id,
+				update: { processors },
+			});
+			existing.processors = processors;
+		}
+		return existing;
+	}
 
 	const stripeIdentity = params.processors.find((p) => p.type === "stripe");
 	await createNewCustomer({
@@ -71,6 +96,9 @@ const upsertFullCustomer = async ({
 			email: params.customer_data?.email,
 			fingerprint: params.customer_data?.fingerprint,
 			stripe_id: stripeIdentity?.id,
+			processors: revenueCatIdentity
+				? { revenuecat: { id: revenueCatIdentity.id } }
+				: undefined,
 			send_email_receipts: false,
 		},
 		createDefaultProducts: false,
@@ -163,8 +191,18 @@ export const setupFlashContext = async ({
 		}
 	}
 
-	// Fill omitted fields from linked Stripe subs BEFORE status/balance resolution.
-	await hydrateStripeBillables({ ctx, planContexts });
+	// Fill omitted fields from processors BEFORE status/balance resolution.
+	const revenueCatAppUserId = params.processors.find(
+		(p) => p.type === "revenuecat",
+	)?.id;
+	await Promise.all([
+		hydrateStripeBillables({ ctx, planContexts }),
+		hydrateRevenueCatBillables({
+			ctx,
+			planContexts,
+			appUserId: revenueCatAppUserId,
+		}),
+	]);
 
 	return {
 		customer_id: params.customer_id,

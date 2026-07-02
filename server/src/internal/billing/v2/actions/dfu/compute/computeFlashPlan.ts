@@ -3,6 +3,7 @@ import {
 	BillingVersion,
 	type DfuFlashedPlan,
 	type FullCusProduct,
+	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
@@ -31,17 +32,21 @@ const buildCustomerProduct = ({
 		billingCycleAnchor,
 		processorType,
 		stripeHydration,
+		revenueCatHydration,
 	} = planContext;
+
+	// Exactly one processor hydration applies per billable; both share the shape.
+	const hydration = stripeHydration ?? revenueCatHydration;
 
 	const statusInfo = resolveFlashStatus({
 		plan,
 		now: currentEpochMs,
-		hydration: stripeHydration,
+		hydration,
 	});
 
 	// Payload wins; hydrated period-end anchors the cycle only when omitted.
 	const resolvedAnchor =
-		billingCycleAnchor ?? stripeHydration?.periodEndMs ?? currentEpochMs;
+		billingCycleAnchor ?? hydration?.periodEndMs ?? currentEpochMs;
 
 	const customerProduct = initFullCustomerProduct({
 		ctx,
@@ -50,8 +55,8 @@ const buildCustomerProduct = ({
 			fullProduct,
 			featureQuantities,
 			resetCycleAnchor: resolvedAnchor,
-			billingCycleAnchor: billingCycleAnchor ?? stripeHydration?.periodEndMs,
-			trialEndsAt: stripeHydration?.trialEndsAt,
+			billingCycleAnchor: billingCycleAnchor ?? hydration?.periodEndMs,
+			trialEndsAt: hydration?.trialEndsAt,
 			now: currentEpochMs,
 			freeTrial: null,
 			billingVersion: BillingVersion.V2,
@@ -62,10 +67,20 @@ const buildCustomerProduct = ({
 			status: statusInfo.status,
 			canceledAt: statusInfo.canceledAt ?? undefined,
 			endedAt: statusInfo.endedAt ?? undefined,
+			startsAt: revenueCatHydration?.startsAt,
 			processorType,
 			isCustom: false,
 		},
 	});
+
+	// Stamp the resolved RC sub/purchase id on the cusProduct processor.
+	if (revenueCatHydration?.processorId) {
+		customerProduct.processor = {
+			...customerProduct.processor,
+			type: ProcessorType.RevenueCat,
+			id: revenueCatHydration.processorId,
+		};
+	}
 
 	applyFlashBalances({ customerProduct, balances: plan.balances });
 
