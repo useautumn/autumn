@@ -435,3 +435,158 @@ describe("sandboxes.copy: selective copy via productIds / featureIds", () => {
 		);
 	}, 180_000);
 });
+
+describe("sandboxes.copy: edge cases", () => {
+	const freshOrg = async (label: string) => {
+		const org = await insertSandboxSubOrg({
+			masterOrgId: defaultCtx.org.id,
+			name: `copy-edge-${label}-${suffix}`,
+		});
+		extraTargets.push(org);
+		return org;
+	};
+
+	test("overwrites matching-id items in the target and re-copy is idempotent", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshOrg("overwrite");
+
+		const seedCtx: AutumnContext = {
+			...baseCtx,
+			org: dst,
+			env: AppEnv.Sandbox,
+			features: [],
+		};
+		await createFeature({
+			ctx: seedCtx,
+			data: constructBooleanFeature({
+				featureId: DASH_FEATURE,
+				orgId: dst.id,
+				env: AppEnv.Sandbox,
+				name: "Stale Dashboard",
+			}),
+			skipGenerateDisplay: true,
+		});
+		const targetFeaturesBefore = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		await createProduct({
+			ctx: { ...seedCtx, features: targetFeaturesBefore },
+			data: products.base({
+				id: PRODUCT_ID,
+				items: [],
+			}) as unknown as CreateProductV2Params,
+		});
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+		});
+
+		const featsAfter = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dash = featsAfter.find((f) => f.id === DASH_FEATURE);
+		expect(dash).toBeDefined();
+		expect(dash?.name).not.toBe("Stale Dashboard");
+
+		const prodsAfter = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const matching = prodsAfter.filter((p) => p.id === PRODUCT_ID);
+		expect(matching.length).toBe(1);
+		const copiedV2 = mapToProductV2({
+			product: matching[0],
+			features: featsAfter,
+		});
+		const itemFeatureIds = copiedV2.items
+			.map((i) => i.feature_id)
+			.filter((id): id is string => Boolean(id));
+		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+		});
+
+		const featsAgain = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const prodsAgain = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		expect(featsAgain.map((f) => f.id).sort()).toEqual(
+			featsAfter.map((f) => f.id).sort(),
+		);
+		expect(prodsAgain.filter((p) => p.id === PRODUCT_ID).length).toBe(1);
+	}, 180_000);
+
+	test("productIds: [] and featureIds: [] copies nothing", async () => {
+		if (!source) throw new Error("source not provisioned");
+		const dst = await freshOrg("empty-filters");
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: source.id,
+			toSandboxId: dst.id,
+			productIds: [],
+			featureIds: [],
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dstProducts = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		expect(features.length).toBe(0);
+		expect(dstProducts.length).toBe(0);
+	}, 180_000);
+
+	test("copying from an empty source succeeds and copies nothing", async () => {
+		const emptySource = await freshOrg("empty-src");
+		const dst = await freshOrg("empty-dst");
+
+		await copySandboxForOrg({
+			db,
+			ctx: baseCtx,
+			masterOrg: defaultCtx.org,
+			fromSandboxId: emptySource.id,
+			toSandboxId: dst.id,
+		});
+
+		const features = await FeatureService.list({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		const dstProducts = await ProductService.listFull({
+			db,
+			orgId: dst.id,
+			env: AppEnv.Sandbox,
+		});
+		expect(features.length).toBe(0);
+		expect(dstProducts.length).toBe(0);
+	}, 180_000);
+});

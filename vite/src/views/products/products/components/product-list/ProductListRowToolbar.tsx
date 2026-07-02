@@ -3,7 +3,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
@@ -155,55 +154,58 @@ export const ProductListRowToolbar = ({
 					</DropdownMenuTrigger>
 				</div>
 				<DropdownMenuContent align="end">
-					<DropdownMenuSub>
-						<DropdownMenuSubTrigger className="flex gap-2">
-							<CopyIcon />
-							Copy to
-						</DropdownMenuSubTrigger>
-						<DropdownMenuSubContent>
-							<DropdownMenuItem
-								className="flex gap-2"
-								onClick={(e) => {
-									e.stopPropagation();
-									e.preventDefault();
-									setDropdownOpen(false);
-									setCopyToEnv(AppEnv.Sandbox);
-									setCopyOpen(true);
-								}}
-							>
-								Sandbox
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="flex gap-2"
-								onClick={(e) => {
-									e.stopPropagation();
-									e.preventDefault();
-									setDropdownOpen(false);
-									setCopyToEnv(AppEnv.Live);
-									setCopyOpen(true);
-								}}
-							>
-								Production
-							</DropdownMenuItem>
-							{inNamedSandbox && otherSandboxes.length > 0 && (
-								<DropdownMenuSeparator />
-							)}
-							{inNamedSandbox &&
-								otherSandboxes.map((s) => (
-									<DropdownMenuItem
-										key={s.id}
-										className="flex gap-2"
-										onClick={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-											handleCopyToSandbox(s);
-										}}
-									>
-										{s.name}
-									</DropdownMenuItem>
-								))}
-						</DropdownMenuSubContent>
-					</DropdownMenuSub>
+					{(!inNamedSandbox || otherSandboxes.length > 0) && (
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger className="flex gap-2">
+								<CopyIcon />
+								Copy to
+							</DropdownMenuSubTrigger>
+							<DropdownMenuSubContent>
+								{!inNamedSandbox && (
+									<>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Sandbox);
+												setCopyOpen(true);
+											}}
+										>
+											Sandbox
+										</DropdownMenuItem>
+										<DropdownMenuItem
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												setDropdownOpen(false);
+												setCopyToEnv(AppEnv.Live);
+												setCopyOpen(true);
+											}}
+										>
+											Production
+										</DropdownMenuItem>
+									</>
+								)}
+								{inNamedSandbox &&
+									otherSandboxes.map((s) => (
+										<DropdownMenuItem
+											key={s.id}
+											className="flex gap-2"
+											onClick={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+												handleCopyToSandbox(s);
+											}}
+										>
+											{s.name}
+										</DropdownMenuItem>
+									))}
+							</DropdownMenuSubContent>
+						</DropdownMenuSub>
+					)}
 					{!isVariant && !product.archived && (
 						<DropdownMenuItem
 							className="flex gap-2"
