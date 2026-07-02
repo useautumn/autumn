@@ -13,7 +13,8 @@
  *     - access  token: `am_cjwt_` prefix, aud=autumn-api,     exp +1h
  *     - refresh token: `am_cjwt_` prefix, aud=autumn-refresh, exp +24h
  *   New behaviors:
- *     - access token authorized on the 6 allowlisted routes (check×2, track×2, customers.get, entities.get)
+ *     - access token authorized on the allowlisted routes (check×2, track×2, customers.get, entities.get, events.list, events.aggregate)
+ *     - analytics routes (events.list / events.aggregate) are read-only and scoped: a caller can ONLY query their own customer's events
  *     - body.customer_id is FORCE-SET to the token's customer (passing another id is ignored)
  *     - non-allowlisted route (customers.list) with an access token -> 403
  *     - x-api-version < 2.3 with an access token -> 400
@@ -35,6 +36,7 @@ import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -176,6 +178,49 @@ test(`${chalk.yellowBright("customer-jwt: mint/scope/allowlist/refresh/revoke co
 		body: { entity_id: mainEntity.id },
 	});
 	expect([400, 404]).toContain(crossEntity.status);
+
+	// ── 9: analytics routes — authorized, read-only, and customer-scoped ──
+	// Seed a few events for THIS customer so the analytical queries have data.
+	for (let i = 0; i < 3; i++) {
+		await raw({
+			path: "/balances.track",
+			token: accessToken,
+			body: { feature_id: TestFeature.Messages, value: 1 },
+		});
+	}
+	// Tinybird ingest is async — give it a moment before querying.
+	await timeout(3000);
+
+	// 9a: events.list authorized with an access token (previously 403).
+	//     Pass a SPOOFED customer_id — force-set must override it so every
+	//     returned row belongs to the token's own customer, never `otherId`.
+	const listEvents = await raw({
+		path: "/events.list",
+		token: accessToken,
+		body: { customer_id: otherId, limit: 100 },
+	});
+	expect(listEvents.status).toBe(200);
+	expect(Array.isArray(listEvents.json?.list)).toBe(true);
+	expect(listEvents.json.list.length).toBeGreaterThan(0);
+	for (const event of listEvents.json.list) {
+		expect(event.customer_id).toBe(customerId);
+	}
+
+	// 9b: events.aggregate authorized with an access token (previously 403).
+	const aggregateEvents = await raw({
+		path: "/events.aggregate",
+		token: accessToken,
+		body: { feature_id: TestFeature.Messages, range: "7d" },
+	});
+	expect(aggregateEvents.status).toBe(200);
+
+	// 9c: aud isolation — a refresh token cannot reach analytics routes.
+	const refreshOnEvents = await raw({
+		path: "/events.list",
+		token: refreshToken,
+		body: { limit: 100 },
+	});
+	expect(refreshOnEvents.status).toBe(403);
 
 	// ── 10: refresh rotates — new access AND refresh; new access works ───
 	const refresh = await raw({

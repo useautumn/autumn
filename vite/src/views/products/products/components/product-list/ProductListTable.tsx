@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
@@ -131,13 +132,18 @@ export function ProductListTable() {
 		[recurringBasePlans, recurringAddOnPlans, oneTimePlans],
 	);
 
+	// Fetched once here (not per row) and passed into the toolbar, so a large
+	// product list doesn't spawn one sandboxes-query observer per row.
+	const { sandboxes } = useSandboxesQuery({ enabled: true });
+
 	const columns = useMemo(
 		() =>
 			createProductListColumns({
 				showGroup: hasAnyGroup,
 				onDeleteClick: handleDeleteClick,
+				sandboxes,
 			}),
-		[hasAnyGroup, handleDeleteClick],
+		[hasAnyGroup, handleDeleteClick, sandboxes],
 	);
 
 	const recurringBaseTable = useProductTable({

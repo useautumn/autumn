@@ -303,11 +303,6 @@ export class SyncBatchingManagerV3 {
 		const usageWindowUpdates = Object.values(
 			context.usageWindowUpdatesByFeatureId,
 		);
-		const modifiedCusEntIdsByFeatureId = Object.fromEntries(
-			Object.entries(context.modifiedCusEntIdsByFeatureId).map(
-				([featureId, ids]) => [featureId, Array.from(new Set(ids)).sort()],
-			),
-		);
 		const messageDeduplicationId = this.buildDeduplicationId({
 			context,
 			cusEntIds,
@@ -327,10 +322,10 @@ export class SyncBatchingManagerV3 {
 					cusEntIds,
 					rolloverIds,
 					entityId: context.entityId,
-					modifiedCusEntIdsByFeatureId,
+					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
 					usageWindowUpdates,
 				},
-				messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
+				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
 
