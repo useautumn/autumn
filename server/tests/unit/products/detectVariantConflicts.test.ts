@@ -6,6 +6,8 @@ import {
 	BillingMethod,
 	type DiffedCustomizePlanV1,
 	type Feature,
+	FeatureType,
+	FeatureUsageType,
 	ResetInterval,
 } from "@autumn/shared";
 import { detectVariantConflicts } from "@/internal/product/actions/previewUpdatePlan/detectVariantConflicts";
@@ -49,7 +51,11 @@ const includedMonthly = (featureId: string, included: number): ApiPlanItemV1 =>
 		price: null,
 	}) as ApiPlanItemV1;
 
-const oneOffPrepaid = (featureId: string, amount: number): ApiPlanItemV1 =>
+const prepaid = (
+	featureId: string,
+	amount: number,
+	interval: BillingInterval,
+): ApiPlanItemV1 =>
 	({
 		feature_id: featureId,
 		included: 0,
@@ -57,11 +63,23 @@ const oneOffPrepaid = (featureId: string, amount: number): ApiPlanItemV1 =>
 		reset: null,
 		price: {
 			amount,
-			interval: BillingInterval.OneOff,
+			interval,
 			billing_units: 1,
 			billing_method: BillingMethod.Prepaid,
 			max_purchase: null,
 		},
+	}) as ApiPlanItemV1;
+
+const oneOffPrepaid = (featureId: string, amount: number): ApiPlanItemV1 =>
+	prepaid(featureId, amount, BillingInterval.OneOff);
+
+const includedNoReset = (featureId: string, included: number): ApiPlanItemV1 =>
+	({
+		feature_id: featureId,
+		included,
+		unlimited: false,
+		reset: null,
+		price: null,
 	}) as ApiPlanItemV1;
 
 const basePrice = (amount: number, interval: BillingInterval) =>
@@ -73,8 +91,19 @@ const plan = (
 ): ApiPlanV1 => ({ items, price }) as ApiPlanV1;
 
 const features = [
-	{ id: "messages", name: "Messages" },
-	{ id: "dashboard", name: "Dashboard" },
+	{
+		id: "messages",
+		name: "Messages",
+		type: FeatureType.Metered,
+		config: { usage_type: FeatureUsageType.Single },
+	},
+	{ id: "dashboard", name: "Dashboard", type: FeatureType.Boolean },
+	{
+		id: "seats",
+		name: "Seats",
+		type: FeatureType.Metered,
+		config: { usage_type: FeatureUsageType.Continuous },
+	},
 ] as Feature[];
 
 const MONTH = ResetInterval.Month as ResetInterval & BillingInterval;
@@ -85,7 +114,9 @@ describe("detectVariantConflicts", () => {
 		const conflicts = detectVariantConflicts({
 			currentBasePlan: plan([bool("dashboard"), usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH)]),
-			diff: { remove_items: [{ feature_id: "dashboard" }] } as DiffedCustomizePlanV1,
+			diff: {
+				remove_items: [{ feature_id: "dashboard" }],
+			} as DiffedCustomizePlanV1,
 			variantPlan: plan([bool("dashboard"), usage("messages", MONTH)]),
 			features,
 		});
@@ -97,7 +128,9 @@ describe("detectVariantConflicts", () => {
 		const conflicts = detectVariantConflicts({
 			currentBasePlan: plan([usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH), bool("dashboard")]),
-			diff: { add_items: [{ feature_id: "dashboard" }] } as DiffedCustomizePlanV1,
+			diff: {
+				add_items: [{ feature_id: "dashboard" }],
+			} as DiffedCustomizePlanV1,
 			variantPlan: plan([usage("messages", MONTH)]),
 			features,
 		});
@@ -125,7 +158,9 @@ describe("detectVariantConflicts", () => {
 		const conflicts = detectVariantConflicts({
 			currentBasePlan: plan([usage("messages", MONTH)]),
 			editedBasePlan: plan([usage("messages", MONTH)]),
-			diff: { add_items: [{ feature_id: "messages" }] } as DiffedCustomizePlanV1,
+			diff: {
+				add_items: [{ feature_id: "messages" }],
+			} as DiffedCustomizePlanV1,
 			variantPlan: plan([usage("messages", YEAR)]),
 			features,
 		});
@@ -136,6 +171,44 @@ describe("detectVariantConflicts", () => {
 			feature_name: "Messages",
 			item_filter: { feature_id: "messages" },
 		});
+	});
+
+	test("priced non-consumable on a different interval is a different_interval conflict", () => {
+		// Propagation would append the $12/month item next to the variant's
+		// $100/year item — a silent duplicate — so it must be flagged.
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([prepaid("seats", 10, BillingInterval.Month)]),
+			editedBasePlan: plan([prepaid("seats", 12, BillingInterval.Month)]),
+			diff: {
+				add_items: [{ feature_id: "seats" }],
+				remove_items: [{ feature_id: "seats", interval: MONTH }],
+			} as DiffedCustomizePlanV1,
+			variantPlan: plan([prepaid("seats", 100, BillingInterval.Year)]),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toMatchObject({
+			reason: "different_interval",
+			feature_name: "Seats",
+			item_filter: { feature_id: "seats" },
+		});
+	});
+
+	test("priced non-consumable edit against an unpriced variant entitlement is a different_interval conflict", () => {
+		const conflicts = detectVariantConflicts({
+			currentBasePlan: plan([prepaid("seats", 10, BillingInterval.Month)]),
+			editedBasePlan: plan([prepaid("seats", 12, BillingInterval.Month)]),
+			diff: {
+				add_items: [{ feature_id: "seats" }],
+				remove_items: [{ feature_id: "seats", interval: MONTH }],
+			} as DiffedCustomizePlanV1,
+			variantPlan: plan([includedNoReset("seats", 5)]),
+			features,
+		});
+
+		expect(conflicts).toHaveLength(1);
+		expect(conflicts[0]).toMatchObject({ reason: "different_interval" });
 	});
 
 	test("variant with a customized value (same interval) is a value_divergence conflict", () => {

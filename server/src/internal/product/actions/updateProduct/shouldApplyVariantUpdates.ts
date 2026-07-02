@@ -1,7 +1,6 @@
 import type { FullProduct, UpdateProductV2Params } from "@autumn/shared";
 
 const propagatedSettingFields = [
-	"name",
 	"description",
 	"group",
 	"is_add_on",
