@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
 import { getRefreshTokenForConsentLookup } from "@/internal/auth/oauth/tokenRequestFields.js";
+import { describe, expect, test } from "bun:test";
 
 const formRequest = (fields: Record<string, string>) =>
 	new Request("http://localhost/api/auth/oauth2/token", {
@@ -9,8 +9,8 @@ const formRequest = (fields: Record<string, string>) =>
 	});
 
 describe("OAuth token request fields", () => {
-	test("ignores refresh_token fields on non-refresh grants", async () => {
-		await expect(
+	test("ignores refresh_token fields on non-refresh grants", () => {
+		return expect(
 			getRefreshTokenForConsentLookup(
 				formRequest({
 					grant_type: "authorization_code",
@@ -21,8 +21,8 @@ describe("OAuth token request fields", () => {
 		).resolves.toBeNull();
 	});
 
-	test("returns refresh_token only for refresh grants", async () => {
-		await expect(
+	test("returns refresh_token only for refresh grants", () => {
+		return expect(
 			getRefreshTokenForConsentLookup(
 				formRequest({
 					grant_type: "refresh_token",
@@ -32,8 +32,8 @@ describe("OAuth token request fields", () => {
 		).resolves.toBe("refresh_1");
 	});
 
-	test("supports JSON token requests", async () => {
-		await expect(
+	test("supports JSON token requests", () => {
+		return expect(
 			getRefreshTokenForConsentLookup(
 				new Request("http://localhost/api/auth/oauth2/token", {
 					method: "POST",
@@ -47,8 +47,8 @@ describe("OAuth token request fields", () => {
 		).resolves.toBe("refresh_json");
 	});
 
-	test("supports case-insensitive JSON content types", async () => {
-		await expect(
+	test("supports case-insensitive JSON content types", () => {
+		return expect(
 			getRefreshTokenForConsentLookup(
 				new Request("http://localhost/api/auth/oauth2/token", {
 					method: "POST",
