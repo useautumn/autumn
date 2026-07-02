@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -8,7 +9,10 @@ export type CatalogItem = { id: string; name: string };
 // so the copy dialog can show the source sandbox's catalog while you sit in a
 // different one.
 export const useSandboxCatalogQuery = (sandboxId: string | null) => {
-	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const axiosInstance = useAxiosInstance({
+		skipSandbox: true,
+		env: AppEnv.Sandbox,
+	});
 
 	const { data, isLoading } = useQuery({
 		queryKey: ["sandbox-catalog", sandboxId],

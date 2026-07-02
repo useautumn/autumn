@@ -1,7 +1,7 @@
 import {
 	AppEnv,
 	ErrCode,
-	FeatureType,
+	isAnyCreditSystem,
 	mapToProductV2,
 	type Organization,
 	RecaseError,
@@ -91,7 +91,7 @@ export const copySandboxForOrg = async ({
 
 		// Credit systems draw from metered features; bring those along too.
 		for (const feature of fromFeatures) {
-			if (feature.type !== FeatureType.CreditSystem) continue;
+			if (!isAnyCreditSystem(feature.type)) continue;
 			if (!wantedFeatureIds.has(feature.id)) continue;
 			const config = feature.config as
 				| { schema?: { metered_feature_id: string }[] }
