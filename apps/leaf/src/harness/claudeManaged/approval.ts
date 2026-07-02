@@ -181,7 +181,3 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 		{ retryable: true },
 	);
 };
-
-export const resumeClaudeManagedApproval = async (
-	input: Omit<ResumeClaudeManagedApprovalWithDepsInput, "deps">,
-): Promise<ApprovalRunResult> => resumeClaudeManagedApprovalWithDeps(input);
