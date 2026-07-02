@@ -9,10 +9,8 @@ import {
 	errorStatusLine,
 	toolStatusLine,
 } from "../../internal/approvals/utils/approvalProgress.js";
-import { db } from "../../lib/db.js";
 import { logger } from "../../lib/logger.js";
 import { claudeManagedConfig } from "./config.js";
-import { cmaRepo } from "./repos/claudeManagedRepo.js";
 import { driveSessionTurn } from "./session/driveSessionTurn.js";
 import { findSessionToolResult } from "./session/findSessionToolResult.js";
 
@@ -32,34 +30,6 @@ const executeAutumnMcpToolLazy: ExecuteAutumnTool = async (input) => {
 	return executeAutumnMcpTool(input);
 };
 
-const deleteResolvedSession = async ({
-	env,
-	orgId,
-	providerUserId,
-	sessionId,
-	toolUseId,
-}: {
-	env: AppEnv;
-	orgId: string;
-	providerUserId: string;
-	sessionId: string;
-	toolUseId: string;
-}) => {
-	try {
-		await cmaRepo.deleteSessionById({ db, env, orgId, sessionId });
-	} catch (error) {
-		logger.warn("Could not delete resolved Claude Managed session", {
-			event: "leaf.approval_delete_session_failed",
-			data: {
-				session_id: sessionId,
-				tool_use_id: toolUseId,
-				provider_user_id: providerUserId,
-			},
-			error,
-		});
-	}
-};
-
 const notifySuspendedToolDenied = async ({
 	providerUserId,
 	sessionId,
@@ -69,8 +39,9 @@ const notifySuspendedToolDenied = async ({
 	sessionId: string;
 	toolUseId: string;
 }) => {
-	// The tool already ran out-of-band under the approver's token. First resolve
-	// the idle session's pending tool with a deny so it isn't left hanging.
+	// The tool already ran out-of-band under the approver's token. Resolve the
+	// idle session's pending tool with a deny so it isn't left hanging and the
+	// session stays usable for the rest of the thread.
 	try {
 		await driveSessionTurn({
 			autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
@@ -103,7 +74,6 @@ const notifySuspendedToolDenied = async ({
 };
 
 const defaultResumeDeps = {
-	deleteResolvedSession,
 	executeTool: executeAutumnMcpToolLazy,
 	findSessionToolResult,
 	notifySuspendedToolDenied,
@@ -131,6 +101,8 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 	if (!(sessionId && toolUseId)) {
 		throw new Error("Approval is missing the session or tool-call id");
 	}
+	// Per-user approvals run the tool out-of-band under the approver's own token,
+	// then release the asker's suspended session via a deny so it stays usable.
 	if (token) {
 		onProgress?.(toolStatusLine(approval.tool_name));
 		try {
@@ -143,13 +115,6 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 			const runResult = isErrorResult(result)
 				? approvalErrorResult(result)
 				: { result, text: "", toolName: approval.tool_name };
-			await deps.deleteResolvedSession({
-				env: approval.env,
-				orgId: approval.org_id,
-				providerUserId,
-				sessionId,
-				toolUseId,
-			});
 			void deps.notifySuspendedToolDenied({
 				providerUserId,
 				sessionId,

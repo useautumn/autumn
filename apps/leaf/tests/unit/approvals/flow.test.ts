@@ -147,16 +147,12 @@ describe("approval flow", () => {
 		).toBe(true);
 	});
 
-	test("direct token approvals fail MCP isError results after deleting the suspended session", async () => {
+	test("direct token approvals fail MCP isError results and release the suspended session via deny", async () => {
 		setLeafTestEnv();
 		const { resumeClaudeManagedApprovalWithDeps } = await import(
 			"../../../src/harness/claudeManaged/approval.js"
 		);
 		const calls: string[] = [];
-		let resolveDelete: (() => void) | undefined;
-		const deleteGate = new Promise<void>((resolve) => {
-			resolveDelete = resolve;
-		});
 		const approval = {
 			env: AppEnv.Sandbox,
 			org_id: "org_1",
@@ -166,8 +162,7 @@ describe("approval flow", () => {
 			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
 		} as unknown as ChatApproval;
 
-		let settled = false;
-		const run = resumeClaudeManagedApprovalWithDeps({
+		const result = await resumeClaudeManagedApprovalWithDeps({
 			approval,
 			providerUserId: "U1",
 			token: "am_oauth_clicker",
@@ -179,11 +174,6 @@ describe("approval flow", () => {
 						content: [{ type: "text", text: "Tool failed" }],
 					};
 				},
-				deleteResolvedSession: async () => {
-					calls.push("delete:start");
-					await deleteGate;
-					calls.push("delete:end");
-				},
 				notifySuspendedToolDenied: async () => {
 					calls.push("notify");
 				},
@@ -194,27 +184,10 @@ describe("approval flow", () => {
 					throw new Error("should not recover session history");
 				},
 			},
-		}).then((result) => {
-			settled = true;
-			return result;
 		});
 
-		await Promise.resolve();
-		await Promise.resolve();
-
-		expect(calls).toEqual(["execute", "delete:start"]);
-		expect(settled).toBe(false);
-
-		resolveDelete?.();
-		const result = await run;
-
 		expect(result).toEqual({ error: true, message: "Tool failed" });
-		expect(calls).toEqual([
-			"execute",
-			"delete:start",
-			"delete:end",
-			"notify",
-		]);
+		expect(calls).toEqual(["execute", "notify"]);
 	});
 
 	test("edits the approval message to failed when the approved tool fails", async () => {

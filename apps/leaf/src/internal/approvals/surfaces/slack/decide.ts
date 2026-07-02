@@ -2,8 +2,6 @@ import {
 	type ChatApproval,
 	chatInstallations,
 	checkScopes,
-	type RouteScopeRequirement,
-	Scopes,
 } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import { and, eq } from "drizzle-orm";
@@ -25,6 +23,7 @@ import {
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
+import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -35,16 +34,6 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	env: approval?.env,
 	preview: approval?.preview ?? undefined,
 });
-
-const approvalScopeRequirements: Record<string, RouteScopeRequirement> = {
-	attach: [Scopes.Billing.Write],
-	createBalance: [Scopes.Balances.Write],
-	createPlan: [Scopes.Plans.Write],
-	createSchedule: [Scopes.Billing.Write],
-	updateCatalog: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },
-	updatePlan: [Scopes.Plans.Write],
-	updateSubscription: [Scopes.Billing.Write],
-};
 
 const authorizeSlackApprovalClicker = async ({
 	approval,
@@ -96,13 +85,9 @@ const authorizeSlackApprovalClicker = async ({
 		slackUserId: providerUserId,
 	});
 	if (!callerAuth.usePerUser) {
-		const token = await getInstallationOAuthAccessToken({
-			installation,
-			env: approval.env,
-			orgId: approval.org_id,
-			userId: installation.installed_by_user_id ?? undefined,
-		});
-		return { allowed: true, token } as const;
+		// Restricted/unrestricted installs already run the session under the
+		// installer token, so resume in-session without minting a separate token.
+		return { allowed: true } as const;
 	}
 
 	if (!callerAuth.ok) {
