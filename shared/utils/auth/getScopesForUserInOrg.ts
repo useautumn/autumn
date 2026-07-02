@@ -1,17 +1,14 @@
-import type { SQL } from "drizzle-orm";
 import { and, eq } from "drizzle-orm";
+import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { member } from "../../db/auth-schema";
+import type * as schema from "../../db/schema";
 import { ROLE_SCOPES, type Role, type ScopeString } from "../scopeDefinitions";
 
-type ScopeResolverDb = {
-	query: {
-		member: {
-			findFirst: (config: {
-				where?: SQL;
-			}) => Promise<{ role: string } | undefined | null>;
-		};
-	};
-};
+/** Any drizzle db over the shared schema; server's instrumented db overrides `execute`. */
+type ScopeResolverDb = Pick<
+	PgDatabase<PgQueryResultHKT, typeof schema>,
+	"query"
+>;
 
 export async function getScopesForUserInOrg({
 	db,
@@ -34,12 +31,9 @@ export async function getScopesForUserInOrg({
 	}
 
 	const rawRole = membership.role;
-	const canonicalRole: Role | undefined = Object.prototype.hasOwnProperty.call(
-		ROLE_SCOPES,
-		rawRole,
-	)
-		? (rawRole as Role)
-		: undefined;
+	const canonicalRole = (Object.keys(ROLE_SCOPES) as Role[]).find(
+		(role) => role === rawRole,
+	);
 
 	if (!canonicalRole) {
 		console.warn(
