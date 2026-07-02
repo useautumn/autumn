@@ -70,7 +70,7 @@ const callFlash = async (
 		: undefined;
 	try {
 		const result = (await client.post(
-			"/dfu.flash",
+			"/billing.import",
 			body,
 			headers,
 		)) as DfuFlashResult;

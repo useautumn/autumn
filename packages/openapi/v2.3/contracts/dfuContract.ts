@@ -4,8 +4,9 @@ import { oc } from "@orpc/contract";
 export const dfuFlashContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/dfu.flash",
+		path: "/v1/billing.import",
 		operationId: "flash",
+		summary: "Import",
 		tags: ["dfu"],
 		description:
 			"Image a customer into Autumn for live migration. Read-only against processors.",

@@ -95,7 +95,7 @@ const callFlash = async (
 	errorMessage: string | null;
 }> => {
 	try {
-		const result = (await client.post("/dfu.flash", body)) as DfuFlashResult;
+		const result = (await client.post("/billing.import", body)) as DfuFlashResult;
 		return { result, errorCode: null, errorMessage: null };
 	} catch (error) {
 		const e = error as { code?: string; message?: string };
