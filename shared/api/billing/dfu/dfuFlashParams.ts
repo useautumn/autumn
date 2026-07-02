@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 
 /**
  * `POST /v1/dfu.flash` — image a customer INTO Autumn for live migration.
@@ -155,6 +156,8 @@ export const DfuFlashedPlanSchema = z.object({
 export const DfuFlashResultSchema = z.object({
 	customer_id: z.string(),
 	flashed: z.array(DfuFlashedPlanSchema),
+	// Freshly-read imaged customer; null for dry_run since nothing is persisted.
+	customer: ApiCustomerV5Schema.nullable(),
 });
 
 export type FlashCustomerData = z.infer<typeof FlashCustomerDataSchema>;
