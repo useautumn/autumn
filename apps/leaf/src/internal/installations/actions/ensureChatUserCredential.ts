@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	type ChatInstallation,
 	type ChatOAuthCredential,
+	ms,
 } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { getChatOAuthCredentialByInstallationEnv } from "../repos/chatOAuthCredentialsRepo.js";
@@ -11,13 +12,10 @@ import {
 } from "./chatOAuthCredentialScopes.js";
 import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthCredentials.js";
 
-// Re-mint a refresh token this far before it dies so a turn never races expiry.
-const REFRESH_EXPIRY_SKEW_MS = 60 * 60 * 1000;
+/** Re-mint a refresh token this far before it dies so a turn never races expiry. */
+const REFRESH_EXPIRY_SKEW_MS = ms.hours(1);
 
-// The envs replaceInstallationOAuthCredentials always mints together. Which one a
-// turn actually consumes is only resolved after this runs (Slack: the env
-// selector; web: the app_env header), so every env's credential must be fresh —
-// gating on a single env would let a stale/missing sibling slip through.
+/** Both envs are minted together and the consumed env is only known later, so both must stay fresh. */
 const CHAT_CREDENTIAL_ENVS = [AppEnv.Sandbox, AppEnv.Live] as const;
 
 const isCredentialStale = ({

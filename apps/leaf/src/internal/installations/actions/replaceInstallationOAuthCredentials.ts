@@ -5,6 +5,7 @@ import {
 	type ChatInstallation,
 	chatOAuthCredentials,
 	DEFAULT_OAUTH_RESOURCE_SCOPES,
+	ms,
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
@@ -26,13 +27,17 @@ import {
 	AUTUMN_SLACK_OAUTH_CLIENT_ID,
 	AUTUMN_WEB_OAUTH_CLIENT_ID,
 } from "./upsertInstallationOAuthCredential.js";
+
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-const ACCESS_TOKEN_TTL_MS = 60 * 60 * 1000;
-const REFRESH_TOKEN_TTL_MS = 365 * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_TTL_MS = ms.hours(1);
+const REFRESH_TOKEN_TTL_MS = ms.days(365);
 const SLACK_OAUTH_REDIRECT_URI = "slack://autumn-chat";
-// Programmatic provisioning never redirects, so this is only a stored value.
+/** Programmatic provisioning never redirects, so this is only a stored value. */
 const WEB_OAUTH_REDIRECT_URI = "https://app.useautumn.com/chat";
+
+/** Scope-less tokens bypass route scope checks, so every sender acts as admin. */
+const UNRESTRICTED_TOKEN_SCOPES: readonly string[] = [];
 
 type ProviderOAuthConfig = {
 	clientId: string;
@@ -309,11 +314,9 @@ export const replaceInstallationOAuthCredentials = async ({
 	}
 	const effectiveAuthMode = authMode ?? installation.auth_mode ?? undefined;
 
-	// Unrestricted installs intentionally mint a scope-less token: the route scope
-	// middleware treats empty scopes as full access, so every sender acts as admin.
 	const scopes =
 		effectiveAuthMode === ChatAuthMode.Unrestricted
-			? []
+			? [...UNRESTRICTED_TOKEN_SCOPES]
 			: resolveAgentScopes(agentScopes);
 	const config = getProviderOAuthConfig({ installation });
 
