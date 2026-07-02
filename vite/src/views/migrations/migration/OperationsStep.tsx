@@ -1,4 +1,4 @@
-import type { Operations } from "@autumn/shared";
+import type { MigrationFilter, Operations } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import {
 	ArrowLeftIcon,
@@ -6,6 +6,7 @@ import {
 	InfoIcon,
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
 import { OperationsForm } from "./operations/OperationsForm";
 import { type StepId, StepIndicator } from "./StepIndicator";
 import { hasValidOperations } from "./shared/operationUtils";
@@ -24,27 +25,32 @@ function hasVersionOperation(operations: Operations): boolean {
 export function OperationsStep({
 	form,
 	operations,
+	filter,
 	noBillingChanges,
 	step,
 	onStepChange,
 	onPrevious,
 	onNext,
 	saveError,
+	headerActions,
 }: {
 	form: FormInstance;
 	operations: Operations;
+	filter: MigrationFilter;
 	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
 	onPrevious: () => void;
 	onNext: () => void;
 	saveError: string | null;
+	headerActions?: ReactNode;
 }) {
 	const canProceed = hasValidOperations(operations) && !saveError;
 
 	return (
 		<div className="flex flex-col gap-4">
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				{headerActions}
 				<Button variant="secondary" size="default" onClick={onPrevious}>
 					<ArrowLeftIcon size={14} />
 					Previous
@@ -61,6 +67,7 @@ export function OperationsStep({
 			</StepIndicator>
 			<OperationsForm
 				value={operations}
+				filter={filter}
 				onChange={(v) => form.setFieldValue("operations", v)}
 				noBillingChanges={noBillingChanges}
 				onNoBillingChangesChange={(v) =>

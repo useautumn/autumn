@@ -27,20 +27,6 @@ test("plan_id not_in compiles to a $none quantifier", () => {
 	});
 });
 
-test("feature is_not compiles to a $none quantifier over items", () => {
-	const filter = groupsToMigrationFilter(
-		group({
-			field: "item_feature_id",
-			operator: "is_not",
-			values: ["credits"],
-		}),
-		{},
-	);
-	expect(planOf(filter)).toEqual({
-		$none: { item: { feature_id: "credits" } },
-	});
-});
-
 test("positive plan_id stays a $some matcher", () => {
 	const filter = groupsToMigrationFilter(
 		group({ field: "plan_id", operator: "is", values: ["pro"] }),
@@ -58,18 +44,6 @@ test("plan_id is_not round-trips back to the is_not operator", () => {
 		field: "plan_id",
 		operator: "is_not",
 		values: ["free"],
-	});
-});
-
-test("feature is_not round-trips back to the is_not operator", () => {
-	const filter: MigrationFilter = {
-		customer: { plan: { $none: { item: { feature_id: "credits" } } } },
-	};
-	const rules = buildGroups(filter).flatMap((g) => g.rules);
-	expect(rules).toContainEqual({
-		field: "item_feature_id",
-		operator: "is_not",
-		values: ["credits"],
 	});
 });
 
@@ -91,18 +65,67 @@ test("two plan rows in a group compile to customer-level $and", () => {
 	});
 });
 
-test("a plan row and a feature row in a group compile to $and", () => {
+test("a plan row and plan properties merge into one plan filter", () => {
 	const filter = groupsToMigrationFilter(
 		group(
 			{ field: "plan_id", operator: "is", values: ["pro"] },
-			{ field: "item_feature_id", operator: "is", values: ["credits"] },
+			{ field: "custom", operator: "is", values: ["false"] },
+			{ field: "paid", operator: "is", values: ["true"] },
+			{ field: "recurring", operator: "is", values: ["true"] },
+			{ field: "price", operator: "exists", values: [] },
+		),
+		{},
+	);
+	expect(filter.customer).toEqual({
+		plan: {
+			plan_id: "pro",
+			custom: false,
+			paid: true,
+			recurring: true,
+			price: { $ne: null },
+		},
+	});
+});
+
+test("plan and custom $and round-trips to a merged plan filter", () => {
+	const filter: MigrationFilter = {
+		customer: {
+			$and: [{ plan: { plan_id: "dedicated" } }, { plan: { custom: false } }],
+		},
+	};
+	const groups = buildGroups(filter);
+	expect(groupsToMigrationFilter(groups, {})).toEqual({
+		customer: { plan: { plan_id: "dedicated", custom: false } },
+	});
+});
+
+test("plan properties without a plan row compile to one plan filter", () => {
+	const filter = groupsToMigrationFilter(
+		group(
+			{ field: "custom", operator: "is", values: ["false"] },
+			{ field: "price", operator: "not_exists", values: [] },
+		),
+		{},
+	);
+	expect(filter.customer).toEqual({
+		plan: { custom: false, price: null },
+	});
+});
+
+test("duplicate plan rows stay independent from plan properties", () => {
+	const filter = groupsToMigrationFilter(
+		group(
+			{ field: "plan_id", operator: "is", values: ["free"] },
+			{ field: "plan_id", operator: "is", values: ["pro"] },
+			{ field: "custom", operator: "is", values: ["false"] },
 		),
 		{},
 	);
 	expect(filter.customer).toEqual({
 		$and: [
+			{ plan: { plan_id: "free" } },
 			{ plan: { plan_id: "pro" } },
-			{ plan: { item: { feature_id: "credits" } } },
+			{ plan: { custom: false } },
 		],
 	});
 });
