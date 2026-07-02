@@ -365,12 +365,8 @@ test.concurrent(
 				{
 					processor: "stripe",
 					link: { subscription_id: "sub_dfu_d" },
-					phases: [
-						{
-							starts_at: "now",
-							plans: [{ plan_id: pro.id, status: "expired" }],
-						},
-					],
+					// `plan` shorthand — equivalent to phases:[{ starts_at:"now", plans:[plan] }].
+					plan: { plan_id: pro.id, status: "expired" },
 				},
 			],
 		};
@@ -508,6 +504,132 @@ test.concurrent(
 		// Payload with internal `entities` must not be rejected as a bad request.
 		expect(flashRes.errorCode).not.toBe("invalid_request");
 		expect(flashRes.errorCode).not.toBe("invalid_inputs");
+	},
+);
+
+// ── Scenario F: `plan` shorthand imports the same cusProduct as the phases form ──
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: `plan` shorthand imports same cusProduct as phases form")}`,
+	async () => {
+		const customerId = "dfu-flash-plan-shorthand";
+		const pro = products.pro({
+			id: "dfu-plan-shorthand-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const payload = {
+			customer_id: customerId,
+			processors: [{ type: "stripe", id: "cus_stripe_dfu_plan" }],
+			billables: [
+				{
+					processor: "stripe",
+					link: { subscription_id: "sub_dfu_plan" },
+					// Singular `plan` — normalized to phases:[{ starts_at:"now", plans:[plan] }].
+					plan: {
+						plan_id: pro.id,
+						status: "active",
+						balances: [{ feature_id: TestFeature.Messages, usage: 40 }],
+					},
+				},
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
+		expect(flashRes.errorCode).not.toBe("invalid_inputs");
+		expect(flashRes.errorCode).not.toBe("invalid_request");
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		await expectCustomerProducts({ customer, active: [pro.id] });
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			remaining: 60,
+			usage: 40,
+		});
+	},
+);
+
+// ── Validator: exactly one of `plan` / `phases` — BOTH present is rejected (400) ──
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: billable with BOTH plan and phases is rejected")}`,
+	async () => {
+		const customerId = "dfu-flash-both";
+		const pro = products.pro({
+			id: "dfu-both-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const payload = {
+			customer_id: customerId,
+			processors: [{ type: "stripe", id: "cus_stripe_dfu_both" }],
+			billables: [
+				{
+					processor: "stripe",
+					link: { subscription_id: "sub_dfu_both" },
+					plan: { plan_id: pro.id, status: "active" },
+					phases: [
+						{
+							starts_at: "now",
+							plans: [{ plan_id: pro.id, status: "active" }],
+						},
+					],
+				},
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
+
+		// Rejected as a validation error; flash never runs.
+		expect(flashRes.errorCode).toBe("invalid_inputs");
+		expect(flashRes.errorMessage ?? "").toContain("not both");
+		expect(flashRes.result).toBeNull();
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		await expectCustomerProducts({ customer, notPresent: [pro.id] });
+	},
+);
+
+// ── Validator: exactly one of `plan` / `phases` — NEITHER present is rejected (400) ──
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: billable with NEITHER plan nor phases is rejected")}`,
+	async () => {
+		const customerId = "dfu-flash-neither";
+		const pro = products.pro({
+			id: "dfu-neither-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const payload = {
+			customer_id: customerId,
+			processors: [{ type: "stripe", id: "cus_stripe_dfu_neither" }],
+			billables: [
+				{ processor: "stripe", link: { subscription_id: "sub_dfu_neither" } },
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
+
+		expect(flashRes.errorCode).toBe("invalid_inputs");
+		expect(flashRes.errorMessage ?? "").toContain("`plan` or `phases`");
+		expect(flashRes.result).toBeNull();
 	},
 );
 

@@ -50,6 +50,22 @@ export type FlashContext = {
 	planContexts: FlashPlanContext[];
 };
 
+// Collapse the `plan` shorthand into phases so all downstream code sees phases only.
+const normalizeBillable = (billable: FlashBillable): FlashBillable => {
+	if (!billable.plan) return billable;
+	const { plan, ...rest } = billable;
+	return { ...rest, phases: [{ starts_at: "now", plans: [plan] }] };
+};
+
+const normalizeFlashParams = (params: DfuFlashParams): DfuFlashParams => ({
+	...params,
+	billables: params.billables.map(normalizeBillable),
+	entities: params.entities?.map((entity) => ({
+		...entity,
+		billables: entity.billables.map(normalizeBillable),
+	})),
+});
+
 const upsertFullCustomer = async ({
 	ctx,
 	params,
@@ -171,18 +187,19 @@ const buildPlanContext = async ({
 
 export const setupFlashContext = async ({
 	ctx,
-	params,
+	params: rawParams,
 }: {
 	ctx: AutumnContext;
 	params: DfuFlashParams;
 }): Promise<FlashContext> => {
+	const params = normalizeFlashParams(rawParams);
 	const fullCustomer = await upsertFullCustomer({ ctx, params });
 	ctx.customerId = fullCustomer.id ?? params.customer_id;
 	const currentEpochMs = Date.now();
 
 	const planContexts: FlashPlanContext[] = [];
 	for (const billable of params.billables) {
-		for (const phase of billable.phases) {
+		for (const phase of billable.phases ?? []) {
 			for (const plan of phase.plans) {
 				planContexts.push(
 					await buildPlanContext({ ctx, fullCustomer, billable, plan }),

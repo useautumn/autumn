@@ -96,12 +96,33 @@ const FlashPhaseSchema = z.object({
 	plans: z.array(FlashPlanSchema),
 });
 
-const FlashBillableSchema = z.object({
-	processor: BillableProcessorSchema,
-	link: FlashLinkSchema.optional(),
-	billing_cycle_anchor: z.number().optional(),
-	phases: z.array(FlashPhaseSchema),
-});
+const FlashBillableSchema = z
+	.object({
+		processor: BillableProcessorSchema,
+		link: FlashLinkSchema.optional(),
+		billing_cycle_anchor: z.number().optional(),
+		// `plan` is the public single-plan path; `phases` is exclusive with it but
+		// stays internal until multi-phase/scheduled imaging is fully implemented.
+		plan: FlashPlanSchema.optional(),
+		phases: z.array(FlashPhaseSchema).optional().meta({ internal: true }),
+	})
+	.superRefine((billable, ctx) => {
+		const hasPlan = billable.plan !== undefined;
+		const hasPhases = billable.phases !== undefined;
+		if (hasPlan && hasPhases) {
+			ctx.addIssue({
+				code: "custom",
+				message: "Provide either `plan` or `phases`, not both",
+				path: ["plan"],
+			});
+		} else if (!(hasPlan || hasPhases)) {
+			ctx.addIssue({
+				code: "custom",
+				message: "A billable must have a `plan` or `phases`",
+				path: ["plan"],
+			});
+		}
+	});
 
 const FlashEntitySchema = z.object({
 	entity_id: z.string(),
