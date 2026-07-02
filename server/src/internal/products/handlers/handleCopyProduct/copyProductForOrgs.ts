@@ -98,10 +98,10 @@ export const copyProductForOrgs = async ({
 	// A variant's base_internal_product_id points at a product in the source
 	// org; there's no safe cross-org remap, so refuse rather than land a dangling
 	// reference.
-	if (crossOrg && fromFullProduct.base_internal_product_id) {
+	if (fromFullProduct.base_internal_product_id) {
 		throw new RecaseError({
 			message:
-				"Variant plans can't be promoted directly. Promote the base plan instead.",
+				"Variant plans can't be copied on their own. Copy the base plan instead.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

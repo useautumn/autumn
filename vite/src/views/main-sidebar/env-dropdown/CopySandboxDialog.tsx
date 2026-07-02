@@ -64,11 +64,15 @@ export const CopySandboxDialog = ({
 		});
 	};
 
-	const checkedProductIds = products
-		.filter((p) => !deselected.products.has(p.id))
-		.map((p) => p.id);
+	const checkedProducts = products.filter(
+		(p) => !deselected.products.has(p.id),
+	);
+	const checkedProductIds = checkedProducts.map((p) => p.id);
+	const forcedFeatureIds = new Set(
+		checkedProducts.flatMap((p) => p.featureIds),
+	);
 	const checkedFeatureIds = features
-		.filter((f) => !deselected.features.has(f.id))
+		.filter((f) => forcedFeatureIds.has(f.id) || !deselected.features.has(f.id))
 		.map((f) => f.id);
 	const nothingSelected =
 		checkedProductIds.length === 0 && checkedFeatureIds.length === 0;
@@ -139,6 +143,7 @@ export const CopySandboxDialog = ({
 							onToggle={(id) => toggle("features", id)}
 							title="Features"
 							deselected={deselected.features}
+							forced={forcedFeatureIds}
 						/>
 					</div>
 				)}
