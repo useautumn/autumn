@@ -22,12 +22,8 @@ export const handleFlashErrors = ({
 	const { params, planContexts } = flashContext;
 
 	if (params.entities?.length) rejectUnsupported("entities");
-	if (params.processors.some((p) => p.type === "vercel")) {
-		rejectUnsupported("vercel processor");
-	}
 
 	for (const billable of params.billables) {
-		if (billable.processor === "vercel") rejectUnsupported("vercel processor");
 		for (const phase of billable.phases ?? []) {
 			if (phase.starting_after) rejectUnsupported("starting_after");
 			for (const plan of phase.plans) {

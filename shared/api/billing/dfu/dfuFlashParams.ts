@@ -7,19 +7,11 @@ import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
  * are schema-defined but `.meta({ internal: true })` so docs hide them.
  */
 
-const ProcessorTypeSchema = z.union([
-	z.literal("stripe"),
-	// RevenueCat processor `id` is the customer's `app_user_id`.
-	z.literal("revenuecat"),
-	z.literal("vercel").meta({ internal: true }),
-]);
+// RevenueCat processor `id` is the customer's `app_user_id`. (Vercel is not yet
+// supported and is intentionally omitted so `type` renders as a clean enum.)
+const ProcessorTypeSchema = z.enum(["stripe", "revenuecat"]);
 
-const BillableProcessorSchema = z.union([
-	z.literal("stripe"),
-	z.literal("revenuecat"),
-	z.literal("vercel").meta({ internal: true }),
-	z.literal("none"),
-]);
+const BillableProcessorSchema = z.enum(["stripe", "revenuecat", "none"]);
 
 const FlashCustomerDataSchema = z.object({
 	name: z
