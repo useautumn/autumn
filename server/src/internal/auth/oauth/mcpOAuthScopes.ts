@@ -4,10 +4,14 @@ import {
 	isMcpOAuthClientRecord,
 	isMcpOAuthResource,
 } from "@autumn/auth/oauth";
-import { ErrCode, isScopeSubset, RecaseError } from "@autumn/shared";
+import {
+	ErrCode,
+	getScopesForUserInOrg,
+	isScopeSubset,
+	RecaseError,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
 import { oauthClientRepo } from "../repos/index.js";
 
 export const isMcpOAuthClient = async ({

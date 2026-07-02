@@ -1,5 +1,12 @@
 import "dotenv/config";
-import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
+import {
+	ALL_SCOPES,
+	ac,
+	getScopesForUserInOrg,
+	invitation,
+	roles,
+	schemas,
+} from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
@@ -25,7 +32,6 @@ import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
 import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
 // emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees

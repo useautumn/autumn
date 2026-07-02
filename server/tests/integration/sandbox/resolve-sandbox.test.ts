@@ -1,5 +1,11 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { AppEnv, member, organizations, user } from "@autumn/shared";
+import {
+	AppEnv,
+	getScopesForUserInOrg,
+	member,
+	organizations,
+	user,
+} from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
@@ -8,7 +14,6 @@ import { betterAuthMiddleware } from "@/honoMiddlewares/betterAuthMiddleware.js"
 import { SANDBOX_ORG_HEADER } from "@/honoMiddlewares/sandboxAccess.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { auth } from "@/utils/auth.js";
-import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
 import { generateId } from "@/utils/genUtils.js";
 
 const { db } = initDrizzle();

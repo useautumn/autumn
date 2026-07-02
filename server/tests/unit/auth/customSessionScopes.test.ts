@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { checkScopes, Scopes } from "@autumn/shared";
-import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
+import { checkScopes, getScopesForUserInOrg, Scopes } from "@autumn/shared";
 
 const state = { member: null as null | { role: string } };
 const db = {
