@@ -2,10 +2,8 @@ import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
-import {
-	isSlackAdminProvider,
-	validateSlackAdminAccess,
-} from "../../slackAdmin/access.js";
+import { validateSlackAdminAccess } from "../../slackAdmin/access.js";
+import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
 import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,

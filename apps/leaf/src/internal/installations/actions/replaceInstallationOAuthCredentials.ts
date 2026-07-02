@@ -14,6 +14,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
+import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
 import { resolveAgentScopes } from "./chatOAuthCredentialScopes.js";
 import {
 	getOAuthConsentMetadata,
@@ -49,10 +50,7 @@ const getProviderOAuthConfig = ({
 }: {
 	installation: ChatInstallation;
 }): ProviderOAuthConfig => {
-	if (
-		installation.provider === "slack_admin" ||
-		installation.provider.startsWith("slack_admin:")
-	) {
+	if (isSlackAdminProvider({ provider: installation.provider })) {
 		return {
 			clientId: AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 			name: "Slack Admin",

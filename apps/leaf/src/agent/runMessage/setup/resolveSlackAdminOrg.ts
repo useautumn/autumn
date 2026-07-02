@@ -11,10 +11,10 @@ import {
 	chatThreadContextsRepo,
 } from "../../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import {
-	isSlackAdminInstallation,
 	resolveSlackAdminOrg,
 	validateSlackAdminAccess,
 } from "../../../internal/slackAdmin/access.js";
+import { isSlackAdminInstallation } from "../../../internal/slackAdmin/provider.js";
 import { db } from "../../../lib/db.js";
 import type { ChatContextMessage } from "../../../types.js";
 import { selectChatOrg } from "./selectChatOrg.js";

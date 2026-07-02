@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { AppEnv, ChatApproval } from "@autumn/shared";
+import type { ChatApproval } from "@autumn/shared";
 import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import {
 	approvalErrorResult,
@@ -9,6 +9,7 @@ import {
 	errorStatusLine,
 	toolStatusLine,
 } from "../../internal/approvals/utils/approvalProgress.js";
+import { executeAutumnMcpTool } from "../../internal/autumnMcp/client.js";
 import { logger } from "../../lib/logger.js";
 import { claudeManagedConfig } from "./config.js";
 import { driveSessionTurn } from "./session/driveSessionTurn.js";
@@ -16,20 +17,7 @@ import { findSessionToolResult } from "./session/findSessionToolResult.js";
 
 const client = new Anthropic();
 
-type ExecuteAutumnTool = (input: {
-	env: AppEnv;
-	token: string;
-	toolName: string;
-	args: Record<string, unknown>;
-}) => Promise<unknown>;
-
-const executeAutumnMcpToolLazy: ExecuteAutumnTool = async (input) => {
-	const { executeAutumnMcpTool } = await import(
-		"../../internal/autumnMcp/client.js"
-	);
-	return executeAutumnMcpTool(input);
-};
-
+/** Keeps the asker's suspended session usable after an out-of-band approval. */
 const notifySuspendedToolDenied = async ({
 	providerUserId,
 	sessionId,
@@ -39,9 +27,6 @@ const notifySuspendedToolDenied = async ({
 	sessionId: string;
 	toolUseId: string;
 }) => {
-	// The tool already ran out-of-band under the approver's token. Resolve the
-	// idle session's pending tool with a deny so it isn't left hanging and the
-	// session stays usable for the rest of the thread.
 	try {
 		await driveSessionTurn({
 			autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
@@ -74,28 +59,28 @@ const notifySuspendedToolDenied = async ({
 };
 
 const defaultResumeDeps = {
-	executeTool: executeAutumnMcpToolLazy,
+	executeTool: executeAutumnMcpTool,
 	findSessionToolResult,
 	notifySuspendedToolDenied,
 	driveSessionTurn,
 };
 
-// Confirms an already-claimed tool in the idle Claude Managed session, then
-// returns its write result and any continuation text for the thread reply.
-// Finalization is owned by the dispatcher (resolveApproval).
+type ResumeClaudeManagedApprovalWithDepsInput = {
+	approval: ChatApproval;
+	deps?: typeof defaultResumeDeps;
+	onProgress?: (statusLine: string) => void;
+	providerUserId: string;
+	token?: string;
+};
+
+/** Resumes an approved Claude Managed write; finalization stays in resolveApproval. */
 export const resumeClaudeManagedApprovalWithDeps = async ({
 	approval,
 	deps = defaultResumeDeps,
 	onProgress,
 	providerUserId,
 	token,
-}: {
-	approval: ChatApproval;
-	deps?: typeof defaultResumeDeps;
-	onProgress?: (statusLine: string) => void;
-	providerUserId: string;
-	token?: string;
-}): Promise<ApprovalRunResult> => {
+}: ResumeClaudeManagedApprovalWithDepsInput): Promise<ApprovalRunResult> => {
 	const sessionId = approval.run_id;
 	const toolUseId = approval.tool_call_id;
 	if (!(sessionId && toolUseId)) {
@@ -197,4 +182,6 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 	);
 };
 
-export const resumeClaudeManagedApproval = resumeClaudeManagedApprovalWithDeps;
+export const resumeClaudeManagedApproval = async (
+	input: Omit<ResumeClaudeManagedApprovalWithDepsInput, "deps">,
+): Promise<ApprovalRunResult> => resumeClaudeManagedApprovalWithDeps(input);

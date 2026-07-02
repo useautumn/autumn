@@ -5,6 +5,7 @@ import {
 	oauthConsent,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
 
 export const SLACK_ADMIN_CONSENT_KIND = "slack_admin";
 
@@ -20,9 +21,6 @@ export type OAuthConsentMetadata =
 			createdByUserId: string;
 	  }
 	| Record<string, never>;
-
-const isSlackAdminProvider = ({ provider }: { provider: string }) =>
-	provider === "slack_admin" || provider.startsWith("slack_admin:");
 
 export const getOAuthConsentMetadata = ({
 	authMode,

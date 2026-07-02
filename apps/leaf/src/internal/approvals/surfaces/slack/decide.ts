@@ -11,10 +11,8 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
-import {
-	isSlackAdminProvider,
-	validateSlackAdminAccess,
-} from "../../../slackAdmin/access.js";
+import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
+import { isSlackAdminProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type { ApprovalActionDeps, ApprovalCardStatus } from "../../types.js";

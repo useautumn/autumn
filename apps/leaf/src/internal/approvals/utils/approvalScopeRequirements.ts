@@ -1,13 +1,6 @@
 import { type RouteScopeRequirement, Scopes } from "@autumn/shared";
 
-/**
- * Autumn scopes a per-user Slack clicker must hold to approve each
- * approval-gated tool. The canonical tool list is derived from the MCP tool
- * definitions (`@autumn/mcp/approval-gated`); the coverage test in
- * approvalScopeRequirements.test.ts fails when a destructive tool ships without
- * an entry here, and per-user approvals fail closed at click time for anything
- * unlisted.
- */
+/** Per-user Slack approval scopes; tests enforce coverage for gated MCP tools. */
 export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 	{
 		attach: [Scopes.Billing.Write],
