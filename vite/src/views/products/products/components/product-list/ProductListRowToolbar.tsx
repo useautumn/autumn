@@ -1,5 +1,15 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
-import { ToolbarButton } from "@autumn/ui";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
+	DropdownMenuTrigger,
+	ToolbarButton,
+} from "@autumn/ui";
 import {
 	ArchiveIcon,
 	ArrowCounterClockwiseIcon,
@@ -8,30 +18,29 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	type SandboxSummary,
+	useCopySandbox,
+} from "@/hooks/queries/useSandboxesQuery";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { pushPage } from "@/utils/genUtils";
+import { useEnv } from "@/utils/envUtils";
+import { getBackendErr, pushPage } from "@/utils/genUtils";
 import { CreateVariantDialog } from "@/views/products/plan/components/CreateVariantDialog";
 import { CopyProductDialog } from "../CopyProductDialog";
 
 export const ProductListRowToolbar = ({
 	product,
 	onDeleteClick,
+	sandboxes,
 }: {
 	product: ProductV2;
 	onDeleteClick?: (product: ProductV2) => void;
+	sandboxes: SandboxSummary[];
 }) => {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [copyOpen, setCopyOpen] = useState(false);
@@ -43,6 +52,31 @@ export const ProductListRowToolbar = ({
 	const { counts, invalidate: invalidateProducts } = useProductsQuery();
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const activeSandbox = useActiveSandbox();
+	const env = useEnv();
+	// Only a Sandbox-env view with an active sandbox is a real named-sandbox
+	// context; activeSandbox can be stale on a production route (no header sent).
+	const inNamedSandbox = env === AppEnv.Sandbox && !!activeSandbox;
+	const copySandbox = useCopySandbox();
+
+	const currentSandboxId = inNamedSandbox ? activeSandbox?.id : undefined;
+	const otherSandboxes = sandboxes.filter((s) => s.id !== currentSandboxId);
+
+	const handleCopyToSandbox = async (target: SandboxSummary) => {
+		setDropdownOpen(false);
+		try {
+			await copySandbox.mutateAsync({
+				...(inNamedSandbox && activeSandbox
+					? { fromSandboxId: activeSandbox.id }
+					: { fromMaster: true }),
+				toSandboxId: target.id,
+				productIds: [product.id],
+			});
+			toast.success(`Copied ${product.name} to ${target.name}`);
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to copy plan"));
+		}
+	};
 
 	const isVariant = !!product.base_internal_product_id;
 
@@ -155,6 +189,20 @@ export const ProductListRowToolbar = ({
 							>
 								Production
 							</DropdownMenuItem>
+							{otherSandboxes.length > 0 && <DropdownMenuSeparator />}
+							{otherSandboxes.map((s) => (
+								<DropdownMenuItem
+									key={s.id}
+									className="flex gap-2"
+									onClick={(e) => {
+										e.stopPropagation();
+										e.preventDefault();
+										handleCopyToSandbox(s);
+									}}
+								>
+									{s.name}
+								</DropdownMenuItem>
+							))}
 						</DropdownMenuSubContent>
 					</DropdownMenuSub>
 					{!isVariant && !product.archived && (

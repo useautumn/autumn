@@ -9,7 +9,7 @@ import {
 	DropdownMenuSeparator,
 	Skeleton,
 } from "@autumn/ui";
-import { Check, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Import, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
@@ -27,6 +27,7 @@ import {
 } from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
+import { CopySandboxDialog } from "./env-dropdown/CopySandboxDialog";
 import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
 import { DeleteSandboxDialog } from "./env-dropdown/DeleteSandboxDialog";
 import { EditSandboxDialog } from "./env-dropdown/EditSandboxDialog";
@@ -70,6 +71,8 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const [sandboxToEdit, setSandboxToEdit] = useState<SandboxSummary | null>(
 		null,
 	);
+	const [sandboxToCopyInto, setSandboxToCopyInto] =
+		useState<SandboxSummary | null>(null);
 	const handleEnvChange = useEnvChange();
 	const { expanded } = useSidebarContext();
 
@@ -181,6 +184,20 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 									>
 										<Pencil size={12} className="!h-3 w-3" />
 									</button>
+									{sandboxes.length > 1 && (
+										<button
+											aria-label={`Import into ${sandbox.name}`}
+											className="text-muted-foreground transition-colors hover:text-foreground"
+											onClick={(e) => {
+												e.stopPropagation();
+												setOpen(false);
+												setSandboxToCopyInto(sandbox);
+											}}
+											type="button"
+										>
+											<Import size={12} className="!h-3 w-3" />
+										</button>
+									)}
 									<button
 										aria-label={`Delete ${sandbox.name}`}
 										className="text-muted-foreground transition-colors hover:text-destructive"
@@ -230,6 +247,18 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 					setOpen={(next) => {
 						if (!next) {
 							setSandboxToEdit(null);
+						}
+					}}
+				/>
+			)}
+			{sandboxToCopyInto && (
+				<CopySandboxDialog
+					target={sandboxToCopyInto}
+					sandboxes={sandboxes}
+					open
+					setOpen={(next) => {
+						if (!next) {
+							setSandboxToCopyInto(null);
 						}
 					}}
 				/>
