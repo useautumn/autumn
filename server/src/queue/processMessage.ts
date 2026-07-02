@@ -325,7 +325,8 @@ export const processMessage = async ({
 		}
 	};
 
-	// Queue dwell = SQS SentTimestamp → processing start; surfaces backlog per job type.
+	// Queue dwell = SQS SentTimestamp → processing start. Total message age:
+	// includes prior delivery attempts on retry (SentTimestamp never resets).
 	const sentAtMs = Number(message.Attributes?.SentTimestamp);
 	const receiveCount = Number(message.Attributes?.ApproximateReceiveCount);
 
@@ -340,7 +341,7 @@ export const processMessage = async ({
 			},
 			attributes: {
 				...(Number.isFinite(sentAtMs) && {
-					"queue.dwell_ms": Date.now() - sentAtMs,
+					"queue.dwell_ms": Math.max(0, Date.now() - sentAtMs),
 				}),
 				...(Number.isFinite(receiveCount) && {
 					"queue.receive_count": receiveCount,
