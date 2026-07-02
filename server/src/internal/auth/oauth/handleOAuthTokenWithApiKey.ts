@@ -154,6 +154,11 @@ const isUnrestrictedChatOAuthConsentMetadata = (metadata: unknown) =>
 	(metadata as Record<string, unknown>).kind ===
 		UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND;
 
+// Scope-less tokens are minted only by leaf's replaceInstallationOAuthCredentials
+// for ChatAuthMode.Unrestricted installs, whose consent metadata kind is
+// chat_unrestricted (UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND). Empty scopes
+// deliberately bypass route scope checks — i.e. full access — so do not loosen
+// the consent-kind check here or the MCP-client guard on isScopeLessChatToken.
 const allowsScopeLessOAuthToken = async ({
 	oauthConsentId,
 }: {
