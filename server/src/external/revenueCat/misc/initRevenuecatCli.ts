@@ -11,6 +11,10 @@ import type {
 	RevenueCatProductsResponse,
 	RevenueCatProject,
 	RevenueCatProjectsResponse,
+	RevenueCatPurchase,
+	RevenueCatPurchasesResponse,
+	RevenueCatSubscription,
+	RevenueCatSubscriptionsResponse,
 	RevenueCatCreateWebhookBody,
 	RevenueCatPublicApiKey,
 	RevenueCatPublicApiKeysResponse,
@@ -164,6 +168,51 @@ export const initRevenuecatCli = ({
 				);
 				await checkOk(response);
 				const data = (await response.json()) as RevenueCatProductsResponse;
+				items.push(...data.items);
+				nextPage = data.next_page;
+			}
+
+			return items;
+		},
+
+		listCustomerSubscriptions: async (
+			customerId: string,
+		): Promise<RevenueCatSubscription[]> => {
+			const items: RevenueCatSubscription[] = [];
+			let nextPage:
+				| string
+				| null = `/v2/projects/${projectId}/customers/${customerId}/subscriptions?limit=100`;
+
+			while (nextPage) {
+				const response = await fetchImpl(
+					new URL(`https://api.revenuecat.com${nextPage}`),
+					{ headers: authHeaders },
+				);
+				await checkOk(response);
+				const data =
+					(await response.json()) as RevenueCatSubscriptionsResponse;
+				items.push(...data.items);
+				nextPage = data.next_page;
+			}
+
+			return items;
+		},
+
+		listCustomerPurchases: async (
+			customerId: string,
+		): Promise<RevenueCatPurchase[]> => {
+			const items: RevenueCatPurchase[] = [];
+			let nextPage:
+				| string
+				| null = `/v2/projects/${projectId}/customers/${customerId}/purchases?limit=100`;
+
+			while (nextPage) {
+				const response = await fetchImpl(
+					new URL(`https://api.revenuecat.com${nextPage}`),
+					{ headers: authHeaders },
+				);
+				await checkOk(response);
+				const data = (await response.json()) as RevenueCatPurchasesResponse;
 				items.push(...data.items);
 				nextPage = data.next_page;
 			}
