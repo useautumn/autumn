@@ -243,10 +243,12 @@ export const initRevenuecatCli = ({
 			callRcMcpTool({
 				accessToken: resolvedAccessToken,
 				name: "create-product-prices",
+				// RC's tool requires `prices` nested under `body`; top-level fields are
+				// rejected (additionalProperties:false) and surface as a generic 500.
 				arguments: {
 					project_id: projectId,
 					product_id: revenuecatProductId,
-					prices: [{ amount_micros: amountMicros, currency }],
+					body: { prices: [{ amount_micros: amountMicros, currency }] },
 				},
 				fetchImpl,
 			}),
