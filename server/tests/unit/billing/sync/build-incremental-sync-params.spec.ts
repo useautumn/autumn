@@ -1,3 +1,12 @@
+/**
+ * Pre-fix: a non-add-on linked product with no `product.group` set made
+ * `linkedCustomerProductsToTargetGroupMap` bail with `{ ok: false }` even when
+ * it was the only linked product -- blocking Stripe-portal downgrades from
+ * auto-syncing for any catalog that doesn't configure product groups (the
+ * common case). Post-fix: missing/blank group is itself a valid group key;
+ * ambiguity now only fires on an actual collision between two non-add-on
+ * products sharing the same entity+group key.
+ */
 import { describe, expect, test } from "bun:test";
 import type {
 	FeatureOptions,
@@ -252,7 +261,7 @@ describe("buildIncrementalSyncParams", () => {
 		});
 	});
 
-	test("rejects unsupported targets with no product group", () => {
+	test("syncs a single ungrouped product with no linked customer product", () => {
 		const noGroup = product({ id: "no_group", group: null });
 		const blankGroup = product({ id: "blank_group", group: "" });
 
@@ -267,11 +276,52 @@ describe("buildIncrementalSyncParams", () => {
 				linkedCustomerProducts: [],
 			});
 
-			expect(result).toMatchObject({
-				shouldSync: false,
-				reason: "unsupported_target",
-			});
+			expect(result.shouldSync).toBe(true);
+			if (!result.shouldSync) throw new Error(result.reason);
+			expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
+				unsupported.id,
+			]);
 		}
+	});
+
+	test("syncs a downgrade between two ungrouped products with a single linked target (production regression)", () => {
+		const ultra = product({ id: "poke_ultra", group: "" });
+		const pro = product({ id: "poke_pro", group: "" });
+		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [linkedCustomerProduct({ product: ultra })],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
+			"poke_pro",
+		]);
+	});
+
+	test("rejects genuinely ambiguous ungrouped linked targets", () => {
+		const ultra = product({ id: "poke_ultra", group: null });
+		const credits = product({ id: "poke_credits", group: "" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: ultra })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: ultra, id: "cp_ultra" }),
+				linkedCustomerProduct({ product: credits, id: "cp_credits" }),
+			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "ambiguous_linked_targets",
+		});
 	});
 
 	test("keeps add-ons when linked quantity is below desired quantity", () => {
