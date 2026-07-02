@@ -115,7 +115,7 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 			const runResult = isErrorResult(result)
 				? approvalErrorResult(result)
 				: { result, text: "", toolName: approval.tool_name };
-			void deps.notifySuspendedToolDenied({
+			await deps.notifySuspendedToolDenied({
 				providerUserId,
 				sessionId,
 				toolUseId,

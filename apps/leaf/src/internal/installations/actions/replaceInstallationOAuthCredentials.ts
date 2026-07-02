@@ -312,11 +312,12 @@ export const replaceInstallationOAuthCredentials = async ({
 	if (!userId) {
 		throw new Error("Missing user id for chat MCP OAuth credentials");
 	}
+	const effectiveAuthMode = authMode ?? installation.auth_mode ?? undefined;
 
 	// Unrestricted installs intentionally mint a scope-less token: the route scope
 	// middleware treats empty scopes as full access, so every sender acts as admin.
 	const scopes =
-		authMode === ChatAuthMode.Unrestricted
+		effectiveAuthMode === ChatAuthMode.Unrestricted
 			? []
 			: resolveAgentScopes(agentScopes);
 	const config = getProviderOAuthConfig({ installation });
@@ -326,7 +327,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
-		authMode,
+		authMode: effectiveAuthMode,
 		env: AppEnv.Sandbox,
 		orgId,
 		userId,
@@ -336,7 +337,7 @@ export const replaceInstallationOAuthCredentials = async ({
 		tx,
 		installation,
 		config,
-		authMode,
+		authMode: effectiveAuthMode,
 		env: AppEnv.Live,
 		orgId,
 		userId,

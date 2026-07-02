@@ -46,4 +46,19 @@ describe("OAuth token request fields", () => {
 			),
 		).resolves.toBe("refresh_json");
 	});
+
+	test("supports case-insensitive JSON content types", async () => {
+		await expect(
+			getRefreshTokenForConsentLookup(
+				new Request("http://localhost/api/auth/oauth2/token", {
+					method: "POST",
+					headers: { "content-type": "Application/JSON; charset=utf-8" },
+					body: JSON.stringify({
+						grant_type: "refresh_token",
+						refresh_token: "refresh_json_upper",
+					}),
+				}),
+			),
+		).resolves.toBe("refresh_json_upper");
+	});
 });

@@ -52,6 +52,6 @@ export const getOAuthConsentMetadataKindFilter = (
 ) => {
 	const kind = "kind" in metadata ? metadata.kind : null;
 	return kind
-		? sql`${oauthConsent.metadata}->>'kind' = ${kind}`
+		? sql`${oauthConsent.metadata}->>'kind' = ${kind} AND ${oauthConsent.metadata}->>'chatInstallationId' = ${metadata.chatInstallationId} AND ${oauthConsent.metadata}->>'createdByUserId' = ${metadata.createdByUserId}`
 		: sql`COALESCE(${oauthConsent.metadata}->>'kind', '') = ''`;
 };

@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, ChatAuthMode, type ChatInstallation } from "@autumn/shared";
-import { resolveSlackCallerAuthCore } from "../../../src/agent/runMessage/setup/resolveSlackCallerAuthCore.js";
+import { resolveSlackCallerAuth } from "../../../src/agent/runMessage/setup/resolveSlackCallerAuth.js";
+import { resolveSlackUserAuth } from "../../../src/agent/runMessage/setup/resolveSlackUserAuth.js";
 
 const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 	({
@@ -25,6 +26,18 @@ const installation = ({ botAccessToken }: { botAccessToken: string }) =>
 		updated_at: 1,
 	}) satisfies ChatInstallation;
 
+const noopLogger = {
+	child: () => noopLogger,
+	debug: () => {},
+	error: () => {},
+	info: () => {},
+	warn: () => {},
+	warning: () => {},
+} as AutumnLogger;
+
+const mockFetch = (handler: () => Promise<Response>) =>
+	Object.assign(handler, { preconnect: fetch.preconnect });
+
 describe("resolveSlackCallerAuth", () => {
 	test("returns a structured denial when per-user token resolution throws", async () => {
 		const errors: unknown[] = [];
@@ -39,16 +52,7 @@ describe("resolveSlackCallerAuth", () => {
 			warning: () => {},
 		} as AutumnLogger;
 
-		const result = await resolveSlackCallerAuthCore({
-			deps: {
-				decrypt: () => {
-					throw new Error("corrupt token");
-				},
-				resolveInstallationAuthMode: () => ChatAuthMode.PerUser,
-				resolveSlackUserAuth: async () => {
-					throw new Error("should not resolve user auth");
-				},
-			},
+		const result = await resolveSlackCallerAuth({
 			installation: installation({
 				botAccessToken: "not-valid-encrypted-data",
 			}),
@@ -65,5 +69,32 @@ describe("resolveSlackCallerAuth", () => {
 			expect(result.text).toContain("couldn't verify your Autumn permissions");
 		}
 		expect(errors).toHaveLength(1);
+	});
+
+	test("denies without Slack lookup when installation org mismatches", async () => {
+		let fetchCalls = 0;
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = mockFetch(async () => {
+			fetchCalls += 1;
+			throw new Error("should not fetch Slack user");
+		});
+
+		try {
+			const result = await resolveSlackUserAuth({
+				botToken: "xoxb-token",
+				installation: installation({ botAccessToken: "unused" }),
+				logger: noopLogger,
+				orgId: "org_other",
+				slackUserId: "U1",
+			});
+
+			expect(result).toMatchObject({
+				ok: false,
+				reason: "installation-org-mismatch",
+			});
+			expect(fetchCalls).toBe(0);
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
 	});
 });

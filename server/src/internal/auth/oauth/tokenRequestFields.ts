@@ -1,5 +1,22 @@
-const getString = (value: unknown) =>
-	typeof value === "string" && value.length > 0 ? value : null;
+import { z } from "zod";
+
+const tokenRequestFieldsSchema = z
+	.object({
+		grant_type: z.string().min(1).optional(),
+		refresh_token: z.string().min(1).optional(),
+	})
+	.passthrough();
+
+const fieldsFromUnknown = (value: unknown): OAuthTokenRequestFields => {
+	const parsed = tokenRequestFieldsSchema.safeParse(value);
+	if (!parsed.success) {
+		return { grantType: null, refreshToken: null };
+	}
+	return {
+		grantType: parsed.data.grant_type ?? null,
+		refreshToken: parsed.data.refresh_token ?? null,
+	};
+};
 
 export type OAuthTokenRequestFields = {
 	grantType: string | null;
@@ -14,24 +31,18 @@ export const getOAuthTokenRequestFields = async (
 	if (!rawBody) {
 		return { grantType: null, refreshToken: null };
 	}
+	const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
 
-	if (contentType.includes("application/json")) {
+	if (mediaType === "application/json") {
 		try {
-			const body = JSON.parse(rawBody) as Record<string, unknown>;
-			return {
-				grantType: getString(body.grant_type),
-				refreshToken: getString(body.refresh_token),
-			};
+			return fieldsFromUnknown(JSON.parse(rawBody));
 		} catch {
 			return { grantType: null, refreshToken: null };
 		}
 	}
 
 	const params = new URLSearchParams(rawBody);
-	return {
-		grantType: getString(params.get("grant_type")),
-		refreshToken: getString(params.get("refresh_token")),
-	};
+	return fieldsFromUnknown(Object.fromEntries(params));
 };
 
 export const getRefreshTokenForConsentLookup = async (request: Request) => {

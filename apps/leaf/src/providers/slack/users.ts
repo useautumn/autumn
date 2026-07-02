@@ -2,6 +2,7 @@ import {
 	ChatAuthMode,
 	type ChatInstallation,
 	SLACK_EMAIL_SCOPE,
+	ms,
 } from "@autumn/shared";
 import { z } from "zod";
 
@@ -42,13 +43,15 @@ const slackUsersInfoSchema = z.object({
 		.optional(),
 });
 
-export const fetchSlackUserEmail = async ({
+type SlackUserEmailLookup = { email: string | null; cacheable: boolean };
+
+const fetchSlackUserEmailResult = async ({
 	botToken,
 	slackUserId,
 }: {
 	botToken: string;
 	slackUserId: string;
-}): Promise<string | null> => {
+}): Promise<SlackUserEmailLookup> => {
 	const url = new URL(SLACK_USERS_INFO_URL);
 	url.searchParams.set("user", slackUserId);
 
@@ -57,30 +60,36 @@ export const fetchSlackUserEmail = async ({
 			headers: { Authorization: `Bearer ${botToken}` },
 		});
 		if (!response.ok) {
-			return null;
+			return { cacheable: false, email: null };
 		}
 
 		const parsed = slackUsersInfoSchema.safeParse(await response.json());
 		if (!(parsed.success && parsed.data.ok) || !parsed.data.user) {
-			return null;
+			return { cacheable: false, email: null };
 		}
 
 		const { user } = parsed.data;
 		if (user.deleted || user.is_bot) {
-			return null;
+			return { cacheable: true, email: null };
 		}
 
 		const email = user.profile?.email?.trim();
-		return email ? email : null;
+		return { cacheable: true, email: email ? email : null };
 	} catch {
-		return null;
+		return { cacheable: false, email: null };
 	}
 };
 
-const EMAIL_CACHE_TTL_MS = 10 * 60 * 1000;
+export const fetchSlackUserEmail = async (params: {
+	botToken: string;
+	slackUserId: string;
+}): Promise<string | null> => (await fetchSlackUserEmailResult(params)).email;
+
+const EMAIL_CACHE_TTL_MS = ms.minutes(10);
+const EMAIL_NEGATIVE_CACHE_TTL_MS = ms.minutes(1);
 const EMAIL_CACHE_MAX_ENTRIES = 10_000;
 
-type CachedEmail = { email: string; expiresAt: number };
+type CachedEmail = { email: string | null; expiresAt: number };
 const emailCache = new Map<string, CachedEmail>();
 
 // Drop expired entries first, then oldest insertion-order entries if still over
@@ -104,9 +113,8 @@ const evictEmailCache = (now: number) => {
 	}
 };
 
-// Slack emails effectively never change, so cache successful lookups to avoid a
-// users.info call on every message. Failures/null are never cached so transient
-// Slack errors retry on the next message.
+// Slack emails effectively never change, so cache successful lookups and stable
+// negative user states. Transient Slack/API failures are not cached.
 export const fetchSlackUserEmailCached = async ({
 	botToken,
 	installationId,
@@ -126,12 +134,17 @@ export const fetchSlackUserEmailCached = async ({
 		emailCache.delete(cacheKey);
 	}
 
-	const email = await fetchSlackUserEmail({ botToken, slackUserId });
-	if (email) {
-		emailCache.set(cacheKey, { email, expiresAt: now + EMAIL_CACHE_TTL_MS });
+	const lookup = await fetchSlackUserEmailResult({ botToken, slackUserId });
+	if (lookup.cacheable) {
+		emailCache.set(cacheKey, {
+			email: lookup.email,
+			expiresAt:
+				now +
+				(lookup.email ? EMAIL_CACHE_TTL_MS : EMAIL_NEGATIVE_CACHE_TTL_MS),
+		});
 		if (emailCache.size > EMAIL_CACHE_MAX_ENTRIES) {
 			evictEmailCache(now);
 		}
 	}
-	return email;
+	return lookup.email;
 };

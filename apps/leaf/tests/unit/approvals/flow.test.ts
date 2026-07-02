@@ -153,6 +153,7 @@ describe("approval flow", () => {
 			"../../../src/harness/claudeManaged/approval.js"
 		);
 		const calls: string[] = [];
+		let finishNotify: (() => void) | undefined;
 		const approval = {
 			env: AppEnv.Sandbox,
 			org_id: "org_1",
@@ -162,7 +163,7 @@ describe("approval flow", () => {
 			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
 		} as unknown as ChatApproval;
 
-		const result = await resumeClaudeManagedApprovalWithDeps({
+		const resultPromise = resumeClaudeManagedApprovalWithDeps({
 			approval,
 			providerUserId: "U1",
 			token: "am_oauth_clicker",
@@ -175,7 +176,11 @@ describe("approval flow", () => {
 					};
 				},
 				notifySuspendedToolDenied: async () => {
-					calls.push("notify");
+					calls.push("notify:start");
+					await new Promise<void>((resolve) => {
+						finishNotify = resolve;
+					});
+					calls.push("notify:end");
 				},
 				driveSessionTurn: async () => {
 					throw new Error("should not drive the live session");
@@ -185,9 +190,14 @@ describe("approval flow", () => {
 				},
 			},
 		});
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(calls).toEqual(["execute", "notify:start"]);
+		finishNotify?.();
+		const result = await resultPromise;
 
 		expect(result).toEqual({ error: true, message: "Tool failed" });
-		expect(calls).toEqual(["execute", "notify"]);
+		expect(calls).toEqual(["execute", "notify:start", "notify:end"]);
 	});
 
 	test("edits the approval message to failed when the approved tool fails", async () => {

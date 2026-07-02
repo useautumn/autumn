@@ -38,9 +38,13 @@ describe("chat OAuth credentials", () => {
 			}),
 		);
 		expect(normalize(unrestricted.sql)).toContain(
-			`"oauth_consent"."metadata"->>'kind' = $1`,
+			`"oauth_consent"."metadata"->>'kind' = $1 AND "oauth_consent"."metadata"->>'chatInstallationId' = $2 AND "oauth_consent"."metadata"->>'createdByUserId' = $3`,
 		);
-		expect(unrestricted.params).toEqual(["chat_unrestricted"]);
+		expect(unrestricted.params).toEqual([
+			"chat_unrestricted",
+			"chat_inst_1",
+			"user_1",
+		]);
 
 		const restricted = render(getOAuthConsentMetadataKindFilter({}));
 		expect(normalize(restricted.sql)).toContain(
