@@ -1,13 +1,12 @@
 import {
 	type FullProduct,
 	mapToProductV2,
-	ProductNotFoundError,
 	type ProductV2,
 	type RewardProgram,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import type { CustomerProductVersioningUsage } from "@/internal/customers/cusProducts/repos/getVersioningUsage.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
@@ -52,13 +51,10 @@ export const setupUpdateProductContext = async ({
 		}),
 	]);
 
-	if (!fullProduct) throw new ProductNotFoundError({ productId });
-
-	const customerUsage =
-		await customerProductRepo.getVersioningUsageForProduct({
-			db,
-			internalProductId: fullProduct.internal_id,
-		});
+	const customerUsage = await customerProductRepo.getVersioningUsageForProduct({
+		db,
+		internalProductId: fullProduct.internal_id,
+	});
 
 	return {
 		fullProduct,

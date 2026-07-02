@@ -1,5 +1,6 @@
 import type { DbLicenseAssignment, DbPlanLicense } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { licenseAssignmentRepo } from "./repos/index.js";
 
 export const serializeLicenseAssignment = ({
 	assignment,
@@ -26,13 +27,13 @@ export const getLicenseAssignmentResponse = async ({
 	assignment: DbLicenseAssignment;
 }) => {
 	const [entity, licenseProduct] = await Promise.all([
-		ctx.db.query.entities.findFirst({
-			where: (table, { eq }) =>
-				eq(table.internal_id, assignment.internal_entity_id),
+		licenseAssignmentRepo.getEntityByInternalId({
+			db: ctx.db,
+			internalEntityId: assignment.internal_entity_id,
 		}),
-		ctx.db.query.products.findFirst({
-			where: (table, { eq }) =>
-				eq(table.internal_id, assignment.license_internal_product_id),
+		licenseAssignmentRepo.getProductByInternalId({
+			db: ctx.db,
+			internalProductId: assignment.license_internal_product_id,
 		}),
 	]);
 
@@ -58,6 +59,7 @@ export const serializePlanLicense = ({
 	license_plan_id: licensePlanId,
 	included_quantity: planLicense.included_quantity,
 	allow_extra_quantity: planLicense.allow_extra_quantity,
+	pooled_feature_ids: planLicense.pooled_feature_ids,
 	customize: planLicense.customize,
 	metadata: planLicense.metadata,
 	created_at: planLicense.created_at,

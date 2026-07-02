@@ -19,8 +19,8 @@ import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/erro
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
-import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/validateCustomLicenseChanges";
 import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
 /** Validates attach v2 request before executing the billing plan. */

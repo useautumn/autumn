@@ -1,24 +1,10 @@
-import {
-	customerProductLicenses,
-	customerProducts,
-	ErrCode,
-	entities,
-	type FullCustomer,
-	licenseAssignments,
-	licensePools,
-	planLicenses,
-	products,
-	RecaseError,
-} from "@autumn/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import {
-	getPaidQuantity,
-	isLicensePoolParentStatus,
-	parentCustomerProducts,
-} from "../licenseUtils.js";
+import { getPaidQuantity, isLicensePoolParentStatus } from "../licenseUtils.js";
+import { licenseAssignmentRepo, licensePoolRepo } from "../repos/index.js";
 import { ensurePoolsForCustomerProducts } from "./ensureLicensePools.js";
+import { reconcilePooledGrantsForCustomer } from "./reconcilePooledGrants.js";
 
 const validateEntity = ({
 	fullCustomer,
@@ -59,63 +45,29 @@ export const listLicensePools = async ({
 		ctx,
 		customerProducts: fullCustomer.customer_products,
 	});
+	await reconcilePooledGrantsForCustomer({
+		ctx,
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+	});
 
-	const poolRows = await ctx.db
-		.select({
-			pool: licensePools,
-			planLicense: planLicenses,
-			customerProductLicense: customerProductLicenses,
-			licenseProduct: products,
-			parentCustomerProduct: parentCustomerProducts,
-			paidCustomerProduct: customerProducts,
-		})
-		.from(licensePools)
-		.leftJoin(planLicenses, eq(licensePools.plan_license_id, planLicenses.id))
-		.leftJoin(
-			customerProductLicenses,
-			eq(licensePools.customer_product_license_id, customerProductLicenses.id),
-		)
-		.innerJoin(
-			products,
-			eq(licensePools.license_internal_product_id, products.internal_id),
-		)
-		.innerJoin(
-			parentCustomerProducts,
-			eq(licensePools.parent_customer_product_id, parentCustomerProducts.id),
-		)
-		.leftJoin(
-			customerProducts,
-			eq(licensePools.license_customer_product_id, customerProducts.id),
-		)
-		.where(
-			and(
-				eq(licensePools.org_id, ctx.org.id),
-				eq(licensePools.env, ctx.env),
-				eq(licensePools.internal_customer_id, fullCustomer.internal_id),
-			),
-		);
+	const poolRows = await licensePoolRepo.listPoolRowsWithProductByCustomer({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		internalCustomerId: fullCustomer.internal_id,
+	});
 
 	if (poolRows.length === 0) return [];
 
 	const poolIds = poolRows.map(({ pool }) => pool.id);
-	const assignments = await ctx.db
-		.select({
-			assignment: licenseAssignments,
-			entity_id: entities.id,
-		})
-		.from(licenseAssignments)
-		.innerJoin(
-			entities,
-			eq(licenseAssignments.internal_entity_id, entities.internal_id),
-		)
-		.where(
-			and(
-				eq(licenseAssignments.org_id, ctx.org.id),
-				eq(licenseAssignments.env, ctx.env),
-				inArray(licenseAssignments.license_pool_id, poolIds),
-				isNull(licenseAssignments.ended_at),
-			),
-		);
+	const assignments = await licenseAssignmentRepo.listActiveWithEntityByPoolIds(
+		{
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			poolIds,
+		},
+	);
 	const assignmentsByPoolId = new Map<string, typeof assignments>();
 	for (const assignment of assignments) {
 		const existing =
@@ -137,8 +89,8 @@ export const listLicensePools = async ({
 				parentCustomerProduct,
 				paidCustomerProduct,
 			}) => {
-				const licenseDefinition = planLicense ?? customerProductLicense;
-				if (!licenseDefinition) return null;
+				// The pools source check + FK cascades guarantee exactly one definition.
+				const licenseDefinition = (planLicense ?? customerProductLicense)!;
 
 				const poolAssignments = assignmentsByPoolId.get(pool.id) ?? [];
 				const paidQuantity = getPaidQuantity({
@@ -169,6 +121,5 @@ export const listLicensePools = async ({
 					})),
 				};
 			},
-		)
-		.filter((pool) => pool !== null);
+		);
 };

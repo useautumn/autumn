@@ -8,7 +8,7 @@ import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/upda
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
-import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/validateCustomLicenseChanges";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleManualTopUpErrors } from "./handleManualTopUpErrors";

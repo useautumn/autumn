@@ -13,6 +13,8 @@ import { handleUpdateProductDetails } from "@/internal/products/handlers/handleU
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { getLicenseProduct } from "../licenseUtils.js";
+import { planLicenseRepo } from "../repos/index.js";
+import { validatePooledFeatures } from "./validatePooledFeatures.js";
 
 export const updateLicenseProduct = async ({
 	ctx,
@@ -60,6 +62,21 @@ export const updateLicenseProduct = async ({
 	}
 
 	const { metadata, items } = updates;
+	if (items) {
+		const pooledLinks = await planLicenseRepo.listByLicenseInternalProductId({
+			db: ctx.db,
+			licenseInternalProductId: licenseProduct.internal_id,
+		});
+		for (const link of pooledLinks) {
+			validatePooledFeatures({
+				ctx,
+				pooledFeatureIds: link.pooled_feature_ids,
+				licenseProduct,
+				customize: link.customize,
+				overrideItems: items,
+			});
+		}
+	}
 	const details = UpdateProductSchema.parse(updates);
 	const currentProductV2 = mapToProductV2({
 		product: licenseProduct,

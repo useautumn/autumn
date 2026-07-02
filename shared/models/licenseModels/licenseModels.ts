@@ -17,6 +17,7 @@ export const PlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
 	included_quantity: z.number(),
 	allow_extra_quantity: z.boolean(),
+	pooled_feature_ids: z.array(z.string()).default([]),
 	customize: LicenseCustomizeSchema.nullish(),
 	metadata: z.record(z.string(), z.unknown()).nullish(),
 	created_at: z.number(),
@@ -38,6 +39,7 @@ export const SetPlanLicenseParamsSchema = z.object({
 	license_plan_id: z.string(),
 	included_quantity: z.number().int().min(0).default(0),
 	allow_extra_quantity: z.boolean().default(false),
+	pooled_feature_ids: z.array(z.string()).default([]),
 	customize: LicenseCustomizeSchema.nullish().optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });

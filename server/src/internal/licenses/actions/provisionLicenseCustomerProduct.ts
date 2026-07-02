@@ -9,7 +9,7 @@ import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCus
 import { insertCustomItems } from "@/internal/customers/attach/attachUtils/insertCustomItems.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import type { LicenseDefinition } from "./customerProductLicenseActions.js";
+import type { LicenseDefinition } from "../licenseTypes.js";
 
 const resolveLicenseProductForPlan = async ({
 	ctx,
@@ -78,15 +78,19 @@ export const insertProvisionedLicenseCustomerProduct = async ({
 			status: CusProductStatus.Active,
 		},
 	});
+	const pooledFeatureIds = new Set(licenseDefinition.pooled_feature_ids ?? []);
 	cusProduct.customer_prices = [];
 	cusProduct.subscription_ids = [];
 	cusProduct.scheduled_ids = [];
-	cusProduct.customer_entitlements = cusProduct.customer_entitlements.map(
-		(entitlement) => ({
-			...entitlement,
+	cusProduct.customer_entitlements = cusProduct.customer_entitlements
+		.filter(
+			(customerEntitlement) =>
+				!pooledFeatureIds.has(customerEntitlement.entitlement.feature.id),
+		)
+		.map((customerEntitlement) => ({
+			...customerEntitlement,
 			internal_entity_id: internalEntityId,
-		}),
-	);
+		}));
 
 	await CusProductService.insert({ db: ctx.db, data: cusProduct });
 	await CusEntService.insert({

@@ -130,6 +130,7 @@ const handleSetPlanLicense = createRoute({
 			licensePlanId: body.license_plan_id,
 			includedQuantity: body.included_quantity,
 			allowExtraQuantity: body.allow_extra_quantity,
+			pooledFeatureIds: body.pooled_feature_ids,
 			customize: body.customize,
 			metadata: body.metadata,
 		});

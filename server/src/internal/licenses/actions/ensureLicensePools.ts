@@ -1,13 +1,12 @@
-import {
-	customerProductLicenses,
-	type FullCusProduct,
-	licensePools,
-	planLicenses,
-} from "@autumn/shared";
-import { inArray } from "drizzle-orm";
+import type { FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { isLicensePoolParentStatus } from "../licenseUtils.js";
+import {
+	customerProductLicenseRepo,
+	licensePoolRepo,
+	planLicenseRepo,
+} from "../repos/index.js";
 
 export const ensurePoolsForCustomerProducts = async ({
 	ctx,
@@ -38,8 +37,9 @@ export const ensurePoolsForCustomerProducts = async ({
 	];
 	const linkedPlanLicenses =
 		productIds.length > 0
-			? await ctx.db.query.planLicenses.findMany({
-					where: inArray(planLicenses.parent_internal_product_id, productIds),
+			? await planLicenseRepo.listByParentInternalProductIds({
+					db: ctx.db,
+					parentInternalProductIds: productIds,
 				})
 			: [];
 	const customParentIds = customCustomerProducts.map(
@@ -47,11 +47,9 @@ export const ensurePoolsForCustomerProducts = async ({
 	);
 	const linkedCustomLicenses =
 		customParentIds.length > 0
-			? await ctx.db.query.customerProductLicenses.findMany({
-					where: inArray(
-						customerProductLicenses.parent_customer_product_id,
-						customParentIds,
-					),
+			? await customerProductLicenseRepo.listByParentCustomerProductIds({
+					db: ctx.db,
+					parentCustomerProductIds: customParentIds,
 				})
 			: [];
 	if (linkedPlanLicenses.length === 0 && linkedCustomLicenses.length === 0)
@@ -129,26 +127,10 @@ export const ensurePoolsForCustomerProducts = async ({
 	if (rows.length === 0 && customRows.length === 0) return;
 
 	if (rows.length > 0) {
-		await ctx.db
-			.insert(licensePools)
-			.values(rows)
-			.onConflictDoNothing({
-				target: [
-					licensePools.parent_customer_product_id,
-					licensePools.plan_license_id,
-				],
-			});
+		await licensePoolRepo.insertInheritedPools({ db: ctx.db, rows });
 	}
 
 	if (customRows.length > 0) {
-		await ctx.db
-			.insert(licensePools)
-			.values(customRows)
-			.onConflictDoNothing({
-				target: [
-					licensePools.parent_customer_product_id,
-					licensePools.customer_product_license_id,
-				],
-			});
+		await licensePoolRepo.insertCustomPools({ db: ctx.db, rows: customRows });
 	}
 };

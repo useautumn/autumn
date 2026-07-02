@@ -1,8 +1,8 @@
 import type { BillingPlan, MultiAttachBillingContext } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
-import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customerProductLicenseActions";
+import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/validateCustomLicenseChanges";
 import { handleMultiAttachCurrentProductErrors } from "./handleMultiAttachCurrentProductErrors";
 import { handleMultiAttachRedirectErrors } from "./handleMultiAttachRedirectErrors";
 

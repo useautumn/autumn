@@ -1,11 +1,4 @@
-import {
-	CusProductStatus,
-	customerProducts,
-	ErrCode,
-	licenseAssignments,
-	RecaseError,
-} from "@autumn/shared";
-import { and, eq, isNull } from "drizzle-orm";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
@@ -13,6 +6,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getLicenseAssignmentResponse } from "../licenseResponseUtils.js";
 import { getLicenseProduct } from "../licenseUtils.js";
+import { licenseAssignmentRepo } from "../repos/index.js";
 
 const resolveAssignment = async ({
 	ctx,
@@ -28,12 +22,11 @@ const resolveAssignment = async ({
 	planId?: string;
 }) => {
 	if (assignmentId) {
-		return await ctx.db.query.licenseAssignments.findFirst({
-			where: and(
-				eq(licenseAssignments.id, assignmentId),
-				eq(licenseAssignments.org_id, ctx.org.id),
-				eq(licenseAssignments.env, ctx.env),
-			),
+		return await licenseAssignmentRepo.getById({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			assignmentId,
 		});
 	}
 
@@ -57,18 +50,13 @@ const resolveAssignment = async ({
 	const entity = fullCustomer.entities?.find((item) => item.id === entityId);
 	if (!entity) return undefined;
 
-	return await ctx.db.query.licenseAssignments.findFirst({
-		where: and(
-			eq(licenseAssignments.org_id, ctx.org.id),
-			eq(licenseAssignments.env, ctx.env),
-			eq(licenseAssignments.internal_customer_id, fullCustomer.internal_id),
-			eq(licenseAssignments.internal_entity_id, entity.internal_id),
-			eq(
-				licenseAssignments.license_internal_product_id,
-				licenseProduct.internal_id,
-			),
-			isNull(licenseAssignments.ended_at),
-		),
+	return await licenseAssignmentRepo.findActive({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		internalCustomerId: fullCustomer.internal_id,
+		internalEntityId: entity.internal_id,
+		licenseInternalProductId: licenseProduct.internal_id,
 	});
 };
 
@@ -102,9 +90,9 @@ export const unassignLicense = async ({
 		});
 	}
 
-	const customer = await ctx.db.query.customers.findFirst({
-		where: (table, { eq }) =>
-			eq(table.internal_id, assignment.internal_customer_id),
+	const customer = await licenseAssignmentRepo.getCustomerByInternalId({
+		db: ctx.db,
+		internalCustomerId: assignment.internal_customer_id,
 	});
 	const unassign = async () => {
 		if (assignment.ended_at) {
@@ -113,22 +101,19 @@ export const unassignLicense = async ({
 
 		const endedAt = Date.now();
 		await ctx.db.transaction(async (tx) => {
-			await tx
-				.update(licenseAssignments)
-				.set({ ended_at: endedAt })
-				.where(eq(licenseAssignments.id, assignment.id));
+			const txDb = tx as unknown as typeof ctx.db;
+			await licenseAssignmentRepo.endById({
+				db: txDb,
+				assignmentId: assignment.id,
+				endedAt,
+			});
 
 			if (assignment.provisioned_customer_product_id) {
-				await tx
-					.update(customerProducts)
-					.set({
-						status: CusProductStatus.Expired,
-						ended_at: endedAt,
-						updated_at: endedAt,
-					})
-					.where(
-						eq(customerProducts.id, assignment.provisioned_customer_product_id),
-					);
+				await licenseAssignmentRepo.expireProvisionedCustomerProductById({
+					db: txDb,
+					customerProductId: assignment.provisioned_customer_product_id,
+					endedAt,
+				});
 			}
 		});
 
