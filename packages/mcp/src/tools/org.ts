@@ -15,7 +15,7 @@ const organizationMeSchema = z.object({
 			email: z.string(),
 			name: z.string(),
 		})
-		.optional(),
+		.nullish(),
 });
 
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
