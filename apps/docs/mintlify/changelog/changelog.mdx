@@ -4,6 +4,64 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 3rd 2026">
+  ## Plan variants
+
+  Model multiple versions of the same offer under a single base plan with [plan variants](/documentation/modelling-pricing/plan-variants). Each variant only stores what differs — a price, an interval, an included quantity — so you can ship monthly/annual, A/B tests, and volume ladders without duplicating the whole plan. Variants show up in the plan edit header, in update previews with conflict detection, and in a customer-count migration step.
+
+  ## Copy and promote plans across sandboxes
+
+  Move a plan (and the features it depends on) between environments from the dashboard. Copy from the default sandbox or production **into** a named sandbox, then **promote** it back up to production or the master sandbox when it's ready. Selective copies pull in the closure — including AI credit systems — and newly created sandboxes inherit their parent's config.
+
+  ## Disable overage billing per customer
+
+  Custom plans get a new **disable overage billing** switch under [billing controls](/documentation/customers/billing-controls). Turn it on to let a specific customer exceed their included usage without generating overage charges — useful for grandfathered accounts, internal teams, and negotiated deals.
+
+  ## RevenueCat prepaid SKU mapping
+
+  In the [RevenueCat integration](/documentation/external-providers/revenuecat), map a RevenueCat SKU directly to a prepaid feature quantity from the raw mappings sheet. Raw mappings also now show the product ID and supported platforms, making it easier to identify the right SKU when your catalog spans iOS, Android, and web.
+
+  ## Slack customer-card link unfurler
+
+  Paste a customer URL into Slack and Autumn now unfurls it into a customer card with plan, balances, and status — so you can triage support without leaving the thread. Install the Slack app from your organization settings.
+
+  ## Customer JWTs can read events
+
+  Per-customer JWT credentials now authorize `events.list` and `events.aggregate`, so you can render a customer's own usage history and aggregates directly in your frontend without a server round-trip.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Active sandbox name is now reflected in the dashboard URL, so links are shareable across environments — [#2058](https://github.com/useautumn/autumn/pull/2058)
+      - Pre-deploy organizations can use the environment dropdown — [#2059](https://github.com/useautumn/autumn/pull/2059)
+      - Sandbox settings show inherited organization members — [#2097](https://github.com/useautumn/autumn/pull/2097)
+      - Sandbox Stripe connect panel is now scoped to the active sub-org — [#2075](https://github.com/useautumn/autumn/pull/2075), [#2078](https://github.com/useautumn/autumn/pull/2078)
+      - When cancelling an already-cancelling subscription immediately, all refund options are now available — [#2071](https://github.com/useautumn/autumn/pull/2071)
+      - Overage is rebalanced when balance entries are deleted, so remaining usage stays consistent — [#2055](https://github.com/useautumn/autumn/pull/2055)
+      - Reset cron marks expired entitlements and skips them, with a grace window for recently-expired products — [#2080](https://github.com/useautumn/autumn/pull/2080), [#2074](https://github.com/useautumn/autumn/pull/2074)
+      - New org setting to disable Stripe product creation for teams managing their own catalog — [#2069](https://github.com/useautumn/autumn/pull/2069)
+      - OAuth consent screen now has an **End impersonation** button for support sessions — [#2088](https://github.com/useautumn/autumn/pull/2088)
+      - Faster query performance and better observability from PlanetScale query tagging — [#2089](https://github.com/useautumn/autumn/pull/2089), [#2101](https://github.com/useautumn/autumn/pull/2101)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Manual invoices now bake in the customer's current discounts instead of stale values — [#2122](https://github.com/useautumn/autumn/pull/2122)
+      - Failed Stripe subscription actions correctly refund the invoice, restore the released schedule, and surface unrefundable rollbacks — [#2094](https://github.com/useautumn/autumn/pull/2094)
+      - Stripe Checkout now prefills the email for existing Stripe customers — [#2111](https://github.com/useautumn/autumn/pull/2111)
+      - Promo code minimums are validated against the customer's currency — [#2102](https://github.com/useautumn/autumn/pull/2102)
+      - Graduated price tooltip shows included usage and correct tier boundaries — [#2070](https://github.com/useautumn/autumn/pull/2070)
+      - Card preview respects the organization's currency instead of defaulting to USD — [#2091](https://github.com/useautumn/autumn/pull/2091)
+      - Free phases render correctly in Stripe subscription schedules — [#2088](https://github.com/useautumn/autumn/pull/2088)
+      - Portal plan backsync is hardened against shared Stripe products and mismatched price IDs — [#2054](https://github.com/useautumn/autumn/pull/2054), [#2118](https://github.com/useautumn/autumn/pull/2118)
+      - Percentage-based spend limits resolve before the most-restrictive plan merge and aggregate correctly for legacy plans — [#2088](https://github.com/useautumn/autumn/pull/2088)
+      - Billing controls apply correctly when updating a plan variant — [#2117](https://github.com/useautumn/autumn/pull/2117)
+      - Usage limit checks corrected for edge-case plans — [#2116](https://github.com/useautumn/autumn/pull/2116)
+      - Migration UI cleaned up and the `atmn` CLI migration flow fixed — [#2119](https://github.com/useautumn/autumn/pull/2119)
+      - Trial removal via `plans.update` now works as expected — [#2104](https://github.com/useautumn/autumn/pull/2104)
+      - Dynamic OAuth client registration can no longer hijack reserved client IDs — [#2083](https://github.com/useautumn/autumn/pull/2083)
+      - Dashboard chatbot restored — [#2065](https://github.com/useautumn/autumn/pull/2065)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="June 26th 2026">
   ## Multiple sandbox environments per org
 
