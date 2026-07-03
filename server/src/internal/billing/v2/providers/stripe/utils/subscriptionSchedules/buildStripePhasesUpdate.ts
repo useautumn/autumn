@@ -79,7 +79,7 @@ const customerProductsToPhaseItems = ({
 	return [...storedItems, ...inlineItems];
 };
 
-const buildFreePhasePlaceholderItem = ({
+export const buildFreeRecurringPlaceholderItem = ({
 	ctx,
 	customerProducts,
 }: {
@@ -257,15 +257,20 @@ export const buildStripePhasesUpdate = ({
 			phaseStartMs: startMs,
 			phaseEndMs: endMs,
 		});
+		const needsFreePhasePlaceholder =
+			endMs &&
+			(activeCustomerProducts.length > 0 ||
+				(normalizedCustomerProducts.some(
+					(product) => product.starts_at < startMs,
+				) &&
+					normalizedCustomerProducts.some(
+						(product) => product.starts_at >= endMs,
+					)));
 		if (
 			phaseItems.length === 0 &&
-			endMs &&
-			normalizedCustomerProducts.some(
-				(product) => product.starts_at < startMs,
-			) &&
-			normalizedCustomerProducts.some((product) => product.starts_at >= endMs)
+			needsFreePhasePlaceholder
 		) {
-			const placeholderItem = buildFreePhasePlaceholderItem({
+			const placeholderItem = buildFreeRecurringPlaceholderItem({
 				ctx,
 				customerProducts: normalizedCustomerProducts,
 			});

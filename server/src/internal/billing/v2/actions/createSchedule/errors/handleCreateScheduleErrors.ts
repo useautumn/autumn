@@ -2,6 +2,7 @@ import {
 	type CreateScheduleBillingContext,
 	ErrCode,
 	isFreeProduct,
+	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -51,8 +52,14 @@ export const handleCreateScheduleErrors = async ({
 		const subscriptionWillBeCanceled =
 			productsOnSub.length > 0 &&
 			productsOnSub.every((cp) => transitioningOutIds.has(cp.id));
+		const hasFuturePaidRecurringPhase =
+			billingContext.scheduledPhaseContexts.some((phase) =>
+				phase.productContexts.some((ctx) =>
+					isProductPaidAndRecurring(ctx.fullProduct),
+				),
+			);
 
-		if (subscriptionWillBeCanceled) {
+		if (subscriptionWillBeCanceled && !hasFuturePaidRecurringPhase) {
 			throw new RecaseError({
 				message:
 					"Cannot create a schedule with a free first phase while the customer has an active subscription. Please cancel the existing subscription first.",
