@@ -1,6 +1,7 @@
 import { type ChatInstallation, ms } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { SLACK_EMAIL_SCOPE } from "@autumn/shared/utils/auth/slackScopes";
+import { LRUCache } from "lru-cache";
 import { z } from "zod";
 
 const SLACK_USERS_INFO_URL = "https://slack.com/api/users.info";
@@ -86,28 +87,12 @@ const EMAIL_CACHE_TTL_MS = ms.minutes(10);
 const EMAIL_NEGATIVE_CACHE_TTL_MS = ms.minutes(1);
 const EMAIL_CACHE_MAX_ENTRIES = 10_000;
 
-type CachedEmail = { email: string | null; expiresAt: number };
-const emailCache = new Map<string, CachedEmail>();
-
-/** Drops expired entries first, then oldest-inserted, to keep the cache bounded. */
-const evictEmailCache = (now: number) => {
-	for (const [key, entry] of emailCache) {
-		if (entry.expiresAt <= now) {
-			emailCache.delete(key);
-		}
-	}
-	let overflow = emailCache.size - EMAIL_CACHE_MAX_ENTRIES;
-	if (overflow <= 0) {
-		return;
-	}
-	for (const key of emailCache.keys()) {
-		emailCache.delete(key);
-		overflow -= 1;
-		if (overflow <= 0) {
-			break;
-		}
-	}
-};
+// null is a legitimate cached value (stable "no email"), so wrap it —
+// lru-cache treats undefined/absent as a miss
+const emailCache = new LRUCache<string, { email: string | null }>({
+	max: EMAIL_CACHE_MAX_ENTRIES,
+	ttl: EMAIL_CACHE_TTL_MS,
+});
 
 /** Caches hits and stable misses (bot/deleted/no email); transient failures are not cached. */
 export const fetchSlackUserEmailCached = async ({
@@ -120,25 +105,20 @@ export const fetchSlackUserEmailCached = async ({
 	slackUserId: string;
 }): Promise<string | null> => {
 	const cacheKey = `${installationId}:${slackUserId}`;
-	const now = Date.now();
 	const cached = emailCache.get(cacheKey);
 	if (cached) {
-		if (cached.expiresAt > now) {
-			return cached.email;
-		}
-		emailCache.delete(cacheKey);
+		return cached.email;
 	}
 
 	const lookup = await fetchSlackUserEmailResult({ botToken, slackUserId });
 	if (lookup.cacheable) {
-		emailCache.set(cacheKey, {
-			email: lookup.email,
-			expiresAt:
-				now + (lookup.email ? EMAIL_CACHE_TTL_MS : EMAIL_NEGATIVE_CACHE_TTL_MS),
-		});
-		if (emailCache.size > EMAIL_CACHE_MAX_ENTRIES) {
-			evictEmailCache(now);
-		}
+		emailCache.set(
+			cacheKey,
+			{ email: lookup.email },
+			{
+				ttl: lookup.email ? EMAIL_CACHE_TTL_MS : EMAIL_NEGATIVE_CACHE_TTL_MS,
+			},
+		);
 	}
 	return lookup.email;
 };
