@@ -67,7 +67,7 @@ const buildCustomerProduct = ({
 			status: statusInfo.status,
 			canceledAt: statusInfo.canceledAt ?? undefined,
 			endedAt: statusInfo.endedAt ?? undefined,
-			startsAt: revenueCatHydration?.startsAt,
+			startsAt: hydration?.startsAt,
 			processorType,
 			isCustom: false,
 		},

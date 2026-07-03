@@ -16,6 +16,7 @@ export type StripeHydration = {
 	endedAt?: number;
 	trialEndsAt?: number;
 	periodEndMs?: number;
+	startsAt?: number;
 };
 
 const secondsToMs = (seconds: number) => seconds * 1000;
@@ -34,6 +35,8 @@ const buildHydration = (
 		endedAt,
 		trialEndsAt: getTrialEndsAtFromStripe({ stripeSubscription }),
 		periodEndMs: secondsToMs(getLatestPeriodEnd({ sub: stripeSubscription })),
+		// The imported plan starts when the Stripe sub started, not at import time.
+		startsAt: secondsToMs(stripeSubscription.start_date),
 	};
 };
 
