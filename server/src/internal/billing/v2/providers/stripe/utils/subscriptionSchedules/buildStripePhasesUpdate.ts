@@ -148,7 +148,7 @@ const stripeDiscountsToPhaseDiscounts = ({
 	);
 };
 
-const getBillingCycleAnchorResetAt = ({
+export const getBillingCycleAnchorResetAt = ({
 	customerProducts,
 	nowMs,
 }: {
@@ -163,7 +163,7 @@ const getBillingCycleAnchorResetAt = ({
 				)
 				.filter(
 					(resetAt): resetAt is number =>
-						typeof resetAt === "number" && resetAt > nowMs,
+						typeof resetAt === "number" && resetAt >= nowMs,
 				),
 		),
 	).sort((a, b) => a - b);
