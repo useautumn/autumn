@@ -23,13 +23,14 @@ const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
 startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
-const logCronHeartbeat = () => {
+const logCronHeartbeat = (job = "main") => {
 	logger.info(
 		{
 			type: "cron_heartbeat",
 			cron: {
 				pid: process.pid,
 				timezone: "UTC",
+				job,
 			},
 		},
 		"Cron heartbeat",
@@ -78,6 +79,8 @@ const main = async () => {
 // column to seek on), so it runs on a slower cadence than the other jobs.
 const oneOffCleanupTick = async () => {
 	if (!shouldRunTick()) return;
+
+	logCronHeartbeat("one_off_cleanup");
 
 	const ctx: CronContext = {
 		db,
