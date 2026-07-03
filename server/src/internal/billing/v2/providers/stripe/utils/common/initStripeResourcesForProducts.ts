@@ -32,6 +32,14 @@ export const initStripeResourcesForProducts = async ({
 	internalEntityId?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
+
+	await Promise.all(
+		products.map((product) =>
+			applyStripeResourceReuseForProduct({ ctx, product }),
+		),
+	);
+	await applyStripeReuseFromVariantFamilies({ ctx, products });
+
 	if (env === AppEnv.Live) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 
