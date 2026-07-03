@@ -21,6 +21,7 @@ type CreatePlanItemParams = Omit<
 
 import {
 	getCreateSchedulePhaseTimingError,
+	hasPersistedCreateSchedule,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
 
@@ -131,6 +132,7 @@ export function buildCreateScheduleRequestBody({
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
+	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
 		// The first phase starts immediately (now) unless backdating is allowed —
@@ -167,7 +169,13 @@ export function buildCreateScheduleRequestBody({
 			});
 
 		if (plans.length === 0) return null;
-		return { starts_at: startsAt, plans };
+		return {
+			starts_at: startsAt,
+			plans,
+			...(index > 0 && resetBillingCycle
+				? { billing_cycle_anchor: "phase_start" as const }
+				: {}),
+		};
 	});
 
 	const validPhases = apiPhases.filter(
@@ -189,7 +197,9 @@ export function buildCreateScheduleRequestBody({
 	const supportsBillingFlags = immediatePlanCount === 1;
 	if (supportsBillingFlags) {
 		if (billingBehavior) body.billing_behavior = billingBehavior;
-		if (resetBillingCycle) body.billing_cycle_anchor = "now";
+		if (resetBillingCycle && !hasPersistedSchedule) {
+			body.billing_cycle_anchor = "now";
+		}
 	}
 	return body as CreateScheduleParamsV0;
 }

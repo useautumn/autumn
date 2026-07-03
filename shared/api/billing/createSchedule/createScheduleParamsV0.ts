@@ -25,6 +25,8 @@ const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	{ includeFreeTrial: false, includeUpdateItems: false },
 );
 
+export const PhaseBillingCycleAnchorSchema = z.enum(["phase_start"]);
+
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({
 		description: "The ID of the plan to schedule in this phase.",
@@ -66,6 +68,10 @@ export const CreateSchedulePhaseSchema = z
 		}),
 		plans: z.array(CreateSchedulePlanSchema).min(1).meta({
 			description: "Plans to materialize for this phase.",
+		}),
+		billing_cycle_anchor: PhaseBillingCycleAnchorSchema.optional().meta({
+			description:
+				"Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.",
 		}),
 	})
 	.check((ctx) => {
