@@ -67,6 +67,12 @@ export const entities = pgTable(
 			.on(sql`${table.internal_feature_id} COLLATE "C"`)
 			.where(sql`${table.internal_feature_id} IS NOT NULL`)
 			.concurrently(),
+		// Default-collation twin: FK enforcement from features (internal_id is
+		// COLLATE "C") cannot use the "C" index above and seq-scans without this.
+		index("idx_entities_internal_feature_id")
+			.on(table.internal_feature_id)
+			.where(sql`${table.internal_feature_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_entities_customer_internal_desc").on(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,

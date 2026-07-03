@@ -122,6 +122,21 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_revenuecat_processor")
 			.on(table.internal_customer_id)
 			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
+		index("idx_customer_products_ended_at")
+			.on(table.ended_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.ended_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_trial_ends_at")
+			.on(table.trial_ends_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.trial_ends_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_product_id")
+			.on(table.product_id)
+			.concurrently(),
 	],
 );
 
