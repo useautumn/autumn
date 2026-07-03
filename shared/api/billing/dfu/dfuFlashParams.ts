@@ -124,6 +124,10 @@ const FlashPlanSchema = z.object({
 			description:
 				"Set the status of the plan to be flashed. Active if undefined.",
 		}),
+	started_at: z.number().optional().meta({
+		description:
+			"When the plan started (Unix ms). Defaults to the linked subscription's start, else the import time. Set this for one-off purchases to record the real purchase date.",
+	}),
 	quantity: z
 		.number()
 		.optional()
