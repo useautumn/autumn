@@ -31,7 +31,7 @@ describe("runRegistry", () => {
 		expect(run.closed).toBe(true);
 	});
 
-	test("injection is rejected once a run is closed", async () => {
+	test("injection is rejected once a run is closed", () => {
 		const run = registerRun({
 			key: "k1b",
 			kind: "message",
@@ -40,9 +40,31 @@ describe("runRegistry", () => {
 		run.resolveSessionId("sesn_1");
 		closeRun({ key: "k1b", run });
 
-		expect(run.injectFollowUp({ text: "late" })).rejects.toThrow(
+		expect(() => run.injectFollowUp({ text: "late" })).toThrow(
 			"Run is closing",
 		);
+	});
+
+	test("queues follow-ups locally and drains them in order", () => {
+		const run = registerRun({
+			key: "k1c",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		const notifiedAtCounts: number[] = [];
+		run.notifyFollowUpQueued = () => {
+			notifiedAtCounts.push(run.pendingTurns);
+		};
+
+		run.injectFollowUp({ text: "one" });
+		run.injectFollowUp({ text: "two" });
+
+		expect(run.pendingTurns).toBe(2);
+		expect(notifiedAtCounts).toEqual([1, 2]);
+		expect(run.drainFollowUps()).toEqual(["one", "two"]);
+		expect(run.pendingTurns).toBe(0);
+		expect(run.drainFollowUps()).toEqual([]);
+		closeRun({ key: "k1c", run });
 	});
 
 	test("close ignores entries replaced by a newer run", () => {

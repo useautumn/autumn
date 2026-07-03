@@ -208,6 +208,14 @@ export const claudeManagedEngine: AgentEngine = {
 					.then(() => undefined),
 			newSession,
 			params,
+			sendFollowUp: ({ text }) =>
+				client.beta.sessions.events
+					.send(activeSessionId, {
+						events: [
+							{ content: [{ text, type: "text" }], type: "user.message" },
+						],
+					})
+					.then(() => undefined),
 			runTurn: ({ onTurnEnd, span }) =>
 				runClaudeManagedTurn({
 					client,

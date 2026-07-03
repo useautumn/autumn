@@ -17,6 +17,7 @@ export const runEngineLoop = async ({
 	newSession,
 	params,
 	runTurn,
+	sendFollowUp,
 	sessionId,
 }: {
 	braintrust?: {
@@ -35,6 +36,8 @@ export const runEngineLoop = async ({
 		onTurnEnd: (turn: SessionTurnOutcome) => Promise<"continue" | "stop">;
 		span?: Span;
 	}) => Promise<SessionTurnOutcome>;
+	/** Deliver queued follow-up text to the session as the next user message. */
+	sendFollowUp: (input: { text: string }) => Promise<void>;
 	sessionId: string;
 }): Promise<AgentOutput> => {
 	const {
@@ -73,26 +76,49 @@ export const runEngineLoop = async ({
 		);
 	};
 
-	// Pump gate: keep consuming while injected follow-ups are pending, posting
-	// each drained turn's text as its own reply.
+	// The pump is the session's only writer of user messages: follow-ups queue
+	// locally on the run and are flushed here, at an idle the pump observed. A
+	// flush into an idle session starts exactly one turn ending in exactly one
+	// idle, so the pump can never wait on a turn the server won't run.
+	let turnInFlight = false;
+	if (run) {
+		run.notifyFollowUpQueued = () => {
+			// Interrupt only a live turn, so the queued text becomes the very next
+			// turn (the user chose immediate pivot over queue-behind-the-turn). At
+			// idle there is nothing to interrupt — the flush below delivers it.
+			if (turnInFlight && !isCancelled()) {
+				void Promise.resolve(interrupt()).catch(() => {});
+			}
+		};
+	}
+
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
-		if (!isCancelled() && run && run.pendingTurns > 0) {
-			run.pendingTurns -= 1;
-			const rawTurnText = turn.textParts.join("\n\n");
-			assertPostableText(rawTurnText);
-			const turnText = redactAgentOutput({
-				logger,
-				text: rawTurnText,
-			});
-			if (turnText.trim()) await onTurnComplete?.(turnText);
-			return "continue" as const;
+		turnInFlight = false;
+		// The drain and the empty-queue close stay synchronous so they are atomic
+		// against injectFollowUp's closed-check-then-push on the same event loop.
+		const queued = run && !isCancelled() ? run.drainFollowUps() : [];
+		if (queued.length === 0) {
+			if (run) run.closed = true;
+			return "stop" as const;
 		}
-		if (run) run.closed = true;
-		return "stop" as const;
+		const rawTurnText = turn.textParts.join("\n\n");
+		assertPostableText(rawTurnText);
+		const turnText = redactAgentOutput({
+			logger,
+			text: rawTurnText,
+		});
+		if (turnText.trim()) await onTurnComplete?.(turnText);
+		// One message per flush: several queued texts become one turn, and the
+		// pump expects exactly the one idle that turn ends with.
+		await sendFollowUp({ text: queued.join("\n\n") });
+		turnInFlight = true;
+		return "continue" as const;
 	};
 
-	const drive = ({ span }: { span?: Span }) =>
-		runTurn({ isCancelled, onTurnEnd, span });
+	const drive = ({ span }: { span?: Span }) => {
+		turnInFlight = true;
+		return runTurn({ isCancelled, onTurnEnd, span });
+	};
 
 	const deadlineDelayMs = deadlineAt ? deadlineAt - Date.now() : 0;
 	const deadlineWatchdog =
@@ -128,6 +154,9 @@ export const runEngineLoop = async ({
 			: await drive({});
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
+		// A late inject must not interrupt a suspended or finished session; its
+		// queued text is surfaced as dropped when the run closes.
+		if (run) run.notifyFollowUpQueued = undefined;
 	}
 
 	const rawFinalText = outcome.textParts.join("\n\n");

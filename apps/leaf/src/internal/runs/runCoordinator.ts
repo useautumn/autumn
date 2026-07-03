@@ -60,7 +60,7 @@ export const dispatchThreadMessage = async ({
 
 		if (injectable) {
 			try {
-				await active.injectFollowUp({ text });
+				active.injectFollowUp({ text });
 				logger.info("Injected follow-up into active run", {
 					event: "leaf.run_follow_up_injected",
 					data: { pending_turns: active.pendingTurns, run_key: runKey },

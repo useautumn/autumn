@@ -10,13 +10,23 @@ export type RunStopReason = "timeout" | "user";
 export type ActiveRun = {
 	/** Set by the pump once it stops consuming turns — no more injections. */
 	closed?: boolean;
-	/** Interrupts the current turn and delivers the text as the next turn. */
-	injectFollowUp: (input: { text: string }) => Promise<void>;
+	/** Pump-side: takes every queued follow-up text, emptying the queue. */
+	drainFollowUps: () => string[];
+	/**
+	 * Queues text to run as an upcoming turn. The engine pump is the only
+	 * writer of user messages to the session, so it delivers the queue itself
+	 * at a turn boundary it observed — the turn count can never desync from
+	 * server behavior. Throws once the run is closing.
+	 */
+	injectFollowUp: (input: { text: string }) => void;
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
+	/** Set by the engine pump; fires after a follow-up is queued so a turn in flight can be interrupted. */
+	notifyFollowUpQueued?: () => void;
 	ownerProviderUserId: string;
-	pendingTurns: number;
+	/** Queued follow-up turns not yet delivered to the session. */
+	readonly pendingTurns: number;
 	requestStop: (input: {
 		byUserId: string;
 		reason: RunStopReason;
@@ -49,39 +59,23 @@ const defaultSendInterrupt = async (sessionId: string) => {
 	});
 };
 
-const defaultSendUserMessage = async ({
-	sessionId,
-	text,
-}: {
-	sessionId: string;
-	text: string;
-}) => {
-	await client.beta.sessions.events.send(sessionId, {
-		events: [{ content: [{ text, type: "text" }], type: "user.message" }],
-	});
-};
-
 export const registerRun = ({
 	key,
 	kind,
 	ownerProviderUserId,
 	sendInterrupt = defaultSendInterrupt,
-	sendUserMessage = defaultSendUserMessage,
 }: {
 	key: string;
 	kind: ActiveRun["kind"];
 	ownerProviderUserId: string;
 	sendInterrupt?: (sessionId: string) => Promise<void>;
-	sendUserMessage?: (input: {
-		sessionId: string;
-		text: string;
-	}) => Promise<void>;
 }): ActiveRun => {
 	let resolveSessionId!: (sessionId: string) => void;
 	const sessionId = new Promise<string>((resolve) => {
 		resolveSessionId = resolve;
 	});
 	let interruptSent = false;
+	const followUpQueue: string[] = [];
 
 	const resolveSessionIdOrNull = () =>
 		Promise.race([
@@ -95,25 +89,19 @@ export const registerRun = ({
 		key,
 		kind,
 		ownerProviderUserId,
-		pendingTurns: 0,
+		get pendingTurns() {
+			return followUpQueue.length;
+		},
 		resolveSessionId,
 		sessionId,
 		startedAt: Date.now(),
-		injectFollowUp: async ({ text }) => {
+		drainFollowUps: () => followUpQueue.splice(0),
+		injectFollowUp: ({ text }) => {
+			// The closed check and the push stay synchronous so they are atomic
+			// against the pump's drain-then-close decision on the same event loop.
 			if (run.closed || run.stop) throw new Error("Run is closing");
-			const resolved = await resolveSessionIdOrNull();
-			if (!resolved) throw new Error("Session is not ready yet");
-			if (run.closed || run.stop) throw new Error("Run is closing");
-			run.pendingTurns += 1;
-			try {
-				// Interrupt first so the message becomes the very next turn —
-				// the user chose immediate pivot over queue-behind-the-turn.
-				if (run.kind === "message") await sendInterrupt(resolved);
-				await sendUserMessage({ sessionId: resolved, text });
-			} catch (error) {
-				run.pendingTurns -= 1;
-				throw error;
-			}
+			followUpQueue.push(text);
+			run.notifyFollowUpQueued?.();
 		},
 		requestStop: async ({ byUserId, reason }) => {
 			if (run.stop) return;
@@ -143,5 +131,11 @@ export const getRun = (key: string) => runs.get(key);
 /** Marks the run inactive and removes the entry only if it still belongs to this run. */
 export const closeRun = ({ key, run }: { key: string; run: ActiveRun }) => {
 	run.closed = true;
+	if (run.pendingTurns > 0) {
+		logger.warn("Closing run with undelivered follow-ups", {
+			event: "leaf.run_closed_with_pending_follow_ups",
+			data: { pending_turns: run.pendingTurns, run_key: key },
+		});
+	}
 	if (runs.get(key) === run) runs.delete(key);
 };
