@@ -240,15 +240,18 @@ export function buildVersionMigrationDraft({
 		plan_filter: { ...basePlanFilter, custom },
 		version: latestVersion,
 	});
+	const versionOpWithoutCustom = (): UpdatePlanOp => ({
+		type: "update_plan",
+		plan_filter: basePlanFilter,
+		version: latestVersion,
+	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
 	};
 
 	const operations: Operations = {
-		customer: includeCustom
-			? [versionOp(false), versionOp(true)]
-			: [versionOp(false)],
+		customer: includeCustom ? [versionOpWithoutCustom()] : [versionOp(false)],
 	};
 
 	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
@@ -291,7 +294,7 @@ export function buildMigrationDraft({
 		: { ...basePlanFilter, custom: false };
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: basePlanFilter,
+		plan_filter: planFilter,
 		...(customize ? { customize } : {}),
 	};
 
@@ -348,20 +351,18 @@ export function buildCombinedVariantMigrationDraft({
 		byVersion.set(variant.version, ids);
 	}
 
-	const versionOps = (custom: boolean): UpdatePlanOp[] =>
+	const versionOps = (custom: boolean | undefined): UpdatePlanOp[] =>
 		Array.from(byVersion.entries()).map(([version, ids]) => ({
 			type: "update_plan",
 			plan_filter: {
 				plan_id: ids.length === 1 ? ids[0] : { $in: ids },
-				custom,
+				...(custom === undefined ? {} : { custom }),
 			},
 			version,
 		}));
 
 	const operations: Operations = {
-		customer: includeCustom
-			? [...versionOps(false), ...versionOps(true)]
-			: versionOps(false),
+		customer: includeCustom ? versionOps(undefined) : versionOps(false),
 	};
 
 	return {
@@ -386,13 +387,16 @@ export function buildAllVersionsUpdateMigrationDraft({
 		const customize = getMigratablePlanDiff(target.customize);
 		if (Object.keys(customize).length === 0) return [];
 
-		const op = (custom: boolean): UpdatePlanOp => ({
+		const op = (custom: boolean | undefined): UpdatePlanOp => ({
 			type: "update_plan",
-			plan_filter: { plan_id: target.id, custom },
+			plan_filter: {
+				plan_id: target.id,
+				...(custom === undefined ? {} : { custom }),
+			},
 			customize,
 		});
 
-		return includeCustom ? [op(false), op(true)] : [op(false)];
+		return [op(includeCustom ? undefined : false)];
 	});
 	if (ops.length === 0) return null;
 

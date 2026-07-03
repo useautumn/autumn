@@ -304,6 +304,7 @@ test(`${chalk.yellowBright("migration drafts: variant custom plans follow includ
 	expect(excludeCustomOp?.plan_filter).toEqual({
 		plan_id: { $in: [planId, variantId] },
 		version: 1,
+		custom: false,
 	});
 
 	await autumnV2_2.catalog.update({

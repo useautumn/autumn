@@ -1,8 +1,6 @@
 import { UserIcon } from "@phosphor-icons/react";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { AddButton } from "../shared/AddButton";
-import { buildFeatureSuggestions } from "../shared/featureSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
 import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
@@ -17,7 +15,6 @@ import {
 function useSuggestionsForField(
 	field: string,
 ): ValuePickerOption[] | undefined {
-	const { features } = useFeaturesQuery();
 	const { customers } = useCusSearchQueryV2({
 		search: "",
 		page: 1,
@@ -36,9 +33,6 @@ function useSuggestionsForField(
 					icon: <UserIcon size={14} className="text-tertiary-foreground" />,
 				};
 			});
-	}
-	if (field === "item_feature_id") {
-		return buildFeatureSuggestions(features);
 	}
 	return undefined;
 }

@@ -64,7 +64,7 @@ test(`${chalk.yellowBright("migration draft builder: current-version drafts use 
 	});
 	expect(operation).toEqual({
 		type: "update_plan",
-		plan_filter: { plan_id: "pro", version: 3 },
+		plan_filter: { plan_id: "pro", version: 3, custom: false },
 		customize: messagesDiff,
 	});
 	expect(operation).not.toHaveProperty("version");
@@ -117,10 +117,41 @@ test(`${chalk.yellowBright("migration draft builder: propagated current-version 
 		plan_filter: {
 			plan_id: { $in: ["pro", "pro_annual"] },
 			version: 2,
+			custom: false,
 		},
 		customize: messagesDiff,
 	});
 	expect(operations[0]).not.toHaveProperty("version");
+});
+
+test(`${chalk.yellowBright("migration draft builder: includeCustom true leaves propagated ops unguarded")}`, () => {
+	const draft = buildCombinedVariantMigrationDraft({
+		targets: [
+			{ id: "pro", version: 2, customize: messagesDiff },
+			{ id: "pro_annual", version: 2, customize: messagesDiff },
+		],
+		hasBillingChanges: false,
+		includeCustom: true,
+	});
+	const operations = draft?.operations.customer ?? [];
+
+	expect(draft?.filter).toEqual({
+		customer: {
+			plan: {
+				plan_id: { $in: ["pro", "pro_annual"] },
+				version: 2,
+			},
+		},
+	});
+	expect(operations).toHaveLength(1);
+	expect(operations[0]).toEqual({
+		type: "update_plan",
+		plan_filter: {
+			plan_id: { $in: ["pro", "pro_annual"] },
+			version: 2,
+		},
+		customize: messagesDiff,
+	});
 });
 
 test(`${chalk.yellowBright("migration draft builder: all-version variants share one diff op")}`, () => {
@@ -146,8 +177,37 @@ test(`${chalk.yellowBright("migration draft builder: all-version variants share 
 		type: "update_plan",
 		plan_filter: {
 			plan_id: { $in: ["pro", "pro_annual"] },
+			custom: false,
 		},
 		customize: messagesDiff,
 	});
 	expect(operations[0]).not.toHaveProperty("version");
+});
+
+test(`${chalk.yellowBright("migration draft builder: includeCustom true leaves all-version ops unguarded")}`, () => {
+	const draft = buildAllVersionsUpdateMigrationDraft({
+		targets: [
+			{ id: "pro", customize: messagesDiff },
+			{ id: "pro_annual", customize: messagesDiff },
+		],
+		hasBillingChanges: false,
+		includeCustom: true,
+	});
+	const operations = draft?.operations.customer ?? [];
+
+	expect(draft?.filter).toEqual({
+		customer: {
+			plan: {
+				plan_id: { $in: ["pro", "pro_annual"] },
+			},
+		},
+	});
+	expect(operations).toHaveLength(1);
+	expect(operations[0]).toEqual({
+		type: "update_plan",
+		plan_filter: {
+			plan_id: { $in: ["pro", "pro_annual"] },
+		},
+		customize: messagesDiff,
+	});
 });
