@@ -56,11 +56,14 @@ import { useCustomerContext } from "@/views/customers2/customer/CustomerContext"
 function hasSchedulePhaseBillingCycleReset({
 	customer,
 	schedule,
+	nowMs,
 }: {
 	customer: FullCustomer | undefined;
 	schedule: FullCustomerSchedule;
+	nowMs: number;
 }) {
 	return schedule.phases.some((phase) =>
+		phase.starts_at > nowMs &&
 		phase.customer_product_ids.some((cpId) => {
 			const cusProduct = findCustomerProductById({
 				fullCustomer: customer,
@@ -145,11 +148,13 @@ export function buildInitialValues({
 	schedule,
 	products,
 	entityId,
+	nowMs = Date.now(),
 }: {
 	customer: FullCustomer | undefined;
 	schedule: FullCustomerSchedule | undefined;
 	products: ProductV2[];
 	entityId?: string;
+	nowMs?: number;
 }): CreateScheduleForm {
 	if (schedule?.phases?.length) {
 		return {
@@ -167,7 +172,11 @@ export function buildInitialValues({
 				}),
 			})),
 			billingBehavior: null,
-			resetBillingCycle: hasSchedulePhaseBillingCycleReset({ customer, schedule }),
+			resetBillingCycle: hasSchedulePhaseBillingCycleReset({
+				customer,
+				schedule,
+				nowMs,
+			}),
 			enablePlanImmediately: false,
 		};
 	}
@@ -406,8 +415,9 @@ export function CreateScheduleSheet() {
 				schedule,
 				products,
 				entityId: scopeEntityId,
+				nowMs: testClockFrozenTimeMs,
 			}),
-		[fullCustomer, schedule, products, scopeEntityId],
+		[fullCustomer, schedule, products, scopeEntityId, testClockFrozenTimeMs],
 	);
 
 	// Intentionally no `key` on CreateScheduleFormProvider: scope changes should
