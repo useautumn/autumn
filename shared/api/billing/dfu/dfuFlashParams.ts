@@ -236,10 +236,13 @@ export const DfuFlashedPlanSchema = z.object({
 		description:
 			"True if an active plan already existed and this one was left untouched.",
 	}),
-	reason: z
-		.string()
-		.optional()
-		.meta({ description: "Why the plan was skipped, when applicable." }),
+	expired: z.boolean().optional().meta({
+		description:
+			"True if this was an existing active plan expired because it was absent from the imaged desired state.",
+	}),
+	reason: z.string().optional().meta({
+		description: "Why the plan was skipped or expired, when applicable.",
+	}),
 });
 
 export const DfuFlashResultSchema = z.object({

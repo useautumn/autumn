@@ -1,14 +1,15 @@
 /**
- * dfu.flash — re-flash idempotency (contract 7): re-flashing the same payload
- * skips the existing active cusProduct and duplicates nothing.
+ * dfu.flash — set-state idempotency (contract 7): re-flashing the identical
+ * desired state keeps the existing active cusProduct, inserts nothing new, and
+ * expires nothing.
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, type ApiCustomerV5 } from "@autumn/shared";
+import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import {
-	type FlashClient,
 	callFlash,
 	createRealStripeSub,
+	type FlashClient,
 } from "@tests/integration/billing/dfu/billing-import/utils/flashTestUtils.js";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -18,7 +19,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("dfu.flash: re-flashing skips existing active cusProducts")}`,
+	`${chalk.yellowBright("dfu.flash: re-flashing identical desired state is a no-op")}`,
 	async () => {
 		const customerId = "dfu-flash-reflash";
 		const pro = products.pro({
@@ -67,8 +68,15 @@ test.concurrent(
 		);
 		expect(flashed?.skipped).toBe(true);
 
-		// ── Contract 7b: nothing duplicated — single active product remains. ──
-		const customerV5 = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		// ── Contract 7b: identical desired state expires nothing. ──
+		const expiredEntries = (secondFlash.result?.flashed ?? []).filter(
+			(f) => f.expired === true,
+		);
+		expect(expiredEntries.length).toBe(0);
+
+		// ── Contract 7c: nothing duplicated — single active product remains. ──
+		const customerV5 =
+			await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer: customerV5, active: [pro.id] });
 		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const proInstances = (customerV3.products ?? []).filter(

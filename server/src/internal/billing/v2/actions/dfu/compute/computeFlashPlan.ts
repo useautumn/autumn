@@ -1,8 +1,12 @@
 import {
+	ACTIVE_STATUSES,
 	type AutumnBillingPlan,
 	BillingVersion,
+	CusProductStatus,
+	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
+	isCustomerProductCustomerScoped,
 	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -13,6 +17,10 @@ import type {
 } from "../setup/setupFlashContext";
 import { applyFlashBalances } from "./resolvers/balanceResolver";
 import { resolveFlashStatus } from "./resolvers/statusResolver";
+
+type CustomerProductUpdate = NonNullable<
+	AutumnBillingPlan["updateCustomerProducts"]
+>[number];
 
 const buildCustomerProduct = ({
 	ctx,
@@ -98,8 +106,17 @@ export const computeFlashPlan = ({
 	ctx: AutumnContext;
 	flashContext: FlashContext;
 }): { autumnBillingPlan: AutumnBillingPlan; flashed: DfuFlashedPlan[] } => {
+	const { currentEpochMs } = flashContext;
 	const insertCustomerProducts: FullCusProduct[] = [];
+	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const flashed: DfuFlashedPlan[] = [];
+
+	// Desired state = the plans in the payload, keyed by their product's internal id.
+	const desiredInternalProductIds = new Set(
+		flashContext.planContexts.map(
+			(planContext) => planContext.fullProduct.internal_id,
+		),
+	);
 
 	for (const planContext of flashContext.planContexts) {
 		const existing = planContext.existingActiveCustomerProduct;
@@ -131,11 +148,48 @@ export const computeFlashPlan = ({
 		});
 	}
 
+	// Reconcile to desired state: expire customer-level active products absent
+	// from the payload. Entity-scoped products are left for the entity phase.
+	for (const customerProduct of flashContext.fullCustomer.customer_products) {
+		const isActive = ACTIVE_STATUSES.includes(customerProduct.status);
+		const isDesired = desiredInternalProductIds.has(
+			customerProduct.internal_product_id,
+		);
+		if (
+			!isActive ||
+			isDesired ||
+			!isCustomerProductCustomerScoped(customerProduct)
+		) {
+			continue;
+		}
+
+		updateCustomerProducts.push({
+			customerProduct,
+			updates: {
+				status: CusProductStatus.Expired,
+				ended_at: currentEpochMs,
+				canceled: true,
+				canceled_at: currentEpochMs,
+			},
+		});
+
+		flashed.push({
+			plan_id: customerProduct.product_id,
+			processor: cusProductToProcessorType(customerProduct) ?? "stripe",
+			customer_product_id: customerProduct.id,
+			status: CusProductStatus.Expired,
+			skipped: false,
+			expired: true,
+			reason: "expired_not_in_desired_state",
+		});
+	}
+
 	return {
 		autumnBillingPlan: {
 			customerId:
 				flashContext.fullCustomer.id ?? flashContext.fullCustomer.internal_id,
 			insertCustomerProducts,
+			updateCustomerProducts,
 		},
 		flashed,
 	};
