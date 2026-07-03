@@ -173,10 +173,6 @@ const seedSub = async (sourceOrg: Organization) => {
 	await db
 		.update(productsTable)
 		.set({ base_internal_product_id: basePlan?.internal_id })
-		.where(eq(productsTable.internal_id, basePlan?.internal_id ?? ""));
-	await db
-		.update(productsTable)
-		.set({ base_internal_product_id: basePlan?.internal_id })
 		.where(
 			eq(
 				productsTable.internal_id,
