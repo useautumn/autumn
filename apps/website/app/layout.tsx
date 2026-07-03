@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { LayoutProps } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { getFaviconConfig } from "@/lib/get-favicon";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,11 +41,7 @@ export const metadata: Metadata = {
 	creator: "Autumn",
 	metadataBase: new URL(url),
 	icons: {
-		icon: [
-			{ url: "/favicon.ico", sizes: "48x48", type: "image/x-icon" },
-			{ url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
-			{ url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-		],
+		icon: getFaviconConfig(),
 		apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
 	},
 	openGraph: {
