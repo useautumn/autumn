@@ -1,22 +1,19 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { type LeafSurface, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import { env as chatEnv } from "../../lib/env.js";
-import { leafSystemPrompt, type LeafSurface } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "./config.js";
+import { ensureLeafSkills, type LeafSkillRef, skillsMatch } from "./skills.js";
 import {
-	ensureLeafSkills,
-	type LeafSkillRef,
-	skillsMatch,
-} from "./skills.js";
-import {
+	type BuiltinToolsetLike,
 	buildDesiredTools,
 	builtinSignatureFromToolset,
 	type ClaudeManagedToolset,
 	desiredBuiltinSignature,
-	mcpSignatureFromToolset,
 	type McpToolsetLike,
+	mcpSignatureFromToolset,
 } from "./toolset.js";
 
 const isLoopback = (hostname: string) =>
@@ -83,14 +80,22 @@ type LeafManagedResources = {
 	tools: ClaudeManagedToolset[];
 };
 
-const isBuiltinToolset = (tool: { type: string }) =>
+const isBuiltinToolset = (tool: { type: string }): tool is BuiltinToolsetLike =>
 	tool.type === "agent_toolset_20260401";
 
-const isAutumnMcpToolset = (
-	tool: { mcp_server_name?: string; type: string },
-): tool is McpToolsetLike =>
+const isAutumnMcpToolset = (tool: {
+	mcp_server_name?: string;
+	type: string;
+}): tool is McpToolsetLike =>
 	tool.type === "mcp_toolset" &&
 	tool.mcp_server_name === claudeManagedConfig.autumnMcpServerName;
+
+const findToolsets = (
+	tools?: Array<{ mcp_server_name?: string; type: string }>,
+) => ({
+	builtinToolset: tools?.find(isBuiltinToolset),
+	mcpToolset: tools?.find(isAutumnMcpToolset),
+});
 
 const findAutumnMcpUrl = (servers?: Array<{ name: string; url: string }>) =>
 	servers?.find(
@@ -108,13 +113,11 @@ const toolConfigDiff = ({
 	expectedMcpServers: AutumnMcpServer[];
 	expectedTools: ClaudeManagedToolset[];
 }) => {
-	const currentBuiltinToolset = currentTools?.find(isBuiltinToolset) as
-		| Parameters<typeof builtinSignatureFromToolset>[0]
-		| undefined;
-	const currentMcpToolset = currentTools?.find(isAutumnMcpToolset);
-	const expectedMcpToolset = expectedTools.find(isAutumnMcpToolset) as
-		| McpToolsetLike
-		| undefined;
+	const {
+		builtinToolset: currentBuiltinToolset,
+		mcpToolset: currentMcpToolset,
+	} = findToolsets(currentTools);
+	const { mcpToolset: expectedMcpToolset } = findToolsets(expectedTools);
 	const currentBuiltinSig = currentBuiltinToolset
 		? builtinSignatureFromToolset(currentBuiltinToolset)
 		: "";
@@ -127,34 +130,63 @@ const toolConfigDiff = ({
 	return {
 		builtinChanged: currentBuiltinSig !== expectedBuiltinSig,
 		currentBuiltinSig,
-		currentMcpSig,
 		currentMcpUrl,
 		expectedBuiltinSig,
-		expectedMcpSig,
 		expectedMcpUrl,
 		mcpPermissionsChanged: currentMcpSig !== expectedMcpSig,
 		mcpUrlChanged: currentMcpUrl !== expectedMcpUrl,
 	};
 };
 
-// Keep the shared agent config in sync with local code/tunnel changes.
-// Dev re-syncs every turn; prod re-syncs when the active token-derived tool
-// policy changes for a surface.
+// Dev re-syncs every turn; prod re-syncs only when the token-derived tool policy changes.
 const alwaysResync = process.env.NODE_ENV !== "production";
 const syncedResourceKeysBySurface = new Map<LeafSurface, string>();
 
-const toolSignatureFromTools = (tools: ClaudeManagedToolset[]) => {
-	const builtinToolset = tools.find(isBuiltinToolset) as
-		| Parameters<typeof builtinSignatureFromToolset>[0]
-		| undefined;
-	const mcpToolset = tools.find(isAutumnMcpToolset) as
-		| McpToolsetLike
-		| undefined;
+// Caches the setupAgentToolContext round trip briefly; dev always fetches fresh
+// so tool-policy edits take effect.
+const TOOL_CONTEXT_TTL_MS = 60_000;
+const destructiveToolsByToken = new Map<
+	string,
+	{ destructiveTools: Set<string>; expiresAt: number }
+>();
 
-	return JSON.stringify({
+const resolveDestructiveTools = async ({
+	env,
+	logger,
+	token,
+}: {
+	env: AppEnv;
+	logger: AutumnLogger;
+	token: string;
+}) => {
+	if (alwaysResync) {
+		return (await setupAgentToolContext({ env, logger, token }))
+			.destructiveTools;
+	}
+	const now = Date.now();
+	const cached = destructiveToolsByToken.get(token);
+	if (cached && cached.expiresAt > now) return cached.destructiveTools;
+	for (const [key, entry] of destructiveToolsByToken) {
+		if (entry.expiresAt <= now) destructiveToolsByToken.delete(key);
+	}
+	const { destructiveTools } = await setupAgentToolContext({
+		env,
+		logger,
+		token,
+	});
+	destructiveToolsByToken.set(token, {
+		destructiveTools,
+		expiresAt: now + TOOL_CONTEXT_TTL_MS,
+	});
+	return destructiveTools;
+};
+
+const toolSignatureFromTools = (tools: ClaudeManagedToolset[]) => {
+	const { builtinToolset, mcpToolset } = findToolsets(tools);
+	return {
 		builtin: builtinToolset ? builtinSignatureFromToolset(builtinToolset) : "",
 		mcp: mcpSignatureFromToolset(mcpToolset),
-	});
+	};
 };
 
 const resourceCacheKey = ({
@@ -220,9 +252,7 @@ const syncAgentConfig = async ({
 				: {}),
 			...(systemChanged ? { system: expectedSystem } : {}),
 			...(modelChanged ? { model: claudeManagedConfig.model } : {}),
-			...(toolsChanged
-				? { tools: expectedTools }
-				: {}),
+			...(toolsChanged ? { tools: expectedTools } : {}),
 			...(skillsChanged ? { skills } : {}),
 			version: agent.version,
 		});
@@ -248,6 +278,24 @@ const syncAgentConfig = async ({
 	syncedResourceKeysBySurface.set(surface, cacheKey);
 };
 
+// Skips the session retrieve when the desired tools/MCP URL haven't changed
+// since the last sync.
+const MAX_SESSION_SIGNATURE_CACHE = 500;
+const lastSyncedSessionSignatures = new Map<string, string>();
+
+const sessionSyncSignature = (resources: LeafManagedResources) =>
+	JSON.stringify({
+		mcpUrl: findAutumnMcpUrl(resources.mcpServers),
+		tools: toolSignatureFromTools(resources.tools),
+	});
+
+const rememberSessionSignature = (sessionId: string, signature: string) => {
+	if (lastSyncedSessionSignatures.size >= MAX_SESSION_SIGNATURE_CACHE) {
+		lastSyncedSessionSignatures.clear();
+	}
+	lastSyncedSessionSignatures.set(sessionId, signature);
+};
+
 export const syncClaudeManagedSessionAgentConfig = async ({
 	client,
 	env,
@@ -263,6 +311,9 @@ export const syncClaudeManagedSessionAgentConfig = async ({
 	resources: LeafManagedResources;
 	sessionId: string;
 }) => {
+	const signature = sessionSyncSignature(resources);
+	if (lastSyncedSessionSignatures.get(sessionId) === signature) return;
+
 	const session = await client.beta.sessions.retrieve(sessionId);
 	const diff = toolConfigDiff({
 		currentMcpServers: session.agent.mcp_servers,
@@ -271,7 +322,10 @@ export const syncClaudeManagedSessionAgentConfig = async ({
 		expectedTools: resources.tools,
 	});
 	const toolsChanged = diff.builtinChanged || diff.mcpPermissionsChanged;
-	if (!diff.mcpUrlChanged && !toolsChanged) return;
+	if (!diff.mcpUrlChanged && !toolsChanged) {
+		rememberSessionSignature(sessionId, signature);
+		return;
+	}
 
 	await client.beta.sessions.update(sessionId, {
 		agent: {
@@ -292,6 +346,7 @@ export const syncClaudeManagedSessionAgentConfig = async ({
 			mcp_permissions_changed: diff.mcpPermissionsChanged,
 		},
 	});
+	rememberSessionSignature(sessionId, signature);
 };
 
 const cachedResources = new Map<string, LeafManagedResources>();
@@ -311,7 +366,7 @@ export const ensureLeafResources = async ({
 	const mcpUrl = autumnMcpUrl();
 	const mcpServers = buildAutumnMcpServers(mcpUrl);
 
-	const { destructiveTools } = await setupAgentToolContext({
+	const destructiveTools = await resolveDestructiveTools({
 		env,
 		logger,
 		token,

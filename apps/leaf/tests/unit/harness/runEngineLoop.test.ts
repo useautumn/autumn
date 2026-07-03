@@ -231,4 +231,43 @@ describe("runEngineLoop follow-up pump", () => {
 		expect(run.followUps.closed).toBe(true);
 		closeRun({ key: "el5", run });
 	});
+
+	test("a failed follow-up send restores the queue instead of losing it", async () => {
+		const run = registerRun({
+			key: "el6",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_6");
+		const posted: string[] = [];
+
+		await expect(
+			runEngineLoop({
+				ctx: makeContext({
+					onTurnComplete: (text) => {
+						posted.push(text);
+					},
+					run,
+				}),
+				interrupt: () => {},
+				newSession: true,
+				params: { text: "question" },
+				runTurn: async ({ onTurnEnd }) => {
+					run.followUps.push("follow-up");
+					const outcome = turnOutcome("answer");
+					await onTurnEnd(outcome);
+					return outcome;
+				},
+				sendFollowUp: async () => {
+					throw new Error("send failed");
+				},
+				sessionId: "sesn_6",
+			}),
+		).rejects.toThrow("send failed");
+
+		expect(posted).toEqual(["answer"]);
+		expect(run.followUps.size).toBe(1);
+		expect(run.followUps.closed).toBe(true);
+		closeRun({ key: "el6", run });
+	});
 });

@@ -61,12 +61,13 @@ export type McpToolsetLike = {
 const policyType = (policy: PermissionPolicyLike, fallback: string) =>
 	policy?.type || fallback;
 
-const buildMcpToolset = ({
+export const buildDesiredTools = ({
 	destructiveTools,
 }: {
 	destructiveTools: Iterable<string>;
-}) =>
-	({
+}) => {
+	const toolset = buildAgentToolset();
+	const mcpToolset = {
 		configs: [...destructiveTools].map((name) => ({
 			name,
 			permission_policy: { type: "always_ask" as const },
@@ -74,15 +75,7 @@ const buildMcpToolset = ({
 		default_config: { permission_policy: { type: "always_allow" as const } },
 		mcp_server_name: claudeManagedConfig.autumnMcpServerName,
 		type: "mcp_toolset" as const,
-	}) satisfies McpToolsetLike;
-
-export const buildDesiredTools = ({
-	destructiveTools,
-}: {
-	destructiveTools: Iterable<string>;
-}) => {
-	const toolset = buildAgentToolset();
-	const mcpToolset = buildMcpToolset({ destructiveTools });
+	} satisfies McpToolsetLike;
 	return toolset ? [toolset, mcpToolset] : [mcpToolset];
 };
 
@@ -91,10 +84,13 @@ export type ClaudeManagedToolset = ReturnType<typeof buildDesiredTools>[number];
 export const desiredBuiltinSignature = () =>
 	[...claudeManagedBuiltinTools].sort().join(",");
 
-export const builtinSignatureFromToolset = (toolset: {
+export type BuiltinToolsetLike = {
 	configs?: { enabled: boolean; name: string }[];
 	default_config?: { enabled: boolean } | null;
-}) => {
+	type: string;
+};
+
+export const builtinSignatureFromToolset = (toolset: BuiltinToolsetLike) => {
 	const enabled = new Set<string>(
 		toolset.default_config?.enabled === false ? [] : ALL_BUILTIN_TOOLS,
 	);

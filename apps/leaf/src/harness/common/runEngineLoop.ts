@@ -9,10 +9,7 @@ import { containsInternalToolCall, redactAgentOutput } from "./output.js";
 import type { SessionTurnOutcome } from "./types.js";
 
 /** Drives one engine turn through the shared pump gate, deadline watchdog, and
- * output assembly. The pump is the session's only writer of user messages:
- * queued follow-ups are flushed at an idle it observed, so a "continue" always
- * has a real next turn behind it. Engines supply only the harness-specific
- * `runTurn`, `interrupt`, and `sendFollowUp`. */
+ * output assembly. */
 export const runEngineLoop = async ({
 	braintrust,
 	ctx,
@@ -81,19 +78,17 @@ export const runEngineLoop = async ({
 	};
 
 	let turnInterruptible = false;
-	let followUpInterruptRequested = false;
 	let followUpInterrupt: Promise<void> | undefined;
 	const requestFollowUpInterrupt = () => {
 		if (
 			!run ||
 			!turnInterruptible ||
-			followUpInterruptRequested ||
+			followUpInterrupt !== undefined ||
 			isCancelled() ||
 			run.followUps.size === 0
 		) {
 			return;
 		}
-		followUpInterruptRequested = true;
 		turnInterruptible = false;
 		followUpInterrupt = Promise.resolve(interrupt()).catch((error) => {
 			logger.warn("Could not interrupt session for follow-up", {
@@ -115,7 +110,6 @@ export const runEngineLoop = async ({
 		turnInterruptible = false;
 		const interruptBeforeFlush = followUpInterrupt;
 		followUpInterrupt = undefined;
-		followUpInterruptRequested = false;
 		if (!run || isCancelled() || run.followUps.size === 0) {
 			run?.followUps.close();
 			return "stop" as const;
@@ -127,12 +121,16 @@ export const runEngineLoop = async ({
 			text: rawTurnText,
 		});
 		if (turnText.trim()) await onTurnComplete?.(turnText);
-		// If a follow-up interrupt raced with this turn ending, make it land
-		// before the queued user message so it cannot cancel that message later.
+		// A racing follow-up interrupt must land before the queued user message, or it could cancel that message.
 		await interruptBeforeFlush;
-		// Drain only after the post succeeds so a failed turn keeps the queue.
-		const singleTurnBatch = run.followUps.drain().join("\n\n");
-		await sendFollowUp({ text: singleTurnBatch });
+		// Drain after the post succeeds so a failed turn keeps the queue; restore on a failed send.
+		const singleTurnBatch = run.followUps.drain();
+		try {
+			await sendFollowUp({ text: singleTurnBatch.join("\n\n") });
+		} catch (error) {
+			run.followUps.restore(singleTurnBatch);
+			throw error;
+		}
 		return "continue" as const;
 	};
 

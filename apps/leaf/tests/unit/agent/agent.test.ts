@@ -393,6 +393,47 @@ describe("Claude Managed vault sync", () => {
 		expect(updates).toEqual([{ agent: { tools } }]);
 	});
 
+	test("skips the session retrieve when resources are unchanged", async () => {
+		const mcpServers = [
+			{
+				name: "autumn" as const,
+				type: "url" as const,
+				url: "https://j.dev.useautumn.com/mcp",
+			},
+		];
+		const tools = buildDesiredTools({ destructiveTools: ["attach"] });
+		let retrieves = 0;
+		const client = {
+			beta: {
+				sessions: {
+					retrieve: async () => {
+						retrieves += 1;
+						return { agent: { mcp_servers: mcpServers, tools } };
+					},
+					update: async () => ({}),
+				},
+			},
+		} as never;
+		const args = {
+			client,
+			env: AppEnv.Sandbox,
+			logger: { info: () => {} } as never,
+			orgId: "org_1",
+			resources: {
+				agentId: "agent_2",
+				environmentId: "env_2",
+				mcpServers,
+				tools,
+			},
+			sessionId: "session_unchanged",
+		};
+
+		await syncClaudeManagedSessionAgentConfig(args);
+		await syncClaudeManagedSessionAgentConfig(args);
+
+		expect(retrieves).toBe(1);
+	});
+
 	test("treats the vault as stale when local OAuth credentials are newer", () => {
 		expect(
 			isCmaVaultStale({

@@ -14,9 +14,7 @@ afterEach(() => {
 const destructiveToolNames = (
 	tools: Array<{ configs?: Array<{ name: string }>; type: string }>,
 ) =>
-	(
-		tools.find((tool) => tool.type === "mcp_toolset")?.configs ?? []
-	)
+	(tools.find((tool) => tool.type === "mcp_toolset")?.configs ?? [])
 		.map((config) => config.name)
 		.sort();
 
@@ -32,7 +30,11 @@ describe("ensureLeafResources", () => {
 			}),
 		);
 		const skills = [
-			{ type: "custom" as const, skill_id: "skill_1", version: "latest" as const },
+			{
+				type: "custom" as const,
+				skill_id: "skill_1",
+				version: "latest" as const,
+			},
 		];
 		const ensureLeafSkills = mock(async () => skills);
 
@@ -166,7 +168,9 @@ describe("ensureLeafResources", () => {
 			token: "token-a",
 		});
 
-		expect(setupAgentToolContext).toHaveBeenCalledTimes(3);
+		// token-a is fetched once and served from the short-TTL cache on the
+		// third call, so only the two distinct tokens hit the round trip.
+		expect(setupAgentToolContext).toHaveBeenCalledTimes(2);
 		expect(destructiveToolNames(first.tools)).toEqual(["attach"]);
 		expect(destructiveToolNames(second.tools)).toEqual(["delete_customer"]);
 		expect(destructiveToolNames(firstAgain.tools)).toEqual(["attach"]);
@@ -177,9 +181,7 @@ describe("ensureLeafResources", () => {
 			),
 		).toEqual(["delete_customer"]);
 		expect(
-			destructiveToolNames(
-				(updates[1] as { tools: typeof first.tools }).tools,
-			),
+			destructiveToolNames((updates[1] as { tools: typeof first.tools }).tools),
 		).toEqual(["attach"]);
 		expect(ensureLeafSkills).toHaveBeenCalledTimes(3);
 	});

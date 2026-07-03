@@ -8,6 +8,10 @@ export type {
 	SuspendedToolCall,
 } from "../../common/types.js";
 
+// The SDK has no idle `agent.*` event, so any one means active work.
+const isActiveAgentWork = (type: string) =>
+	type.startsWith("agent.") || type === "span.model_request_start";
+
 // Streams one CMA turn to completion after `kickoff`, preserving text, tool
 // results, usage, and pending destructive tool confirmations.
 export const driveSessionTurn = async ({
@@ -127,14 +131,7 @@ export const driveSessionTurn = async ({
 			lastEventAt = now;
 		}
 		mark("first_event");
-		if (
-			event.type === "agent.message" ||
-			event.type === "agent.mcp_tool_use" ||
-			event.type === "agent.mcp_tool_result" ||
-			event.type === "agent.tool_use" ||
-			event.type === "agent.thinking" ||
-			event.type === "span.model_request_start"
-		) {
+		if (isActiveAgentWork(event.type)) {
 			markTurnStarted();
 		}
 		if (

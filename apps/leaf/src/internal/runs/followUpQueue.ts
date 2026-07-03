@@ -1,9 +1,4 @@
-/**
- * Follow-up texts queued on one run. The engine pump is the only consumer:
- * it drains at turn boundaries it observed, so delivery can't desync from
- * session behavior. All methods are synchronous — push vs drain/close
- * ordering is settled by the event loop.
- */
+// Queued follow-up texts for one run; the engine pump drains this at turn boundaries.
 export class FollowUpQueue {
 	/** Installed by the pump to request an interrupt when a live turn should pivot. */
 	onPush?: () => void;
@@ -24,6 +19,11 @@ export class FollowUpQueue {
 
 	drain() {
 		return this.items.splice(0);
+	}
+
+	/** Ignores the closed flag: a failed send is the one caller and must not lose items. */
+	restore(items: string[]) {
+		this.items.unshift(...items);
 	}
 
 	push(text: string) {
