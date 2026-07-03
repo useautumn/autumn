@@ -1,22 +1,23 @@
 import {
 	type ApiPlanV1,
-	ErrCode,
-	RecaseError,
 	type DiffedCustomizePlanV1,
+	ErrCode,
 	type FullProduct,
 	products,
+	RecaseError,
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { createVariant } from "../createVariant/createVariant.js";
 import {
 	applyDiffToVariantPlan,
 	fullProductToApiPlanV1,
 	getApiPlanDiff,
 	getVariantSettingsPatch,
+	omitVariantOwnedSettings,
 	variantSettingsPatchHasValues,
 } from "../common/planTransformUtils.js";
+import { createVariant } from "../createVariant/createVariant.js";
 import { hasPlanCustomers } from "../previewUpdatePlan/hasPlanCustomers.js";
 import { getVariantPropagationTargets } from "./getVariantPropagationTargets.js";
 import { updateVariant } from "./updateVariant.js";
@@ -193,10 +194,12 @@ export const updateVariants = async ({
 		from: currentBasePlan,
 		to: incomingBasePlan,
 	});
-	const settingsPatch = getVariantSettingsPatch({
-		from: currentBasePlan,
-		to: incomingBasePlan,
-	});
+	const settingsPatch = omitVariantOwnedSettings(
+		getVariantSettingsPatch({
+			from: currentBasePlan,
+			to: incomingBasePlan,
+		}),
+	);
 	const hasSettingsPatch = variantSettingsPatchHasValues(settingsPatch);
 	const baseWasVersioned = oldBase.internal_id !== newBase.internal_id;
 	if (targetVariantIds.length === 0 && !hasSettingsPatch) {

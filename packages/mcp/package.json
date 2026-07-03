@@ -5,7 +5,8 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./approval-gated": "./src/tools/approvalGated.ts"
   },
   "files": [
     "README.md",

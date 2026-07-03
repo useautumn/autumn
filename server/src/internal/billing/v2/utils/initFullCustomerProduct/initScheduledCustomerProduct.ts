@@ -30,6 +30,7 @@ export const initScheduledCustomerProduct = ({
 	accessStartsAt,
 	externalId,
 	isCustom,
+	billingCycleAnchorResetsAt,
 	subscriptionId,
 	subscriptionScheduleId,
 	internalEntityId,
@@ -46,6 +47,7 @@ export const initScheduledCustomerProduct = ({
 	/** Customer-facing Autumn subscription API id, stored on customer_products.external_id. */
 	externalId?: string;
 	isCustom?: boolean;
+	billingCycleAnchorResetsAt?: number | null;
 	/** When syncing from an existing Stripe sub/schedule, link the resulting
 	 * scheduled cusProduct back to it so the customer-products view shows the
 	 * Stripe linkage and downstream actions (cancel, restore) can find it. */
@@ -78,6 +80,7 @@ export const initScheduledCustomerProduct = ({
 			accessStartsAt,
 			externalId,
 			isCustom,
+			billingCycleAnchorResetsAt,
 			subscriptionId,
 			subscriptionScheduleId,
 			internalEntityId,

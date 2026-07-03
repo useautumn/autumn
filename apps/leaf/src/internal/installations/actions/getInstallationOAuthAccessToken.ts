@@ -2,10 +2,8 @@ import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
-import {
-	isSlackAdminProvider,
-	validateSlackAdminAccess,
-} from "../../slackAdmin/access.js";
+import { validateSlackAdminAccess } from "../../slackAdmin/access.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,
@@ -23,6 +21,23 @@ const getTokenEndpoint = () =>
 
 const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
 
+const resolveCredentialUserId = ({
+	installation,
+	userId,
+}: {
+	installation: ChatInstallation;
+	userId?: string;
+}) => {
+	const credentialUserId = userId ?? installation.installed_by_user_id;
+	if (!credentialUserId) {
+		throw new Error(
+			"Missing installer user id for chat MCP OAuth credentials",
+		);
+	}
+
+	return credentialUserId;
+};
+
 export const getInstallationOAuthAccessToken = async ({
 	installation,
 	env,
@@ -32,10 +47,13 @@ export const getInstallationOAuthAccessToken = async ({
 	installation: ChatInstallation;
 	env: AppEnv;
 	orgId?: string;
-	// Web chat resolves a per-user credential; Slack omits it.
+	// Web/per-user chat passes the caller. Installer-scoped installs fall back to
+	// the installer so credential lookup never drops the user_id predicate.
 	userId?: string;
 }) => {
-	if (isSlackAdminProvider({ provider: installation.provider })) {
+	const credentialUserId = resolveCredentialUserId({ installation, userId });
+
+	if (isInternalAutumnSlackProvider({ provider: installation.provider })) {
 		const access = validateSlackAdminAccess({
 			workspaceId: installation.workspace_id,
 		});
@@ -49,11 +67,11 @@ export const getInstallationOAuthAccessToken = async ({
 		chatInstallationId: installation.id,
 		env,
 		orgId,
-		userId,
+		userId: credentialUserId,
 	});
 
 	if (
-		isSlackAdminProvider({ provider: installation.provider }) &&
+		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
 		(!credential || credential.org_id !== orgId)
 	) {
 		await db.transaction(async (tx) => {
@@ -61,7 +79,7 @@ export const getInstallationOAuthAccessToken = async ({
 				tx,
 				installation,
 				orgId,
-				userId: installation.installed_by_user_id ?? "",
+				userId: credentialUserId,
 			});
 		});
 
@@ -70,6 +88,7 @@ export const getInstallationOAuthAccessToken = async ({
 			chatInstallationId: installation.id,
 			env,
 			orgId,
+			userId: credentialUserId,
 		});
 	}
 
