@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autumn Favicon Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            color: #fff;
+            padding: 48px 24px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #8838FF, #A855F7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 48px;
+            font-size: 16px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 48px;
+        }
+        
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            border-color: #8838FF;
+            transform: translateY(-2px);
+        }
+        
+        .card.current {
+            border-color: #8838FF;
+            background: #1a1a1a;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+        
+        .badge.prod {
+            background: #8838FF;
+            color: white;
+        }
+        
+        .badge.dev {
+            background: #FF8800;
+            color: white;
+        }
+        
+        .badge.staging {
+            background: #A855F7;
+            color: white;
+        }
+        
+        .badge.alt {
+            background: #333;
+            color: #aaa;
+        }
+        
+        .icon-wrapper {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .icon-wrapper img {
+            width: 96px;
+            height: 96px;
+            display: block;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .card-desc {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        
+        .color-code {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #A855F7;
+            background: #111;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            margin: 48px 0 24px 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .info-box {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .info-box h3 {
+            margin-bottom: 12px;
+            color: #8838FF;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .info-box li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+        }
+        
+        .info-box li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #8838FF;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Autumn Favicon System</h1>
+        <p class="subtitle">Environment-specific favicons to distinguish between dev, staging, and production</p>
+        
+        <div class="info-box">
+            <h3>How It Works</h3>
+            <ul>
+                <li><strong>Development:</strong> Orange favicon when <code>NODE_ENV=development</code></li>
+                <li><strong>Staging:</strong> Light purple favicon when <code>VERCEL_ENV=preview</code></li>
+                <li><strong>Production:</strong> Original purple favicon (default)</li>
+            </ul>
+        </div>
+        
+        <h2 class="section-title">Current Defaults</h2>
+        <div class="grid">
+            <div class="card current">
+                <span class="badge prod">Production</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-prod.svg" alt="Production Favicon">
+                </div>
+                <h3 class="card-title">favicon-prod.svg</h3>
+                <p class="card-desc">Original Autumn purple - used in production</p>
+                <span class="color-code">#8838FF</span>
+            </div>
+            
+            <div class="card current">
+                <span class="badge dev">Development</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-dev.svg" alt="Development Favicon">
+                </div>
+                <h3 class="card-title">favicon-dev.svg</h3>
+                <p class="card-desc">Orange background - used in local development</p>
+                <span class="color-code">#FF8800</span>
+            </div>
+            
+            <div class="card current">
+                <span class="badge staging">Staging</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-staging.svg" alt="Staging Favicon">
+                </div>
+                <h3 class="card-title">favicon-staging.svg</h3>
+                <p class="card-desc">Light purple - used in preview deployments</p>
+                <span class="color-code">#A855F7</span>
+            </div>
+        </div>
+        
+        <h2 class="section-title">Alternative Designs</h2>
+        <div class="grid">
+            <div class="card">
+                <span class="badge dev">Development</span>
+                <span class="badge alt">Alternative</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-dev-alt.svg" alt="Development Favicon Alt">
+                </div>
+                <h3 class="card-title">favicon-dev-alt.svg</h3>
+                <p class="card-desc">Bright orange with dark logo</p>
+                <span class="color-code">#FFA500</span>
+            </div>
+            
+            <div class="card">
+                <span class="badge staging">Staging</span>
+                <span class="badge alt">Alternative</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-staging-alt.svg" alt="Staging Favicon Alt">
+                </div>
+                <h3 class="card-title">favicon-staging-alt.svg</h3>
+                <p class="card-desc">Purple gradient background</p>
+                <span class="color-code">gradient</span>
+            </div>
+            
+            <div class="card">
+                <span class="badge staging">Staging</span>
+                <span class="badge alt">Alternative</span>
+                <div class="icon-wrapper">
+                    <img src="/favicon-staging-green.svg" alt="Staging Favicon Green">
+                </div>
+                <h3 class="card-title">favicon-staging-green.svg</h3>
+                <p class="card-desc">Green background option</p>
+                <span class="color-code">#10B981</span>
+            </div>
+        </div>
+        
+        <div class="info-box">
+            <h3>Switching Designs</h3>
+            <p>To use an alternative design, edit <code>/lib/get-favicon.ts</code> and change the return value to your preferred file:</p>
+            <pre style="background: #0a0a0a; padding: 16px; border-radius: 4px; margin-top: 12px; overflow-x: auto; color: #A855F7;">
+if (process.env.NODE_ENV === "development") {
+    return "/favicon-dev-alt.svg"; // Use alternative orange
+}
+            </pre>
+        </div>
+    </div>
+</body>
+</html>
