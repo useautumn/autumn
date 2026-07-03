@@ -14,7 +14,7 @@ import { createStripeSubscriptionFromProduct } from "@tests/integration/billing/
 import {
 	type FlashClient,
 	callFlash,
-} from "@tests/integration/billing/dfu/dfu-flash/utils/flashTestUtils.js";
+} from "@tests/integration/billing/dfu/billing-import/utils/flashTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

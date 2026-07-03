@@ -15,7 +15,7 @@ import {
 	mockProduct,
 	mockSubscription,
 	rcSubscriptionProduct,
-} from "@tests/integration/billing/dfu/dfu-flash/utils/flashTestUtils.js";
+} from "@tests/integration/billing/dfu/billing-import/utils/flashTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";

@@ -9,7 +9,7 @@ import {
 	type FlashClient,
 	callFlash,
 	createRealStripeSub,
-} from "@tests/integration/billing/dfu/dfu-flash/utils/flashTestUtils.js";
+} from "@tests/integration/billing/dfu/billing-import/utils/flashTestUtils.js";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
