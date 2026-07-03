@@ -3,10 +3,11 @@ import {
 	AppEnv,
 	apiKeys,
 	chatInstallations,
-	chatThreadContexts,
 	chatOAuthCredentials,
+	chatThreadContexts,
 	createChatInstallState,
 } from "@autumn/shared";
+import type { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { addMinutes } from "date-fns";
 import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -50,6 +51,7 @@ export class ChatService {
 				workspace_name: installation.workspace_name,
 				bot_user_id: installation.bot_user_id,
 				default_env: installation.default_env,
+				auth_mode: installation.auth_mode,
 				scopes: installation.scopes,
 				agent_scopes:
 					scopesByInstallationEnv.get(
@@ -65,8 +67,11 @@ export class ChatService {
 
 	static createInstallUrl(
 		ctx: AutumnContext,
-		env = AppEnv.Live,
-		scopes?: string[],
+		{
+			env = AppEnv.Live,
+			mode,
+			scopes,
+		}: { env?: AppEnv; mode?: ChatAuthMode; scopes?: string[] },
 	) {
 		const state = createChatInstallState({
 			secret: getChatStateSecret(),
@@ -74,6 +79,7 @@ export class ChatService {
 			orgId: ctx.org.id,
 			userId: ctx.userId ?? "",
 			env,
+			mode,
 			scopes,
 			expiresAt: addMinutes(Date.now(), 10).getTime(),
 			nonce: randomUUID(),

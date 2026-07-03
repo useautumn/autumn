@@ -1,4 +1,5 @@
 export const MCP_CLIENT_KIND = "mcp_client";
+export const UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND = "chat_unrestricted";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
 export const SUMMER_OAUTH_CLIENT_ID = "autumn_summer";

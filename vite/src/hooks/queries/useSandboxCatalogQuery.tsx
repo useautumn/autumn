@@ -3,6 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export type CatalogItem = { id: string; name: string };
+export type CatalogProduct = CatalogItem & { featureIds: string[] };
+
+type RawProduct = {
+	id: string;
+	name: string;
+	items?: { feature_id?: string | null }[];
+};
 
 // Lists a SPECIFIC sandbox's plans + features by overriding x-sandbox-org-id
 // per request (skipSandbox keeps the interceptor from forcing the active one),
@@ -23,8 +30,15 @@ export const useSandboxCatalogQuery = (sandboxId: string | null) => {
 				axiosInstance.get("/v1/products", { headers }),
 				axiosInstance.post("/v1/features.list", {}, { headers }),
 			]);
+			const rawProducts = (productsRes.data?.list ?? []) as RawProduct[];
 			return {
-				products: (productsRes.data?.list ?? []) as CatalogItem[],
+				products: rawProducts.map((p) => ({
+					id: p.id,
+					name: p.name,
+					featureIds: (p.items ?? [])
+						.map((i) => i.feature_id)
+						.filter((id): id is string => Boolean(id)),
+				})) as CatalogProduct[],
 				features: (featuresRes.data?.list ?? []) as CatalogItem[],
 			};
 		},

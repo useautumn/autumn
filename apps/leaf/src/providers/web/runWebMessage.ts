@@ -42,6 +42,8 @@ export const runWebMessage = async ({
 		// Neither engine reads ctx.agentTools (CMA loads its own toolset in
 		// ensureLeafResources; mastra loads tools in-engine), so skip the load.
 		agentTools: { destructiveTools: new Set<string>() },
+		// Web's MCP credential + vault are keyed by the dashboard user id.
+		autumnUserId: userId,
 		env,
 		id: crypto.randomUUID(),
 		logger,

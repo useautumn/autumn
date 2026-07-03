@@ -1,4 +1,4 @@
-import type { ReplyTarget } from "./progress.js";
+import { formatTypingStatus, type ReplyTarget } from "./progress.js";
 
 // Generic "still working" verbs cycled during model inference, when there's no
 // concrete tool action to show. Slack renders its own shimmer; we just keep the
@@ -38,7 +38,7 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 	const render = (text: string) => {
 		if (stopped || text === current) return;
 		current = text;
-		target.startTyping(text).catch((error) => {
+		target.startTyping(formatTypingStatus(text)).catch((error) => {
 			console.warn("[chat] Could not update status", error);
 		});
 	};

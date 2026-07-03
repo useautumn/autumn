@@ -1,4 +1,4 @@
-import type { UpsertVercelProcessorConfig } from "@autumn/shared";
+import type { ChatAuthMode, UpsertVercelProcessorConfig } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
 export class OrgService {
@@ -36,7 +36,12 @@ export class OrgService {
 
 	static async createChatInstall(
 		axiosInstance: AxiosInstance,
-		data: { provider: "slack"; env: string; scopes?: string[] },
+		data: {
+			provider: "slack";
+			env: string;
+			mode?: ChatAuthMode;
+			scopes?: string[];
+		},
 	) {
 		return await axiosInstance.post(`/organization/chat/install`, data);
 	}

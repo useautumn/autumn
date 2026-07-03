@@ -5,9 +5,11 @@ import type { ThreadRef } from "../../agent/runMessage/types.js";
 export const buildThreadKey = ({
 	env,
 	thread,
+	userId,
 }: {
 	env: AppEnv;
 	thread: ThreadRef;
+	userId?: string;
 }) =>
 	[
 		thread.provider,
@@ -15,4 +17,5 @@ export const buildThreadKey = ({
 		thread.channelId,
 		thread.threadId,
 		env,
+		...(userId ? [`user:${userId}`] : []),
 	].join(":");
