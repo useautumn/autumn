@@ -3,6 +3,7 @@ import {
 	customizePlanV1ToV0,
 	type FullProduct,
 	hasCustomItems,
+	orgMultiCurrencyEnabled,
 	type PatchContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -53,6 +54,7 @@ export const setupCustomFullProduct = async ({
 			product: currentFullProduct,
 			logger,
 			isCustom: true,
+			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
 		});
 
 	const newFullProduct = {

@@ -10,6 +10,7 @@ import {
 	type Entitlement,
 	type FreeTrial,
 	type FullProduct,
+	orgMultiCurrencyEnabled,
 	type Price,
 	ProductAlreadyExistsError,
 	Scopes,
@@ -96,6 +97,7 @@ export const handleCreatePlan = createRoute({
 				logger,
 				isCustom: false,
 				newVersion: false,
+				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 			});
 			prices = res.prices;
 			entitlements = res.entitlements;

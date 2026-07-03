@@ -3,8 +3,9 @@ import {
 	CreateProductV2ParamsSchema,
 	type FullProduct,
 	type Organization,
-	products,
+	orgMultiCurrencyEnabled,
 	type ProductV2,
+	products,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
@@ -110,6 +111,7 @@ export const handleVersionProductV2 = async ({
 		features,
 		orgId: org.id,
 		env,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
 	await ProductService.insert({ db, product: newProduct });
@@ -129,6 +131,7 @@ export const handleVersionProductV2 = async ({
 		logger: ctx.logger,
 		isCustom: false,
 		newVersion: true,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
 	await EntitlementService.insert({

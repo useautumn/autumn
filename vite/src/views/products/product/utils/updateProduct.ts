@@ -1,5 +1,6 @@
 import {
 	type FrontendProductItem,
+	type ProductItem,
 	sortPlanItems,
 	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 import type { ZodError } from "zod";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr } from "@/utils/genUtils";
+import { normalizeItemCurrencies } from "../../plan/utils/currencyUtils";
 import { validateItemsBeforeSave } from "../../plan/utils/validateItemsBeforeSave";
 
 type EditableProductUpdate = UpdateProductV2Params & {
@@ -21,12 +23,14 @@ export const updateProduct = async ({
 	product,
 	onSuccess,
 	version,
+	orgCurrency,
 }: {
 	axiosInstance: AxiosInstance;
 	productId: string;
 	product: EditableProductUpdate;
 	onSuccess: () => Promise<void>;
 	version?: number;
+	orgCurrency?: string;
 }) => {
 	const validated = validateItemsBeforeSave(
 		product.items as FrontendProductItem[],
@@ -37,7 +41,12 @@ export const updateProduct = async ({
 	}
 
 	try {
-		const sortedItems = sortPlanItems({ items: product.items });
+		const items = orgCurrency
+			? (product.items as ProductItem[]).map((item) =>
+					normalizeItemCurrencies({ item, orgCurrency }),
+				)
+			: product.items;
+		const sortedItems = sortPlanItems({ items });
 		const { base_id, ...productUpdates } = product;
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...productUpdates,

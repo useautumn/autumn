@@ -32,9 +32,11 @@ import {
 const validateProductItem = ({
 	item,
 	features,
+	multiCurrencyEnabled,
 }: {
 	item: ProductItem;
 	features: Feature[];
+	multiCurrencyEnabled: boolean;
 }) => {
 	item = ProductItemSchema.parse(item);
 	const feature = features.find((f) => f.id === item.feature_id);
@@ -62,6 +64,13 @@ const validateProductItem = ({
 			(tier) => (tier.additional_currencies?.length ?? 0) > 0,
 		) ??
 			false);
+	if (hasAdditionalCurrencies && !multiCurrencyEnabled) {
+		throw new RecaseError({
+			message: "Multi-currency is not enabled for this organization",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 	if (hasAdditionalCurrencies && nullish(item.base_currency)) {
 		throw new RecaseError({
 			message: `'base_currency' is required when 'additional_currencies' are set`,
@@ -315,11 +324,13 @@ export const validateProductItems = ({
 	features,
 	orgId,
 	env,
+	multiCurrencyEnabled,
 }: {
 	newItems: ProductItem[];
 	features: Feature[];
 	orgId: string;
 	env: AppEnv;
+	multiCurrencyEnabled: boolean;
 }) => {
 	const { allFeatures, newFeatures } = createFeaturesFromItems({
 		items: newItems,
@@ -339,7 +350,11 @@ export const validateProductItems = ({
 
 	// 1. Check values
 	for (let index = 0; index < newItems.length; index++) {
-		validateProductItem({ item: newItems[index], features });
+		validateProductItem({
+			item: newItems[index],
+			features,
+			multiCurrencyEnabled,
+		});
 		const feature = features.find((f) => f.id === newItems[index].feature_id);
 
 		if (feature && feature.type === FeatureType.Metered) {

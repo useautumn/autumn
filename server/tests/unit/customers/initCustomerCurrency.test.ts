@@ -4,7 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initFullCustomer } from "@/internal/customers/cusUtils/initCustomer.js";
 
 const ctx = {
-	org: { id: "org_1" },
+	org: { id: "org_1", config: { multi_currency: true } },
 	env: AppEnv.Sandbox,
 } as unknown as AutumnContext;
 

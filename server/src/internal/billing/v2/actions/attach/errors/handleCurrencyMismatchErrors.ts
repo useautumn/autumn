@@ -5,6 +5,7 @@ import {
 	isFixedPrice,
 	isFreeProduct,
 	notNullish,
+	orgMultiCurrencyEnabled,
 	orgToCurrency,
 	type Price,
 	priceHasCurrencyAmounts,
@@ -84,6 +85,14 @@ export const handleCurrencyMismatchErrors = ({
 }) => {
 	const { fullCustomer, attachProduct } = billingContext;
 	const prices = attachProduct.prices;
+
+	if (params.currency && !orgMultiCurrencyEnabled({ org: ctx.org })) {
+		throw new RecaseError({
+			code: ErrCode.InvalidRequest,
+			message: "Multi-currency is not enabled for this organization",
+			statusCode: 400,
+		});
+	}
 
 	// Free / auto-enabled plans neither need nor lock a currency.
 	if (isFreeProduct({ prices })) return;

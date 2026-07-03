@@ -24,6 +24,8 @@ import {
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
+import { stampBaseCurrency } from "../../utils/currencyUtils";
+import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
 import { FreeTrialOption } from "./FreeTrialOption";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
@@ -58,6 +60,21 @@ export const BasePriceSection = ({
 		const newItems = [...product.items];
 		newItems[getBasePriceIndex()] = item;
 		setProduct({ ...product, items: newItems });
+	};
+
+	const basePriceItem =
+		getBasePriceIndex() !== -1 ? product.items[getBasePriceIndex()] : undefined;
+
+	const handleCurrenciesChange = (
+		currencies: NonNullable<ProductItem["additional_currencies"]>,
+	) => {
+		if (!basePriceItem) return;
+		setItem(
+			stampBaseCurrency({
+				item: { ...basePriceItem, additional_currencies: currencies },
+				orgCurrency: defaultCurrency,
+			}),
+		);
 	};
 
 	const handleUpdateBasePrice = ({
@@ -231,6 +248,14 @@ export const BasePriceSection = ({
 									</div>
 								)}
 							</div>
+
+							{!disabled && org?.config?.multi_currency && (
+								<AdditionalCurrenciesEditor
+									currencies={basePriceItem?.additional_currencies}
+									onChange={handleCurrenciesChange}
+									baseCurrency={defaultCurrency}
+								/>
+							)}
 						</div>
 					) : (
 						<Button

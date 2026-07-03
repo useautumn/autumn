@@ -28,6 +28,7 @@ import {
 import { getDefaultAttachConfig } from "../attach/attachUtils/getAttachConfig.js";
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { assertCustomerCurrencyAllowed } from "./initCustomer.js";
 
 const getGroupToDefaultProd = async ({
 	defaultProds,
@@ -88,6 +89,8 @@ export const createNewCustomer = async ({
 	);
 
 	const parsedCustomer = CreateCustomerSchema.parse(customer);
+
+	assertCustomerCurrencyAllowed({ ctx, currency: parsedCustomer.currency });
 
 	const internalId = generateId("cus");
 	const customerData: Customer = {

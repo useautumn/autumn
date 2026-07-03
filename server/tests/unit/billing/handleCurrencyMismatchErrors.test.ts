@@ -7,7 +7,9 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleCurrencyMismatchErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors";
 
-const ctx = { org: { default_currency: "usd" } } as unknown as AutumnContext;
+const ctx = {
+	org: { default_currency: "usd", config: { multi_currency: true } },
+} as unknown as AutumnContext;
 
 const price = (config: Record<string, unknown>): Price =>
 	({ config }) as unknown as Price;
@@ -132,5 +134,22 @@ describe("handleCurrencyMismatchErrors", () => {
 				requested: "eur",
 			}),
 		).toThrow(/locked/i);
+	});
+
+	test("requested currency is rejected when the org flag is off", () => {
+		const flagOffCtx = {
+			org: { default_currency: "usd", config: { multi_currency: false } },
+		} as unknown as AutumnContext;
+		expect(() =>
+			handleCurrencyMismatchErrors({
+				ctx: flagOffCtx,
+				billingContext: {
+					fullCustomer: { currency: null },
+					stripeCustomer: null,
+					attachProduct: { name: "Pro", prices: [paidWithEur] },
+				} as unknown as AttachBillingContext,
+				params: { currency: "eur" } as AttachParamsV1,
+			}),
+		).toThrow(/not enabled/i);
 	});
 });

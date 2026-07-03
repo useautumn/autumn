@@ -16,11 +16,19 @@ import { useEffect, useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import {
+	addCurrencyToTiers,
+	itemCurrencyCodes,
+	removeCurrencyFromTiers,
+	stampBaseCurrency,
+	updateTierCurrencyAmount,
+} from "../../utils/currencyUtils";
+import {
 	addTier,
 	removeTier,
 	updateTier,
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
+import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
 import { BillingUnits } from "./BillingUnits";
 
 const getTierToDisplay = ({
@@ -100,6 +108,7 @@ export function PriceTiers({
 		{},
 	);
 	const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
+	const [pendingCurrencyCode, setPendingCurrencyCode] = useState("");
 
 	// Auto-select prepaid when volume-based is active with multiple tiers
 	useEffect(() => {
@@ -211,23 +220,66 @@ export function PriceTiers({
 						</IconButton>
 					</div>
 				</div>
+
+				{org?.config?.multi_currency && (
+					<AdditionalCurrenciesEditor
+						currencies={firstTier.additional_currencies?.map((entry) => ({
+							currency: entry.currency,
+							amount: entry.amount ?? 0,
+						}))}
+						onChange={(currencies) =>
+							setItem(
+								stampBaseCurrency({
+									item: {
+										...item,
+										tiers: [
+											{ ...firstTier, additional_currencies: currencies },
+										],
+									},
+									orgCurrency: currency,
+								}),
+							)
+						}
+						baseCurrency={currency}
+					/>
+				)}
 			</div>
 		);
 	}
 
 	// Multi-tier UI - full tier management
+	const isFlatMode = volumePricingMode === "flat";
+	const amountField = isFlatMode ? "flat_amount" : "amount";
+	const currencyCodes = itemCurrencyCodes(item);
+
+	const addPendingCurrency = () => {
+		const code = pendingCurrencyCode.toLowerCase();
+		if (
+			code.length !== 3 ||
+			code === currency.toLowerCase() ||
+			currencyCodes.includes(code)
+		) {
+			return;
+		}
+		setItem(
+			stampBaseCurrency({
+				item: addCurrencyToTiers({ item, code }),
+				orgCurrency: currency,
+			}),
+		);
+		setPendingCurrencyCode("");
+	};
+
 	return (
 		<div className="space-y-2">
 			{tiers.map((tier: PriceTier, index: number) => {
-				const isFlatMode = volumePricingMode === "flat";
-				const amountField = isFlatMode ? "flat_amount" : "amount";
 				const amountKey = `tier-${index}-${amountField}`;
 				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
 				return (
 					<div
 						key={`${index}-${tier.to}`}
-						className="flex gap-2 w-full items-center"
+						className="flex flex-wrap gap-2 w-full items-center"
 					>
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
 							{Number(includedUsage) === 0 && index === 0
@@ -260,6 +312,53 @@ export function PriceTiers({
 							</InputGroupAddon>
 						</InputGroup>
 
+						{currencyCodes.map((code) => {
+							const entry = tier.additional_currencies?.find(
+								(candidate) => candidate.currency === code,
+							);
+							const entryValue = isFlatMode
+								? (entry?.flat_amount ?? 0)
+								: (entry?.amount ?? 0);
+							const entryKey = `tier-${index}-${code}-${amountField}`;
+
+							return (
+								<InputGroup key={code} className="min-w-0 w-26 shrink-0">
+									<InputGroupInput
+										value={getDisplayValue(entryKey, entryValue)}
+										onFocus={() => handleInputFocus(entryKey, entryValue)}
+										onBlur={() =>
+											setIsEditing((prev) => ({ ...prev, [entryKey]: false }))
+										}
+										onChange={(e) => {
+											setEditingValues((prev) => ({
+												...prev,
+												[entryKey]: e.target.value,
+											}));
+											setItem(
+												stampBaseCurrency({
+													item: updateTierCurrencyAmount({
+														item,
+														tierIndex: index,
+														code,
+														field: amountField,
+														value: e.target.value,
+													}),
+													orgCurrency: currency,
+												}),
+											);
+										}}
+										inputMode="decimal"
+										placeholder="0.00"
+									/>
+									<InputGroupAddon align="inline-end">
+										<span className="text-tertiary-foreground text-tiny uppercase">
+											{code}
+										</span>
+									</InputGroupAddon>
+								</InputGroup>
+							);
+						})}
+
 						{!isFlatMode && <BillingUnits />}
 
 						<div className="flex items-center gap-1 shrink-0">
@@ -282,6 +381,55 @@ export function PriceTiers({
 			>
 				Add Tier
 			</IconButton>
+
+			{org?.config?.multi_currency && (
+				<div className="flex gap-2 items-center">
+					<Input
+						value={pendingCurrencyCode}
+						onChange={(e) =>
+							setPendingCurrencyCode(
+								e.target.value
+									.replace(/[^a-zA-Z]/g, "")
+									.toLowerCase()
+									.slice(0, 3),
+							)
+						}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") addPendingCurrency();
+						}}
+						placeholder="eur"
+						className="w-16 shrink-0 uppercase"
+						maxLength={3}
+					/>
+					<IconButton
+						variant="muted"
+						className="text-tertiary-foreground text-xs"
+						onClick={addPendingCurrency}
+						icon={<PlusIcon size={10} />}
+						iconOrientation="left"
+					>
+						Add currency
+					</IconButton>
+					{currencyCodes.map((code) => (
+						<IconButton
+							key={code}
+							variant="muted"
+							className="text-tertiary-foreground text-xs uppercase"
+							onClick={() =>
+								setItem(
+									stampBaseCurrency({
+										item: removeCurrencyFromTiers({ item, code }),
+										orgCurrency: currency,
+									}),
+								)
+							}
+							icon={<TrashSimpleIcon size={10} />}
+						>
+							{code}
+						</IconButton>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }
