@@ -27,20 +27,23 @@ export const getOAuthConsentMetadata = ({
 	authMode?: ChatAuthMode;
 	installation: ChatInstallation;
 	userId: string;
-}): OAuthConsentMetadata =>
-	isSlackAdminProvider({ provider: installation.provider })
-		? {
-				kind: SLACK_ADMIN_CONSENT_KIND,
-				chatInstallationId: installation.id,
-				createdByUserId: userId,
-			}
-		: authMode === ChatAuthMode.Unrestricted
-			? {
-					kind: UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
-					chatInstallationId: installation.id,
-					createdByUserId: userId,
-				}
-			: {};
+}): OAuthConsentMetadata => {
+	if (isSlackAdminProvider({ provider: installation.provider })) {
+		return {
+			kind: SLACK_ADMIN_CONSENT_KIND,
+			chatInstallationId: installation.id,
+			createdByUserId: userId,
+		};
+	}
+	if (authMode === ChatAuthMode.Unrestricted) {
+		return {
+			kind: UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND,
+			chatInstallationId: installation.id,
+			createdByUserId: userId,
+		};
+	}
+	return {};
+};
 
 export const getOAuthConsentMetadataKindFilter = (
 	metadata: OAuthConsentMetadata,

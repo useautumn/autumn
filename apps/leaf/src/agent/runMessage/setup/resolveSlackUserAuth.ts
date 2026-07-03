@@ -1,9 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { type ChatInstallation, user as userTable } from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
-import {
-	type ChatInstallation,
-	user as userTable,
-} from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { ensureChatUserCredential } from "../../../internal/installations/actions/ensureChatUserCredential.js";
 import { db } from "../../../lib/db.js";
@@ -14,6 +11,7 @@ import {
 	type SlackAuthDenyReason,
 	type SlackUserAuthResult,
 } from "./slackUserAuthTypes.js";
+
 type AutumnUserMatch =
 	| { kind: "none" }
 	| { kind: "single"; userId: string }
@@ -118,7 +116,7 @@ export const resolveSlackUserAuth = async ({
 		installation,
 		orgId,
 		userId,
-		userScopes: scopes,
+		userScopes: supportedScopes,
 	});
 
 	logger.info("Resolved Slack user auth", {

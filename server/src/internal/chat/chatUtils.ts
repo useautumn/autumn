@@ -17,6 +17,12 @@ export const getSlackAdminProvider = ({
 /** Scopes that enable extra features but don't require a reconnect when absent. */
 const OPTIONAL_SLACK_SCOPES: readonly string[] = [SLACK_EMAIL_SCOPE];
 
+/** Slack user resolution depends on these, even when SLACK_BOT_SCOPES overrides the defaults. */
+const REQUIRED_USER_RESOLUTION_SCOPES: readonly string[] = [
+	SLACK_USERS_READ_SCOPE,
+	SLACK_EMAIL_SCOPE,
+];
+
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
 	return DEFAULT_SLACK_BOT_SCOPES.filter(
@@ -60,9 +66,7 @@ const getSlackBotScopes = () => {
 	const base = process.env.SLACK_BOT_SCOPES
 		? parseSlackBotScopesEnv(process.env.SLACK_BOT_SCOPES)
 		: DEFAULT_SLACK_BOT_SCOPES;
-	// users:read + users:read.email are required for user resolution no matter
-	// what SLACK_BOT_SCOPES is set to, so they're always folded in.
-	return [...new Set([...base, SLACK_USERS_READ_SCOPE, SLACK_EMAIL_SCOPE])];
+	return [...new Set([...base, ...REQUIRED_USER_RESOLUTION_SCOPES])];
 };
 
 export const createSlackInstallUrl = (state: string) => {

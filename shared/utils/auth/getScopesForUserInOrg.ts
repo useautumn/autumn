@@ -10,6 +10,9 @@ type ScopeResolverDb = Pick<
 	"query"
 >;
 
+const isCanonicalRole = (role: string): role is Role => role in ROLE_SCOPES;
+
+/** Unknown roles keep their name but grant no scopes, so callers surface the denial themselves. */
 export async function getScopesForUserInOrg({
 	db,
 	userId,
@@ -30,21 +33,10 @@ export async function getScopesForUserInOrg({
 		return { role: null, scopes: [] };
 	}
 
-	const rawRole = membership.role;
-	const canonicalRole = (Object.keys(ROLE_SCOPES) as Role[]).find(
-		(role) => role === rawRole,
-	);
-
-	if (!canonicalRole) {
-		console.warn(
-			`[getScopesForUserInOrg] Unknown role "${rawRole}" for user ${userId} ` +
-				`in org ${organizationId}; granting no scopes.`,
-		);
-		return { role: rawRole, scopes: [] };
+	const { role } = membership;
+	if (!isCanonicalRole(role)) {
+		return { role, scopes: [] };
 	}
 
-	return {
-		role: rawRole,
-		scopes: [...ROLE_SCOPES[canonicalRole]],
-	};
+	return { role, scopes: [...ROLE_SCOPES[role]] };
 }

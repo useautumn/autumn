@@ -81,8 +81,10 @@ type ResumeBranchInput = Required<
 	toolUseId: string;
 };
 
-// Runs the tool under the approver's own token, then releases the asker's
-// suspended session via a deny so it stays usable.
+/**
+ * Runs the tool under the approver's own token, then releases the asker's
+ * suspended session via a deny so it stays usable.
+ */
 const runOutOfBandApproval = async ({
 	approval,
 	approverToken,
@@ -91,7 +93,9 @@ const runOutOfBandApproval = async ({
 	providerUserId,
 	sessionId,
 	toolUseId,
-}: ResumeBranchInput & { approverToken: string }): Promise<ApprovalRunResult> => {
+}: ResumeBranchInput & {
+	approverToken: string;
+}): Promise<ApprovalRunResult> => {
 	onProgress?.(toolStatusLine(approval.tool_name));
 	try {
 		const result = await deps.executeTool({
@@ -114,7 +118,7 @@ const runOutOfBandApproval = async ({
 	}
 };
 
-// Replays the approver's allow into the asker's own suspended session.
+/** Replays the approver's allow into the asker's own suspended session. */
 const resumeSuspendedApproval = async ({
 	approval,
 	deps,

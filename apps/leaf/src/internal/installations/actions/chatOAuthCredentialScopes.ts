@@ -14,10 +14,9 @@ export const scopeSetsEqual = (a: string[], b: string[]) => {
 };
 
 /**
- * Bound the requested scopes to the bot's ceiling. `undefined` is the
- * install/default path (grant the full set); an explicit empty list means a
- * caller resolved *no* permissions, so we throw rather than fail open into the
- * default set. See the throws below for the intersection cases.
+ * Bounds the requested scopes to the bot's ceiling. `undefined` grants the
+ * default set; an empty or fully out-of-ceiling list throws instead of
+ * failing open.
  */
 export const resolveAgentScopes = (agentScopes?: string[]) => {
 	if (agentScopes === undefined) {

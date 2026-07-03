@@ -85,8 +85,6 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
-			// Admin installs keep the installer-scoped flow. Restricted/unrestricted
-			// installs share the installer token; only per-user resolves the sender.
 			let autumnUserId: string | undefined;
 			const callerAuth = await resolveSlackCallerAuth({
 				installation: effectiveInstallation,
@@ -157,8 +155,8 @@ export const runMessage = async ({
 				},
 			});
 
-			// Legacy/admin installs resolve no per-user id; target the installer's
-			// credential explicitly rather than relying on an unordered findFirst.
+			// Legacy/admin installs resolve no per-user id; fall back to the
+			// installer's credential.
 			const tokenUserId =
 				autumnUserId ?? effectiveInstallation.installed_by_user_id;
 			if (!tokenUserId) {

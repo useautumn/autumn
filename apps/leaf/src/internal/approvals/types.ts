@@ -15,6 +15,10 @@ export type ApprovalRunResult =
 	| { error: true; message: string; retryable?: boolean }
 	| { result: unknown; text: string; toolName?: string };
 
+export type ApprovalAuthorization =
+	| { allowed: true; approverToken?: string }
+	| { allowed: false; text: string };
+
 export type ApprovalActionDeps = {
 	resolveApproval: (input: {
 		approval: ChatApproval;
@@ -37,10 +41,7 @@ export type ApprovalActionDeps = {
 	authorizeApprovalClicker?: (input: {
 		approval: ChatApproval;
 		providerUserId: string;
-	}) => Promise<
-		| { allowed: true; approverToken?: string }
-		| { allowed: false; text: string }
-	>;
+	}) => Promise<ApprovalAuthorization>;
 	editActionMessage: (input: {
 		content: ActionMessageContent;
 		event: ActionEvent;

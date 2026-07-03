@@ -15,7 +15,11 @@ import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
 import { isSlackAdminProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import type { ApprovalActionDeps, ApprovalCardStatus } from "../../types.js";
+import type {
+	ApprovalActionDeps,
+	ApprovalAuthorization,
+	ApprovalCardStatus,
+} from "../../types.js";
 import {
 	approvalErrorResult,
 	isErrorResult,
@@ -39,10 +43,12 @@ const authorizeSlackApprovalClicker = async ({
 }: {
 	approval: ChatApproval;
 	providerUserId: string;
-}) => {
+}): Promise<ApprovalAuthorization> => {
+	const { toolName } = detailsFromApproval({ approval });
+
 	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
 	if (isSlackAdminProvider({ provider: approval.provider })) {
-		return { allowed: true } as const;
+		return { allowed: true };
 	}
 
 	// A gated tool without a declared scope requirement fails closed.
@@ -55,8 +61,8 @@ const authorizeSlackApprovalClicker = async ({
 		});
 		return {
 			allowed: false,
-			text: `I can't determine the permissions required to approve ${detailsFromApproval({ approval }).toolName}, so I won't run it.`,
-		} as const;
+			text: `I can't determine the permissions required to approve ${toolName}, so I won't run it.`,
+		};
 	}
 
 	const installation = await db.query.chatInstallations.findFirst({
@@ -70,7 +76,7 @@ const authorizeSlackApprovalClicker = async ({
 		return {
 			allowed: false,
 			text: "I couldn't verify your Slack workspace installation, so I can't approve this action.",
-		} as const;
+		};
 	}
 
 	const callerAuth = await resolveSlackCallerAuth({
@@ -81,19 +87,19 @@ const authorizeSlackApprovalClicker = async ({
 	});
 	if (!callerAuth.usePerUser) {
 		// The session already runs under the installer token; no approver token needed.
-		return { allowed: true } as const;
+		return { allowed: true };
 	}
 
 	if (!callerAuth.ok) {
-		return { allowed: false, text: callerAuth.text } as const;
+		return { allowed: false, text: callerAuth.text };
 	}
 
 	const { allowed, missing } = checkScopes(required, callerAuth.scopes);
 	if (!allowed) {
 		return {
 			allowed: false,
-			text: `You don't have permission to approve ${detailsFromApproval({ approval }).toolName}. Missing: ${missing.join(", ")}.`,
-		} as const;
+			text: `You don't have permission to approve ${toolName}. Missing: ${missing.join(", ")}.`,
+		};
 	}
 
 	const approverToken = await getInstallationOAuthAccessToken({
@@ -103,7 +109,7 @@ const authorizeSlackApprovalClicker = async ({
 		userId: callerAuth.userId,
 	});
 
-	return { allowed: true, approverToken } as const;
+	return { allowed: true, approverToken };
 };
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
@@ -233,13 +239,7 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		// On denial, release the claim so another authorized user can still approve.
-		let authorization:
-			| Awaited<
-					ReturnType<
-						NonNullable<ApprovalActionDeps["authorizeApprovalClicker"]>
-					>
-			  >
-			| undefined;
+		let authorization: ApprovalAuthorization | undefined;
 		try {
 			authorization = await deps.authorizeApprovalClicker?.({
 				approval: claimed,
