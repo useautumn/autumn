@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
@@ -123,6 +124,84 @@ export const createRealStripeSub = async (
 	});
 	return { customerId: stripeCustomerId, subscriptionId: sub.id };
 };
+
+// Real test-mode Stripe customer bound to a test clock frozen at `frozenTime`
+// (a past instant). Advancing the clock to ≈ real now makes the sub's period
+// bracket Date.now(), which the flash uses as its import "now".
+export const createRealStripeCustomerOnClock = async (
+	ctx: TestContext,
+	{ email, frozenTime }: { email: string; frozenTime: number },
+): Promise<{ customerId: string; testClockId: string }> => {
+	const testClock = await ctx.stripeCli.testHelpers.testClocks.create({
+		frozen_time: Math.floor(frozenTime / 1000),
+	});
+	const customer = await ctx.stripeCli.customers.create({
+		email,
+		payment_method: "pm_card_visa",
+		invoice_settings: { default_payment_method: "pm_card_visa" },
+		test_clock: testClock.id,
+	});
+	return { customerId: customer.id, testClockId: testClock.id };
+};
+
+// Subscription on a clock-bound customer (auto-binds to that clock). Its
+// start_date and period follow the clock, so the sub can be genuinely
+// mid-cycle / mid-trial relative to real now after advancing.
+export const createRealStripeSubOnClock = async (
+	ctx: TestContext,
+	{
+		customerId,
+		amount = 1000,
+		interval = "month",
+		label,
+		trialPeriodDays,
+	}: {
+		customerId: string;
+		amount?: number;
+		interval?: "month" | "year";
+		label: string;
+		trialPeriodDays?: number;
+	},
+): Promise<{ subscriptionId: string; priceId: string }> => {
+	const price = await ctx.stripeCli.prices.create({
+		unit_amount: amount,
+		currency: "usd",
+		recurring: { interval },
+		product_data: { name: `dfu-flash-clock-${label}` },
+	});
+	const sub = await ctx.stripeCli.subscriptions.create({
+		customer: customerId,
+		items: [{ price: price.id }],
+		...(trialPeriodDays ? { trial_period_days: trialPeriodDays } : {}),
+	});
+	return { subscriptionId: sub.id, priceId: price.id };
+};
+
+// Thin wrapper over advanceTestClock (advances the clock + waits for Stripe).
+export const advanceClock = async (
+	ctx: TestContext,
+	{
+		testClockId,
+		advanceTo,
+		numberOfDays,
+		numberOfMonths,
+		waitForSeconds,
+	}: {
+		testClockId: string;
+		advanceTo?: number;
+		numberOfDays?: number;
+		numberOfMonths?: number;
+		waitForSeconds?: number;
+	},
+): Promise<number> =>
+	advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId,
+		advanceTo,
+		numberOfDays,
+		numberOfMonths,
+		waitForSeconds,
+	});
 
 export const NOW = Date.now();
 export const THIRTY_DAYS_MS = 1000 * 60 * 60 * 24 * 30;
