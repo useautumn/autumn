@@ -1,5 +1,5 @@
 {
-  "id": "73fd9d12-0d80-4953-91b3-47186554de7f",
+  "id": "9975abae-3667-48b9-9f96-75af78a58015",
   "prevId": "55bf7640-255f-452d-96c1-79b17dc224da",
   "version": "7",
   "dialect": "postgresql",
@@ -4917,30 +4917,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "idx_metadata_type_expires": {
-          "name": "idx_metadata_type_expires",
-          "columns": [
-            {
-              "expression": "type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"metadata\".\"expires_at\" IS NOT NULL",
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

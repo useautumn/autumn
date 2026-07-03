@@ -7,5 +7,4 @@ CREATE INDEX CONCURRENTLY "idx_entities_internal_feature_id" ON "entities" USING
 CREATE INDEX CONCURRENTLY "idx_entitlements_internal_feature_id" ON "entitlements" USING btree ("internal_feature_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_invoice_line_items_stripe_invoice_id" ON "invoice_line_items" USING btree ("stripe_invoice_id") WHERE "invoice_line_items"."stripe_invoice_id" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_invoice_line_items_invoice_id" ON "invoice_line_items" USING btree ("invoice_id") WHERE "invoice_line_items"."invoice_id" IS NOT NULL;--> statement-breakpoint
-CREATE INDEX CONCURRENTLY "idx_invoice_line_items_stripe_invoice_item_id" ON "invoice_line_items" USING btree ("stripe_invoice_item_id") WHERE "invoice_line_items"."stripe_invoice_item_id" IS NOT NULL;--> statement-breakpoint
-CREATE INDEX CONCURRENTLY "idx_metadata_type_expires" ON "metadata" USING btree ("type","expires_at") WHERE "metadata"."expires_at" IS NOT NULL;
+CREATE INDEX CONCURRENTLY "idx_invoice_line_items_stripe_invoice_item_id" ON "invoice_line_items" USING btree ("stripe_invoice_item_id") WHERE "invoice_line_items"."stripe_invoice_item_id" IS NOT NULL;
