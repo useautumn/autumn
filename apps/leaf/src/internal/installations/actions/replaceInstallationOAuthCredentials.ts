@@ -15,7 +15,7 @@ import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { and, eq } from "drizzle-orm";
 import { encrypt } from "../../../lib/crypto.js";
 import type { db } from "../../../lib/db.js";
-import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { resolveAgentScopes } from "./chatOAuthCredentialScopes.js";
 import {
 	getOAuthConsentMetadata,
@@ -52,7 +52,7 @@ const getProviderOAuthConfig = ({
 }: {
 	installation: ChatInstallation;
 }): ProviderOAuthConfig => {
-	if (isSlackAdminProvider({ provider: installation.provider })) {
+	if (isInternalAutumnSlackProvider({ provider: installation.provider })) {
 		return {
 			clientId: AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 			name: "Slack Admin",

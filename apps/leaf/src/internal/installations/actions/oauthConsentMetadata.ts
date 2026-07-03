@@ -2,7 +2,7 @@ import { UNRESTRICTED_CHAT_OAUTH_CONSENT_KIND } from "@autumn/auth/oauth";
 import { type ChatInstallation, oauthConsent } from "@autumn/shared";
 import { ChatAuthMode } from "@autumn/shared/models/chatModels/chatEnums";
 import { sql } from "drizzle-orm";
-import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 
 export const SLACK_ADMIN_CONSENT_KIND = "slack_admin";
 
@@ -28,7 +28,7 @@ export const getOAuthConsentMetadata = ({
 	installation: ChatInstallation;
 	userId: string;
 }): OAuthConsentMetadata => {
-	if (isSlackAdminProvider({ provider: installation.provider })) {
+	if (isInternalAutumnSlackProvider({ provider: installation.provider })) {
 		return {
 			kind: SLACK_ADMIN_CONSENT_KIND,
 			chatInstallationId: installation.id,

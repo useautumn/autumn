@@ -12,7 +12,7 @@ import { approvalStatusCard } from "../../../../ui/blocks.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
-import { isSlackAdminProvider } from "../../../slackAdmin/provider.js";
+import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import type {
@@ -47,7 +47,7 @@ const authorizeSlackApprovalClicker = async ({
 	const { toolName } = detailsFromApproval({ approval });
 
 	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
-	if (isSlackAdminProvider({ provider: approval.provider })) {
+	if (isInternalAutumnSlackProvider({ provider: approval.provider })) {
 		return { allowed: true };
 	}
 
@@ -183,7 +183,7 @@ export const handleApprovalActionWithDeps = async ({
 		}
 		if (
 			approval.provider &&
-			isSlackAdminProvider({ provider: approval.provider })
+			isInternalAutumnSlackProvider({ provider: approval.provider })
 		) {
 			const access = validateSlackAdminAccess({
 				workspaceId: approval.workspace_id,

@@ -3,7 +3,7 @@ import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
 import { validateSlackAdminAccess } from "../../slackAdmin/access.js";
-import { isSlackAdminProvider } from "../../slackAdmin/provider.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,
@@ -53,7 +53,7 @@ export const getInstallationOAuthAccessToken = async ({
 }) => {
 	const credentialUserId = resolveCredentialUserId({ installation, userId });
 
-	if (isSlackAdminProvider({ provider: installation.provider })) {
+	if (isInternalAutumnSlackProvider({ provider: installation.provider })) {
 		const access = validateSlackAdminAccess({
 			workspaceId: installation.workspace_id,
 		});
@@ -71,7 +71,7 @@ export const getInstallationOAuthAccessToken = async ({
 	});
 
 	if (
-		isSlackAdminProvider({ provider: installation.provider }) &&
+		isInternalAutumnSlackProvider({ provider: installation.provider }) &&
 		(!credential || credential.org_id !== orgId)
 	) {
 		await db.transaction(async (tx) => {
