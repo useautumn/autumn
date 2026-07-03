@@ -81,7 +81,7 @@ export const runEngineLoop = async ({
 
 	let turnInFlight = false;
 	if (run) {
-		run.notifyFollowUpQueued = () => {
+		run.followUps.onPush = () => {
 			if (turnInFlight && !isCancelled()) {
 				void Promise.resolve(interrupt()).catch(() => {});
 			}
@@ -90,9 +90,8 @@ export const runEngineLoop = async ({
 
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
 		turnInFlight = false;
-		const queued = run && !isCancelled() ? run.drainFollowUps() : [];
-		if (queued.length === 0) {
-			if (run) run.closed = true;
+		if (!run || isCancelled() || run.followUps.size === 0) {
+			run?.followUps.close();
 			return "stop" as const;
 		}
 		const rawTurnText = turn.textParts.join("\n\n");
@@ -102,7 +101,8 @@ export const runEngineLoop = async ({
 			text: rawTurnText,
 		});
 		if (turnText.trim()) await onTurnComplete?.(turnText);
-		const singleTurnBatch = queued.join("\n\n");
+		// Drain only after the post succeeds so a failed turn keeps the queue.
+		const singleTurnBatch = run.followUps.drain().join("\n\n");
 		await sendFollowUp({ text: singleTurnBatch });
 		turnInFlight = true;
 		return "continue" as const;
@@ -147,7 +147,11 @@ export const runEngineLoop = async ({
 			: await drive({});
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
-		if (run) run.notifyFollowUpQueued = undefined;
+		// Close on every exit (incl. suspension) so late injects start a new run.
+		if (run) {
+			run.followUps.close();
+			run.followUps.onPush = undefined;
+		}
 	}
 
 	const rawFinalText = outcome.textParts.join("\n\n");

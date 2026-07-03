@@ -47,8 +47,8 @@ describe("runEngineLoop follow-up pump", () => {
 		});
 		run.resolveSessionId("sesn_1");
 		// The hang repro: two queued follow-ups answered by a single turn.
-		run.injectFollowUp({ text: "second question" });
-		run.injectFollowUp({ text: "third question" });
+		run.followUps.push("second question");
+		run.followUps.push("third question");
 		const flushed: string[] = [];
 		const posted: string[] = [];
 
@@ -79,7 +79,7 @@ describe("runEngineLoop follow-up pump", () => {
 		expect(posted).toEqual(["answer one"]);
 		expect(output.text).toBe("answer two");
 		expect(output.finishReason).toBe("stop");
-		expect(run.closed).toBe(true);
+		expect(run.followUps.closed).toBe(true);
 		closeRun({ key: "el1", run });
 	});
 
@@ -100,7 +100,7 @@ describe("runEngineLoop follow-up pump", () => {
 			newSession: true,
 			params: { text: "question" },
 			runTurn: async ({ onTurnEnd }) => {
-				run.injectFollowUp({ text: "pivot" });
+				run.followUps.push("pivot");
 				expect(interrupts).toBe(1);
 				expect(await onTurnEnd(turnOutcome("aborted answer"))).toBe("continue");
 				const second = turnOutcome("pivot answer");
@@ -112,9 +112,7 @@ describe("runEngineLoop follow-up pump", () => {
 		});
 
 		expect(interrupts).toBe(1);
-		expect(() => run.injectFollowUp({ text: "late" })).toThrow(
-			"Run is closing",
-		);
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
 		closeRun({ key: "el2", run });
 	});
 
@@ -134,7 +132,7 @@ describe("runEngineLoop follow-up pump", () => {
 			newSession: true,
 			params: { text: "question" },
 			runTurn: async ({ onTurnEnd }) => {
-				run.injectFollowUp({ text: "follow-up" });
+				run.followUps.push("follow-up");
 				await run.requestStop({ byUserId: "U9", reason: "user" });
 				const outcome = turnOutcome("partial");
 				expect(await onTurnEnd(outcome)).toBe("stop");
@@ -149,5 +147,71 @@ describe("runEngineLoop follow-up pump", () => {
 		expect(flushed).toEqual([]);
 		expect(output.finishReason).toBe("stopped");
 		closeRun({ key: "el3", run });
+	});
+
+	test("closes the queue when a turn suspends so late injects start a new run", async () => {
+		const run = registerRun({
+			key: "el4",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_4");
+
+		const output = await runEngineLoop({
+			ctx: makeContext({ run }),
+			interrupt: () => {},
+			newSession: true,
+			params: { text: "attach the pro plan" },
+			runTurn: async () => ({
+				...turnOutcome("needs approval"),
+				suspendedQueue: [{ args: {}, toolCallId: "t1", toolName: "attach" }],
+			}),
+			sendFollowUp: async () => {},
+			sessionId: "sesn_4",
+		});
+
+		expect(output.finishReason).toBe("suspended");
+		expect(run.followUps.closed).toBe(true);
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
+		closeRun({ key: "el4", run });
+	});
+
+	test("a failed turn post keeps the queue instead of losing it", async () => {
+		const run = registerRun({
+			key: "el5",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_5");
+		const flushed: string[] = [];
+
+		await expect(
+			runEngineLoop({
+				ctx: makeContext({
+					onTurnComplete: () => {
+						throw new Error("slack down");
+					},
+					run,
+				}),
+				interrupt: () => {},
+				newSession: true,
+				params: { text: "question" },
+				runTurn: async ({ onTurnEnd }) => {
+					run.followUps.push("follow-up");
+					const outcome = turnOutcome("answer");
+					await onTurnEnd(outcome);
+					return outcome;
+				},
+				sendFollowUp: async ({ text }) => {
+					flushed.push(text);
+				},
+				sessionId: "sesn_5",
+			}),
+		).rejects.toThrow("slack down");
+
+		expect(flushed).toEqual([]);
+		expect(run.followUps.size).toBe(1);
+		expect(run.followUps.closed).toBe(true);
+		closeRun({ key: "el5", run });
 	});
 });

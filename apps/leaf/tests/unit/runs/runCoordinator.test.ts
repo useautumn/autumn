@@ -56,7 +56,7 @@ describe("dispatchThreadMessage", () => {
 		});
 		run.resolveSessionId("sesn_1");
 		let notified = 0;
-		run.notifyFollowUpQueued = () => {
+		run.followUps.onPush = () => {
 			notified += 1;
 		};
 		let acked = 0;
@@ -75,9 +75,9 @@ describe("dispatchThreadMessage", () => {
 			text: "also, what's the MRR?",
 		});
 
-		expect(run.pendingTurns).toBe(1);
+		expect(run.followUps.size).toBe(1);
 		expect(notified).toBe(1);
-		expect(run.drainFollowUps()).toEqual(["also, what's the MRR?"]);
+		expect(run.followUps.drain()).toEqual(["also, what's the MRR?"]);
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);
 		closeRun({ key: "co2", run });
@@ -117,8 +117,8 @@ describe("dispatchThreadMessage", () => {
 			ownerProviderUserId: "U1",
 		});
 		run.resolveSessionId("sesn_1");
-		// The pump closed the run between the coordinator's check and the inject.
-		run.injectFollowUp = () => {
+		// The pump closed the run between the coordinator's check and the push.
+		run.followUps.push = () => {
 			throw new Error("Run is closing");
 		};
 		let newRuns = 0;
@@ -134,7 +134,7 @@ describe("dispatchThreadMessage", () => {
 		});
 
 		expect(newRuns).toBe(1);
-		expect(run.pendingTurns).toBe(0);
+		expect(run.followUps.size).toBe(0);
 		closeRun({ key: "co4", run });
 	});
 
@@ -182,7 +182,7 @@ describe("dispatchThreadMessage", () => {
 			text: "attach the enterprise plan to cus_1",
 		});
 
-		expect(run.pendingTurns).toBe(0);
+		expect(run.followUps.size).toBe(0);
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co6", run });
 	});

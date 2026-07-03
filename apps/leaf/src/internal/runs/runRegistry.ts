@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../../lib/logger.js";
+import { FollowUpQueue } from "./followUpQueue.js";
 
 const client = new Anthropic();
 
@@ -8,18 +9,11 @@ const SESSION_RESOLVE_TIMEOUT_MS = 15_000;
 export type RunStopReason = "timeout" | "user";
 
 export type ActiveRun = {
-	/** Set by the pump once it stops consuming turns — no more injections. */
-	closed?: boolean;
-	drainFollowUps: () => string[];
-	/** Queues text as an upcoming turn for the engine pump; throws once the run is closing. */
-	injectFollowUp: (input: { text: string }) => void;
+	followUps: FollowUpQueue;
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
-	/** Set by the engine pump to interrupt a turn in flight when a follow-up queues. */
-	notifyFollowUpQueued?: () => void;
 	ownerProviderUserId: string;
-	readonly pendingTurns: number;
 	requestStop: (input: {
 		byUserId: string;
 		reason: RunStopReason;
@@ -68,7 +62,6 @@ export const registerRun = ({
 		resolveSessionId = resolve;
 	});
 	let interruptSent = false;
-	const followUpQueue: string[] = [];
 
 	const resolveSessionIdOrNull = () =>
 		Promise.race([
@@ -79,24 +72,17 @@ export const registerRun = ({
 		]);
 
 	const run: ActiveRun = {
+		followUps: new FollowUpQueue(),
 		key,
 		kind,
 		ownerProviderUserId,
-		get pendingTurns() {
-			return followUpQueue.length;
-		},
 		resolveSessionId,
 		sessionId,
 		startedAt: Date.now(),
-		drainFollowUps: () => followUpQueue.splice(0),
-		injectFollowUp: ({ text }) => {
-			if (run.closed || run.stop) throw new Error("Run is closing");
-			followUpQueue.push(text);
-			run.notifyFollowUpQueued?.();
-		},
 		requestStop: async ({ byUserId, reason }) => {
 			if (run.stop) return;
 			run.stop = { byUserId, reason };
+			run.followUps.close();
 			if (interruptSent) return;
 			interruptSent = true;
 			// The session id may never resolve if the run failed during setup.
@@ -121,11 +107,11 @@ export const getRun = (key: string) => runs.get(key);
 
 /** Marks the run inactive and removes the entry only if it still belongs to this run. */
 export const closeRun = ({ key, run }: { key: string; run: ActiveRun }) => {
-	run.closed = true;
-	if (run.pendingTurns > 0) {
+	run.followUps.close();
+	if (run.followUps.size > 0) {
 		logger.warn("Closing run with undelivered follow-ups", {
 			event: "leaf.run_closed_with_pending_follow_ups",
-			data: { pending_turns: run.pendingTurns, run_key: key },
+			data: { pending_follow_ups: run.followUps.size, run_key: key },
 		});
 	}
 	if (runs.get(key) === run) runs.delete(key);

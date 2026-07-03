@@ -28,7 +28,7 @@ describe("runRegistry", () => {
 
 		closeRun({ key: "k1", run });
 		expect(getRun("k1")).toBeUndefined();
-		expect(run.closed).toBe(true);
+		expect(run.followUps.closed).toBe(true);
 	});
 
 	test("injection is rejected once a run is closed", () => {
@@ -40,9 +40,7 @@ describe("runRegistry", () => {
 		run.resolveSessionId("sesn_1");
 		closeRun({ key: "k1b", run });
 
-		expect(() => run.injectFollowUp({ text: "late" })).toThrow(
-			"Run is closing",
-		);
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
 	});
 
 	test("queues follow-ups locally and drains them in order", () => {
@@ -51,20 +49,35 @@ describe("runRegistry", () => {
 			kind: "message",
 			ownerProviderUserId: "U1",
 		});
-		const notifiedAtCounts: number[] = [];
-		run.notifyFollowUpQueued = () => {
-			notifiedAtCounts.push(run.pendingTurns);
+		const notifiedAtSizes: number[] = [];
+		run.followUps.onPush = () => {
+			notifiedAtSizes.push(run.followUps.size);
 		};
 
-		run.injectFollowUp({ text: "one" });
-		run.injectFollowUp({ text: "two" });
+		run.followUps.push("one");
+		run.followUps.push("two");
 
-		expect(run.pendingTurns).toBe(2);
-		expect(notifiedAtCounts).toEqual([1, 2]);
-		expect(run.drainFollowUps()).toEqual(["one", "two"]);
-		expect(run.pendingTurns).toBe(0);
-		expect(run.drainFollowUps()).toEqual([]);
+		expect(run.followUps.size).toBe(2);
+		expect(notifiedAtSizes).toEqual([1, 2]);
+		expect(run.followUps.drain()).toEqual(["one", "two"]);
+		expect(run.followUps.size).toBe(0);
+		expect(run.followUps.drain()).toEqual([]);
 		closeRun({ key: "k1c", run });
+	});
+
+	test("a stop request closes the queue", async () => {
+		const run = registerRun({
+			key: "k1d",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async () => {},
+		});
+		run.resolveSessionId("sesn_1");
+
+		await run.requestStop({ byUserId: "U1", reason: "user" });
+
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
+		closeRun({ key: "k1d", run });
 	});
 
 	test("close ignores entries replaced by a newer run", () => {
