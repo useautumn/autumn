@@ -20,7 +20,9 @@ export type SlackCallerAuthResult =
 const SLACK_CALLER_AUTH_ERROR_TEXT =
 	"I couldn't verify your Autumn permissions. Please try again, or ask an admin to reconnect Autumn if this keeps happening.";
 
-const toCallerAuthResult = (auth: SlackUserAuthResult): SlackCallerAuthResult => {
+const toCallerAuthResult = (
+	auth: SlackUserAuthResult,
+): SlackCallerAuthResult => {
 	if (!auth.ok) {
 		return { usePerUser: true, ok: false, text: auth.text };
 	}
@@ -33,25 +35,19 @@ const toCallerAuthResult = (auth: SlackUserAuthResult): SlackCallerAuthResult =>
 	};
 };
 
-/**
- * Shared per-user auth seam for the message and approval-click paths.
- * `skipPerUser` lets admin approval paths run their own scope check instead.
- */
+/** Shared per-user auth seam for the message and approval-click paths. */
 export const resolveSlackCallerAuth = async ({
 	installation,
 	logger,
 	orgId,
-	skipPerUser = false,
 	slackUserId,
 }: {
 	installation: ChatInstallation;
 	logger: AutumnLogger;
 	orgId: string;
-	skipPerUser?: boolean;
 	slackUserId: string;
 }): Promise<SlackCallerAuthResult> => {
 	const usePerUser =
-		!skipPerUser &&
 		resolveInstallationAuthMode({ installation }) === ChatAuthMode.PerUser;
 	if (!usePerUser) {
 		return { usePerUser: false };

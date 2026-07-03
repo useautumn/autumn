@@ -85,23 +85,25 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
+			// Admin installs act as Autumn staff, never as org members.
 			let autumnUserId: string | undefined;
-			const callerAuth = await resolveSlackCallerAuth({
-				installation: effectiveInstallation,
-				logger,
-				orgId: org.id,
-				skipPerUser: orgContext.admin,
-				slackUserId: providerUserId,
-			});
-			if (callerAuth.usePerUser) {
-				if (!callerAuth.ok) {
+			if (!orgContext.admin) {
+				const callerAuth = await resolveSlackCallerAuth({
+					installation: effectiveInstallation,
+					logger,
+					orgId: org.id,
+					slackUserId: providerUserId,
+				});
+				if (callerAuth.usePerUser && !callerAuth.ok) {
 					await onAgentReady?.();
 					return {
 						env: getDefaultChatEnv(),
 						text: callerAuth.text,
 					};
 				}
-				autumnUserId = callerAuth.userId;
+				if (callerAuth.usePerUser) {
+					autumnUserId = callerAuth.userId;
+				}
 			}
 
 			const preparedPromise = prepareAttachmentMessage({
