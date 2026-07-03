@@ -193,9 +193,6 @@ const runAndReply = async ({
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
 	const ticker = createStatusTicker(target);
-	const startThinking = () => {
-		ticker.thinking();
-	};
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const installation = await findSlackInstallationForWorkspace({
@@ -249,7 +246,7 @@ const runAndReply = async ({
 			const card = bootstrapLoading;
 			bootstrapLoading = null;
 			await finishLoading(target, card, "Autumn started.");
-			startThinking();
+			ticker.thinking();
 		};
 		run = registerRun({
 			key: runKey,
@@ -282,7 +279,7 @@ const runAndReply = async ({
 			onAgentReady: completeBootstrap,
 			onApprovalsSuperseded: (approvals) =>
 				editSupersededApprovalCards({ approvals, logger, target }),
-			onThinking: startThinking,
+			onThinking: ticker.thinking,
 			onTurnComplete: async (turnText) => {
 				await target.post({ markdown: turnText });
 			},
