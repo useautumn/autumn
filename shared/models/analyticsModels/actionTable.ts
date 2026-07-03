@@ -57,6 +57,10 @@ export const actions = pgTable(
 			name: "actions_entity_id_fkey",
 		}).onDelete("set null"),
 		index("idx_actions_on_internal_entity_id").on(table.internal_entity_id),
+		index("idx_actions_internal_customer_id")
+			.on(table.internal_customer_id)
+			.where(sql`${table.internal_customer_id} IS NOT NULL`)
+			.concurrently(),
 	],
 ).enableRLS();
 

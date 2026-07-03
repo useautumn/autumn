@@ -1,0 +1,11 @@
+DROP INDEX CONCURRENTLY IF EXISTS "idx_customer_entitlements_internal_customer_id";--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_actions_internal_customer_id" ON "actions" USING btree ("internal_customer_id") WHERE "actions"."internal_customer_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_ended_at" ON "customer_products" USING btree ("ended_at") WHERE "customer_products"."status" IN ('active', 'past_due') AND "customer_products"."ended_at" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_trial_ends_at" ON "customer_products" USING btree ("trial_ends_at") WHERE "customer_products"."status" IN ('active', 'past_due') AND "customer_products"."trial_ends_at" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_product_id" ON "customer_products" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_entities_internal_feature_id" ON "entities" USING btree ("internal_feature_id") WHERE "entities"."internal_feature_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_entitlements_internal_feature_id" ON "entitlements" USING btree ("internal_feature_id");--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_invoice_line_items_stripe_invoice_id" ON "invoice_line_items" USING btree ("stripe_invoice_id") WHERE "invoice_line_items"."stripe_invoice_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_invoice_line_items_invoice_id" ON "invoice_line_items" USING btree ("invoice_id") WHERE "invoice_line_items"."invoice_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_invoice_line_items_stripe_invoice_item_id" ON "invoice_line_items" USING btree ("stripe_invoice_item_id") WHERE "invoice_line_items"."stripe_invoice_item_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_metadata_type_expires" ON "metadata" USING btree ("type","expires_at") WHERE "metadata"."expires_at" IS NOT NULL;

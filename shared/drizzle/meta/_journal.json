@@ -267,6 +267,13 @@
       "when": 1782981605443,
       "tag": "0037_match_slack_auth_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1783084253383,
+      "tag": "0038_wandering_mimic",
+      "breakpoints": true
     }
   ]
 }
