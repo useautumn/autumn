@@ -40,7 +40,12 @@ export function hasMultipleImmediateSchedulePlans({
 }: {
 	phases: SchedulePhase[];
 }) {
-	return (phases[0]?.plans.filter((plan) => plan.productId).length ?? 0) > 1;
+	const immediatePhase = phases.find((phase) =>
+		phase.plans.some((plan) => plan.productId),
+	);
+	return (
+		(immediatePhase?.plans.filter((plan) => plan.productId).length ?? 0) > 1
+	);
 }
 
 export function canResetScheduleBillingCycle({

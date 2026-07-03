@@ -20,10 +20,8 @@ type CreatePlanItemParams = Omit<
 };
 
 import {
-	canResetScheduleBillingCycle,
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
-	hasMultipleImmediateSchedulePlans,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
 
@@ -135,9 +133,6 @@ export function buildCreateScheduleRequestBody({
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
-	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({ phases });
-	const canResetFuturePhases =
-		resetBillingCycle && canResetScheduleBillingCycle({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
 		// The first phase starts immediately (now) unless backdating is allowed —
@@ -177,9 +172,6 @@ export function buildCreateScheduleRequestBody({
 		return {
 			starts_at: startsAt,
 			plans,
-			...(index > 0 && canResetFuturePhases
-				? { billing_cycle_anchor: "phase_start" as const }
-				: {}),
 		};
 	});
 
@@ -188,9 +180,19 @@ export function buildCreateScheduleRequestBody({
 	);
 	if (validPhases.length === 0) return null;
 
+	const hasMultipleImmediatePlans = (validPhases[0]?.plans.length ?? 0) > 1;
+	const canResetFuturePhases =
+		resetBillingCycle && (!hasMultipleImmediatePlans || hasPersistedSchedule);
+	const phasesWithBillingAnchors = validPhases.map((phase, index) => ({
+		...phase,
+		...(index > 0 && canResetFuturePhases
+			? { billing_cycle_anchor: "phase_start" as const }
+			: {}),
+	}));
+
 	const body: Record<string, unknown> = {
 		customer_id: customerId,
-		phases: validPhases,
+		phases: phasesWithBillingAnchors,
 	};
 	if (entityId) body.entity_id = entityId;
 

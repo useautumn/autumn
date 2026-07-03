@@ -301,6 +301,17 @@ describe("canResetScheduleBillingCycle", () => {
 			}),
 		).toBe(false);
 	});
+
+	test("blocks new schedules whose first non-empty phase has multiple plans", () => {
+		expect(
+			canResetScheduleBillingCycle({
+				phases: [
+					schedulePhase({ productIds: [""] }),
+					schedulePhase({ productIds: ["prod_1", "prod_2"] }),
+				],
+			}),
+		).toBe(false);
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -652,6 +663,37 @@ describe("buildCreateScheduleRequestBody", () => {
 
 		expect(result).not.toBeNull();
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
+	});
+
+	test("does not send billing flags when the first valid phase is multi-plan", () => {
+		const now = Date.now();
+		const future = now + 1000 * 60 * 60 * 24 * 30;
+		const later = now + 1000 * 60 * 60 * 24 * 60;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				schedulePhase({ startsAt: now, productIds: [""] }),
+				schedulePhase({
+					startsAt: future,
+					productIds: ["prod_1", "prod_2"],
+				}),
+				schedulePhase({ startsAt: later }),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			billingBehavior: "none",
+			resetBillingCycle: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result).not.toHaveProperty("billing_behavior");
+		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases).toHaveLength(2);
+		expect(result!.phases[0].plans).toHaveLength(2);
+		expect(result!.phases[0]).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 });
