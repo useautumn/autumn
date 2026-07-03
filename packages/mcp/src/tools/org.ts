@@ -4,13 +4,19 @@ import { getAutumnAuth } from "../server/auth/auth.js";
 import { mcpAnnotations } from "./utils/annotations.js";
 import { callAutumnGet } from "./utils/client.js";
 
-const organizationMeSchema = z
-	.object({
-		name: z.string(),
-		slug: z.string(),
-		env: z.string(),
-	})
-	.strict();
+const organizationMeSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	slug: z.string(),
+	env: z.string(),
+	user: z
+		.object({
+			id: z.string(),
+			email: z.string(),
+			name: z.string(),
+		})
+		.optional(),
+});
 
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
