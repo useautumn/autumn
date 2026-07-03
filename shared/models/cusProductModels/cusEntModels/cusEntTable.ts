@@ -94,6 +94,20 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_internal_feature_id_c")
 			.on(sql`${table.internal_feature_id} COLLATE "C"`)
 			.concurrently(),
+		index("idx_ce_internal_feature_id")
+			.on(table.internal_feature_id)
+			.concurrently(),
+		index("idx_ce_customer_product_id_c")
+			.on(sql`${table.customer_product_id} COLLATE "C"`)
+			.concurrently(),
+		index("idx_ce_loose_next_reset")
+			.on(table.next_reset_at)
+			.where(sql`${table.customer_product_id} IS NULL`)
+			.concurrently(),
+		index("idx_customer_entitlements_nonnull_entity_by_id")
+			.on(table.id)
+			.where(sql`${table.internal_entity_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_entitlements_internal_entity_id").using(
 			"hash",
 			table.internal_entity_id,

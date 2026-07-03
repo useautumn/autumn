@@ -1,5 +1,5 @@
 {
-  "id": "6ca66658-5951-4b69-94b7-6d6d5fb80773",
+  "id": "e2b441fa-58e3-4a1d-b8ee-3c81dd02b2d2",
   "prevId": "55bf7640-255f-452d-96c1-79b17dc224da",
   "version": "7",
   "dialect": "postgresql",
@@ -234,22 +234,6 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_actions_internal_customer_id": {
-          "name": "idx_actions_internal_customer_id",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"actions\".\"internal_customer_id\" IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -1725,6 +1709,68 @@
           "method": "btree",
           "with": {}
         },
+        "idx_ce_internal_feature_id": {
+          "name": "idx_ce_internal_feature_id",
+          "columns": [
+            {
+              "expression": "internal_feature_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_ce_customer_product_id_c": {
+          "name": "idx_ce_customer_product_id_c",
+          "columns": [
+            {
+              "expression": "\"customer_product_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_ce_loose_next_reset": {
+          "name": "idx_ce_loose_next_reset",
+          "columns": [
+            {
+              "expression": "next_reset_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"customer_product_id\" IS NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_nonnull_entity_by_id": {
+          "name": "idx_customer_entitlements_nonnull_entity_by_id",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"internal_entity_id\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
         "idx_customer_entitlements_internal_entity_id": {
           "name": "idx_customer_entitlements_internal_entity_id",
           "columns": [
@@ -2055,6 +2101,21 @@
           "concurrently": true,
           "method": "btree",
           "with": {}
+        },
+        "idx_cpr_customer_product_id_c": {
+          "name": "idx_cpr_customer_product_id_c",
+          "columns": [
+            {
+              "expression": "\"customer_product_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2330,6 +2391,54 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_customer_status_created_at": {
+          "name": "idx_customer_products_customer_status_created_at",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" DESC",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_product_status": {
+          "name": "idx_customer_products_product_status",
+          "columns": [
+            {
+              "expression": "internal_product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -3704,6 +3813,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_events_timestamp": {
+          "name": "idx_events_timestamp",
+          "columns": [
+            {
+              "expression": "timestamp",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3827,7 +3951,29 @@
           "default": "null"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_features_composite": {
+          "name": "idx_features_composite",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "features_org_id_fkey": {
           "name": "features_org_id_fkey",
@@ -4932,7 +5078,45 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_metadata_on_type_expires_at": {
+          "name": "idx_metadata_on_type_expires_at",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "metadata_expires_at_idx": {
+          "name": "metadata_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"metadata\".\"expires_at\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -8368,6 +8552,21 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_uw_internal_feature_id": {
+          "name": "idx_uw_internal_feature_id",
+          "columns": [
+            {
+              "expression": "internal_feature_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
