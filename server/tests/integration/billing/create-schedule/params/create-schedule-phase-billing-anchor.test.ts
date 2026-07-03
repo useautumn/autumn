@@ -2,17 +2,16 @@
 // reset timestamp so Stripe schedule phases can reset anchors.
 
 import { expect, test } from "bun:test";
-import { BillingInterval, customerProducts } from "@autumn/shared";
+import { BillingInterval, customerProducts, ms } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { addMonths } from "date-fns";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule phase billing anchor: quarterly phase resets anchor at phase start")}`,
+	`${chalk.yellowBright("create-schedule phase billing anchor: backdated monthly to current quarterly resets anchor")}`,
 	async () => {
 		const customerId = "create-schedule-phase-anchor-reset";
 		const starter = products.pro({
@@ -36,15 +35,15 @@ test.concurrent(
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [starter, commercial] }),
 			],
-			actions: [s.billing.attach({ productId: starter.id })],
+			actions: [],
 		});
 
-		const phaseStartsAt = addMonths(advancedTo, 1).getTime();
+		const phaseStartsAt = advancedTo;
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
 				{
-					starts_at: advancedTo,
+					starts_at: advancedTo - ms.days(2),
 					plans: [{ plan_id: starter.id }],
 				},
 				{
