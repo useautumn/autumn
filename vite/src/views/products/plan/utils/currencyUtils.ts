@@ -27,11 +27,11 @@ export const stampBaseCurrency = ({
 export const itemCurrencyCodes = (item: ProductItem): string[] => {
 	const codes = new Set<string>();
 	for (const entry of item.additional_currencies ?? []) {
-		codes.add(entry.currency);
+		codes.add(entry.currency.toLowerCase());
 	}
 	for (const tier of item.tiers ?? []) {
 		for (const entry of tier.additional_currencies ?? []) {
-			codes.add(entry.currency);
+			codes.add(entry.currency.toLowerCase());
 		}
 	}
 	return [...codes];
@@ -65,7 +65,7 @@ export const removeCurrencyFromTiers = ({
 	tiers: (item.tiers ?? []).map((tier) => ({
 		...tier,
 		additional_currencies: (tier.additional_currencies ?? []).filter(
-			(entry) => entry.currency !== code,
+			(entry) => entry.currency.toLowerCase() !== code.toLowerCase(),
 		),
 	})),
 });
@@ -91,8 +91,8 @@ export const updateTierCurrencyAmount = ({
 	tiers[tierIndex] = {
 		...tier,
 		additional_currencies: (tier.additional_currencies ?? []).map((entry) =>
-			entry.currency === code
-				? { ...entry, [field]: Number.isNaN(parsed) ? 0 : parsed }
+			entry.currency.toLowerCase() === code.toLowerCase()
+				? { ...entry, [field]: Number.isNaN(parsed) ? 0 : Math.max(0, parsed) }
 				: entry,
 		),
 	};
@@ -104,9 +104,15 @@ const cleanCurrencyEntries = <
 >(
 	entries: T[] | null | undefined,
 ): T[] | undefined => {
-	const cleaned = (entries ?? [])
-		.filter((entry) => /^[a-zA-Z]{3}$/.test(entry.currency))
-		.map((entry) => ({ ...entry, currency: entry.currency.toLowerCase() }));
+	const seen = new Set<string>();
+	const cleaned: T[] = [];
+	for (const entry of entries ?? []) {
+		if (!/^[a-zA-Z]{3}$/.test(entry.currency)) continue;
+		const code = entry.currency.toLowerCase();
+		if (seen.has(code)) continue;
+		seen.add(code);
+		cleaned.push({ ...entry, currency: code });
+	}
 	return cleaned.length > 0 ? cleaned : undefined;
 };
 

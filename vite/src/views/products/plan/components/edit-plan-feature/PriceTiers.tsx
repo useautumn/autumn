@@ -314,7 +314,7 @@ export function PriceTiers({
 
 						{currencyCodes.map((code) => {
 							const entry = tier.additional_currencies?.find(
-								(candidate) => candidate.currency === code,
+								(candidate) => candidate.currency.toLowerCase() === code,
 							);
 							const entryValue = isFlatMode
 								? (entry?.flat_amount ?? 0)

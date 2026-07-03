@@ -78,6 +78,22 @@ const validateProductItem = ({
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
+	if ((item.additional_currencies?.length ?? 0) > 0) {
+		if (notNullish(item.tiers)) {
+			throw new RecaseError({
+				message: `Tiered items carry 'additional_currencies' on each tier, not at the item level`,
+				code: ErrCode.InvalidProductItem,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+		if (notNullish(item.price) && item.price <= 0) {
+			throw new RecaseError({
+				message: `'additional_currencies' require a non-zero 'price' — a plan that is free in the base currency is free in every currency`,
+				code: ErrCode.InvalidProductItem,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+	}
 
 	// 2. If amount is set, it must be greater than 0
 	// if (notNullish(item.price) && item.price <= 0) {

@@ -70,7 +70,7 @@ export const AdditionalCurrenciesEditor = ({
 								setEditingAmounts((prev) => ({ ...prev, [index]: raw }));
 								const parsed = Number.parseFloat(raw);
 								updateEntry(index, {
-									amount: Number.isNaN(parsed) ? 0 : parsed,
+									amount: Number.isNaN(parsed) ? 0 : Math.max(0, parsed),
 								});
 							}}
 							onBlur={() =>

@@ -2,9 +2,12 @@ import { Infinite } from "@models/productModels/productEnums.js";
 import { z } from "zod/v4";
 
 export const AdditionalCurrencyPriceSchema = z.object({
-	currency: z.string().min(1).meta({
-		description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
-	}),
+	currency: z
+		.string()
+		.regex(/^[a-zA-Z]{3}$/, "must be a 3-letter ISO currency code")
+		.meta({
+			description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+		}),
 	amount: z.number().meta({
 		description:
 			"Price amount in this currency. Set explicitly per currency, not converted from the base amount.",
@@ -17,9 +20,12 @@ export type AdditionalCurrencyPrice = z.infer<
 
 export const AdditionalCurrencyTierSchema = z
 	.object({
-		currency: z.string().min(1).meta({
-			description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
-		}),
+		currency: z
+			.string()
+			.regex(/^[a-zA-Z]{3}$/, "must be a 3-letter ISO currency code")
+			.meta({
+				description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
+			}),
 		amount: z.number().optional().meta({
 			description: "Per-unit amount for this tier in this currency.",
 		}),
@@ -108,7 +114,7 @@ export const additionalCurrencyPlanItemIssues = (
 	if (
 		price.additional_currencies &&
 		price.additional_currencies.length > 0 &&
-		typeof price.amount !== "number"
+		(typeof price.amount !== "number" || (price.tiers?.length ?? 0) > 0)
 	) {
 		issues.push(
 			"price.additional_currencies requires a flat 'amount'; tiered prices carry per-currency amounts on each tier.",

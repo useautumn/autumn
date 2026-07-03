@@ -122,7 +122,7 @@ export const SaveChangesBar = ({
 			productId: product.id,
 			product,
 			version: product.version,
-			orgCurrency: org?.default_currency ?? "usd",
+			orgCurrency: org?.default_currency,
 			onSuccess: async () => {
 				await queryRefetch();
 				await Promise.all([invalidateProduct(), invalidateProducts()]);

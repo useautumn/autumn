@@ -98,4 +98,29 @@ describe("validateProductItems multi-currency", () => {
 			),
 		).not.toThrow();
 	});
+
+	test("rejects additional_currencies on a zero price", () => {
+		expect(() =>
+			run({
+				price: 0,
+				interval: BillingInterval.Month,
+				base_currency: "usd",
+				additional_currencies: [{ currency: "eur", amount: 9 }],
+			} as unknown as ProductItem),
+		).toThrow(/non-zero/i);
+	});
+
+	test("rejects item-level additional_currencies alongside tiers", () => {
+		expect(() =>
+			run({
+				feature_id: "messages",
+				feature_type: "single_use",
+				included_usage: 0,
+				interval: BillingInterval.Month,
+				base_currency: "usd",
+				additional_currencies: [{ currency: "eur", amount: 9 }],
+				tiers: [{ to: -1, amount: 0.5 }],
+			} as unknown as ProductItem),
+		).toThrow(/on each tier/i);
+	});
 });

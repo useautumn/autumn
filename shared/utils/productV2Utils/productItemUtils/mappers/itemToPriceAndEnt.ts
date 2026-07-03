@@ -97,7 +97,7 @@ const toPrice = ({
 	if (currencies) {
 		config.currencies = currencies;
 		config.base_currency =
-			curPrice?.config?.base_currency ?? item.base_currency ?? undefined;
+			item.base_currency ?? curPrice?.config?.base_currency ?? undefined;
 	}
 
 	let price: Price = {
@@ -292,7 +292,7 @@ const toFeatureAndPrice = ({
 	if (currencies) {
 		config.currencies = currencies;
 		config.base_currency =
-			curPrice?.config?.base_currency ?? item.base_currency ?? undefined;
+			item.base_currency ?? curPrice?.config?.base_currency ?? undefined;
 	}
 
 	const canProrate =
