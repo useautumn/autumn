@@ -6,6 +6,7 @@ import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMidd
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
+import { getRevenueCatOverrideCustomerId } from "../misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "../misc/resolveRevenuecatResources";
 
 export const handleBillingIssue = async ({
@@ -28,6 +29,7 @@ export const handleBillingIssue = async ({
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
 		originalAppUserId: original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

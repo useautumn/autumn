@@ -1,5 +1,6 @@
 import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
+import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
@@ -27,6 +28,7 @@ export const handleInitialPurchase = async ({
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
 		originalAppUserId: original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		autoCreateCustomer: true,
 	});
 

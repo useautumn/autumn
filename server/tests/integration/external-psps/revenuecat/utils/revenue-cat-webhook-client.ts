@@ -70,15 +70,27 @@ export class RevenueCatWebhookClient {
 		type,
 		event,
 		mock,
+		subscriberAttributes,
 	}: {
 		type: RevenueCatEventType;
 		event: Record<string, unknown>;
 		mock?: RevenueCatMockFixtures;
+		subscriberAttributes?: Record<string, string>;
 	}): Promise<{ response: Response; data: unknown }> {
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 			Authorization: this.webhookSecret,
 		};
+
+		// Mirror the RC webhook shape: { [key]: { updated_at_ms, value } }.
+		const subscriber_attributes = subscriberAttributes
+			? Object.fromEntries(
+					Object.entries(subscriberAttributes).map(([key, value]) => [
+						key,
+						{ updated_at_ms: Date.now(), value },
+					]),
+				)
+			: undefined;
 
 		// Server-side RC read client is served from these fixtures via testOptions.
 		if (mock) {
@@ -92,6 +104,7 @@ export class RevenueCatWebhookClient {
 				event: {
 					type,
 					...event,
+					...(subscriber_attributes ? { subscriber_attributes } : {}),
 				},
 			}),
 			headers,
@@ -114,6 +127,7 @@ export class RevenueCatWebhookClient {
 		currency,
 		purchasedAtMs,
 		mock,
+		subscriberAttributes,
 	}: {
 		productId: string;
 		appUserId: string;
@@ -124,6 +138,7 @@ export class RevenueCatWebhookClient {
 		currency?: string;
 		purchasedAtMs?: number;
 		mock?: RevenueCatMockFixtures;
+		subscriberAttributes?: Record<string, string>;
 	}) {
 		return this.sendEvent({
 			type: "INITIAL_PURCHASE",
@@ -140,6 +155,7 @@ export class RevenueCatWebhookClient {
 				purchased_at_ms: purchasedAtMs,
 			},
 			mock,
+			subscriberAttributes,
 		});
 	}
 
@@ -155,6 +171,7 @@ export class RevenueCatWebhookClient {
 		price,
 		currency,
 		purchasedAtMs,
+		subscriberAttributes,
 	}: {
 		productId: string;
 		appUserId: string;
@@ -164,6 +181,7 @@ export class RevenueCatWebhookClient {
 		price?: number | null;
 		currency?: string;
 		purchasedAtMs?: number;
+		subscriberAttributes?: Record<string, string>;
 	}) {
 		return this.sendEvent({
 			type: "RENEWAL",
@@ -179,6 +197,7 @@ export class RevenueCatWebhookClient {
 				currency,
 				purchased_at_ms: purchasedAtMs,
 			},
+			subscriberAttributes,
 		});
 	}
 

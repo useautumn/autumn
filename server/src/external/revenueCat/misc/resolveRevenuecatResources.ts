@@ -141,16 +141,66 @@ const resolveRevenueCatCustomer = async ({
 	ctx,
 	appUserId,
 	originalAppUserId,
+	overrideCustomerId,
 	autoCreateCustomer,
 }: {
 	ctx: RevenueCatWebhookContext;
 	appUserId: string;
 	originalAppUserId?: string;
+	overrideCustomerId?: string;
 	autoCreateCustomer: boolean;
 }): Promise<FullCustomer> => {
 	const hasOriginal = Boolean(
 		originalAppUserId && originalAppUserId !== appUserId,
 	);
+
+	// Client-declared canonical id wins outright: resolve/auto-create by it and
+	// still seed the webhook's app_user_id as an RC alias for attribute-less events.
+	if (overrideCustomerId) {
+		const overrideMatch = await CusService.getFull({
+			ctx,
+			idOrInternalId: overrideCustomerId,
+			withEntities: true,
+			withSubs: true,
+			allowNotFound: true,
+		});
+
+		const overrideCustomer =
+			overrideMatch ??
+			(await getOrCreateCustomer({
+				ctx,
+				customerId: overrideCustomerId,
+				withEntities: true,
+				customerData: {
+					processors: { revenuecat: { id: appUserId, aliases: [] } },
+				},
+			}));
+
+		ctx.logger
+			.child({
+				context: {
+					extras: {
+						rc_resolution: true,
+						app_user_id: appUserId,
+						original_app_user_id: originalAppUserId ?? null,
+						matched_by: "override_attribute",
+						override_customer_id: overrideCustomerId,
+						override_auto_created: !overrideMatch,
+						resolved_customer_id:
+							overrideCustomer.id ?? overrideCustomer.internal_id,
+					},
+				},
+			})
+			.info("Resolved RevenueCat customer via override attribute");
+
+		accumulateRevenueCatAliases({
+			ctx,
+			customer: overrideCustomer,
+			appUserId,
+			originalAppUserId,
+		});
+		return overrideCustomer;
+	}
 
 	// Processors-key match, read-both (app_user_id first, then original).
 	let processorMatch = await CusService.getByRevenueCatAppUserId({
@@ -320,12 +370,14 @@ export const resolveRevenuecatResources = async ({
 	revenuecatProductId,
 	customerId,
 	originalAppUserId,
+	overrideCustomerId,
 	autoCreateCustomer = false,
 }: {
 	ctx: RevenueCatWebhookContext;
 	revenuecatProductId: string;
 	customerId: string;
 	originalAppUserId?: string;
+	overrideCustomerId?: string;
 	autoCreateCustomer?: boolean;
 }): Promise<{
 	ctx: RevenueCatWebhookContext;
@@ -366,6 +418,7 @@ export const resolveRevenuecatResources = async ({
 			ctx,
 			appUserId: customerId,
 			originalAppUserId,
+			overrideCustomerId,
 			autoCreateCustomer,
 		}),
 	]);
