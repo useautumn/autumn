@@ -67,3 +67,36 @@ test.concurrent(
 		expect(cusProduct?.starts_at).toBe(startsAt);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("dfu.flash: one-off with resetting credits and no started_at is rejected")}`,
+	async () => {
+		const customerId = "dfu-flash-started-at-required";
+		const pro = products.pro({
+			id: "dfu-started-at-required-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+		const stripeCustomerId = await createRealStripeCustomer(ctx, {
+			email: `${customerId}@example.com`,
+		});
+
+		const payload = {
+			customer_id: customerId,
+			processors: [{ type: "stripe", id: stripeCustomerId }],
+			// One-off (no link) + resetting credits + no started_at → must reject.
+			billables: [
+				{ processor: "stripe", plan: { plan_id: pro.id, status: "active" } },
+			],
+		};
+
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
+		expect(flashRes.errorCode).toBe("started_at_required");
+	},
+);

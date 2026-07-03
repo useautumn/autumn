@@ -37,6 +37,7 @@ const buildCustomerProduct = ({
 
 	// Exactly one processor hydration applies per billable; both share the shape.
 	const hydration = stripeHydration ?? revenueCatHydration;
+	const resolvedStartsAt = plan.started_at ?? hydration?.startsAt;
 
 	const statusInfo = resolveFlashStatus({
 		plan,
@@ -44,9 +45,12 @@ const buildCustomerProduct = ({
 		hydration,
 	});
 
-	// Payload wins; hydrated period-end anchors the cycle only when omitted.
+	// Payload wins; hydrated period-end, else the plan start, anchors the cycle.
 	const resolvedAnchor =
-		billingCycleAnchor ?? hydration?.periodEndMs ?? currentEpochMs;
+		billingCycleAnchor ??
+		hydration?.periodEndMs ??
+		resolvedStartsAt ??
+		currentEpochMs;
 
 	const customerProduct = initFullCustomerProduct({
 		ctx,
@@ -67,7 +71,7 @@ const buildCustomerProduct = ({
 			status: statusInfo.status,
 			canceledAt: statusInfo.canceledAt ?? undefined,
 			endedAt: statusInfo.endedAt ?? undefined,
-			startsAt: plan.started_at ?? hydration?.startsAt,
+			startsAt: resolvedStartsAt,
 			processorType,
 			isCustom: false,
 		},

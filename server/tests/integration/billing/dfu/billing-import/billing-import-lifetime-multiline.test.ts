@@ -58,6 +58,8 @@ test.concurrent(
 								{
 									plan_id: lifetimePlan.id,
 									status: "active",
+									// One-off with monthly-resetting credits needs an explicit anchor.
+									started_at: Date.now() - 1000 * 60 * 60 * 24 * 120,
 									balances: [
 										{
 											feature_id: TestFeature.Credits,

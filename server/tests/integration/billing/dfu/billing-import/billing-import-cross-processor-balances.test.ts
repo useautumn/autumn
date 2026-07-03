@@ -69,6 +69,8 @@ test.concurrent(
 								{
 									plan_id: seatPack.id,
 									status: "active",
+									// RC billable has no linked sub to hydrate an anchor from.
+									started_at: Date.now() - 1000 * 60 * 60 * 24 * 120,
 									feature_quantities: [
 										{ feature_id: TestFeature.Messages, quantity: 300 },
 									],
