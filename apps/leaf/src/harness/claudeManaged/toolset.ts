@@ -41,13 +41,30 @@ const buildAgentToolset = () =>
 				})),
 			};
 
-export const buildDesiredTools = ({
+type PermissionPolicyLike = { type?: string } | null | undefined;
+
+export type McpToolsetLike = {
+	configs?: Array<{
+		enabled?: boolean | null;
+		name: string;
+		permission_policy?: PermissionPolicyLike;
+	}>;
+	default_config?: {
+		enabled?: boolean | null;
+		permission_policy?: PermissionPolicyLike;
+	} | null;
+	mcp_server_name: string;
+	type: "mcp_toolset";
+};
+
+const policyType = (policy: PermissionPolicyLike) => policy?.type ?? "unset";
+
+const buildMcpToolset = ({
 	destructiveTools,
 }: {
 	destructiveTools: Iterable<string>;
-}) => {
-	const toolset = buildAgentToolset();
-	const mcpToolset = {
+}) =>
+	({
 		configs: [...destructiveTools].map((name) => ({
 			name,
 			permission_policy: { type: "always_ask" as const },
@@ -55,9 +72,19 @@ export const buildDesiredTools = ({
 		default_config: { permission_policy: { type: "always_allow" as const } },
 		mcp_server_name: claudeManagedConfig.autumnMcpServerName,
 		type: "mcp_toolset" as const,
-	};
+	}) satisfies McpToolsetLike;
+
+export const buildDesiredTools = ({
+	destructiveTools,
+}: {
+	destructiveTools: Iterable<string>;
+}) => {
+	const toolset = buildAgentToolset();
+	const mcpToolset = buildMcpToolset({ destructiveTools });
 	return toolset ? [toolset, mcpToolset] : [mcpToolset];
 };
+
+export type ClaudeManagedToolset = ReturnType<typeof buildDesiredTools>[number];
 
 export const desiredBuiltinSignature = () =>
 	[...claudeManagedBuiltinTools].sort().join(",");
@@ -77,4 +104,25 @@ export const builtinSignatureFromToolset = (toolset: {
 		}
 	}
 	return [...enabled].sort().join(",");
+};
+
+export const mcpSignatureFromToolset = (toolset?: McpToolsetLike | null) => {
+	if (!toolset) return "";
+	const defaultEnabled = toolset.default_config?.enabled ?? true;
+	const defaultPolicy = policyType(toolset.default_config?.permission_policy);
+	const configs = (toolset.configs ?? [])
+		.map((config) => ({
+			enabled: config.enabled ?? defaultEnabled,
+			name: config.name,
+			permission: config.permission_policy
+				? policyType(config.permission_policy)
+				: defaultPolicy,
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
+
+	return JSON.stringify({
+		configs,
+		default: { enabled: defaultEnabled, permission: defaultPolicy },
+		server: toolset.mcp_server_name,
+	});
 };
