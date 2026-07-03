@@ -2,13 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/autumn-logo-bg.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout</title>
     <script>
-      if (window.location.hostname === 'localhost') {
-        document.title = 'Checkout (Local)';
+      // Dynamically set favicon and title based on environment
+      const hostname = window.location.hostname;
+      const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+      const isPreview = hostname.includes('vercel.app') && !hostname.includes('useautumn.com');
+      
+      let faviconPath;
+      let titleSuffix = '';
+      
+      if (isLocal) {
+        faviconPath = '/favicon-dev.svg';
+        titleSuffix = ' (Local)';
+      } else if (isPreview) {
+        faviconPath = '/favicon-staging.svg';
+        titleSuffix = ' (Preview)';
+      } else {
+        faviconPath = '/autumn-logo-bg.png';
       }
+      
+      // Set favicon
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = isLocal || isPreview ? 'image/svg+xml' : 'image/png';
+      link.href = faviconPath;
+      document.head.appendChild(link);
+      
+      // Set title
+      document.title = 'Checkout' + titleSuffix;
     </script>
   </head>
   <body>

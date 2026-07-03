@@ -1,8 +1,8 @@
 /**
  * Get the appropriate favicon path based on the environment
  * - dev: Orange favicon for local development
- * - staging: Purple gradient favicon for preview/staging deployments  
- * - prod: Original purple favicon for production
+ * - staging: Light purple favicon for preview/staging deployments  
+ * - prod: Uses existing favicon.ico (no changes to production)
  */
 export function getFaviconPath(): string {
 	// Check if we're in development
@@ -17,8 +17,8 @@ export function getFaviconPath(): string {
 		return "/favicon-staging.svg";
 	}
 
-	// Default to production favicon
-	return "/favicon-prod.svg";
+	// Default to existing production favicon (unchanged)
+	return "/favicon.ico";
 }
 
 /**

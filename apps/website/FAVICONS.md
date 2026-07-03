@@ -6,12 +6,12 @@ This website uses environment-specific favicons to make it easy to distinguish b
 
 - **Development** (`NODE_ENV=development`): Orange favicon (`favicon-dev.svg`)
 - **Staging/Preview** (`VERCEL_ENV=preview`): Light purple favicon (`favicon-staging.svg`)
-- **Production** (default): Original purple favicon (`favicon-prod.svg`)
+- **Production** (default): **Original favicon** (`favicon.ico`) - **unchanged**
 
 ## Available Designs
 
 ### Production (Default)
-- `favicon-prod.svg` - Purple (#8838FF) background with white logo
+- `favicon.ico` / `favicon-48x48.png` - **Original production favicons** (unchanged)
 
 ### Development Options
 - `favicon-dev.svg` - **Current**: Orange (#FF8800) background with white logo
