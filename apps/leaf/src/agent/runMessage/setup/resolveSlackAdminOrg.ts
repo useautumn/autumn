@@ -11,10 +11,10 @@ import {
 	chatThreadContextsRepo,
 } from "../../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import {
-	isSlackAdminInstallation,
 	resolveSlackAdminOrg,
 	validateSlackAdminAccess,
 } from "../../../internal/slackAdmin/access.js";
+import { isInternalAutumnSlackInstallation } from "../../../internal/slackAdmin/provider.js";
 import { db } from "../../../lib/db.js";
 import type { ChatContextMessage } from "../../../types.js";
 import { selectChatOrg } from "./selectChatOrg.js";
@@ -201,7 +201,7 @@ export const resolveSlackAdminOrgContext = async ({
 	text: string;
 	thread: Thread;
 }): Promise<ResolveSlackAdminOrgResult> => {
-	if (!isSlackAdminInstallation({ installation })) {
+	if (!isInternalAutumnSlackInstallation({ installation })) {
 		if (isFirstThreadTurn({ recentMessages })) {
 			await deps.upsertContext({
 				db,

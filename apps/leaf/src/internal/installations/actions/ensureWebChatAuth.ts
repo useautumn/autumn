@@ -2,45 +2,13 @@ import crypto from "node:crypto";
 import {
 	AppEnv,
 	type ChatInstallation,
-	type ChatOAuthCredential,
 	chatInstallations,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import { db } from "../../../lib/db.js";
-import { getChatOAuthCredentialByInstallationEnv } from "../repos/chatOAuthCredentialsRepo.js";
-import {
-	replaceInstallationOAuthCredentials,
-	resolveAgentScopes,
-} from "./replaceInstallationOAuthCredentials.js";
+import { ensureChatUserCredential } from "./ensureChatUserCredential.js";
 
 export const WEB_CHAT_PROVIDER = "web" as const;
-
-// Re-mint a refresh token this far before it dies so a turn never races expiry.
-const REFRESH_EXPIRY_SKEW_MS = 60 * 60 * 1000;
-
-const scopeSetsEqual = (a: string[], b: string[]) => {
-	if (a.length !== b.length) {
-		return false;
-	}
-	const set = new Set(a);
-	return b.every((scope) => set.has(scope));
-};
-
-/**
- * A per-user web credential is stale (must be re-minted from the cookie) when its
- * refresh token has expired, or the user's scopes no longer match what it was
- * minted with (e.g. an upgrade/downgrade).
- */
-const isWebCredentialStale = ({
-	credential,
-	desiredScopes,
-}: {
-	credential: ChatOAuthCredential;
-	desiredScopes: string[];
-}) =>
-	credential.refresh_token_expires_at == null ||
-	credential.refresh_token_expires_at - REFRESH_EXPIRY_SKEW_MS <= Date.now() ||
-	!scopeSetsEqual(credential.scopes, desiredScopes);
 
 /**
  * Web chat has no Slack-style install, so we synthesize one "web" installation
@@ -107,24 +75,6 @@ export const ensureWebChatAuth = async ({
 	userScopes: string[];
 }): Promise<ChatInstallation> => {
 	const installation = await ensureWebInstallation({ orgId });
-	const credential = await getChatOAuthCredentialByInstallationEnv({
-		db,
-		chatInstallationId: installation.id,
-		env: AppEnv.Sandbox,
-		orgId,
-		userId,
-	});
-	const desiredScopes = resolveAgentScopes(userScopes);
-	if (!credential || isWebCredentialStale({ credential, desiredScopes })) {
-		await db.transaction((tx) =>
-			replaceInstallationOAuthCredentials({
-				tx,
-				installation,
-				userId,
-				orgId,
-				agentScopes: userScopes,
-			}),
-		);
-	}
+	await ensureChatUserCredential({ installation, orgId, userId, userScopes });
 	return installation;
 };

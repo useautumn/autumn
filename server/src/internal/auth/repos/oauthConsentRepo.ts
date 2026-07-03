@@ -8,6 +8,7 @@ export type OAuthConsentApiKeyRecord = {
 	env: AppEnv | null;
 	oauthApiKeyId: string | null;
 	redirectUri: string | null;
+	metadata: Record<string, unknown> | null;
 };
 
 export const listOAuthConsentsByReferenceId = async ({
@@ -89,12 +90,29 @@ export const getOAuthConsentApiKeyRecord = async ({
 			oauthApiKeyId: oauthConsent.oauthApiKeyId,
 			redirectUri: oauthConsent.redirectUri,
 			scopes: oauthConsent.scopes,
+			metadata: oauthConsent.metadata,
 		})
 		.from(oauthConsent)
 		.where(eq(oauthConsent.id, consentId))
 		.limit(1);
 
 	return consent ?? null;
+};
+
+export const getOAuthConsentMetadataById = async ({
+	db,
+	consentId,
+}: {
+	db: DrizzleCli;
+	consentId: string;
+}) => {
+	const [consent] = await db
+		.select({ metadata: oauthConsent.metadata })
+		.from(oauthConsent)
+		.where(eq(oauthConsent.id, consentId))
+		.limit(1);
+
+	return consent?.metadata ?? null;
 };
 
 export const listOAuthConsentsForClientUserOrg = async ({
@@ -223,6 +241,7 @@ export const oauthConsentRepo = {
 	listByReferenceId: listOAuthConsentsByReferenceId,
 	getOwner: getOAuthConsentOwner,
 	getApiKeyRecord: getOAuthConsentApiKeyRecord,
+	getMetadataById: getOAuthConsentMetadataById,
 	listForClientUserOrg: listOAuthConsentsForClientUserOrg,
 	updateEnv: updateOAuthConsentEnv,
 	getForClientUserOrg: getOAuthConsentForClientUserOrg,

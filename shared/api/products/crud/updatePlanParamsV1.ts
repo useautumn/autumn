@@ -90,7 +90,7 @@ export const UpdatePlanParamsV2Schema = z
 			description:
 				"Variant plan IDs to apply this update to. Empty or omitted means no propagation.",
 		}),
-		variants: z.array(UpdateVariantParamsSchema).optional().default([]).meta({
+		variants: z.array(UpdateVariantParamsSchema).default([]).optional().meta({
 			description:
 				"Additive variant updates for this base plan. Missing variants are created when name is provided.",
 		}),

@@ -6,11 +6,11 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
-import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
-import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
 import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
-import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
 import { presentApproval } from "./internal/approvals/surfaces/slack/present.js";
+import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
+import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
+import { ensureWebChatAuth } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { dispatchThreadMessage } from "./internal/runs/runCoordinator.js";
 import {
@@ -248,14 +248,17 @@ const runAndReply = async ({
 			await finishLoading(target, card, "Autumn started.");
 			ticker.thinking();
 		};
-		run = registerRun({ key: runKey, kind: "message" });
-		// Follow-ups have no bootstrap card, so the status starts right away.
-		if (isFollowUp) {
-			ticker.thinking();
-		}
-		const logAction = (message: string) => ticker.activity(message);
-		const logKeyed = ({ message }: { key: string; message: string }) =>
+		run = registerRun({
+			key: runKey,
+			kind: "message",
+			ownerProviderUserId: providerUserId,
+		});
+		const logAction = (message: string) => {
 			ticker.activity(message);
+		};
+		const logKeyed = ({ message }: { key: string; message: string }) => {
+			ticker.activity(message);
+		};
 		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
@@ -322,6 +325,7 @@ const runAndReply = async ({
 		if (postedApproval) return;
 
 		await finishLoading(target, loading, "Done.");
+
 		await target.post({ markdown: output.text || "Done." });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",

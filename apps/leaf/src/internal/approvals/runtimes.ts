@@ -8,11 +8,13 @@ export type ApprovalRuntime = (input: {
 	approval: ChatApproval;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
+	approverToken?: string;
 }) => Promise<ApprovalRunResult>;
 
 // Registered per harness. "mastra" has no suspend/resume session model, so it
 // has no entry (resolveApproval errors clearly if one is ever requested).
-export const approvalRuntimes: Partial<Record<AgentHarnessName, ApprovalRuntime>> =
-	{
-		"claude-managed": resumeClaudeManagedApproval,
-	};
+export const approvalRuntimes: Partial<
+	Record<AgentHarnessName, ApprovalRuntime>
+> = {
+	"claude-managed": resumeClaudeManagedApproval,
+};

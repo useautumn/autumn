@@ -39,6 +39,7 @@ export const claudeManagedEngine: AgentEngine = {
 	name: "claude-managed",
 	run: async ({ ctx, params }) => {
 		const {
+			autumnUserId,
 			env,
 			logger,
 			onAction,
@@ -57,7 +58,13 @@ export const claudeManagedEngine: AgentEngine = {
 		const existingSession =
 			claudeManagedSession ??
 			(await perf.time("lookup_session", () =>
-				getClaudeManagedSession({ db, env, orgId: org.id, thread }),
+				getClaudeManagedSession({
+					db,
+					env,
+					orgId: org.id,
+					thread,
+					userId: autumnUserId,
+				}),
 			));
 
 		let sessionRef = existingSession;
@@ -88,7 +95,7 @@ export const claudeManagedEngine: AgentEngine = {
 							orgId: org.id,
 							provider: thread.provider,
 							workspaceId: thread.workspaceId,
-							userId: thread.provider === "web" ? providerUserId : undefined,
+							userId: autumnUserId,
 						}),
 					);
 				},
@@ -114,6 +121,7 @@ export const claudeManagedEngine: AgentEngine = {
 					memoryStoreId,
 					orgId: org.id,
 					thread,
+					userId: autumnUserId,
 					vaultId,
 				}),
 			);
@@ -136,7 +144,7 @@ export const claudeManagedEngine: AgentEngine = {
 				orgId: org.id,
 				provider: thread.provider,
 				workspaceId: thread.workspaceId,
-				userId: thread.provider === "web" ? providerUserId : undefined,
+				userId: autumnUserId,
 			});
 
 			const { cancelledApprovals, cancelledCount } =
