@@ -65,7 +65,7 @@ const defaultResumeDeps = {
 	driveSessionTurn,
 };
 
-type ResumeClaudeManagedApprovalWithDepsInput = {
+type ResumeClaudeManagedApprovalInput = {
 	approval: ChatApproval;
 	deps?: typeof defaultResumeDeps;
 	onProgress?: (statusLine: string) => void;
@@ -73,43 +73,55 @@ type ResumeClaudeManagedApprovalWithDepsInput = {
 	approverToken?: string;
 };
 
-/** Resumes an approved Claude Managed write; finalization stays in resolveApproval. */
-export const resumeClaudeManagedApprovalWithDeps = async ({
+type ResumeBranchInput = Required<
+	Pick<ResumeClaudeManagedApprovalInput, "approval" | "deps" | "providerUserId">
+> & {
+	onProgress?: (statusLine: string) => void;
+	sessionId: string;
+	toolUseId: string;
+};
+
+// Runs the tool under the approver's own token, then releases the asker's
+// suspended session via a deny so it stays usable.
+const runOutOfBandApproval = async ({
 	approval,
-	deps = defaultResumeDeps,
+	approverToken,
+	deps,
 	onProgress,
 	providerUserId,
-	approverToken,
-}: ResumeClaudeManagedApprovalWithDepsInput): Promise<ApprovalRunResult> => {
-	const sessionId = approval.run_id;
-	const toolUseId = approval.tool_call_id;
-	if (!(sessionId && toolUseId)) {
-		throw new Error("Approval is missing the session or tool-call id");
+	sessionId,
+	toolUseId,
+}: ResumeBranchInput & { approverToken: string }): Promise<ApprovalRunResult> => {
+	onProgress?.(toolStatusLine(approval.tool_name));
+	try {
+		const result = await deps.executeTool({
+			env: approval.env,
+			token: approverToken,
+			toolName: approval.tool_name,
+			args: approval.tool_args,
+		});
+		const runResult = isErrorResult(result)
+			? approvalErrorResult(result)
+			: { result, text: "", toolName: approval.tool_name };
+		await deps.notifySuspendedToolDenied({
+			providerUserId,
+			sessionId,
+			toolUseId,
+		});
+		return runResult;
+	} catch (error) {
+		return approvalErrorResult(error);
 	}
-	// Per-user approvals run the tool out-of-band under the approver's own token,
-	// then release the asker's suspended session via a deny so it stays usable.
-	if (approverToken) {
-		onProgress?.(toolStatusLine(approval.tool_name));
-		try {
-			const result = await deps.executeTool({
-				env: approval.env,
-				token: approverToken,
-				toolName: approval.tool_name,
-				args: approval.tool_args,
-			});
-			const runResult = isErrorResult(result)
-				? approvalErrorResult(result)
-				: { result, text: "", toolName: approval.tool_name };
-			await deps.notifySuspendedToolDenied({
-				providerUserId,
-				sessionId,
-				toolUseId,
-			});
-			return runResult;
-		} catch (error) {
-			return approvalErrorResult(error);
-		}
-	}
+};
+
+// Replays the approver's allow into the asker's own suspended session.
+const resumeSuspendedApproval = async ({
+	approval,
+	deps,
+	onProgress,
+	sessionId,
+	toolUseId,
+}: ResumeBranchInput): Promise<ApprovalRunResult> => {
 	const outcome = await deps.driveSessionTurn({
 		autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
 		client,
@@ -174,4 +186,30 @@ export const resumeClaudeManagedApprovalWithDeps = async ({
 		"The write did not complete — no tool result was returned.",
 		{ retryable: true },
 	);
+};
+
+/** Resumes an approved Claude Managed write; finalization stays in resolveApproval. */
+export const resumeClaudeManagedApproval = async ({
+	approval,
+	deps = defaultResumeDeps,
+	onProgress,
+	providerUserId,
+	approverToken,
+}: ResumeClaudeManagedApprovalInput): Promise<ApprovalRunResult> => {
+	const sessionId = approval.run_id;
+	const toolUseId = approval.tool_call_id;
+	if (!(sessionId && toolUseId)) {
+		throw new Error("Approval is missing the session or tool-call id");
+	}
+	const branchInput = {
+		approval,
+		deps,
+		onProgress,
+		providerUserId,
+		sessionId,
+		toolUseId,
+	};
+	return approverToken
+		? runOutOfBandApproval({ ...branchInput, approverToken })
+		: resumeSuspendedApproval(branchInput);
 };

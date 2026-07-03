@@ -34,11 +34,8 @@ const toCallerAuthResult = (auth: SlackUserAuthResult): SlackCallerAuthResult =>
 };
 
 /**
- * Single seam for "does this Slack sender need per-user resolution, and if so
- * are they authorized" — shared by the message path (runMessage) and the
- * approval-click path (decide) so a future change to deny reasons or
- * scope-ceiling handling can't drift between the two. `skipPerUser` lets admin
- * approval paths use their own explicit scope check instead of user reminting.
+ * Shared per-user auth seam for the message and approval-click paths.
+ * `skipPerUser` lets admin approval paths run their own scope check instead.
  */
 export const resolveSlackCallerAuth = async ({
 	installation,

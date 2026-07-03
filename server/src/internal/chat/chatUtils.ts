@@ -56,16 +56,19 @@ const parseSlackBotScopesEnv = (raw: string) => {
 	return scopes;
 };
 
-export const createSlackInstallUrl = (state: string) => {
-	const configured = process.env.SLACK_BOT_SCOPES
+const getSlackBotScopes = () => {
+	const base = process.env.SLACK_BOT_SCOPES
 		? parseSlackBotScopesEnv(process.env.SLACK_BOT_SCOPES)
-		: [...DEFAULT_SLACK_BOT_SCOPES];
-	const scope = [
-		...new Set([...configured, SLACK_USERS_READ_SCOPE, SLACK_EMAIL_SCOPE]),
-	].join(",");
+		: DEFAULT_SLACK_BOT_SCOPES;
+	// users:read + users:read.email are required for user resolution no matter
+	// what SLACK_BOT_SCOPES is set to, so they're always folded in.
+	return [...new Set([...base, SLACK_USERS_READ_SCOPE, SLACK_EMAIL_SCOPE])];
+};
+
+export const createSlackInstallUrl = (state: string) => {
 	const params = new URLSearchParams({
 		client_id: getRequiredChatEnv("SLACK_CLIENT_ID"),
-		scope,
+		scope: getSlackBotScopes().join(","),
 		state,
 	});
 	if (process.env.SLACK_REDIRECT_URI) {

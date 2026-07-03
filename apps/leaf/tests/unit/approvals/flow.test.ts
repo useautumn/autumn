@@ -149,7 +149,7 @@ describe("approval flow", () => {
 
 	test("direct approver token approvals fail MCP isError results and release the suspended session via deny", async () => {
 		setLeafTestEnv();
-		const { resumeClaudeManagedApprovalWithDeps } = await import(
+		const { resumeClaudeManagedApproval } = await import(
 			"../../../src/harness/claudeManaged/approval.js"
 		);
 		const calls: string[] = [];
@@ -163,7 +163,7 @@ describe("approval flow", () => {
 			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
 		} as unknown as ChatApproval;
 
-		const resultPromise = resumeClaudeManagedApprovalWithDeps({
+		const resultPromise = resumeClaudeManagedApproval({
 			approval,
 			providerUserId: "U1",
 			approverToken: "am_oauth_clicker",

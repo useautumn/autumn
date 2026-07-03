@@ -14,14 +14,10 @@ export const scopeSetsEqual = (a: string[], b: string[]) => {
 };
 
 /**
- * Bound the requested scopes to the bot's ceiling.
- *
- * - `undefined` is the install/default path: grant the full default set.
- * - An explicit empty list is never the default set — it means a caller resolved
- *   *no* permissions (e.g. a denied Slack user that slipped past the guard), so we
- *   throw rather than silently mint full default scopes (which would fail open).
- * - A non-empty list is intersected with the ceiling; if nothing survives, the
- *   caller asked only for scopes the bot can never hold, so we throw too.
+ * Bound the requested scopes to the bot's ceiling. `undefined` is the
+ * install/default path (grant the full set); an explicit empty list means a
+ * caller resolved *no* permissions, so we throw rather than fail open into the
+ * default set. See the throws below for the intersection cases.
  */
 export const resolveAgentScopes = (agentScopes?: string[]) => {
 	if (agentScopes === undefined) {
