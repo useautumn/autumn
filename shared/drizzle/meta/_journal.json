@@ -260,6 +260,13 @@
       "when": 1782907607380,
       "tag": "0036_remarkable_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1782981605443,
+      "tag": "0037_match_slack_auth_mode",
+      "breakpoints": true
     }
   ]
 }

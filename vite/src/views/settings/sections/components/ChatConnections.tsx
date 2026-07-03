@@ -1,4 +1,4 @@
-import { AppEnv, type ScopeString } from "@autumn/shared";
+import { AppEnv, ChatAuthMode, type ScopeString } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -17,6 +17,7 @@ type SlackInstallation = {
 	connected: true;
 	workspace_name: string;
 	default_env: AppEnv;
+	auth_mode: ChatAuthMode | null;
 	agent_scopes: ScopeString[];
 	needs_reconnect?: boolean;
 	updated_at: number;
@@ -58,11 +59,18 @@ export const ChatConnections = () => {
 	});
 
 	const install = useMutation({
-		mutationFn: async (scopes: ScopeString[]) => {
+		mutationFn: async ({
+			mode,
+			scopes,
+		}: {
+			mode: ChatAuthMode;
+			scopes: ScopeString[];
+		}) => {
 			const res = await OrgService.createChatInstall(axiosInstance, {
 				provider: "slack",
 				env: env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox,
-				scopes,
+				mode,
+				scopes: mode === ChatAuthMode.Restricted ? scopes : undefined,
 			});
 			return res.data as { url: string };
 		},
@@ -149,11 +157,12 @@ export const ChatConnections = () => {
 			<SlackScopesSheet
 				open={sheetOpen}
 				onOpenChange={setSheetOpen}
+				initialMode={installation?.auth_mode}
 				initialScopes={installation?.agent_scopes}
 				callerScopes={callerScopes}
 				isReconnect={!!installation}
 				isSubmitting={install.isPending}
-				onConfirm={(scopes) => install.mutate(scopes)}
+				onConfirm={(args) => install.mutate(args)}
 			/>
 		</div>
 	);

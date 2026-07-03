@@ -65,6 +65,7 @@ export const setupScheduledProductsContext = async ({
 			return {
 				startsAt: phase.starts_at,
 				endsAt: nextPhaseStartsAt,
+				billingCycleAnchor: phase.billing_cycle_anchor,
 				productContexts,
 			};
 		}),

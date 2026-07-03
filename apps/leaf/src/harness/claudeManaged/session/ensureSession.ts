@@ -19,13 +19,15 @@ export const getClaudeManagedSession = async ({
 	env,
 	orgId,
 	thread,
+	userId,
 }: {
 	db: ChatDb;
 	env: AppEnv;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 }) => {
-	const threadKey = buildThreadKey({ env, thread });
+	const threadKey = buildThreadKey({ env, thread, userId });
 	const existingSession = await cmaRepo.getSession({
 		db,
 		env,
@@ -47,14 +49,22 @@ export const findClaudeManagedSessionForThread = async ({
 	db,
 	orgId,
 	thread,
+	userId,
 }: {
 	db: ChatDb;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 }) => {
 	const sessions = await all({
 		async live() {
-			return getClaudeManagedSession({ db, env: AppEnv.Live, orgId, thread });
+			return getClaudeManagedSession({
+				db,
+				env: AppEnv.Live,
+				orgId,
+				thread,
+				userId,
+			});
 		},
 		async sandbox() {
 			return getClaudeManagedSession({
@@ -62,6 +72,7 @@ export const findClaudeManagedSessionForThread = async ({
 				env: AppEnv.Sandbox,
 				orgId,
 				thread,
+				userId,
 			});
 		},
 	});
@@ -77,6 +88,7 @@ export const createClaudeManagedSession = async ({
 	memoryStoreId,
 	orgId,
 	thread,
+	userId,
 	vaultId,
 }: {
 	agentId: string;
@@ -87,9 +99,10 @@ export const createClaudeManagedSession = async ({
 	memoryStoreId?: string;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 	vaultId: string;
 }) => {
-	const threadKey = buildThreadKey({ env, thread });
+	const threadKey = buildThreadKey({ env, thread, userId });
 
 	const session = await client.beta.sessions.create({
 		agent: agentId,
@@ -137,6 +150,7 @@ export const ensureClaudeManagedSession = async ({
 	memoryStoreId,
 	orgId,
 	thread,
+	userId,
 	vaultId,
 }: {
 	agentId: string;
@@ -147,9 +161,10 @@ export const ensureClaudeManagedSession = async ({
 	memoryStoreId?: string;
 	orgId: string;
 	thread: ThreadRef;
+	userId?: string;
 	vaultId: string;
 }) =>
-	(await getClaudeManagedSession({ db, env, orgId, thread })) ??
+	(await getClaudeManagedSession({ db, env, orgId, thread, userId })) ??
 	createClaudeManagedSession({
 		agentId,
 		client,
@@ -159,5 +174,6 @@ export const ensureClaudeManagedSession = async ({
 		memoryStoreId,
 		orgId,
 		thread,
+		userId,
 		vaultId,
 	});

@@ -1,4 +1,9 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
+import {
+	DEFAULT_SLACK_BOT_SCOPES,
+	SLACK_EMAIL_SCOPE,
+	SLACK_USERS_READ_SCOPE,
+} from "@autumn/shared/utils/auth/slackScopes";
 
 export const slackProvider = "slack" as const;
 export const slackAdminProviderPrefix = "slack_admin" as const;
@@ -9,25 +14,20 @@ export const getSlackAdminProvider = ({
 	clientId?: string;
 } = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
-export const defaultSlackScopes = [
-	"app_mentions:read",
-	"assistant:write",
-	"channels:history",
-	"channels:read",
-	"chat:write",
-	"groups:history",
-	"groups:read",
-	"im:history",
-	"im:read",
-	"im:write",
-	"mpim:history",
-	"mpim:read",
-	"users:read",
+/** Scopes that enable extra features but don't require a reconnect when absent. */
+const OPTIONAL_SLACK_SCOPES: readonly string[] = [SLACK_EMAIL_SCOPE];
+
+/** Slack user resolution depends on these, even when SLACK_BOT_SCOPES overrides the defaults. */
+const REQUIRED_USER_RESOLUTION_SCOPES: readonly string[] = [
+	SLACK_USERS_READ_SCOPE,
+	SLACK_EMAIL_SCOPE,
 ];
 
 export const getMissingSlackScopes = (scopes: string[]) => {
 	const granted = new Set(scopes);
-	return defaultSlackScopes.filter((scope) => !granted.has(scope));
+	return DEFAULT_SLACK_BOT_SCOPES.filter(
+		(scope) => !(OPTIONAL_SLACK_SCOPES.includes(scope) || granted.has(scope)),
+	);
 };
 
 export const getRequiredChatEnv = (key: string) => {
@@ -47,11 +47,32 @@ export const getChatStateSecret = () =>
 	process.env.BETTER_AUTH_SECRET ??
 	getRequiredChatEnv("ENCRYPTION_PASSWORD");
 
+const parseSlackBotScopesEnv = (raw: string) => {
+	const scopes = raw
+		.split(",")
+		.map((scope) => scope.trim())
+		.filter(Boolean);
+	if (scopes.length === 0) {
+		throw new RecaseError({
+			message: "SLACK_BOT_SCOPES is set but contains no valid scopes",
+			code: ErrCode.InvalidRequest,
+			statusCode: 500,
+		});
+	}
+	return scopes;
+};
+
+const getSlackBotScopes = () => {
+	const base = process.env.SLACK_BOT_SCOPES
+		? parseSlackBotScopesEnv(process.env.SLACK_BOT_SCOPES)
+		: DEFAULT_SLACK_BOT_SCOPES;
+	return [...new Set([...base, ...REQUIRED_USER_RESOLUTION_SCOPES])];
+};
+
 export const createSlackInstallUrl = (state: string) => {
-	const scope = process.env.SLACK_BOT_SCOPES ?? defaultSlackScopes.join(",");
 	const params = new URLSearchParams({
 		client_id: getRequiredChatEnv("SLACK_CLIENT_ID"),
-		scope,
+		scope: getSlackBotScopes().join(","),
 		state,
 	});
 	if (process.env.SLACK_REDIRECT_URI) {

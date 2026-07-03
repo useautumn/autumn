@@ -4,10 +4,12 @@ import {
 	composeMatchKey,
 	type DiffedCustomizePlanV1,
 	type Feature,
+	findFeatureById,
 	itemsEqual,
 	type PlanItemFilter,
 	type PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
+import { isConsumableFeature } from "@shared/utils/featureUtils/classifyFeature/isConsumableFeature";
 
 const intervalOf = (item: ApiPlanItemV1): string =>
 	item.price?.interval ?? item.reset?.interval ?? "none";
@@ -100,9 +102,6 @@ export const detectVariantConflicts = ({
 		if (!editedByMatchKey.has(key)) changedMatchKeys.add(key);
 	}
 
-	const featureName = (featureId: string) =>
-		features.find((f) => f.id === featureId)?.name;
-
 	const conflicts: PlanUpdatePreviewVariantConflict[] = [];
 
 	for (const featureId of changedFeatureIds) {
@@ -114,6 +113,8 @@ export const detectVariantConflicts = ({
 		const variantList = variantByFeature.get(featureId) ?? [];
 		if (variantList.length === 0) continue; // clean add into variant
 
+		const feature = findFeatureById({ features, featureId });
+
 		const editedIntervals = new Set(editedList.map(intervalOf));
 		const variantIntervals = new Set(variantList.map(intervalOf));
 		const sharesInterval = [...variantIntervals].some((iv) =>
@@ -121,11 +122,20 @@ export const detectVariantConflicts = ({
 		);
 
 		if (!sharesInterval) {
-			conflicts.push({
-				item_filter: filterForItem(variantList[0]),
-				feature_name: featureName(featureId),
-				reason: "different_interval",
-			});
+			// Unpriced non-consumables have no real interval, so propagation maps
+			// cleanly; a priced item propagates as a duplicate at the edit's interval.
+			const hasPricedItem =
+				editedList.some((item) => item.price != null) ||
+				variantList.some((item) => item.price != null);
+			const isCleanNonConsumableEntitlement =
+				feature != null && !isConsumableFeature(feature) && !hasPricedItem;
+			if (!isCleanNonConsumableEntitlement) {
+				conflicts.push({
+					item_filter: filterForItem(variantList[0]),
+					feature_name: feature?.name,
+					reason: "different_interval",
+				});
+			}
 			continue;
 		}
 
@@ -137,7 +147,7 @@ export const detectVariantConflicts = ({
 		if (divergentItem) {
 			conflicts.push({
 				item_filter: filterForItem(divergentItem),
-				feature_name: featureName(featureId),
+				feature_name: feature?.name,
 				reason: "value_divergence",
 			});
 		}
