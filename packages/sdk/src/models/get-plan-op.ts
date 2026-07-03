@@ -147,7 +147,7 @@ export type GetPlanFeature = {
 /**
  * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
  */
-export const GetPlanResetItemInterval = {
+export const GetPlanResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -161,34 +161,32 @@ export const GetPlanResetItemInterval = {
 /**
  * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
  */
-export type GetPlanResetItemInterval = OpenEnum<
-  typeof GetPlanResetItemInterval
->;
+export type GetPlanResetInterval = OpenEnum<typeof GetPlanResetInterval>;
 
-export type GetPlanItemReset = {
+export type GetPlanReset = {
   /**
    * The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
    */
-  interval: GetPlanResetItemInterval;
+  interval: GetPlanResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type GetPlanItemTo = number | string;
+export type GetPlanTo = number | string;
 
-export type GetPlanItemTier = {
+export type GetPlanTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
 };
 
-export const GetPlanItemTierBehavior = {
+export const GetPlanTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type GetPlanItemTierBehavior = OpenEnum<typeof GetPlanItemTierBehavior>;
+export type GetPlanTierBehavior = OpenEnum<typeof GetPlanTierBehavior>;
 
 /**
  * Billing interval for this price. For consumable features, should match reset.interval.
@@ -211,16 +209,14 @@ export type GetPlanPriceItemInterval = OpenEnum<
 /**
  * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
  */
-export const GetPlanItemBillingMethod = {
+export const GetPlanBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
  */
-export type GetPlanItemBillingMethod = OpenEnum<
-  typeof GetPlanItemBillingMethod
->;
+export type GetPlanBillingMethod = OpenEnum<typeof GetPlanBillingMethod>;
 
 export type GetPlanItemPrice = {
   /**
@@ -230,8 +226,8 @@ export type GetPlanItemPrice = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<GetPlanItemTier> | undefined;
-  tierBehavior?: GetPlanItemTierBehavior | undefined;
+  tiers?: Array<GetPlanTier> | undefined;
+  tierBehavior?: GetPlanTierBehavior | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
    */
@@ -247,7 +243,7 @@ export type GetPlanItemPrice = {
   /**
    * 'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
    */
-  billingMethod: GetPlanItemBillingMethod;
+  billingMethod: GetPlanBillingMethod;
   /**
    * Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
    */
@@ -271,21 +267,21 @@ export type GetPlanItemDisplay = {
 /**
  * When rolled over units expire.
  */
-export const GetPlanItemExpiryDurationType = {
+export const GetPlanExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type GetPlanItemExpiryDurationType = OpenEnum<
-  typeof GetPlanItemExpiryDurationType
+export type GetPlanExpiryDurationType = OpenEnum<
+  typeof GetPlanExpiryDurationType
 >;
 
 /**
  * Rollover configuration for unused units. If set, unused included units roll over to the next period.
  */
-export type GetPlanItemRollover = {
+export type GetPlanRollover = {
   /**
    * Maximum rollover units. Null for unlimited rollover.
    */
@@ -297,7 +293,7 @@ export type GetPlanItemRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: GetPlanItemExpiryDurationType;
+  expiryDurationType: GetPlanExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
@@ -324,7 +320,7 @@ export type GetPlanItem = {
   /**
    * Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
    */
-  reset: GetPlanItemReset | null;
+  reset: GetPlanReset | null;
   /**
    * Pricing configuration for usage beyond included units. Null if feature is entirely free.
    */
@@ -336,7 +332,7 @@ export type GetPlanItem = {
   /**
    * Rollover configuration for unused units. If set, unused included units roll over to the next period.
    */
-  rollover?: GetPlanItemRollover | undefined;
+  rollover?: GetPlanRollover | undefined;
 };
 
 /**
@@ -393,642 +389,6 @@ export const GetPlanEnv = {
 export type GetPlanEnv = OpenEnum<typeof GetPlanEnv>;
 
 /**
- * Billing interval (e.g. 'month', 'year').
- */
-export const GetPlanPriceVariantDetailsInterval = {
-  OneOff: "one_off",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-/**
- * Billing interval (e.g. 'month', 'year').
- */
-export type GetPlanPriceVariantDetailsInterval = OpenEnum<
-  typeof GetPlanPriceVariantDetailsInterval
->;
-
-/**
- * Base price configuration for a plan.
- */
-export type GetPlanBasePrice = {
-  /**
-   * Base price amount for the plan.
-   */
-  amount: number;
-  /**
-   * Billing interval (e.g. 'month', 'year').
-   */
-  interval: GetPlanPriceVariantDetailsInterval;
-  /**
-   * Number of intervals per billing cycle. Defaults to 1.
-   */
-  intervalCount?: number | undefined;
-};
-
-/**
- * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
- */
-export const GetPlanAddItemResetInterval = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-/**
- * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
- */
-export type GetPlanAddItemResetInterval = OpenEnum<
-  typeof GetPlanAddItemResetInterval
->;
-
-/**
- * Reset configuration for consumable features. Omit for non-consumable features like seats.
- */
-export type GetPlanVariantDetailsReset = {
-  /**
-   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
-   */
-  interval: GetPlanAddItemResetInterval;
-  /**
-   * Number of intervals between resets. Defaults to 1.
-   */
-  intervalCount?: number | undefined;
-};
-
-export type GetPlanVariantDetailsTo = number | string;
-
-export type GetPlanVariantDetailsTier = {
-  to: number | string;
-  amount: number;
-  flatAmount?: number | undefined;
-};
-
-export const GetPlanVariantDetailsTierBehavior = {
-  Graduated: "graduated",
-  Volume: "volume",
-} as const;
-export type GetPlanVariantDetailsTierBehavior = OpenEnum<
-  typeof GetPlanVariantDetailsTierBehavior
->;
-
-/**
- * Billing interval. For consumable features, should match reset.interval.
- */
-export const GetPlanAddItemPriceInterval = {
-  OneOff: "one_off",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-/**
- * Billing interval. For consumable features, should match reset.interval.
- */
-export type GetPlanAddItemPriceInterval = OpenEnum<
-  typeof GetPlanAddItemPriceInterval
->;
-
-/**
- * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
- */
-export const GetPlanAddItemBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
- */
-export type GetPlanAddItemBillingMethod = OpenEnum<
-  typeof GetPlanAddItemBillingMethod
->;
-
-/**
- * Pricing for usage beyond included units. Omit for free features.
- */
-export type GetPlanVariantDetailsPrice = {
-  /**
-   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
-   */
-  amount?: number | undefined;
-  /**
-   * Tiered pricing.  Either 'amount' or 'tiers' is required.
-   */
-  tiers?: Array<GetPlanVariantDetailsTier> | undefined;
-  tierBehavior?: GetPlanVariantDetailsTierBehavior | undefined;
-  /**
-   * Billing interval. For consumable features, should match reset.interval.
-   */
-  interval: GetPlanAddItemPriceInterval;
-  /**
-   * Number of intervals per billing cycle. Defaults to 1.
-   */
-  intervalCount: number;
-  /**
-   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
-   */
-  billingUnits: number;
-  /**
-   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
-   */
-  billingMethod: GetPlanAddItemBillingMethod;
-  /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
-   */
-  maxPurchase?: number | null | undefined;
-};
-
-/**
- * Billing behavior when quantity increases mid-cycle.
- */
-export const GetPlanOnIncrease = {
-  BillImmediately: "bill_immediately",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  BillNextCycle: "bill_next_cycle",
-} as const;
-/**
- * Billing behavior when quantity increases mid-cycle.
- */
-export type GetPlanOnIncrease = OpenEnum<typeof GetPlanOnIncrease>;
-
-/**
- * Credit behavior when quantity decreases mid-cycle.
- */
-export const GetPlanOnDecrease = {
-  Prorate: "prorate",
-  ProrateImmediately: "prorate_immediately",
-  ProrateNextCycle: "prorate_next_cycle",
-  None: "none",
-  NoProrations: "no_prorations",
-} as const;
-/**
- * Credit behavior when quantity decreases mid-cycle.
- */
-export type GetPlanOnDecrease = OpenEnum<typeof GetPlanOnDecrease>;
-
-/**
- * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
- */
-export type GetPlanProration = {
-  /**
-   * Billing behavior when quantity increases mid-cycle.
-   */
-  onIncrease: GetPlanOnIncrease;
-  /**
-   * Credit behavior when quantity decreases mid-cycle.
-   */
-  onDecrease: GetPlanOnDecrease;
-};
-
-/**
- * When rolled over units expire.
- */
-export const GetPlanVariantDetailsExpiryDurationType = {
-  Month: "month",
-  Forever: "forever",
-} as const;
-/**
- * When rolled over units expire.
- */
-export type GetPlanVariantDetailsExpiryDurationType = OpenEnum<
-  typeof GetPlanVariantDetailsExpiryDurationType
->;
-
-/**
- * Rollover config for unused units. If set, unused included units carry over.
- */
-export type GetPlanVariantDetailsRollover = {
-  /**
-   * Max rollover units. Omit for unlimited rollover.
-   */
-  max?: number | undefined;
-  /**
-   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
-   */
-  maxPercentage?: number | undefined;
-  /**
-   * When rolled over units expire.
-   */
-  expiryDurationType: GetPlanVariantDetailsExpiryDurationType;
-  /**
-   * Number of periods before expiry.
-   */
-  expiryDurationLength?: number | undefined;
-};
-
-/**
- * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
- */
-export type GetPlanPlanItem = {
-  /**
-   * The ID of the feature to configure.
-   */
-  featureId: string;
-  /**
-   * Number of free units included. Balance resets to this each interval for consumable features.
-   */
-  included?: number | undefined;
-  /**
-   * If true, customer has unlimited access to this feature.
-   */
-  unlimited?: boolean | undefined;
-  /**
-   * Reset configuration for consumable features. Omit for non-consumable features like seats.
-   */
-  reset?: GetPlanVariantDetailsReset | undefined;
-  /**
-   * Pricing for usage beyond included units. Omit for free features.
-   */
-  price?: GetPlanVariantDetailsPrice | undefined;
-  /**
-   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
-   */
-  proration?: GetPlanProration | undefined;
-  /**
-   * Rollover config for unused units. If set, unused included units carry over.
-   */
-  rollover?: GetPlanVariantDetailsRollover | undefined;
-};
-
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export const GetPlanRemoveItemBillingMethod = {
-  Prepaid: "prepaid",
-  UsageBased: "usage_based",
-} as const;
-/**
- * Match items with this billing method (prepaid or usage_based).
- */
-export type GetPlanRemoveItemBillingMethod = OpenEnum<
-  typeof GetPlanRemoveItemBillingMethod
->;
-
-export const GetPlanIntervalRemoveItemEnum2 = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type GetPlanIntervalRemoveItemEnum2 = OpenEnum<
-  typeof GetPlanIntervalRemoveItemEnum2
->;
-
-export const GetPlanIntervalRemoveItemEnum1 = {
-  OneOff: "one_off",
-  Week: "week",
-  Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
-  Year: "year",
-} as const;
-export type GetPlanIntervalRemoveItemEnum1 = OpenEnum<
-  typeof GetPlanIntervalRemoveItemEnum1
->;
-
-/**
- * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
- */
-export type GetPlanIntervalUnion =
-  | GetPlanIntervalRemoveItemEnum1
-  | GetPlanIntervalRemoveItemEnum2;
-
-/**
- * Filter for matching plan items. All provided fields must match (AND).
- */
-export type GetPlanPlanItemFilter = {
-  /**
-   * Match items linked to this feature.
-   */
-  featureId?: string | undefined;
-  /**
-   * Match items with this billing method (prepaid or usage_based).
-   */
-  billingMethod?: GetPlanRemoveItemBillingMethod | undefined;
-  /**
-   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
-   */
-  interval?:
-    | GetPlanIntervalRemoveItemEnum1
-    | GetPlanIntervalRemoveItemEnum2
-    | undefined;
-  /**
-   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
-   */
-  intervalCount?: number | undefined;
-};
-
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export const GetPlanVariantDetailsDurationType = {
-  Day: "day",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Unit of time for the trial ('day', 'month', 'year').
- */
-export type GetPlanVariantDetailsDurationType = OpenEnum<
-  typeof GetPlanVariantDetailsDurationType
->;
-
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export const GetPlanVariantDetailsOnEnd = {
-  Bill: "bill",
-  Revert: "revert",
-} as const;
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export type GetPlanVariantDetailsOnEnd = OpenEnum<
-  typeof GetPlanVariantDetailsOnEnd
->;
-
-/**
- * Free trial configuration for a plan.
- */
-export type GetPlanFreeTrialParams = {
-  /**
-   * Number of duration_type periods the trial lasts.
-   */
-  durationLength: number;
-  /**
-   * Unit of time for the trial ('day', 'month', 'year').
-   */
-  durationType: GetPlanVariantDetailsDurationType;
-  /**
-   * If true, payment method required to start trial. Customer is charged after trial ends.
-   */
-  cardRequired: boolean;
-  /**
-   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-   */
-  onEnd?: GetPlanVariantDetailsOnEnd | undefined;
-};
-
-/**
- * The time interval for the purchase limit window.
- */
-export const GetPlanVariantDetailsPurchaseLimitInterval = {
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-} as const;
-/**
- * The time interval for the purchase limit window.
- */
-export type GetPlanVariantDetailsPurchaseLimitInterval = OpenEnum<
-  typeof GetPlanVariantDetailsPurchaseLimitInterval
->;
-
-/**
- * Optional rate limit to cap how often auto top-ups occur.
- */
-export type GetPlanVariantDetailsPurchaseLimit = {
-  /**
-   * The time interval for the purchase limit window.
-   */
-  interval: GetPlanVariantDetailsPurchaseLimitInterval;
-  /**
-   * Number of intervals in the purchase limit window.
-   */
-  intervalCount: number;
-  /**
-   * Maximum number of auto top-ups allowed within the interval.
-   */
-  limit: number;
-};
-
-export type GetPlanVariantDetailsAutoTopup = {
-  /**
-   * The ID of the feature (credit balance) to auto top-up.
-   */
-  featureId: string;
-  /**
-   * Whether auto top-up is enabled.
-   */
-  enabled: boolean;
-  /**
-   * When the balance drops below this threshold, an auto top-up will be purchased.
-   */
-  threshold: number;
-  /**
-   * Amount of credits to add per auto top-up.
-   */
-  quantity: number;
-  /**
-   * Optional rate limit to cap how often auto top-ups occur.
-   */
-  purchaseLimit?: GetPlanVariantDetailsPurchaseLimit | undefined;
-  /**
-   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
-   */
-  invoiceMode?: boolean | undefined;
-};
-
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const GetPlanVariantDetailsLimitType = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type GetPlanVariantDetailsLimitType = OpenEnum<
-  typeof GetPlanVariantDetailsLimitType
->;
-
-export type GetPlanVariantDetailsSpendLimit = {
-  /**
-   * Optional feature ID this spend limit applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether the overage spend limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: GetPlanVariantDetailsLimitType | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
-   */
-  overageLimit?: number | undefined;
-};
-
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export const GetPlanVariantDetailsUsageLimitInterval = {
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export type GetPlanVariantDetailsUsageLimitInterval = OpenEnum<
-  typeof GetPlanVariantDetailsUsageLimitInterval
->;
-
-export type GetPlanVariantDetailsUsageLimit = {
-  /**
-   * The feature this usage limit applies to.
-   */
-  featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * Maximum units allowed per interval.
-   */
-  limit: number;
-  /**
-   * Interval for the cap, aligned to the customer's billing cycle.
-   */
-  interval: GetPlanVariantDetailsUsageLimitInterval;
-};
-
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export const GetPlanVariantDetailsThresholdType = {
-  Usage: "usage",
-  UsagePercentage: "usage_percentage",
-  Remaining: "remaining",
-  RemainingPercentage: "remaining_percentage",
-} as const;
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export type GetPlanVariantDetailsThresholdType = OpenEnum<
-  typeof GetPlanVariantDetailsThresholdType
->;
-
-export type GetPlanVariantDetailsUsageAlert = {
-  /**
-   * The feature ID this alert applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether this usage alert is enabled.
-   */
-  enabled: boolean;
-  /**
-   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
-   */
-  threshold: number;
-  /**
-   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
-   */
-  thresholdType: GetPlanVariantDetailsThresholdType;
-  /**
-   * Optional user-defined label to distinguish multiple alerts on the same feature.
-   */
-  name?: string | undefined;
-};
-
-export type GetPlanVariantDetailsOverageAllowed = {
-  /**
-   * The feature ID this overage allowed control applies to.
-   */
-  featureId: string;
-  /**
-   * Whether overage is allowed for this feature.
-   */
-  enabled: boolean;
-};
-
-/**
- * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
- */
-export type GetPlanVariantDetailsBillingControls = {
-  /**
-   * List of auto top-up configurations per feature.
-   */
-  autoTopups?: Array<GetPlanVariantDetailsAutoTopup> | undefined;
-  /**
-   * List of overage spend limits per feature (caps overage spend).
-   */
-  spendLimits?: Array<GetPlanVariantDetailsSpendLimit> | undefined;
-  /**
-   * List of hard usage caps per feature (max units per interval).
-   */
-  usageLimits?: Array<GetPlanVariantDetailsUsageLimit> | undefined;
-  /**
-   * List of usage alert configurations per feature.
-   */
-  usageAlerts?: Array<GetPlanVariantDetailsUsageAlert> | undefined;
-  /**
-   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
-   */
-  overageAllowed?: Array<GetPlanVariantDetailsOverageAllowed> | undefined;
-};
-
-/**
- * The customization that transforms the base plan into this variant.
- */
-export type GetPlanCustomize = {
-  /**
-   * Override the base price of the plan. Pass null to remove the base price.
-   */
-  price?: GetPlanBasePrice | null | undefined;
-  /**
-   * Items to add to the plan.
-   */
-  addItems?: Array<GetPlanPlanItem> | undefined;
-  /**
-   * Filters selecting items to remove from the plan.
-   */
-  removeItems?: Array<GetPlanPlanItemFilter> | undefined;
-  /**
-   * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
-   */
-  freeTrial?: GetPlanFreeTrialParams | null | undefined;
-  /**
-   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
-   */
-  billingControls?: GetPlanVariantDetailsBillingControls | undefined;
-};
-
-/**
- * Details about how this variant relates to its latest base plan.
- */
-export type GetPlanVariantDetails = {
-  /**
-   * The ID of the base plan this variant was derived from.
-   */
-  basePlanId: string;
-  /**
-   * The customization that transforms the base plan into this variant.
-   */
-  customize?: GetPlanCustomize | undefined;
-};
-
-/**
  * Miscellaneous plan-level configuration flags.
  */
 export type GetPlanConfig = {
@@ -1036,207 +396,6 @@ export type GetPlanConfig = {
    * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
    */
   ignorePastDue: boolean;
-};
-
-/**
- * The time interval for the purchase limit window.
- */
-export const GetPlanPurchaseLimitInterval = {
-  Hour: "hour",
-  Day: "day",
-  Week: "week",
-  Month: "month",
-} as const;
-/**
- * The time interval for the purchase limit window.
- */
-export type GetPlanPurchaseLimitInterval = OpenEnum<
-  typeof GetPlanPurchaseLimitInterval
->;
-
-/**
- * Optional rate limit to cap how often auto top-ups occur.
- */
-export type GetPlanPurchaseLimit = {
-  /**
-   * The time interval for the purchase limit window.
-   */
-  interval: GetPlanPurchaseLimitInterval;
-  /**
-   * Number of intervals in the purchase limit window.
-   */
-  intervalCount: number;
-  /**
-   * Maximum number of auto top-ups allowed within the interval.
-   */
-  limit: number;
-};
-
-export type GetPlanAutoTopup = {
-  /**
-   * The ID of the feature (credit balance) to auto top-up.
-   */
-  featureId: string;
-  /**
-   * Whether auto top-up is enabled.
-   */
-  enabled: boolean;
-  /**
-   * When the balance drops below this threshold, an auto top-up will be purchased.
-   */
-  threshold: number;
-  /**
-   * Amount of credits to add per auto top-up.
-   */
-  quantity: number;
-  /**
-   * Optional rate limit to cap how often auto top-ups occur.
-   */
-  purchaseLimit?: GetPlanPurchaseLimit | undefined;
-  /**
-   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
-   */
-  invoiceMode?: boolean | undefined;
-};
-
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const GetPlanLimitType = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type GetPlanLimitType = OpenEnum<typeof GetPlanLimitType>;
-
-export type GetPlanSpendLimit = {
-  /**
-   * Optional feature ID this spend limit applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether the overage spend limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: GetPlanLimitType | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
-   */
-  overageLimit?: number | undefined;
-};
-
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export const GetPlanUsageLimitInterval = {
-  Day: "day",
-  Week: "week",
-  Month: "month",
-  Year: "year",
-} as const;
-/**
- * Interval for the cap, aligned to the customer's billing cycle.
- */
-export type GetPlanUsageLimitInterval = OpenEnum<
-  typeof GetPlanUsageLimitInterval
->;
-
-export type GetPlanUsageLimit = {
-  /**
-   * The feature this usage limit applies to.
-   */
-  featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled: boolean;
-  /**
-   * Maximum units allowed per interval.
-   */
-  limit: number;
-  /**
-   * Interval for the cap, aligned to the customer's billing cycle.
-   */
-  interval: GetPlanUsageLimitInterval;
-};
-
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export const GetPlanThresholdType = {
-  Usage: "usage",
-  UsagePercentage: "usage_percentage",
-  Remaining: "remaining",
-  RemainingPercentage: "remaining_percentage",
-} as const;
-/**
- * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
- */
-export type GetPlanThresholdType = OpenEnum<typeof GetPlanThresholdType>;
-
-export type GetPlanUsageAlert = {
-  /**
-   * The feature ID this alert applies to.
-   */
-  featureId?: string | undefined;
-  /**
-   * Whether this usage alert is enabled.
-   */
-  enabled: boolean;
-  /**
-   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
-   */
-  threshold: number;
-  /**
-   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
-   */
-  thresholdType: GetPlanThresholdType;
-  /**
-   * Optional user-defined label to distinguish multiple alerts on the same feature.
-   */
-  name?: string | undefined;
-};
-
-export type GetPlanOverageAllowed = {
-  /**
-   * The feature ID this overage allowed control applies to.
-   */
-  featureId: string;
-  /**
-   * Whether overage is allowed for this feature.
-   */
-  enabled: boolean;
-};
-
-/**
- * Plan-level billing controls used as customer defaults.
- */
-export type GetPlanBillingControls = {
-  /**
-   * List of auto top-up configurations per feature.
-   */
-  autoTopups?: Array<GetPlanAutoTopup> | undefined;
-  /**
-   * List of overage spend limits per feature (caps overage spend).
-   */
-  spendLimits?: Array<GetPlanSpendLimit> | undefined;
-  /**
-   * List of hard usage caps per feature (max units per interval).
-   */
-  usageLimits?: Array<GetPlanUsageLimit> | undefined;
-  /**
-   * List of usage alert configurations per feature.
-   */
-  usageAlerts?: Array<GetPlanUsageAlert> | undefined;
-  /**
-   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
-   */
-  overageAllowed?: Array<GetPlanOverageAllowed> | undefined;
 };
 
 /**
@@ -1346,25 +505,13 @@ export type GetPlanResponse = {
    */
   archived: boolean;
   /**
-   * Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from.
+   * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
-  /**
-   * Details about how this variant relates to its latest base plan.
-   */
-  variantDetails?: GetPlanVariantDetails | undefined;
   /**
    * Miscellaneous plan-level configuration flags.
    */
   config: GetPlanConfig;
-  /**
-   * Plan-level billing controls used as customer defaults.
-   */
-  billingControls?: GetPlanBillingControls | undefined;
-  /**
-   * Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.
-   */
-  metadata: { [k: string]: any };
   customerEligibility?: GetPlanCustomerEligibility | undefined;
 };
 
@@ -1538,85 +685,79 @@ export function getPlanFeatureFromJSON(
 }
 
 /** @internal */
-export const GetPlanResetItemInterval$inboundSchema: z.ZodMiniType<
-  GetPlanResetItemInterval,
+export const GetPlanResetInterval$inboundSchema: z.ZodMiniType<
+  GetPlanResetInterval,
   unknown
-> = openEnums.inboundSchema(GetPlanResetItemInterval);
+> = openEnums.inboundSchema(GetPlanResetInterval);
 
 /** @internal */
-export const GetPlanItemReset$inboundSchema: z.ZodMiniType<
-  GetPlanItemReset,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: GetPlanResetItemInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
+export const GetPlanReset$inboundSchema: z.ZodMiniType<GetPlanReset, unknown> =
+  z.pipe(
+    z.object({
+      interval: GetPlanResetInterval$inboundSchema,
+      interval_count: types.optional(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "interval_count": "intervalCount",
+      });
+    }),
+  );
 
-export function getPlanItemResetFromJSON(
+export function getPlanResetFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanItemReset, SDKValidationError> {
+): SafeParseResult<GetPlanReset, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanItemReset$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanItemReset' from JSON`,
+    (x) => GetPlanReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanReset' from JSON`,
   );
 }
 
 /** @internal */
-export const GetPlanItemTo$inboundSchema: z.ZodMiniType<
-  GetPlanItemTo,
-  unknown
-> = smartUnion([types.number(), types.string()]);
+export const GetPlanTo$inboundSchema: z.ZodMiniType<GetPlanTo, unknown> =
+  smartUnion([types.number(), types.string()]);
 
-export function getPlanItemToFromJSON(
+export function getPlanToFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanItemTo, SDKValidationError> {
+): SafeParseResult<GetPlanTo, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanItemTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanItemTo' from JSON`,
+    (x) => GetPlanTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanTo' from JSON`,
   );
 }
 
 /** @internal */
-export const GetPlanItemTier$inboundSchema: z.ZodMiniType<
-  GetPlanItemTier,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-    flat_amount: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-    });
-  }),
-);
+export const GetPlanTier$inboundSchema: z.ZodMiniType<GetPlanTier, unknown> = z
+  .pipe(
+    z.object({
+      to: smartUnion([types.number(), types.string()]),
+      amount: types.number(),
+      flat_amount: types.optional(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "flat_amount": "flatAmount",
+      });
+    }),
+  );
 
-export function getPlanItemTierFromJSON(
+export function getPlanTierFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanItemTier, SDKValidationError> {
+): SafeParseResult<GetPlanTier, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanItemTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanItemTier' from JSON`,
+    (x) => GetPlanTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanTier' from JSON`,
   );
 }
 
 /** @internal */
-export const GetPlanItemTierBehavior$inboundSchema: z.ZodMiniType<
-  GetPlanItemTierBehavior,
+export const GetPlanTierBehavior$inboundSchema: z.ZodMiniType<
+  GetPlanTierBehavior,
   unknown
-> = openEnums.inboundSchema(GetPlanItemTierBehavior);
+> = openEnums.inboundSchema(GetPlanTierBehavior);
 
 /** @internal */
 export const GetPlanPriceItemInterval$inboundSchema: z.ZodMiniType<
@@ -1625,10 +766,10 @@ export const GetPlanPriceItemInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetPlanPriceItemInterval);
 
 /** @internal */
-export const GetPlanItemBillingMethod$inboundSchema: z.ZodMiniType<
-  GetPlanItemBillingMethod,
+export const GetPlanBillingMethod$inboundSchema: z.ZodMiniType<
+  GetPlanBillingMethod,
   unknown
-> = openEnums.inboundSchema(GetPlanItemBillingMethod);
+> = openEnums.inboundSchema(GetPlanBillingMethod);
 
 /** @internal */
 export const GetPlanItemPrice$inboundSchema: z.ZodMiniType<
@@ -1637,12 +778,12 @@ export const GetPlanItemPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    tiers: types.optional(z.array(z.lazy(() => GetPlanItemTier$inboundSchema))),
-    tier_behavior: types.optional(GetPlanItemTierBehavior$inboundSchema),
+    tiers: types.optional(z.array(z.lazy(() => GetPlanTier$inboundSchema))),
+    tier_behavior: types.optional(GetPlanTierBehavior$inboundSchema),
     interval: GetPlanPriceItemInterval$inboundSchema,
     interval_count: types.optional(types.number()),
     billing_units: types.number(),
-    billing_method: GetPlanItemBillingMethod$inboundSchema,
+    billing_method: GetPlanBillingMethod$inboundSchema,
     max_purchase: types.nullable(types.number()),
   }),
   z.transform((v) => {
@@ -1694,20 +835,20 @@ export function getPlanItemDisplayFromJSON(
 }
 
 /** @internal */
-export const GetPlanItemExpiryDurationType$inboundSchema: z.ZodMiniType<
-  GetPlanItemExpiryDurationType,
+export const GetPlanExpiryDurationType$inboundSchema: z.ZodMiniType<
+  GetPlanExpiryDurationType,
   unknown
-> = openEnums.inboundSchema(GetPlanItemExpiryDurationType);
+> = openEnums.inboundSchema(GetPlanExpiryDurationType);
 
 /** @internal */
-export const GetPlanItemRollover$inboundSchema: z.ZodMiniType<
-  GetPlanItemRollover,
+export const GetPlanRollover$inboundSchema: z.ZodMiniType<
+  GetPlanRollover,
   unknown
 > = z.pipe(
   z.object({
     max: types.nullable(types.number()),
     max_percentage: z.optional(z.nullable(types.number())),
-    expiry_duration_type: GetPlanItemExpiryDurationType$inboundSchema,
+    expiry_duration_type: GetPlanExpiryDurationType$inboundSchema,
     expiry_duration_length: types.optional(types.number()),
   }),
   z.transform((v) => {
@@ -1719,13 +860,13 @@ export const GetPlanItemRollover$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function getPlanItemRolloverFromJSON(
+export function getPlanRolloverFromJSON(
   jsonString: string,
-): SafeParseResult<GetPlanItemRollover, SDKValidationError> {
+): SafeParseResult<GetPlanRollover, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => GetPlanItemRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanItemRollover' from JSON`,
+    (x) => GetPlanRollover$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanRollover' from JSON`,
   );
 }
 
@@ -1737,10 +878,10 @@ export const GetPlanItem$inboundSchema: z.ZodMiniType<GetPlanItem, unknown> = z
       feature: types.optional(z.lazy(() => GetPlanFeature$inboundSchema)),
       included: types.number(),
       unlimited: types.boolean(),
-      reset: types.nullable(z.lazy(() => GetPlanItemReset$inboundSchema)),
+      reset: types.nullable(z.lazy(() => GetPlanReset$inboundSchema)),
       price: types.nullable(z.lazy(() => GetPlanItemPrice$inboundSchema)),
       display: types.optional(z.lazy(() => GetPlanItemDisplay$inboundSchema)),
-      rollover: types.optional(z.lazy(() => GetPlanItemRollover$inboundSchema)),
+      rollover: types.optional(z.lazy(() => GetPlanRollover$inboundSchema)),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -1805,712 +946,6 @@ export const GetPlanEnv$inboundSchema: z.ZodMiniType<GetPlanEnv, unknown> =
   openEnums.inboundSchema(GetPlanEnv);
 
 /** @internal */
-export const GetPlanPriceVariantDetailsInterval$inboundSchema: z.ZodMiniType<
-  GetPlanPriceVariantDetailsInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanPriceVariantDetailsInterval);
-
-/** @internal */
-export const GetPlanBasePrice$inboundSchema: z.ZodMiniType<
-  GetPlanBasePrice,
-  unknown
-> = z.pipe(
-  z.object({
-    amount: types.number(),
-    interval: GetPlanPriceVariantDetailsInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function getPlanBasePriceFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanBasePrice, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanBasePrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanBasePrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemResetInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanAddItemResetInterval);
-
-/** @internal */
-export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsReset,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: GetPlanAddItemResetInterval$inboundSchema,
-    interval_count: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsResetFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsReset, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsReset$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsReset' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsTo$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsTo,
-  unknown
-> = smartUnion([types.number(), types.string()]);
-
-export function getPlanVariantDetailsToFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsTo, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsTo$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsTo' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsTier$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsTier,
-  unknown
-> = z.pipe(
-  z.object({
-    to: smartUnion([types.number(), types.string()]),
-    amount: types.number(),
-    flat_amount: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "flat_amount": "flatAmount",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsTierFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsTier, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsTier$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsTier' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsTierBehavior$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsTierBehavior,
-  unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsTierBehavior);
-
-/** @internal */
-export const GetPlanAddItemPriceInterval$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemPriceInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanAddItemPriceInterval);
-
-/** @internal */
-export const GetPlanAddItemBillingMethod$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemBillingMethod,
-  unknown
-> = openEnums.inboundSchema(GetPlanAddItemBillingMethod);
-
-/** @internal */
-export const GetPlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsPrice,
-  unknown
-> = z.pipe(
-  z.object({
-    amount: types.optional(types.number()),
-    tiers: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsTier$inboundSchema)),
-    ),
-    tier_behavior: types.optional(
-      GetPlanVariantDetailsTierBehavior$inboundSchema,
-    ),
-    interval: GetPlanAddItemPriceInterval$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    billing_units: z._default(types.number(), 1),
-    billing_method: GetPlanAddItemBillingMethod$inboundSchema,
-    max_purchase: z.optional(z.nullable(types.number())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "tier_behavior": "tierBehavior",
-      "interval_count": "intervalCount",
-      "billing_units": "billingUnits",
-      "billing_method": "billingMethod",
-      "max_purchase": "maxPurchase",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsPriceFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsPrice, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsPrice$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsPrice' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanOnIncrease$inboundSchema: z.ZodMiniType<
-  GetPlanOnIncrease,
-  unknown
-> = openEnums.inboundSchema(GetPlanOnIncrease);
-
-/** @internal */
-export const GetPlanOnDecrease$inboundSchema: z.ZodMiniType<
-  GetPlanOnDecrease,
-  unknown
-> = openEnums.inboundSchema(GetPlanOnDecrease);
-
-/** @internal */
-export const GetPlanProration$inboundSchema: z.ZodMiniType<
-  GetPlanProration,
-  unknown
-> = z.pipe(
-  z.object({
-    on_increase: GetPlanOnIncrease$inboundSchema,
-    on_decrease: GetPlanOnDecrease$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "on_increase": "onIncrease",
-      "on_decrease": "onDecrease",
-    });
-  }),
-);
-
-export function getPlanProrationFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanProration, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanProration$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanProration' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsExpiryDurationType$inboundSchema:
-  z.ZodMiniType<GetPlanVariantDetailsExpiryDurationType, unknown> = openEnums
-    .inboundSchema(GetPlanVariantDetailsExpiryDurationType);
-
-/** @internal */
-export const GetPlanVariantDetailsRollover$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsRollover,
-  unknown
-> = z.pipe(
-  z.object({
-    max: types.optional(types.number()),
-    max_percentage: types.optional(types.number()),
-    expiry_duration_type: GetPlanVariantDetailsExpiryDurationType$inboundSchema,
-    expiry_duration_length: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "max_percentage": "maxPercentage",
-      "expiry_duration_type": "expiryDurationType",
-      "expiry_duration_length": "expiryDurationLength",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsRolloverFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsRollover, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsRollover' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanPlanItem$inboundSchema: z.ZodMiniType<
-  GetPlanPlanItem,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    included: types.optional(types.number()),
-    unlimited: types.optional(types.boolean()),
-    reset: types.optional(
-      z.lazy(() => GetPlanVariantDetailsReset$inboundSchema),
-    ),
-    price: types.optional(
-      z.lazy(() => GetPlanVariantDetailsPrice$inboundSchema),
-    ),
-    proration: types.optional(z.lazy(() => GetPlanProration$inboundSchema)),
-    rollover: types.optional(
-      z.lazy(() => GetPlanVariantDetailsRollover$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function getPlanPlanItemFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanPlanItem, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanPlanItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanPlanItem' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanRemoveItemBillingMethod$inboundSchema: z.ZodMiniType<
-  GetPlanRemoveItemBillingMethod,
-  unknown
-> = openEnums.inboundSchema(GetPlanRemoveItemBillingMethod);
-
-/** @internal */
-export const GetPlanIntervalRemoveItemEnum2$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalRemoveItemEnum2,
-  unknown
-> = openEnums.inboundSchema(GetPlanIntervalRemoveItemEnum2);
-
-/** @internal */
-export const GetPlanIntervalRemoveItemEnum1$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalRemoveItemEnum1,
-  unknown
-> = openEnums.inboundSchema(GetPlanIntervalRemoveItemEnum1);
-
-/** @internal */
-export const GetPlanIntervalUnion$inboundSchema: z.ZodMiniType<
-  GetPlanIntervalUnion,
-  unknown
-> = smartUnion([
-  GetPlanIntervalRemoveItemEnum1$inboundSchema,
-  GetPlanIntervalRemoveItemEnum2$inboundSchema,
-]);
-
-export function getPlanIntervalUnionFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanIntervalUnion, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanIntervalUnion$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanIntervalUnion' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanPlanItemFilter$inboundSchema: z.ZodMiniType<
-  GetPlanPlanItemFilter,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    billing_method: types.optional(
-      GetPlanRemoveItemBillingMethod$inboundSchema,
-    ),
-    interval: types.optional(
-      smartUnion([
-        GetPlanIntervalRemoveItemEnum1$inboundSchema,
-        GetPlanIntervalRemoveItemEnum2$inboundSchema,
-      ]),
-    ),
-    interval_count: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "billing_method": "billingMethod",
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function getPlanPlanItemFilterFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanPlanItemFilter, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanPlanItemFilter$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanPlanItemFilter' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsDurationType$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsDurationType,
-  unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsDurationType);
-
-/** @internal */
-export const GetPlanVariantDetailsOnEnd$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsOnEnd,
-  unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsOnEnd);
-
-/** @internal */
-export const GetPlanFreeTrialParams$inboundSchema: z.ZodMiniType<
-  GetPlanFreeTrialParams,
-  unknown
-> = z.pipe(
-  z.object({
-    duration_length: types.number(),
-    duration_type: z._default(
-      GetPlanVariantDetailsDurationType$inboundSchema,
-      "month",
-    ),
-    card_required: z._default(types.boolean(), true),
-    on_end: types.optional(GetPlanVariantDetailsOnEnd$inboundSchema),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "duration_length": "durationLength",
-      "duration_type": "durationType",
-      "card_required": "cardRequired",
-      "on_end": "onEnd",
-    });
-  }),
-);
-
-export function getPlanFreeTrialParamsFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanFreeTrialParams, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanFreeTrialParams$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanFreeTrialParams' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsPurchaseLimitInterval$inboundSchema:
-  z.ZodMiniType<GetPlanVariantDetailsPurchaseLimitInterval, unknown> = openEnums
-    .inboundSchema(GetPlanVariantDetailsPurchaseLimitInterval);
-
-/** @internal */
-export const GetPlanVariantDetailsPurchaseLimit$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsPurchaseLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: GetPlanVariantDetailsPurchaseLimitInterval$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    limit: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsPurchaseLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsPurchaseLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      GetPlanVariantDetailsPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsPurchaseLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsAutoTopup$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsAutoTopup,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-    threshold: types.number(),
-    quantity: types.number(),
-    purchase_limit: types.optional(
-      z.lazy(() => GetPlanVariantDetailsPurchaseLimit$inboundSchema),
-    ),
-    invoice_mode: types.optional(types.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "purchase_limit": "purchaseLimit",
-      "invoice_mode": "invoiceMode",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsAutoTopupFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsAutoTopup, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsAutoTopup$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsAutoTopup' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsLimitType$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsLimitType,
-  unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsLimitType);
-
-/** @internal */
-export const GetPlanVariantDetailsSpendLimit$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsSpendLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), false),
-    limit_type: types.optional(GetPlanVariantDetailsLimitType$inboundSchema),
-    overage_limit: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "limit_type": "limitType",
-      "overage_limit": "overageLimit",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsSpendLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsSpendLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsSpendLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsSpendLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsUsageLimitInterval$inboundSchema:
-  z.ZodMiniType<GetPlanVariantDetailsUsageLimitInterval, unknown> = openEnums
-    .inboundSchema(GetPlanVariantDetailsUsageLimitInterval);
-
-/** @internal */
-export const GetPlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsUsageLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), true),
-    limit: types.number(),
-    interval: GetPlanVariantDetailsUsageLimitInterval$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsUsageLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsUsageLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsUsageLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsUsageLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsThresholdType$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsThresholdType,
-  unknown
-> = openEnums.inboundSchema(GetPlanVariantDetailsThresholdType);
-
-/** @internal */
-export const GetPlanVariantDetailsUsageAlert$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsUsageAlert,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), true),
-    threshold: types.number(),
-    threshold_type: GetPlanVariantDetailsThresholdType$inboundSchema,
-    name: types.optional(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "threshold_type": "thresholdType",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsUsageAlertFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsUsageAlert, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetailsUsageAlert$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsUsageAlert' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsOverageAllowed$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsOverageAllowed,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsOverageAllowedFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsOverageAllowed, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      GetPlanVariantDetailsOverageAllowed$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsOverageAllowed' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetailsBillingControls$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetailsBillingControls,
-  unknown
-> = z.pipe(
-  z.object({
-    auto_topups: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsAutoTopup$inboundSchema)),
-    ),
-    spend_limits: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsSpendLimit$inboundSchema)),
-    ),
-    usage_limits: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsUsageLimit$inboundSchema)),
-    ),
-    usage_alerts: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsUsageAlert$inboundSchema)),
-    ),
-    overage_allowed: types.optional(
-      z.array(z.lazy(() => GetPlanVariantDetailsOverageAllowed$inboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "auto_topups": "autoTopups",
-      "spend_limits": "spendLimits",
-      "usage_limits": "usageLimits",
-      "usage_alerts": "usageAlerts",
-      "overage_allowed": "overageAllowed",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsBillingControlsFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetailsBillingControls, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) =>
-      GetPlanVariantDetailsBillingControls$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetailsBillingControls' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanCustomize$inboundSchema: z.ZodMiniType<
-  GetPlanCustomize,
-  unknown
-> = z.pipe(
-  z.object({
-    price: z.optional(z.nullable(z.lazy(() => GetPlanBasePrice$inboundSchema))),
-    add_items: types.optional(
-      z.array(z.lazy(() => GetPlanPlanItem$inboundSchema)),
-    ),
-    remove_items: types.optional(
-      z.array(z.lazy(() => GetPlanPlanItemFilter$inboundSchema)),
-    ),
-    free_trial: z.optional(
-      z.nullable(z.lazy(() => GetPlanFreeTrialParams$inboundSchema)),
-    ),
-    billing_controls: types.optional(
-      z.lazy(() => GetPlanVariantDetailsBillingControls$inboundSchema),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "add_items": "addItems",
-      "remove_items": "removeItems",
-      "free_trial": "freeTrial",
-      "billing_controls": "billingControls",
-    });
-  }),
-);
-
-export function getPlanCustomizeFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanCustomize, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanCustomize$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanCustomize' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanVariantDetails$inboundSchema: z.ZodMiniType<
-  GetPlanVariantDetails,
-  unknown
-> = z.pipe(
-  z.object({
-    base_plan_id: types.string(),
-    customize: types.optional(z.lazy(() => GetPlanCustomize$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "base_plan_id": "basePlanId",
-    });
-  }),
-);
-
-export function getPlanVariantDetailsFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanVariantDetails, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanVariantDetails$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanVariantDetails' from JSON`,
-  );
-}
-
-/** @internal */
 export const GetPlanConfig$inboundSchema: z.ZodMiniType<
   GetPlanConfig,
   unknown
@@ -2532,248 +967,6 @@ export function getPlanConfigFromJSON(
     jsonString,
     (x) => GetPlanConfig$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'GetPlanConfig' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanPurchaseLimitInterval$inboundSchema: z.ZodMiniType<
-  GetPlanPurchaseLimitInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanPurchaseLimitInterval);
-
-/** @internal */
-export const GetPlanPurchaseLimit$inboundSchema: z.ZodMiniType<
-  GetPlanPurchaseLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    interval: GetPlanPurchaseLimitInterval$inboundSchema,
-    interval_count: z._default(types.number(), 1),
-    limit: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "interval_count": "intervalCount",
-    });
-  }),
-);
-
-export function getPlanPurchaseLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanPurchaseLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanPurchaseLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanAutoTopup$inboundSchema: z.ZodMiniType<
-  GetPlanAutoTopup,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-    threshold: types.number(),
-    quantity: types.number(),
-    purchase_limit: types.optional(
-      z.lazy(() => GetPlanPurchaseLimit$inboundSchema),
-    ),
-    invoice_mode: types.optional(types.boolean()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "purchase_limit": "purchaseLimit",
-      "invoice_mode": "invoiceMode",
-    });
-  }),
-);
-
-export function getPlanAutoTopupFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanAutoTopup, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanAutoTopup$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanAutoTopup' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanLimitType$inboundSchema: z.ZodMiniType<
-  GetPlanLimitType,
-  unknown
-> = openEnums.inboundSchema(GetPlanLimitType);
-
-/** @internal */
-export const GetPlanSpendLimit$inboundSchema: z.ZodMiniType<
-  GetPlanSpendLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), false),
-    limit_type: types.optional(GetPlanLimitType$inboundSchema),
-    overage_limit: types.optional(types.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "limit_type": "limitType",
-      "overage_limit": "overageLimit",
-    });
-  }),
-);
-
-export function getPlanSpendLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanSpendLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanSpendLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanSpendLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanUsageLimitInterval$inboundSchema: z.ZodMiniType<
-  GetPlanUsageLimitInterval,
-  unknown
-> = openEnums.inboundSchema(GetPlanUsageLimitInterval);
-
-/** @internal */
-export const GetPlanUsageLimit$inboundSchema: z.ZodMiniType<
-  GetPlanUsageLimit,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), true),
-    limit: types.number(),
-    interval: GetPlanUsageLimitInterval$inboundSchema,
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function getPlanUsageLimitFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanUsageLimit, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanUsageLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanUsageLimit' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanThresholdType$inboundSchema: z.ZodMiniType<
-  GetPlanThresholdType,
-  unknown
-> = openEnums.inboundSchema(GetPlanThresholdType);
-
-/** @internal */
-export const GetPlanUsageAlert$inboundSchema: z.ZodMiniType<
-  GetPlanUsageAlert,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.optional(types.string()),
-    enabled: z._default(types.boolean(), true),
-    threshold: types.number(),
-    threshold_type: GetPlanThresholdType$inboundSchema,
-    name: types.optional(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-      "threshold_type": "thresholdType",
-    });
-  }),
-);
-
-export function getPlanUsageAlertFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanUsageAlert, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanUsageAlert$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanUsageAlert' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanOverageAllowed$inboundSchema: z.ZodMiniType<
-  GetPlanOverageAllowed,
-  unknown
-> = z.pipe(
-  z.object({
-    feature_id: types.string(),
-    enabled: z._default(types.boolean(), false),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "feature_id": "featureId",
-    });
-  }),
-);
-
-export function getPlanOverageAllowedFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanOverageAllowed, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanOverageAllowed$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanOverageAllowed' from JSON`,
-  );
-}
-
-/** @internal */
-export const GetPlanBillingControls$inboundSchema: z.ZodMiniType<
-  GetPlanBillingControls,
-  unknown
-> = z.pipe(
-  z.object({
-    auto_topups: types.optional(
-      z.array(z.lazy(() => GetPlanAutoTopup$inboundSchema)),
-    ),
-    spend_limits: types.optional(
-      z.array(z.lazy(() => GetPlanSpendLimit$inboundSchema)),
-    ),
-    usage_limits: types.optional(
-      z.array(z.lazy(() => GetPlanUsageLimit$inboundSchema)),
-    ),
-    usage_alerts: types.optional(
-      z.array(z.lazy(() => GetPlanUsageAlert$inboundSchema)),
-    ),
-    overage_allowed: types.optional(
-      z.array(z.lazy(() => GetPlanOverageAllowed$inboundSchema)),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "auto_topups": "autoTopups",
-      "spend_limits": "spendLimits",
-      "usage_limits": "usageLimits",
-      "usage_alerts": "usageAlerts",
-      "overage_allowed": "overageAllowed",
-    });
-  }),
-);
-
-export function getPlanBillingControlsFromJSON(
-  jsonString: string,
-): SafeParseResult<GetPlanBillingControls, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => GetPlanBillingControls$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'GetPlanBillingControls' from JSON`,
   );
 }
 
@@ -2839,14 +1032,7 @@ export const GetPlanResponse$inboundSchema: z.ZodMiniType<
     env: GetPlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
-    variant_details: types.optional(
-      z.lazy(() => GetPlanVariantDetails$inboundSchema),
-    ),
     config: z.lazy(() => GetPlanConfig$inboundSchema),
-    billing_controls: types.optional(
-      z.lazy(() => GetPlanBillingControls$inboundSchema),
-    ),
-    metadata: z.record(z.string(), z.any()),
     customer_eligibility: types.optional(
       z.lazy(() => GetPlanCustomerEligibility$inboundSchema),
     ),
@@ -2858,8 +1044,6 @@ export const GetPlanResponse$inboundSchema: z.ZodMiniType<
       "free_trial": "freeTrial",
       "created_at": "createdAt",
       "base_variant_id": "baseVariantId",
-      "variant_details": "variantDetails",
-      "billing_controls": "billingControls",
       "customer_eligibility": "customerEligibility",
     });
   }),

@@ -468,7 +468,7 @@ IncludedUsage2TypedDict = TypeAliasType("IncludedUsage2TypedDict", Union[float, 
 IncludedUsage2 = TypeAliasType("IncludedUsage2", Union[float, str])
 
 
-CheckItemInterval2 = Union[
+CheckInterval2 = Union[
     Literal[
         "minute",
         "hour",
@@ -661,7 +661,7 @@ class CheckItem2TypedDict(TypedDict):
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
     included_usage: NotRequired[Nullable[IncludedUsage2TypedDict]]
     r"""The amount of usage included for this feature."""
-    interval: NotRequired[Nullable[CheckItemInterval2]]
+    interval: NotRequired[Nullable[CheckInterval2]]
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
     interval_count: NotRequired[Nullable[float]]
     r"""The interval count of the product item."""
@@ -704,7 +704,7 @@ class CheckItem2(BaseModel):
     included_usage: OptionalNullable[IncludedUsage2] = UNSET
     r"""The amount of usage included for this feature."""
 
-    interval: OptionalNullable[CheckItemInterval2] = UNSET
+    interval: OptionalNullable[CheckInterval2] = UNSET
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
 
     interval_count: OptionalNullable[float] = UNSET
@@ -889,360 +889,6 @@ class CheckFreeTrial2(BaseModel):
         return m
 
 
-CheckPurchaseLimitInterval2 = Union[
-    Literal[
-        "hour",
-        "day",
-        "week",
-        "month",
-    ],
-    UnrecognizedStr,
-]
-r"""The time interval for the purchase limit window."""
-
-
-class CheckPurchaseLimit2TypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: CheckPurchaseLimitInterval2
-    r"""The time interval for the purchase limit window."""
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals in the purchase limit window."""
-
-
-class CheckPurchaseLimit2(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: CheckPurchaseLimitInterval2
-    r"""The time interval for the purchase limit window."""
-
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals in the purchase limit window."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckAutoTopup2TypedDict(TypedDict):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-    enabled: NotRequired[bool]
-    r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[CheckPurchaseLimit2TypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-    invoice_mode: NotRequired[bool]
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-
-class CheckAutoTopup2(BaseModel):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-
-    enabled: Optional[bool] = False
-    r"""Whether auto top-up is enabled."""
-
-    purchase_limit: Optional[CheckPurchaseLimit2] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    invoice_mode: Optional[bool] = None
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckLimitType2 = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
-class CheckSpendLimit2TypedDict(TypedDict):
-    feature_id: NotRequired[str]
-    r"""Optional feature ID this spend limit applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CheckLimitType2]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-    overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-
-
-class CheckSpendLimit2(BaseModel):
-    feature_id: Optional[str] = None
-    r"""Optional feature ID this spend limit applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether the overage spend limit is enabled."""
-
-    limit_type: Optional[CheckLimitType2] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-    overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckUsageLimitInterval2 = Union[
-    Literal[
-        "day",
-        "week",
-        "month",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-
-class CheckUsageLimit2TypedDict(TypedDict):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-    limit: float
-    r"""Maximum units allowed per interval."""
-    interval: CheckUsageLimitInterval2
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
-
-
-class CheckUsageLimit2(BaseModel):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-
-    limit: float
-    r"""Maximum units allowed per interval."""
-
-    interval: CheckUsageLimitInterval2
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckThresholdType2 = Union[
-    Literal[
-        "usage",
-        "usage_percentage",
-        "remaining",
-        "remaining_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-
-class CheckUsageAlert2TypedDict(TypedDict):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: CheckThresholdType2
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-    feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage alert is enabled."""
-    name: NotRequired[str]
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-
-class CheckUsageAlert2(BaseModel):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-
-    threshold_type: CheckThresholdType2
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-    feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage alert is enabled."""
-
-    name: Optional[str] = None
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckOverageAllowed2TypedDict(TypedDict):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether overage is allowed for this feature."""
-
-
-class CheckOverageAllowed2(BaseModel):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether overage is allowed for this feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckBillingControls2TypedDict(TypedDict):
-    r"""Plan-level billing controls used as customer defaults"""
-
-    auto_topups: NotRequired[List[CheckAutoTopup2TypedDict]]
-    r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[CheckSpendLimit2TypedDict]]
-    r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[CheckUsageLimit2TypedDict]]
-    r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[CheckUsageAlert2TypedDict]]
-    r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[CheckOverageAllowed2TypedDict]]
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-
-class CheckBillingControls2(BaseModel):
-    r"""Plan-level billing controls used as customer defaults"""
-
-    auto_topups: Optional[List[CheckAutoTopup2]] = None
-    r"""List of auto top-up configurations per feature."""
-
-    spend_limits: Optional[List[CheckSpendLimit2]] = None
-    r"""List of overage spend limits per feature (caps overage spend)."""
-
-    usage_limits: Optional[List[CheckUsageLimit2]] = None
-    r"""List of hard usage caps per feature (max units per interval)."""
-
-    usage_alerts: Optional[List[CheckUsageAlert2]] = None
-    r"""List of usage alert configurations per feature."""
-
-    overage_allowed: Optional[List[CheckOverageAllowed2]] = None
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "auto_topups",
-                "spend_limits",
-                "usage_limits",
-                "usage_alerts",
-                "overage_allowed",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 ProductScenario2 = Union[
     Literal[
         "scheduled",
@@ -1341,8 +987,6 @@ class CheckProduct2TypedDict(TypedDict):
     r"""Free trial configuration for this product, if available"""
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
-    billing_controls: NotRequired[CheckBillingControls2TypedDict]
-    r"""Plan-level billing controls used as customer defaults"""
     scenario: NotRequired[ProductScenario2]
     r"""Scenario for when this product is used in attach flows"""
     properties: NotRequired[Properties2TypedDict]
@@ -1385,9 +1029,6 @@ class CheckProduct2(BaseModel):
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
 
-    billing_controls: Optional[CheckBillingControls2] = None
-    r"""Plan-level billing controls used as customer defaults"""
-
     scenario: Optional[ProductScenario2] = None
     r"""Scenario for when this product is used in attach flows"""
 
@@ -1395,7 +1036,7 @@ class CheckProduct2(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_controls", "scenario", "properties"])
+        optional_fields = set(["scenario", "properties"])
         nullable_fields = set(["group", "free_trial", "base_variant_id"])
         serialized = handler(self)
         m = {}
@@ -1841,7 +1482,7 @@ IncludedUsage1TypedDict = TypeAliasType("IncludedUsage1TypedDict", Union[float, 
 IncludedUsage1 = TypeAliasType("IncludedUsage1", Union[float, str])
 
 
-CheckItemInterval1 = Union[
+CheckInterval1 = Union[
     Literal[
         "minute",
         "hour",
@@ -2034,7 +1675,7 @@ class CheckItem1TypedDict(TypedDict):
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
     included_usage: NotRequired[Nullable[IncludedUsage1TypedDict]]
     r"""The amount of usage included for this feature."""
-    interval: NotRequired[Nullable[CheckItemInterval1]]
+    interval: NotRequired[Nullable[CheckInterval1]]
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
     interval_count: NotRequired[Nullable[float]]
     r"""The interval count of the product item."""
@@ -2077,7 +1718,7 @@ class CheckItem1(BaseModel):
     included_usage: OptionalNullable[IncludedUsage1] = UNSET
     r"""The amount of usage included for this feature."""
 
-    interval: OptionalNullable[CheckItemInterval1] = UNSET
+    interval: OptionalNullable[CheckInterval1] = UNSET
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
 
     interval_count: OptionalNullable[float] = UNSET
@@ -2262,360 +1903,6 @@ class CheckFreeTrial1(BaseModel):
         return m
 
 
-CheckPurchaseLimitInterval1 = Union[
-    Literal[
-        "hour",
-        "day",
-        "week",
-        "month",
-    ],
-    UnrecognizedStr,
-]
-r"""The time interval for the purchase limit window."""
-
-
-class CheckPurchaseLimit1TypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: CheckPurchaseLimitInterval1
-    r"""The time interval for the purchase limit window."""
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals in the purchase limit window."""
-
-
-class CheckPurchaseLimit1(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: CheckPurchaseLimitInterval1
-    r"""The time interval for the purchase limit window."""
-
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals in the purchase limit window."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckAutoTopup1TypedDict(TypedDict):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-    enabled: NotRequired[bool]
-    r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[CheckPurchaseLimit1TypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-    invoice_mode: NotRequired[bool]
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-
-class CheckAutoTopup1(BaseModel):
-    feature_id: str
-    r"""The ID of the feature (credit balance) to auto top-up."""
-
-    threshold: float
-    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
-
-    quantity: float
-    r"""Amount of credits to add per auto top-up."""
-
-    enabled: Optional[bool] = False
-    r"""Whether auto top-up is enabled."""
-
-    purchase_limit: Optional[CheckPurchaseLimit1] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    invoice_mode: Optional[bool] = None
-    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckLimitType1 = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
-class CheckSpendLimit1TypedDict(TypedDict):
-    feature_id: NotRequired[str]
-    r"""Optional feature ID this spend limit applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CheckLimitType1]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-    overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-
-
-class CheckSpendLimit1(BaseModel):
-    feature_id: Optional[str] = None
-    r"""Optional feature ID this spend limit applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether the overage spend limit is enabled."""
-
-    limit_type: Optional[CheckLimitType1] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-    overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckUsageLimitInterval1 = Union[
-    Literal[
-        "day",
-        "week",
-        "month",
-        "year",
-    ],
-    UnrecognizedStr,
-]
-r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-
-class CheckUsageLimit1TypedDict(TypedDict):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-    limit: float
-    r"""Maximum units allowed per interval."""
-    interval: CheckUsageLimitInterval1
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
-
-
-class CheckUsageLimit1(BaseModel):
-    feature_id: str
-    r"""The feature this usage limit applies to."""
-
-    limit: float
-    r"""Maximum units allowed per interval."""
-
-    interval: CheckUsageLimitInterval1
-    r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-CheckThresholdType1 = Union[
-    Literal[
-        "usage",
-        "usage_percentage",
-        "remaining",
-        "remaining_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-
-class CheckUsageAlert1TypedDict(TypedDict):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-    threshold_type: CheckThresholdType1
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-    feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage alert is enabled."""
-    name: NotRequired[str]
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-
-class CheckUsageAlert1(BaseModel):
-    threshold: float
-    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
-
-    threshold_type: CheckThresholdType1
-    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
-
-    feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage alert is enabled."""
-
-    name: Optional[str] = None
-    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckOverageAllowed1TypedDict(TypedDict):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-    enabled: NotRequired[bool]
-    r"""Whether overage is allowed for this feature."""
-
-
-class CheckOverageAllowed1(BaseModel):
-    feature_id: str
-    r"""The feature ID this overage allowed control applies to."""
-
-    enabled: Optional[bool] = False
-    r"""Whether overage is allowed for this feature."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class CheckBillingControls1TypedDict(TypedDict):
-    r"""Plan-level billing controls used as customer defaults"""
-
-    auto_topups: NotRequired[List[CheckAutoTopup1TypedDict]]
-    r"""List of auto top-up configurations per feature."""
-    spend_limits: NotRequired[List[CheckSpendLimit1TypedDict]]
-    r"""List of overage spend limits per feature (caps overage spend)."""
-    usage_limits: NotRequired[List[CheckUsageLimit1TypedDict]]
-    r"""List of hard usage caps per feature (max units per interval)."""
-    usage_alerts: NotRequired[List[CheckUsageAlert1TypedDict]]
-    r"""List of usage alert configurations per feature."""
-    overage_allowed: NotRequired[List[CheckOverageAllowed1TypedDict]]
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-
-class CheckBillingControls1(BaseModel):
-    r"""Plan-level billing controls used as customer defaults"""
-
-    auto_topups: Optional[List[CheckAutoTopup1]] = None
-    r"""List of auto top-up configurations per feature."""
-
-    spend_limits: Optional[List[CheckSpendLimit1]] = None
-    r"""List of overage spend limits per feature (caps overage spend)."""
-
-    usage_limits: Optional[List[CheckUsageLimit1]] = None
-    r"""List of hard usage caps per feature (max units per interval)."""
-
-    usage_alerts: Optional[List[CheckUsageAlert1]] = None
-    r"""List of usage alert configurations per feature."""
-
-    overage_allowed: Optional[List[CheckOverageAllowed1]] = None
-    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(
-            [
-                "auto_topups",
-                "spend_limits",
-                "usage_limits",
-                "usage_alerts",
-                "overage_allowed",
-            ]
-        )
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 ProductScenario1 = Union[
     Literal[
         "scheduled",
@@ -2714,8 +2001,6 @@ class CheckProduct1TypedDict(TypedDict):
     r"""Free trial configuration for this product, if available"""
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
-    billing_controls: NotRequired[CheckBillingControls1TypedDict]
-    r"""Plan-level billing controls used as customer defaults"""
     scenario: NotRequired[ProductScenario1]
     r"""Scenario for when this product is used in attach flows"""
     properties: NotRequired[Properties1TypedDict]
@@ -2758,9 +2043,6 @@ class CheckProduct1(BaseModel):
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
 
-    billing_controls: Optional[CheckBillingControls1] = None
-    r"""Plan-level billing controls used as customer defaults"""
-
     scenario: Optional[ProductScenario1] = None
     r"""Scenario for when this product is used in attach flows"""
 
@@ -2768,7 +2050,7 @@ class CheckProduct1(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["billing_controls", "scenario", "properties"])
+        optional_fields = set(["scenario", "properties"])
         nullable_fields = set(["group", "free_trial", "base_variant_id"])
         serialized = handler(self)
         m = {}

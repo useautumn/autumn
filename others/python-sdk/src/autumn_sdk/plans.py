@@ -5,7 +5,7 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Any, Dict, List, Mapping, Optional, Union, cast
+from typing import List, Mapping, Optional, Union, cast
 
 
 class Plans(BaseSDK):
@@ -26,8 +26,8 @@ class Plans(BaseSDK):
         ] = None,
         items: Optional[
             Union[
-                List[models.CreatePlanItemPlanItem],
-                List[models.CreatePlanItemPlanItemTypedDict],
+                List[models.CreatePlanPlanItem],
+                List[models.CreatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: Optional[
@@ -38,13 +38,6 @@ class Plans(BaseSDK):
                 models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
             ]
         ] = None,
-        billing_controls: Optional[
-            Union[
-                models.CreatePlanBillingControlsRequest,
-                models.CreatePlanBillingControlsRequestTypedDict,
-            ]
-        ] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         create_in_stripe: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -67,8 +60,6 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
         :param config: Miscellaneous plan-level configuration flags.
-        :param billing_controls: Plan-level billing controls used as customer defaults.
-        :param metadata: Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.
         :param create_in_stripe:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -96,7 +87,7 @@ class Plans(BaseSDK):
                 price, Optional[models.CreatePlanPriceRequestBody]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.CreatePlanItemPlanItem]]
+                items, Optional[List[models.CreatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequest]
@@ -104,10 +95,6 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.CreatePlanConfigRequest]
             ),
-            billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreatePlanBillingControlsRequest]
-            ),
-            metadata=metadata,
             create_in_stripe=create_in_stripe,
         )
 
@@ -187,8 +174,8 @@ class Plans(BaseSDK):
         ] = None,
         items: Optional[
             Union[
-                List[models.CreatePlanItemPlanItem],
-                List[models.CreatePlanItemPlanItemTypedDict],
+                List[models.CreatePlanPlanItem],
+                List[models.CreatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: Optional[
@@ -199,13 +186,6 @@ class Plans(BaseSDK):
                 models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
             ]
         ] = None,
-        billing_controls: Optional[
-            Union[
-                models.CreatePlanBillingControlsRequest,
-                models.CreatePlanBillingControlsRequestTypedDict,
-            ]
-        ] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         create_in_stripe: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -228,8 +208,6 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
         :param config: Miscellaneous plan-level configuration flags.
-        :param billing_controls: Plan-level billing controls used as customer defaults.
-        :param metadata: Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.
         :param create_in_stripe:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -257,7 +235,7 @@ class Plans(BaseSDK):
                 price, Optional[models.CreatePlanPriceRequestBody]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.CreatePlanItemPlanItem]]
+                items, Optional[List[models.CreatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequest]
@@ -265,10 +243,6 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.CreatePlanConfigRequest]
             ),
-            billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.CreatePlanBillingControlsRequest]
-            ),
-            metadata=metadata,
             create_in_stripe=create_in_stripe,
         )
 
@@ -721,27 +695,24 @@ class Plans(BaseSDK):
         self,
         *,
         plan_id: str,
-        group: Optional[str] = None,
+        group: Optional[str] = "",
         name: Optional[str] = None,
         description: Optional[str] = None,
         add_on: Optional[bool] = None,
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
-            Union[
-                models.UpdatePlanBasePriceRequest,
-                models.UpdatePlanBasePriceRequestTypedDict,
-            ]
+            Union[models.UpdatePlanBasePrice, models.UpdatePlanBasePriceTypedDict]
         ] = UNSET,
         items: Optional[
             Union[
-                List[models.UpdatePlanItemPlanItem],
-                List[models.UpdatePlanItemPlanItemTypedDict],
+                List[models.UpdatePlanPlanItem],
+                List[models.UpdatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialParamsRequest,
-                models.UpdatePlanFreeTrialParamsRequestTypedDict,
+                models.UpdatePlanFreeTrialParams,
+                models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
         config: Optional[
@@ -749,27 +720,11 @@ class Plans(BaseSDK):
                 models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
             ]
         ] = None,
-        billing_controls: Optional[
-            Union[
-                models.UpdatePlanBillingControlsRequest,
-                models.UpdatePlanBillingControlsRequestTypedDict,
-            ]
-        ] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         create_in_stripe: Optional[bool] = True,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
-        base_plan_id: OptionalNullable[str] = UNSET,
         new_plan_id: Optional[str] = None,
         disable_version: Optional[bool] = None,
-        all_versions: Optional[bool] = None,
-        migration: Optional[Union[models.Migration, models.MigrationTypedDict]] = None,
-        force_version: Optional[bool] = None,
-        update_variant_ids: Optional[List[str]] = None,
-        variants: Optional[
-            Union[List[models.Variant], List[models.VariantTypedDict]]
-        ] = None,
-        is_default: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -782,7 +737,7 @@ class Plans(BaseSDK):
         Use this to modify plan properties, pricing, or feature configurations. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
 
         :param plan_id: The ID of the plan to update.
-        :param group:
+        :param group: Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
         :param name: Display name of the plan.
         :param description:
         :param add_on: Whether the plan is an add-on.
@@ -791,20 +746,11 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
         :param config: Miscellaneous plan-level configuration flags.
-        :param billing_controls: Plan-level billing controls used as customer defaults.
-        :param metadata: Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.
         :param create_in_stripe:
         :param version:
         :param archived:
-        :param base_plan_id: The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
         :param disable_version:
-        :param all_versions: Apply the update diff to all versions of this plan. Mutually exclusive with disable_version.
-        :param migration:
-        :param force_version: Force versioning even when no customers exist. Mutually exclusive with disable_version.
-        :param update_variant_ids: Variant plan IDs to apply this update to. Empty or omitted means no propagation.
-        :param variants: Additive variant updates for this base plan. Missing variants are created when name is provided.
-        :param is_default: Whether this is the org's default plan. Cannot be true on a variant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -828,33 +774,22 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanBasePriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePrice]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.UpdatePlanItemPlanItem]]
+                items, Optional[List[models.UpdatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParamsRequest]
+                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdatePlanConfigRequest]
             ),
-            billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdatePlanBillingControlsRequest]
-            ),
-            metadata=metadata,
             create_in_stripe=create_in_stripe,
             version=version,
             archived=archived,
-            base_plan_id=base_plan_id,
             new_plan_id=new_plan_id,
             disable_version=disable_version,
-            all_versions=all_versions,
-            migration=utils.get_pydantic_model(migration, Optional[models.Migration]),
-            force_version=force_version,
-            update_variant_ids=update_variant_ids,
-            variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
-            is_default=is_default,
         )
 
         req = self._build_request(
@@ -920,27 +855,24 @@ class Plans(BaseSDK):
         self,
         *,
         plan_id: str,
-        group: Optional[str] = None,
+        group: Optional[str] = "",
         name: Optional[str] = None,
         description: Optional[str] = None,
         add_on: Optional[bool] = None,
         auto_enable: Optional[bool] = None,
         price: OptionalNullable[
-            Union[
-                models.UpdatePlanBasePriceRequest,
-                models.UpdatePlanBasePriceRequestTypedDict,
-            ]
+            Union[models.UpdatePlanBasePrice, models.UpdatePlanBasePriceTypedDict]
         ] = UNSET,
         items: Optional[
             Union[
-                List[models.UpdatePlanItemPlanItem],
-                List[models.UpdatePlanItemPlanItemTypedDict],
+                List[models.UpdatePlanPlanItem],
+                List[models.UpdatePlanPlanItemTypedDict],
             ]
         ] = None,
         free_trial: OptionalNullable[
             Union[
-                models.UpdatePlanFreeTrialParamsRequest,
-                models.UpdatePlanFreeTrialParamsRequestTypedDict,
+                models.UpdatePlanFreeTrialParams,
+                models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
         config: Optional[
@@ -948,27 +880,11 @@ class Plans(BaseSDK):
                 models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
             ]
         ] = None,
-        billing_controls: Optional[
-            Union[
-                models.UpdatePlanBillingControlsRequest,
-                models.UpdatePlanBillingControlsRequestTypedDict,
-            ]
-        ] = None,
-        metadata: Optional[Dict[str, Any]] = None,
         create_in_stripe: Optional[bool] = True,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
-        base_plan_id: OptionalNullable[str] = UNSET,
         new_plan_id: Optional[str] = None,
         disable_version: Optional[bool] = None,
-        all_versions: Optional[bool] = None,
-        migration: Optional[Union[models.Migration, models.MigrationTypedDict]] = None,
-        force_version: Optional[bool] = None,
-        update_variant_ids: Optional[List[str]] = None,
-        variants: Optional[
-            Union[List[models.Variant], List[models.VariantTypedDict]]
-        ] = None,
-        is_default: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -981,7 +897,7 @@ class Plans(BaseSDK):
         Use this to modify plan properties, pricing, or feature configurations. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
 
         :param plan_id: The ID of the plan to update.
-        :param group:
+        :param group: Group identifier for organizing related plans. Plans in the same group are mutually exclusive.
         :param name: Display name of the plan.
         :param description:
         :param add_on: Whether the plan is an add-on.
@@ -990,20 +906,11 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
         :param config: Miscellaneous plan-level configuration flags.
-        :param billing_controls: Plan-level billing controls used as customer defaults.
-        :param metadata: Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.
         :param create_in_stripe:
         :param version:
         :param archived:
-        :param base_plan_id: The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan.
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
         :param disable_version:
-        :param all_versions: Apply the update diff to all versions of this plan. Mutually exclusive with disable_version.
-        :param migration:
-        :param force_version: Force versioning even when no customers exist. Mutually exclusive with disable_version.
-        :param update_variant_ids: Variant plan IDs to apply this update to. Empty or omitted means no propagation.
-        :param variants: Additive variant updates for this base plan. Missing variants are created when name is provided.
-        :param is_default: Whether this is the org's default plan. Cannot be true on a variant.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1027,33 +934,22 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, OptionalNullable[models.UpdatePlanBasePriceRequest]
+                price, OptionalNullable[models.UpdatePlanBasePrice]
             ),
             items=utils.get_pydantic_model(
-                items, Optional[List[models.UpdatePlanItemPlanItem]]
+                items, Optional[List[models.UpdatePlanPlanItem]]
             ),
             free_trial=utils.get_pydantic_model(
-                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParamsRequest]
+                free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
             ),
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdatePlanConfigRequest]
             ),
-            billing_controls=utils.get_pydantic_model(
-                billing_controls, Optional[models.UpdatePlanBillingControlsRequest]
-            ),
-            metadata=metadata,
             create_in_stripe=create_in_stripe,
             version=version,
             archived=archived,
-            base_plan_id=base_plan_id,
             new_plan_id=new_plan_id,
             disable_version=disable_version,
-            all_versions=all_versions,
-            migration=utils.get_pydantic_model(migration, Optional[models.Migration]),
-            force_version=force_version,
-            update_variant_ids=update_variant_ids,
-            variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
-            is_default=is_default,
         )
 
         req = self._build_request_async(

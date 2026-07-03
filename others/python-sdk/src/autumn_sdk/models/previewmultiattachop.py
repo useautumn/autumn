@@ -735,22 +735,13 @@ PreviewMultiAttachRedirectMode = Literal[
 r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
 
 
-PreviewMultiAttachLimitType = Literal[
-    "absolute",
-    "usage_percentage",
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class PreviewMultiAttachSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[PreviewMultiAttachLimitType]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class PreviewMultiAttachSpendLimit(BaseModel):
@@ -760,15 +751,12 @@ class PreviewMultiAttachSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[PreviewMultiAttachLimitType] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -799,8 +787,6 @@ class PreviewMultiAttachUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: PreviewMultiAttachEntityDataInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
 
 
 class PreviewMultiAttachUsageLimit(BaseModel):
@@ -812,25 +798,6 @@ class PreviewMultiAttachUsageLimit(BaseModel):
 
     interval: PreviewMultiAttachEntityDataInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
 
 
 PreviewMultiAttachThresholdType = Literal[

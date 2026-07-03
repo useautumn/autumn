@@ -47,22 +47,13 @@ class CreateEntityGlobals(BaseModel):
         return m
 
 
-CreateEntityLimitTypeRequestBody = Literal[
-    "absolute",
-    "usage_percentage",
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class CreateEntitySpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CreateEntityLimitTypeRequestBody]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class CreateEntitySpendLimitRequest(BaseModel):
@@ -72,15 +63,12 @@ class CreateEntitySpendLimitRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[CreateEntityLimitTypeRequestBody] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -111,8 +99,6 @@ class CreateEntityUsageLimitRequestTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: CreateEntityIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
 
 
 class CreateEntityUsageLimitRequest(BaseModel):
@@ -124,25 +110,6 @@ class CreateEntityUsageLimitRequest(BaseModel):
 
     interval: CreateEntityIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
 
 
 CreateEntityThresholdTypeRequestBody = Literal[
@@ -811,25 +778,13 @@ class CreateEntityFlags(BaseModel):
         return m
 
 
-CreateEntityLimitTypeResponse = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class CreateEntitySpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CreateEntityLimitTypeResponse]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class CreateEntitySpendLimitResponse(BaseModel):
@@ -839,15 +794,12 @@ class CreateEntitySpendLimitResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[CreateEntityLimitTypeResponse] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -881,8 +833,6 @@ class CreateEntityUsageLimitResponseTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: CreateEntityIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
@@ -897,15 +847,12 @@ class CreateEntityUsageLimitResponse(BaseModel):
     interval: CreateEntityIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "usage"])
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 

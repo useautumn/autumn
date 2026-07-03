@@ -146,22 +146,13 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
         return m
 
 
-UpdateCustomerLimitTypeRequestBody = Literal[
-    "absolute",
-    "usage_percentage",
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class UpdateCustomerSpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[UpdateCustomerLimitTypeRequestBody]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class UpdateCustomerSpendLimitRequest(BaseModel):
@@ -171,15 +162,12 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[UpdateCustomerLimitTypeRequestBody] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -210,8 +198,6 @@ class UpdateCustomerUsageLimitRequestTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: UpdateCustomerUsageLimitIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
 
 
 class UpdateCustomerUsageLimitRequest(BaseModel):
@@ -223,25 +209,6 @@ class UpdateCustomerUsageLimitRequest(BaseModel):
 
     interval: UpdateCustomerUsageLimitIntervalRequestBody
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
 
 
 UpdateCustomerThresholdTypeRequestBody = Literal[
@@ -393,8 +360,6 @@ class UpdateCustomerConfigRequestTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
-    disable_overage_billing: NotRequired[bool]
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class UpdateCustomerConfigRequest(BaseModel):
@@ -403,12 +368,9 @@ class UpdateCustomerConfigRequest(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
-    disable_overage_billing: Optional[bool] = None
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
+        optional_fields = set(["disable_pooled_balance"])
         serialized = handler(self)
         m = {}
 
@@ -696,25 +658,13 @@ class UpdateCustomerAutoTopupResponse(BaseModel):
         return m
 
 
-UpdateCustomerLimitTypeResponse = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class UpdateCustomerSpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[UpdateCustomerLimitTypeResponse]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class UpdateCustomerSpendLimitResponse(BaseModel):
@@ -724,15 +674,12 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[UpdateCustomerLimitTypeResponse] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -766,8 +713,6 @@ class UpdateCustomerUsageLimitResponseTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: UpdateCustomerUsageLimitIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
@@ -782,15 +727,12 @@ class UpdateCustomerUsageLimitResponse(BaseModel):
     interval: UpdateCustomerUsageLimitIntervalResponse
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "usage"])
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -1420,8 +1362,6 @@ class UpdateCustomerConfigResponseTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
-    disable_overage_billing: NotRequired[bool]
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class UpdateCustomerConfigResponse(BaseModel):
@@ -1430,12 +1370,9 @@ class UpdateCustomerConfigResponse(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
-    disable_overage_billing: Optional[bool] = None
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
+        optional_fields = set(["disable_pooled_balance"])
         serialized = handler(self)
         m = {}
 

@@ -42,7 +42,7 @@ class TrackTokensParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
     model_id: str
-    r"""The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
     input_tokens: int
     r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""
     output_tokens: int
@@ -63,7 +63,7 @@ class TrackTokensParamsTypedDict(TypedDict):
     r"""Number of reasoning tokens generated."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
-    timestamp: NotRequired[int]
+    timestamp: NotRequired[float]
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
     async_: NotRequired[bool]
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
@@ -74,7 +74,7 @@ class TrackTokensParams(BaseModel):
     r"""The ID of the customer."""
 
     model_id: str
-    r"""The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
 
     input_tokens: int
     r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""
@@ -106,7 +106,7 @@ class TrackTokensParams(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
-    timestamp: Optional[int] = None
+    timestamp: Optional[float] = None
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
 
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None

@@ -22,7 +22,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="model_id" type="string" required>
-  The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+  The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
 </DynamicParamField>
 
 <DynamicParamField body="input_tokens" type="integer" required>
@@ -57,7 +57,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Additional properties to attach to this usage event.
 </DynamicParamField>
 
-<DynamicParamField body="timestamp" type="integer">
+<DynamicParamField body="timestamp" type="number">
   Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
 </DynamicParamField>
 

@@ -38,7 +38,6 @@ export * from "./list-entities-op.js";
 export * from "./list-events-op.js";
 export * from "./list-features-op.js";
 export * from "./list-plans-op.js";
-export * from "./list-rewards-op.js";
 export * from "./mint-key-op.js";
 export * from "./multi-attach-op.js";
 export * from "./open-customer-portal-op.js";

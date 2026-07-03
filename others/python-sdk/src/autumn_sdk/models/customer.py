@@ -193,25 +193,13 @@ class CustomerAutoTopup(BaseModel):
         return m
 
 
-CustomerLimitType = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class CustomerSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[CustomerLimitType]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class CustomerSpendLimit(BaseModel):
@@ -221,15 +209,12 @@ class CustomerSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[CustomerLimitType] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -263,8 +248,6 @@ class CustomerUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: CustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
@@ -279,15 +262,12 @@ class CustomerUsageLimit(BaseModel):
     interval: CustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "usage"])
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -915,8 +895,6 @@ class CustomerConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
-    disable_overage_billing: NotRequired[bool]
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class CustomerConfig(BaseModel):
@@ -925,12 +903,9 @@ class CustomerConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
-    disable_overage_billing: Optional[bool] = None
-    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
+        optional_fields = set(["disable_pooled_balance"])
         serialized = handler(self)
         m = {}
 
@@ -1235,7 +1210,7 @@ class TrialsUsed(BaseModel):
         return m
 
 
-CustomerDiscountType = Union[
+CustomerRewardsType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -1264,7 +1239,7 @@ class DiscountTypedDict(TypedDict):
     r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: CustomerDiscountType
+    type: CustomerRewardsType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -1291,7 +1266,7 @@ class Discount(BaseModel):
     name: str
     r"""The name of the discount or coupon"""
 
-    type: CustomerDiscountType
+    type: CustomerRewardsType
     r"""The type of reward"""
 
     discount_value: float

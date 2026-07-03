@@ -79,20 +79,6 @@ export type UpdateCustomerAutoTopupRequest = {
   invoiceMode?: boolean | undefined;
 };
 
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const UpdateCustomerLimitTypeRequestBody = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type UpdateCustomerLimitTypeRequestBody = ClosedEnum<
-  typeof UpdateCustomerLimitTypeRequestBody
->;
-
 export type UpdateCustomerSpendLimitRequest = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -103,11 +89,7 @@ export type UpdateCustomerSpendLimitRequest = {
    */
   enabled?: boolean | undefined;
   /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: UpdateCustomerLimitTypeRequestBody | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
 };
@@ -133,10 +115,6 @@ export type UpdateCustomerUsageLimitRequest = {
    * The feature this usage limit applies to.
    */
   featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -231,10 +209,6 @@ export type UpdateCustomerConfigRequest = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
-  /**
-   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
-   */
-  disableOverageBilling?: boolean | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -393,20 +367,6 @@ export type UpdateCustomerAutoTopupResponse = {
   invoiceMode?: boolean | undefined;
 };
 
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const UpdateCustomerLimitTypeResponse = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type UpdateCustomerLimitTypeResponse = OpenEnum<
-  typeof UpdateCustomerLimitTypeResponse
->;
-
 export type UpdateCustomerSpendLimitResponse = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -417,11 +377,7 @@ export type UpdateCustomerSpendLimitResponse = {
    */
   enabled: boolean;
   /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: UpdateCustomerLimitTypeResponse | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
 };
@@ -447,10 +403,6 @@ export type UpdateCustomerUsageLimitResponse = {
    * The feature this usage limit applies to.
    */
   featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -798,10 +750,6 @@ export type UpdateCustomerConfigResponse = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
-  /**
-   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
-   */
-  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -1011,15 +959,9 @@ export function updateCustomerAutoTopupRequestToJSON(
 }
 
 /** @internal */
-export const UpdateCustomerLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
-  typeof UpdateCustomerLimitTypeRequestBody
-> = z.enum(UpdateCustomerLimitTypeRequestBody);
-
-/** @internal */
 export type UpdateCustomerSpendLimitRequest$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
-  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -1031,13 +973,11 @@ export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
-    limitType: z.optional(UpdateCustomerLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
-      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -1062,7 +1002,6 @@ export const UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema:
 /** @internal */
 export type UpdateCustomerUsageLimitRequest$Outbound = {
   feature_id: string;
-  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -1074,7 +1013,6 @@ export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
-    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
   }),
@@ -1231,7 +1169,6 @@ export function updateCustomerBillingControlsRequestToJSON(
 /** @internal */
 export type UpdateCustomerConfigRequest$Outbound = {
   disable_pooled_balance?: boolean | undefined;
-  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1241,12 +1178,10 @@ export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
-    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
-      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );
@@ -1447,12 +1382,6 @@ export function updateCustomerAutoTopupResponseFromJSON(
 }
 
 /** @internal */
-export const UpdateCustomerLimitTypeResponse$inboundSchema: z.ZodMiniType<
-  UpdateCustomerLimitTypeResponse,
-  unknown
-> = openEnums.inboundSchema(UpdateCustomerLimitTypeResponse);
-
-/** @internal */
 export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerSpendLimitResponse,
   unknown
@@ -1460,13 +1389,11 @@ export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
-    limit_type: types.optional(UpdateCustomerLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
-      "limit_type": "limitType",
       "overage_limit": "overageLimit",
     });
   }),
@@ -1494,7 +1421,6 @@ export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     feature_id: types.string(),
-    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateCustomerUsageLimitIntervalResponse$inboundSchema,
     usage: types.optional(types.number()),
@@ -1906,12 +1832,10 @@ export const UpdateCustomerConfigResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disable_pooled_balance: types.optional(types.boolean()),
-    disable_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "disable_pooled_balance": "disablePooledBalance",
-      "disable_overage_billing": "disableOverageBilling",
     });
   }),
 );

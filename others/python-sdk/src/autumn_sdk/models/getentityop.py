@@ -550,25 +550,13 @@ class GetEntityFlags(BaseModel):
         return m
 
 
-GetEntityLimitType = Union[
-    Literal[
-        "absolute",
-        "usage_percentage",
-    ],
-    UnrecognizedStr,
-]
-r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
-
 class GetEntitySpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
-    limit_type: NotRequired[GetEntityLimitType]
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
 
 class GetEntitySpendLimit(BaseModel):
@@ -578,15 +566,12 @@ class GetEntitySpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
-    limit_type: Optional[GetEntityLimitType] = None
-    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
-
     overage_limit: Optional[float] = None
-    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    r"""Maximum allowed overage spend for the target feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(["feature_id", "enabled", "overage_limit"])
         serialized = handler(self)
         m = {}
 
@@ -620,8 +605,6 @@ class GetEntityUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: GetEntityInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
-    enabled: NotRequired[bool]
-    r"""Whether this usage limit is enabled."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
@@ -636,15 +619,12 @@ class GetEntityUsageLimit(BaseModel):
     interval: GetEntityInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
-    enabled: Optional[bool] = True
-    r"""Whether this usage limit is enabled."""
-
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "usage"])
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 

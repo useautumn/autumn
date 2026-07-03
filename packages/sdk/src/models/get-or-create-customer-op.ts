@@ -75,20 +75,6 @@ export type GetOrCreateCustomerAutoTopup = {
   invoiceMode?: boolean | undefined;
 };
 
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const GetOrCreateCustomerLimitType = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type GetOrCreateCustomerLimitType = ClosedEnum<
-  typeof GetOrCreateCustomerLimitType
->;
-
 export type GetOrCreateCustomerSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -99,11 +85,7 @@ export type GetOrCreateCustomerSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: GetOrCreateCustomerLimitType | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
 };
@@ -129,10 +111,6 @@ export type GetOrCreateCustomerUsageLimit = {
    * The feature this usage limit applies to.
    */
   featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -227,10 +205,6 @@ export type GetOrCreateCustomerConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
-  /**
-   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
-   */
-  disableOverageBilling?: boolean | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -366,15 +340,9 @@ export function getOrCreateCustomerAutoTopupToJSON(
 }
 
 /** @internal */
-export const GetOrCreateCustomerLimitType$outboundSchema: z.ZodMiniEnum<
-  typeof GetOrCreateCustomerLimitType
-> = z.enum(GetOrCreateCustomerLimitType);
-
-/** @internal */
 export type GetOrCreateCustomerSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
-  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -386,13 +354,11 @@ export const GetOrCreateCustomerSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
-    limitType: z.optional(GetOrCreateCustomerLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
-      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -417,7 +383,6 @@ export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
 /** @internal */
 export type GetOrCreateCustomerUsageLimit$Outbound = {
   feature_id: string;
-  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -429,7 +394,6 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
-    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
   }),
@@ -583,7 +547,6 @@ export function getOrCreateCustomerBillingControlsToJSON(
 /** @internal */
 export type GetOrCreateCustomerConfig$Outbound = {
   disable_pooled_balance?: boolean | undefined;
-  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -593,12 +556,10 @@ export const GetOrCreateCustomerConfig$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
-    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
-      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );

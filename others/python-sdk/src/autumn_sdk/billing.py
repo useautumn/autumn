@@ -425,9 +425,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -494,7 +492,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request(
@@ -560,9 +558,7 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[
-            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
-        ],
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
         entity_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -629,7 +625,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
-            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
         )
 
         req = self._build_request_async(

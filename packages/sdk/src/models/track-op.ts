@@ -304,7 +304,7 @@ export const TrackParams$outboundSchema: z.ZodMiniType<
     eventName: z.optional(z.string()),
     value: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
-    timestamp: z.optional(z.int()),
+    timestamp: z.optional(z.number()),
     async: z.optional(z.boolean()),
     lock: z.optional(z.lazy(() => TrackLock$outboundSchema)),
   }),

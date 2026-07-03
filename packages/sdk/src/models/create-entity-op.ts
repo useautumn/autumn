@@ -22,20 +22,6 @@ export type CreateEntityGlobals = {
   xApiVersion?: string | undefined;
 };
 
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const CreateEntityLimitTypeRequestBody = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type CreateEntityLimitTypeRequestBody = ClosedEnum<
-  typeof CreateEntityLimitTypeRequestBody
->;
-
 export type CreateEntitySpendLimitRequest = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -46,11 +32,7 @@ export type CreateEntitySpendLimitRequest = {
    */
   enabled?: boolean | undefined;
   /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: CreateEntityLimitTypeRequestBody | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
 };
@@ -76,10 +58,6 @@ export type CreateEntityUsageLimitRequest = {
    * The feature this usage limit applies to.
    */
   featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -450,20 +428,6 @@ export type CreateEntityFlags = {
   feature?: CreateEntityFeature | undefined;
 };
 
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export const CreateEntityLimitTypeResponse = {
-  Absolute: "absolute",
-  UsagePercentage: "usage_percentage",
-} as const;
-/**
- * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
- */
-export type CreateEntityLimitTypeResponse = OpenEnum<
-  typeof CreateEntityLimitTypeResponse
->;
-
 export type CreateEntitySpendLimitResponse = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -474,11 +438,7 @@ export type CreateEntitySpendLimitResponse = {
    */
   enabled: boolean;
   /**
-   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
-   */
-  limitType?: CreateEntityLimitTypeResponse | undefined;
-  /**
-   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
 };
@@ -504,10 +464,6 @@ export type CreateEntityUsageLimitResponse = {
    * The feature this usage limit applies to.
    */
   featureId: string;
-  /**
-   * Whether this usage limit is enabled.
-   */
-  enabled: boolean;
   /**
    * Maximum units allowed per interval.
    */
@@ -686,15 +642,9 @@ export type CreateEntityResponse = {
 };
 
 /** @internal */
-export const CreateEntityLimitTypeRequestBody$outboundSchema: z.ZodMiniEnum<
-  typeof CreateEntityLimitTypeRequestBody
-> = z.enum(CreateEntityLimitTypeRequestBody);
-
-/** @internal */
 export type CreateEntitySpendLimitRequest$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
-  limit_type?: string | undefined;
   overage_limit?: number | undefined;
 };
 
@@ -706,13 +656,11 @@ export const CreateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
-    limitType: z.optional(CreateEntityLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
-      limitType: "limit_type",
       overageLimit: "overage_limit",
     });
   }),
@@ -736,7 +684,6 @@ export const CreateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreateEntityUsageLimitRequest$Outbound = {
   feature_id: string;
-  enabled: boolean;
   limit: number;
   interval: string;
 };
@@ -748,7 +695,6 @@ export const CreateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
-    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CreateEntityIntervalRequestBody$outboundSchema,
   }),
@@ -1221,12 +1167,6 @@ export function createEntityFlagsFromJSON(
 }
 
 /** @internal */
-export const CreateEntityLimitTypeResponse$inboundSchema: z.ZodMiniType<
-  CreateEntityLimitTypeResponse,
-  unknown
-> = openEnums.inboundSchema(CreateEntityLimitTypeResponse);
-
-/** @internal */
 export const CreateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
   CreateEntitySpendLimitResponse,
   unknown
@@ -1234,13 +1174,11 @@ export const CreateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.optional(types.string()),
     enabled: z._default(types.boolean(), false),
-    limit_type: types.optional(CreateEntityLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
-      "limit_type": "limitType",
       "overage_limit": "overageLimit",
     });
   }),
@@ -1269,7 +1207,6 @@ export const CreateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     feature_id: types.string(),
-    enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CreateEntityIntervalResponse$inboundSchema,
     usage: types.optional(types.number()),

@@ -693,8 +693,7 @@ actions:
                     {
                       featureId: "messages",
                       enabled: true,
-                      limitType: "usage_percentage",
-                      overageLimit: 120,
+                      overageLimit: 25,
                     },
                   ],
                 },
@@ -1170,26 +1169,6 @@ actions:
                 code: "REF123",
                 customerId: "cus_456",
               });
-
-              console.log(result);
-            }
-
-            run();
-  - target: $["paths"]["/v1/rewards.list"]["post"]
-    update:
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from "@useautumn/sdk";
-
-            const autumn = new Autumn({
-              xApiVersion: "2.3.0",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-            });
-
-            async function run() {
-              const result = await autumn.rewards.list({});
 
               console.log(result);
             }
