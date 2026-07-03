@@ -586,6 +586,33 @@ describe("buildInitialValues", () => {
 		expect(result.phases[1].plans[0].productId).toBe("prod_2");
 	});
 
+	test("hydrates billing cycle reset state from scheduled customer products", () => {
+		const cusProduct1 = makeCusProduct({ id: "cp_1", productId: "prod_1" });
+		const cusProduct2 = makeCusProduct({ id: "cp_2", productId: "prod_2" });
+		(cusProduct2 as any).billing_cycle_anchor_resets_at = 2000;
+		const customer = makeCustomer({
+			customerProducts: [cusProduct1, cusProduct2],
+		});
+		const schedule: FullCustomerSchedule = {
+			id: "sched_1",
+			org_id: "org_1",
+			env: AppEnv.Sandbox,
+			internal_customer_id: "int_cus_1",
+			customer_id: "cus_1",
+			internal_entity_id: null,
+			entity_id: null,
+			created_at: Date.now(),
+			phases: [
+				{ id: "phase_1", schedule_id: "sched_1", starts_at: 1000, customer_product_ids: ["cp_1"], created_at: 1000 },
+				{ id: "phase_2", schedule_id: "sched_1", starts_at: 2000, customer_product_ids: ["cp_2"], created_at: 1000 },
+			],
+		};
+
+		const result = buildInitialValues({ customer, schedule, products });
+
+		expect(result.resetBillingCycle).toBe(true);
+	});
+
 	test("falls back to EMPTY_SCHEDULE_PLAN for missing customer product", () => {
 		const customer = makeCustomer({ customerProducts: [] });
 		const schedule: FullCustomerSchedule = {

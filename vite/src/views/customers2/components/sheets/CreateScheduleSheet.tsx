@@ -4,7 +4,11 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { CusProductStatus, mapToProductItems } from "@autumn/shared";
+import {
+	CusProductStatus,
+	findCustomerProductById,
+	mapToProductItems,
+} from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useMemo } from "react";
@@ -48,6 +52,24 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+
+function hasSchedulePhaseBillingCycleReset({
+	customer,
+	schedule,
+}: {
+	customer: FullCustomer | undefined;
+	schedule: FullCustomerSchedule;
+}) {
+	return schedule.phases.some((phase) =>
+		phase.customer_product_ids.some((cpId) => {
+			const cusProduct = findCustomerProductById({
+				fullCustomer: customer,
+				customerProductId: cpId,
+			});
+			return cusProduct?.billing_cycle_anchor_resets_at === phase.starts_at;
+		}),
+	);
+}
 
 function reconstructCustomItems({
 	cusProduct,
@@ -135,16 +157,17 @@ export function buildInitialValues({
 				startsAt: phase.starts_at,
 				persistedStartsAt: phase.starts_at,
 				plans: phase.customer_product_ids.map((cpId) => {
-					const cusProduct = customer?.customer_products.find(
-						(cp) => cp.id === cpId,
-					);
+					const cusProduct = findCustomerProductById({
+						fullCustomer: customer,
+						customerProductId: cpId,
+					});
 					return cusProduct
 						? cusProductToPlan({ cusProduct, products })
 						: { ...EMPTY_SCHEDULE_PLAN };
 				}),
 			})),
 			billingBehavior: null,
-			resetBillingCycle: false,
+			resetBillingCycle: hasSchedulePhaseBillingCycleReset({ customer, schedule }),
 			enablePlanImmediately: false,
 		};
 	}

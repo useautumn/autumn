@@ -283,6 +283,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Whether to disable the shared customer-level pool for entities.
         </DynamicParamField>
 
+        <DynamicParamField body="disable_overage_billing" type="boolean">
+          Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
