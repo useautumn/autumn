@@ -8,6 +8,8 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
+	isCusProductOnEntity,
+	isCustomerProductCustomerScoped,
 	isOneOffPrice,
 	ProcessorType,
 } from "@autumn/shared";
@@ -36,6 +38,9 @@ export type FlashPlanContext = {
 	billingCycleAnchor?: number;
 	isAddOn: boolean;
 	isRecurring: boolean;
+	// Undefined = customer-level scope; set = plan is scoped to this entity.
+	entityId?: string;
+	internalEntityId?: string;
 	existingActiveCustomerProduct?: FullCusProduct;
 	stripeHydration?: StripeHydration;
 	revenueCatHydration?: RevenueCatHydration;
@@ -133,11 +138,15 @@ const buildPlanContext = async ({
 	fullCustomer,
 	billable,
 	plan,
+	entityId,
+	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	billable: FlashBillable;
 	plan: FlashPlan;
+	entityId?: string;
+	internalEntityId?: string;
 }): Promise<FlashPlanContext> => {
 	const fullProduct = await ProductService.getFull({
 		db: ctx.db,
@@ -163,12 +172,20 @@ const buildPlanContext = async ({
 
 	const isRecurring = fullProduct.prices.some((price) => !isOneOffPrice(price));
 
+	// Match only within this plan's scope so entity products don't cross into
+	// customer-level (and vice-versa).
+	const matchesScope = (customerProduct: FullCusProduct): boolean =>
+		internalEntityId
+			? isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
+			: isCustomerProductCustomerScoped(customerProduct);
+
 	const existingActiveCustomerProduct = fullCustomer.customer_products.find(
 		(customerProduct) =>
 			ACTIVE_STATUSES.includes(customerProduct.status) &&
 			customerProduct.internal_product_id === fullProduct.internal_id &&
 			cusProductToProcessorType(customerProduct) ===
-				(processorType ?? ProcessorType.Stripe),
+				(processorType ?? ProcessorType.Stripe) &&
+			matchesScope(customerProduct),
 	);
 
 	return {
@@ -181,6 +198,8 @@ const buildPlanContext = async ({
 		billingCycleAnchor: billable.billing_cycle_anchor,
 		isAddOn: fullProduct.is_add_on === true,
 		isRecurring,
+		entityId,
+		internalEntityId,
 		existingActiveCustomerProduct,
 	};
 };
@@ -198,14 +217,43 @@ export const setupFlashContext = async ({
 	const currentEpochMs = Date.now();
 
 	const planContexts: FlashPlanContext[] = [];
-	for (const billable of params.billables) {
-		for (const phase of billable.phases ?? []) {
-			for (const plan of phase.plans) {
-				planContexts.push(
-					await buildPlanContext({ ctx, fullCustomer, billable, plan }),
-				);
+	const buildScopedPlanContexts = async ({
+		billables,
+		entityId,
+		internalEntityId,
+	}: {
+		billables: FlashBillable[];
+		entityId?: string;
+		internalEntityId?: string;
+	}) => {
+		for (const billable of billables) {
+			for (const phase of billable.phases ?? []) {
+				for (const plan of phase.plans) {
+					planContexts.push(
+						await buildPlanContext({
+							ctx,
+							fullCustomer,
+							billable,
+							plan,
+							entityId,
+							internalEntityId,
+						}),
+					);
+				}
 			}
 		}
+	};
+
+	await buildScopedPlanContexts({ billables: params.billables });
+	for (const entity of params.entities ?? []) {
+		const internalEntityId = fullCustomer.entities?.find(
+			(e) => e.id === entity.entity_id,
+		)?.internal_id;
+		await buildScopedPlanContexts({
+			billables: entity.billables,
+			entityId: entity.entity_id,
+			internalEntityId,
+		});
 	}
 
 	// Fill omitted fields from processors BEFORE status/balance resolution.

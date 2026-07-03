@@ -6,7 +6,7 @@ import {
 	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
-	isCustomerProductCustomerScoped,
+	nullish,
 	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -39,6 +39,7 @@ const buildCustomerProduct = ({
 		subscriptionIds,
 		billingCycleAnchor,
 		processorType,
+		internalEntityId,
 		stripeHydration,
 		revenueCatHydration,
 	} = planContext;
@@ -81,6 +82,7 @@ const buildCustomerProduct = ({
 			endedAt: statusInfo.endedAt ?? undefined,
 			startsAt: resolvedStartsAt,
 			processorType,
+			internalEntityId,
 			isCustom: false,
 		},
 	});
@@ -106,17 +108,37 @@ export const computeFlashPlan = ({
 	ctx: AutumnContext;
 	flashContext: FlashContext;
 }): { autumnBillingPlan: AutumnBillingPlan; flashed: DfuFlashedPlan[] } => {
-	const { currentEpochMs } = flashContext;
+	const { currentEpochMs, fullCustomer, params } = flashContext;
 	const insertCustomerProducts: FullCusProduct[] = [];
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const flashed: DfuFlashedPlan[] = [];
 
-	// Desired state = the plans in the payload, keyed by their product's internal id.
-	const desiredInternalProductIds = new Set(
-		flashContext.planContexts.map(
-			(planContext) => planContext.fullProduct.internal_id,
-		),
-	);
+	// Desired state per addressed scope, keyed by the scope's product internal ids.
+	const customerDesiredProductIds = new Set<string>();
+	const entityDesiredProductIds = new Map<string, Set<string>>();
+	for (const planContext of flashContext.planContexts) {
+		const productId = planContext.fullProduct.internal_id;
+		if (planContext.internalEntityId) {
+			const desired =
+				entityDesiredProductIds.get(planContext.internalEntityId) ??
+				new Set<string>();
+			desired.add(productId);
+			entityDesiredProductIds.set(planContext.internalEntityId, desired);
+		} else {
+			customerDesiredProductIds.add(productId);
+		}
+	}
+
+	// A scope is only reconciled when the payload addresses it: customer-level iff
+	// top-level billables exist; an entity iff it appears in `params.entities`.
+	const customerLevelAddressed = params.billables.length > 0;
+	const addressedEntityInternalIds = new Set<string>();
+	for (const entity of params.entities ?? []) {
+		const internalEntityId = fullCustomer.entities?.find(
+			(e) => e.id === entity.entity_id,
+		)?.internal_id;
+		if (internalEntityId) addressedEntityInternalIds.add(internalEntityId);
+	}
 
 	for (const planContext of flashContext.planContexts) {
 		const existing = planContext.existingActiveCustomerProduct;
@@ -148,20 +170,27 @@ export const computeFlashPlan = ({
 		});
 	}
 
-	// Reconcile to desired state: expire customer-level active products absent
-	// from the payload. Entity-scoped products are left for the entity phase.
-	for (const customerProduct of flashContext.fullCustomer.customer_products) {
-		const isActive = ACTIVE_STATUSES.includes(customerProduct.status);
-		const isDesired = desiredInternalProductIds.has(
-			customerProduct.internal_product_id,
-		);
-		if (
-			!isActive ||
-			isDesired ||
-			!isCustomerProductCustomerScoped(customerProduct)
-		) {
-			continue;
+	// Reconcile each addressed scope independently: expire active in-scope
+	// products absent from that scope's desired set. Non-addressed scopes and
+	// products in other scopes are never touched.
+	for (const customerProduct of fullCustomer.customer_products) {
+		if (!ACTIVE_STATUSES.includes(customerProduct.status)) continue;
+
+		const entityInternalId = customerProduct.internal_entity_id;
+		let isDesired: boolean;
+		if (nullish(entityInternalId)) {
+			if (!customerLevelAddressed) continue;
+			isDesired = customerDesiredProductIds.has(
+				customerProduct.internal_product_id,
+			);
+		} else {
+			if (!addressedEntityInternalIds.has(entityInternalId)) continue;
+			isDesired =
+				entityDesiredProductIds
+					.get(entityInternalId)
+					?.has(customerProduct.internal_product_id) ?? false;
 		}
+		if (isDesired) continue;
 
 		updateCustomerProducts.push({
 			customerProduct,

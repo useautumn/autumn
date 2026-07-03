@@ -21,9 +21,11 @@ export const handleFlashErrors = ({
 }): void => {
 	const { params, planContexts } = flashContext;
 
-	if (params.entities?.length) rejectUnsupported("entities");
-
-	for (const billable of params.billables) {
+	const allBillables = [
+		...params.billables,
+		...(params.entities?.flatMap((entity) => entity.billables) ?? []),
+	];
+	for (const billable of allBillables) {
 		for (const phase of billable.phases ?? []) {
 			if (phase.starting_after) rejectUnsupported("starting_after");
 			for (const plan of phase.plans) {
