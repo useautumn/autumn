@@ -1,4 +1,3 @@
-DROP INDEX CONCURRENTLY IF EXISTS "idx_customer_entitlements_internal_customer_id";--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_actions_internal_customer_id" ON "actions" USING btree ("internal_customer_id") WHERE "actions"."internal_customer_id" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_customer_products_ended_at" ON "customer_products" USING btree ("ended_at") WHERE "customer_products"."status" IN ('active', 'past_due') AND "customer_products"."ended_at" IS NOT NULL;--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_customer_products_trial_ends_at" ON "customer_products" USING btree ("trial_ends_at") WHERE "customer_products"."status" IN ('active', 'past_due') AND "customer_products"."trial_ends_at" IS NOT NULL;--> statement-breakpoint

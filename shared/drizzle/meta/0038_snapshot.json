@@ -1,5 +1,5 @@
 {
-  "id": "9975abae-3667-48b9-9f96-75af78a58015",
+  "id": "6ca66658-5951-4b69-94b7-6d6d5fb80773",
   "prevId": "55bf7640-255f-452d-96c1-79b17dc224da",
   "version": "7",
   "dialect": "postgresql",
@@ -1663,6 +1663,21 @@
           "isUnique": false,
           "concurrently": false,
           "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_internal_customer_id": {
+          "name": "idx_customer_entitlements_internal_customer_id",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hash",
           "with": {}
         },
         "idx_customer_entitlements_internal_customer_id_btree": {

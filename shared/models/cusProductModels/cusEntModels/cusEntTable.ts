@@ -83,6 +83,10 @@ export const customerEntitlements = pgTable(
 			.onUpdate("cascade")
 			.onDelete("cascade"),
 		index("idx_customer_entitlements_product_id").on(table.customer_product_id),
+		index("idx_customer_entitlements_internal_customer_id").using(
+			"hash",
+			table.internal_customer_id,
+		),
 		index("idx_customer_entitlements_internal_customer_id_btree").on(
 			table.internal_customer_id,
 		),
