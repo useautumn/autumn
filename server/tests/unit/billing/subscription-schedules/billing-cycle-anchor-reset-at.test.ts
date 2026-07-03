@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { FullCusProduct } from "@autumn/shared";
-import { getBillingCycleAnchorResetAt } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
+import {
+	getBillingCycleAnchorResetAt,
+	getBillingCycleAnchorResetAts,
+} from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 
 const customerProductWithResetAt = (
 	billingCycleAnchorResetsAt: number | null,
@@ -30,5 +33,22 @@ describe("getBillingCycleAnchorResetAt", () => {
 				nowMs: now,
 			}),
 		).toBeUndefined();
+	});
+
+	test("keeps every reset timestamp from current and future phases", () => {
+		const now = Date.UTC(2026, 6, 21, 11);
+		const october = Date.UTC(2026, 9, 3, 15, 52, 33);
+		const january = Date.UTC(2027, 0, 3, 15, 52, 35);
+
+		expect(
+			getBillingCycleAnchorResetAts({
+				customerProducts: [
+					customerProductWithResetAt(now),
+					customerProductWithResetAt(october),
+					customerProductWithResetAt(january),
+				],
+				nowMs: now,
+			}),
+		).toEqual([now, october, january]);
 	});
 });
