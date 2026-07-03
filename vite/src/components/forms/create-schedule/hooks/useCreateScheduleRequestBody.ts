@@ -20,8 +20,10 @@ type CreatePlanItemParams = Omit<
 };
 
 import {
+	canResetScheduleBillingCycle,
 	getCreateSchedulePhaseTimingError,
 	hasPersistedCreateSchedule,
+	hasMultipleImmediateSchedulePlans,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
 
@@ -133,6 +135,9 @@ export function buildCreateScheduleRequestBody({
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
+	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({ phases });
+	const canResetFuturePhases =
+		resetBillingCycle && canResetScheduleBillingCycle({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
 		// The first phase starts immediately (now) unless backdating is allowed —
@@ -172,7 +177,7 @@ export function buildCreateScheduleRequestBody({
 		return {
 			starts_at: startsAt,
 			plans,
-			...(index > 0 && resetBillingCycle
+			...(index > 0 && canResetFuturePhases
 				? { billing_cycle_anchor: "phase_start" as const }
 				: {}),
 		};
@@ -189,12 +194,9 @@ export function buildCreateScheduleRequestBody({
 	};
 	if (entityId) body.entity_id = entityId;
 
-	// `billing_behavior` / `billing_cycle_anchor` aren't supported when the
-	// immediate phase is a multi-attach. The review UI disables the toggles in
-	// that case; mirror the same guard here so stale values don't leak into the
-	// request if the user flips from single-plan to multi-plan after toggling.
-	const immediatePlanCount = validPhases[0]?.plans.length ?? 0;
-	const supportsBillingFlags = immediatePlanCount === 1;
+	// Top-level billing flags aren't supported when the immediate phase is a
+	// multi-attach; future phase anchor resets are allowed for persisted schedules.
+	const supportsBillingFlags = !hasMultipleImmediatePlans;
 	if (supportsBillingFlags) {
 		if (billingBehavior) body.billing_behavior = billingBehavior;
 		if (resetBillingCycle && !hasPersistedSchedule) {

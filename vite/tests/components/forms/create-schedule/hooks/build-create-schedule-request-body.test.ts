@@ -7,7 +7,11 @@ import {
 	buildCustomizeItems,
 	buildCreateScheduleRequestBody,
 } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
-import { EMPTY_SCHEDULE_PLAN } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import {
+	canResetScheduleBillingCycle,
+	EMPTY_SCHEDULE_PLAN,
+	type SchedulePhase,
+} from "@/components/forms/create-schedule/createScheduleFormSchema";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -75,6 +79,25 @@ const features: Feature[] = [
 	{ id: "storage", name: "Storage", internal_id: "int_storage", type: "usage" } as Feature,
 	{ id: "support", name: "Support", internal_id: "int_support", type: "boolean" } as Feature,
 ];
+
+const schedulePlan = (productId: string) => ({
+	...EMPTY_SCHEDULE_PLAN,
+	productId,
+});
+
+const schedulePhase = ({
+	startsAt = 1000,
+	persistedStartsAt,
+	productIds = ["prod_1"],
+}: {
+	startsAt?: number;
+	persistedStartsAt?: number;
+	productIds?: string[];
+}): SchedulePhase => ({
+	startsAt,
+	persistedStartsAt,
+	plans: productIds.map(schedulePlan),
+});
 
 // ---------------------------------------------------------------------------
 // buildCustomizeBasePrice
@@ -250,6 +273,33 @@ describe("buildCustomize", () => {
 		expect(result).toBeDefined();
 		expect(result!.price).toBeDefined();
 		expect(result!.items).toBeDefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// canResetScheduleBillingCycle
+// ---------------------------------------------------------------------------
+
+describe("canResetScheduleBillingCycle", () => {
+	test("allows existing schedules with multiple current plans", () => {
+		expect(
+			canResetScheduleBillingCycle({
+				phases: [
+					schedulePhase({
+						persistedStartsAt: 1000,
+						productIds: ["prod_1", "prod_2"],
+					}),
+				],
+			}),
+		).toBe(true);
+	});
+
+	test("blocks new schedules with multiple current plans", () => {
+		expect(
+			canResetScheduleBillingCycle({
+				phases: [schedulePhase({ productIds: ["prod_1", "prod_2"] })],
+			}),
+		).toBe(false);
 	});
 });
 
@@ -549,5 +599,59 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result).not.toBeNull();
 		expect(result).not.toHaveProperty("billing_cycle_anchor");
 		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("sets future phase anchors for existing schedules with multiple current plans", () => {
+		const now = Date.now();
+		const persistedStart = now - 1000 * 60 * 60 * 24;
+		const future = now + 1000 * 60 * 60 * 24 * 30;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				schedulePhase({
+					startsAt: persistedStart,
+					persistedStartsAt: persistedStart,
+					productIds: ["prod_1", "prod_2"],
+				}),
+				schedulePhase({
+					startsAt: future,
+				}),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1].billing_cycle_anchor).toBe("phase_start");
+	});
+
+	test("does not send stale billing anchors for new schedules with multiple current plans", () => {
+		const now = Date.now();
+		const future = now + 1000 * 60 * 60 * 24 * 30;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				schedulePhase({
+					startsAt: now,
+					productIds: ["prod_1", "prod_2"],
+				}),
+				schedulePhase({
+					startsAt: future,
+				}),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result).not.toHaveProperty("billing_cycle_anchor");
+		expect(result!.phases[1]).not.toHaveProperty("billing_cycle_anchor");
 	});
 });
