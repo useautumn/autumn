@@ -49,16 +49,10 @@ describe("runRegistry", () => {
 			kind: "message",
 			ownerProviderUserId: "U1",
 		});
-		const notifiedAtSizes: number[] = [];
-		run.followUps.onPush = () => {
-			notifiedAtSizes.push(run.followUps.size);
-		};
-
 		run.followUps.push("one");
 		run.followUps.push("two");
 
 		expect(run.followUps.size).toBe(2);
-		expect(notifiedAtSizes).toEqual([1, 2]);
 		expect(run.followUps.drain()).toEqual(["one", "two"]);
 		expect(run.followUps.size).toBe(0);
 		expect(run.followUps.drain()).toEqual([]);

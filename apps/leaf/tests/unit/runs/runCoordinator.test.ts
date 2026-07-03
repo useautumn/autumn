@@ -48,17 +48,13 @@ describe("dispatchThreadMessage", () => {
 		closeRun({ key: "co1", run });
 	});
 
-	test("queues follow-ups on the active run and notifies the pump", async () => {
+	test("queues follow-ups on the active run", async () => {
 		const run = registerRun({
 			key: "co2",
 			kind: "message",
 			ownerProviderUserId: "U1",
 		});
 		run.resolveSessionId("sesn_1");
-		let notified = 0;
-		run.followUps.onPush = () => {
-			notified += 1;
-		};
 		let acked = 0;
 		let newRuns = 0;
 
@@ -76,7 +72,6 @@ describe("dispatchThreadMessage", () => {
 		});
 
 		expect(run.followUps.size).toBe(1);
-		expect(notified).toBe(1);
 		expect(run.followUps.drain()).toEqual(["also, what's the MRR?"]);
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);

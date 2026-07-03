@@ -83,7 +83,7 @@ describe("runEngineLoop follow-up pump", () => {
 		closeRun({ key: "el1", run });
 	});
 
-	test("interrupts only a turn in flight and rejects injects after close", async () => {
+	test("never interrupts the session for queued follow-ups", async () => {
 		const run = registerRun({
 			key: "el2",
 			kind: "message",
@@ -101,8 +101,7 @@ describe("runEngineLoop follow-up pump", () => {
 			params: { text: "question" },
 			runTurn: async ({ onTurnEnd }) => {
 				run.followUps.push("pivot");
-				expect(interrupts).toBe(1);
-				expect(await onTurnEnd(turnOutcome("aborted answer"))).toBe("continue");
+				expect(await onTurnEnd(turnOutcome("first answer"))).toBe("continue");
 				const second = turnOutcome("pivot answer");
 				expect(await onTurnEnd(second)).toBe("stop");
 				return second;
@@ -111,7 +110,7 @@ describe("runEngineLoop follow-up pump", () => {
 			sessionId: "sesn_2",
 		});
 
-		expect(interrupts).toBe(1);
+		expect(interrupts).toBe(0);
 		expect(() => run.followUps.push("late")).toThrow("Run is closing");
 		closeRun({ key: "el2", run });
 	});

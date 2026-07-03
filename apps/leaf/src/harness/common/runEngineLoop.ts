@@ -79,17 +79,7 @@ export const runEngineLoop = async ({
 		);
 	};
 
-	let turnInFlight = false;
-	if (run) {
-		run.followUps.onPush = () => {
-			if (turnInFlight && !isCancelled()) {
-				void Promise.resolve(interrupt()).catch(() => {});
-			}
-		};
-	}
-
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
-		turnInFlight = false;
 		if (!run || isCancelled() || run.followUps.size === 0) {
 			run?.followUps.close();
 			return "stop" as const;
@@ -104,14 +94,11 @@ export const runEngineLoop = async ({
 		// Drain only after the post succeeds so a failed turn keeps the queue.
 		const singleTurnBatch = run.followUps.drain().join("\n\n");
 		await sendFollowUp({ text: singleTurnBatch });
-		turnInFlight = true;
 		return "continue" as const;
 	};
 
-	const drive = ({ span }: { span?: Span }) => {
-		turnInFlight = true;
-		return runTurn({ isCancelled, onTurnEnd, span });
-	};
+	const drive = ({ span }: { span?: Span }) =>
+		runTurn({ isCancelled, onTurnEnd, span });
 
 	const deadlineDelayMs = deadlineAt ? deadlineAt - Date.now() : 0;
 	const deadlineWatchdog =
@@ -148,10 +135,7 @@ export const runEngineLoop = async ({
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
 		// Close on every exit (incl. suspension) so late injects start a new run.
-		if (run) {
-			run.followUps.close();
-			run.followUps.onPush = undefined;
-		}
+		if (run) run.followUps.close();
 	}
 
 	const rawFinalText = outcome.textParts.join("\n\n");
