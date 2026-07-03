@@ -42,6 +42,7 @@ const buildAgentToolset = () =>
 			};
 
 type PermissionPolicyLike = { type?: string } | null | undefined;
+const DEFAULT_MCP_PERMISSION_POLICY = "always_allow";
 
 export type McpToolsetLike = {
 	configs?: Array<{
@@ -57,7 +58,8 @@ export type McpToolsetLike = {
 	type: "mcp_toolset";
 };
 
-const policyType = (policy: PermissionPolicyLike) => policy?.type ?? "unset";
+const policyType = (policy: PermissionPolicyLike, fallback: string) =>
+	policy?.type || fallback;
 
 const buildMcpToolset = ({
 	destructiveTools,
@@ -109,14 +111,15 @@ export const builtinSignatureFromToolset = (toolset: {
 export const mcpSignatureFromToolset = (toolset?: McpToolsetLike | null) => {
 	if (!toolset) return "";
 	const defaultEnabled = toolset.default_config?.enabled ?? true;
-	const defaultPolicy = policyType(toolset.default_config?.permission_policy);
+	const defaultPolicy = policyType(
+		toolset.default_config?.permission_policy,
+		DEFAULT_MCP_PERMISSION_POLICY,
+	);
 	const configs = (toolset.configs ?? [])
 		.map((config) => ({
 			enabled: config.enabled ?? defaultEnabled,
 			name: config.name,
-			permission: config.permission_policy
-				? policyType(config.permission_policy)
-				: defaultPolicy,
+			permission: policyType(config.permission_policy, defaultPolicy),
 		}))
 		.sort((a, b) => a.name.localeCompare(b.name));
 

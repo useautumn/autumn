@@ -63,6 +63,7 @@ export const runClaudeManagedTurn = async ({
 	onAction,
 	onActionKeyed,
 	onThinking,
+	onTurnStarted,
 	onTurnEnd,
 	orgId,
 	sessionId,
@@ -75,6 +76,7 @@ export const runClaudeManagedTurn = async ({
 	onAction?: (message: string) => Promise<void> | void;
 	onActionKeyed?: KeyedActionLogger;
 	onThinking?: () => void;
+	onTurnStarted?: () => void;
 	onTurnEnd?: (
 		turn: SessionTurnOutcome,
 	) => Promise<"continue" | "stop"> | "continue" | "stop";
@@ -167,6 +169,7 @@ export const runClaudeManagedTurn = async ({
 					message: `⚠️ ${toolLabel(name)} failed: ${message}`,
 				});
 			},
+			onTurnStarted,
 			onTurnEnd,
 			sessionId,
 		});

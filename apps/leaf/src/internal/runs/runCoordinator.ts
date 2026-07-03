@@ -41,17 +41,17 @@ export const dispatchThreadMessage = async ({
 	text: string;
 }) => {
 	const active = getRun(runKey);
-	if (active && !(active.followUps.closed || active.stop)) {
-		if (isStopMessage(text)) {
-			logger.info("Stop keyword received for active run", {
-				event: "leaf.run_stop_keyword",
-				data: { run_key: runKey },
-			});
-			await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
-			await active.requestStop({ byUserId: providerUserId, reason: "user" });
-			return;
-		}
+	if (active && !active.stop && isStopMessage(text)) {
+		logger.info("Stop keyword received for active run", {
+			event: "leaf.run_stop_keyword",
+			data: { run_key: runKey },
+		});
+		await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
+		await active.requestStop({ byUserId: providerUserId, reason: "user" });
+		return;
+	}
 
+	if (active && !(active.followUps.closed || active.stop)) {
 		const injectable =
 			active.kind === "message" &&
 			active.ownerProviderUserId === providerUserId &&

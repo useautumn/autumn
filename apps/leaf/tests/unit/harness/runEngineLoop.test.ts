@@ -83,7 +83,7 @@ describe("runEngineLoop follow-up pump", () => {
 		closeRun({ key: "el1", run });
 	});
 
-	test("never interrupts the session for queued follow-ups", async () => {
+	test("interrupts an active turn for queued follow-ups before pump delivery", async () => {
 		const run = registerRun({
 			key: "el2",
 			kind: "message",
@@ -91,26 +91,44 @@ describe("runEngineLoop follow-up pump", () => {
 		});
 		run.resolveSessionId("sesn_2");
 		let interrupts = 0;
+		let resolveInterrupt: (() => void) | undefined;
+		const flushed: string[] = [];
 
 		await runEngineLoop({
 			ctx: makeContext({ run }),
 			interrupt: () => {
 				interrupts += 1;
+				return new Promise<void>((resolve) => {
+					resolveInterrupt = resolve;
+				});
 			},
 			newSession: true,
 			params: { text: "question" },
-			runTurn: async ({ onTurnEnd }) => {
+			runTurn: async ({ onTurnEnd, onTurnStarted }) => {
+				onTurnStarted();
 				run.followUps.push("pivot");
-				expect(await onTurnEnd(turnOutcome("first answer"))).toBe("continue");
+				run.followUps.push("clarification");
+				expect(interrupts).toBe(1);
+
+				const firstTurnEnd = onTurnEnd(turnOutcome("aborted answer"));
+				await Promise.resolve();
+				expect(flushed).toEqual([]);
+				expect(resolveInterrupt).toBeDefined();
+				resolveInterrupt?.();
+				expect(await firstTurnEnd).toBe("continue");
+
 				const second = turnOutcome("pivot answer");
 				expect(await onTurnEnd(second)).toBe("stop");
 				return second;
 			},
-			sendFollowUp: async () => {},
+			sendFollowUp: async ({ text }) => {
+				flushed.push(text);
+			},
 			sessionId: "sesn_2",
 		});
 
-		expect(interrupts).toBe(0);
+		expect(interrupts).toBe(1);
+		expect(flushed).toEqual(["pivot\n\nclarification"]);
 		expect(() => run.followUps.push("late")).toThrow("Run is closing");
 		closeRun({ key: "el2", run });
 	});

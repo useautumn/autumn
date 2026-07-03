@@ -110,6 +110,7 @@ describe("driveSessionTurn", () => {
 
 	test("pumps multiple turns while onTurnEnd continues", async () => {
 		const drainedTurns: string[][] = [];
+		let turnStarts = 0;
 		let continuesLeft = 1;
 		const outcome = await driveSessionTurn({
 			autumnMcpServerName: "autumn",
@@ -126,6 +127,9 @@ describe("driveSessionTurn", () => {
 				idleEndTurn,
 			]),
 			kickoff: async () => {},
+			onTurnStarted: () => {
+				turnStarts += 1;
+			},
 			onTurnEnd: (turn) => {
 				drainedTurns.push([...turn.textParts]);
 				if (continuesLeft > 0) {
@@ -138,6 +142,7 @@ describe("driveSessionTurn", () => {
 		});
 
 		expect(drainedTurns).toEqual([["first turn"], ["second turn"]]);
+		expect(turnStarts).toBe(2);
 		expect(outcome.textParts).toEqual(["second turn"]);
 	});
 

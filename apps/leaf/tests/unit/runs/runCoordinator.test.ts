@@ -48,6 +48,36 @@ describe("dispatchThreadMessage", () => {
 		closeRun({ key: "co1", run });
 	});
 
+	test("routes stop keywords even after the follow-up queue closes", async () => {
+		const interrupts: string[] = [];
+		const run = registerRun({
+			key: "co1b",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async (sessionId) => {
+				interrupts.push(sessionId);
+			},
+		});
+		run.resolveSessionId("sesn_1");
+		run.followUps.close();
+		let newRuns = 0;
+
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co1b",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "stop",
+		});
+
+		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
+		expect(interrupts).toEqual(["sesn_1"]);
+		expect(newRuns).toBe(0);
+		closeRun({ key: "co1b", run });
+	});
+
 	test("queues follow-ups on the active run", async () => {
 		const run = registerRun({
 			key: "co2",
@@ -76,6 +106,36 @@ describe("dispatchThreadMessage", () => {
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);
 		closeRun({ key: "co2", run });
+	});
+
+	test("queues a new run for follow-ups after the follow-up queue closes", async () => {
+		const run = registerRun({
+			key: "co2b",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_1");
+		run.followUps.close();
+		let acked = 0;
+		let newRuns = 0;
+
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			onFollowUpInjected: () => {
+				acked += 1;
+			},
+			providerUserId: "U1",
+			runKey: "co2b",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "also, what's the MRR?",
+		});
+
+		expect(run.followUps.size).toBe(0);
+		expect(acked).toBe(0);
+		expect(newRuns).toBe(1);
+		closeRun({ key: "co2b", run });
 	});
 
 	test("serializes new runs per thread when nothing is active", async () => {

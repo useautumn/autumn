@@ -21,6 +21,7 @@ export const driveSessionTurn = async ({
 	onSessionRetry,
 	onThinking,
 	onToolError,
+	onTurnStarted,
 	onTurnEnd,
 	perfLabel,
 	sessionId,
@@ -54,6 +55,8 @@ export const driveSessionTurn = async ({
 		name: string;
 		output: unknown;
 	}) => Promise<void> | void;
+	/** Fires once for each turn after the session emits active agent work. */
+	onTurnStarted?: () => void;
 	/** Multi-turn pump: on "continue", the drained turn is emitted and the stream keeps being consumed. */
 	onTurnEnd?: (
 		turn: SessionTurnOutcome,
@@ -99,6 +102,12 @@ export const driveSessionTurn = async ({
 	let sandboxReadCount = 0;
 	let inferenceMs = 0;
 	let inferenceStart = 0;
+	let turnStarted = false;
+	const markTurnStarted = () => {
+		if (turnStarted) return;
+		turnStarted = true;
+		onTurnStarted?.();
+	};
 
 	const stream = await client.beta.sessions.events.stream(sessionId);
 	mark("stream_open");
@@ -118,6 +127,16 @@ export const driveSessionTurn = async ({
 			lastEventAt = now;
 		}
 		mark("first_event");
+		if (
+			event.type === "agent.message" ||
+			event.type === "agent.mcp_tool_use" ||
+			event.type === "agent.mcp_tool_result" ||
+			event.type === "agent.tool_use" ||
+			event.type === "agent.thinking" ||
+			event.type === "span.model_request_start"
+		) {
+			markTurnStarted();
+		}
 		if (
 			event.type === "agent.message" &&
 			event.content.some((b) => b.type === "text" && b.text)
@@ -241,6 +260,7 @@ export const driveSessionTurn = async ({
 				if (decision === "continue") {
 					outcome.textParts = [];
 					outcome.toolResults = [];
+					turnStarted = false;
 					continue;
 				}
 			}

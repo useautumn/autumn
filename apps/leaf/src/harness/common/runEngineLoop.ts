@@ -36,6 +36,7 @@ export const runEngineLoop = async ({
 	/** Run a single turn to completion, wiring the shared pump + cancel. */
 	runTurn: (input: {
 		isCancelled: () => boolean;
+		onTurnStarted: () => void;
 		onTurnEnd: (turn: SessionTurnOutcome) => Promise<"continue" | "stop">;
 		span?: Span;
 	}) => Promise<SessionTurnOutcome>;
@@ -79,7 +80,42 @@ export const runEngineLoop = async ({
 		);
 	};
 
+	let turnInterruptible = false;
+	let followUpInterruptRequested = false;
+	let followUpInterrupt: Promise<void> | undefined;
+	const requestFollowUpInterrupt = () => {
+		if (
+			!run ||
+			!turnInterruptible ||
+			followUpInterruptRequested ||
+			isCancelled() ||
+			run.followUps.size === 0
+		) {
+			return;
+		}
+		followUpInterruptRequested = true;
+		turnInterruptible = false;
+		followUpInterrupt = Promise.resolve(interrupt()).catch((error) => {
+			logger.warn("Could not interrupt session for follow-up", {
+				event: "leaf.run_follow_up_interrupt_failed",
+				context: { env, org_id: org.id },
+				data: { session_id: sessionId },
+				error,
+			});
+		});
+	};
+	if (run) run.followUps.onPush = requestFollowUpInterrupt;
+
+	const onTurnStarted = () => {
+		turnInterruptible = true;
+		requestFollowUpInterrupt();
+	};
+
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
+		turnInterruptible = false;
+		const interruptBeforeFlush = followUpInterrupt;
+		followUpInterrupt = undefined;
+		followUpInterruptRequested = false;
 		if (!run || isCancelled() || run.followUps.size === 0) {
 			run?.followUps.close();
 			return "stop" as const;
@@ -91,6 +127,9 @@ export const runEngineLoop = async ({
 			text: rawTurnText,
 		});
 		if (turnText.trim()) await onTurnComplete?.(turnText);
+		// If a follow-up interrupt raced with this turn ending, make it land
+		// before the queued user message so it cannot cancel that message later.
+		await interruptBeforeFlush;
 		// Drain only after the post succeeds so a failed turn keeps the queue.
 		const singleTurnBatch = run.followUps.drain().join("\n\n");
 		await sendFollowUp({ text: singleTurnBatch });
@@ -98,7 +137,7 @@ export const runEngineLoop = async ({
 	};
 
 	const drive = ({ span }: { span?: Span }) =>
-		runTurn({ isCancelled, onTurnEnd, span });
+		runTurn({ isCancelled, onTurnEnd, onTurnStarted, span });
 
 	const deadlineDelayMs = deadlineAt ? deadlineAt - Date.now() : 0;
 	const deadlineWatchdog =
@@ -135,7 +174,11 @@ export const runEngineLoop = async ({
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
 		// Close on every exit (incl. suspension) so late injects start a new run.
-		if (run) run.followUps.close();
+		turnInterruptible = false;
+		if (run) {
+			run.followUps.close();
+			run.followUps.onPush = undefined;
+		}
 	}
 
 	const rawFinalText = outcome.textParts.join("\n\n");

@@ -5,6 +5,8 @@
  * ordering is settled by the event loop.
  */
 export class FollowUpQueue {
+	/** Installed by the pump to request an interrupt when a live turn should pivot. */
+	onPush?: () => void;
 	private items: string[] = [];
 	private closedFlag = false;
 
@@ -27,5 +29,6 @@ export class FollowUpQueue {
 	push(text: string) {
 		if (this.closedFlag) throw new Error("Run is closing");
 		this.items.push(text);
+		this.onPush?.();
 	}
 }

@@ -227,7 +227,7 @@ export const claudeManagedEngine: AgentEngine = {
 						],
 					})
 					.then(() => undefined),
-			runTurn: ({ onTurnEnd, span }) =>
+			runTurn: ({ onTurnEnd, onTurnStarted, span }) =>
 				runClaudeManagedTurn({
 					client,
 					content,
@@ -236,6 +236,7 @@ export const claudeManagedEngine: AgentEngine = {
 					onAction,
 					onActionKeyed,
 					onThinking,
+					onTurnStarted,
 					onTurnEnd,
 					orgId: org.id,
 					sessionId: activeSessionId,

@@ -138,12 +138,45 @@ const toolConfigDiff = ({
 };
 
 // Keep the shared agent config in sync with local code/tunnel changes.
-// Dev re-syncs every turn; prod syncs once per process.
+// Dev re-syncs every turn; prod re-syncs when the active token-derived tool
+// policy changes for a surface.
 const alwaysResync = process.env.NODE_ENV !== "production";
-const syncedSurfaces = new Set<LeafSurface>();
+const syncedResourceKeysBySurface = new Map<LeafSurface, string>();
+
+const toolSignatureFromTools = (tools: ClaudeManagedToolset[]) => {
+	const builtinToolset = tools.find(isBuiltinToolset) as
+		| Parameters<typeof builtinSignatureFromToolset>[0]
+		| undefined;
+	const mcpToolset = tools.find(isAutumnMcpToolset) as
+		| McpToolsetLike
+		| undefined;
+
+	return JSON.stringify({
+		builtin: builtinToolset ? builtinSignatureFromToolset(builtinToolset) : "",
+		mcp: mcpSignatureFromToolset(mcpToolset),
+	});
+};
+
+const resourceCacheKey = ({
+	surface,
+	tools,
+}: {
+	surface: LeafSurface;
+	tools: ClaudeManagedToolset[];
+}) => JSON.stringify({ surface, tools: toolSignatureFromTools(tools) });
+
+const isResourceSynced = ({
+	cacheKey,
+	surface,
+}: {
+	cacheKey: string;
+	surface: LeafSurface;
+}) => syncedResourceKeysBySurface.get(surface) === cacheKey;
+
 const syncAgentConfig = async ({
 	agentId,
 	client,
+	cacheKey,
 	expectedMcpServers,
 	expectedTools,
 	logger,
@@ -152,13 +185,14 @@ const syncAgentConfig = async ({
 }: {
 	agentId: string;
 	client: Anthropic;
+	cacheKey: string;
 	expectedMcpServers: AutumnMcpServer[];
 	expectedTools: ClaudeManagedToolset[];
 	logger: AutumnLogger;
 	skills: LeafSkillRef[];
 	surface: LeafSurface;
 }) => {
-	if (syncedSurfaces.has(surface) && !alwaysResync) return;
+	if (isResourceSynced({ cacheKey, surface }) && !alwaysResync) return;
 	const agent = await client.beta.agents.retrieve(agentId);
 	const expectedSystem = buildAgentSystem({ surface });
 	const diff = toolConfigDiff({
@@ -211,7 +245,7 @@ const syncAgentConfig = async ({
 			},
 		});
 	}
-	syncedSurfaces.add(surface);
+	syncedResourceKeysBySurface.set(surface, cacheKey);
 };
 
 export const syncClaudeManagedSessionAgentConfig = async ({
@@ -260,7 +294,7 @@ export const syncClaudeManagedSessionAgentConfig = async ({
 	});
 };
 
-const cachedResources = new Map<LeafSurface, LeafManagedResources>();
+const cachedResources = new Map<string, LeafManagedResources>();
 export const ensureLeafResources = async ({
 	client,
 	env,
@@ -276,20 +310,25 @@ export const ensureLeafResources = async ({
 }): Promise<LeafManagedResources> => {
 	const mcpUrl = autumnMcpUrl();
 	const mcpServers = buildAutumnMcpServers(mcpUrl);
-	const cached = cachedResources.get(surface);
-	if (cached && syncedSurfaces.has(surface) && !alwaysResync) {
+
+	const { destructiveTools } = await setupAgentToolContext({
+		env,
+		logger,
+		token,
+	});
+	const tools = buildDesiredTools({ destructiveTools });
+	const cacheKey = resourceCacheKey({ surface, tools });
+	const cached = cachedResources.get(cacheKey);
+	if (cached && isResourceSynced({ cacheKey, surface }) && !alwaysResync) {
 		return cached;
 	}
 
-	const [{ destructiveTools }, skills] = await Promise.all([
-		setupAgentToolContext({ env, logger, token }),
-		ensureLeafSkills(client),
-	]);
-	const tools = buildDesiredTools({ destructiveTools });
+	const skills = await ensureLeafSkills(client);
 
 	if (cached) {
 		await syncAgentConfig({
 			agentId: cached.agentId,
+			cacheKey,
 			client,
 			expectedMcpServers: mcpServers,
 			expectedTools: tools,
@@ -298,7 +337,7 @@ export const ensureLeafResources = async ({
 			surface,
 		});
 		const resources = { ...cached, mcpServers, tools };
-		cachedResources.set(surface, resources);
+		cachedResources.set(cacheKey, resources);
 		return resources;
 	}
 
@@ -319,6 +358,7 @@ export const ensureLeafResources = async ({
 	if (agentId) {
 		await syncAgentConfig({
 			agentId,
+			cacheKey,
 			client,
 			expectedMcpServers: mcpServers,
 			expectedTools: tools,
@@ -336,7 +376,7 @@ export const ensureLeafResources = async ({
 			tools,
 		});
 		agentId = agent.id;
-		syncedSurfaces.add(surface);
+		syncedResourceKeysBySurface.set(surface, cacheKey);
 		logger.info("Created shared Claude Managed agent", {
 			event: "leaf.claude_managed_agent_created",
 			data: { agent_id: agentId, environment_id: environmentId, surface },
@@ -344,6 +384,6 @@ export const ensureLeafResources = async ({
 	}
 
 	const resources = { agentId, environmentId, mcpServers, tools };
-	cachedResources.set(surface, resources);
+	cachedResources.set(cacheKey, resources);
 	return resources;
 };
