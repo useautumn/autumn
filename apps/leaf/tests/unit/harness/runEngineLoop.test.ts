@@ -46,8 +46,7 @@ describe("runEngineLoop follow-up pump", () => {
 			ownerProviderUserId: "U1",
 		});
 		run.resolveSessionId("sesn_1");
-		// Two quick follow-ups queued before the turn ends — the old counting
-		// pump expected two extra turns and hung when the session ran only one.
+		// The hang repro: two queued follow-ups answered by a single turn.
 		run.injectFollowUp({ text: "second question" });
 		run.injectFollowUp({ text: "third question" });
 		const flushed: string[] = [];

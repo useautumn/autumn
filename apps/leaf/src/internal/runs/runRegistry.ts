@@ -10,22 +10,15 @@ export type RunStopReason = "timeout" | "user";
 export type ActiveRun = {
 	/** Set by the pump once it stops consuming turns — no more injections. */
 	closed?: boolean;
-	/** Pump-side: takes every queued follow-up text, emptying the queue. */
 	drainFollowUps: () => string[];
-	/**
-	 * Queues text to run as an upcoming turn. The engine pump is the only
-	 * writer of user messages to the session, so it delivers the queue itself
-	 * at a turn boundary it observed — the turn count can never desync from
-	 * server behavior. Throws once the run is closing.
-	 */
+	/** Queues text as an upcoming turn for the engine pump; throws once the run is closing. */
 	injectFollowUp: (input: { text: string }) => void;
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
-	/** Set by the engine pump; fires after a follow-up is queued so a turn in flight can be interrupted. */
+	/** Set by the engine pump to interrupt a turn in flight when a follow-up queues. */
 	notifyFollowUpQueued?: () => void;
 	ownerProviderUserId: string;
-	/** Queued follow-up turns not yet delivered to the session. */
 	readonly pendingTurns: number;
 	requestStop: (input: {
 		byUserId: string;
@@ -97,8 +90,6 @@ export const registerRun = ({
 		startedAt: Date.now(),
 		drainFollowUps: () => followUpQueue.splice(0),
 		injectFollowUp: ({ text }) => {
-			// The closed check and the push stay synchronous so they are atomic
-			// against the pump's drain-then-close decision on the same event loop.
 			if (run.closed || run.stop) throw new Error("Run is closing");
 			followUpQueue.push(text);
 			run.notifyFollowUpQueued?.();

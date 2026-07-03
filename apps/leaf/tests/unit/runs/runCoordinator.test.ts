@@ -117,8 +117,7 @@ describe("dispatchThreadMessage", () => {
 			ownerProviderUserId: "U1",
 		});
 		run.resolveSessionId("sesn_1");
-		// Emulate the close race: the pump closes the run between the
-		// coordinator's active check and the inject.
+		// The pump closed the run between the coordinator's check and the inject.
 		run.injectFollowUp = () => {
 			throw new Error("Run is closing");
 		};

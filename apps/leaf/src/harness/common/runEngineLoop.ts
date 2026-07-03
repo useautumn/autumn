@@ -9,7 +9,10 @@ import { containsInternalToolCall, redactAgentOutput } from "./output.js";
 import type { SessionTurnOutcome } from "./types.js";
 
 /** Drives one engine turn through the shared pump gate, deadline watchdog, and
- * output assembly. Engines supply only the harness-specific `runTurn` + `interrupt`. */
+ * output assembly. The pump is the session's only writer of user messages:
+ * queued follow-ups are flushed at an idle it observed, so a "continue" always
+ * has a real next turn behind it. Engines supply only the harness-specific
+ * `runTurn`, `interrupt`, and `sendFollowUp`. */
 export const runEngineLoop = async ({
 	braintrust,
 	ctx,
@@ -76,16 +79,9 @@ export const runEngineLoop = async ({
 		);
 	};
 
-	// The pump is the session's only writer of user messages: follow-ups queue
-	// locally on the run and are flushed here, at an idle the pump observed. A
-	// flush into an idle session starts exactly one turn ending in exactly one
-	// idle, so the pump can never wait on a turn the server won't run.
 	let turnInFlight = false;
 	if (run) {
 		run.notifyFollowUpQueued = () => {
-			// Interrupt only a live turn, so the queued text becomes the very next
-			// turn (the user chose immediate pivot over queue-behind-the-turn). At
-			// idle there is nothing to interrupt — the flush below delivers it.
 			if (turnInFlight && !isCancelled()) {
 				void Promise.resolve(interrupt()).catch(() => {});
 			}
@@ -94,8 +90,6 @@ export const runEngineLoop = async ({
 
 	const onTurnEnd = async (turn: SessionTurnOutcome) => {
 		turnInFlight = false;
-		// The drain and the empty-queue close stay synchronous so they are atomic
-		// against injectFollowUp's closed-check-then-push on the same event loop.
 		const queued = run && !isCancelled() ? run.drainFollowUps() : [];
 		if (queued.length === 0) {
 			if (run) run.closed = true;
@@ -108,9 +102,8 @@ export const runEngineLoop = async ({
 			text: rawTurnText,
 		});
 		if (turnText.trim()) await onTurnComplete?.(turnText);
-		// One message per flush: several queued texts become one turn, and the
-		// pump expects exactly the one idle that turn ends with.
-		await sendFollowUp({ text: queued.join("\n\n") });
+		const singleTurnBatch = queued.join("\n\n");
+		await sendFollowUp({ text: singleTurnBatch });
 		turnInFlight = true;
 		return "continue" as const;
 	};
@@ -154,8 +147,6 @@ export const runEngineLoop = async ({
 			: await drive({});
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
-		// A late inject must not interrupt a suspended or finished session; its
-		// queued text is surfaced as dropped when the run closes.
 		if (run) run.notifyFollowUpQueued = undefined;
 	}
 
