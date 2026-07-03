@@ -360,6 +360,8 @@ class CustomerDataConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class CustomerDataConfig(BaseModel):
@@ -368,9 +370,12 @@ class CustomerDataConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 
@@ -404,8 +409,6 @@ class CustomerDataTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
-    currency: NotRequired[Nullable[str]]
-    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[CustomerDataBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[CustomerDataConfigTypedDict]
@@ -439,9 +442,6 @@ class CustomerData(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
-    currency: OptionalNullable[str] = UNSET
-    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
-
     billing_controls: Optional[CustomerDataBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -460,14 +460,11 @@ class CustomerData(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
-                "currency",
                 "billing_controls",
                 "config",
             ]
         )
-        nullable_fields = set(
-            ["name", "email", "fingerprint", "metadata", "stripe_id", "currency"]
-        )
+        nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
         serialized = handler(self)
         m = {}
 

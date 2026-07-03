@@ -231,6 +231,10 @@ export type UpdateCustomerConfigRequest = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -262,10 +266,6 @@ export type UpdateCustomerParams = {
    * Whether to send email receipts to this customer
    */
   sendEmailReceipts?: boolean | undefined;
-  /**
-   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
-   */
-  currency?: string | null | undefined;
   /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
@@ -798,6 +798,10 @@ export type UpdateCustomerConfigResponse = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -1227,6 +1231,7 @@ export function updateCustomerBillingControlsRequestToJSON(
 /** @internal */
 export type UpdateCustomerConfigRequest$Outbound = {
   disable_pooled_balance?: boolean | undefined;
+  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1236,10 +1241,12 @@ export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
+    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
+      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );
@@ -1263,7 +1270,6 @@ export type UpdateCustomerParams$Outbound = {
   metadata?: { [k: string]: any } | null | undefined;
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
-  currency?: string | null | undefined;
   billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
   config?: UpdateCustomerConfigRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
@@ -1282,7 +1288,6 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.nullable(z.record(z.string(), z.any()))),
     stripeId: z.optional(z.nullable(z.string())),
     sendEmailReceipts: z.optional(z.boolean()),
-    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
     ),
@@ -1901,10 +1906,12 @@ export const UpdateCustomerConfigResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disable_pooled_balance: types.optional(types.boolean()),
+    disable_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "disable_pooled_balance": "disablePooledBalance",
+      "disable_overage_billing": "disableOverageBilling",
     });
   }),
 );

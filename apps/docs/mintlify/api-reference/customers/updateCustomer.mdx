@@ -37,10 +37,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Whether to send email receipts to this customer
 </DynamicParamField>
 
-<DynamicParamField body="currency" type="string | null">
-  Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
-</DynamicParamField>
-
 <DynamicParamField body="billing_controls" type="object">
   Billing controls for the customer (auto top-ups, etc.)
   <Expandable title="properties">
@@ -180,6 +176,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   <Expandable title="properties">
     <DynamicParamField body="disable_pooled_balance" type="boolean">
       Whether to disable the shared customer-level pool for entities.
+    </DynamicParamField>
+
+    <DynamicParamField body="disable_overage_billing" type="boolean">
+      Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
     </DynamicParamField>
 
   </Expandable>
@@ -411,20 +411,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base price amount for the plan.
             </DynamicResponseField>
 
-            <DynamicResponseField name="additional_currencies" type="object[]">
-              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-              <Expandable title="properties">
-                <DynamicResponseField name="currency" type="string">
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
             <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
               Billing interval (e.g. 'month', 'year').
             </DynamicResponseField>
@@ -536,20 +522,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="additional_currencies" type="object[]">
-                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="currency" type="string">
-                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="amount" type="number">
-                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
@@ -558,23 +530,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicResponseField name="amount" type="number" />
 
                     <DynamicResponseField name="flat_amount" type="number" />
-
-                    <DynamicResponseField name="additional_currencies" type="object[]">
-                      <Expandable title="properties">
-                        <DynamicResponseField name="currency" type="string">
-                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="amount" type="number">
-                          Per-unit amount for this tier in this currency.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="flat_amount" type="number">
-                          Flat amount for this tier in this currency, if the tier uses one.
-                        </DynamicResponseField>
-
-                      </Expandable>
-                    </DynamicResponseField>
 
                   </Expandable>
                 </DynamicResponseField>
@@ -706,20 +661,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Number of intervals per billing cycle. Defaults to 1.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="additional_currencies" type="object[]">
-                      Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="currency" type="string">
-                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="amount" type="number">
-                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                        </DynamicResponseField>
-
-                      </Expandable>
-                    </DynamicResponseField>
-
                   </Expandable>
                 </DynamicResponseField>
 
@@ -759,20 +700,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="additional_currencies" type="object[]">
-                          Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-                          <Expandable title="properties">
-                            <DynamicResponseField name="currency" type="string">
-                              Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                            </DynamicResponseField>
-
-                            <DynamicResponseField name="amount" type="number">
-                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                            </DynamicResponseField>
-
-                          </Expandable>
-                        </DynamicResponseField>
-
                         <DynamicResponseField name="tiers" type="object[]">
                           Tiered pricing. Either 'amount' or 'tiers' is required.
                           <Expandable title="properties">
@@ -781,23 +708,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="amount" type="number" />
 
                             <DynamicResponseField name="flat_amount" type="number" />
-
-                            <DynamicResponseField name="additional_currencies" type="object[]">
-                              <Expandable title="properties">
-                                <DynamicResponseField name="currency" type="string">
-                                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="amount" type="number">
-                                  Per-unit amount for this tier in this currency.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="flat_amount" type="number">
-                                  Flat amount for this tier in this currency, if the tier uses one.
-                                </DynamicResponseField>
-
-                              </Expandable>
-                            </DynamicResponseField>
 
                           </Expandable>
                         </DynamicResponseField>
@@ -1322,20 +1232,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Base price amount for the plan.
             </DynamicResponseField>
 
-            <DynamicResponseField name="additional_currencies" type="object[]">
-              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-              <Expandable title="properties">
-                <DynamicResponseField name="currency" type="string">
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
             <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
               Billing interval (e.g. 'month', 'year').
             </DynamicResponseField>
@@ -1447,20 +1343,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="additional_currencies" type="object[]">
-                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
-                  <Expandable title="properties">
-                    <DynamicResponseField name="currency" type="string">
-                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="amount" type="number">
-                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                   <Expandable title="properties">
@@ -1469,23 +1351,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                     <DynamicResponseField name="amount" type="number" />
 
                     <DynamicResponseField name="flat_amount" type="number" />
-
-                    <DynamicResponseField name="additional_currencies" type="object[]">
-                      <Expandable title="properties">
-                        <DynamicResponseField name="currency" type="string">
-                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="amount" type="number">
-                          Per-unit amount for this tier in this currency.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="flat_amount" type="number">
-                          Flat amount for this tier in this currency, if the tier uses one.
-                        </DynamicResponseField>
-
-                      </Expandable>
-                    </DynamicResponseField>
 
                   </Expandable>
                 </DynamicResponseField>
@@ -1617,20 +1482,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Number of intervals per billing cycle. Defaults to 1.
                     </DynamicResponseField>
 
-                    <DynamicResponseField name="additional_currencies" type="object[]">
-                      Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-                      <Expandable title="properties">
-                        <DynamicResponseField name="currency" type="string">
-                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="amount" type="number">
-                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                        </DynamicResponseField>
-
-                      </Expandable>
-                    </DynamicResponseField>
-
                   </Expandable>
                 </DynamicResponseField>
 
@@ -1670,20 +1521,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                         </DynamicResponseField>
 
-                        <DynamicResponseField name="additional_currencies" type="object[]">
-                          Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-                          <Expandable title="properties">
-                            <DynamicResponseField name="currency" type="string">
-                              Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                            </DynamicResponseField>
-
-                            <DynamicResponseField name="amount" type="number">
-                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                            </DynamicResponseField>
-
-                          </Expandable>
-                        </DynamicResponseField>
-
                         <DynamicResponseField name="tiers" type="object[]">
                           Tiered pricing. Either 'amount' or 'tiers' is required.
                           <Expandable title="properties">
@@ -1692,23 +1529,6 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             <DynamicResponseField name="amount" type="number" />
 
                             <DynamicResponseField name="flat_amount" type="number" />
-
-                            <DynamicResponseField name="additional_currencies" type="object[]">
-                              <Expandable title="properties">
-                                <DynamicResponseField name="currency" type="string">
-                                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="amount" type="number">
-                                  Per-unit amount for this tier in this currency.
-                                </DynamicResponseField>
-
-                                <DynamicResponseField name="flat_amount" type="number">
-                                  Flat amount for this tier in this currency, if the tier uses one.
-                                </DynamicResponseField>
-
-                              </Expandable>
-                            </DynamicResponseField>
 
                           </Expandable>
                         </DynamicResponseField>
@@ -2499,6 +2319,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Whether to disable the shared customer-level pool for entities.
     </DynamicResponseField>
 
+    <DynamicResponseField name="disable_overage_billing" type="boolean">
+      Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -2618,7 +2442,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     }
   },
   "config": {
-    "disable_pooled_balance": false
+    "disable_pooled_balance": false,
+    "disable_overage_billing": false
   }
 }
 ```

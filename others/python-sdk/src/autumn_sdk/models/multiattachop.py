@@ -56,21 +56,6 @@ MultiAttachPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class MultiAttachAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class MultiAttachAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 class MultiAttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -80,8 +65,6 @@ class MultiAttachBasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[MultiAttachAdditionalCurrencyTypedDict]]
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class MultiAttachBasePrice(BaseModel):
@@ -96,12 +79,9 @@ class MultiAttachBasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[MultiAttachAdditionalCurrency]] = None
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "additional_currencies"])
+        optional_fields = set(["interval_count"])
         serialized = handler(self)
         m = {}
 
@@ -165,63 +145,16 @@ class MultiAttachReset(BaseModel):
         return m
 
 
-class MultiAttachItemAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class MultiAttachItemAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 MultiAttachToTypedDict = TypeAliasType("MultiAttachToTypedDict", Union[float, str])
 
 
 MultiAttachTo = TypeAliasType("MultiAttachTo", Union[float, str])
 
 
-class MultiAttachTierAdditionalCurrencyTypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-    flat_amount: NotRequired[Any]
-
-
-class MultiAttachTierAdditionalCurrency(BaseModel):
-    currency: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    flat_amount: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount", "flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class MultiAttachTierTypedDict(TypedDict):
     to: MultiAttachToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
-    additional_currencies: NotRequired[List[MultiAttachTierAdditionalCurrencyTypedDict]]
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class MultiAttachTier(BaseModel):
@@ -231,12 +164,9 @@ class MultiAttachTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[MultiAttachTierAdditionalCurrency]] = None
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -284,8 +214,6 @@ class MultiAttachPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[List[MultiAttachItemAdditionalCurrencyTypedDict]]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[MultiAttachTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[MultiAttachTierBehavior]
@@ -309,9 +237,6 @@ class MultiAttachPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[MultiAttachItemAdditionalCurrency]] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
     tiers: Optional[List[MultiAttachTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -331,7 +256,6 @@ class MultiAttachPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
-                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",

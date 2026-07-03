@@ -393,6 +393,8 @@ class UpdateCustomerConfigRequestTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class UpdateCustomerConfigRequest(BaseModel):
@@ -401,9 +403,12 @@ class UpdateCustomerConfigRequest(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 
@@ -433,8 +438,6 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     r"""Stripe customer ID if you already have one"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
-    currency: NotRequired[Nullable[str]]
-    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[UpdateCustomerConfigRequestTypedDict]
@@ -465,9 +468,6 @@ class UpdateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
-    currency: OptionalNullable[str] = UNSET
-    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
-
     billing_controls: Optional[UpdateCustomerBillingControlsRequest] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -487,15 +487,12 @@ class UpdateCustomerParams(BaseModel):
                 "metadata",
                 "stripe_id",
                 "send_email_receipts",
-                "currency",
                 "billing_controls",
                 "config",
                 "new_customer_id",
             ]
         )
-        nullable_fields = set(
-            ["name", "email", "fingerprint", "metadata", "stripe_id", "currency"]
-        )
+        nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
         serialized = handler(self)
         m = {}
 
@@ -1423,6 +1420,8 @@ class UpdateCustomerConfigResponseTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class UpdateCustomerConfigResponse(BaseModel):
@@ -1431,9 +1430,12 @@ class UpdateCustomerConfigResponse(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 

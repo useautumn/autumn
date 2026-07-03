@@ -980,6 +980,8 @@ class GetCustomerConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class GetCustomerConfig(BaseModel):
@@ -988,9 +990,12 @@ class GetCustomerConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 
@@ -1295,7 +1300,7 @@ class GetCustomerTrialsUsed(BaseModel):
         return m
 
 
-GetCustomerRewardsType = Union[
+GetCustomerDiscountType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -1324,7 +1329,7 @@ class GetCustomerDiscountTypedDict(TypedDict):
     r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: GetCustomerRewardsType
+    type: GetCustomerDiscountType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -1351,7 +1356,7 @@ class GetCustomerDiscount(BaseModel):
     name: str
     r"""The name of the discount or coupon"""
 
-    type: GetCustomerRewardsType
+    type: GetCustomerDiscountType
     r"""The type of reward"""
 
     discount_value: float

@@ -97,21 +97,6 @@ PreviewAttachPriceInterval = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class PreviewAttachAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class PreviewAttachAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 class PreviewAttachBasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -121,8 +106,6 @@ class PreviewAttachBasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[PreviewAttachAdditionalCurrencyTypedDict]]
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class PreviewAttachBasePrice(BaseModel):
@@ -137,12 +120,9 @@ class PreviewAttachBasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[PreviewAttachAdditionalCurrency]] = None
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "additional_currencies"])
+        optional_fields = set(["interval_count"])
         serialized = handler(self)
         m = {}
 
@@ -206,21 +186,6 @@ class PreviewAttachItemReset(BaseModel):
         return m
 
 
-class PreviewAttachItemAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class PreviewAttachItemAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 PreviewAttachItemToTypedDict = TypeAliasType(
     "PreviewAttachItemToTypedDict", Union[float, str]
 )
@@ -229,50 +194,10 @@ PreviewAttachItemToTypedDict = TypeAliasType(
 PreviewAttachItemTo = TypeAliasType("PreviewAttachItemTo", Union[float, str])
 
 
-class PreviewAttachItemTierAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: NotRequired[float]
-    r"""Per-unit amount for this tier in this currency."""
-    flat_amount: NotRequired[float]
-    r"""Flat amount for this tier in this currency, if the tier uses one."""
-
-
-class PreviewAttachItemTierAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: Optional[float] = None
-    r"""Per-unit amount for this tier in this currency."""
-
-    flat_amount: Optional[float] = None
-    r"""Flat amount for this tier in this currency, if the tier uses one."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class PreviewAttachItemTierTypedDict(TypedDict):
     to: PreviewAttachItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
-    additional_currencies: NotRequired[
-        List[PreviewAttachItemTierAdditionalCurrencyTypedDict]
-    ]
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class PreviewAttachItemTier(BaseModel):
@@ -282,14 +207,9 @@ class PreviewAttachItemTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[List[PreviewAttachItemTierAdditionalCurrency]] = (
-        None
-    )
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -337,10 +257,6 @@ class PreviewAttachItemPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[PreviewAttachItemAdditionalCurrencyTypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[PreviewAttachItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PreviewAttachItemTierBehavior]
@@ -364,9 +280,6 @@ class PreviewAttachItemPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[PreviewAttachItemAdditionalCurrency]] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
     tiers: Optional[List[PreviewAttachItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -386,7 +299,6 @@ class PreviewAttachItemPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
-                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -618,21 +530,6 @@ class PreviewAttachAddItemReset(BaseModel):
         return m
 
 
-class PreviewAttachAddItemAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class PreviewAttachAddItemAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 PreviewAttachAddItemToTypedDict = TypeAliasType(
     "PreviewAttachAddItemToTypedDict", Union[float, str]
 )
@@ -641,50 +538,10 @@ PreviewAttachAddItemToTypedDict = TypeAliasType(
 PreviewAttachAddItemTo = TypeAliasType("PreviewAttachAddItemTo", Union[float, str])
 
 
-class PreviewAttachAddItemTierAdditionalCurrencyTypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: NotRequired[float]
-    r"""Per-unit amount for this tier in this currency."""
-    flat_amount: NotRequired[float]
-    r"""Flat amount for this tier in this currency, if the tier uses one."""
-
-
-class PreviewAttachAddItemTierAdditionalCurrency(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: Optional[float] = None
-    r"""Per-unit amount for this tier in this currency."""
-
-    flat_amount: Optional[float] = None
-    r"""Flat amount for this tier in this currency, if the tier uses one."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class PreviewAttachAddItemTierTypedDict(TypedDict):
     to: PreviewAttachAddItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
-    additional_currencies: NotRequired[
-        List[PreviewAttachAddItemTierAdditionalCurrencyTypedDict]
-    ]
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
 
 
 class PreviewAttachAddItemTier(BaseModel):
@@ -694,14 +551,9 @@ class PreviewAttachAddItemTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
-    additional_currencies: Optional[
-        List[PreviewAttachAddItemTierAdditionalCurrency]
-    ] = None
-    r"""Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -749,10 +601,6 @@ class PreviewAttachAddItemPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[PreviewAttachAddItemAdditionalCurrencyTypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[PreviewAttachAddItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PreviewAttachAddItemTierBehavior]
@@ -776,9 +624,6 @@ class PreviewAttachAddItemPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[PreviewAttachAddItemAdditionalCurrency]] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
     tiers: Optional[List[PreviewAttachAddItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -798,7 +643,6 @@ class PreviewAttachAddItemPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
-                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -1801,8 +1645,6 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
     tax_rate_id: NotRequired[str]
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
-    currency: NotRequired[str]
-    r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -1890,9 +1732,6 @@ class PreviewAttachParams(BaseModel):
     tax_rate_id: Optional[str] = None
     r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
 
-    currency: Optional[str] = None
-    r"""Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1922,7 +1761,6 @@ class PreviewAttachParams(BaseModel):
                 "no_billing_changes",
                 "enable_plan_immediately",
                 "tax_rate_id",
-                "currency",
             ]
         )
         serialized = handler(self)

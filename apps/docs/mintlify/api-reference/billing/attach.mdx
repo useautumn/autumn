@@ -74,12 +74,6 @@ Use `checkoutSessionParams` to pass additional data to the Stripe checkout sessi
 
 This is useful for attaching custom metadata to the Stripe subscription created during checkout — for example, linking subscriptions to internal user IDs or tracking the source of the purchase.
 
-### Currency
-
-Pass `currency` to bill the attach in a specific currency the plan offers via [`additional_currencies`](/documentation/concepts/plans#multiple-currencies). If omitted, Autumn uses the customer's currency, falling back to your organization's default.
-
-A customer who has paid is locked to their currency: passing a different one, or attaching a plan that doesn't offer a paid price in their currency, fails with a `currency_mismatch` error before any billing happens.
-
 ### Body Parameters
 
 <DynamicParamField body="customer_id" type="string" required>
@@ -134,20 +128,6 @@ A customer who has paid is locked to their currency: passing a different one, or
           Number of intervals per billing cycle. Defaults to 1.
         </DynamicParamField>
 
-        <DynamicParamField body="additional_currencies" type="object[]">
-          Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-          <Expandable title="properties">
-            <DynamicParamField body="currency" type="string" required>
-              Three-letter ISO currency code (e.g. 'eur', 'gbp').
-            </DynamicParamField>
-
-            <DynamicParamField body="amount" type="number" required>
-              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-            </DynamicParamField>
-
-          </Expandable>
-        </DynamicParamField>
-
       </Expandable>
     </DynamicParamField>
 
@@ -187,20 +167,6 @@ A customer who has paid is locked to their currency: passing a different one, or
               Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
             </DynamicParamField>
 
-            <DynamicParamField body="additional_currencies" type="object[]">
-              Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-              <Expandable title="properties">
-                <DynamicParamField body="currency" type="string" required>
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicParamField>
-
-                <DynamicParamField body="amount" type="number" required>
-                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                </DynamicParamField>
-
-              </Expandable>
-            </DynamicParamField>
-
             <DynamicParamField body="tiers" type="object[]">
               Tiered pricing. Either 'amount' or 'tiers' is required.
               <Expandable title="properties">
@@ -209,24 +175,6 @@ A customer who has paid is locked to their currency: passing a different one, or
                 <DynamicParamField body="amount" type="number" />
 
                 <DynamicParamField body="flat_amount" type="number" />
-
-                <DynamicParamField body="additional_currencies" type="object[]">
-                  Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
-                  <Expandable title="properties">
-                    <DynamicParamField body="currency" type="string" required>
-                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                    </DynamicParamField>
-
-                    <DynamicParamField body="amount" type="number">
-                      Per-unit amount for this tier in this currency.
-                    </DynamicParamField>
-
-                    <DynamicParamField body="flat_amount" type="number">
-                      Flat amount for this tier in this currency, if the tier uses one.
-                    </DynamicParamField>
-
-                  </Expandable>
-                </DynamicParamField>
 
               </Expandable>
             </DynamicParamField>
@@ -331,20 +279,6 @@ A customer who has paid is locked to their currency: passing a different one, or
               Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
             </DynamicParamField>
 
-            <DynamicParamField body="additional_currencies" type="object[]">
-              Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-              <Expandable title="properties">
-                <DynamicParamField body="currency" type="string" required>
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicParamField>
-
-                <DynamicParamField body="amount" type="number" required>
-                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                </DynamicParamField>
-
-              </Expandable>
-            </DynamicParamField>
-
             <DynamicParamField body="tiers" type="object[]">
               Tiered pricing. Either 'amount' or 'tiers' is required.
               <Expandable title="properties">
@@ -353,24 +287,6 @@ A customer who has paid is locked to their currency: passing a different one, or
                 <DynamicParamField body="amount" type="number" />
 
                 <DynamicParamField body="flat_amount" type="number" />
-
-                <DynamicParamField body="additional_currencies" type="object[]">
-                  Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
-                  <Expandable title="properties">
-                    <DynamicParamField body="currency" type="string" required>
-                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                    </DynamicParamField>
-
-                    <DynamicParamField body="amount" type="number">
-                      Per-unit amount for this tier in this currency.
-                    </DynamicParamField>
-
-                    <DynamicParamField body="flat_amount" type="number">
-                      Flat amount for this tier in this currency, if the tier uses one.
-                    </DynamicParamField>
-
-                  </Expandable>
-                </DynamicParamField>
 
               </Expandable>
             </DynamicParamField>
@@ -764,10 +680,6 @@ A customer who has paid is locked to their currency: passing a different one, or
 
 <DynamicParamField body="tax_rate_id" type="string">
   Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
-</DynamicParamField>
-
-<DynamicParamField body="currency" type="string">
-  Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
 </DynamicParamField>
 
 

@@ -518,6 +518,10 @@ export type CustomerConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -667,7 +671,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const CustomerRewardsType = {
+export const CustomerDiscountType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -677,7 +681,7 @@ export const CustomerRewardsType = {
 /**
  * The type of reward
  */
-export type CustomerRewardsType = OpenEnum<typeof CustomerRewardsType>;
+export type CustomerDiscountType = OpenEnum<typeof CustomerDiscountType>;
 
 /**
  * How long the discount lasts
@@ -704,7 +708,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: CustomerRewardsType;
+  type: CustomerDiscountType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -1428,10 +1432,12 @@ export const CustomerConfig$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disable_pooled_balance: types.optional(types.boolean()),
+    disable_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "disable_pooled_balance": "disablePooledBalance",
+      "disable_overage_billing": "disableOverageBilling",
     });
   }),
 );
@@ -1620,10 +1626,10 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const CustomerRewardsType$inboundSchema: z.ZodMiniType<
-  CustomerRewardsType,
+export const CustomerDiscountType$inboundSchema: z.ZodMiniType<
+  CustomerDiscountType,
   unknown
-> = openEnums.inboundSchema(CustomerRewardsType);
+> = openEnums.inboundSchema(CustomerDiscountType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1636,7 +1642,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: CustomerRewardsType$inboundSchema,
+    type: CustomerDiscountType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),

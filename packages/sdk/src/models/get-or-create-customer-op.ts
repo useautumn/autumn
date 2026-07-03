@@ -227,6 +227,10 @@ export type GetOrCreateCustomerConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -263,10 +267,6 @@ export type GetOrCreateCustomerParams = {
    * Whether to send email receipts to this customer
    */
   sendEmailReceipts?: boolean | undefined;
-  /**
-   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
-   */
-  currency?: string | null | undefined;
   /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
@@ -583,6 +583,7 @@ export function getOrCreateCustomerBillingControlsToJSON(
 /** @internal */
 export type GetOrCreateCustomerConfig$Outbound = {
   disable_pooled_balance?: boolean | undefined;
+  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -592,10 +593,12 @@ export const GetOrCreateCustomerConfig$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
+    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
+      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );
@@ -619,7 +622,6 @@ export type GetOrCreateCustomerParams$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
-  currency?: string | null | undefined;
   billing_controls?: GetOrCreateCustomerBillingControls$Outbound | undefined;
   config?: GetOrCreateCustomerConfig$Outbound | undefined;
   expand?: Array<string> | undefined;
@@ -640,7 +642,6 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
-    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
     ),

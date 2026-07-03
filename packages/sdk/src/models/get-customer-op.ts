@@ -549,6 +549,10 @@ export type GetCustomerConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -700,7 +704,7 @@ export type GetCustomerTrialsUsed = {
 /**
  * The type of reward
  */
-export const GetCustomerRewardsType = {
+export const GetCustomerDiscountType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -710,7 +714,7 @@ export const GetCustomerRewardsType = {
 /**
  * The type of reward
  */
-export type GetCustomerRewardsType = OpenEnum<typeof GetCustomerRewardsType>;
+export type GetCustomerDiscountType = OpenEnum<typeof GetCustomerDiscountType>;
 
 /**
  * How long the discount lasts
@@ -737,7 +741,7 @@ export type GetCustomerDiscount = {
   /**
    * The type of reward
    */
-  type: GetCustomerRewardsType;
+  type: GetCustomerDiscountType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -1504,10 +1508,12 @@ export const GetCustomerConfig$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disable_pooled_balance: types.optional(types.boolean()),
+    disable_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "disable_pooled_balance": "disablePooledBalance",
+      "disable_overage_billing": "disableOverageBilling",
     });
   }),
 );
@@ -1717,10 +1723,10 @@ export function getCustomerTrialsUsedFromJSON(
 }
 
 /** @internal */
-export const GetCustomerRewardsType$inboundSchema: z.ZodMiniType<
-  GetCustomerRewardsType,
+export const GetCustomerDiscountType$inboundSchema: z.ZodMiniType<
+  GetCustomerDiscountType,
   unknown
-> = openEnums.inboundSchema(GetCustomerRewardsType);
+> = openEnums.inboundSchema(GetCustomerDiscountType);
 
 /** @internal */
 export const GetCustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1736,7 +1742,7 @@ export const GetCustomerDiscount$inboundSchema: z.ZodMiniType<
   z.object({
     id: types.string(),
     name: types.string(),
-    type: GetCustomerRewardsType$inboundSchema,
+    type: GetCustomerDiscountType$inboundSchema,
     discount_value: types.number(),
     duration_type: GetCustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),

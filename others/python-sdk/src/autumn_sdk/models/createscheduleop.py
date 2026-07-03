@@ -237,21 +237,6 @@ CreateSchedulePriceInterval2 = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class CreateScheduleAdditionalCurrency2TypedDict(TypedDict):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
-class CreateScheduleAdditionalCurrency2(BaseModel):
-    currency: str
-    r"""Three-letter ISO currency code (e.g. 'eur', 'gbp')."""
-
-    amount: float
-    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
-
-
 class CreateScheduleBasePrice2TypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -261,8 +246,6 @@ class CreateScheduleBasePrice2TypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
-    additional_currencies: NotRequired[List[CreateScheduleAdditionalCurrency2TypedDict]]
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class CreateScheduleBasePrice2(BaseModel):
@@ -277,12 +260,9 @@ class CreateScheduleBasePrice2(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
-    additional_currencies: Optional[List[CreateScheduleAdditionalCurrency2]] = None
-    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "additional_currencies"])
+        optional_fields = set(["interval_count"])
         serialized = handler(self)
         m = {}
 
@@ -346,38 +326,10 @@ class CreateScheduleItemReset2(BaseModel):
         return m
 
 
-class CreateScheduleItemAdditionalCurrency2TypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-
-
-class CreateScheduleItemAdditionalCurrency2(BaseModel):
-    currency: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class CreateScheduleItemTier2TypedDict(TypedDict):
     to: NotRequired[Any]
     amount: NotRequired[Any]
     flat_amount: NotRequired[Any]
-    additional_currencies: NotRequired[Any]
 
 
 class CreateScheduleItemTier2(BaseModel):
@@ -387,11 +339,9 @@ class CreateScheduleItemTier2(BaseModel):
 
     flat_amount: Optional[Any] = None
 
-    additional_currencies: Optional[Any] = None
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["to", "amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["to", "amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -439,10 +389,6 @@ class CreateScheduleItemPrice2TypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[CreateScheduleItemAdditionalCurrency2TypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[CreateScheduleItemTier2TypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreateScheduleItemTierBehavior2]
@@ -466,9 +412,6 @@ class CreateScheduleItemPrice2(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[CreateScheduleItemAdditionalCurrency2]] = None
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
     tiers: Optional[List[CreateScheduleItemTier2]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -488,7 +431,6 @@ class CreateScheduleItemPrice2(BaseModel):
         optional_fields = set(
             [
                 "amount",
-                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -720,38 +662,10 @@ class CreateScheduleAddItemReset2(BaseModel):
         return m
 
 
-class CreateScheduleAddItemAdditionalCurrency2TypedDict(TypedDict):
-    currency: NotRequired[Any]
-    amount: NotRequired[Any]
-
-
-class CreateScheduleAddItemAdditionalCurrency2(BaseModel):
-    currency: Optional[Any] = None
-
-    amount: Optional[Any] = None
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["currency", "amount"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 class CreateScheduleAddItemTier2TypedDict(TypedDict):
     to: NotRequired[Any]
     amount: NotRequired[Any]
     flat_amount: NotRequired[Any]
-    additional_currencies: NotRequired[Any]
 
 
 class CreateScheduleAddItemTier2(BaseModel):
@@ -761,11 +675,9 @@ class CreateScheduleAddItemTier2(BaseModel):
 
     flat_amount: Optional[Any] = None
 
-    additional_currencies: Optional[Any] = None
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["to", "amount", "flat_amount", "additional_currencies"])
+        optional_fields = set(["to", "amount", "flat_amount"])
         serialized = handler(self)
         m = {}
 
@@ -813,10 +725,6 @@ class CreateScheduleAddItemPrice2TypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    additional_currencies: NotRequired[
-        List[CreateScheduleAddItemAdditionalCurrency2TypedDict]
-    ]
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[CreateScheduleAddItemTier2TypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[CreateScheduleAddItemTierBehavior2]
@@ -840,11 +748,6 @@ class CreateScheduleAddItemPrice2(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    additional_currencies: Optional[List[CreateScheduleAddItemAdditionalCurrency2]] = (
-        None
-    )
-    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
-
     tiers: Optional[List[CreateScheduleAddItemTier2]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -864,7 +767,6 @@ class CreateScheduleAddItemPrice2(BaseModel):
         optional_fields = set(
             [
                 "amount",
-                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",
@@ -1589,16 +1491,22 @@ class CreateSchedulePlan2(BaseModel):
         return m
 
 
-class PhaseRequest2TypedDict(TypedDict):
+BillingCycleAnchor2 = Literal["phase_start",]
+r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
+
+class PhaseStartTypedDict(TypedDict):
     plans: List[CreateSchedulePlan2TypedDict]
     r"""Plans to materialize for this phase."""
     starts_at: NotRequired[StartsAt2TypedDict]
     r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
     starting_after: NotRequired[StartingAfter2TypedDict]
     r"""Relative start offset from the previous resolved schedule phase."""
+    billing_cycle_anchor: NotRequired[BillingCycleAnchor2]
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
 
-class PhaseRequest2(BaseModel):
+class PhaseStart(BaseModel):
     plans: List[CreateSchedulePlan2]
     r"""Plans to materialize for this phase."""
 
@@ -1608,9 +1516,12 @@ class PhaseRequest2(BaseModel):
     starting_after: Optional[StartingAfter2] = None
     r"""Relative start offset from the previous resolved schedule phase."""
 
+    billing_cycle_anchor: Optional[BillingCycleAnchor2] = None
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["starts_at", "starting_after"])
+        optional_fields = set(["starts_at", "starting_after", "billing_cycle_anchor"])
         serialized = handler(self)
         m = {}
 
@@ -1625,16 +1536,16 @@ class PhaseRequest2(BaseModel):
         return m
 
 
-PhaseTypedDict = PhaseRequest2TypedDict
+PhaseStartUnionTypedDict = PhaseStartTypedDict
 
 
-Phase = PhaseRequest2
+PhaseStartUnion = PhaseStart
 
 
 class CreateScheduleParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
-    phases: List[PhaseTypedDict]
+    phases: List[PhaseStartUnionTypedDict]
     r"""Ordered phase definitions for the schedule."""
     entity_id: NotRequired[str]
     r"""Optional entity ID for an entity-scoped schedule."""
@@ -1660,7 +1571,7 @@ class CreateScheduleParams(BaseModel):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
 
-    phases: List[Phase]
+    phases: List[PhaseStartUnion]
     r"""Ordered phase definitions for the schedule."""
 
     entity_id: Optional[str] = None

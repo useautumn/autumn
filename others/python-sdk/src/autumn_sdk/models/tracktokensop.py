@@ -42,7 +42,7 @@ class TrackTokensParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
     model_id: str
-    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+    r"""The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
     input_tokens: int
     r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""
     output_tokens: int
@@ -74,7 +74,7 @@ class TrackTokensParams(BaseModel):
     r"""The ID of the customer."""
 
     model_id: str
-    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+    r"""The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
 
     input_tokens: int
     r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""

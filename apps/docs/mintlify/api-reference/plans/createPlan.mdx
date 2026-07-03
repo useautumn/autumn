@@ -29,10 +29,6 @@ Each item in the `items` array configures a single feature. There are two types:
 - Do NOT set `reset` - usage persists across billing cycles
 - Use `billing_method: "prepaid"` for upfront payment per unit
 
-### Multiple Currencies
-
-To sell a plan in currencies beyond your organization's default, set `additional_currencies` on the base price, a feature price, or each tier of a tiered price. Amounts are explicit per currency - no exchange rates are applied - and tier boundaries stay the same across currencies. See [Plans](/documentation/concepts/plans#multiple-currencies) for how customers are matched to a currency.
-
 ### Common Use Cases
 
 <CodeGroup>
@@ -183,20 +179,6 @@ await autumn.plans.create({
       Number of intervals per billing cycle. Defaults to 1.
     </DynamicParamField>
 
-    <DynamicParamField body="additional_currencies" type="object[]">
-      Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-      <Expandable title="properties">
-        <DynamicParamField body="currency" type="string" required>
-          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-        </DynamicParamField>
-
-        <DynamicParamField body="amount" type="number" required>
-          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-        </DynamicParamField>
-
-      </Expandable>
-    </DynamicParamField>
-
   </Expandable>
 </DynamicParamField>
 
@@ -236,20 +218,6 @@ await autumn.plans.create({
           Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
         </DynamicParamField>
 
-        <DynamicParamField body="additional_currencies" type="object[]">
-          Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-          <Expandable title="properties">
-            <DynamicParamField body="currency" type="string" required>
-              Three-letter ISO currency code (e.g. 'eur', 'gbp').
-            </DynamicParamField>
-
-            <DynamicParamField body="amount" type="number" required>
-              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-            </DynamicParamField>
-
-          </Expandable>
-        </DynamicParamField>
-
         <DynamicParamField body="tiers" type="object[]">
           Tiered pricing. Either 'amount' or 'tiers' is required.
           <Expandable title="properties">
@@ -258,24 +226,6 @@ await autumn.plans.create({
             <DynamicParamField body="amount" type="number" />
 
             <DynamicParamField body="flat_amount" type="number" />
-
-            <DynamicParamField body="additional_currencies" type="object[]">
-              Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
-              <Expandable title="properties">
-                <DynamicParamField body="currency" type="string" required>
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicParamField>
-
-                <DynamicParamField body="amount" type="number">
-                  Per-unit amount for this tier in this currency.
-                </DynamicParamField>
-
-                <DynamicParamField body="flat_amount" type="number">
-                  Flat amount for this tier in this currency, if the tier uses one.
-                </DynamicParamField>
-
-              </Expandable>
-            </DynamicParamField>
 
           </Expandable>
         </DynamicParamField>
@@ -554,20 +504,6 @@ await autumn.plans.create({
       Base price amount for the plan.
     </DynamicResponseField>
 
-    <DynamicResponseField name="additional_currencies" type="object[]">
-      Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-      <Expandable title="properties">
-        <DynamicResponseField name="currency" type="string">
-          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-        </DynamicResponseField>
-
-        <DynamicResponseField name="amount" type="number">
-          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-        </DynamicResponseField>
-
-      </Expandable>
-    </DynamicResponseField>
-
     <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
       Billing interval (e.g. 'month', 'year').
     </DynamicResponseField>
@@ -679,20 +615,6 @@ await autumn.plans.create({
           Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
         </DynamicResponseField>
 
-        <DynamicResponseField name="additional_currencies" type="object[]">
-          Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
-          <Expandable title="properties">
-            <DynamicResponseField name="currency" type="string">
-              Three-letter ISO currency code (e.g. 'eur', 'gbp').
-            </DynamicResponseField>
-
-            <DynamicResponseField name="amount" type="number">
-              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-            </DynamicResponseField>
-
-          </Expandable>
-        </DynamicResponseField>
-
         <DynamicResponseField name="tiers" type="object[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
           <Expandable title="properties">
@@ -701,23 +623,6 @@ await autumn.plans.create({
             <DynamicResponseField name="amount" type="number" />
 
             <DynamicResponseField name="flat_amount" type="number" />
-
-            <DynamicResponseField name="additional_currencies" type="object[]">
-              <Expandable title="properties">
-                <DynamicResponseField name="currency" type="string">
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  Per-unit amount for this tier in this currency.
-                </DynamicResponseField>
-
-                <DynamicResponseField name="flat_amount" type="number">
-                  Flat amount for this tier in this currency, if the tier uses one.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
 
           </Expandable>
         </DynamicResponseField>
@@ -849,20 +754,6 @@ await autumn.plans.create({
               Number of intervals per billing cycle. Defaults to 1.
             </DynamicResponseField>
 
-            <DynamicResponseField name="additional_currencies" type="object[]">
-              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
-              <Expandable title="properties">
-                <DynamicResponseField name="currency" type="string">
-                  Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                </DynamicResponseField>
-
-                <DynamicResponseField name="amount" type="number">
-                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                </DynamicResponseField>
-
-              </Expandable>
-            </DynamicResponseField>
-
           </Expandable>
         </DynamicResponseField>
 
@@ -902,20 +793,6 @@ await autumn.plans.create({
                   Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="additional_currencies" type="object[]">
-                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
-                  <Expandable title="properties">
-                    <DynamicResponseField name="currency" type="string">
-                      Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                    </DynamicResponseField>
-
-                    <DynamicResponseField name="amount" type="number">
-                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
-                    </DynamicResponseField>
-
-                  </Expandable>
-                </DynamicResponseField>
-
                 <DynamicResponseField name="tiers" type="object[]">
                   Tiered pricing. Either 'amount' or 'tiers' is required.
                   <Expandable title="properties">
@@ -924,23 +801,6 @@ await autumn.plans.create({
                     <DynamicResponseField name="amount" type="number" />
 
                     <DynamicResponseField name="flat_amount" type="number" />
-
-                    <DynamicResponseField name="additional_currencies" type="object[]">
-                      <Expandable title="properties">
-                        <DynamicResponseField name="currency" type="string">
-                          Three-letter ISO currency code (e.g. 'eur', 'gbp').
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="amount" type="number">
-                          Per-unit amount for this tier in this currency.
-                        </DynamicResponseField>
-
-                        <DynamicResponseField name="flat_amount" type="number">
-                          Flat amount for this tier in this currency, if the tier uses one.
-                        </DynamicResponseField>
-
-                      </Expandable>
-                    </DynamicResponseField>
 
                   </Expandable>
                 </DynamicResponseField>
