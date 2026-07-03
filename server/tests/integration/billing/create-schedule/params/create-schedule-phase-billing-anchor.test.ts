@@ -2,24 +2,32 @@
 // reset timestamp so Stripe schedule phases can reset anchors.
 
 import { expect, test } from "bun:test";
-import { customerProducts, ms } from "@autumn/shared";
+import { BillingInterval, customerProducts } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { addMonths } from "date-fns";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule phase billing anchor: scheduled phase can reset anchor at phase start")}`,
+	`${chalk.yellowBright("create-schedule phase billing anchor: quarterly phase resets anchor at phase start")}`,
 	async () => {
 		const customerId = "create-schedule-phase-anchor-reset";
 		const starter = products.pro({
 			id: "starter",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
-		const commercial = products.premium({
+		const commercial = products.base({
 			id: "commercial-quarterly",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
+			items: [
+				items.monthlyMessages({ includedUsage: 500 }),
+				constructPriceItem({
+					price: 2000,
+					interval: BillingInterval.Quarter,
+				}),
+			],
 		});
 
 		const { autumnV1, ctx, advancedTo } = await initScenario({
@@ -31,7 +39,7 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: starter.id })],
 		});
 
-		const phaseStartsAt = advancedTo + ms.days(30);
+		const phaseStartsAt = addMonths(advancedTo, 1).getTime();
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
@@ -50,6 +58,10 @@ test.concurrent(
 		const scheduledCustomerProductId =
 			response.phases[1]?.customer_product_ids[0];
 		expect(scheduledCustomerProductId).toBeDefined();
+		const activeCustomerProductId = response.phases[0]?.customer_product_ids[0];
+		expect(activeCustomerProductId).toBeDefined();
+		const resolvedPhaseStartsAt = response.phases[1]?.starts_at;
+		expect(resolvedPhaseStartsAt).toBeDefined();
 
 		const [scheduledCustomerProduct] = await ctx.db
 			.select()
@@ -57,7 +69,47 @@ test.concurrent(
 			.where(eq(customerProducts.id, scheduledCustomerProductId!));
 
 		expect(scheduledCustomerProduct?.billing_cycle_anchor_resets_at).toBe(
-			phaseStartsAt,
+			resolvedPhaseStartsAt,
 		);
+
+		const [activeCustomerProduct] = await ctx.db
+			.select()
+			.from(customerProducts)
+			.where(eq(customerProducts.id, activeCustomerProductId!));
+
+		const stripeSubscriptionId = activeCustomerProduct?.subscription_ids?.[0];
+		expect(stripeSubscriptionId).toBeDefined();
+
+		const stripeSubscription = await ctx.stripeCli.subscriptions.retrieve(
+			stripeSubscriptionId!,
+		);
+		const stripeScheduleId =
+			typeof stripeSubscription.schedule === "string"
+				? stripeSubscription.schedule
+				: stripeSubscription.schedule?.id;
+		expect(stripeScheduleId).toBeDefined();
+
+		const stripeSchedule = await ctx.stripeCli.subscriptionSchedules.retrieve(
+			stripeScheduleId!,
+			{ expand: ["phases.items.price"] },
+		);
+		const stripePhase = stripeSchedule.phases.find(
+			(phase) =>
+				Math.abs(phase.start_date * 1000 - resolvedPhaseStartsAt!) < 60_000,
+		);
+		expect(stripePhase).toBeDefined();
+		expect(stripePhase?.billing_cycle_anchor).toBe("phase_start");
+
+		const stripePrice = stripePhase?.items[0]?.price;
+		const expandedStripePrice =
+			stripePrice && typeof stripePrice !== "string" ? stripePrice : undefined;
+		expect(expandedStripePrice).toBeDefined();
+		expect(expandedStripePrice && "recurring" in expandedStripePrice).toBe(true);
+		const recurring =
+			expandedStripePrice && "recurring" in expandedStripePrice
+				? expandedStripePrice.recurring
+				: undefined;
+		expect(recurring?.interval).toBe("month");
+		expect(recurring?.interval_count).toBe(3);
 	},
 );
