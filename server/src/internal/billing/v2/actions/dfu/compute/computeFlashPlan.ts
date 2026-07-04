@@ -6,6 +6,7 @@ import {
 	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
+	isResettingEntitlement,
 	nullish,
 	ProcessorType,
 } from "@autumn/shared";
@@ -30,7 +31,11 @@ const buildCustomerProduct = ({
 	ctx: AutumnContext;
 	flashContext: FlashContext;
 	planContext: FlashPlanContext;
-}): { customerProduct: FullCusProduct; reportStatus: string } => {
+}): {
+	customerProduct: FullCusProduct;
+	reportStatus: string;
+	anchorMismatch: boolean;
+} => {
 	const { fullCustomer, currentEpochMs } = flashContext;
 	const {
 		plan,
@@ -60,6 +65,18 @@ const buildCustomerProduct = ({
 		hydration?.periodEndMs ??
 		resolvedStartsAt ??
 		currentEpochMs;
+
+	// Flag (don't block): a resetting plan whose anchor fell through to the import
+	// time — its cycle is likely wrong and the caller should supply started_at.
+	const anchorResolved =
+		billingCycleAnchor != null ||
+		hydration?.periodEndMs != null ||
+		resolvedStartsAt != null;
+	const anchorMismatch =
+		!anchorResolved &&
+		fullProduct.entitlements.some((entitlement) =>
+			isResettingEntitlement({ entitlement }),
+		);
 
 	const customerProduct = initFullCustomerProduct({
 		ctx,
@@ -98,7 +115,11 @@ const buildCustomerProduct = ({
 
 	applyFlashBalances({ customerProduct, balances: plan.balances });
 
-	return { customerProduct, reportStatus: statusInfo.reportStatus };
+	return {
+		customerProduct,
+		reportStatus: statusInfo.reportStatus,
+		anchorMismatch,
+	};
 };
 
 export const computeFlashPlan = ({
@@ -154,11 +175,12 @@ export const computeFlashPlan = ({
 			continue;
 		}
 
-		const { customerProduct, reportStatus } = buildCustomerProduct({
-			ctx,
-			flashContext,
-			planContext,
-		});
+		const { customerProduct, reportStatus, anchorMismatch } =
+			buildCustomerProduct({
+				ctx,
+				flashContext,
+				planContext,
+			});
 		insertCustomerProducts.push(customerProduct);
 
 		flashed.push({
@@ -167,6 +189,10 @@ export const computeFlashPlan = ({
 			customer_product_id: customerProduct.id,
 			status: reportStatus,
 			skipped: false,
+			...(anchorMismatch && {
+				mismatch: true,
+				reason: "no_resolvable_billing_anchor",
+			}),
 		});
 	}
 

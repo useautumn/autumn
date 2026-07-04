@@ -1,4 +1,4 @@
-import { isResettingEntitlement, RecaseError } from "@autumn/shared";
+import { RecaseError } from "@autumn/shared";
 import type { FlashContext } from "../setup/setupFlashContext";
 
 const rejectUnsupported = (message: string): never => {
@@ -53,29 +53,5 @@ export const handleFlashErrors = ({
 			code: "cross_processor_conflict",
 			statusCode: 400,
 		});
-	}
-
-	// A resetting plan whose anchor can't be resolved would silently anchor its
-	// credit resets to the import time — require an explicit start instead.
-	for (const planContext of planContexts) {
-		const hydration =
-			planContext.stripeHydration ?? planContext.revenueCatHydration;
-		const anchorResolvable =
-			planContext.billingCycleAnchor != null ||
-			hydration?.periodEndMs != null ||
-			planContext.plan.started_at != null ||
-			hydration?.startsAt != null;
-		if (anchorResolvable) continue;
-
-		const hasResettingEntitlement = planContext.fullProduct.entitlements.some(
-			(entitlement) => isResettingEntitlement({ entitlement }),
-		);
-		if (hasResettingEntitlement) {
-			throw new RecaseError({
-				message: `dfu.flash: plan '${planContext.plan.plan_id}' has resetting credits but no resolvable billing anchor — provide started_at so resets don't anchor to the import time`,
-				code: "started_at_required",
-				statusCode: 400,
-			});
-		}
 	}
 };

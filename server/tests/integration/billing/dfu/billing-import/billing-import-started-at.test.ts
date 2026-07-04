@@ -69,7 +69,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("dfu.flash: one-off with resetting credits and no started_at is rejected")}`,
+	`${chalk.yellowBright("dfu.flash: one-off with resetting credits and no started_at is flagged, not blocked")}`,
 	async () => {
 		const customerId = "dfu-flash-started-at-required";
 		const pro = products.pro({
@@ -90,13 +90,17 @@ test.concurrent(
 		const payload = {
 			customer_id: customerId,
 			processors: [{ type: "stripe", id: stripeCustomerId }],
-			// One-off (no link) + resetting credits + no started_at → must reject.
+			// One-off (no link) + resetting credits + no started_at → imaged but flagged.
 			billables: [
 				{ processor: "stripe", plan: { plan_id: pro.id, status: "active" } },
 			],
 		};
 
 		const flashRes = await callFlash(autumnV2_2 as FlashClient, payload);
-		expect(flashRes.errorCode).toBe("started_at_required");
+		// Not blocked — the plan is imaged but flagged so the caller sees the state is wrong.
+		const flashed = flashRes.result?.flashed?.find((f) => f.plan_id === pro.id);
+		expect(flashed?.customer_product_id).toBeTruthy();
+		expect(flashed?.mismatch).toBe(true);
+		expect(flashed?.reason).toBe("no_resolvable_billing_anchor");
 	},
 );

@@ -240,8 +240,13 @@ export const DfuFlashedPlanSchema = z.object({
 		description:
 			"True if this was an existing active plan expired because it was absent from the imaged desired state.",
 	}),
+	mismatch: z.boolean().optional().meta({
+		description:
+			"True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.",
+	}),
 	reason: z.string().optional().meta({
-		description: "Why the plan was skipped or expired, when applicable.",
+		description:
+			"Why the plan was skipped, expired, or flagged as a mismatch, when applicable.",
 	}),
 });
 
