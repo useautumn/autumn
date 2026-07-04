@@ -45,10 +45,27 @@ export const processExpiredTrialRow = async ({
 		withSubs: true,
 	});
 
-	const trialFullCusProduct = fullCustomer.customer_products.find(
+	const customerPageTrialCusProduct = fullCustomer.customer_products.find(
 		(cp) => cp.id === customerProduct.id,
 	);
+	const trialFullCusProduct =
+		customerPageTrialCusProduct ??
+		(await CusProductService.getFull({
+			db: ctx.db,
+			id: customerProduct.id,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		}));
 	if (!trialFullCusProduct) return;
+
+	const originalFullCustomer = customerPageTrialCusProduct
+		? fullCustomer
+		: {
+				...fullCustomer,
+				customer_products: [
+					...fullCustomer.customer_products,
+					trialFullCusProduct,
+				],
+			};
 
 	const defaultProduct = customerProductToDefaultProduct({
 		ctx,
@@ -61,7 +78,7 @@ export const processExpiredTrialRow = async ({
 		activatedDefault = await activateFreeDefaultProduct({
 			ctx,
 			customerProduct: trialFullCusProduct,
-			fullCustomer,
+			fullCustomer: originalFullCustomer,
 			defaultProduct,
 		});
 	}
@@ -82,7 +99,7 @@ export const processExpiredTrialRow = async ({
 	void sendBillingUpdatedWebhook({
 		ctx,
 		autumnBillingPlan: {
-			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+			customerId: originalFullCustomer.id ?? originalFullCustomer.internal_id,
 			insertCustomerProducts: activatedDefault ? [activatedDefault] : [],
 			updateCustomerProducts: [
 				{
@@ -91,7 +108,7 @@ export const processExpiredTrialRow = async ({
 				},
 			],
 		},
-		originalFullCustomer: fullCustomer,
+		originalFullCustomer,
 		tags: ["trial_ended"],
 	});
 };
