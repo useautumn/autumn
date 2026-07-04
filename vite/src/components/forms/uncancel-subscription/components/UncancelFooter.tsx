@@ -36,6 +36,10 @@ export function UncancelFooter() {
 
 	const handleGoBack = () => {
 		form.setFieldValue("cancelAction", "uncancel");
+		form.setFieldValue("billingBehavior", null);
+		form.setFieldValue("refundBehavior", null);
+		form.setFieldValue("refundAmount", null);
+		form.setFieldValue("noBillingChanges", false);
 	};
 
 	if (!showFooter) return null;

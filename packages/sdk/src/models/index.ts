@@ -25,6 +25,7 @@ export * from "./delete-entity-op.js";
 export * from "./delete-feature-op.js";
 export * from "./delete-plan-op.js";
 export * from "./finalize-lock-op.js";
+export * from "./flash-op.js";
 export * from "./get-customer-op.js";
 export * from "./get-entity-op.js";
 export * from "./get-feature-op.js";

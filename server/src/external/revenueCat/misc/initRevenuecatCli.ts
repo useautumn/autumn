@@ -11,6 +11,10 @@ import type {
 	RevenueCatProductsResponse,
 	RevenueCatProject,
 	RevenueCatProjectsResponse,
+	RevenueCatPurchase,
+	RevenueCatPurchasesResponse,
+	RevenueCatSubscription,
+	RevenueCatSubscriptionsResponse,
 	RevenueCatCreateWebhookBody,
 	RevenueCatPublicApiKey,
 	RevenueCatPublicApiKeysResponse,
@@ -171,6 +175,51 @@ export const initRevenuecatCli = ({
 			return items;
 		},
 
+		listCustomerSubscriptions: async (
+			customerId: string,
+		): Promise<RevenueCatSubscription[]> => {
+			const items: RevenueCatSubscription[] = [];
+			let nextPage:
+				| string
+				| null = `/v2/projects/${projectId}/customers/${customerId}/subscriptions?limit=100`;
+
+			while (nextPage) {
+				const response = await fetchImpl(
+					new URL(`https://api.revenuecat.com${nextPage}`),
+					{ headers: authHeaders },
+				);
+				await checkOk(response);
+				const data =
+					(await response.json()) as RevenueCatSubscriptionsResponse;
+				items.push(...data.items);
+				nextPage = data.next_page;
+			}
+
+			return items;
+		},
+
+		listCustomerPurchases: async (
+			customerId: string,
+		): Promise<RevenueCatPurchase[]> => {
+			const items: RevenueCatPurchase[] = [];
+			let nextPage:
+				| string
+				| null = `/v2/projects/${projectId}/customers/${customerId}/purchases?limit=100`;
+
+			while (nextPage) {
+				const response = await fetchImpl(
+					new URL(`https://api.revenuecat.com${nextPage}`),
+					{ headers: authHeaders },
+				);
+				await checkOk(response);
+				const data = (await response.json()) as RevenueCatPurchasesResponse;
+				items.push(...data.items);
+				nextPage = data.next_page;
+			}
+
+			return items;
+		},
+
 		listProductPrices: async (
 			revenuecatProductId: string,
 		): Promise<RevenueCatPrice[]> => {
@@ -194,10 +243,12 @@ export const initRevenuecatCli = ({
 			callRcMcpTool({
 				accessToken: resolvedAccessToken,
 				name: "create-product-prices",
+				// RC's tool requires `prices` nested under `body`; top-level fields are
+				// rejected (additionalProperties:false) and surface as a generic 500.
 				arguments: {
 					project_id: projectId,
 					product_id: revenuecatProductId,
-					prices: [{ amount_micros: amountMicros, currency }],
+					body: { prices: [{ amount_micros: amountMicros, currency }] },
 				},
 				fetchImpl,
 			}),

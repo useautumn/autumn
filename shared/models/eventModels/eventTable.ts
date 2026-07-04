@@ -60,6 +60,7 @@ export const events = pgTable(
 				sql`${table.id} DESC`,
 			)
 			.where(sql`${table.set_usage} = false`),
+		index("idx_events_timestamp").on(table.timestamp).concurrently(),
 	],
 );
 

@@ -81,6 +81,9 @@ export const usageWindows = pgTable(
 		index("idx_usage_windows_internal_customer_id").on(
 			table.internal_customer_id,
 		),
+		index("idx_uw_internal_feature_id")
+			.on(table.internal_feature_id)
+			.concurrently(),
 		// ONE mutable counter row per scope: bounds roll forward in place, usage
 		// zeroes when its window closes. NULL internal_entity_id = customer
 		// scope; COALESCE makes the key unique across both scopes.

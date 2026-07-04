@@ -250,6 +250,10 @@ Use this when you know the customer exists or assert they exist without creating
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
+### [Dfu](docs/sdks/dfu/README.md)
+
+* [flash](docs/sdks/dfu/README.md#flash) - Import
+
 ### [Entities](docs/sdks/entities/README.md)
 
 * [create](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.

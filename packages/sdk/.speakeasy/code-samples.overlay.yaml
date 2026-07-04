@@ -266,6 +266,52 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.import"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.dfu.flash({
+                customerId: "cus_123",
+                processors: [
+                  {
+                    type: "stripe",
+                    id: "cus_stripe_123",
+                  },
+                ],
+                billables: [
+                  {
+                    processor: "stripe",
+                    link: {
+                      subscriptionId: "sub_123",
+                    },
+                    plan: {
+                      planId: "pro",
+                      status: "active",
+                      balances: [
+                        {
+                          featureId: "messages",
+                          usage: 10,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.multi_attach"]["post"]
     update:
       x-codeSamples:
