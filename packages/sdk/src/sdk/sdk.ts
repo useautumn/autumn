@@ -12,6 +12,7 @@ import { unwrapAsync } from "../types/fp.js";
 import { Balances } from "./balances.js";
 import { Billing } from "./billing.js";
 import { Customers } from "./customers.js";
+import { Dfu } from "./dfu.js";
 import { Entities } from "./entities.js";
 import { Events } from "./events.js";
 import { Features } from "./features.js";
@@ -40,6 +41,11 @@ export class Autumn extends ClientSDK {
   private _billing?: Billing;
   get billing(): Billing {
     return (this._billing ??= new Billing(this._options));
+  }
+
+  private _dfu?: Dfu;
+  get dfu(): Dfu {
+    return (this._dfu ??= new Dfu(this._options));
   }
 
   private _balances?: Balances;

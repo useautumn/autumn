@@ -145,7 +145,7 @@ CreateScheduleRedirectMode = Literal[
 r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
 
-BillingBehavior = Literal[
+CreateScheduleBillingBehavior = Literal[
     "prorate_immediately",
     "none",
 ]
@@ -1550,7 +1550,7 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     redirect_mode: NotRequired[CreateScheduleRedirectMode]
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
-    billing_behavior: NotRequired[BillingBehavior]
+    billing_behavior: NotRequired[CreateScheduleBillingBehavior]
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time."""
@@ -1583,7 +1583,7 @@ class CreateScheduleParams(BaseModel):
     redirect_mode: Optional[CreateScheduleRedirectMode] = "if_required"
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
-    billing_behavior: Optional[BillingBehavior] = None
+    billing_behavior: Optional[CreateScheduleBillingBehavior] = None
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
 
     billing_cycle_anchor: Annotated[

@@ -12,6 +12,7 @@ export const getOrCreateCustomerOverageAllowedSchema = z.object({
 
 export const getOrCreateCustomerConfigSchema = z.object({
 	disablePooledBalance: z.union([z.boolean(), z.undefined()]).optional(),
+	disableOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
@@ -90,6 +91,7 @@ export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 
 export const getOrCreateCustomerConfigOutboundSchema = z.object({
 	disable_pooled_balance: z.union([z.boolean(), z.undefined()]).optional(),
+	disable_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerParamsOutboundSchema = z.object({

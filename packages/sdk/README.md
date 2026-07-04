@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783199313913,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784408913913,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -538,6 +538,10 @@ const response = await client.get({ customerId: "cus_123", expand: ["invoices","
 * [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
+
+### [Dfu](docs/sdks/dfu/README.md)
+
+* [flash](docs/sdks/dfu/README.md#flash) - Import
 
 ### [Entities](docs/sdks/entities/README.md)
 
@@ -852,7 +856,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783199313913,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784408913913,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1110,6 +1114,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
+- [`dfuFlash`](docs/sdks/dfu/README.md#flash) - Import
 - [`entitiesCreate`](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
 
 Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.

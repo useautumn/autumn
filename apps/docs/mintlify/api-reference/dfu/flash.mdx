@@ -1,6 +1,6 @@
 ---
-title: "List Customers"
-openapi: "openapi POST /v1/customers.list"
+title: "Import"
+openapi: "openapi POST /v1/billing.import"
 ---
 
 import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
@@ -9,41 +9,197 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 ### Body Parameters
 
-<DynamicParamField body="start_cursor" type="string">
-  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+<DynamicParamField body="customer_id" type="string" required>
+  Autumn customer to image into.
 </DynamicParamField>
 
-<DynamicParamField body="limit" type="integer">
-  Number of items to return. Default 50, hard ceiling 5000.
-</DynamicParamField>
-
-<DynamicParamField body="plans" type="object[]">
-  Filter by plan ID and version. Returns customers with active subscriptions to this plan.
+<DynamicParamField body="customer_data" type="object">
+  Optional identity fields to upsert if the customer is new.
   <Expandable title="properties">
-    <DynamicParamField body="id" type="string" required />
+    <DynamicParamField body="name" type="string">
+      Display name for the customer.
+    </DynamicParamField>
 
-    <DynamicParamField body="versions" type="number[]" />
+    <DynamicParamField body="email" type="string">
+      Email address for the customer.
+    </DynamicParamField>
+
+    <DynamicParamField body="fingerprint" type="string">
+      Anti-fraud fingerprint for the customer.
+    </DynamicParamField>
 
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="subscription_status" type="'active' | 'scheduled'">
-  Filter by customer product status. Defaults to active and scheduled.
+<DynamicParamField body="processors" type="object[]" required>
+  The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
+  <Expandable title="properties">
+    <DynamicParamField body="type" type="'stripe' | 'revenuecat'" required>
+      The processor this identity belongs to.
+    </DynamicParamField>
+
+    <DynamicParamField body="id" type="string" required>
+      The customer's id in that processor (Stripe customer id, or RevenueCat app_user_id).
+    </DynamicParamField>
+
+  </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="search" type="string">
-  Search customers by id, name, or email.
+<DynamicParamField body="billables" type="object[]" required>
+  The billing objects (subscriptions, one-offs) to image, each carrying its plan.
+  <Expandable title="properties">
+    <DynamicParamField body="processor" type="'stripe' | 'revenuecat' | 'none'" required>
+      The processor that owns this billable (stripe, revenuecat, or none).
+    </DynamicParamField>
+
+    <DynamicParamField body="link" type="object">
+      Existing processor billing object this billable is adopted from; omit for paid one-offs.
+      <Expandable title="properties">
+        <DynamicParamField body="subscription_id" type="string">
+          Existing processor subscription id this billable is adopted from.
+        </DynamicParamField>
+
+        <DynamicParamField body="schedule_id" type="string">
+          Existing processor subscription-schedule id this billable is adopted from.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+    <DynamicParamField body="billing_cycle_anchor" type="number">
+      Unix ms billing anchor shared by co-billed plans on this billable.
+    </DynamicParamField>
+
+    <DynamicParamField body="plan" type="object">
+      The single plan on this billable (provide either plan or phases, not both).
+      <Expandable title="properties">
+        <DynamicParamField body="plan_id" type="string" required>
+          The Autumn plan to attach to the customer.
+        </DynamicParamField>
+
+        <DynamicParamField body="version" type="number">
+          Specific plan version to attach; defaults to the latest.
+        </DynamicParamField>
+
+        <DynamicParamField body="status" type="'active' | 'trialing' | 'past_due' | 'canceled' | 'expired'">
+          Set the status of the plan to be flashed. Active if undefined.
+        </DynamicParamField>
+
+        <DynamicParamField body="started_at" type="number">
+          When the plan started (Unix ms). Defaults to the linked subscription's start, else the import time. Set this for one-off purchases to record the real purchase date.
+        </DynamicParamField>
+
+        <DynamicParamField body="quantity" type="number">
+          Seat/unit quantity for the plan.
+        </DynamicParamField>
+
+        <DynamicParamField body="feature_quantities" type="object[]">
+          Purchased prepaid quantities per feature.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The prepaid feature being quantified.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number" required>
+              Purchased quantity for this prepaid feature.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="balances" type="object[]">
+          Per-feature balances to image onto the plan.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature whose balance is being set.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              Disambiguates which entitlement line to target when the feature has multiple.
+              <Expandable title="properties">
+                <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month' | 'year'">
+                  Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_behavior" type="'included' | 'prepaid'">
+                  Selects the included vs prepaid entitlement line when a feature has both.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="usage" type="number">
+              Units already consumed; remaining balance is derived from the plan allowance minus this.
+            </DynamicParamField>
+
+            <DynamicParamField body="balance" type="number">
+              Explicit remaining balance override (mutually exclusive with usage).
+            </DynamicParamField>
+
+            <DynamicParamField body="next_reset_at" type="number">
+              Unix ms timestamp of this line's next reset.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="processors" type="('stripe' | 'revenuecat' | 'vercel')[]">
-  Filter by customer processor type (stripe, revenuecat, vercel).
+<DynamicParamField body="dry_run" type="boolean">
+  If true, validate and compute without persisting; returns what would be flashed.
 </DynamicParamField>
 
 
 ### Response
 
-<DynamicResponseField name="list" type="object[]">
-  Items for current page.
+<DynamicResponseField name="customer_id" type="string">
+  The imaged customer's id.
+</DynamicResponseField>
+
+<DynamicResponseField name="flashed" type="object[]">
+  Per-plan outcome of the flash.
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_id" type="string">
+      The plan that was imaged.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="processor" type="string">
+      The processor that owns the imaged plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_product_id" type="string | null">
+      The created (or existing) customer product id, if any.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string">
+      The resulting status of the imaged plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="skipped" type="boolean">
+      True if an active plan already existed and this one was left untouched.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expired" type="boolean">
+      True if this was an existing active plan expired because it was absent from the imaged desired state.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="mismatch" type="boolean">
+      True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reason" type="string">
+      Why the plan was skipped, expired, or flagged as a mismatch, when applicable.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="customer" type="object | null">
+  The freshly-read imaged customer; null for dry_run.
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string | null">
       Your unique identifier for the customer.
@@ -2219,97 +2375,256 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       </Expandable>
     </DynamicResponseField>
 
-  </Expandable>
-</DynamicResponseField>
+    <DynamicResponseField name="invoices" type="object[]">
+      Invoices for this customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="plan_ids" type="string[]">
+          Array of plan IDs included in this invoice
+        </DynamicResponseField>
 
-<DynamicResponseField name="next_cursor" type="string | null">
-  Opaque cursor for the next page. Null when there are no more results.
+        <DynamicResponseField name="stripe_id" type="string">
+          The Stripe invoice ID
+        </DynamicResponseField>
+
+        <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+          The billing processor that owns this invoice.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="status" type="string">
+          The status of the invoice
+        </DynamicResponseField>
+
+        <DynamicResponseField name="total" type="number">
+          The total amount of the invoice
+        </DynamicResponseField>
+
+        <DynamicResponseField name="currency" type="string">
+          The currency code for the invoice
+        </DynamicResponseField>
+
+        <DynamicResponseField name="created_at" type="number">
+          Timestamp when the invoice was created
+        </DynamicResponseField>
+
+        <DynamicResponseField name="hosted_invoice_url" type="string | null">
+          URL to the Stripe-hosted invoice page
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entities" type="object[]">
+      Entities associated with this customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string | null">
+          The unique identifier of the entity
+        </DynamicResponseField>
+
+        <DynamicResponseField name="name" type="string | null">
+          The name of the entity
+        </DynamicResponseField>
+
+        <DynamicResponseField name="customer_id" type="string | null">
+          The customer ID this entity belongs to
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_id" type="string | null">
+          The feature ID this entity belongs to
+        </DynamicResponseField>
+
+        <DynamicResponseField name="created_at" type="number">
+          Unix timestamp when the entity was created
+        </DynamicResponseField>
+
+        <DynamicResponseField name="env" type="'sandbox' | 'live'">
+          The environment (sandbox/live)
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="trials_used" type="object[]">
+      Trial usage history for this customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="plan_id" type="string" />
+
+        <DynamicResponseField name="customer_id" type="string" />
+
+        <DynamicResponseField name="fingerprint" type="string | null" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="rewards" type="object | null">
+      Rewards earned or applied for this customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="discounts" type="object[]">
+          Array of active discounts applied to the customer
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string">
+              The unique identifier for this discount
+            </DynamicResponseField>
+
+            <DynamicResponseField name="name" type="string">
+              The name of the discount or coupon
+            </DynamicResponseField>
+
+            <DynamicResponseField name="type" type="'percentage_discount' | 'fixed_discount' | 'free_product' | 'invoice_credits' | 'feature_grant'">
+              The type of reward
+            </DynamicResponseField>
+
+            <DynamicResponseField name="discount_value" type="number">
+              The discount value (percentage or fixed amount)
+            </DynamicResponseField>
+
+            <DynamicResponseField name="duration_type" type="'one_off' | 'months' | 'forever'">
+              How long the discount lasts
+            </DynamicResponseField>
+
+            <DynamicResponseField name="duration_value" type="number | null">
+              Number of billing periods the discount applies for repeating durations
+            </DynamicResponseField>
+
+            <DynamicResponseField name="currency" type="string | null">
+              The currency code for fixed amount discounts
+            </DynamicResponseField>
+
+            <DynamicResponseField name="start" type="number | null">
+              Timestamp when the discount becomes active
+            </DynamicResponseField>
+
+            <DynamicResponseField name="end" type="number | null">
+              Timestamp when the discount expires
+            </DynamicResponseField>
+
+            <DynamicResponseField name="subscription_id" type="string | null">
+              The Stripe subscription ID this discount is applied to
+            </DynamicResponseField>
+
+            <DynamicResponseField name="total_discount_amount" type="number | null">
+              Total amount saved from this discount
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="referrals" type="object[]">
+      Referral records for this customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="program_id" type="string" />
+
+        <DynamicResponseField name="customer" type="object">
+          <Expandable title="properties">
+            <DynamicResponseField name="id" type="string" />
+
+            <DynamicResponseField name="name" type="string | null" />
+
+            <DynamicResponseField name="email" type="string | null" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="reward_applied" type="boolean" />
+
+        <DynamicResponseField name="created_at" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="payment_method" type="any | null">
+      The customer's default payment method.
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 
 <ResponseExample>
 ```json 200
 {
-  "list": [
+  "customer_id": "cus_123",
+  "flashed": [
     {
-      "id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58",
-      "name": "Patrick",
-      "email": "patrick@useautumn.com",
-      "createdAt": 1771409161016,
-      "fingerprint": null,
-      "stripeId": "cus_U0BKxpq1mFhuJO",
-      "processors": {
-        "stripe": {
-          "id": "cus_U0BKxpq1mFhuJO"
-        }
-      },
-      "env": "sandbox",
-      "metadata": {},
-      "sendEmailReceipts": false,
-      "billingControls": {
-        "autoTopups": []
-      },
-      "subscriptions": [
-        {
-          "planId": "pro_plan",
-          "autoEnable": true,
-          "addOn": false,
-          "status": "active",
-          "pastDue": false,
-          "canceledAt": null,
-          "expiresAt": null,
-          "trialEndsAt": null,
-          "startedAt": 1771431921437,
-          "currentPeriodStart": 1771431921437,
-          "currentPeriodEnd": 1771999921437,
-          "quantity": 1
-        }
-      ],
-      "purchases": [],
-      "balances": {
-        "messages": {
-          "featureId": "messages",
-          "granted": 100,
-          "remaining": 0,
-          "usage": 100,
-          "unlimited": false,
-          "overageAllowed": false,
-          "maxPurchase": null,
-          "nextResetAt": 1773851121437,
-          "breakdown": [
-            {
-              "id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
-              "planId": "pro_plan",
-              "includedGrant": 100,
-              "prepaidGrant": 0,
-              "remaining": 0,
-              "usage": 100,
-              "unlimited": false,
-              "reset": {
-                "interval": "month",
-                "resetsAt": 1773851121437
-              },
-              "price": null,
-              "expiresAt": null
-            }
-          ]
-        }
-      },
-      "flags": {
-        "advanced_workflows": {
-          "id": "cus_ent_abc123",
-          "plan_id": "pro_plan",
-          "expires_at": null,
-          "feature_id": "advanced_workflows"
-        }
-      },
-      "config": {
-        "disable_pooled_balance": false,
-        "disable_overage_billing": false
-      }
+      "plan_id": "pro",
+      "processor": "stripe",
+      "customer_product_id": "cus_prod_123",
+      "status": "active",
+      "skipped": false
     }
   ],
-  "next_cursor": null
+  "customer": {
+    "id": "cus_123",
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "createdAt": 1771409161016,
+    "fingerprint": null,
+    "stripeId": "cus_stripe_123",
+    "processors": {
+      "stripe": {
+        "id": "cus_stripe_123"
+      }
+    },
+    "env": "sandbox",
+    "metadata": {},
+    "sendEmailReceipts": false,
+    "billingControls": {
+      "autoTopups": []
+    },
+    "subscriptions": [
+      {
+        "planId": "pro",
+        "autoEnable": false,
+        "addOn": false,
+        "status": "active",
+        "pastDue": false,
+        "canceledAt": null,
+        "expiresAt": null,
+        "trialEndsAt": null,
+        "startedAt": 1771431921437,
+        "currentPeriodStart": 1771431921437,
+        "currentPeriodEnd": 1771999921437,
+        "quantity": 1
+      }
+    ],
+    "purchases": [],
+    "balances": {
+      "messages": {
+        "featureId": "messages",
+        "granted": 100,
+        "remaining": 90,
+        "usage": 10,
+        "unlimited": false,
+        "overageAllowed": false,
+        "maxPurchase": null,
+        "nextResetAt": 1773851121437,
+        "breakdown": [
+          {
+            "id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV",
+            "planId": "pro",
+            "includedGrant": 100,
+            "prepaidGrant": 0,
+            "remaining": 90,
+            "usage": 10,
+            "unlimited": false,
+            "reset": {
+              "interval": "month",
+              "resetsAt": 1773851121437
+            },
+            "price": null,
+            "expiresAt": null
+          }
+        ]
+      }
+    },
+    "flags": {},
+    "config": {
+      "disable_pooled_balance": false,
+      "disable_overage_billing": false
+    }
+  }
 }
 ```
 </ResponseExample>
