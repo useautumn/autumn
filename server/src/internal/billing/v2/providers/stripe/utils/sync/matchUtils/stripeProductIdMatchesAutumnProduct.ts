@@ -1,4 +1,4 @@
-import type { Product } from "@autumn/shared";
+import { type Product, productToStripeIds } from "@autumn/shared";
 import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
 
 export const stripeProductIdMatchesAutumnProduct = ({
@@ -10,5 +10,5 @@ export const stripeProductIdMatchesAutumnProduct = ({
 }): boolean => {
 	if (!candidate.stripeProductId) return false;
 
-	return product.processor?.id === candidate.stripeProductId;
+	return productToStripeIds({ product }).includes(candidate.stripeProductId);
 };

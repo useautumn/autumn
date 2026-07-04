@@ -14,6 +14,7 @@ import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals"
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
 import { syncV2 } from "@/internal/billing/v2/actions/sync/syncV2";
 import { updateSubscription } from "@/internal/billing/v2/actions/updateSubscription/updateSubscription";
+import { verify } from "@/internal/billing/v2/actions/verify/verify";
 
 export const billingActions = {
 	attach: attach,
@@ -29,6 +30,7 @@ export const billingActions = {
 	syncV2: syncV2,
 	syncProposals: syncProposals,
 	syncProposalsV2: syncProposalsV2,
+	verify: verify,
 
 	legacy: {
 		attach: legacyAttach,
