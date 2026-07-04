@@ -174,7 +174,7 @@ test(`${chalk.yellowBright("migration drafts: plans.update all_versions creates 
 				noBillingChanges: true,
 				operation: {
 					type: "update_plan",
-					plan_filter: { plan_id: planId },
+					plan_filter: { plan_id: planId, custom: false },
 					customize: messagesDiff(500),
 				},
 			},
@@ -219,6 +219,7 @@ test(`${chalk.yellowBright("migration drafts: catalog.update all_versions base+v
 					type: "update_plan",
 					plan_filter: {
 						plan_id: { $in: [planId, variantId] },
+						custom: false,
 					},
 					customize: messagesDiff(500),
 				},
@@ -368,7 +369,7 @@ test(`${chalk.yellowBright("migration drafts: catalog.update current version cre
 				noBillingChanges: true,
 				operation: {
 					type: "update_plan",
-					plan_filter: { plan_id: planId, version: 1 },
+					plan_filter: { plan_id: planId, version: 1, custom: false },
 					customize: messagesDiff(500),
 				},
 			},
@@ -409,6 +410,7 @@ test(`${chalk.yellowBright("migration drafts: plans.update current base+variant 
 					plan_filter: {
 						plan_id: { $in: [planId, variantId] },
 						version: 1,
+						custom: false,
 					},
 					customize: messagesDiff(500),
 				},
