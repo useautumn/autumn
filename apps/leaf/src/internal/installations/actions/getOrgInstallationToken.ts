@@ -5,8 +5,8 @@ import {
 	chatInstallations,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import { db } from "../../../lib/db.js";
+import { isInternalAutumnSlackProvider } from "../../slackAdmin/provider.js";
 import { getInstallationOAuthAccessToken } from "./getInstallationOAuthAccessToken.js";
 
 /** Resolve an org's chat installation and a fresh Autumn OAuth access token for
@@ -26,7 +26,7 @@ export const getOrgInstallationToken = async ({
 	userId?: string;
 }): Promise<{ accessToken: string; installation: ChatInstallation }> => {
 	const installation = await db.query.chatInstallations.findFirst({
-		where: isSlackAdminProvider({ provider })
+		where: isInternalAutumnSlackProvider({ provider })
 			? and(
 					eq(chatInstallations.provider, provider as ChatProvider),
 					eq(chatInstallations.workspace_id, workspaceId),

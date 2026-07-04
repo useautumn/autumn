@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleCopySandbox } from "./handlers/handleCopySandbox.js";
 import { handleCreateSandbox } from "./handlers/handleCreateSandbox.js";
 import { handleDeleteSandbox } from "./handlers/handleDeleteSandbox.js";
 import { handleListSandboxes } from "./handlers/handleListSandboxes.js";
@@ -11,3 +12,4 @@ sandboxesRpcRouter.post("/sandboxes.create", ...handleCreateSandbox);
 sandboxesRpcRouter.post("/sandboxes.list", ...handleListSandboxes);
 sandboxesRpcRouter.post("/sandboxes.delete", ...handleDeleteSandbox);
 sandboxesRpcRouter.post("/sandboxes.update", ...handleUpdateSandbox);
+sandboxesRpcRouter.post("/sandboxes.copy", ...handleCopySandbox);

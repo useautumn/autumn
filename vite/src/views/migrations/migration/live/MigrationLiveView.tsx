@@ -43,7 +43,13 @@ import {
 	useQueryState,
 	useQueryStates,
 } from "nuqs";
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useDeferredValue,
+	useMemo,
+	useState,
+} from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
@@ -214,6 +220,7 @@ export function MigrationLiveView({
 	noBillingChanges,
 	step,
 	onStepChange,
+	headerActions,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
@@ -221,6 +228,7 @@ export function MigrationLiveView({
 	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
+	headerActions?: ReactNode;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
@@ -477,6 +485,7 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				{headerActions}
 				{activeRun && (
 					<Button
 						variant="secondary"

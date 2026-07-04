@@ -61,7 +61,7 @@ export function CreateScheduleAdvancedSection() {
 			/>
 			<ConfigRow
 				title="Reset Billing Cycle"
-				description="Restart the billing cycle from today"
+				description="Align Stripe anchors to avoid off-cycle charges"
 				action={renderToggle({
 					checked: resetBillingCycle,
 					onCheckedChange: (checked) =>

@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "autumn",
@@ -111,6 +112,7 @@
         "date-fns": "^4.1.0",
         "drizzle-orm": "catalog:",
         "hono": "4.12.7",
+        "lru-cache": "^11.2.7",
         "postgres": "catalog:",
         "zod": "^3.25.23",
       },
@@ -235,7 +237,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "1.1.9",
+      "version": "1.1.12",
       "bin": {
         "atmn": "dist/cli.js",
       },

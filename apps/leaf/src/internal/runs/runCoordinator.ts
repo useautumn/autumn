@@ -51,10 +51,13 @@ export const dispatchThreadMessage = async ({
 			await active.requestStop({ byUserId: providerUserId, reason: "user" });
 			return;
 		}
+
 		const injectable =
 			active.kind === "message" &&
+			active.ownerProviderUserId === providerUserId &&
 			!hasAttachments &&
 			active.pendingTurns < MAX_PENDING_TURNS;
+
 		if (injectable) {
 			try {
 				await active.injectFollowUp({ text });

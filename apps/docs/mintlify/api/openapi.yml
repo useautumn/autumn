@@ -14489,6 +14489,12 @@ paths:
                             required:
                               - plan_id
                           description: Plans to materialize for this phase.
+                        billing_cycle_anchor:
+                          enum:
+                            - phase_start
+                          type: string
+                          description: Pass 'phase_start' to reset the Stripe billing cycle anchor when
+                            this phase starts.
                       required:
                         - plans
                   items:
@@ -15124,6 +15130,12 @@ paths:
                           required:
                             - plan_id
                         description: Plans to materialize for this phase.
+                      billing_cycle_anchor:
+                        enum:
+                          - phase_start
+                        type: string
+                        description: Pass 'phase_start' to reset the Stripe billing cycle anchor when
+                          this phase starts.
                     required:
                       - plans
                   description: Ordered phase definitions for the schedule.

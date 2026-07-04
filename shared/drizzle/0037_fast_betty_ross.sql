@@ -1,1 +1,0 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_customers_processors_revenuecat_id" ON "customers" USING btree (("processors" -> 'revenuecat' ->> 'id'));

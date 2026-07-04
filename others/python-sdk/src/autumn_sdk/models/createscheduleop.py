@@ -1491,16 +1491,22 @@ class CreateSchedulePlan2(BaseModel):
         return m
 
 
-class PhaseRequest2TypedDict(TypedDict):
+BillingCycleAnchor2 = Literal["phase_start",]
+r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
+
+class PhaseStartTypedDict(TypedDict):
     plans: List[CreateSchedulePlan2TypedDict]
     r"""Plans to materialize for this phase."""
     starts_at: NotRequired[StartsAt2TypedDict]
     r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
     starting_after: NotRequired[StartingAfter2TypedDict]
     r"""Relative start offset from the previous resolved schedule phase."""
+    billing_cycle_anchor: NotRequired[BillingCycleAnchor2]
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
 
-class PhaseRequest2(BaseModel):
+class PhaseStart(BaseModel):
     plans: List[CreateSchedulePlan2]
     r"""Plans to materialize for this phase."""
 
@@ -1510,9 +1516,12 @@ class PhaseRequest2(BaseModel):
     starting_after: Optional[StartingAfter2] = None
     r"""Relative start offset from the previous resolved schedule phase."""
 
+    billing_cycle_anchor: Optional[BillingCycleAnchor2] = None
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["starts_at", "starting_after"])
+        optional_fields = set(["starts_at", "starting_after", "billing_cycle_anchor"])
         serialized = handler(self)
         m = {}
 
@@ -1527,16 +1536,16 @@ class PhaseRequest2(BaseModel):
         return m
 
 
-PhaseTypedDict = PhaseRequest2TypedDict
+PhaseStartUnionTypedDict = PhaseStartTypedDict
 
 
-Phase = PhaseRequest2
+PhaseStartUnion = PhaseStart
 
 
 class CreateScheduleParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
-    phases: List[PhaseTypedDict]
+    phases: List[PhaseStartUnionTypedDict]
     r"""Ordered phase definitions for the schedule."""
     entity_id: NotRequired[str]
     r"""Optional entity ID for an entity-scoped schedule."""
@@ -1562,7 +1571,7 @@ class CreateScheduleParams(BaseModel):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
 
-    phases: List[Phase]
+    phases: List[PhaseStartUnion]
     r"""Ordered phase definitions for the schedule."""
 
     entity_id: Optional[str] = None

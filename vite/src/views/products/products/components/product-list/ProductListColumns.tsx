@@ -1,6 +1,7 @@
 import type { ProductV2 } from "@autumn/shared";
 import { MiniCopyButton } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
+import type { SandboxSummary } from "@/hooks/queries/useSandboxesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
@@ -9,9 +10,11 @@ import { ProductNameCell } from "./ProductNameCell";
 export const createProductListColumns = ({
 	showGroup = false,
 	onDeleteClick,
+	sandboxes = [],
 }: {
 	showGroup?: boolean;
 	onDeleteClick?: (product: ProductV2) => void;
+	sandboxes?: SandboxSummary[];
 } = {}) => [
 	{
 		size: 300,
@@ -92,6 +95,7 @@ export const createProductListColumns = ({
 					<ProductListRowToolbar
 						product={row.original}
 						onDeleteClick={onDeleteClick}
+						sandboxes={sandboxes}
 					/>
 				</div>
 			);

@@ -1,5 +1,5 @@
 {
-  "id": "ac18f2e5-4bdd-4259-98de-03fc8a813091",
+  "id": "55bf7640-255f-452d-96c1-79b17dc224da",
   "prevId": "442bd3fe-6549-429e-ac25-0bb5f05dc192",
   "version": "7",
   "dialect": "postgresql",
@@ -828,6 +828,12 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "auth_mode": {
+          "name": "auth_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "default_env": {
           "name": "default_env",
@@ -2835,21 +2841,6 @@
           "columns": [
             {
               "expression": "(\"processors\" ->> 'revenuecat')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customers_processors_revenuecat_id": {
-          "name": "idx_customers_processors_revenuecat_id",
-          "columns": [
-            {
-              "expression": "(\"processors\" -> 'revenuecat' ->> 'id')",
               "asc": true,
               "isExpression": true,
               "nulls": "last"

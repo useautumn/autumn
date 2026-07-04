@@ -52,4 +52,12 @@ describe("sandbox route guards (zod + dashboard-actor wiring on the request path
 		const status = await postStatus("/sandboxes.list", {});
 		expect(status).toBe(401);
 	});
+
+	test("copy from a secret key is blocked by assertDashboardActor (401)", async () => {
+		const status = await postStatus("/sandboxes.copy", {
+			fromMaster: true,
+			toSandboxId: "sandbox_does_not_exist",
+		});
+		expect(status).toBe(401);
+	});
 });

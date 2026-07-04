@@ -1,28 +1,48 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { AuthType, member, type Organization } from "@autumn/shared";
+import {
+	AppEnv,
+	AuthType,
+	member,
+	type Organization,
+	OrgConfigSchema,
+	organizations,
+} from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import type { User } from "better-auth";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
 	assertDashboardActor,
 	assertNotSandboxContext,
 	createSandboxForOrg,
 } from "@/internal/sandboxes/createSandbox.js";
+import { generatePublishableKey } from "@/utils/encryptUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const { db } = initDrizzle();
 let createdOrg: Organization | undefined;
+let inheritSandbox: Organization | undefined;
+let inheritMasterId: string | undefined;
 
 afterAll(async () => {
-	if (createdOrg) {
-		await deletePlatformSubOrg({
-			db,
-			org: createdOrg,
-			logger,
-			skipLiveCustomerCheck: true,
-		});
+	for (const org of [createdOrg, inheritSandbox]) {
+		if (org) {
+			await deletePlatformSubOrg({
+				db,
+				org,
+				logger,
+				skipLiveCustomerCheck: true,
+			}).catch(() => {});
+		}
+	}
+	if (inheritMasterId) {
+		await db
+			.delete(organizations)
+			.where(eq(organizations.id, inheritMasterId))
+			.catch(() => {});
 	}
 });
 
@@ -79,5 +99,42 @@ describe("createSandboxForOrg", () => {
 			where: eq(member.organizationId, org.id),
 		});
 		expect(members.length).toBe(0);
+	}, 120_000);
+
+	test("a new sandbox inherits the master org's config", async () => {
+		const actorUser = (await db.query.user.findFirst()) as unknown as User;
+
+		const masterConfig = OrgConfigSchema.parse({
+			default_applies_to_entities: true,
+			prorate_unused: false,
+		});
+		inheritMasterId = generateId("org");
+		await db.insert(organizations).values({
+			id: inheritMasterId,
+			slug: `cfg-master-${crypto.randomUUID()}`,
+			name: "cfg-master",
+			createdAt: new Date(),
+			created_at: Date.now(),
+			is_sandbox: false,
+			stripe_connected: false,
+			default_currency: "usd",
+			config: masterConfig,
+			onboarded: true,
+			test_pkey: generatePublishableKey(AppEnv.Sandbox),
+			live_pkey: generatePublishableKey(AppEnv.Live),
+		});
+		const master = await OrgService.get({ db, orgId: inheritMasterId });
+
+		const { org } = await createSandboxForOrg({
+			db,
+			masterOrg: master,
+			actorUser,
+			name: "Config Inherit Sandbox",
+		});
+		inheritSandbox = org;
+
+		expect(org.config.default_applies_to_entities).toBe(true);
+		expect(org.config.prorate_unused).toBe(false);
+		expect(org.config).toEqual(masterConfig);
 	}, 120_000);
 });

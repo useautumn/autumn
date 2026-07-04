@@ -145,7 +145,7 @@ Plan items define what each plan includes -- usage limits, pricing, and billing 
 | \`reset\` | object | No | How often the included amount resets: \`{ interval, intervalCount? }\`. |
 | \`price\` | object | No | Pricing for usage beyond the included amount. |
 | \`proration\` | object | No | Mid-cycle changes: \`{ onIncrease, onDecrease }\`. |
-| \`rollover\` | object | No | Carry unused balance: \`{ max, expiryDurationType, expiryDurationLength }\`. |
+| \`rollover\` | object | No | Carry unused balance: \`{ max?, maxPercentage?, expiryDurationType, expiryDurationLength? }\`. \`max\`/\`maxPercentage\` are mutually exclusive. |
 
 Reset intervals: \`"hour"\` | \`"day"\` | \`"week"\` | \`"month"\` | \`"quarter"\` | \`"semi_annual"\` | \`"year"\`
 

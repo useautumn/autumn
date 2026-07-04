@@ -1,16 +1,7 @@
-import { type ChatInstallation, organizations } from "@autumn/shared";
+import { organizations } from "@autumn/shared";
 import { desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
-
-export const isSlackAdminProvider = ({ provider }: { provider: string }) =>
-	provider === "slack_admin" || provider.startsWith("slack_admin:");
-
-export const isSlackAdminInstallation = ({
-	installation,
-}: {
-	installation: ChatInstallation;
-}) => isSlackAdminProvider({ provider: installation.provider });
 
 export const validateSlackAdminAccessConfig = ({
 	configuredWorkspaceId,

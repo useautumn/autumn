@@ -16,6 +16,39 @@ const variantSettingsFields = [
 	"metadata",
 ] as const satisfies readonly (keyof UpdateProductV2Params)[];
 
+// Order-insensitive canonical form: DB stores billing_controls in one key/array
+// order while the editor re-serializes it in another, so a plain JSON.stringify
+// falsely reports a change when nothing meaningful differs.
+const sortDeep = (value: unknown): unknown => {
+	if (Array.isArray(value)) return value.map(sortDeep);
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.keys(value as Record<string, unknown>)
+				.sort()
+				.map((key) => [key, sortDeep((value as Record<string, unknown>)[key])]),
+		);
+	}
+	return value;
+};
+
+const canonicalizeBillingControls = (value: unknown): string => {
+	const source = (value ?? {}) as Record<string, unknown>;
+	const normalized: Record<string, unknown> = {};
+	for (const key of Object.keys(source)) {
+		const entries = source[key];
+		// Treat an absent key and an empty array as the same "no controls" state.
+		if (Array.isArray(entries) && entries.length === 0) continue;
+		normalized[key] = Array.isArray(entries)
+			? [...entries].sort((a, b) =>
+					String((a as { feature_id?: string })?.feature_id ?? "").localeCompare(
+						String((b as { feature_id?: string })?.feature_id ?? ""),
+					),
+				)
+			: entries;
+	}
+	return JSON.stringify(sortDeep(normalized));
+};
+
 const normalizeVariantSettingValue = ({
 	field,
 	value,
@@ -27,7 +60,8 @@ const normalizeVariantSettingValue = ({
 	// Treat "" and null/undefined as the same empty description; the editor sends
 	// "" while a description-less plan stores null, which isn't a real change.
 	if (field === "description") return value || null;
-	if (["config", "billing_controls", "metadata"].includes(field)) {
+	if (field === "billing_controls") return canonicalizeBillingControls(value);
+	if (["config", "metadata"].includes(field)) {
 		return JSON.stringify(value ?? {});
 	}
 	return value;
