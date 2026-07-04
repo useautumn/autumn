@@ -20629,12 +20629,12 @@ paths:
         - *a5
   /v1/billing.import:
     post:
-      operationId: flash
+      operationId: import
       summary: Import
       description: Image a customer into Autumn for live migration. Read-only against
         processors.
       tags:
-        - dfu
+        - billing
       requestBody:
         required: true
         content:
@@ -20961,7 +20961,7 @@ paths:
                         disable_pooled_balance: false
                         disable_overage_billing: false
               example: *a48
-      x-speakeasy-name-override: flash
+      x-speakeasy-name-override: import
       parameters:
         - *a5
   /v1/balances.create:

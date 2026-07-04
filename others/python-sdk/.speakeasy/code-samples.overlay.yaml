@@ -227,7 +227,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.dfu.flash(customer_id="cus_123", processors=[
+                res = autumn.billing.import_(customer_id="cus_123", processors=[
                     {
                         "type": "stripe",
                         "id": "cus_stripe_123",

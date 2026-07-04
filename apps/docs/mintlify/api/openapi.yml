@@ -21315,12 +21315,12 @@ paths:
             )
   /v1/billing.import:
     post:
-      operationId: flash
+      operationId: import
       summary: Import
       description: Image a customer into Autumn for live migration. Read-only against
         processors.
       tags:
-        - dfu
+        - billing
       requestBody:
         required: true
         content:
@@ -21647,7 +21647,7 @@ paths:
                         disable_pooled_balance: false
                         disable_overage_billing: false
               example: *a48
-      x-speakeasy-name-override: flash
+      x-speakeasy-name-override: import
       parameters:
         - *a5
       x-codeSamples:
@@ -21658,7 +21658,7 @@ paths:
 
             const autumn = new Autumn()
 
-            const result = await autumn.dfu.flash({
+            const result = await autumn.billing.import({
               customerId: "cus_123",
               processors: [
                 {
@@ -21692,7 +21692,7 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.dfu.flash(
+            res = autumn.billing.import_(
                 customer_id="cus_123",
                 processors=[
                     {

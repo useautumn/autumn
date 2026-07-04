@@ -32,7 +32,7 @@ import { Result } from "../types/fp.js";
  * @remarks
  * Image a customer into Autumn for live migration. Read-only against processors.
  */
-export function dfuFlash(
+export function billingImport(
   client: AutumnCore,
   request: models.DfuFlashParams,
   options?: RequestOptions,
@@ -106,7 +106,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "flash",
+    operationID: "import",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,

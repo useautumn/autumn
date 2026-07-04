@@ -237,6 +237,7 @@ Use this endpoint to update prepaid quantities, cancel a subscription (immediate
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 * [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
+* [import_](docs/sdks/billing/README.md#import_) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -249,10 +250,6 @@ Use this when you know the customer exists or assert they exist without creating
 * [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
-
-### [Dfu](docs/sdks/dfu/README.md)
-
-* [flash](docs/sdks/dfu/README.md#flash) - Import
 
 ### [Entities](docs/sdks/entities/README.md)
 
