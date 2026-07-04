@@ -88,6 +88,8 @@ test.concurrent(
 		expect(cusProduct?.status).toBe(CusProductStatus.Active);
 		// Start is the sub's real (past) start, not import time.
 		expect(cusProduct?.starts_at).toBe(startMs);
+		// created_at is back-dated to the sub's real start, not the import time.
+		expect(cusProduct?.created_at).toBe(startMs);
 		// Cycle anchor is the real future period end, not import + 1 month.
 		expect(cusProduct?.billing_cycle_anchor).toBe(periodEndMs);
 		expect(cusProduct?.starts_at).toBeLessThan(Date.now());

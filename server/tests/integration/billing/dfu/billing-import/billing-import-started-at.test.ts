@@ -65,6 +65,8 @@ test.concurrent(
 			productId: pro.id,
 		});
 		expect(cusProduct?.starts_at).toBe(startsAt);
+		// created_at is back-dated to the real start too, not the import time.
+		expect(cusProduct?.created_at).toBe(startsAt);
 	},
 );
 

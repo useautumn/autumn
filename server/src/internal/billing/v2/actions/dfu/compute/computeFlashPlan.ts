@@ -104,6 +104,12 @@ const buildCustomerProduct = ({
 		},
 	});
 
+	// Back-date the record to the plan's real start so a migrated plan's created_at
+	// (like starts_at) reflects the source, not the import time.
+	if (resolvedStartsAt !== undefined) {
+		customerProduct.created_at = resolvedStartsAt;
+	}
+
 	// Stamp the resolved RC sub/purchase id on the cusProduct processor.
 	if (revenueCatHydration?.processorId) {
 		customerProduct.processor = {
