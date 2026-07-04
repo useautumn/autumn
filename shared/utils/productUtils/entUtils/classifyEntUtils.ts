@@ -39,6 +39,19 @@ export const isLifetimeEntitlement = ({
 	return !entitlement.interval || entitlement.interval === EntInterval.Lifetime;
 };
 
+/** Grants an allowance that refreshes on a cycle — i.e. has a real `next_reset_at`. */
+export const isResettingEntitlement = ({
+	entitlement,
+}: {
+	entitlement: EntitlementWithFeature;
+}) => {
+	return (
+		!isBooleanEntitlement({ entitlement }) &&
+		!isUnlimitedEntitlement({ entitlement }) &&
+		!isLifetimeEntitlement({ entitlement })
+	);
+};
+
 export const entitlementHasEntityFeature = ({
 	entitlement,
 	entity,

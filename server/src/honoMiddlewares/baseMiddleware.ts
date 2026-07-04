@@ -19,6 +19,22 @@ import { resolveEntityId } from "./utils/resolveEntityId.js";
 const SENSITIVE_REQUEST_BODY_KEYS = new Set(["connectionString"]);
 const REDACTED_REQUEST_BODY_VALUE = "[REDACTED]";
 
+const parseMockRevenueCatFixtures = (
+	raw: string | undefined,
+): {
+	subscriptions?: unknown[];
+	purchases?: unknown[];
+	products?: unknown[];
+} => {
+	if (!raw) return {};
+	try {
+		const parsed = JSON.parse(raw);
+		return parsed && typeof parsed === "object" ? parsed : {};
+	} catch {
+		return {};
+	}
+};
+
 const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
 	if (!body || typeof body !== "object") return body;
 
@@ -131,6 +147,15 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			allowVercelTestOidc:
 				process.env.NODE_ENV !== "production" &&
 				c.req.header("x-allow-vercel-test-oidc") === "true",
+			mockRevenueCat:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-mock-revenuecat") === "true",
+			revenueCat:
+				process.env.NODE_ENV !== "production"
+					? parseMockRevenueCatFixtures(
+							c.req.header("x-mock-revenuecat-fixtures"),
+						)
+					: {},
 		},
 	});
 

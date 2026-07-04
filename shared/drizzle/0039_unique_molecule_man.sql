@@ -1,0 +1,2 @@
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_customers_processors_revenuecat_id" ON "customers" USING btree (("processors" -> 'revenuecat' ->> 'id'));--> statement-breakpoint
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_customers_processors_revenuecat_aliases" ON "customers" USING gin (("processors" -> 'revenuecat' -> 'aliases'));

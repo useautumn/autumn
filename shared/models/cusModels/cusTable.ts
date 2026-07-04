@@ -91,6 +91,13 @@ export const customers = pgTable(
 		index("idx_customers_processors_revenuecat").on(
 			sql`(${table.processors} ->> 'revenuecat')`,
 		),
+		index("idx_customers_processors_revenuecat_id").on(
+			sql`(${table.processors} -> 'revenuecat' ->> 'id')`,
+		),
+		index("idx_customers_processors_revenuecat_aliases").using(
+			"gin",
+			sql`(${table.processors} -> 'revenuecat' -> 'aliases')`,
+		),
 		index("idx_customers_processors_vercel").on(
 			sql`(${table.processors} ->> 'vercel')`,
 		),

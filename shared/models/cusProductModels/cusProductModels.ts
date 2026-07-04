@@ -59,6 +59,8 @@ export const CusProductSchema = z.object({
 	processor: z
 		.object({
 			type: z.enum(ProcessorType),
+			// Processor-native id for the cus_product (e.g. RevenueCat sub/purchase id).
+			id: z.string().nullish(),
 			// subscription_id: z.string().optional().nullable(),
 			// subscription_schedule_id: z.string().optional().nullable(),
 			// last_invoice_id: z.string().optional().nullable(),
