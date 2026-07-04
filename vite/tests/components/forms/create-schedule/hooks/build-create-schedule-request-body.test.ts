@@ -553,6 +553,43 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result!.phases[0].starts_at).toBe(now);
 	});
 
+	test("preserves persisted first phase start when editing an existing schedule", () => {
+		const persistedStart = Date.UTC(2027, 5, 30, 13, 11);
+		const now = Date.UTC(2027, 6, 2, 16, 49);
+		const paidStart = Date.UTC(2027, 9, 2, 12, 0);
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				schedulePhase({
+					startsAt: persistedStart,
+					persistedStartsAt: persistedStart,
+					productIds: ["prod_1", "prod_2"],
+				}),
+				schedulePhase({
+					startsAt: now,
+					persistedStartsAt: now,
+					productIds: ["prod_1"],
+				}),
+				schedulePhase({
+					startsAt: paidStart,
+					productIds: ["prod_1"],
+				}),
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			resetBillingCycle: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.phases.map((phase) => phase.starts_at)).toEqual([
+			persistedStart,
+			now,
+			paidStart,
+		]);
+	});
+
 	test("sets phase billing anchor for future phases when billing cycle reset is enabled", () => {
 		const now = Date.now();
 		const future = now + 1000 * 60 * 60 * 24 * 30;

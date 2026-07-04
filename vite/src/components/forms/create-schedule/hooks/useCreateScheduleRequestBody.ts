@@ -135,14 +135,11 @@ export function buildCreateScheduleRequestBody({
 	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
-		// The first phase starts immediately (now) unless backdating is allowed —
-		// only when a brand-new Stripe subscription will be created — in which case
-		// a past starts_at flows through to backdate that subscription.
 		const startsAt =
 			index === 0
 				? allowFirstPhaseBackdate
 					? (phase.startsAt ?? now)
-					: now
+					: (phase.persistedStartsAt ?? now)
 				: phase.startsAt;
 		if (startsAt === null) return null;
 
