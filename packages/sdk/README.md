@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783201356738,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784410956738,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783204252278,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784413852278,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -492,6 +492,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
+* [import](docs/sdks/billing/README.md#import) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -538,10 +539,6 @@ const response = await client.get({ customerId: "cus_123", expand: ["invoices","
 * [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
-
-### [Dfu](docs/sdks/dfu/README.md)
-
-* [flash](docs/sdks/dfu/README.md#flash) - Import
 
 ### [Entities](docs/sdks/entities/README.md)
 
@@ -856,7 +853,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783201356738,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784410956738,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783204252278,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784413852278,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -872,6 +869,7 @@ const response = await client.billing.createSchedule({ customerId: "cus_123", ph
 @param phases - Ordered phase definitions for the schedule.
 
 @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+- [`billingImport`](docs/sdks/billing/README.md#import) - Import
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
 Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
@@ -1114,7 +1112,6 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
-- [`dfuFlash`](docs/sdks/dfu/README.md#flash) - Import
 - [`entitiesCreate`](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
 
 Use entities when usage and access must be scoped to sub-resources (for example seats, projects, or workspaces) instead of only the customer.

@@ -5,14 +5,14 @@ export const dfuFlashContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/billing.import",
-		operationId: "flash",
+		operationId: "import",
 		summary: "Import",
-		tags: ["dfu"],
+		tags: ["billing"],
 		description:
 			"Image a customer into Autumn for live migration. Read-only against processors.",
 		spec: (spec) => ({
 			...spec,
-			"x-speakeasy-name-override": "flash",
+			"x-speakeasy-name-override": "import",
 		}),
 	})
 	.input(

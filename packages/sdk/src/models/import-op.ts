@@ -11,14 +11,14 @@ import * as types from "../types/primitives.js";
 import { Customer, Customer$inboundSchema } from "./customer.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type FlashGlobals = {
+export type ImportGlobals = {
   xApiVersion?: string | undefined;
 };
 
 /**
  * Optional identity fields to upsert if the customer is new.
  */
-export type FlashCustomerData = {
+export type ImportCustomerData = {
   /**
    * Display name for the customer.
    */
@@ -36,20 +36,20 @@ export type FlashCustomerData = {
 /**
  * The processor this identity belongs to.
  */
-export const FlashType = {
+export const ImportType = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
 } as const;
 /**
  * The processor this identity belongs to.
  */
-export type FlashType = ClosedEnum<typeof FlashType>;
+export type ImportType = ClosedEnum<typeof ImportType>;
 
-export type FlashProcessor = {
+export type ImportProcessor = {
   /**
    * The processor this identity belongs to.
    */
-  type: FlashType;
+  type: ImportType;
   /**
    * The customer's id in that processor (Stripe customer id, or RevenueCat app_user_id).
    */
@@ -86,7 +86,7 @@ export type Link = {
 /**
  * Set the status of the plan to be flashed. Active if undefined.
  */
-export const FlashStatus = {
+export const ImportStatus = {
   Active: "active",
   Trialing: "trialing",
   PastDue: "past_due",
@@ -96,9 +96,9 @@ export const FlashStatus = {
 /**
  * Set the status of the plan to be flashed. Active if undefined.
  */
-export type FlashStatus = ClosedEnum<typeof FlashStatus>;
+export type ImportStatus = ClosedEnum<typeof ImportStatus>;
 
-export type FlashFeatureQuantity = {
+export type ImportFeatureQuantity = {
   /**
    * The prepaid feature being quantified.
    */
@@ -109,26 +109,26 @@ export type FlashFeatureQuantity = {
   quantity: number;
 };
 
-export const FlashInterval = {
+export const ImportInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
   Year: "year",
 } as const;
-export type FlashInterval = ClosedEnum<typeof FlashInterval>;
+export type ImportInterval = ClosedEnum<typeof ImportInterval>;
 
 /**
  * Selects the included vs prepaid entitlement line when a feature has both.
  */
-export const FlashBillingBehavior = {
+export const ImportBillingBehavior = {
   Included: "included",
   Prepaid: "prepaid",
 } as const;
 /**
  * Selects the included vs prepaid entitlement line when a feature has both.
  */
-export type FlashBillingBehavior = ClosedEnum<typeof FlashBillingBehavior>;
+export type ImportBillingBehavior = ClosedEnum<typeof ImportBillingBehavior>;
 
 /**
  * Disambiguates which entitlement line to target when the feature has multiple.
@@ -137,14 +137,14 @@ export type Filter = {
   /**
    * Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).
    */
-  interval?: FlashInterval | null | undefined;
+  interval?: ImportInterval | null | undefined;
   /**
    * Selects the included vs prepaid entitlement line when a feature has both.
    */
-  billingBehavior?: FlashBillingBehavior | undefined;
+  billingBehavior?: ImportBillingBehavior | undefined;
 };
 
-export type FlashBalance = {
+export type ImportBalance = {
   /**
    * The feature whose balance is being set.
    */
@@ -170,7 +170,7 @@ export type FlashBalance = {
 /**
  * The single plan on this billable (provide either plan or phases, not both).
  */
-export type FlashPlan = {
+export type ImportPlan = {
   /**
    * The Autumn plan to attach to the customer.
    */
@@ -182,7 +182,7 @@ export type FlashPlan = {
   /**
    * Set the status of the plan to be flashed. Active if undefined.
    */
-  status?: FlashStatus | undefined;
+  status?: ImportStatus | undefined;
   /**
    * When the plan started (Unix ms). Defaults to the linked subscription's start, else the import time. Set this for one-off purchases to record the real purchase date.
    */
@@ -194,11 +194,11 @@ export type FlashPlan = {
   /**
    * Purchased prepaid quantities per feature.
    */
-  featureQuantities?: Array<FlashFeatureQuantity> | undefined;
+  featureQuantities?: Array<ImportFeatureQuantity> | undefined;
   /**
    * Per-feature balances to image onto the plan.
    */
-  balances?: Array<FlashBalance> | undefined;
+  balances?: Array<ImportBalance> | undefined;
 };
 
 export type Billable = {
@@ -217,7 +217,7 @@ export type Billable = {
   /**
    * The single plan on this billable (provide either plan or phases, not both).
    */
-  plan?: FlashPlan | undefined;
+  plan?: ImportPlan | undefined;
 };
 
 export type DfuFlashParams = {
@@ -228,11 +228,11 @@ export type DfuFlashParams = {
   /**
    * Optional identity fields to upsert if the customer is new.
    */
-  customerData?: FlashCustomerData | undefined;
+  customerData?: ImportCustomerData | undefined;
   /**
    * The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
    */
-  processors: Array<FlashProcessor>;
+  processors: Array<ImportProcessor>;
   /**
    * The billing objects (subscriptions, one-offs) to image, each carrying its plan.
    */
@@ -297,52 +297,53 @@ export type DfuFlashResult = {
 };
 
 /** @internal */
-export type FlashCustomerData$Outbound = {
+export type ImportCustomerData$Outbound = {
   name?: string | undefined;
   email?: string | undefined;
   fingerprint?: string | undefined;
 };
 
 /** @internal */
-export const FlashCustomerData$outboundSchema: z.ZodMiniType<
-  FlashCustomerData$Outbound,
-  FlashCustomerData
+export const ImportCustomerData$outboundSchema: z.ZodMiniType<
+  ImportCustomerData$Outbound,
+  ImportCustomerData
 > = z.object({
   name: z.optional(z.string()),
   email: z.optional(z.string()),
   fingerprint: z.optional(z.string()),
 });
 
-export function flashCustomerDataToJSON(
-  flashCustomerData: FlashCustomerData,
+export function importCustomerDataToJSON(
+  importCustomerData: ImportCustomerData,
 ): string {
   return JSON.stringify(
-    FlashCustomerData$outboundSchema.parse(flashCustomerData),
+    ImportCustomerData$outboundSchema.parse(importCustomerData),
   );
 }
 
 /** @internal */
-export const FlashType$outboundSchema: z.ZodMiniEnum<typeof FlashType> = z.enum(
-  FlashType,
-);
+export const ImportType$outboundSchema: z.ZodMiniEnum<typeof ImportType> = z
+  .enum(ImportType);
 
 /** @internal */
-export type FlashProcessor$Outbound = {
+export type ImportProcessor$Outbound = {
   type: string;
   id: string;
 };
 
 /** @internal */
-export const FlashProcessor$outboundSchema: z.ZodMiniType<
-  FlashProcessor$Outbound,
-  FlashProcessor
+export const ImportProcessor$outboundSchema: z.ZodMiniType<
+  ImportProcessor$Outbound,
+  ImportProcessor
 > = z.object({
-  type: FlashType$outboundSchema,
+  type: ImportType$outboundSchema,
   id: z.string(),
 });
 
-export function flashProcessorToJSON(flashProcessor: FlashProcessor): string {
-  return JSON.stringify(FlashProcessor$outboundSchema.parse(flashProcessor));
+export function importProcessorToJSON(
+  importProcessor: ImportProcessor,
+): string {
+  return JSON.stringify(ImportProcessor$outboundSchema.parse(importProcessor));
 }
 
 /** @internal */
@@ -375,19 +376,19 @@ export function linkToJSON(link: Link): string {
 }
 
 /** @internal */
-export const FlashStatus$outboundSchema: z.ZodMiniEnum<typeof FlashStatus> = z
-  .enum(FlashStatus);
+export const ImportStatus$outboundSchema: z.ZodMiniEnum<typeof ImportStatus> = z
+  .enum(ImportStatus);
 
 /** @internal */
-export type FlashFeatureQuantity$Outbound = {
+export type ImportFeatureQuantity$Outbound = {
   feature_id: string;
   quantity: number;
 };
 
 /** @internal */
-export const FlashFeatureQuantity$outboundSchema: z.ZodMiniType<
-  FlashFeatureQuantity$Outbound,
-  FlashFeatureQuantity
+export const ImportFeatureQuantity$outboundSchema: z.ZodMiniType<
+  ImportFeatureQuantity$Outbound,
+  ImportFeatureQuantity
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -400,22 +401,23 @@ export const FlashFeatureQuantity$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function flashFeatureQuantityToJSON(
-  flashFeatureQuantity: FlashFeatureQuantity,
+export function importFeatureQuantityToJSON(
+  importFeatureQuantity: ImportFeatureQuantity,
 ): string {
   return JSON.stringify(
-    FlashFeatureQuantity$outboundSchema.parse(flashFeatureQuantity),
+    ImportFeatureQuantity$outboundSchema.parse(importFeatureQuantity),
   );
 }
 
 /** @internal */
-export const FlashInterval$outboundSchema: z.ZodMiniEnum<typeof FlashInterval> =
-  z.enum(FlashInterval);
+export const ImportInterval$outboundSchema: z.ZodMiniEnum<
+  typeof ImportInterval
+> = z.enum(ImportInterval);
 
 /** @internal */
-export const FlashBillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof FlashBillingBehavior
-> = z.enum(FlashBillingBehavior);
+export const ImportBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof ImportBillingBehavior
+> = z.enum(ImportBillingBehavior);
 
 /** @internal */
 export type Filter$Outbound = {
@@ -427,8 +429,8 @@ export type Filter$Outbound = {
 export const Filter$outboundSchema: z.ZodMiniType<Filter$Outbound, Filter> = z
   .pipe(
     z.object({
-      interval: z.optional(z.nullable(FlashInterval$outboundSchema)),
-      billingBehavior: z.optional(FlashBillingBehavior$outboundSchema),
+      interval: z.optional(z.nullable(ImportInterval$outboundSchema)),
+      billingBehavior: z.optional(ImportBillingBehavior$outboundSchema),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -442,7 +444,7 @@ export function filterToJSON(filter: Filter): string {
 }
 
 /** @internal */
-export type FlashBalance$Outbound = {
+export type ImportBalance$Outbound = {
   feature_id: string;
   filter?: Filter$Outbound | undefined;
   usage?: number | undefined;
@@ -451,9 +453,9 @@ export type FlashBalance$Outbound = {
 };
 
 /** @internal */
-export const FlashBalance$outboundSchema: z.ZodMiniType<
-  FlashBalance$Outbound,
-  FlashBalance
+export const ImportBalance$outboundSchema: z.ZodMiniType<
+  ImportBalance$Outbound,
+  ImportBalance
 > = z.pipe(
   z.object({
     featureId: z.string(),
@@ -470,36 +472,36 @@ export const FlashBalance$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function flashBalanceToJSON(flashBalance: FlashBalance): string {
-  return JSON.stringify(FlashBalance$outboundSchema.parse(flashBalance));
+export function importBalanceToJSON(importBalance: ImportBalance): string {
+  return JSON.stringify(ImportBalance$outboundSchema.parse(importBalance));
 }
 
 /** @internal */
-export type FlashPlan$Outbound = {
+export type ImportPlan$Outbound = {
   plan_id: string;
   version?: number | undefined;
   status?: string | undefined;
   started_at?: number | undefined;
   quantity?: number | undefined;
-  feature_quantities?: Array<FlashFeatureQuantity$Outbound> | undefined;
-  balances?: Array<FlashBalance$Outbound> | undefined;
+  feature_quantities?: Array<ImportFeatureQuantity$Outbound> | undefined;
+  balances?: Array<ImportBalance$Outbound> | undefined;
 };
 
 /** @internal */
-export const FlashPlan$outboundSchema: z.ZodMiniType<
-  FlashPlan$Outbound,
-  FlashPlan
+export const ImportPlan$outboundSchema: z.ZodMiniType<
+  ImportPlan$Outbound,
+  ImportPlan
 > = z.pipe(
   z.object({
     planId: z.string(),
     version: z.optional(z.number()),
-    status: z.optional(FlashStatus$outboundSchema),
+    status: z.optional(ImportStatus$outboundSchema),
     startedAt: z.optional(z.number()),
     quantity: z.optional(z.number()),
     featureQuantities: z.optional(
-      z.array(z.lazy(() => FlashFeatureQuantity$outboundSchema)),
+      z.array(z.lazy(() => ImportFeatureQuantity$outboundSchema)),
     ),
-    balances: z.optional(z.array(z.lazy(() => FlashBalance$outboundSchema))),
+    balances: z.optional(z.array(z.lazy(() => ImportBalance$outboundSchema))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -510,8 +512,8 @@ export const FlashPlan$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function flashPlanToJSON(flashPlan: FlashPlan): string {
-  return JSON.stringify(FlashPlan$outboundSchema.parse(flashPlan));
+export function importPlanToJSON(importPlan: ImportPlan): string {
+  return JSON.stringify(ImportPlan$outboundSchema.parse(importPlan));
 }
 
 /** @internal */
@@ -519,7 +521,7 @@ export type Billable$Outbound = {
   processor: string;
   link?: Link$Outbound | undefined;
   billing_cycle_anchor?: number | undefined;
-  plan?: FlashPlan$Outbound | undefined;
+  plan?: ImportPlan$Outbound | undefined;
 };
 
 /** @internal */
@@ -531,7 +533,7 @@ export const Billable$outboundSchema: z.ZodMiniType<
     processor: BillableProcessor$outboundSchema,
     link: z.optional(z.lazy(() => Link$outboundSchema)),
     billingCycleAnchor: z.optional(z.number()),
-    plan: z.optional(z.lazy(() => FlashPlan$outboundSchema)),
+    plan: z.optional(z.lazy(() => ImportPlan$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -547,8 +549,8 @@ export function billableToJSON(billable: Billable): string {
 /** @internal */
 export type DfuFlashParams$Outbound = {
   customer_id: string;
-  customer_data?: FlashCustomerData$Outbound | undefined;
-  processors: Array<FlashProcessor$Outbound>;
+  customer_data?: ImportCustomerData$Outbound | undefined;
+  processors: Array<ImportProcessor$Outbound>;
   billables: Array<Billable$Outbound>;
   dry_run?: boolean | undefined;
 };
@@ -560,8 +562,8 @@ export const DfuFlashParams$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     customerId: z.string(),
-    customerData: z.optional(z.lazy(() => FlashCustomerData$outboundSchema)),
-    processors: z.array(z.lazy(() => FlashProcessor$outboundSchema)),
+    customerData: z.optional(z.lazy(() => ImportCustomerData$outboundSchema)),
+    processors: z.array(z.lazy(() => ImportProcessor$outboundSchema)),
     billables: z.array(z.lazy(() => Billable$outboundSchema)),
     dryRun: z.optional(z.boolean()),
   }),

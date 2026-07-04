@@ -4,6 +4,7 @@
 
 import { billingAttach } from "../funcs/billing-attach.js";
 import { billingCreateSchedule } from "../funcs/billing-create-schedule.js";
+import { billingImport } from "../funcs/billing-import.js";
 import { billingMultiAttach } from "../funcs/billing-multi-attach.js";
 import { billingOpenCustomerPortal } from "../funcs/billing-open-customer-portal.js";
 import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
@@ -88,7 +89,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783201356738,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784410956738,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783204252278,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784413852278,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
@@ -368,6 +369,23 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.SetupPaymentResponse> {
     return unwrapAsync(billingSetupPayment(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Import
+   *
+   * @remarks
+   * Image a customer into Autumn for live migration. Read-only against processors.
+   */
+  async import(
+    request: models.DfuFlashParams,
+    options?: RequestOptions,
+  ): Promise<models.DfuFlashResult> {
+    return unwrapAsync(billingImport(
       this,
       request,
       options,

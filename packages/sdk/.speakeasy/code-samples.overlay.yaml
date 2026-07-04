@@ -280,7 +280,7 @@ actions:
             });
 
             async function run() {
-              const result = await autumn.dfu.flash({
+              const result = await autumn.billing.import({
                 customerId: "cus_123",
                 processors: [
                   {

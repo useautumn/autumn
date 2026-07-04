@@ -16,11 +16,11 @@ from typing import List, Literal, Optional
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
-class FlashGlobalsTypedDict(TypedDict):
+class ImportGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class FlashGlobals(BaseModel):
+class ImportGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -44,7 +44,7 @@ class FlashGlobals(BaseModel):
         return m
 
 
-class FlashCustomerDataTypedDict(TypedDict):
+class ImportCustomerDataTypedDict(TypedDict):
     r"""Optional identity fields to upsert if the customer is new."""
 
     name: NotRequired[str]
@@ -55,7 +55,7 @@ class FlashCustomerDataTypedDict(TypedDict):
     r"""Anti-fraud fingerprint for the customer."""
 
 
-class FlashCustomerData(BaseModel):
+class ImportCustomerData(BaseModel):
     r"""Optional identity fields to upsert if the customer is new."""
 
     name: Optional[str] = None
@@ -84,22 +84,22 @@ class FlashCustomerData(BaseModel):
         return m
 
 
-FlashType = Literal[
+ImportType = Literal[
     "stripe",
     "revenuecat",
 ]
 r"""The processor this identity belongs to."""
 
 
-class FlashProcessorTypedDict(TypedDict):
-    type: FlashType
+class ImportProcessorTypedDict(TypedDict):
+    type: ImportType
     r"""The processor this identity belongs to."""
     id: str
     r"""The customer's id in that processor (Stripe customer id, or RevenueCat app_user_id)."""
 
 
-class FlashProcessor(BaseModel):
-    type: FlashType
+class ImportProcessor(BaseModel):
+    type: ImportType
     r"""The processor this identity belongs to."""
 
     id: str
@@ -149,7 +149,7 @@ class Link(BaseModel):
         return m
 
 
-FlashStatus = Literal[
+ImportStatus = Literal[
     "active",
     "trialing",
     "past_due",
@@ -159,14 +159,14 @@ FlashStatus = Literal[
 r"""Set the status of the plan to be flashed. Active if undefined."""
 
 
-class FlashFeatureQuantityTypedDict(TypedDict):
+class ImportFeatureQuantityTypedDict(TypedDict):
     feature_id: str
     r"""The prepaid feature being quantified."""
     quantity: float
     r"""Purchased quantity for this prepaid feature."""
 
 
-class FlashFeatureQuantity(BaseModel):
+class ImportFeatureQuantity(BaseModel):
     feature_id: str
     r"""The prepaid feature being quantified."""
 
@@ -174,7 +174,7 @@ class FlashFeatureQuantity(BaseModel):
     r"""Purchased quantity for this prepaid feature."""
 
 
-FlashInterval = Literal[
+ImportInterval = Literal[
     "hour",
     "day",
     "week",
@@ -183,7 +183,7 @@ FlashInterval = Literal[
 ]
 
 
-FlashBillingBehavior = Literal[
+ImportBillingBehavior = Literal[
     "included",
     "prepaid",
 ]
@@ -193,19 +193,19 @@ r"""Selects the included vs prepaid entitlement line when a feature has both."""
 class FilterTypedDict(TypedDict):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
-    interval: NotRequired[Nullable[FlashInterval]]
+    interval: NotRequired[Nullable[ImportInterval]]
     r"""Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line)."""
-    billing_behavior: NotRequired[FlashBillingBehavior]
+    billing_behavior: NotRequired[ImportBillingBehavior]
     r"""Selects the included vs prepaid entitlement line when a feature has both."""
 
 
 class Filter(BaseModel):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
-    interval: OptionalNullable[FlashInterval] = UNSET
+    interval: OptionalNullable[ImportInterval] = UNSET
     r"""Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line)."""
 
-    billing_behavior: Optional[FlashBillingBehavior] = None
+    billing_behavior: Optional[ImportBillingBehavior] = None
     r"""Selects the included vs prepaid entitlement line when a feature has both."""
 
     @model_serializer(mode="wrap")
@@ -234,7 +234,7 @@ class Filter(BaseModel):
         return m
 
 
-class FlashBalanceTypedDict(TypedDict):
+class ImportBalanceTypedDict(TypedDict):
     feature_id: str
     r"""The feature whose balance is being set."""
     filter_: NotRequired[FilterTypedDict]
@@ -247,7 +247,7 @@ class FlashBalanceTypedDict(TypedDict):
     r"""Unix ms timestamp of this line's next reset."""
 
 
-class FlashBalance(BaseModel):
+class ImportBalance(BaseModel):
     feature_id: str
     r"""The feature whose balance is being set."""
 
@@ -280,26 +280,26 @@ class FlashBalance(BaseModel):
         return m
 
 
-class FlashPlanTypedDict(TypedDict):
+class ImportPlanTypedDict(TypedDict):
     r"""The single plan on this billable (provide either plan or phases, not both)."""
 
     plan_id: str
     r"""The Autumn plan to attach to the customer."""
     version: NotRequired[float]
     r"""Specific plan version to attach; defaults to the latest."""
-    status: NotRequired[FlashStatus]
+    status: NotRequired[ImportStatus]
     r"""Set the status of the plan to be flashed. Active if undefined."""
     started_at: NotRequired[float]
     r"""When the plan started (Unix ms). Defaults to the linked subscription's start, else the import time. Set this for one-off purchases to record the real purchase date."""
     quantity: NotRequired[float]
     r"""Seat/unit quantity for the plan."""
-    feature_quantities: NotRequired[List[FlashFeatureQuantityTypedDict]]
+    feature_quantities: NotRequired[List[ImportFeatureQuantityTypedDict]]
     r"""Purchased prepaid quantities per feature."""
-    balances: NotRequired[List[FlashBalanceTypedDict]]
+    balances: NotRequired[List[ImportBalanceTypedDict]]
     r"""Per-feature balances to image onto the plan."""
 
 
-class FlashPlan(BaseModel):
+class ImportPlan(BaseModel):
     r"""The single plan on this billable (provide either plan or phases, not both)."""
 
     plan_id: str
@@ -308,7 +308,7 @@ class FlashPlan(BaseModel):
     version: Optional[float] = None
     r"""Specific plan version to attach; defaults to the latest."""
 
-    status: Optional[FlashStatus] = None
+    status: Optional[ImportStatus] = None
     r"""Set the status of the plan to be flashed. Active if undefined."""
 
     started_at: Optional[float] = None
@@ -317,10 +317,10 @@ class FlashPlan(BaseModel):
     quantity: Optional[float] = None
     r"""Seat/unit quantity for the plan."""
 
-    feature_quantities: Optional[List[FlashFeatureQuantity]] = None
+    feature_quantities: Optional[List[ImportFeatureQuantity]] = None
     r"""Purchased prepaid quantities per feature."""
 
-    balances: Optional[List[FlashBalance]] = None
+    balances: Optional[List[ImportBalance]] = None
     r"""Per-feature balances to image onto the plan."""
 
     @model_serializer(mode="wrap")
@@ -356,7 +356,7 @@ class BillableTypedDict(TypedDict):
     r"""Existing processor billing object this billable is adopted from; omit for paid one-offs."""
     billing_cycle_anchor: NotRequired[float]
     r"""Unix ms billing anchor shared by co-billed plans on this billable."""
-    plan: NotRequired[FlashPlanTypedDict]
+    plan: NotRequired[ImportPlanTypedDict]
     r"""The single plan on this billable (provide either plan or phases, not both)."""
 
 
@@ -370,7 +370,7 @@ class Billable(BaseModel):
     billing_cycle_anchor: Optional[float] = None
     r"""Unix ms billing anchor shared by co-billed plans on this billable."""
 
-    plan: Optional[FlashPlan] = None
+    plan: Optional[ImportPlan] = None
     r"""The single plan on this billable (provide either plan or phases, not both)."""
 
     @model_serializer(mode="wrap")
@@ -393,11 +393,11 @@ class Billable(BaseModel):
 class DfuFlashParamsTypedDict(TypedDict):
     customer_id: str
     r"""Autumn customer to image into."""
-    processors: List[FlashProcessorTypedDict]
+    processors: List[ImportProcessorTypedDict]
     r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id)."""
     billables: List[BillableTypedDict]
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
-    customer_data: NotRequired[FlashCustomerDataTypedDict]
+    customer_data: NotRequired[ImportCustomerDataTypedDict]
     r"""Optional identity fields to upsert if the customer is new."""
     dry_run: NotRequired[bool]
     r"""If true, validate and compute without persisting; returns what would be flashed."""
@@ -407,13 +407,13 @@ class DfuFlashParams(BaseModel):
     customer_id: str
     r"""Autumn customer to image into."""
 
-    processors: List[FlashProcessor]
+    processors: List[ImportProcessor]
     r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id)."""
 
     billables: List[Billable]
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
 
-    customer_data: Optional[FlashCustomerData] = None
+    customer_data: Optional[ImportCustomerData] = None
     r"""Optional identity fields to upsert if the customer is new."""
 
     dry_run: Optional[bool] = None
@@ -545,6 +545,6 @@ class DfuFlashResult(BaseModel):
 
 
 try:
-    FlashBalance.model_rebuild()
+    ImportBalance.model_rebuild()
 except NameError:
     pass
