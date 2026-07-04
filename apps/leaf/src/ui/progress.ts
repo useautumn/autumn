@@ -10,6 +10,17 @@ export type KeyedActionLogger = (input: {
 }) => Promise<void> | void;
 
 const typingStatusMessage = "Working on it...";
+const maxTypingStatusLength = 50;
+const truncationSuffix = "...";
+
+export const formatTypingStatus = (message: string) => {
+	const trimmed = message.trim() || typingStatusMessage;
+	if (trimmed.length <= maxTypingStatusLength) return trimmed;
+
+	return `${trimmed
+		.slice(0, maxTypingStatusLength - truncationSuffix.length)
+		.trimEnd()}${truncationSuffix}`;
+};
 
 const postPlan = async ({
 	initialMessage,
@@ -33,7 +44,9 @@ export const startLoading = async (
 	}: { initialMessage?: string; showPlan?: boolean } = {},
 ) => {
 	try {
-		await target.startTyping(showPlan ? initialMessage : typingStatusMessage);
+		await target.startTyping(
+			formatTypingStatus(showPlan ? initialMessage : typingStatusMessage),
+		);
 		if (!showPlan) return null;
 		return await postPlan({ initialMessage, target });
 	} catch (error) {
@@ -55,7 +68,7 @@ export const createActionLogger = (
 
 		try {
 			if (!loading) {
-				await target?.startTyping(typingStatusMessage);
+				await target?.startTyping(formatTypingStatus(typingStatusMessage));
 				return;
 			}
 			if (first) {
@@ -81,7 +94,7 @@ export const createKeyedActionLogger = (
 	return async ({ key, message }) => {
 		try {
 			if (!loading) {
-				await target?.startTyping(message);
+				await target?.startTyping(formatTypingStatus(message));
 				return;
 			}
 			const existing = tasks.get(key);

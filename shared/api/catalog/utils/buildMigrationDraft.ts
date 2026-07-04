@@ -141,7 +141,10 @@ export const buildMigrationDraft = ({
 
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: basePlanFilter,
+		plan_filter: withCustomGuard({
+			includeCustom,
+			planFilter: basePlanFilter,
+		}),
 		...(customize ? { customize } : {}),
 	};
 
@@ -179,7 +182,10 @@ export const buildCombinedVariantMigrationDraft = ({
 	const ops = groupTargetsByCustomize(targets).map(
 		({ customize, targets }): UpdatePlanOp => ({
 			type: "update_plan",
-			plan_filter: versionedPlanFilter(targets),
+			plan_filter: withCustomGuard({
+				includeCustom,
+				planFilter: versionedPlanFilter(targets),
+			}),
 			customize,
 		}),
 	);
@@ -214,7 +220,10 @@ export const buildAllVersionsUpdateMigrationDraft = ({
 			const ids = targets.map((target) => target.id);
 			return {
 				type: "update_plan",
-				plan_filter: { plan_id: planMatcher(ids) },
+				plan_filter: withCustomGuard({
+					includeCustom,
+					planFilter: { plan_id: planMatcher(ids) },
+				}),
 				customize,
 			};
 		},

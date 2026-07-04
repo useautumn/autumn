@@ -1,0 +1,1 @@
+ALTER TABLE "chat_installations" ADD COLUMN "auth_mode" text;

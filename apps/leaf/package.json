@@ -36,6 +36,7 @@
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",
 		"hono": "4.12.7",
+		"lru-cache": "^11.2.7",
 		"postgres": "catalog:",
 		"zod": "^3.25.23"
 	},

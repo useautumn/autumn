@@ -195,7 +195,10 @@ export const useCopySandbox = () => {
 		// Source is exactly one of fromSandboxId / fromMaster — a union so bad
 		// combos fail to compile instead of hitting a guaranteed server 400.
 		mutationFn: async (
-			input: ({ fromSandboxId: string } | { fromMaster: true }) & {
+			input: (
+				| { fromSandboxId: string; fromMaster?: never }
+				| { fromMaster: true; fromSandboxId?: never }
+			) & {
 				toSandboxId: string;
 				productIds?: string[];
 				featureIds?: string[];

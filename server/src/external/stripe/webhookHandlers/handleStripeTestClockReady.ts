@@ -1,5 +1,6 @@
 import { RELEVANT_STATUSES, secondsToMs } from "@autumn/shared";
 import type Stripe from "stripe";
+import { expireTrialProductsForCustomer } from "@/cron/productCron/expireTrialProductsForCustomer.js";
 import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { resetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -55,10 +56,21 @@ export const handleStripeTestClockReady = async ({
 			skipReset: true,
 		});
 
+		const nowMs = secondsToMs(testClock.frozen_time);
+
 		await resetCustomerEntitlements({
 			ctx: routedCtx,
 			fullCus: fullCustomer,
-			now: secondsToMs(testClock.frozen_time),
+			now: nowMs,
+		});
+
+		// Entitlement-only / revert trials have no Stripe subscription to react
+		// to the clock advance, so productCron's real-time NOW() never catches
+		// them here — use the test clock's frozen_time as "now" instead.
+		await expireTrialProductsForCustomer({
+			ctx: routedCtx,
+			internalCustomerId: customer.internal_id,
+			nowMs,
 		});
 	}
 };

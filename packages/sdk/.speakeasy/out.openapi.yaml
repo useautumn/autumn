@@ -212,6 +212,9 @@ components:
             disable_pooled_balance:
               type: boolean
               description: Whether to disable the shared customer-level pool for entities.
+            disable_overage_billing:
+              type: boolean
+              description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
           description: Miscellaneous configurations for the customer.
       title: CustomerData
       description: Customer details to set when creating a customer
@@ -734,6 +737,9 @@ components:
             disable_pooled_balance:
               type: boolean
               description: Whether to disable the shared customer-level pool for entities.
+            disable_overage_billing:
+              type: boolean
+              description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
           description: Configuration for the customer.
         processors:
           type: object
@@ -1061,6 +1067,7 @@ components:
               feature_id: advanced_workflows
           config:
             disable_pooled_balance: false
+            disable_overage_billing: false
     Plan:
       type: object
       properties:
@@ -2578,6 +2585,9 @@ paths:
                     disable_pooled_balance:
                       type: boolean
                       description: Whether to disable the shared customer-level pool for entities.
+                    disable_overage_billing:
+                      type: boolean
+                      description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
                   description: Miscellaneous configurations for the customer.
                 expand:
                   type: array
@@ -3179,6 +3189,9 @@ paths:
                       disable_pooled_balance:
                         type: boolean
                         description: Whether to disable the shared customer-level pool for entities.
+                      disable_overage_billing:
+                        type: boolean
+                        description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
                     description: Configuration for the customer.
                   processors:
                     type: object
@@ -3506,6 +3519,7 @@ paths:
                         feature_id: advanced_workflows
                     config:
                       disable_pooled_balance: false
+                      disable_overage_billing: false
       x-speakeasy-name-override: get
       parameters:
         - *a1
@@ -4082,6 +4096,9 @@ paths:
                             disable_pooled_balance:
                               type: boolean
                               description: Whether to disable the shared customer-level pool for entities.
+                            disable_overage_billing:
+                              type: boolean
+                              description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
                           description: Configuration for the customer.
                         processors:
                           type: object
@@ -4195,6 +4212,7 @@ paths:
                               feature_id: advanced_workflows
                           config:
                             disable_pooled_balance: false
+                            disable_overage_billing: false
                     description: Items for current page.
                   next_cursor:
                     anyOf:
@@ -4265,6 +4283,7 @@ paths:
                             feature_id: advanced_workflows
                         config:
                           disable_pooled_balance: false
+                          disable_overage_billing: false
                     next_cursor: null
       x-speakeasy-name-override: list
       parameters:
@@ -4478,6 +4497,9 @@ paths:
                     disable_pooled_balance:
                       type: boolean
                       description: Whether to disable the shared customer-level pool for entities.
+                    disable_overage_billing:
+                      type: boolean
+                      description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
                   description: Miscellaneous configurations for the customer.
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
@@ -4998,6 +5020,9 @@ paths:
                       disable_pooled_balance:
                         type: boolean
                         description: Whether to disable the shared customer-level pool for entities.
+                      disable_overage_billing:
+                        type: boolean
+                        description: Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
                     description: Configuration for the customer.
                   processors:
                     type: object
@@ -5111,6 +5136,7 @@ paths:
                         feature_id: advanced_workflows
                     config:
                       disable_pooled_balance: false
+                      disable_overage_billing: false
       x-speakeasy-name-override: update
       parameters:
         - *a1
@@ -12725,7 +12751,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782832462400,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784042062400,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783072953299,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784282553299,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -13401,6 +13427,11 @@ paths:
                             required:
                               - plan_id
                           description: Plans to materialize for this phase.
+                        billing_cycle_anchor:
+                          enum:
+                            - phase_start
+                          type: string
+                          description: Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
                       required:
                         - plans
                   items:
@@ -13977,6 +14008,11 @@ paths:
                           required:
                             - plan_id
                         description: Plans to materialize for this phase.
+                      billing_cycle_anchor:
+                        enum:
+                          - phase_start
+                        type: string
+                        description: Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
                     required:
                       - plans
                   description: Ordered phase definitions for the schedule.

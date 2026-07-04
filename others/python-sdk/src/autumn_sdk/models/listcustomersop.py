@@ -1049,6 +1049,8 @@ class ListCustomersConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class ListCustomersConfig(BaseModel):
@@ -1057,9 +1059,12 @@ class ListCustomersConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 

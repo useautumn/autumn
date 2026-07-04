@@ -44,6 +44,7 @@ export type MessageContext = {
 	/** Posts a drained intermediate turn's text while follow-ups keep the run alive. */
 	onTurnComplete?: (text: string) => Promise<void> | void;
 	org: { id: string; slug?: string };
+	autumnUserId?: string;
 	providerUserId: string;
 	run?: ActiveRun;
 	thread: ThreadRef;

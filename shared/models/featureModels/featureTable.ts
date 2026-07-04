@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -10,7 +11,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils";
 import { organizations } from "../orgModels/orgTable";
-import type { CreditSystemConfig, ModelMarkups } from "./featureConfig/creditConfig";
+import type {
+	CreditSystemConfig,
+	ModelMarkups,
+} from "./featureConfig/creditConfig";
 import type { MeteredConfig } from "./featureConfig/meteredConfig";
 
 type FeatureDisplay = {
@@ -48,6 +52,7 @@ export const features = pgTable(
 			name: "features_org_id_fkey",
 		}).onDelete("cascade"),
 		unique("feature_id_constraint").on(table.org_id, table.id, table.env),
+		index("idx_features_composite").on(table.org_id, table.env).concurrently(),
 	],
 );
 

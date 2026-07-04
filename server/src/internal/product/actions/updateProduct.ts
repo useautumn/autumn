@@ -12,6 +12,7 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
@@ -21,7 +22,6 @@ import { handleUpdateProductDetails } from "@/internal/products/handlers/handleU
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -218,7 +218,6 @@ export const updateProduct = async ({
 			},
 		});
 	};
-
 	const newFreeTrial =
 		"free_trial" in productUpdates
 			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
@@ -400,9 +399,9 @@ export const updateProduct = async ({
 	await applyHistoricalVersions({ latestProduct: newFullProduct });
 	await applyVariantUpdates({ latestBase: newFullProduct });
 
-	await initProductInStripe({
+	await initStripeResourcesForProducts({
 		ctx,
-		product: newFullProduct,
+		products: [newFullProduct],
 	});
 
 	// logger.info("Adding task to queue to detect base variant");
