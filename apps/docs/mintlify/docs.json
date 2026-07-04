@@ -209,7 +209,7 @@
 							"api-reference/billing/previewMultiAttach",
 							"api-reference/billing/multiAttach",
 							"api-reference/billing/createSchedule",
-							"api-reference/dfu/flash"
+							"api-reference/billing/import"
 						]
 					},
 					{
