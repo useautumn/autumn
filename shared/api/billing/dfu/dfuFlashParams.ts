@@ -240,7 +240,7 @@ export const DfuFlashedPlanSchema = z.object({
 	}),
 	mismatch: z.boolean().optional().meta({
 		description:
-			"True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.",
+			"True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, or a paid recurring plan with no linked subscription for Autumn to manage. The plan is still imaged; see `reason` and fix by supplying started_at or a subscription_id.",
 	}),
 	reason: z.string().optional().meta({
 		description:
