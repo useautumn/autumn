@@ -21553,10 +21553,11 @@ paths:
                         mismatch:
                           type: boolean
                           description: True when the imaged state may be wrong — e.g. a resetting plan
-                            with no resolvable billing anchor, so its cycle
-                            defaulted to the import time. The plan is still
-                            imaged; fix by supplying started_at or a resolvable
-                            subscription.
+                            with no resolvable billing anchor, or a paid
+                            recurring plan with no linked subscription for
+                            Autumn to manage. The plan is still imaged; see
+                            `reason` and fix by supplying started_at or a
+                            subscription_id.
                         reason:
                           type: string
                           description: Why the plan was skipped, expired, or flagged as a mismatch, when
