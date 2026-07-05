@@ -1,6 +1,10 @@
-import { fatal } from "../helpers/shell.ts";
 import { resolveAgentEntryOrFatal } from "../helpers/registry.ts";
-import { tmuxSessionName, ensureTmuxInstalled, tmuxSessionExists } from "../helpers/tmux.ts";
+import { fatal } from "../helpers/shell.ts";
+import {
+	ensureTmuxInstalled,
+	tmuxSessionExists,
+	tmuxSessionName,
+} from "../helpers/tmux.ts";
 
 export function cmdAttach(): void {
 	const entry = resolveAgentEntryOrFatal("attach");

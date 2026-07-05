@@ -1,5 +1,9 @@
 import { resolveAgentEntryOrFatal } from "../helpers/registry.ts";
-import { tmuxSessionName, ensureTmuxInstalled, tmuxSessionExists } from "../helpers/tmux.ts";
+import {
+	ensureTmuxInstalled,
+	tmuxSessionExists,
+	tmuxSessionName,
+} from "../helpers/tmux.ts";
 
 export function cmdLogs(): void {
 	const entry = resolveAgentEntryOrFatal("logs");

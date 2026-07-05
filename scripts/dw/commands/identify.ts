@@ -1,7 +1,7 @@
-import { loadRegistry } from "../helpers/registry.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
 import { isPlainCanonical, isProvisioned } from "../helpers/entry.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
 import { aliasesFor } from "../helpers/ports.ts";
+import { loadRegistry } from "../helpers/registry.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
 
 export function cmdIdentify(): void {

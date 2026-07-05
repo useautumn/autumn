@@ -1,29 +1,28 @@
-import { fatal, log, shInherit } from "../helpers/shell.ts";
+import { NEON_PROJECT_ID, PROJECT_ROOT } from "../constants.ts";
+import { isProvisioned } from "../helpers/entry.ts";
 import {
 	getCanonicalWorktree,
-	getCurrentWorktree,
 	getCurrentBranch,
+	getCurrentWorktree,
 	getDefaultBranch,
 } from "../helpers/git.ts";
-import {
-	loadRegistry,
-	saveRegistry,
-	reconcile,
-	allocateWorktreeNumber,
-	deriveBranchName,
-	deriveCanonicalBranchName,
-	refreshCanonicalEntry,
-	wantsCanonicalProvision,
-} from "../helpers/registry.ts";
-import { isProvisioned } from "../helpers/entry.ts";
-import { provisionWorktree } from "../helpers/provision.ts";
 import { withNeonContext } from "../helpers/neonContext.ts";
 import {
 	parseRegionArg,
 	resolveNeonRegionForSetup,
 } from "../helpers/neonRegion.ts";
-import { NEON_PROJECT_ID } from "../constants.ts";
-import { PROJECT_ROOT } from "../constants.ts";
+import { provisionWorktree } from "../helpers/provision.ts";
+import {
+	allocateWorktreeNumber,
+	deriveBranchName,
+	deriveCanonicalBranchName,
+	loadRegistry,
+	reconcile,
+	refreshCanonicalEntry,
+	saveRegistry,
+	wantsCanonicalProvision,
+} from "../helpers/registry.ts";
+import { fatal, log, shInherit } from "../helpers/shell.ts";
 import type { RegistryEntry } from "../types.ts";
 
 function ensureAiSubmoduleSynced(): void {

@@ -1,7 +1,7 @@
-import { fatal } from "../helpers/shell.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
-import { loadRegistry } from "../helpers/registry.ts";
 import { killOwnPorts } from "../helpers/ports.ts";
+import { loadRegistry } from "../helpers/registry.ts";
+import { fatal } from "../helpers/shell.ts";
 import { startDev } from "../helpers/start.ts";
 
 export async function cmdRun(): Promise<void> {

@@ -229,7 +229,10 @@ async function startDev() {
 
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+			// Amicable devbox: webhooks arrive via the ngrok endpoint dw registered.
+			const amicable = Boolean(process.env.AMICABLE_HOME);
+			const stripeAvailable =
+				!amicable && Bun.spawnSync(["which", "stripe"]).exitCode === 0;
 			if (stripeAvailable) {
 				const auth = Bun.spawnSync(
 					["stripe", "customers", "list", "--limit", "1"],

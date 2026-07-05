@@ -1,22 +1,26 @@
-import { log, fatal } from "../helpers/shell.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
 import {
-	loadRegistry,
-	saveRegistry,
-	hasOtherActiveWorktrees,
-} from "../helpers/registry.ts";
+	removeAllAutumnComposeStacks,
+	removeComposeStack,
+} from "../helpers/compose.ts";
+import { stopEmulateAndPortless } from "../helpers/emulate.ts";
 import { isPlainCanonical } from "../helpers/entry.ts";
+import { removeEnvLocalFiles } from "../helpers/env-files.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
 import { deleteBranch } from "../helpers/neon.ts";
 import { deleteReservedDomain } from "../helpers/ngrok.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
-import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
-import { removeComposeStack, removeAllAutumnComposeStacks } from "../helpers/compose.ts";
-import { removeEnvLocalFiles } from "../helpers/env-files.ts";
-import { stopEmulateAndPortless } from "../helpers/emulate.ts";
+import {
+	hasOtherActiveWorktrees,
+	loadRegistry,
+	saveRegistry,
+} from "../helpers/registry.ts";
+import { fatal, log } from "../helpers/shell.ts";
+import { deleteConnectWebhook } from "../helpers/stripeWebhook.ts";
+import { killTmuxSession, tmuxSessionName } from "../helpers/tmux.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
 
 export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
-	let registry = loadRegistry();
+	const registry = loadRegistry();
 
 	if (opts.all) {
 		for (const entry of Object.values(registry)) {
@@ -70,13 +74,18 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	if (!hasOtherActiveWorktrees(registry, cwd)) {
 		stopEmulateAndPortless();
 	} else {
-		log("other agent worktrees still active; leaving emulate + portless running");
+		log(
+			"other agent worktrees still active; leaving emulate + portless running",
+		);
 	}
 }
 
 async function teardownEntry(entry: RegistryEntry): Promise<void> {
 	if (entry.branchName) {
 		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
+	}
+	if (entry.ngrokUrl) {
+		await deleteConnectWebhook(entry.ngrokUrl);
 	}
 	if (entry.reservedDomainId) {
 		await deleteReservedDomain(entry.reservedDomainId);

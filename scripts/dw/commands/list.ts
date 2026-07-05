@@ -17,7 +17,9 @@ export function cmdList(): void {
 		console.log(
 			`  ${e.worktreeNum.toString().padStart(2)} | ${(
 				e.branchName ?? "(canonical)"
-			).padEnd(24)} | server :${8080 + offset} vite :${3000 + offset} | ${ageDays}d | ${e.path}`,
+			).padEnd(
+				24,
+			)} | server :${8080 + offset} vite :${3000 + offset} | ${ageDays}d | ${e.path}`,
 		);
 	}
 }

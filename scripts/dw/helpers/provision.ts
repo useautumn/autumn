@@ -1,5 +1,6 @@
 import { promoteAllUsersToAdmin } from "../commands/admin.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
+import { isAmicable } from "./amicable.ts";
 import { ensureComposeStack, readNgrokTunnelUrl } from "./compose.ts";
 import { ensureEmulateRunning } from "./emulate.ts";
 import { writeEnvLocalFiles } from "./env-files.ts";
@@ -12,6 +13,7 @@ import {
 	setupAgentWorktree,
 } from "./setup.ts";
 import { log } from "./shell.ts";
+import { ensureConnectWebhook } from "./stripeWebhook.ts";
 
 export async function provisionWorktree({
 	entry,
@@ -54,6 +56,10 @@ export async function provisionWorktree({
 		};
 		registry[cwd] = current;
 		saveRegistry(registry);
+	}
+
+	if (isAmicable() && current.ngrokUrl) {
+		await ensureConnectWebhook(current.ngrokUrl);
 	}
 
 	writeEnvLocalFiles(current);

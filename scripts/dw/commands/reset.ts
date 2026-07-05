@@ -1,12 +1,12 @@
-import { log, fatal } from "../helpers/shell.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
-import { loadRegistry, saveRegistry } from "../helpers/registry.ts";
-import { isPlainCanonical } from "../helpers/entry.ts";
-import { deleteBranch } from "../helpers/neon.ts";
-import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack } from "../helpers/compose.ts";
+import { isPlainCanonical } from "../helpers/entry.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
+import { deleteBranch } from "../helpers/neon.ts";
 import { provisionWorktree } from "../helpers/provision.ts";
+import { loadRegistry, saveRegistry } from "../helpers/registry.ts";
+import { fatal, log } from "../helpers/shell.ts";
+import { killTmuxSession, tmuxSessionName } from "../helpers/tmux.ts";
 import type { RegistryEntry } from "../types.ts";
 
 export async function cmdReset(): Promise<void> {

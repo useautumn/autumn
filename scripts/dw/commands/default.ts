@@ -1,7 +1,7 @@
-import { killOwnPorts } from "../helpers/ports.ts";
-import { getCurrentWorktree } from "../helpers/git.ts";
-import { loadRegistry } from "../helpers/registry.ts";
 import { isProvisioned } from "../helpers/entry.ts";
+import { getCurrentWorktree } from "../helpers/git.ts";
+import { killOwnPorts } from "../helpers/ports.ts";
+import { loadRegistry } from "../helpers/registry.ts";
 import { fatal } from "../helpers/shell.ts";
 import { startDev } from "../helpers/start.ts";
 
