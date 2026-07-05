@@ -1,6 +1,6 @@
-import { sh, log, fatal } from "./shell.ts";
-import { aliasesFor } from "./ports.ts";
 import type { WorktreeAliases } from "../types.ts";
+import { aliasesFor } from "./ports.ts";
+import { fatal, log, sh } from "./shell.ts";
 
 export function registerPortlessAliases(worktreeNum: number): WorktreeAliases {
 	const offset = (worktreeNum - 1) * 100;

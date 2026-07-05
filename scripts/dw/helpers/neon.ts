@@ -1,8 +1,7 @@
-import { sh, fatal, log } from "./shell.ts";
 import {
+	BRANCH_NAME_RE,
 	NEON_PROJECT_ID,
 	NEON_TEMPLATE_BRANCH,
-	BRANCH_NAME_RE,
 } from "../constants.ts";
 import type { NeonBranch } from "../types.ts";
 import {
@@ -10,6 +9,7 @@ import {
 	neonTemplateParent,
 	withNeonContextSync,
 } from "./neonContext.ts";
+import { fatal, log, sh } from "./shell.ts";
 
 let neonCmd: string | undefined;
 
@@ -27,7 +27,11 @@ function resolveNeonCmd(): string {
 	);
 }
 
-function neon(args: string[]): { stdout: string; stderr: string; code: number } {
+function neon(args: string[]): {
+	stdout: string;
+	stderr: string;
+	code: number;
+} {
 	return sh(resolveNeonCmd(), args);
 }
 

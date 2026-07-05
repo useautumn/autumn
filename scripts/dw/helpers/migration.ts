@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { sh, shInherit, fatal, log } from "./shell.ts";
 import { PROJECT_ROOT } from "../constants.ts";
+import { fatal, log, sh, shInherit } from "./shell.ts";
 
 /**
  * Brings a freshly-provisioned Neon branch up to the canonical schema.
@@ -15,7 +15,9 @@ export function applyCommittedMigrations(
 	branchName: string,
 	databaseUrl: string,
 ): void {
-	log(`applying committed migrations to ${branchName} (this may take a few minutes)`);
+	log(
+		`applying committed migrations to ${branchName} (this may take a few minutes)`,
+	);
 
 	const code = shInherit("bun", ["db", "migrate", "--bootstrap"], {
 		cwd: PROJECT_ROOT,

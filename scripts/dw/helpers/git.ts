@@ -1,5 +1,5 @@
-import { sh, fatal } from "./shell.ts";
 import { PROJECT_ROOT } from "../constants.ts";
+import { fatal, sh } from "./shell.ts";
 
 export function getWorktreeList(): string[] {
 	const res = sh("git", ["worktree", "list", "--porcelain"], {

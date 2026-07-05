@@ -1,10 +1,17 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { EMULATE_PID_FILE, START_EMULATE_SH } from "../constants.ts";
+import { isAmicable } from "./amicable.ts";
 import { portlessHttpsUrl } from "./ports.ts";
 import { log, sh } from "./shell.ts";
 
+export function emulateGoogleUrl(): string {
+	return isAmicable()
+		? "http://localhost:4000"
+		: portlessHttpsUrl("google.emulate.localhost");
+}
+
 function emulateReachable(): boolean {
-	const healthUrl = `${portlessHttpsUrl("google.emulate.localhost")}/.well-known/openid-configuration`;
+	const healthUrl = `${emulateGoogleUrl()}/.well-known/openid-configuration`;
 	const res = sh("curl", [
 		"-sf",
 		"-o",
@@ -56,8 +63,11 @@ export function killHostProcessByName(name: string): boolean {
 
 export function stopEmulateAndPortless(): void {
 	const fromPid = killPidFromFile(EMULATE_PID_FILE);
-	const fromScan = killHostProcessByName("emulate --portless");
+	const fromScan =
+		killHostProcessByName("emulate --portless") ||
+		killHostProcessByName("emulate start");
 	if (fromPid || fromScan) log("stopped emulate.dev");
+	if (isAmicable()) return;
 	const stop = sh("portless", ["proxy", "stop"]);
 	if (stop.code === 0) log("stopped portless proxy");
 }

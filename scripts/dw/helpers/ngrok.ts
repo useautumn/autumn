@@ -1,5 +1,5 @@
-import { log } from "./shell.ts";
 import { shortHash } from "./registry.ts";
+import { log } from "./shell.ts";
 
 const NGROK_API = "https://api.ngrok.com";
 

@@ -10,12 +10,18 @@ LOG="$HOME/.autumn-emulate.log"
 PID_FILE="$HOME/.autumn-emulate.pid"
 PORTLESS_PORT_FILE="$HOME/.portless/proxy.port"
 EMULATE_URL="https://google.emulate.localhost"
+# Amicable devbox (AMICABLE_HOME set): no portless — emulate serves plain
+# HTTP on :4000; the Mac browser reaches it as https://4000.<box>.ami.
+AMICABLE_MODE="${AMICABLE_HOME:+1}"
+if [[ -n "$AMICABLE_MODE" ]]; then
+	EMULATE_URL="http://localhost:4000"
+fi
 
 PORTLESS_PROXY_PORT="${PORTLESS_PORT:-}"
 if [[ -z "$PORTLESS_PROXY_PORT" && -f "$PORTLESS_PORT_FILE" ]]; then
 	PORTLESS_PROXY_PORT="$(cat "$PORTLESS_PORT_FILE" 2>/dev/null || true)"
 fi
-if [[ -n "$PORTLESS_PROXY_PORT" && "$PORTLESS_PROXY_PORT" != "443" ]]; then
+if [[ -z "$AMICABLE_MODE" && -n "$PORTLESS_PROXY_PORT" && "$PORTLESS_PROXY_PORT" != "443" ]]; then
 	EMULATE_URL="${EMULATE_URL}:${PORTLESS_PROXY_PORT}"
 fi
 
@@ -33,7 +39,7 @@ if ! command -v bunx >/dev/null 2>&1; then
 	exit 1
 fi
 
-if ! command -v portless >/dev/null 2>&1; then
+if [[ -z "$AMICABLE_MODE" ]] && ! command -v portless >/dev/null 2>&1; then
 	echo "[emulate] installing portless globally via bun"
 	bun install -g portless >/dev/null
 fi
@@ -43,7 +49,7 @@ if ! command -v emulate >/dev/null 2>&1; then
 	bun install -g emulate >/dev/null
 fi
 
-if ! curl -sf -o /dev/null --max-time 1 -k "https://localhost" 2>/dev/null; then
+if [[ -z "$AMICABLE_MODE" ]] && ! curl -sf -o /dev/null --max-time 1 -k "https://localhost" 2>/dev/null; then
 	echo "[emulate] starting portless proxy (may prompt for sudo for port 443)"
 	portless proxy start
 fi
@@ -56,8 +62,13 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 echo "[emulate] spawning emulate daemon → $LOG"
-nohup emulate --portless --service google --seed "$SEED" \
-	>"$LOG" 2>&1 </dev/null &
+if [[ -n "$AMICABLE_MODE" ]]; then
+	nohup emulate start --service google --seed "$SEED" --port 4000 \
+		>"$LOG" 2>&1 </dev/null &
+else
+	nohup emulate --portless --service google --seed "$SEED" \
+		>"$LOG" 2>&1 </dev/null &
+fi
 echo $! >"$PID_FILE"
 disown
 

@@ -1,20 +1,20 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { log, fatal } from "./shell.ts";
 import {
-	getWorktreeList,
-	getCurrentWorktree,
-	getCurrentBranch,
-	getDefaultBranch,
-} from "./git.ts";
-import { deleteBranch } from "./neon.ts";
-import {
-	REGISTRY_PATH,
-	MAX_WORKTREE,
 	BRANCH_NAME_RE,
 	INACTIVITY_MS,
+	MAX_WORKTREE,
+	REGISTRY_PATH,
 } from "../constants.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
+import {
+	getCurrentBranch,
+	getCurrentWorktree,
+	getDefaultBranch,
+	getWorktreeList,
+} from "./git.ts";
+import { deleteBranch } from "./neon.ts";
+import { fatal, log } from "./shell.ts";
 
 export function shortHash(input: string): string {
 	return createHash("sha1").update(input).digest("hex").slice(0, 6);
@@ -91,12 +91,10 @@ export function refreshCanonicalEntry(
 		return next;
 	}
 
-	if (
-		entry.gitBranch &&
-		entry.gitBranch !== gitBranch &&
-		entry.branchName
-	) {
-		log(`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`);
+	if (entry.gitBranch && entry.gitBranch !== gitBranch && entry.branchName) {
+		log(
+			`git branch changed (${entry.gitBranch} -> ${gitBranch}), resetting neon branch`,
+		);
 		deleteBranch(entry.branchName, { projectId: entry.neonProjectId });
 		next.branchId = undefined;
 		next.databaseUrl = undefined;

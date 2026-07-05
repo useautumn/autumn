@@ -1,9 +1,6 @@
 import { NEON_TEMPLATE_BRANCH, PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
-import {
-	applyCommittedMigrations,
-	loadDbFunctions,
-} from "./migration.ts";
+import { applyCommittedMigrations, loadDbFunctions } from "./migration.ts";
 import { hasPendingMigrations } from "./migrationStatus.ts";
 import {
 	connectionString,

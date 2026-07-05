@@ -1,13 +1,7 @@
-import {
-	NEON_PARENT_BRANCH,
-	NEON_PROJECT_ID,
-} from "../constants.ts";
+import { NEON_PARENT_BRANCH, NEON_PROJECT_ID } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 import { ensureTemplateBranch, runNeon } from "./neon.ts";
-import {
-	type NeonProjectContext,
-	withNeonContextSync,
-} from "./neonContext.ts";
+import { type NeonProjectContext, withNeonContextSync } from "./neonContext.ts";
 import { fatal, log } from "./shell.ts";
 
 const PROJECT_NAME_PREFIX = "autumn-dw";

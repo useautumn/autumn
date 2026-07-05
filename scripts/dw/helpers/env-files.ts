@@ -13,13 +13,15 @@ import {
 	PROJECT_ROOT,
 } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { isAmicable, logAmicableLinks } from "./amicable.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
 import {
 	aliasesFor,
 	dragonflyPortFor,
 	elasticMqPortFor,
-	portlessHttpsUrl,
 	serverPortFor,
+	vitePortFor,
 } from "./ports.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
@@ -76,13 +78,16 @@ export function mergeEnvFile(
 	return `${outLines.join("\n")}\n`;
 }
 
-function urlsForEntry(entry: RegistryEntry): { apiUrl: string; viteUrl: string } {
+function urlsForEntry(entry: RegistryEntry): {
+	apiUrl: string;
+	viteUrl: string;
+} {
 	if (isProvisioned(entry)) {
 		const aliases = aliasesFor(entry.worktreeNum);
 		return { apiUrl: aliases.apiUrl, viteUrl: aliases.viteUrl };
 	}
 	const serverPort = serverPortFor(entry.worktreeNum);
-	const vitePort = 3000 + (entry.worktreeNum - 1) * 100;
+	const vitePort = vitePortFor(entry.worktreeNum);
 	return {
 		apiUrl: `http://localhost:${serverPort}`,
 		viteUrl: `http://localhost:${vitePort}`,
@@ -105,7 +110,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		DATABASE_CRITICAL_URL: dbUrl,
 		BETTER_AUTH_URL: apiUrl,
 		CLIENT_URL: viteUrl,
-		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
+		EMULATE_GOOGLE_URL: emulateGoogleUrl(),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
@@ -120,7 +125,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		serverEnv.SQS_QUEUE_URL_V2 = `http://localhost:${elasticMqPort}/000000000000/autumn.fifo`;
 		serverEnv.TRACK_SQS_QUEUE_URL = `http://localhost:${elasticMqPort}/000000000000/autumn-track.fifo`;
 	}
-	if (existsSync(portlessCa)) {
+	if (!isAmicable() && existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
 	// Public tunnel for this worktree (CMA reaches /mcp through it). dev.ts derives
@@ -155,6 +160,10 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	writeOne("vite/.env.local", viteEnv);
 	writeOne("apps/checkout/.env.local", checkoutEnv);
 	log(`wrote .env.local for ${ENV_LOCAL_TARGETS.length} workspace(s)`);
+	logAmicableLinks([
+		{ label: "vite", port: vitePortFor(worktreeNum) },
+		{ label: "api", port: serverPort },
+	]);
 }
 
 export function removeEnvLocalFiles(): void {

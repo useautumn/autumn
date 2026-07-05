@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { WorktreeAliases } from "../types.ts";
+import { isAmicable } from "./amicable.ts";
 import { log, sh } from "./shell.ts";
 
 const PORTLESS_PROXY_PORT_FILE = join(homedir(), ".portless", "proxy.port");
@@ -28,7 +29,20 @@ export function composeProjectName(worktreeNum: number): string {
 	return `autumn-wt-${worktreeNum}`;
 }
 
+export function vitePortFor(worktreeNum: number): number {
+	return 3000 + (worktreeNum - 1) * 100;
+}
+
 export function aliasesFor(worktreeNum: number): WorktreeAliases {
+	// Devbox: browser is remote (reaches ports via <port>.<box>.ami) — no portless.
+	if (isAmicable()) {
+		return {
+			apiHost: "localhost",
+			apiUrl: `http://localhost:${serverPortFor(worktreeNum)}`,
+			viteHost: "localhost",
+			viteUrl: `http://localhost:${vitePortFor(worktreeNum)}`,
+		};
+	}
 	const apiHost = `wt${worktreeNum}-api.localhost`;
 	const viteHost = `wt${worktreeNum}.localhost`;
 	return {

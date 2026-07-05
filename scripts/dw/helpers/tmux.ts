@@ -1,7 +1,7 @@
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { existsSync, rmSync, writeFileSync } from "node:fs";
-import { sh, fatal, log } from "./shell.ts";
+import { fatal, log, sh } from "./shell.ts";
 
 export function tmuxSessionName(worktreeNum: number): string {
 	return `dw-wt-${worktreeNum}`;
@@ -46,9 +46,7 @@ export function spawnDevInTmux(
 		.filter(Boolean)
 		.join("\n");
 
-	const quotedArgs = args
-		.map((a) => `'${a.replace(/'/g, "'\\''")}'`)
-		.join(" ");
+	const quotedArgs = args.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(" ");
 	const script = `#!/usr/bin/env bash\nset -e\ncd '${cwd.replace(/'/g, "'\\''")}'\n${exports}\nexec ${quotedArgs}\n`;
 	const scriptPath = join(
 		tmpdir(),
@@ -56,14 +54,7 @@ export function spawnDevInTmux(
 	);
 	writeFileSync(scriptPath, script, { mode: 0o700 });
 
-	const res = sh("tmux", [
-		"new-session",
-		"-d",
-		"-s",
-		name,
-		"bash",
-		scriptPath,
-	]);
+	const res = sh("tmux", ["new-session", "-d", "-s", name, "bash", scriptPath]);
 	if (res.code !== 0) {
 		if (existsSync(scriptPath)) rmSync(scriptPath, { force: true });
 		fatal(`tmux new-session failed: ${res.stderr || res.stdout}`);
@@ -72,5 +63,7 @@ export function spawnDevInTmux(
 	// tmux has spawned bash which holds the script open; safe to delete shortly.
 	// Give it a brief tick by deferring removal via a separate shell.
 	sh("bash", ["-c", `(sleep 5 && rm -f '${scriptPath}') >/dev/null 2>&1 &`]);
-	log(`started dev inside tmux session ${name} (use 'bun dw logs' / 'bun dw attach')`);
+	log(
+		`started dev inside tmux session ${name} (use 'bun dw logs' / 'bun dw attach')`,
+	);
 }

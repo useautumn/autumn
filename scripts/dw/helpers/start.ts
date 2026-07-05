@@ -3,9 +3,11 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { isAmicable } from "./amicable.ts";
+import { emulateGoogleUrl } from "./emulate.ts";
 import { isProvisioned } from "./entry.ts";
 import { registerPortlessAliases } from "./portless.ts";
-import { portlessHttpsUrl } from "./ports.ts";
+import { aliasesFor } from "./ports.ts";
 import { fatal, log } from "./shell.ts";
 import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
 import { rewriteDbEnv } from "./url.ts";
@@ -17,15 +19,17 @@ function applyProvisionedDevEnv(
 	const { worktreeNum, databaseUrl } = entry;
 	if (!databaseUrl) fatal("worktree missing databaseUrl");
 
-	let next = rewriteDbEnv(env, databaseUrl);
+	const next = rewriteDbEnv(env, databaseUrl);
 	if (!next.EMULATE_GOOGLE_URL) {
-		next.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
+		next.EMULATE_GOOGLE_URL = emulateGoogleUrl();
 	}
 	const portlessCa = join(homedir(), ".portless", "ca.pem");
-	if (existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
+	if (!isAmicable() && existsSync(portlessCa) && !next.NODE_EXTRA_CA_CERTS) {
 		next.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
-	const aliases = registerPortlessAliases(worktreeNum);
+	const aliases = isAmicable()
+		? aliasesFor(worktreeNum)
+		: registerPortlessAliases(worktreeNum);
 	next.BETTER_AUTH_URL = aliases.apiUrl;
 	next.CLIENT_URL = aliases.viteUrl;
 	next.VITE_BACKEND_URL = aliases.apiUrl;
