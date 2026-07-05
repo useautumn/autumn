@@ -11,8 +11,6 @@ import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 // supported and is intentionally omitted so `type` renders as a clean enum.)
 const ProcessorTypeSchema = z.enum(["stripe", "revenuecat"]);
 
-const BillableProcessorSchema = z.enum(["stripe", "revenuecat", "none"]);
-
 const FlashCustomerDataSchema = z.object({
 	name: z
 		.string()
@@ -153,9 +151,9 @@ const FlashPhaseSchema = z.object({
 
 const FlashBillableSchema = z
 	.object({
-		processor: BillableProcessorSchema.meta({
+		processor: ProcessorTypeSchema.optional().meta({
 			description:
-				"The processor that owns this billable (stripe, revenuecat, or none).",
+				"The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.",
 		}),
 		link: FlashLinkSchema.optional().meta({
 			description:
@@ -204,9 +202,9 @@ export const DfuFlashParamsSchema = z.object({
 	customer_data: FlashCustomerDataSchema.optional().meta({
 		description: "Optional identity fields to upsert if the customer is new.",
 	}),
-	processors: z.array(FlashProcessorIdentitySchema).meta({
+	processors: z.array(FlashProcessorIdentitySchema).optional().meta({
 		description:
-			"The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).",
+			"The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.",
 	}),
 	billables: z.array(FlashBillableSchema).meta({
 		description:

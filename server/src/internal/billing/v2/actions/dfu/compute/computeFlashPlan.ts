@@ -172,7 +172,7 @@ export const computeFlashPlan = ({
 		if (existing) {
 			flashed.push({
 				plan_id: planContext.plan.plan_id,
-				processor: planContext.processor,
+				processor: planContext.processor ?? "stripe",
 				customer_product_id: existing.id,
 				status: existing.status,
 				skipped: true,
@@ -191,7 +191,7 @@ export const computeFlashPlan = ({
 
 		flashed.push({
 			plan_id: planContext.plan.plan_id,
-			processor: planContext.processor,
+			processor: planContext.processor ?? "stripe",
 			customer_product_id: customerProduct.id,
 			status: reportStatus,
 			skipped: false,
