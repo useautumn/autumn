@@ -13871,7 +13871,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783204252278,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784413852278,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783259673472,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784469273472,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -21493,7 +21493,8 @@ paths:
                       - type
                       - id
                   description: The customer's processor identities (e.g. Stripe customer id,
-                    RevenueCat app_user_id).
+                    RevenueCat app_user_id). Omit for customers with no
+                    processor, e.g. those only ever on a free plan.
                 billables:
                   type: array
                   items:
@@ -21503,10 +21504,9 @@ paths:
                         enum:
                           - stripe
                           - revenuecat
-                          - none
                         type: string
-                        description: The processor that owns this billable (stripe, revenuecat, or
-                          none).
+                        description: The processor that owns this billable (stripe or revenuecat). Omit
+                          for plans with no processor, e.g. a free plan.
                       link:
                         type: object
                         properties:
@@ -21615,8 +21615,6 @@ paths:
                           - plan_id
                         description: The single plan on this billable (provide either plan or phases,
                           not both).
-                    required:
-                      - processor
                   description: The billing objects (subscriptions, one-offs) to image, each
                     carrying its plan.
                 dry_run:
@@ -21625,7 +21623,6 @@ paths:
                     would be flashed.
               required:
                 - customer_id
-                - processors
                 - billables
               title: DfuFlashParams
               examples:

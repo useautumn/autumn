@@ -109,9 +109,8 @@ class ImportProcessor(BaseModel):
 BillableProcessor = Literal[
     "stripe",
     "revenuecat",
-    "none",
 ]
-r"""The processor that owns this billable (stripe, revenuecat, or none)."""
+r"""The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan."""
 
 
 class LinkTypedDict(TypedDict):
@@ -350,8 +349,8 @@ class ImportPlan(BaseModel):
 
 
 class BillableTypedDict(TypedDict):
-    processor: BillableProcessor
-    r"""The processor that owns this billable (stripe, revenuecat, or none)."""
+    processor: NotRequired[BillableProcessor]
+    r"""The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan."""
     link: NotRequired[LinkTypedDict]
     r"""Existing processor billing object this billable is adopted from; omit for paid one-offs."""
     billing_cycle_anchor: NotRequired[float]
@@ -361,8 +360,8 @@ class BillableTypedDict(TypedDict):
 
 
 class Billable(BaseModel):
-    processor: BillableProcessor
-    r"""The processor that owns this billable (stripe, revenuecat, or none)."""
+    processor: Optional[BillableProcessor] = None
+    r"""The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan."""
 
     link: Optional[Link] = None
     r"""Existing processor billing object this billable is adopted from; omit for paid one-offs."""
@@ -375,7 +374,7 @@ class Billable(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["link", "billing_cycle_anchor", "plan"])
+        optional_fields = set(["processor", "link", "billing_cycle_anchor", "plan"])
         serialized = handler(self)
         m = {}
 
@@ -393,12 +392,12 @@ class Billable(BaseModel):
 class DfuFlashParamsTypedDict(TypedDict):
     customer_id: str
     r"""Autumn customer to image into."""
-    processors: List[ImportProcessorTypedDict]
-    r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id)."""
     billables: List[BillableTypedDict]
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
     customer_data: NotRequired[ImportCustomerDataTypedDict]
     r"""Optional identity fields to upsert if the customer is new."""
+    processors: NotRequired[List[ImportProcessorTypedDict]]
+    r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan."""
     dry_run: NotRequired[bool]
     r"""If true, validate and compute without persisting; returns what would be flashed."""
 
@@ -407,21 +406,21 @@ class DfuFlashParams(BaseModel):
     customer_id: str
     r"""Autumn customer to image into."""
 
-    processors: List[ImportProcessor]
-    r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id)."""
-
     billables: List[Billable]
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
 
     customer_data: Optional[ImportCustomerData] = None
     r"""Optional identity fields to upsert if the customer is new."""
 
+    processors: Optional[List[ImportProcessor]] = None
+    r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan."""
+
     dry_run: Optional[bool] = None
     r"""If true, validate and compute without persisting; returns what would be flashed."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["customer_data", "dry_run"])
+        optional_fields = set(["customer_data", "processors", "dry_run"])
         serialized = handler(self)
         m = {}
 

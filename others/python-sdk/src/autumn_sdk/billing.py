@@ -3025,12 +3025,12 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        processors: Union[
-            List[models.ImportProcessor], List[models.ImportProcessorTypedDict]
-        ],
         billables: Union[List[models.Billable], List[models.BillableTypedDict]],
         customer_data: Optional[
             Union[models.ImportCustomerData, models.ImportCustomerDataTypedDict]
+        ] = None,
+        processors: Optional[
+            Union[List[models.ImportProcessor], List[models.ImportProcessorTypedDict]]
         ] = None,
         dry_run: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -3043,9 +3043,9 @@ class Billing(BaseSDK):
         Image a customer into Autumn for live migration. Read-only against processors.
 
         :param customer_id: Autumn customer to image into.
-        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
         :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
         :param customer_data: Optional identity fields to upsert if the customer is new.
+        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
         :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -3068,7 +3068,7 @@ class Billing(BaseSDK):
                 customer_data, Optional[models.ImportCustomerData]
             ),
             processors=utils.get_pydantic_model(
-                processors, List[models.ImportProcessor]
+                processors, Optional[List[models.ImportProcessor]]
             ),
             billables=utils.get_pydantic_model(billables, List[models.Billable]),
             dry_run=dry_run,
@@ -3137,12 +3137,12 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        processors: Union[
-            List[models.ImportProcessor], List[models.ImportProcessorTypedDict]
-        ],
         billables: Union[List[models.Billable], List[models.BillableTypedDict]],
         customer_data: Optional[
             Union[models.ImportCustomerData, models.ImportCustomerDataTypedDict]
+        ] = None,
+        processors: Optional[
+            Union[List[models.ImportProcessor], List[models.ImportProcessorTypedDict]]
         ] = None,
         dry_run: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -3155,9 +3155,9 @@ class Billing(BaseSDK):
         Image a customer into Autumn for live migration. Read-only against processors.
 
         :param customer_id: Autumn customer to image into.
-        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
         :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
         :param customer_data: Optional identity fields to upsert if the customer is new.
+        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
         :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -3180,7 +3180,7 @@ class Billing(BaseSDK):
                 customer_data, Optional[models.ImportCustomerData]
             ),
             processors=utils.get_pydantic_model(
-                processors, List[models.ImportProcessor]
+                processors, Optional[List[models.ImportProcessor]]
             ),
             billables=utils.get_pydantic_model(billables, List[models.Billable]),
             dry_run=dry_run,

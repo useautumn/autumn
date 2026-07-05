@@ -57,15 +57,14 @@ export type ImportProcessor = {
 };
 
 /**
- * The processor that owns this billable (stripe, revenuecat, or none).
+ * The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.
  */
 export const BillableProcessor = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
-  None: "none",
 } as const;
 /**
- * The processor that owns this billable (stripe, revenuecat, or none).
+ * The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.
  */
 export type BillableProcessor = ClosedEnum<typeof BillableProcessor>;
 
@@ -203,9 +202,9 @@ export type ImportPlan = {
 
 export type Billable = {
   /**
-   * The processor that owns this billable (stripe, revenuecat, or none).
+   * The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.
    */
-  processor: BillableProcessor;
+  processor?: BillableProcessor | undefined;
   /**
    * Existing processor billing object this billable is adopted from; omit for paid one-offs.
    */
@@ -230,9 +229,9 @@ export type DfuFlashParams = {
    */
   customerData?: ImportCustomerData | undefined;
   /**
-   * The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
+   * The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
    */
-  processors: Array<ImportProcessor>;
+  processors?: Array<ImportProcessor> | undefined;
   /**
    * The billing objects (subscriptions, one-offs) to image, each carrying its plan.
    */
@@ -518,7 +517,7 @@ export function importPlanToJSON(importPlan: ImportPlan): string {
 
 /** @internal */
 export type Billable$Outbound = {
-  processor: string;
+  processor?: string | undefined;
   link?: Link$Outbound | undefined;
   billing_cycle_anchor?: number | undefined;
   plan?: ImportPlan$Outbound | undefined;
@@ -530,7 +529,7 @@ export const Billable$outboundSchema: z.ZodMiniType<
   Billable
 > = z.pipe(
   z.object({
-    processor: BillableProcessor$outboundSchema,
+    processor: z.optional(BillableProcessor$outboundSchema),
     link: z.optional(z.lazy(() => Link$outboundSchema)),
     billingCycleAnchor: z.optional(z.number()),
     plan: z.optional(z.lazy(() => ImportPlan$outboundSchema)),
@@ -550,7 +549,7 @@ export function billableToJSON(billable: Billable): string {
 export type DfuFlashParams$Outbound = {
   customer_id: string;
   customer_data?: ImportCustomerData$Outbound | undefined;
-  processors: Array<ImportProcessor$Outbound>;
+  processors?: Array<ImportProcessor$Outbound> | undefined;
   billables: Array<Billable$Outbound>;
   dry_run?: boolean | undefined;
 };
@@ -563,7 +562,9 @@ export const DfuFlashParams$outboundSchema: z.ZodMiniType<
   z.object({
     customerId: z.string(),
     customerData: z.optional(z.lazy(() => ImportCustomerData$outboundSchema)),
-    processors: z.array(z.lazy(() => ImportProcessor$outboundSchema)),
+    processors: z.optional(
+      z.array(z.lazy(() => ImportProcessor$outboundSchema)),
+    ),
     billables: z.array(z.lazy(() => Billable$outboundSchema)),
     dryRun: z.optional(z.boolean()),
   }),
