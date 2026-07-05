@@ -31,8 +31,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicParamField>
 
-<DynamicParamField body="processors" type="object[]" required>
-  The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).
+<DynamicParamField body="processors" type="object[]">
+  The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
   <Expandable title="properties">
     <DynamicParamField body="type" type="'stripe' | 'revenuecat'" required>
       The processor this identity belongs to.
@@ -48,8 +48,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <DynamicParamField body="billables" type="object[]" required>
   The billing objects (subscriptions, one-offs) to image, each carrying its plan.
   <Expandable title="properties">
-    <DynamicParamField body="processor" type="'stripe' | 'revenuecat' | 'none'" required>
-      The processor that owns this billable (stripe, revenuecat, or none).
+    <DynamicParamField body="processor" type="'stripe' | 'revenuecat'">
+      The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.
     </DynamicParamField>
 
     <DynamicParamField body="link" type="object">

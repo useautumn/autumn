@@ -21,7 +21,7 @@ test.concurrent(
 	`${chalk.yellowBright("dfu.flash: plan.started_at sets the imported one-off start date")}`,
 	async () => {
 		const customerId = "dfu-flash-starts-at";
-		const pro = products.pro({
+		const pro = products.oneOff({
 			id: "dfu-starts-at-pro",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
@@ -71,10 +71,12 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("dfu.flash: one-off with resetting credits and no started_at is flagged, not blocked")}`,
+	`${chalk.yellowBright("dfu.flash: resetting plan with no started_at is flagged, not blocked")}`,
 	async () => {
 		const customerId = "dfu-flash-started-at-required";
-		const pro = products.pro({
+		// Free (no base price) so this isolates the anchor mismatch, not the
+		// paid-plan-without-subscription one.
+		const pro = products.base({
 			id: "dfu-started-at-required-pro",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});

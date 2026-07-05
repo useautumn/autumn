@@ -6,6 +6,7 @@ import {
 	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
+	isProductPaidAndRecurring,
 	isResettingEntitlement,
 	nullish,
 	ProcessorType,
@@ -34,7 +35,7 @@ const buildCustomerProduct = ({
 }): {
 	customerProduct: FullCusProduct;
 	reportStatus: string;
-	anchorMismatch: boolean;
+	mismatchReason: string | undefined;
 } => {
 	const { fullCustomer, currentEpochMs } = flashContext;
 	const {
@@ -66,8 +67,8 @@ const buildCustomerProduct = ({
 		resolvedStartsAt ??
 		currentEpochMs;
 
-	// Flag (don't block): a resetting plan whose anchor fell through to the import
-	// time — its cycle is likely wrong and the caller should supply started_at.
+	// Flags (don't block) surfaced to the caller as `mismatch` — the plan images
+	// anyway, but its billing state is likely wrong and needs attention.
 	const anchorResolved =
 		billingCycleAnchor != null ||
 		hydration?.periodEndMs != null ||
@@ -77,6 +78,16 @@ const buildCustomerProduct = ({
 		fullProduct.entitlements.some((entitlement) =>
 			isResettingEntitlement({ entitlement }),
 		);
+	// A paid recurring plan with no linked subscription can't be billed/managed —
+	// Autumn has no processor object to run renewals against.
+	const paidPlanUnlinked =
+		isProductPaidAndRecurring(fullProduct) && subscriptionIds.length === 0;
+
+	const mismatchReason = paidPlanUnlinked
+		? "paid_plan_without_subscription"
+		: anchorMismatch
+			? "no_resolvable_billing_anchor"
+			: undefined;
 
 	const customerProduct = initFullCustomerProduct({
 		ctx,
@@ -124,7 +135,7 @@ const buildCustomerProduct = ({
 	return {
 		customerProduct,
 		reportStatus: statusInfo.reportStatus,
-		anchorMismatch,
+		mismatchReason,
 	};
 };
 
@@ -172,7 +183,7 @@ export const computeFlashPlan = ({
 		if (existing) {
 			flashed.push({
 				plan_id: planContext.plan.plan_id,
-				processor: planContext.processor,
+				processor: planContext.processor ?? "stripe",
 				customer_product_id: existing.id,
 				status: existing.status,
 				skipped: true,
@@ -181,7 +192,7 @@ export const computeFlashPlan = ({
 			continue;
 		}
 
-		const { customerProduct, reportStatus, anchorMismatch } =
+		const { customerProduct, reportStatus, mismatchReason } =
 			buildCustomerProduct({
 				ctx,
 				flashContext,
@@ -191,14 +202,11 @@ export const computeFlashPlan = ({
 
 		flashed.push({
 			plan_id: planContext.plan.plan_id,
-			processor: planContext.processor,
+			processor: planContext.processor ?? "stripe",
 			customer_product_id: customerProduct.id,
 			status: reportStatus,
 			skipped: false,
-			...(anchorMismatch && {
-				mismatch: true,
-				reason: "no_resolvable_billing_anchor",
-			}),
+			...(mismatchReason && { mismatch: true, reason: mismatchReason }),
 		});
 	}
 

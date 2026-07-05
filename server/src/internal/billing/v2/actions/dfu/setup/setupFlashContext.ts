@@ -78,7 +78,7 @@ const upsertFullCustomer = async ({
 	ctx: AutumnContext;
 	params: DfuFlashParams;
 }): Promise<FullCustomer> => {
-	const revenueCatIdentity = params.processors.find(
+	const revenueCatIdentity = params.processors?.find(
 		(p) => p.type === "revenuecat",
 	);
 
@@ -108,7 +108,7 @@ const upsertFullCustomer = async ({
 		return existing;
 	}
 
-	const stripeIdentity = params.processors.find((p) => p.type === "stripe");
+	const stripeIdentity = params.processors?.find((p) => p.type === "stripe");
 	await createNewCustomer({
 		ctx,
 		customer: {
@@ -257,7 +257,7 @@ export const setupFlashContext = async ({
 	}
 
 	// Fill omitted fields from processors BEFORE status/balance resolution.
-	const revenueCatAppUserId = params.processors.find(
+	const revenueCatAppUserId = params.processors?.find(
 		(p) => p.type === "revenuecat",
 	)?.id;
 	await Promise.all([

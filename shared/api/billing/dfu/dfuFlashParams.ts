@@ -11,8 +11,6 @@ import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 // supported and is intentionally omitted so `type` renders as a clean enum.)
 const ProcessorTypeSchema = z.enum(["stripe", "revenuecat"]);
 
-const BillableProcessorSchema = z.enum(["stripe", "revenuecat", "none"]);
-
 const FlashCustomerDataSchema = z.object({
 	name: z
 		.string()
@@ -153,9 +151,9 @@ const FlashPhaseSchema = z.object({
 
 const FlashBillableSchema = z
 	.object({
-		processor: BillableProcessorSchema.meta({
+		processor: ProcessorTypeSchema.optional().meta({
 			description:
-				"The processor that owns this billable (stripe, revenuecat, or none).",
+				"The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.",
 		}),
 		link: FlashLinkSchema.optional().meta({
 			description:
@@ -204,9 +202,9 @@ export const DfuFlashParamsSchema = z.object({
 	customer_data: FlashCustomerDataSchema.optional().meta({
 		description: "Optional identity fields to upsert if the customer is new.",
 	}),
-	processors: z.array(FlashProcessorIdentitySchema).meta({
+	processors: z.array(FlashProcessorIdentitySchema).optional().meta({
 		description:
-			"The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id).",
+			"The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.",
 	}),
 	billables: z.array(FlashBillableSchema).meta({
 		description:
@@ -242,7 +240,7 @@ export const DfuFlashedPlanSchema = z.object({
 	}),
 	mismatch: z.boolean().optional().meta({
 		description:
-			"True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.",
+			"True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, or a paid recurring plan with no linked subscription for Autumn to manage. The plan is still imaged; see `reason` and fix by supplying started_at or a subscription_id.",
 	}),
 	reason: z.string().optional().meta({
 		description:
