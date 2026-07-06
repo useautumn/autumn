@@ -61,15 +61,20 @@ export const computeCustomPlan = async ({
 	const isUpdatingScheduledProduct =
 		customerProduct.status === CusProductStatus.Scheduled;
 
-	const { allLineItems } = buildAutumnLineItems({
-		ctx,
-		newCustomerProducts: [newFullCustomerProduct],
-		deletedCustomerProduct: customerProduct,
-		billingContext: updateSubscriptionContext,
+	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
+	// prorate — its future phase item swap is applied wholesale via
+	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
+	const { allLineItems } = isUpdatingScheduledProduct
+		? { allLineItems: [] }
+		: buildAutumnLineItems({
+				ctx,
+				newCustomerProducts: [newFullCustomerProduct],
+				deletedCustomerProduct: customerProduct,
+				billingContext: updateSubscriptionContext,
 
-		includeArrearLineItems:
-			updateSubscriptionContext.chargeExistingOverages === true,
-	});
+				includeArrearLineItems:
+					updateSubscriptionContext.chargeExistingOverages === true,
+			});
 
 	// If customer product is canceling, compute the scheduled product to delete
 	const deleteCustomerProduct = computeDeleteCustomerProduct({

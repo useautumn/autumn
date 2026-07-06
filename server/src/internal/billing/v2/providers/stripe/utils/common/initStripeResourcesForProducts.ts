@@ -25,17 +25,19 @@ import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeRe
 export const initStripeResourcesForProducts = async ({
 	ctx,
 	products,
+	candidateProducts = [],
 	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
+	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
 
 	await Promise.all(
 		products.map((product) =>
-			applyStripeResourceReuseForProduct({ ctx, product }),
+			applyStripeResourceReuseForProduct({ ctx, product, candidateProducts }),
 		),
 	);
 	await applyStripeReuseFromVariantFamilies({ ctx, products });

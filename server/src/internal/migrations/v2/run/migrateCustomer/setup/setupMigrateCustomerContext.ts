@@ -9,10 +9,12 @@ export const setupMigrateCustomerContext = async ({
 	ctx,
 	migration,
 	customerId,
+	preview,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntime;
 	customerId: string;
+	preview: boolean;
 }): Promise<MigrateCustomerContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -22,6 +24,7 @@ export const setupMigrateCustomerContext = async ({
 	return {
 		migration,
 		fullCustomer,
+		preview,
 		stripeCache: createMigrationStripeCache({
 			ctx,
 			fullCustomer,
