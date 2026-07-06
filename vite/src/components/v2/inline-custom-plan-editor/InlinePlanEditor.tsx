@@ -1,4 +1,8 @@
-import { type FrontendProduct, sortPlanItems } from "@autumn/shared";
+import {
+	type CustomizePlanLicense,
+	type FrontendProduct,
+	sortPlanItems,
+} from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
@@ -9,6 +13,13 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
+import {
+	collectCustomizedLicenses,
+	LicenseCustomizeCollectorProvider,
+	useHasCollectedLicenseChanges,
+	useLicenseCollectorStore,
+} from "@/views/products/plan/components/plan-licenses/LicenseCustomizeCollector";
+import { LicensePlanCards } from "@/views/products/plan/components/plan-licenses/LicensePlanCards";
 import { SheetPanelHost } from "@/views/products/plan/components/SheetPanelHost";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
@@ -17,9 +28,12 @@ import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
-	onSave: (product: FrontendProduct) => void;
+	onSave: (product: FrontendProduct, licenses?: CustomizePlanLicense[]) => void;
 	onCancel: () => void;
 	isOpen: boolean;
+	/** Render the plan's license cards and collect edits into onSave's
+	 * `licenses` — only for flows whose payload supports a license override. */
+	enableLicenseEditing?: boolean;
 }
 
 export function InlinePlanEditor({
@@ -27,6 +41,7 @@ export function InlinePlanEditor({
 	onSave,
 	onCancel,
 	isOpen,
+	enableLicenseEditing = false,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -48,7 +63,13 @@ export function InlinePlanEditor({
 		<AnimatePresence>
 			{isOpen && (
 				<InlineEditorProvider initialProduct={product}>
-					<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
+					<LicenseCustomizeCollectorProvider>
+						<InlinePlanEditorContent
+							onSave={onSave}
+							onCancel={onCancel}
+							enableLicenseEditing={enableLicenseEditing}
+						/>
+					</LicenseCustomizeCollectorProvider>
 				</InlineEditorProvider>
 			)}
 		</AnimatePresence>,
@@ -59,13 +80,31 @@ export function InlinePlanEditor({
 function InlinePlanEditorContent({
 	onSave,
 	onCancel,
+	enableLicenseEditing,
 }: {
-	onSave: (product: FrontendProduct) => void;
+	onSave: (product: FrontendProduct, licenses?: CustomizePlanLicense[]) => void;
 	onCancel: () => void;
+	enableLicenseEditing: boolean;
 }) {
 	const { product } = useProduct();
 	const { sheetType } = useSheet();
 	const hasPlanChanges = useHasPlanChanges();
+	const collectorStore = useLicenseCollectorStore();
+	const hasLicenseChanges = useHasCollectedLicenseChanges();
+	const hasChanges = hasPlanChanges || hasLicenseChanges;
+
+	const handleSave = () => {
+		// customize.licenses replaces the whole set, so only send it when a
+		// license was actually edited.
+		const licenses =
+			hasLicenseChanges && collectorStore
+				? collectCustomizedLicenses(collectorStore)
+				: undefined;
+		onSave(
+			{ ...product, items: sortPlanItems({ items: product.items }) },
+			licenses,
+		);
+	};
 
 	return (
 		<motion.div
@@ -89,22 +128,15 @@ function InlinePlanEditorContent({
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
 							<CustomerPlanInfoBox />
 							<PlanCard />
+							{enableLicenseEditing && <LicensePlanCards />}
 						</div>
 						{!sheetType && (
 							<PlanEditorBar>
 								<Button variant="secondary" onClick={onCancel}>
 									Return to Customer
 								</Button>
-								{hasPlanChanges && (
-									<ShortcutButton
-										metaShortcut="s"
-										onClick={() =>
-											onSave({
-												...product,
-												items: sortPlanItems({ items: product.items }),
-											})
-										}
-									>
+								{hasChanges && (
+									<ShortcutButton metaShortcut="s" onClick={handleSave}>
 										Save Changes
 									</ShortcutButton>
 								)}

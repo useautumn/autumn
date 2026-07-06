@@ -454,6 +454,7 @@ function SheetContent() {
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
+						enableLicenseEditing
 					/>
 				)}
 			</div>

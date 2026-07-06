@@ -8,9 +8,8 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
-import { productToLicenseCustomize } from "./licenseCustomizeUtils";
+import { buildCustomizePlanLicense } from "./licenseCustomizeUtils";
 import { runWithErrorToast } from "./runWithErrorToast";
-import { useLicenseDraftStore } from "./useLicenseDraftStore";
 
 /**
  * Seeds the inline editor with the license's effective items and persists edits
@@ -36,28 +35,29 @@ export const useLicenseCustomize = ({
 		product: { ...license, items },
 	});
 
-	const save = (draftProduct: FrontendProduct) =>
+	const buildCustomize = ({
+		product,
+		itemsChanged,
+	}: {
+		product: FrontendProduct;
+		itemsChanged: boolean;
+	}) =>
+		buildCustomizePlanLicense({
+			product,
+			planLicense,
+			license,
+			features,
+			currency: org?.default_currency ?? "USD",
+			itemsChanged,
+		});
+
+	const save = (args: { product: FrontendProduct; itemsChanged: boolean }) =>
 		runWithErrorToast(async () => {
-			// Read the drafts imperatively at save time so editing them doesn't
-			// re-render this card on every keystroke.
-			const draft = useLicenseDraftStore.getState().drafts[license.id];
-			const includedQuantity =
-				draft?.includedQuantity ?? planLicense.included_quantity;
-			const pooledFeatureIds =
-				draft?.pooledFeatureIds ?? planLicense.pooled_feature_ids;
 			await setPlanLicense.mutateAsync({
 				parent_plan_id: parentPlanId,
-				license_plan_id: license.id,
-				included_quantity: includedQuantity,
-				allow_extra_quantity: planLicense.allow_extra_quantity,
-				pooled_feature_ids: pooledFeatureIds,
-				customize: productToLicenseCustomize({
-					product: draftProduct,
-					features,
-					currency: org?.default_currency ?? "USD",
-				}),
+				...buildCustomize(args),
 			});
 		}, "Failed to save license");
 
-	return { seededProduct, save };
+	return { seededProduct, save, buildCustomize };
 };

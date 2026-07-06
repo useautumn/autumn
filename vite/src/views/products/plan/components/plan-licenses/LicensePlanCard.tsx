@@ -9,15 +9,19 @@ export function LicensePlanCard({
 	planLicense,
 	license,
 	parentPlanId,
+	isPendingLink = false,
+	isParentSheetOpen = false,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
 	parentPlanId: string;
+	isPendingLink?: boolean;
+	isParentSheetOpen?: boolean;
 }) {
 	const { features } = useFeaturesQuery();
 	const items = planLicenseItems({ planLicense, license, features });
 
-	const { seededProduct, save } = useLicenseCustomize({
+	const { seededProduct, save, buildCustomize } = useLicenseCustomize({
 		parentPlanId,
 		planLicense,
 		license,
@@ -30,6 +34,9 @@ export function LicensePlanCard({
 				planLicense={planLicense}
 				license={license}
 				onSave={save}
+				buildCustomize={buildCustomize}
+				isPendingLink={isPendingLink}
+				isParentSheetOpen={isParentSheetOpen}
 			/>
 		</LicenseEditorProvider>
 	);

@@ -50,6 +50,7 @@ export function useUpdateSubscriptionForm({
 			trialEnabled: isTrialing,
 			version: currentVersion,
 			items: null,
+			licenses: null,
 			cancelAction: null,
 			billingBehavior: null,
 			resetBillingCycle: false,

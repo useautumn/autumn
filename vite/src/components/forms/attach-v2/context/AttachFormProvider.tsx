@@ -1,5 +1,6 @@
 import type {
 	CusProduct,
+	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
@@ -81,7 +82,10 @@ interface AttachFormContextValue {
 
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (product: FrontendProduct) => void;
+	handlePlanEditorSave: (
+		product: FrontendProduct,
+		licenses?: CustomizePlanLicense[],
+	) => void;
 	handlePlanEditorCancel: () => void;
 
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
@@ -173,6 +177,7 @@ export function AttachFormProvider({
 		productId,
 		prepaidOptions,
 		items,
+		licenses,
 		version,
 		trialLength,
 		trialDuration,
@@ -308,6 +313,7 @@ export function AttachFormProvider({
 		if (previousVersionRef.current === version) return;
 		previousVersionRef.current = version;
 		form.setFieldValue("items", null);
+		form.setFieldValue("licenses", null);
 	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
@@ -326,6 +332,7 @@ export function AttachFormProvider({
 
 		if (isProductChange) {
 			form.setFieldValue("items", null);
+			form.setFieldValue("licenses", null);
 			form.setFieldValue("version", undefined);
 			form.setFieldValue("trialEnabled", false);
 			form.setFieldValue("trialLength", null);
@@ -405,6 +412,7 @@ export function AttachFormProvider({
 		product: effectiveProduct,
 		prepaidOptions,
 		items,
+		licenses,
 		grantFree,
 		version,
 		trialLength,
@@ -474,7 +482,10 @@ export function AttachFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen, grantFree]);
 
 	const handlePlanEditorSave = useCallback(
-		(draftProduct: FrontendProduct) => {
+		(
+			draftProduct: FrontendProduct,
+			editedLicenses?: CustomizePlanLicense[],
+		) => {
 			if (!productWithFormItems) {
 				setShowPlanEditor(false);
 				onPlanEditorClose?.();
@@ -505,6 +516,10 @@ export function AttachFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
+
+			if (editedLicenses) {
+				form.setFieldValue("licenses", editedLicenses);
+			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();

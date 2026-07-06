@@ -1,7 +1,9 @@
+import { isLicenseProduct } from "@autumn/shared";
 import { Button } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import {
 	useCurrentItem,
+	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
@@ -10,9 +12,11 @@ import { useOpenAddFeatureSheet } from "../../hooks/useOpenAddFeatureSheet";
 
 export const AddFeatureRow = () => {
 	const item = useCurrentItem();
+	const { product } = useProduct();
 	const openAddFeatureSheet = useOpenAddFeatureSheet();
 	const { sheetType } = useSheet();
 	const isSelecting = sheetType === "select-feature";
+	const targetLabel = isLicenseProduct({ product }) ? "License" : "Plan";
 
 	return (
 		<Button
@@ -29,7 +33,7 @@ export const AddFeatureRow = () => {
 			aria-label="Add new feature"
 		>
 			<PlusIcon className="size-3 !text-primary" weight="bold" />
-			<span className="!text-primary">Add Feature to Plan</span>
+			<span className="!text-primary">Add Feature to {targetLabel}</span>
 		</Button>
 	);
 };

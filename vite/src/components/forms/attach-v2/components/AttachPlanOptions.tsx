@@ -1,14 +1,15 @@
-import { Button, Switch } from "@autumn/ui";
-import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { ConfigRow } from "@/components/forms/shared/ConfigRow";
-import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Switch,
 } from "@autumn/ui";
+import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 

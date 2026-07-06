@@ -49,13 +49,17 @@ export const LicenseCardDim = ({ show }: { show: boolean }) => (
  * license context. The overlay dims the page and closes the sheet on click-out.
  */
 export function LicenseSheetPortal() {
-	const mainContent = document.querySelector("[data-main-content]");
+	// Inside the inline customize editor (itself z-100 over the page), the
+	// overlay must portal into the editor root or it would sit behind it.
+	const portalTarget =
+		document.querySelector("[data-inline-editor-open]") ??
+		document.querySelector("[data-main-content]");
 
-	if (!mainContent) return null;
+	if (!portalTarget) return null;
 
 	return (
 		<>
-			{createPortal(<SheetOverlay inline zIndex={OVERLAY_Z} />, mainContent)}
+			{createPortal(<SheetOverlay inline zIndex={OVERLAY_Z} />, portalTarget)}
 			<ProductSheets />
 		</>
 	);

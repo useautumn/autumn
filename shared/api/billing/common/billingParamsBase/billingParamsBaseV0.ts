@@ -3,6 +3,7 @@ import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuanti
 import { TransitionRulesSchema } from "@api/billing/common/transitionRules";
 import { FreeTrialParamsV0Schema } from "@api/common/freeTrial/freeTrialParamsV0";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
+import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../../common/customerData";
@@ -20,6 +21,8 @@ export const BillingParamsBaseV0Schema = z.object({
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),
+	// Overrides the plan's license set for this subscription (replaces whole set)
+	licenses: z.array(CustomizePlanLicenseSchema).optional(),
 	billing_controls: CustomerBillingControlsParamsSchema.optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),

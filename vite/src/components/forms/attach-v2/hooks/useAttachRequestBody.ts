@@ -1,6 +1,7 @@
 import type {
 	AttachParamsV0,
 	BillingBehavior,
+	CustomizePlanLicense,
 	FreeTrialDuration,
 	PlanTiming,
 	ProductItem,
@@ -26,6 +27,7 @@ export interface BuildAttachRequestBodyParams {
 	product: ProductV2 | undefined;
 	prepaidOptions: Record<string, number | undefined>;
 	items: ProductItem[] | null;
+	licenses: CustomizePlanLicense[] | null;
 	grantFree: boolean;
 	version: number | undefined;
 	trialLength: number | null;
@@ -58,6 +60,7 @@ export function buildAttachRequestBody({
 	product,
 	prepaidOptions,
 	items,
+	licenses,
 	grantFree,
 	version,
 	trialLength,
@@ -117,6 +120,10 @@ export function buildAttachRequestBody({
 			// (paid) items; omitting `items` falls back to them. See useGrantFree.
 			body.items = [];
 		}
+	}
+
+	if (licenses !== null) {
+		body.licenses = licenses;
 	}
 
 	if (version !== undefined) {
@@ -212,6 +219,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		product,
 		prepaidOptions,
 		items,
+		licenses,
 		grantFree,
 		version,
 		trialLength,
@@ -245,6 +253,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				product,
 				prepaidOptions,
 				items,
+				licenses,
 				grantFree,
 				version,
 				trialLength,
@@ -275,6 +284,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			product,
 			prepaidOptions,
 			items,
+			licenses,
 			grantFree,
 			version,
 			trialLength,

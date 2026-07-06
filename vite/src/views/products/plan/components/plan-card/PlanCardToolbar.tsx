@@ -1,8 +1,12 @@
+import { isLicenseProduct } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { DeletePlanDialog } from "../DeletePlanDialog";
@@ -21,8 +25,12 @@ export const PlanCardToolbar = ({
 	editDisabled,
 }: PlanCardToolbarProps) => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
+	const { product } = useProduct();
 	const { sheetType } = useSheet();
 	const isEditingPlan = sheetType === "edit-plan";
+	const settingsLabel = isLicenseProduct({ product })
+		? "License Settings"
+		: "Plan Settings";
 	const navigate = useNavigate();
 
 	return (
@@ -46,7 +54,7 @@ export const PlanCardToolbar = ({
 				<IconButton
 					// icon={<PencilSimpleIcon />}
 					onClick={onEdit}
-					aria-label="Edit plan"
+					aria-label={settingsLabel}
 					variant="secondary"
 					disabled={editDisabled}
 					iconOrientation="left"
@@ -57,7 +65,7 @@ export const PlanCardToolbar = ({
 						isEditingPlan && "btn-secondary-active !opacity-100 z-95",
 					)}
 				>
-					Plan Settings
+					{settingsLabel}
 				</IconButton>
 			</div>
 		</>

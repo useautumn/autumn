@@ -9,43 +9,35 @@ import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
-import { runWithErrorToast } from "./runWithErrorToast";
+import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 
 /**
  * "Link license" entry for the plan toolbar (ellipsis) dropdown: a sub-menu of
- * license subplans that aren't already linked to this plan. Hidden when the
- * product itself is a license.
+ * license subplans that aren't already linked to this plan. Linking only stages
+ * a pending card — the link persists when the plan save bar is saved. Hidden
+ * when the product itself is a license.
  */
 export const LinkLicenseMenuItem = () => {
 	const { product } = useProduct();
 	const isLicense = isLicenseProduct({ product });
 
-	const { planLicenses, setPlanLicense } = usePlanLicensesQuery(
+	const { planLicenses } = usePlanLicensesQuery(
 		isLicense ? undefined : product.id,
 	);
 	const { licenseProducts } = useLicenseProductsQuery();
+	const { pendingLicenseIds, addPendingLink } = usePendingLicenseLinks();
 
 	if (isLicense) return null;
 
-	const linkedIds = new Set(
-		planLicenses.map((planLicense) => planLicense.license_plan_id),
-	);
+	const linkedIds = new Set([
+		...planLicenses.map((planLicense) => planLicense.license_plan_id),
+		...pendingLicenseIds,
+	]);
 	const availableLicenses = licenseProducts.filter(
 		(license) => !linkedIds.has(license.id),
 	);
 
-	const linkLicense = (licensePlanId: string) =>
-		runWithErrorToast(
-			() =>
-				setPlanLicense.mutateAsync({
-					parent_plan_id: product.id,
-					license_plan_id: licensePlanId,
-					included_quantity: 1,
-					allow_extra_quantity: false,
-					pooled_feature_ids: [],
-				}),
-			"Failed to link license",
-		);
+	const linkLicense = (licensePlanId: string) => addPendingLink(licensePlanId);
 
 	return (
 		<DropdownMenuSub>
