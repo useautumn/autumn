@@ -1,10 +1,14 @@
-import { AppEnv } from "@models/genModels/genEnums.js";
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
+import { AppEnv } from "@models/genModels/genEnums.js";
+import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
-import { CustomizePlanV1Schema } from "../billing/common/customizePlan/customizePlanV1.js";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../billing/common/customizePlan/customizePlanV1.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
@@ -49,8 +53,34 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-const VariantCustomizeSchema = CustomizePlanV1Schema.omit({
-	items: true,
+const VariantCustomizeSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
+
+export const ApiPlanLicenseV1Schema = z.object({
+	license_plan_id: z.string().meta({
+		description: "The plan offered as a license under this plan.",
+	}),
+	included: z.number().meta({
+		description:
+			"Number of license assignments included with this plan for free.",
+	}),
+	prepaid_only: z.boolean().meta({
+		description:
+			"When true, assignments are capped at the included quantity. When false, assignments beyond it attach the license plan to the entity and bill as normal.",
+	}),
+	pooled_feature_ids: z.array(z.string()).optional().meta({
+		description:
+			"Features granted as one shared customer-level pool sized by the license capacity, instead of per assigned entity.",
+	}),
+	customize: LicenseCustomizeSchema.nullish().meta({
+		description:
+			"Item overrides applied to the license plan when offered under this plan.",
+	}),
 });
 
 export const ApiPlanV1Schema = z.object({
@@ -105,6 +135,10 @@ export const ApiPlanV1Schema = z.object({
 	items: z.array(ApiPlanItemV1Schema).meta({
 		description:
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
+	}),
+	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
+		description:
+			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),
 	free_trial: ApiFreeTrialV2Schema.optional().meta({
 		description:
