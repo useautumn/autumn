@@ -143,6 +143,23 @@ const getStripeProductIdForCoupon = ({
 	return stripeProductId;
 };
 
+/** Throws product_not_in_stripe for any plan missing in Stripe. Run before deleting an existing coupon. */
+export const resolveCouponStripeProductIds = ({
+	reward,
+	prices,
+}: {
+	reward: Reward;
+	prices: (Price & { product: Product })[];
+}) => {
+	const appliesToSpecificProducts =
+		reward.type !== RewardType.FreeProduct &&
+		!reward.discount_config!.apply_to_all;
+
+	return appliesToSpecificProducts
+		? prices.map((price) => getStripeProductIdForCoupon({ price }))
+		: [];
+};
+
 const getPromoCouponId = (promo: Stripe.PromotionCode): string | null => {
 	const coupon =
 		promo.promotion?.coupon ??
@@ -173,9 +190,7 @@ export const createStripeCoupon = async ({
 
 	// Resolve Stripe product ids before any Stripe writes so a missing
 	// plan fails cleanly instead of after the existing coupon is deleted.
-	const stripeProdIds = appliesToSpecificProducts
-		? prices.map((price) => getStripeProductIdForCoupon({ price }))
-		: [];
+	const stripeProdIds = resolveCouponStripeProductIds({ reward, prices });
 
 	const stripeCli = createStripeCli({
 		org,
