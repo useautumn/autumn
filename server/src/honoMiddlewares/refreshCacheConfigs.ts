@@ -148,6 +148,16 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		method: "POST",
 		url: "/billing.import",
 	}),
+
+	route({
+		method: "POST",
+		url: "/billing.sync",
+	}),
+
+	route({
+		method: "POST",
+		url: "/billing.sync_v2",
+	}),
 ];
 
 export const getRefreshCacheRouteConfig = ({

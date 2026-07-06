@@ -21,6 +21,7 @@ import {
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	GETDEL_SHARED_BALANCE_FIELDS_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
@@ -203,6 +204,10 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
 		numberOfKeys: 1,
 		lua: prepareScript(UPDATE_ENTITY_DATA_V2_SCRIPT),
+	});
+
+	redisInstance.defineCommand("getDelFullSubjectBalanceFields", {
+		lua: prepareScript(GETDEL_SHARED_BALANCE_FIELDS_SCRIPT),
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerProductV2", {

@@ -25,6 +25,7 @@ import LUA_UTILS from "./luaUtils.lua";
 // ============================================================================
 
 import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
+import getDelSharedBalanceFieldsScript from "./fullSubject/getDelSharedBalanceFields.lua";
 import setCachedFullSubjectScript from "./fullSubject/setCachedFullSubject.lua";
 import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
 import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
@@ -121,6 +122,9 @@ export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${setCachedFullSubjectScript}`;
 
 /** Atomically update top-level customer fields in the cached FullSubject. */
 export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;
+
+/** Atomically read + delete shared balance hash fields (GETDEL semantics). */
+export const GETDEL_SHARED_BALANCE_FIELDS_SCRIPT = `${getDelSharedBalanceFieldsScript}`;
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
 export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${updateEntityDataV2Script}`;
