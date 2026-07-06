@@ -19,7 +19,8 @@ sandboxes and invokes these.
 | Script | Layer | Plan sections | What it does |
 |---|---|---|---|
 | `build-base.sh` | BASE (ref-agnostic) | §4a, §5, §5a "BASE snapshot" | Installs native PG18 + contrib (`pg_trgm`), Dragonfly, elasticmq-native (GraalVM binary, **not** the JVM jar), optional ClickHouse, and bun. `initdb` a PG18 cluster, role `postgres/postgres` SUPERUSER, `createdb autumn`, `CREATE EXTENSION pg_trgm` into an **empty** DB (no tables). Places `elasticmq.conf` declaring `autumn.fifo` + `autumn-track.fifo`. `bun install` at repo root. |
-| `start-services.sh` | base build + worker boot | §5, §5a, §4c | Starts PG (`pg_ctl`), Dragonfly (`--dir` snapshot path, `:6379`), elasticmq-native (`:9324`, `-Dconfig.file`), optional ClickHouse (`:8123`), in background. Idempotent (PING/probe gate per service). |
+| `start-services.sh` | base build + worker boot | §5, §5a, §4c | Starts PG (`pg_ctl`), Dragonfly (`--dir` snapshot path, `:6380`), elasticmq-native (`:9324`, `-Dconfig.file`), Tinybird Local (supervisord, `:7181`, Modal image only), optional ClickHouse (`:8123`), in background. Idempotent (PING/probe gate per service). |
+| `deploy-tinybird-local.sh` | WARM (per-run, on the ref) | — | Deploys `server/tinybird` (datasources + materializations + API pipes; the S3 sink + PG backfill copies are excluded — they need cloud secrets) to Tinybird Local via the baked `tb` CLI, authenticated with the instance's own `/tokens` workspace admin token. |
 | `stop-services.sh` | warm build, pre-snapshot | §5a step 6, §4b step 5 | CLEAN-STOP for snapshot consistency: `pg_ctl -m fast stop -w`; Dragonfly `SAVE` then `SHUTDOWN NOSAVE`; SIGTERM elasticmq. Filesystem-only snapshots mean process memory is lost, so state must be flushed to disk. |
 | `warmup.sh` | WARM (per-run, on the ref) | §4b, §5a "WARM snapshot", §9 step 3 | `git checkout <ref>` → `bun install --frozen-lockfile` → `bun db migrate --bootstrap` (fail-fast) → `bun migrate-functions` → seed via `setup-test` (Stripe disabled) → `stop-services.sh`. |
 
@@ -37,10 +38,12 @@ sandboxes and invokes these.
 
 - `TW_PREFIX=/opt/autumn-tw` — root for `pgdata/`, `dragonfly/`, `elasticmq/`,
   `bin/`, `logs/`.
-- PG `:5432`, Dragonfly `:6379` (backs `REDIS_URL` + `CACHE_URL` +
-  `CACHE_V2_DRAGONFLY_URL` — one instance, plan §5a port note), elasticmq
-  `:9324`, ClickHouse `:8123`. No dw `+(worktreeNum-1)*100` offset — each worker
-  is its own µVM, so base ports are used directly.
+- PG `:5432`, Dragonfly `:6380` (backs `REDIS_URL` + `CACHE_URL` +
+  `CACHE_V2_DRAGONFLY_URL` — one instance, plan §5a port note; `:6379` belongs
+  to Tinybird Local's Redis), elasticmq `:9324`, Tinybird Local `:7181`,
+  ClickHouse `:8123` (Tinybird's own on the Modal image). No dw
+  `+(worktreeNum-1)*100` offset — each worker is its own µVM, so base ports are
+  used directly.
 
 ## Key decisions / assumptions (verify on the µVM)
 
@@ -56,7 +59,18 @@ sandboxes and invokes these.
   JVM", ensure `crane` is on the µVM. `start-services.sh`/`stop-services.sh`
   handle both the native binary and the jar fallback.
 - **ClickHouse is optional** — gated behind `TW_INSTALL_CLICKHOUSE=1` (build)
-  and `TW_START_CLICKHOUSE=1` (start). Only needed for analytics tests.
+  and `TW_START_CLICKHOUSE=1` (start). Only needed for analytics tests, and
+  mutually exclusive with Tinybird Local (both bind `:8123`).
+- **Tinybird Local is Modal-only.** The Modal base image (`modalImage.ts`) is
+  built FROM `tinybirdco/tinybird-local` (Ubuntu 22.04), so the whole Tinybird
+  stack (ClickHouse, Redis `:6379`, nginx API `:7181`, tinybird_server, HFI
+  events API) ships as supervisord programs — the only daemon-less way to run
+  Tinybird in a sandbox. `warmup.sh` deploys the ref's `server/tinybird` schema
+  ONCE (WARM layer) via `deploy-tinybird-local.sh`; workers cold-start the
+  already-deployed instance and `worker/boot.ts` wires
+  `TINYBIRD_US_EAST_API_URL`/`_TOKEN` from `/tokens`. The Vercel build-base.sh
+  path has no Tinybird — the `auto` gates in start/stop/warmup skip it there
+  (Tinybird-dependent tests still fail on that provider).
 - **Migrate bypasses Infisical.** `warmup.sh` exports a localhost
   `DATABASE_URL` + `AUTUMN_DB_DIRECT=1`, which `scripts/db/helpers/env.ts:66-74`
   honors to skip the `infisical run` wrap. `bun migrate-functions` is invoked as

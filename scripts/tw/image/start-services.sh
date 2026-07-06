@@ -2,9 +2,12 @@
 #
 # start-services.sh — bring up the µVM's localhost daemons (plan §5, §5a, §4c).
 #
-# Starts (in background, idempotent): PostgreSQL 18 (pg_ctl), Dragonfly (:6379),
-# elasticmq-native (:9324), and optionally ClickHouse (:8123). All bind to
-# localhost; only the Autumn server port is ever exposed.
+# Starts (in background, idempotent): PostgreSQL 18 (pg_ctl), Dragonfly (:6380 —
+# :6379 belongs to Tinybird Local's Redis), elasticmq-native (:9324), Tinybird
+# Local (supervisord stack, API on :7181, present on the Modal image only), and
+# optionally ClickHouse (:8123 — mutually exclusive with Tinybird Local, whose
+# own ClickHouse owns that port). All bind to localhost; only the Autumn server
+# port is ever exposed.
 #
 # Used twice:
 #   1. during the BASE build (build-base.sh starts PG itself; this is for warm).
@@ -29,10 +32,16 @@ GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 
 PG_PORT="${PG_PORT:-5432}"
-DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
+DRAGONFLY_PORT="${DRAGONFLY_PORT:-6380}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
 START_CLICKHOUSE="${TW_START_CLICKHOUSE:-0}"
+TINYBIRD_PORT="${TINYBIRD_PORT:-7181}"
+# Tinybird Local lives at /app/tinybird-local on the Modal base image only;
+# "auto" starts it iff that layout exists (no-op on the Vercel µVM).
+START_TINYBIRD="${TW_START_TINYBIRD:-auto}"
+TINYBIRD_MARKER="/app/tinybird-local"
+SUPERVISORD_CONF="/etc/supervisor/supervisord.conf"
 
 mkdir -p "$LOG_DIR" "$DRAGONFLY_DIR"
 
@@ -91,7 +100,7 @@ else
   run_pg pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -o "-p $PG_PORT" start
 fi
 
-# 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so the
+# 2. Dragonfly — Redis-protocol cache on :6380. --dir is the snapshot path so the
 #    clean-stop SAVE in stop-services.sh persists to disk for the fork.
 if redis-cli -p "$DRAGONFLY_PORT" PING >/dev/null 2>&1; then
   log "Dragonfly already running"
@@ -122,14 +131,45 @@ else
   disown || true
 fi
 
-# Wait for all three (started above) concurrently — readiness overlaps.
+# 4. Tinybird Local — the whole stack (ClickHouse, Redis :6379, nginx :7181,
+#    tinybird_server, HFI events API) is supervisord-managed on the Modal image.
+#    /tokens returns 200 only once the workspace is set up and the API serves.
+tinybird_ready_probe="curl -sf -o /dev/null http://localhost:$TINYBIRD_PORT/tokens"
+tinybird_wanted=0
+if [ "$START_TINYBIRD" = "1" ]; then
+  tinybird_wanted=1
+elif [ "$START_TINYBIRD" = "auto" ] && [ -d "$TINYBIRD_MARKER" ] && command -v supervisord >/dev/null 2>&1; then
+  tinybird_wanted=1
+fi
+if [ "$tinybird_wanted" = "1" ]; then
+  if eval "$tinybird_ready_probe" >/dev/null 2>&1; then
+    log "Tinybird Local already running"
+  else
+    [ -f "$SUPERVISORD_CONF" ] || die "supervisord config missing at $SUPERVISORD_CONF"
+    log "Starting Tinybird Local (supervisord) on :$TINYBIRD_PORT"
+    nohup supervisord -c "$SUPERVISORD_CONF" >"$LOG_DIR/tinybird-supervisord.log" 2>&1 &
+    disown || true
+  fi
+else
+  log "Skipping Tinybird Local (not present on this image)"
+fi
+
+# Wait for all (started above) concurrently — readiness overlaps.
 wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
+if [ "$tinybird_wanted" = "1" ]; then
+  # First-ever boot (warm layer) runs the workspace setup — allow up to 3 min.
+  wait_for "Tinybird Local" "$tinybird_ready_probe" 720 "/var/log/tinybird-local-setup.log"
+fi
 
 # ---------------------------------------------------------------------------
-# 4. ClickHouse (optional).
+# 5. Standalone ClickHouse (optional; unavailable when Tinybird Local runs —
+#    Tinybird's own ClickHouse owns :8123).
 # ---------------------------------------------------------------------------
+if [ "$START_CLICKHOUSE" = "1" ] && [ "$tinybird_wanted" = "1" ]; then
+  die "TW_START_CLICKHOUSE=1 conflicts with Tinybird Local (both bind :8123)"
+fi
 if [ "$START_CLICKHOUSE" = "1" ]; then
   if curl -sf -o /dev/null "http://localhost:$CLICKHOUSE_PORT/ping" 2>/dev/null; then
     log "ClickHouse already running"
@@ -148,4 +188,4 @@ else
   log "Skipping ClickHouse (set TW_START_CLICKHOUSE=1 to start it)"
 fi
 
-log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT)"
+log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT tinybird:$([ "$tinybird_wanted" = "1" ] && echo "$TINYBIRD_PORT" || echo off))"

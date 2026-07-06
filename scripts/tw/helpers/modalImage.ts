@@ -16,6 +16,15 @@
  *   - bun (pinned to .bun-version) → /usr/local/bin/bun, with `node` symlinked
  *     to bun so the whole image runs on one runtime (ingress + native installs)
  *
+ * The BASE registry image is `tinybirdco/tinybird-local` (Ubuntu 22.04), NOT
+ * debian:bookworm-slim: it ships the whole Tinybird Local stack (ClickHouse,
+ * Redis on :6379, nginx API front on :7181, tinybird_server, HFI events API)
+ * as supervisord programs, which is the only daemon-less way to run Tinybird
+ * inside a sandbox (no Docker on Modal/Vercel µVMs). start-services.sh starts
+ * supervisord; warmup.sh deploys `server/tinybird` to it once per run; Dragonfly
+ * moved to :6380 to leave :6379 to Tinybird's Redis. The `tb` CLI is baked here
+ * for the warm deploy.
+ *
  * What's NOT baked here (done per-run by warmup.sh on Modal, since the repo isn't
  * present at image-build time): `bun install`, `bun db migrate`, the seed, and
  * Playwright Chromium (browser-test groups). The empty migrated db + trgm
@@ -77,7 +86,7 @@ export const buildBaseImage = (
 	deps: BaseImageDeps,
 ): Promise<Image> =>
 	modal.images
-		.fromRegistry("debian:bookworm-slim")
+		.fromRegistry("tinybirdco/tinybird-local:latest")
 		// 1. Base system packages (+ redis-tools for redis-cli). No `nodejs`: bun
 		//    is the only runtime (step 6 symlinks `node` → bun). `python3 make g++`
 		//    are needed when native deps fall back to node-gyp. Pre-create /repo so
@@ -89,16 +98,23 @@ export const buildBaseImage = (
 				"locales unzip redis-tools python3 make g++ && " +
 				"rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
 		])
-		// 2. PostgreSQL 18 + contrib (pg_trgm) from the PGDG apt repo.
+		// 2. PostgreSQL 18 + contrib (pg_trgm) from the PGDG apt repo (jammy — the
+		//    tinybird-local base is Ubuntu 22.04).
 		.dockerfileCommands([
 			"RUN install -d /usr/share/postgresql-common/pgdg && " +
 				"curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc " +
 				"-o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc && " +
 				'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] ' +
-				'https://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" ' +
+				'https://apt.postgresql.org/pub/repos/apt jammy-pgdg main" ' +
 				"> /etc/apt/sources.list.d/pgdg.list && " +
 				"apt-get update && apt-get install -y --no-install-recommends " +
 				"postgresql-18 postgresql-contrib-18 && rm -rf /var/lib/apt/lists/*",
+		])
+		// 2b. Tinybird `tb` CLI (uv tool → /root/.local/bin/tb) — used by warmup.sh
+		//     to deploy server/tinybird once per run. The image's own
+		//     /usr/local/bin/tb is an internal dev wrapper; leave it untouched.
+		.dockerfileCommands([
+			"RUN curl -fsSL https://tinybird.co | sh && /root/.local/bin/tb --version",
 		])
 		// 3. Dragonfly → $BIN_DIR/dragonfly (matches start-services.sh probe path).
 		.dockerfileCommands([

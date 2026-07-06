@@ -24,7 +24,7 @@ REPO_ROOT="${TW_REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 
 TW_PREFIX="${TW_PREFIX:-/opt/autumn-tw}"
 PG_PORT="${PG_PORT:-5432}"
-DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
+DRAGONFLY_PORT="${DRAGONFLY_PORT:-6380}"
 ELASTICMQ_PORT="${ELASTICMQ_PORT:-9324}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 
@@ -122,6 +122,18 @@ bun scripts/migrations/migrate-functions.ts || die "migrate-functions FAILED"
 # ---------------------------------------------------------------------------
 log "Seeding test org (setup-test, createStripeAccount disabled)"
 bun scripts/setup/setup-test.ts --yes || die "setup-test seed FAILED"
+
+# ---------------------------------------------------------------------------
+# 5b. Deploy the ref's Tinybird schema to the baked Tinybird Local instance
+#     (Modal image only). Runs ONCE here; the warm snapshot carries the deployed
+#     workspace + token so workers cold-start with it — no per-worker deploy.
+# ---------------------------------------------------------------------------
+if [ -d /app/tinybird-local ]; then
+  log "Deploying Tinybird schema to Tinybird Local"
+  bash "$SCRIPT_DIR/deploy-tinybird-local.sh" || die "Tinybird Local deploy FAILED"
+else
+  log "Skipping Tinybird deploy (Tinybird Local not on this image)"
+fi
 
 # ---------------------------------------------------------------------------
 # 6. Clean-stop services for a snapshot-consistent filesystem (plan §5a step 6).

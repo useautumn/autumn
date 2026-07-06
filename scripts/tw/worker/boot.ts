@@ -36,6 +36,7 @@
  *   - plus the baked/localhost service env from §11a.
  */
 
+import { existsSync } from "node:fs";
 import { connect } from "node:net";
 import { join } from "node:path";
 import { type Subprocess, spawn } from "bun";
@@ -45,6 +46,7 @@ import {
 	ELASTICMQ_PORT,
 	PG_PORT,
 	SERVER_PORT,
+	TINYBIRD_LOCAL_URL,
 	TW_ENV,
 } from "../constants.js";
 
@@ -166,6 +168,46 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
 			`[tw-boot] start-services.sh exited with code ${exitCode} — services failed to start`,
 		);
 	}
+};
+
+/** Tinybird Local ships on the Modal base image at this path; absent on Vercel. */
+const TINYBIRD_MARKER = "/app/tinybird-local";
+
+/**
+ * Waits for Tinybird Local's /tokens endpoint (200 only once the whole stack
+ * serves), then injects the workspace admin token + local API URL into
+ * process.env so the server/workers/cron children inherit them. The token was
+ * minted at warm time and persists in the snapshot's Redis, so every fork
+ * resolves the same value.
+ */
+const wireTinybirdEnv = async (timeoutMs: number): Promise<void> => {
+	const deadline = Date.now() + timeoutMs;
+	const url = `${TINYBIRD_LOCAL_URL}/tokens`;
+	let lastError = "no-response";
+	while (Date.now() < deadline) {
+		try {
+			const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
+			if (response.ok) {
+				const tokens = (await response.json()) as {
+					workspace_admin_token?: string;
+				};
+				if (!tokens.workspace_admin_token) {
+					throw new Error("no workspace_admin_token in /tokens response");
+				}
+				process.env.TINYBIRD_US_EAST_API_URL = TINYBIRD_LOCAL_URL;
+				process.env.TINYBIRD_US_EAST_TOKEN = tokens.workspace_admin_token;
+				log(`Tinybird Local ready on ${TINYBIRD_LOCAL_URL} (env wired)`);
+				return;
+			}
+			lastError = `status ${response.status}`;
+		} catch (error) {
+			lastError = (error as Error).message ?? "fetch-error";
+		}
+		await sleep(POLL_INTERVAL_MS);
+	}
+	throw new Error(
+		`[tw-boot] Tinybird Local (${url}) not ready within ${timeoutMs}ms (last: ${lastError}) — aborting worker boot`,
+	);
 };
 
 /**
@@ -291,12 +333,18 @@ const main = async (): Promise<void> => {
 		);
 	}
 
-	// 1 + 2. Native services up, then wait for their ports.
+	// 1 + 2. Native services up, then wait for their ports. start-services.sh
+	// already gates on Tinybird readiness; the extra wire step resolves its token
+	// into env before the server/workers spawn.
 	await startNativeServices(repoRoot);
+	const hasTinybird = existsSync(TINYBIRD_MARKER);
 	await Promise.all([
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		hasTinybird
+			? wireTinybirdEnv(SERVICE_HEALTH_TIMEOUT_MS)
+			: Promise.resolve(log("Tinybird Local not on this image — skipping")),
 	]);
 
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only

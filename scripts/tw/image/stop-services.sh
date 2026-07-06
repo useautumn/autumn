@@ -23,8 +23,9 @@ PGDATA="${PGDATA:-$TW_PREFIX/pgdata}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 
 PG_PORT="${PG_PORT:-5432}"
-DRAGONFLY_PORT="${DRAGONFLY_PORT:-6379}"
+DRAGONFLY_PORT="${DRAGONFLY_PORT:-6380}"
 CLICKHOUSE_PORT="${CLICKHOUSE_PORT:-8123}"
+SUPERVISORD_CONF="/etc/supervisor/supervisord.conf"
 
 PG_BINDIR=""
 for candidate in /usr/pgsql-18/bin /usr/lib/postgresql/18/bin /usr/bin "$BIN_DIR"; do
@@ -81,7 +82,30 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4. ClickHouse (optional) — graceful SIGTERM if present.
+# 4. Tinybird Local — supervisorctl shutdown TERMs every program (Redis persists
+#    via AOF, ClickHouse checkpoints), then wait so the snapshot is consistent.
+# ---------------------------------------------------------------------------
+if pgrep -x supervisord >/dev/null 2>&1 && [ -f "$SUPERVISORD_CONF" ]; then
+  log "Shutting down Tinybird Local (supervisorctl shutdown)"
+  supervisorctl -c "$SUPERVISORD_CONF" shutdown >/dev/null 2>&1 || true
+  # Redis has stopwaitsecs=60 and ClickHouse checkpoints — allow up to 3 min.
+  for _ in $(seq 1 720); do
+    pgrep -x supervisord >/dev/null 2>&1 || break
+    sleep 0.25
+  done
+  if pgrep -x supervisord >/dev/null 2>&1; then
+    log "WARN: supervisord still alive after 180s — SIGKILL stragglers"
+    pkill -KILL -x supervisord || true
+    pkill -KILL -x clickhouse-serv || true
+    pkill -KILL -x redis-server || true
+  fi
+else
+  log "Tinybird Local not running"
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Standalone ClickHouse (optional) — graceful SIGTERM if present. Skipped
+#    implicitly when Tinybird Local owns ClickHouse (supervisord already stopped it).
 # ---------------------------------------------------------------------------
 if pgrep -f 'clickhouse server' >/dev/null 2>&1; then
   log "SIGTERM ClickHouse"

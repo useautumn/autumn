@@ -146,10 +146,15 @@ export const buildWebhookUrl = (
  * µVM, so every worker uses the base ports.
  */
 export const PG_PORT = 5432;
-/** Dragonfly speaks the Redis protocol; one instance backs Redis + both caches. */
-export const DRAGONFLY_PORT = 6379;
+/** Dragonfly speaks the Redis protocol; one instance backs Redis + both caches.
+ * 6380 (not 6379): Tinybird Local's own Redis owns 6379 on the Modal image. */
+export const DRAGONFLY_PORT = 6380;
 export const ELASTICMQ_PORT = 9324;
 export const CLICKHOUSE_PORT = 8123;
+/** Tinybird Local API (nginx front of the tinybird-local stack baked into the
+ * Modal base image). Backs TINYBIRD_US_EAST_API_URL inside each worker. */
+export const TINYBIRD_LOCAL_PORT = 7181;
+export const TINYBIRD_LOCAL_URL = `http://localhost:${TINYBIRD_LOCAL_PORT}`;
 
 /**
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at

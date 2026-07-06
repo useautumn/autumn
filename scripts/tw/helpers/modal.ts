@@ -76,10 +76,11 @@ const APP_NAME = "autumn-tw";
  * at scale (full suite, 1422 passing) and ~halves the per-worker cost vs the
  * earlier 4/8 default. Env-overridable (`TW_MODAL_WORKER_CPU` / `_MEM_MIB`) so a
  * heavier shard can be dialed up — or a resource-quota kill ruled out — without
- * a rebuild.
+ * a rebuild. 6 GiB (not 4): the baked Tinybird Local stack (ClickHouse +
+ * tinybird_server forks + HFI) adds ~1.5-2 GiB per worker on 2 vCPU.
  */
 const WORKER_CPU = Number(process.env.TW_MODAL_WORKER_CPU ?? 2);
-const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 4096);
+const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 6144);
 const INGRESS_MEMORY_MIB = 1024;
 /**
  * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
