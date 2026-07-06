@@ -1,11 +1,13 @@
 import {
 	BillingType,
 	type EntitlementWithFeature,
+	ErrCode,
 	type FullProduct,
 	getPriceCurrencyStripeId,
 	type Price,
 	priceHasCurrencyAmounts,
 	priceUtils,
+	RecaseError,
 	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -183,9 +185,11 @@ export const createStripePriceIFNotExist = async ({
 		billingType === BillingType.FixedCycle ||
 		billingType === BillingType.OneOff;
 	if (!priceHasCurrencyAmounts({ config, currency, orgDefault, isFixed })) {
-		throw new Error(
-			`Price ${price.id} has no '${currency}' amounts in config.currencies — cannot create a Stripe price in that currency`,
-		);
+		throw new RecaseError({
+			code: ErrCode.CurrencyMismatch,
+			message: `Price ${price.id} has no '${currency}' amounts in config.currencies — cannot create a Stripe price in that currency`,
+			statusCode: 400,
+		});
 	}
 
 	const { stripePrice, stripePrepaidPriceV2, stripeProd, stripeEmptyPrice } =

@@ -75,5 +75,6 @@ describe("priceToLineAmount per-currency", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: strip stamped fields for legacy shape
 		(price.config as any).base_currency = undefined;
 		expect(priceToLineAmount({ price, currency: "usd" })).toBe(10);
+		expect(priceToLineAmount({ price, currency: "eur" })).toBe(10);
 	});
 });
