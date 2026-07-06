@@ -1,6 +1,7 @@
 import {
 	ACTIVE_STATUSES,
 	type FullCustomer,
+	fullCustomerToFullSubject,
 	InternalError,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
@@ -248,8 +249,8 @@ export const executePostgresDeduction = async ({
 
 			fireTrackWebhooks({
 				ctx,
-				oldFullCus,
-				newFullCus: fullCustomer,
+				oldFullSubject: fullCustomerToFullSubject({ fullCustomer: oldFullCus }),
+				newFullSubject: fullCustomerToFullSubject({ fullCustomer }),
 				feature: deduction.feature,
 				entityId,
 				featuresFromMutationLogs,
