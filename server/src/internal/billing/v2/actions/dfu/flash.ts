@@ -43,13 +43,13 @@ export const flash = async ({
 	await deleteCachedFullCustomer({
 		ctx,
 		customerId,
-		source: "dfu.flash",
+		source: "billing.import",
 		skipGuard: true,
 	});
 	const customer = await getApiCustomerByRollout({
 		ctx,
 		customerId,
-		source: "dfu.flash",
+		source: "billing.import",
 	});
 
 	return {

@@ -91,19 +91,38 @@ const upsertFullCustomer = async ({
 		allowNotFound: true,
 	});
 	if (existing) {
+		const update: Parameters<typeof CusService.update>[0]["update"] = {};
+
 		// Self-migration: seed the RC app_user_id so Phase 1 webhooks resolve this
 		// customer by it. Only-if-absent — never clobber an existing value.
 		if (revenueCatIdentity && !existing.processors?.revenuecat?.id) {
-			const processors = {
+			update.processors = {
 				...existing.processors,
 				revenuecat: { id: revenueCatIdentity.id, aliases: [] },
 			};
+		}
+
+		const customerData = params.customer_data;
+		if (customerData?.name !== undefined && customerData.name !== existing.name)
+			update.name = customerData.name;
+		if (
+			customerData?.email !== undefined &&
+			customerData.email !== existing.email
+		)
+			update.email = customerData.email;
+		if (
+			customerData?.fingerprint !== undefined &&
+			customerData.fingerprint !== existing.fingerprint
+		)
+			update.fingerprint = customerData.fingerprint;
+
+		if (Object.keys(update).length > 0) {
 			await CusService.update({
 				ctx,
 				idOrInternalId: existing.id ?? existing.internal_id,
-				update: { processors },
+				update,
 			});
-			existing.processors = processors;
+			Object.assign(existing, update);
 		}
 		return existing;
 	}
