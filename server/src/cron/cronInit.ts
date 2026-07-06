@@ -23,23 +23,24 @@ const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
 startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
-const logCronHeartbeat = () => {
+const logCronHeartbeat = (job = "main") => {
 	logger.info(
 		{
 			type: "cron_heartbeat",
 			cron: {
 				pid: process.pid,
 				timezone: "UTC",
+				job,
 			},
 		},
 		"Cron heartbeat",
 	);
 };
 
-const main = async () => {
+const shouldRunTick = () => {
 	if (process.env.DISABLE_CRON === "true") {
 		console.log(`Cron disabled!`);
-		return;
+		return false;
 	}
 
 	// Blue-green gate: skip the tick on the idle task set so a swap doesn't
@@ -50,8 +51,14 @@ const main = async () => {
 			type: "cron_skipped_idle",
 			gate: reason,
 		});
-		return;
+		return false;
 	}
+
+	return true;
+};
+
+const main = async () => {
+	if (!shouldRunTick()) return;
 
 	logCronHeartbeat();
 
@@ -63,10 +70,23 @@ const main = async () => {
 		runProductCron({ ctx }),
 		runResetCron({ ctx }),
 		runInvoiceCron({ ctx }),
-		runOneOffCleanup({ ctx }),
 		runOneOffExpiry({ ctx }),
 		// runClearExpiredResetCron({ ctx }),
 	]);
+};
+
+// Cleanup re-derives "depleted one-off" candidates from scratch (no time
+// column to seek on), so it runs on a slower cadence than the other jobs.
+const oneOffCleanupTick = async () => {
+	if (!shouldRunTick()) return;
+
+	logCronHeartbeat("one_off_cleanup");
+
+	const ctx: CronContext = {
+		db,
+		logger,
+	};
+	await runOneOffCleanup({ ctx });
 };
 
 new CronJob(
@@ -77,7 +97,16 @@ new CronJob(
 	"UTC", // timezone (adjust as needed)
 );
 
+new CronJob(
+	"*/10 * * * *", // Run every 10 minutes
+	oneOffCleanupTick,
+	null, // onComplete
+	true, // start immediately
+	"UTC", // timezone (adjust as needed)
+);
+
 main();
+oneOffCleanupTick();
 
 process.on("SIGTERM", async () => {
 	console.log("Received SIGTERM signal, closing database connection...");
