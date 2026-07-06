@@ -110,14 +110,14 @@ export const setupImmediateMultiProductBillingContext = async ({
 	preview = false,
 	billingStartsAt,
 	billingStartsAtToleranceMs,
-	fetchScheduledCustomerProductSchedule,
+	includeScheduledProductsForScheduleLookup,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
 	preview?: boolean;
 	billingStartsAt?: number;
 	billingStartsAtToleranceMs?: number;
-	fetchScheduledCustomerProductSchedule?: boolean;
+	includeScheduledProductsForScheduleLookup?: boolean;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -190,7 +190,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		params,
 		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
 		newBillingSubscription: params.new_billing_subscription || undefined,
-		fetchScheduledCustomerProductSchedule,
+		includeScheduledProductsForScheduleLookup,
 		createStripeCustomerIfMissing: !preview,
 	});
 

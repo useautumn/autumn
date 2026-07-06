@@ -148,7 +148,7 @@ export const setupCreateScheduleBillingContext = async ({
 			? initialPhase.starts_at
 			: undefined,
 		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-		fetchScheduledCustomerProductSchedule: true,
+		includeScheduledProductsForScheduleLookup: true,
 	});
 
 	validateCreateSchedulePhasePlans({
@@ -188,7 +188,7 @@ export const setupCreateScheduleBillingContext = async ({
 			preview,
 			billingStartsAt: immediatePhase.starts_at,
 			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-			fetchScheduledCustomerProductSchedule: true,
+			includeScheduledProductsForScheduleLookup: true,
 		});
 	}
 
@@ -221,11 +221,11 @@ export const setupCreateScheduleBillingContext = async ({
 		customPrices: [
 			...(billingContext.customPrices ?? []),
 			...scheduledCustomPrices,
-		], // combine custom prices from immediate and scheduled phases
+		],
 		customEnts: [
 			...(billingContext.customEnts ?? []),
 			...scheduledCustomEntitlements,
-		], // combine custom prices and entitlements from immediate and scheduled phases
+		],
 		isCustom:
 			billingContext.isCustom ||
 			scheduledCustomPrices.length > 0 ||

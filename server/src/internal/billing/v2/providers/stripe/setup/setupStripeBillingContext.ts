@@ -36,7 +36,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription,
 	skipBillingFetching,
 	skipSubscriptionFetching,
-	fetchScheduledCustomerProductSchedule = false,
+	includeScheduledProductsForScheduleLookup = false,
 	createStripeCustomerIfMissing = true,
 	fetchTaxRate = false,
 }: {
@@ -49,7 +49,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription?: boolean;
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
-	fetchScheduledCustomerProductSchedule?: boolean;
+	includeScheduledProductsForScheduleLookup?: boolean;
 	createStripeCustomerIfMissing?: boolean;
 	fetchTaxRate?: boolean;
 }) => {
@@ -110,7 +110,7 @@ export const setupStripeBillingContext = async ({
 
 			return targetCustomerProduct ||
 				notNullish(localStripeSubscription) ||
-				fetchScheduledCustomerProductSchedule
+				includeScheduledProductsForScheduleLookup
 				? fetchStripeSubscriptionScheduleForBilling({
 						ctx,
 						fullCus: fullCustomer,
