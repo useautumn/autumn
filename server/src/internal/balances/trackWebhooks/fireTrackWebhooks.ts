@@ -53,9 +53,6 @@ export const fireTrackWebhooks = ({
 		});
 	}
 
-	// Build the old/new evaluation subjects once (plan-level + percentage-resolved
-	// billing controls, matching the /v1/check path), then detect the
-	// allowed -> blocked transition per affected feature.
 	(async () => {
 		const [oldEvalSubject, newEvalSubject] = await Promise.all([
 			buildEvaluationSubject({ ctx, fullSubject: oldFullSubject, entityId }),

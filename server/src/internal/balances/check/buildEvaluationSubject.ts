@@ -15,17 +15,10 @@ import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/ge
 import { resolveCheckSpendLimits } from "./resolveCheckSpendLimits.js";
 
 /**
- * Build the api subject used to evaluate `allowed` (via apiBalanceToAllowed),
- * with plan-level and (for entities) customer-level billing controls merged in
- * and percentage spend limits resolved to absolute.
- *
- * This is the single source of truth for "what limits gate this subject",
- * shared by the /v1/check path (getCheckDataV2) and the track webhooks
- * (checkLimitReached). Both must see identical billing controls, or a plan-level
- * / percentage cap that blocks a track would fail to fire balances.limit_reached.
- *
- * Pure with respect to inputs (returns a new subject); does no aggregation
- * (evaluation subject only), matching getApiSubject includeAggregations: false.
+ * Evaluation subject for apiBalanceToAllowed, with plan-level (and, for
+ * entities, customer-level) billing controls merged in and percentage spend
+ * limits resolved to absolute. Shared by /v1/check and the track webhooks so
+ * both gate on identical limits.
  */
 export const buildEvaluationSubject = async ({
 	ctx,

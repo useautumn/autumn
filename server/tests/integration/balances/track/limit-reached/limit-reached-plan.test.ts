@@ -1,13 +1,6 @@
 /**
- * Integration tests for the `balances.limit_reached` webhook when the limit is
- * configured at the PLAN level (billing controls on the attached product),
- * rather than on the customer.
- *
- * Reproduces Resend's setup: their spend limits live on the plan
- * ("Transactional Pro" > billing controls), e.g. an absolute overage cap and a
- * `usage_percentage` overage cap. Enforcement blocks the track correctly, but
- * the webhook must also fire — the check path merges plan-level billing
- * controls into the evaluated subject, so the track-webhook path must too.
+ * balances.limit_reached for PLAN-level billing controls (Resend's setup:
+ * spend/usage limits live on the plan, not the customer).
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -86,7 +79,6 @@ test.concurrent(
 			actions: [s.attach({ productId: planProd.id })],
 		});
 
-		// included 50 + overage cap 10 → allowed up to 60; 60 lands exactly on the cap.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
@@ -121,7 +113,7 @@ test.concurrent(
 			includedUsage: 50,
 			price: 1,
 		});
-		// 120% of the 50-unit allowance = 60 units of overage → total allowed 110.
+		// 120% of 50 allowance = 60 overage → total allowed 110.
 		const planProd = products.base({
 			id: "lr-plan-pct-spend-1",
 			items: [consumableMsg],
@@ -176,9 +168,8 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("limit-reached-plan3: plan-level usage_limit fires webhook (usage_limit)")}`,
 	async () => {
-		// Cap of 5/day on the plan, well under the 1000 included allowance — the
-		// windowed usage_limit is the gate. Its live window `usage` only survives if
-		// the webhook path evaluates the real fullSubject (not a FullCustomer).
+		// Windowed cap (5/day) under the 1000 allowance; its live window `usage`
+		// only survives if the webhook evaluates the real fullSubject.
 		const planProd = products.base({
 			id: "lr-plan-usage-limit-1",
 			items: [items.monthlyMessages({ includedUsage: 1000 })],

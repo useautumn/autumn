@@ -10,14 +10,8 @@ import {
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-/**
- * Fires balances.limit_reached when a feature crosses from allowed -> blocked.
- *
- * The old/new subjects must already carry plan-level + percentage-resolved
- * billing controls (built via buildEvaluationSubject, the same pipeline the
- * /v1/check path uses). Building them off the raw customer-level controls would
- * miss plan-level spend/usage caps, so the transition would never be seen.
- */
+// Subjects must be built via buildEvaluationSubject, or plan-level / percentage
+// caps are invisible here and the allowed -> blocked transition never fires.
 export const checkLimitReached = async ({
 	ctx,
 	oldEvalSubject,
