@@ -36,6 +36,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription,
 	skipBillingFetching,
 	skipSubscriptionFetching,
+	fetchScheduledCustomerProductSchedule = false,
 	createStripeCustomerIfMissing = true,
 	fetchTaxRate = false,
 }: {
@@ -48,6 +49,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription?: boolean;
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
+	fetchScheduledCustomerProductSchedule?: boolean;
 	createStripeCustomerIfMissing?: boolean;
 	fetchTaxRate?: boolean;
 }) => {
@@ -106,7 +108,9 @@ export const setupStripeBillingContext = async ({
 		async stripeSubscriptionSchedule() {
 			const localStripeSubscription = await this.$.stripeSubscription;
 
-			return targetCustomerProduct || notNullish(localStripeSubscription)
+			return targetCustomerProduct ||
+				notNullish(localStripeSubscription) ||
+				fetchScheduledCustomerProductSchedule
 				? fetchStripeSubscriptionScheduleForBilling({
 						ctx,
 						fullCus: fullCustomer,

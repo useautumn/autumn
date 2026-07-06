@@ -148,6 +148,7 @@ export const setupCreateScheduleBillingContext = async ({
 			? initialPhase.starts_at
 			: undefined,
 		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+		fetchScheduledCustomerProductSchedule: true,
 	});
 
 	validateCreateSchedulePhasePlans({
@@ -187,6 +188,7 @@ export const setupCreateScheduleBillingContext = async ({
 			preview,
 			billingStartsAt: immediatePhase.starts_at,
 			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+			fetchScheduledCustomerProductSchedule: true,
 		});
 	}
 

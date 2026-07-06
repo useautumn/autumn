@@ -3,7 +3,9 @@
 
 import { expect, test } from "bun:test";
 import {
+	type AttachPreviewResponse,
 	BillingInterval,
+	type CreateScheduleParamsV0Input,
 	CusProductStatus,
 	customerProducts,
 	ms,
@@ -54,6 +56,15 @@ const newInvoices = ({
 	beforeIds: Set<string>;
 	invoices: Stripe.Invoice[];
 }) => invoices.filter((invoice) => !beforeIds.has(invoice.id));
+
+const previewCreateSchedule = async ({
+	autumnV1,
+	params,
+}: {
+	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
+	params: CreateScheduleParamsV0Input;
+}): Promise<AttachPreviewResponse> =>
+	await autumnV1.post("/billing.preview_create_schedule", params);
 
 test.concurrent(
 	`${chalk.yellowBright("create-schedule free first phase: active subscription resumes paid future phase")}`,
@@ -250,6 +261,7 @@ test.concurrent(
 		const clockStart = Date.UTC(2027, 4, 2, 16, 49);
 		const scheduleStartsAt = Date.UTC(2027, 5, 30, 13, 11);
 		const badQuarterlyStartsAt = Date.UTC(2027, 6, 2, 16, 49);
+		const postCorrectionPreviewAt = Date.UTC(2027, 6, 6, 12, 0);
 		const noChargeCheckAt = Date.UTC(2027, 7, 2, 17, 0);
 		const paidStartsAt = Date.UTC(2027, 9, 2, 12, 0);
 		const freeStartsAt = Date.UTC(2028, 3, 2, 12, 0);
@@ -281,10 +293,6 @@ test.concurrent(
 				}),
 			],
 		});
-		const commercialFree = products.base({
-			id: "commercial-free-access",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
 
 		const { autumnV1, customer, ctx } = await initScenario({
 			customerId,
@@ -295,16 +303,15 @@ test.concurrent(
 					stripeCustomerOverrides: { test_clock: testClock.id },
 				}),
 				s.products({
-					list: [
-						agencyMonthly,
-						rpsAddOn,
-						commercialQuarterly,
-						commercialFree,
-					],
+					list: [agencyMonthly, rpsAddOn, commercialQuarterly],
 				}),
 			],
 			actions: [s.billing.attach({ productId: agencyMonthly.id })],
 		});
+		const freeCommercialPlan = {
+			plan_id: commercialQuarterly.id,
+			customize: { price: null },
+		};
 
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
@@ -326,7 +333,7 @@ test.concurrent(
 				},
 				{
 					starts_at: freeStartsAt,
-					plans: [{ plan_id: commercialFree.id }],
+					plans: [freeCommercialPlan],
 				},
 				{
 					starts_at: paidResumesAt,
@@ -352,7 +359,7 @@ test.concurrent(
 			invoicesAfterBadCharge.data.some((invoice) => invoice.total === 67391),
 		).toBe(true);
 
-		await autumnV1.billing.createSchedule({
+		const correctedScheduleParams = {
 			customer_id: customerId,
 			billing_behavior: "none",
 			phases: [
@@ -362,7 +369,7 @@ test.concurrent(
 				},
 				{
 					starts_at: badQuarterlyStartsAt,
-					plans: [{ plan_id: commercialFree.id }],
+					plans: [freeCommercialPlan],
 				},
 				{
 					starts_at: paidStartsAt,
@@ -371,7 +378,7 @@ test.concurrent(
 				},
 				{
 					starts_at: freeStartsAt,
-					plans: [{ plan_id: commercialFree.id }],
+					plans: [freeCommercialPlan],
 				},
 				{
 					starts_at: paidResumesAt,
@@ -379,6 +386,20 @@ test.concurrent(
 					plans: [{ plan_id: commercialQuarterly.id }],
 				},
 			],
+		} satisfies CreateScheduleParamsV0Input;
+
+		await autumnV1.billing.createSchedule(correctedScheduleParams);
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClock.id,
+			advanceTo: postCorrectionPreviewAt,
+			waitForSeconds: 30,
+		});
+
+		await previewCreateSchedule({
+			autumnV1,
+			params: correctedScheduleParams,
 		});
 
 		const subscriptions = await ctx.stripeCli.subscriptions.list({
