@@ -1662,7 +1662,16 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		for (const file of failedFiles) {
 			failureReport.push(`\n✗ ${file.file}`);
 			if (file.crashError) {
-				failureReport.push(`    CRASH: ${file.crashError.split("\n")[0]}`);
+				// Bun stderr's first line is just the file header — keep enough lines
+				// to surface the real cause (panic, unhandled error, matched-0-tests).
+				const crashLines = file.crashError
+					.split("\n")
+					.filter((line) => line.trim())
+					.slice(0, 6);
+				failureReport.push(`    CRASH: ${crashLines.shift() ?? ""}`);
+				for (const line of crashLines) {
+					failureReport.push(`        ${line}`);
+				}
 			}
 			for (const test of file.failedTests) {
 				failureReport.push(`    ✗ ${test.name}`);

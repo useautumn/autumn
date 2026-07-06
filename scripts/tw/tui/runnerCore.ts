@@ -121,8 +121,9 @@ const runOneFile = async (params: {
 			tests,
 			attempt,
 			passedOnRetry: false,
+			// Zero tests + exit 0 is an empty/skipped file, not a crash.
 			crashError:
-				tests.length === 0 && stderr.trim()
+				tests.length === 0 && exitCode !== 0 && stderr.trim()
 					? stderr.trim().slice(0, 1000)
 					: undefined,
 		};

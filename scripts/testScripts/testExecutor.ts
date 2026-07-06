@@ -85,8 +85,15 @@ const buildTestCommand = ({
 	const command = ["bun", "test", "--timeout", "0"];
 
 	if (failedTestNames && failedTestNames.length > 0) {
+		// Bun matches --test-name-pattern against SPACE-joined describe>test
+		// labels, but prints them " > "-joined; escaping verbatim matches 0 tests.
 		const pattern = failedTestNames
-			.map((name) => name.replace(TEST_NAME_REGEX_SPECIALS, "\\$&"))
+			.map((name) =>
+				name
+					.split(" > ")
+					.map((segment) => segment.replace(TEST_NAME_REGEX_SPECIALS, "\\$&"))
+					.join(" "),
+			)
 			.join("|");
 		command.push("--test-name-pattern", pattern);
 	}
