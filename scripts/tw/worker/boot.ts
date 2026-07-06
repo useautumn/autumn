@@ -194,6 +194,17 @@ const wireTinybirdEnv = async (timeoutMs: number): Promise<void> => {
 				if (!tokens.workspace_admin_token) {
 					throw new Error("no workspace_admin_token in /tokens response");
 				}
+				// /tokens goes 200 before the API backend serves — also require an
+				// authenticated 200 from the real API before wiring env.
+				const apiProbe = await fetch(
+					`${TINYBIRD_LOCAL_URL}/v0/datasources?token=${tokens.workspace_admin_token}`,
+					{ signal: AbortSignal.timeout(2_000) },
+				);
+				if (!apiProbe.ok) {
+					lastError = `api status ${apiProbe.status}`;
+					await sleep(POLL_INTERVAL_MS);
+					continue;
+				}
 				process.env.TINYBIRD_US_EAST_API_URL = TINYBIRD_LOCAL_URL;
 				process.env.TINYBIRD_US_EAST_TOKEN = tokens.workspace_admin_token;
 				log(`Tinybird Local ready on ${TINYBIRD_LOCAL_URL} (env wired)`);

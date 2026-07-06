@@ -133,8 +133,10 @@ fi
 
 # 4. Tinybird Local — the whole stack (ClickHouse, Redis :6379, nginx :7181,
 #    tinybird_server, HFI events API) is supervisord-managed on the Modal image.
-#    /tokens returns 200 only once the workspace is set up and the API serves.
-tinybird_ready_probe="curl -sf -o /dev/null http://localhost:$TINYBIRD_PORT/tokens"
+#    /tokens goes 200 BEFORE the API backend serves (still 502 then), so the
+#    probe also requires a non-5xx from /v0/datasources (401/403 = backend up).
+tinybird_api_probe="curl -s -o /dev/null -w '%{http_code}' http://localhost:$TINYBIRD_PORT/v0/datasources | grep -qE '^[234]'"
+tinybird_ready_probe="curl -sf -o /dev/null http://localhost:$TINYBIRD_PORT/tokens && $tinybird_api_probe"
 tinybird_wanted=0
 if [ "$START_TINYBIRD" = "1" ]; then
   tinybird_wanted=1

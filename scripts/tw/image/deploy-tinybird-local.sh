@@ -43,6 +43,20 @@ TOKEN="$(curl -sf "$TB_LOCAL_URL/tokens" \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["workspace_admin_token"])')"
 [ -n "$TOKEN" ] || die "could not resolve workspace_admin_token from $TB_LOCAL_URL/tokens"
 
+# /tokens goes 200 before the API backend serves — require an authenticated 200
+# from the real API (up to 3 min) so tb deploy doesn't eat 502s.
+api_ready=0
+code="none"
+for _ in $(seq 1 180); do
+  code="$(curl -s -o /dev/null -w '%{http_code}' "$TB_LOCAL_URL/v0/datasources?token=$TOKEN" || true)"
+  if [ "$code" = "200" ]; then
+    api_ready=1
+    break
+  fi
+  sleep 1
+done
+[ "$api_ready" = "1" ] || die "Tinybird Local API not ready after 180s (last code: $code)"
+
 STAGE="$(mktemp -d /tmp/tw-tinybird-stage.XXXXXX)"
 trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/tinybird"
