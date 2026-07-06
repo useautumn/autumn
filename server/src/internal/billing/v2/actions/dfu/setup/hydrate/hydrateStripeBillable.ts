@@ -76,7 +76,7 @@ export const hydrateStripeBillables = async ({
 				);
 			} catch (error) {
 				ctx.logger.warn(
-					`dfu.flash: could not retrieve Stripe subscription ${subscriptionId} for hydration; using caller-supplied fields`,
+					`billing.import: could not retrieve Stripe subscription ${subscriptionId} for hydration; using caller-supplied fields`,
 					{ error },
 				);
 				hydrationBySubscription.set(subscriptionId, null);

@@ -13871,7 +13871,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783259673472,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784469273472,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783348981363,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784558581363,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -21473,7 +21473,8 @@ paths:
                     fingerprint:
                       type: string
                       description: Anti-fraud fingerprint for the customer.
-                  description: Optional identity fields to upsert if the customer is new.
+                  description: Optional identity fields upserted onto the customer (applied to
+                    existing customers too).
                 processors:
                   type: array
                   items:
@@ -21578,23 +21579,29 @@ paths:
                                     interval:
                                       anyOf:
                                         - enum:
+                                            - lifetime
+                                            - minute
                                             - hour
                                             - day
                                             - week
                                             - month
+                                            - quarter
+                                            - semi_annual
                                             - year
                                           type: string
                                         - type: "null"
                                       description: Reset interval selecting which entitlement line to target when a
-                                        feature has several (null = the
-                                        non-resetting one-off line).
+                                        feature has several ('lifetime' or null
+                                        = the non-resetting one-off line).
                                     billing_behavior:
                                       enum:
                                         - included
                                         - prepaid
+                                        - usage_based
                                       type: string
-                                      description: Selects the included vs prepaid entitlement line when a feature has
-                                        both.
+                                      description: Selects the included vs prepaid vs usage-based (pay-per-use)
+                                        entitlement line when a feature has
+                                        several.
                                   description: Disambiguates which entitlement line to target when the feature has
                                     multiple.
                                 usage:
@@ -21681,10 +21688,11 @@ paths:
                         mismatch:
                           type: boolean
                           description: True when the imaged state may be wrong — e.g. a resetting plan
-                            with no resolvable billing anchor, so its cycle
-                            defaulted to the import time. The plan is still
-                            imaged; fix by supplying started_at or a resolvable
-                            subscription.
+                            with no resolvable billing anchor, or a paid
+                            recurring plan with no linked subscription for
+                            Autumn to manage. The plan is still imaged; see
+                            `reason` and fix by supplying started_at or a
+                            subscription_id.
                         reason:
                           type: string
                           description: Why the plan was skipped, expired, or flagged as a mismatch, when

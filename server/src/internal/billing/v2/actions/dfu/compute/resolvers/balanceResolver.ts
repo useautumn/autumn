@@ -4,6 +4,7 @@ import {
 	type FlashBalance,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
+	isPayPerUsePrice,
 	isPrepaidPrice,
 	type Price,
 	RecaseError,
@@ -11,9 +12,28 @@ import {
 } from "@autumn/shared";
 
 type FilterInterval = NonNullable<FlashBalance["filter"]>["interval"];
+type FilterBillingBehavior = NonNullable<
+	NonNullable<FlashBalance["filter"]>["billing_behavior"]
+>;
 
 const filterIntervalToReset = (interval: FilterInterval): ResetInterval =>
-	interval == null ? ResetInterval.OneOff : (interval as ResetInterval);
+	interval == null
+		? ResetInterval.OneOff
+		: entIntvToResetIntv({ entInterval: interval });
+
+const lineBillingBehavior = ({
+	customerEntitlement,
+	prices,
+}: {
+	customerEntitlement: FullCustomerEntitlement;
+	prices: Price[];
+}): FilterBillingBehavior => {
+	const price = entToPrice({ ent: customerEntitlement.entitlement, prices });
+	if (!price) return "included";
+	if (isPrepaidPrice(price)) return "prepaid";
+	if (isPayPerUsePrice({ price })) return "usage_based";
+	return "included";
+};
 
 const matchesFilter = ({
 	customerEntitlement,
@@ -36,13 +56,8 @@ const matchesFilter = ({
 	}
 
 	if (filter?.billing_behavior) {
-		const price = entToPrice({
-			ent: customerEntitlement.entitlement,
-			prices,
-		});
-		const isPrepaidLine = price ? isPrepaidPrice(price) : false;
-		const wantsPrepaid = filter.billing_behavior === "prepaid";
-		if (isPrepaidLine !== wantsPrepaid) return false;
+		const lineBehavior = lineBillingBehavior({ customerEntitlement, prices });
+		if (lineBehavior !== filter.billing_behavior) return false;
 	}
 
 	return true;
@@ -74,14 +89,14 @@ export const applyFlashBalances = ({
 
 		if (matches.length === 0) {
 			throw new RecaseError({
-				message: `dfu.flash: no entitlement line matched balance for feature '${balance.feature_id}'`,
+				message: `billing.import: no entitlement line matched balance for feature '${balance.feature_id}'`,
 				code: "flash_balance_no_match",
 				statusCode: 400,
 			});
 		}
 		if (matches.length > 1) {
 			throw new RecaseError({
-				message: `dfu.flash: balance filter for feature '${balance.feature_id}' matched multiple lines; add a filter to disambiguate`,
+				message: `billing.import: balance filter for feature '${balance.feature_id}' matched multiple lines; add a filter to disambiguate`,
 				code: "flash_balance_ambiguous",
 				statusCode: 400,
 			});

@@ -3,7 +3,7 @@ import type { FlashContext } from "../setup/setupFlashContext";
 
 const rejectUnsupported = (message: string): never => {
 	throw new RecaseError({
-		message: `dfu.flash: ${message} is not yet supported`,
+		message: `billing.import: ${message} is not yet supported`,
 		code: "unsupported_field",
 		statusCode: 400,
 	});
@@ -49,7 +49,7 @@ export const handleFlashErrors = ({
 	if (hasStripeRecurringBase && hasRevenuecatRecurringBase) {
 		throw new RecaseError({
 			message:
-				"dfu.flash: a recurring Stripe base plan and a recurring RevenueCat base plan cannot be flashed together",
+				"billing.import: a recurring Stripe base plan and a recurring RevenueCat base plan cannot be flashed together",
 			code: "cross_processor_conflict",
 			statusCode: 400,
 		});

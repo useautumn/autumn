@@ -45,7 +45,7 @@ class ImportGlobals(BaseModel):
 
 
 class ImportCustomerDataTypedDict(TypedDict):
-    r"""Optional identity fields to upsert if the customer is new."""
+    r"""Optional identity fields upserted onto the customer (applied to existing customers too)."""
 
     name: NotRequired[str]
     r"""Display name for the customer."""
@@ -56,7 +56,7 @@ class ImportCustomerDataTypedDict(TypedDict):
 
 
 class ImportCustomerData(BaseModel):
-    r"""Optional identity fields to upsert if the customer is new."""
+    r"""Optional identity fields upserted onto the customer (applied to existing customers too)."""
 
     name: Optional[str] = None
     r"""Display name for the customer."""
@@ -174,10 +174,14 @@ class ImportFeatureQuantity(BaseModel):
 
 
 ImportInterval = Literal[
+    "lifetime",
+    "minute",
     "hour",
     "day",
     "week",
     "month",
+    "quarter",
+    "semi_annual",
     "year",
 ]
 
@@ -185,27 +189,28 @@ ImportInterval = Literal[
 ImportBillingBehavior = Literal[
     "included",
     "prepaid",
+    "usage_based",
 ]
-r"""Selects the included vs prepaid entitlement line when a feature has both."""
+r"""Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several."""
 
 
 class FilterTypedDict(TypedDict):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
     interval: NotRequired[Nullable[ImportInterval]]
-    r"""Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line)."""
+    r"""Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line)."""
     billing_behavior: NotRequired[ImportBillingBehavior]
-    r"""Selects the included vs prepaid entitlement line when a feature has both."""
+    r"""Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several."""
 
 
 class Filter(BaseModel):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
     interval: OptionalNullable[ImportInterval] = UNSET
-    r"""Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line)."""
+    r"""Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line)."""
 
     billing_behavior: Optional[ImportBillingBehavior] = None
-    r"""Selects the included vs prepaid entitlement line when a feature has both."""
+    r"""Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -395,7 +400,7 @@ class DfuFlashParamsTypedDict(TypedDict):
     billables: List[BillableTypedDict]
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
     customer_data: NotRequired[ImportCustomerDataTypedDict]
-    r"""Optional identity fields to upsert if the customer is new."""
+    r"""Optional identity fields upserted onto the customer (applied to existing customers too)."""
     processors: NotRequired[List[ImportProcessorTypedDict]]
     r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan."""
     dry_run: NotRequired[bool]
@@ -410,7 +415,7 @@ class DfuFlashParams(BaseModel):
     r"""The billing objects (subscriptions, one-offs) to image, each carrying its plan."""
 
     customer_data: Optional[ImportCustomerData] = None
-    r"""Optional identity fields to upsert if the customer is new."""
+    r"""Optional identity fields upserted onto the customer (applied to existing customers too)."""
 
     processors: Optional[List[ImportProcessor]] = None
     r"""The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan."""
@@ -449,7 +454,7 @@ class FlashedTypedDict(TypedDict):
     expired: NotRequired[bool]
     r"""True if this was an existing active plan expired because it was absent from the imaged desired state."""
     mismatch: NotRequired[bool]
-    r"""True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription."""
+    r"""True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, or a paid recurring plan with no linked subscription for Autumn to manage. The plan is still imaged; see `reason` and fix by supplying started_at or a subscription_id."""
     reason: NotRequired[str]
     r"""Why the plan was skipped, expired, or flagged as a mismatch, when applicable."""
 
@@ -474,7 +479,7 @@ class Flashed(BaseModel):
     r"""True if this was an existing active plan expired because it was absent from the imaged desired state."""
 
     mismatch: Optional[bool] = None
-    r"""True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription."""
+    r"""True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, or a paid recurring plan with no linked subscription for Autumn to manage. The plan is still imaged; see `reason` and fix by supplying started_at or a subscription_id."""
 
     reason: Optional[str] = None
     r"""Why the plan was skipped, expired, or flagged as a mismatch, when applicable."""
