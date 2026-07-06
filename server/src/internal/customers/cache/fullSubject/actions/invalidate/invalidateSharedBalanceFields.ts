@@ -1,7 +1,8 @@
-import type { SubjectBalance } from "@autumn/shared";
+import type { SubjectBalance, UsageWindow } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { flushSubjectBalancesToDb } from "@/internal/balances/utils/sync/flushSubjectBalancesToDb.js";
+import type { UsageWindowUpdate } from "@/internal/balances/utils/types/usageWindowUpdate.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
@@ -53,6 +54,8 @@ export const invalidateSharedBalanceFields = async ({
 };
 
 type BalanceFieldTargets = {
+	internalCustomerId: string;
+	featureIds: string[];
 	balanceKeys: string[];
 	customerEntitlementIdsByKey: string[][];
 };
@@ -82,24 +85,24 @@ const manifestToBalanceFieldTargets = ({
 	if (!customerEntitlementIdsByFeatureId) return null;
 
 	// Capped features may have no entitlements, so their hashes only appear in
-	// usageWindowFeatureIds; union both so `_usage_windows` is cleared too.
-	// Safe to delete counters: capped tracks write through to PG synchronously,
-	// and the rebuild re-seeds the field from PG.
+	// usageWindowFeatureIds; union both so `_usage_windows` is covered too.
 	// Raw blob, no sanitize walker: cjson re-encodes empty arrays as {}, so
 	// array fields must be Array.isArray-guarded before spreading.
 	const usageWindowFeatureIds = Array.isArray(manifest.usageWindowFeatureIds)
 		? manifest.usageWindowFeatureIds
 		: [];
-	const featureIds = new Set([
+	const featureIdSet = new Set([
 		...Object.keys(customerEntitlementIdsByFeatureId),
 		...usageWindowFeatureIds,
 	]);
-	if (featureIds.size === 0) return null;
+	if (featureIdSet.size === 0) return null;
 
+	const featureIds: string[] = [];
 	const balanceKeys: string[] = [];
 	const customerEntitlementIdsByKey: string[][] = [];
-	for (const featureId of featureIds) {
+	for (const featureId of featureIdSet) {
 		const rawCusEntIds = customerEntitlementIdsByFeatureId[featureId];
+		featureIds.push(featureId);
 		balanceKeys.push(
 			buildSharedFullSubjectBalanceKey({
 				orgId: org.id,
@@ -113,7 +116,12 @@ const manifestToBalanceFieldTargets = ({
 		);
 	}
 
-	return { balanceKeys, customerEntitlementIdsByKey };
+	return {
+		internalCustomerId: manifest.internalCustomerId,
+		featureIds,
+		balanceKeys,
+		customerEntitlementIdsByKey,
+	};
 };
 
 async function getDelFieldsFromManifest({
@@ -133,13 +141,20 @@ async function getDelFieldsFromManifest({
 	if (!targets) return;
 	const { balanceKeys, customerEntitlementIdsByKey } = targets;
 
+	// `_usage_windows` is read+deleted alongside the cusEnt fields (last field
+	// per key) so window counters are flushed too, not just deleted.
+	const fieldsByKey = customerEntitlementIdsByKey.map((cusEntIds) => [
+		...cusEntIds,
+		USAGE_WINDOWS_FIELD,
+	]);
+
 	const resultRaw = await tryRedisWrite(
 		() =>
 			redisV2.getDelFullSubjectBalanceFields(
 				balanceKeys.length,
 				...balanceKeys,
-				JSON.stringify(customerEntitlementIdsByKey),
-				JSON.stringify([AGGREGATED_BALANCE_FIELD, USAGE_WINDOWS_FIELD]),
+				JSON.stringify(fieldsByKey),
+				JSON.stringify([AGGREGATED_BALANCE_FIELD]),
 			),
 		redisV2,
 	);
@@ -151,25 +166,30 @@ async function getDelFieldsFromManifest({
 		return;
 	}
 
-	const subjectBalances = parseSubjectBalances({
+	const parsed = parseGetDelResult({
 		ctx,
 		customerId,
 		resultRaw,
+		targets,
+		fieldsByKey,
 	});
+	if (!parsed) return;
+	const { subjectBalances, usageWindowUpdates } = parsed;
 
 	logger.info(
-		`[invalidateSharedBalanceFields] ${customerId}: GETDEL ${balanceKeys.length} balance keys, flushing ${subjectBalances.length} balances`,
+		`[invalidateSharedBalanceFields] ${customerId}: GETDEL ${balanceKeys.length} balance keys, flushing ${subjectBalances.length} balances, ${usageWindowUpdates.length} usage windows`,
 	);
 
 	await flushSubjectBalancesToDb({
 		ctx,
 		customerId,
 		subjectBalances,
+		usageWindowUpdates,
 		source: "invalidateSharedBalanceFields",
 	});
 }
 
-/** Legacy blind HDEL, kept as the DISABLE_INVALIDATION_BALANCE_FLUSH path. */
+/** Legacy blind HDEL, kept as the FLUSH_BALANCES_ON_INVALIDATION=false path. */
 async function deleteFieldsFromManifest({
 	ctx,
 	customerId,
@@ -208,50 +228,79 @@ async function deleteFieldsFromManifest({
 	}
 }
 
-function parseSubjectBalances({
+function parseGetDelResult({
 	ctx,
 	customerId,
 	resultRaw,
+	targets,
+	fieldsByKey,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	resultRaw: string;
-}): SubjectBalance[] {
+	targets: BalanceFieldTargets;
+	fieldsByKey: string[][];
+}): {
+	subjectBalances: SubjectBalance[];
+	usageWindowUpdates: UsageWindowUpdate[];
+} | null {
+	const { logger } = ctx;
+
 	let valuesByKey: unknown[];
 	try {
 		valuesByKey = JSON.parse(resultRaw) as unknown[];
 	} catch (error) {
-		ctx.logger.warn(
+		logger.warn(
 			`[invalidateSharedBalanceFields] ${customerId}: failed to parse GETDEL result, skipping flush, error: ${error}`,
 		);
-		return [];
+		return null;
 	}
-
-	// cjson encodes empty Lua tables as {}, so each per-key entry must be
-	// Array.isArray-guarded.
-	const allValues = (Array.isArray(valuesByKey) ? valuesByKey : []).flatMap(
-		(values) => (Array.isArray(values) ? values : []),
-	);
+	if (!Array.isArray(valuesByKey)) return null;
 
 	const subjectBalances: SubjectBalance[] = [];
-	for (const value of allValues) {
-		if (typeof value !== "string") continue;
-		try {
-			// Same parse path as getCachedFeatureBalances: cjson-written values
-			// need sanitizing (e.g. empty arrays re-encoded as {}).
-			const parsedBalance = JSON.parse(value) as SubjectBalance;
-			subjectBalances.push(
-				roundSubjectBalance({
-					subjectBalance: sanitizeCachedSubjectBalance({
-						subjectBalance: parsedBalance,
-					}),
-				}),
-			);
-		} catch {
-			ctx.logger.warn(
-				`[invalidateSharedBalanceFields] ${customerId}: unparseable balance field, dropping it from flush`,
-			);
+	const usageWindowUpdates: UsageWindowUpdate[] = [];
+
+	for (let keyIndex = 0; keyIndex < fieldsByKey.length; keyIndex++) {
+		const rawValues = valuesByKey[keyIndex];
+		// cjson encodes empty Lua tables as {}, so each per-key entry must be
+		// Array.isArray-guarded.
+		const values = Array.isArray(rawValues) ? (rawValues as unknown[]) : [];
+		const fields = fieldsByKey[keyIndex];
+
+		for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+			const value = values[fieldIndex];
+			if (typeof value !== "string") continue;
+
+			const isUsageWindowsField = fieldIndex === fields.length - 1;
+			try {
+				if (isUsageWindowsField) {
+					// Same fail-open semantics as getCachedFeatureBalances: a non-array
+					// blob reads as an empty counter set (still full-replaces).
+					const parsedWindows = JSON.parse(value) as UsageWindow[];
+					usageWindowUpdates.push({
+						internal_customer_id: targets.internalCustomerId,
+						feature_id: targets.featureIds[keyIndex],
+						usage_windows: Array.isArray(parsedWindows) ? parsedWindows : [],
+					});
+				} else {
+					// Same parse path as getCachedFeatureBalances: cjson-written values
+					// need sanitizing (e.g. empty arrays re-encoded as {}).
+					const parsedBalance = JSON.parse(value) as SubjectBalance;
+					subjectBalances.push(
+						roundSubjectBalance({
+							subjectBalance: sanitizeCachedSubjectBalance({
+								subjectBalance: parsedBalance,
+							}),
+						}),
+					);
+				}
+			} catch {
+				logger.warn(
+					`[invalidateSharedBalanceFields] ${customerId}: unparseable balance field ${fields[fieldIndex]}, dropping it from flush`,
+				);
+			}
 		}
 	}
-	return subjectBalances;
+
+	return { subjectBalances, usageWindowUpdates };
 }

@@ -7,6 +7,7 @@ import { tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 
 export const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -83,14 +84,16 @@ export const flushSubjectBalancesToDb = async ({
 	ctx,
 	customerId,
 	subjectBalances,
+	usageWindowUpdates = [],
 	source,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	subjectBalances: SubjectBalance[];
+	usageWindowUpdates?: UsageWindowUpdate[];
 	source: string;
 }): Promise<void> => {
-	if (subjectBalances.length === 0) return;
+	if (subjectBalances.length === 0 && usageWindowUpdates.length === 0) return;
 
 	const { db, logger } = ctx;
 	const entries = subjectBalances.map((subjectBalance) =>
@@ -103,14 +106,14 @@ export const flushSubjectBalancesToDb = async ({
 			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
-				usage_window_updates: [],
+				usage_window_updates: usageWindowUpdates,
 			})}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
 		),
 	);
 
 	if (!error) {
 		logger.info(
-			`[flushSubjectBalancesToDb] ${customerId}: flushed ${entries.length} balances, source: ${source}`,
+			`[flushSubjectBalancesToDb] ${customerId}: flushed ${entries.length} balances, ${usageWindowUpdates.length} usage windows, source: ${source}`,
 		);
 		return;
 	}
