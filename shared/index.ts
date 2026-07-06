@@ -54,6 +54,7 @@ export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
 export * from "./models/attachModels/attachPreviewModels";
 export * from "./models/authModels/membership";
+export * from "./models/chatModels/chatEnums";
 export * from "./models/chatModels/chatTable";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";

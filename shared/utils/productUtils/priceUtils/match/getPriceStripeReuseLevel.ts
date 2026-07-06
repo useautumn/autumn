@@ -43,6 +43,8 @@ const findPairedEntitlement = ({
 		entitlements: entitlements as EntitlementWithFeature[],
 	});
 
+const normalizeOptionalId = (value?: string | null) => value || null;
+
 /**
  * Classify how much of the Stripe resource set on `candidatePrice` can be
  * carried forward onto `newPrice` when the two represent the same logical
@@ -103,7 +105,10 @@ export const getPriceStripeReuseLevel = ({
 
 	if (!newEnt && !candidateEnt) return "stripeProductOnly";
 	if (!newEnt || !candidateEnt) return "none";
-	if (newEnt.entity_feature_id !== candidateEnt.entity_feature_id) {
+	if (
+		normalizeOptionalId(newEnt.entity_feature_id) !==
+		normalizeOptionalId(candidateEnt.entity_feature_id)
+	) {
 		return "none";
 	}
 

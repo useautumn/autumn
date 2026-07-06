@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { getEntsWithFeature } from "@server/internal/products/entitlements/entitlementUtils.js";
 import { handleNewFreeTrial } from "@server/internal/products/free-trials/freeTrialUtils.js";
@@ -19,7 +20,6 @@ import { handleNewProductItems } from "@server/internal/products/product-items/p
 import { validateProductItems } from "@server/internal/products/product-items/validateProductItems.js";
 import {
 	constructProduct,
-	initProductInStripe,
 } from "@server/internal/products/productUtils.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
@@ -203,13 +203,13 @@ export const handleVersionProductV2 = async ({
 		return newProduct;
 	}
 
-	await initProductInStripe({
+	await initStripeResourcesForProducts({
 		ctx,
-		product: {
+		products: [{
 			...newProduct,
 			prices: customPrices,
 			entitlements: getEntsWithFeature({ ents: customEnts, features }),
-		} as FullProduct,
+		} as FullProduct],
 	});
 
 	await addTaskToQueue({

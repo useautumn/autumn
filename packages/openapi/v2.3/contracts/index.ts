@@ -20,6 +20,7 @@ import {
 	billingSetupPaymentContract,
 	billingUpdateContract,
 } from "./billingContract.js";
+import { dfuFlashContract } from "./dfuContract.js";
 import {
 	deleteCustomerContract,
 	getCustomerContract,
@@ -101,6 +102,9 @@ export const v2_3ContractRouter = oc.router({
 	billingPreviewUpdate: billingPreviewUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
 	billingSetupPayment: billingSetupPaymentContract,
+
+	// DFU (customer imaging / live migration)
+	dfuFlash: dfuFlashContract,
 
 	// Balances
 	balancesCreate: balancesCreateContract,

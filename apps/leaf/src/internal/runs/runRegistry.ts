@@ -15,6 +15,7 @@ export type ActiveRun = {
 	key: string;
 	kind: "approval" | "message";
 	logAction?: (message: string) => Promise<void> | void;
+	ownerProviderUserId: string;
 	pendingTurns: number;
 	requestStop: (input: {
 		byUserId: string;
@@ -63,11 +64,13 @@ const defaultSendUserMessage = async ({
 export const registerRun = ({
 	key,
 	kind,
+	ownerProviderUserId,
 	sendInterrupt = defaultSendInterrupt,
 	sendUserMessage = defaultSendUserMessage,
 }: {
 	key: string;
 	kind: ActiveRun["kind"];
+	ownerProviderUserId: string;
 	sendInterrupt?: (sessionId: string) => Promise<void>;
 	sendUserMessage?: (input: {
 		sessionId: string;
@@ -91,6 +94,7 @@ export const registerRun = ({
 	const run: ActiveRun = {
 		key,
 		kind,
+		ownerProviderUserId,
 		pendingTurns: 0,
 		resolveSessionId,
 		sessionId,

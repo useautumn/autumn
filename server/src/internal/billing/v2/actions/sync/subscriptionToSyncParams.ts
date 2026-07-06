@@ -1,5 +1,6 @@
 import {
 	type FullCusProduct,
+	type FullProduct,
 	filterCustomerProductsByStripeSubscriptionId,
 	type SyncParamsV1,
 	type SyncPhase,
@@ -120,6 +121,7 @@ export const subscriptionToSyncParams = async ({
 	subscription,
 	schedule,
 	customerProducts,
+	fullProducts,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -131,6 +133,9 @@ export const subscriptionToSyncParams = async ({
 	 * full customer pass these to avoid a redundant fetch). Used to restore the
 	 * entity binding of products already linked to this subscription. */
 	customerProducts?: FullCusProduct[];
+	/** Optional pre-fetched catalog, forwarded to detection (callers matching
+	 * many subscriptions pass this to avoid a per-call fetch). */
+	fullProducts?: FullProduct[];
 }): Promise<{
 	match: SubscriptionMatch;
 	params: SyncParamsV1;
@@ -154,6 +159,7 @@ export const subscriptionToSyncParams = async ({
 		ctx,
 		subscription,
 		schedule: resolvedSchedule,
+		fullProducts,
 	});
 
 	const detectedPhases: SyncPhase[] = match.phaseMatches

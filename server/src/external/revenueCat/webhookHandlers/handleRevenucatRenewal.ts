@@ -4,6 +4,7 @@ import {
 	AttachScenario,
 	CusProductStatus,
 } from "@shared/index";
+import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
@@ -20,7 +21,7 @@ export const handleRenewal = async ({
 	ctx: RevenueCatWebhookContext;
 }) => {
 	const { org, env, logger } = ctx;
-	const { product_id, app_user_id } = event;
+	const { product_id, app_user_id, original_app_user_id } = event;
 
 	const {
 		ctx: customerCtx,
@@ -31,6 +32,8 @@ export const handleRenewal = async ({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
+		originalAppUserId: original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 	});
 
 	const { curSameProduct } = getExistingCusProducts({
@@ -116,6 +119,7 @@ export const handleRenewal = async ({
 		ctx: customerCtx,
 		customer,
 		product,
+		appUserId: app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (renewal transition)`);

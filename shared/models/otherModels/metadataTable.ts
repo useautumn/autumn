@@ -1,5 +1,5 @@
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
-import { jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
+import { index, jsonb, numeric, pgTable, text } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 
 export enum MetadataType {
@@ -14,15 +14,27 @@ export enum MetadataType {
 	SetupPaymentV2 = "setup_payment_v2",
 }
 
-export const metadata = pgTable("metadata", {
-	id: text().primaryKey().notNull(),
-	created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
-	expires_at: numeric({ mode: "number" }),
-	data: jsonb(),
-	type: text("type").$type<MetadataType>(),
-	stripe_invoice_id: text("stripe_invoice_id"),
-	stripe_checkout_session_id: text("stripe_checkout_session_id"),
-});
+export const metadata = pgTable(
+	"metadata",
+	{
+		id: text().primaryKey().notNull(),
+		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+		expires_at: numeric({ mode: "number" }),
+		data: jsonb(),
+		type: text("type").$type<MetadataType>(),
+		stripe_invoice_id: text("stripe_invoice_id"),
+		stripe_checkout_session_id: text("stripe_checkout_session_id"),
+	},
+	(table) => [
+		index("idx_metadata_on_type_expires_at")
+			.on(table.type, table.expires_at)
+			.concurrently(),
+		index("metadata_expires_at_idx")
+			.on(table.expires_at)
+			.where(sql`${table.expires_at} IS NOT NULL`)
+			.concurrently(),
+	],
+);
 
 export type Metadata = InferSelectModel<typeof metadata>;
 export type MetadataInsert = InferInsertModel<typeof metadata>;

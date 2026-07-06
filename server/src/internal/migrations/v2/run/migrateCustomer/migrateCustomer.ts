@@ -48,6 +48,7 @@ export const migrateCustomer = async ({
 		ctx: migrationCtx,
 		migration,
 		customerId,
+		preview,
 	});
 
 	const baseArgs = {
@@ -93,6 +94,13 @@ export const migrateCustomer = async ({
 				originalFullCustomer: context.fullCustomer,
 				autumnBillingPlan: billingPlan.autumn,
 			}),
+			// Invoice line items this migration would generate (empty for
+			// charge-free ops) — surfaced so audit tooling can show what will
+			// actually be billed, not just the feature/plan diff.
+			line_items: (billingPlan.autumn.lineItems ?? []).map((item) => ({
+				description: item.description,
+				amount: item.amountAfterDiscounts ?? item.amount,
+			})),
 		};
 
 		logMigrateCustomerResult({

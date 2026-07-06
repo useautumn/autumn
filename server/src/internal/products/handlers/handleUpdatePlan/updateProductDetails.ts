@@ -268,8 +268,12 @@ export const handleUpdateProductDetails = async ({
 		},
 	});
 
-	// Update product name in Stripe
-	if (curProduct.name !== newProduct.name && notNullish(newProduct.name)) {
+	// Update product-owned Stripe names.
+	if (
+		!curProduct.base_internal_product_id &&
+		curProduct.name !== newProduct.name &&
+		notNullish(newProduct.name)
+	) {
 		logger.info(
 			`Updating product (${curProduct.id}) name in Stripe to ${newProduct.name}`,
 		);

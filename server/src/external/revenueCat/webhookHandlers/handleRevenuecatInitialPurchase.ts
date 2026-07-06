@@ -1,5 +1,6 @@
 import type { WebhookInitialPurchase } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
+import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
@@ -14,7 +15,7 @@ export const handleInitialPurchase = async ({
 	ctx: RevenueCatWebhookContext;
 }) => {
 	const { logger } = ctx;
-	const { product_id, app_user_id } = event;
+	const { product_id, app_user_id, original_app_user_id } = event;
 
 	const {
 		ctx: customerCtx,
@@ -26,6 +27,8 @@ export const handleInitialPurchase = async ({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
+		originalAppUserId: original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
 		autoCreateCustomer: true,
 	});
 
@@ -49,6 +52,7 @@ export const handleInitialPurchase = async ({
 		customer,
 		product,
 		featureQuantities,
+		appUserId: app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (initial purchase)`);

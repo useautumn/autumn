@@ -32,6 +32,7 @@ export * from "./get-or-create-customer-op.js";
 export * from "./get-plan-op.js";
 export * from "./get-revenue-cat-keys-op.js";
 export * from "./http-client-errors.js";
+export * from "./import-op.js";
 export * from "./link-revenue-cat-op.js";
 export * from "./list-customers-op.js";
 export * from "./list-entities-op.js";

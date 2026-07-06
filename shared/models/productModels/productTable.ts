@@ -19,6 +19,8 @@ import type { ProductMetadata } from "./productMetadata";
 type ProductProcessor = {
 	type: string;
 	id: string;
+	/** Legacy/alias Stripe product ids that also map to this product. */
+	additional_ids?: string[];
 };
 
 export const products = pgTable(

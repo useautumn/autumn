@@ -1,3 +1,4 @@
+import type { FullProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -22,11 +23,15 @@ export const detectSubscriptionMatch = async ({
 	subscription,
 	schedule,
 	nowSec,
+	fullProducts: preloadedFullProducts,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
 	nowSec?: number;
+	/** Optional pre-fetched catalog (callers matching many subscriptions pass
+	 * this to avoid a per-call fetch). */
+	fullProducts?: FullProduct[];
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
 		throw new Error(
@@ -40,11 +45,13 @@ export const detectSubscriptionMatch = async ({
 		nowSec,
 	});
 
-	const fullProducts = await PlanService.listFull({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	const fullProducts =
+		preloadedFullProducts ??
+		(await PlanService.listFull({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		}));
 
 	const phaseMatches: PhaseMatch[] = phaseSnapshots.map((snapshot) => {
 		const itemDiffs = snapshot.items.map((item) =>

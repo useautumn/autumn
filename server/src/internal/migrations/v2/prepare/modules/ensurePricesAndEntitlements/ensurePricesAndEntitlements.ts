@@ -1,7 +1,8 @@
 import {
+	copyStripeResourcesToMatchingPrice,
 	type Entitlement,
-	type FullProduct,
 	findFeatureById,
+	type FullProduct,
 	type Price,
 } from "@autumn/shared";
 import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
@@ -15,13 +16,13 @@ import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PlanService } from "@/internal/products/PlanService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
 import { hashJson } from "@/utils/hash/hashJson.js";
 import type { PrepareModule } from "../../types/prepareModule.js";
 import type {
 	EnsurePricesAndEntitlementsResult,
 	PreparedArtifactRef,
 } from "./types.js";
-import { inheritStripeProductFromCatalog } from "./inheritStripeProductFromCatalog.js";
 
 export type EnsurePricesAndEntitlementsInput = {
 	updatePlanOps: {
@@ -134,6 +135,75 @@ const getMatchedProducts = async ({
 	);
 };
 
+/**
+ * Anchors Stripe resource reuse to the LATEST version of the BASE plan
+ * (`product.base_variant_id ?? product.id` — so a yearly variant like
+ * `pro_yearly` reuses `pro`'s price, not its own separate history) — not
+ * "whichever sibling this run happens to prepare first". Looks up the base
+ * plan's own catalog data directly (not the current op's `matchedProducts`,
+ * which is scoped to just this op's `plan_filter` and won't include a
+ * different plan_id's rows) via a dedicated, cached-per-call query, and only
+ * ever reuses its NON-CUSTOM price — the one created by ordinary catalog
+ * editing, never a prior migration run's own synthesized custom price — so a
+ * re-run of the same migration finds the real Stripe ids that catalog price
+ * already carries, before this run's own upsert would otherwise blank a
+ * fresh synthesized price back out. Mutates `price.config` in place; no DB
+ * writes (safe to call from `.plan()`, which also runs during dry runs).
+ */
+const inheritStripeResourcesFromLatestVersion = async ({
+	ctx,
+	price,
+	entitlement,
+	product,
+	basePlanVersionsCache,
+}: {
+	ctx: AutumnContext;
+	price: Price;
+	entitlement: Entitlement | undefined;
+	product: FullProduct;
+	basePlanVersionsCache: Map<string, Promise<FullProduct[]>>;
+}) => {
+	const featureId = price.config.feature_id;
+	if (!featureId) return;
+
+	const basePlanId = product.base_variant_id ?? product.id;
+
+	let basePlanVersionsPromise = basePlanVersionsCache.get(basePlanId);
+	if (!basePlanVersionsPromise) {
+		basePlanVersionsPromise = ProductService.listFull({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			returnAll: true,
+			inIds: [basePlanId],
+		});
+		basePlanVersionsCache.set(basePlanId, basePlanVersionsPromise);
+	}
+	const basePlanVersions = await basePlanVersionsPromise;
+	if (basePlanVersions.length === 0) return;
+
+	const latestVersionProduct = basePlanVersions.reduce((latest, candidate) =>
+		candidate.version > latest.version ? candidate : latest,
+	);
+
+	// A feature can have more than one price (e.g. AI_CREDITS carries both a
+	// prepaid tiered price and a metered pay-as-you-go price) — pass every
+	// same-feature candidate and let copyStripeResourcesToMatchingPrice's own
+	// content matching (pricesAreSame) pick the right one, rather than picking
+	// just the first `find()` hit and having no fallback if it's the wrong one.
+	const candidatePrices = latestVersionProduct.prices.filter(
+		(candidate) => candidate.config.feature_id === featureId,
+	);
+	if (candidatePrices.length === 0) return;
+
+	copyStripeResourcesToMatchingPrice({
+		targetPrice: price,
+		candidatePrices,
+		targetEntitlements: entitlement ? [entitlement] : [],
+		candidateEntitlements: latestVersionProduct.entitlements,
+	});
+};
+
 const buildProductsWithPreparedRows = ({
 	products,
 	prices,
@@ -191,6 +261,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 		const entitlementsById = new Map<string, Entitlement>();
 		const pricesById = new Map<string, Price>();
 		const artifacts: PreparedArtifactRef[] = [];
+		const basePlanVersionsCache = new Map<string, Promise<FullProduct[]>>();
 
 		for (const { opIndex, op } of input.updatePlanOps) {
 			const customize = op.customize;
@@ -275,22 +346,24 @@ export const ensurePricesAndEntitlements: PrepareModule<
 						});
 					}
 					if (newPrice) {
-						const preparedPrice = inheritStripeProductFromCatalog({
-							price: {
-								...newPrice,
-								id: priceId,
-								entitlement_id: newEnt
-									? entitlementId
-									: newPrice.entitlement_id,
-								internal_product_id: product.internal_id,
-							},
+						const preparedPrice: Price = {
+							...newPrice,
+							id: priceId,
+							entitlement_id: newEnt ? entitlementId : newPrice.entitlement_id,
+							internal_product_id: product.internal_id,
+						};
+
+						await inheritStripeResourcesFromLatestVersion({
+							ctx,
+							price: preparedPrice,
+							entitlement: newEnt
+								? { ...newEnt, id: entitlementId, internal_product_id: product.internal_id }
+								: undefined,
 							product,
-							products: matchedProducts,
+							basePlanVersionsCache,
 						});
 
-						pricesById.set(priceId, {
-							...preparedPrice,
-						});
+						pricesById.set(priceId, preparedPrice);
 					}
 
 					artifacts.push({
@@ -327,15 +400,44 @@ export const ensurePricesAndEntitlements: PrepareModule<
 					input.updatePlanOps.map(({ op }) => getMatchedProducts({ ctx, op })),
 				)
 			).flat();
-			await initStripeResourcesForProducts({
-				ctx,
-				products: buildProductsWithPreparedRows({
-					products: allMatchedProducts,
-					prices: planned.prices,
-					entitlements: planned.entitlements,
-					features: ctx.features,
-				}),
+			const productsWithPreparedRows = buildProductsWithPreparedRows({
+				products: allMatchedProducts,
+				prices: planned.prices,
+				entitlements: planned.entitlements,
+				features: ctx.features,
 			});
+
+			// Every matched product version starts this call with an identical,
+			// brand-new synthesized price — none of them has a real Stripe id yet,
+			// so reusing across a single all-at-once pass finds nothing to copy.
+			// Group by `product.id` (never across different plans) and resolve each
+			// group SEQUENTIALLY: reuse against whatever's already been resolved
+			// so far, create for real only if nothing matched, then add this
+			// version to the resolved set before moving to the next. The first
+			// version in a group pays for one real Stripe price; every sibling
+			// after it reuses that instead of minting its own.
+			const groupsByPlanId = new Map<string, FullProduct[]>();
+			for (const product of productsWithPreparedRows) {
+				const group = groupsByPlanId.get(product.id) ?? [];
+				group.push(product);
+				groupsByPlanId.set(product.id, group);
+			}
+
+			await Promise.all(
+				Array.from(groupsByPlanId.values()).map(async (group) => {
+					const resolved: FullProduct[] = [];
+					for (const product of group) {
+						await applyStripeResourceReuseForProduct({
+							ctx,
+							product,
+							candidateProducts: resolved,
+							reuseProcessor: false,
+						});
+						await initStripeResourcesForProducts({ ctx, products: [product] });
+						resolved.push(product);
+					}
+				}),
+			);
 		}
 
 		return planned;

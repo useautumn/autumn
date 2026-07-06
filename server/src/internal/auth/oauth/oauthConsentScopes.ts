@@ -8,8 +8,8 @@ import {
 	isScopeSubset,
 	RecaseError,
 } from "@autumn/shared";
+import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
 
 export const getOAuthConsentScopeGrant = async ({
 	db,
