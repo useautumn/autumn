@@ -1,8 +1,9 @@
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
 import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 
 /**
- * `POST /v1/dfu.flash` — image a customer INTO Autumn for live migration.
+ * `POST /v1/billing.import` — image a customer INTO Autumn for live migration.
  * Read-only against processors. v1 fields are public; deferred capabilities
  * are schema-defined but `.meta({ internal: true })` so docs hide them.
  */
@@ -55,18 +56,17 @@ const FlashStartingAfterSchema = z
 	.meta({ internal: true });
 
 const FlashBalanceFilterSchema = z.object({
-	interval: z
-		.enum(["hour", "day", "week", "month", "year"])
-		.nullable()
+	interval: z.enum(EntInterval).nullable().optional().meta({
+		description:
+			"Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line).",
+	}),
+	billing_behavior: z
+		.enum(["included", "prepaid", "usage_based"])
 		.optional()
 		.meta({
 			description:
-				"Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).",
+				"Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several.",
 		}),
-	billing_behavior: z.enum(["included", "prepaid"]).optional().meta({
-		description:
-			"Selects the included vs prepaid entitlement line when a feature has both.",
-	}),
 });
 
 const FlashRolloverSchema = z
@@ -200,7 +200,8 @@ export const DfuFlashParamsSchema = z.object({
 		description: "Autumn customer to image into.",
 	}),
 	customer_data: FlashCustomerDataSchema.optional().meta({
-		description: "Optional identity fields to upsert if the customer is new.",
+		description:
+			"Optional identity fields upserted onto the customer (applied to existing customers too).",
 	}),
 	processors: z.array(FlashProcessorIdentitySchema).optional().meta({
 		description:
