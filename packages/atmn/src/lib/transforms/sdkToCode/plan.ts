@@ -48,6 +48,11 @@ export function buildPlanCode(
 		lines.push(`\tautoEnable: ${plan.autoEnable},`);
 	}
 
+	// Add archived flag only when explicitly true
+	if (plan.archived === true) {
+		lines.push(`\tarchived: true,`);
+	}
+
 	// Add price
 	if (plan.price) {
 		lines.push(`\tprice: {`);
