@@ -402,6 +402,7 @@ export const updateProduct = async ({
 	await initStripeResourcesForProducts({
 		ctx,
 		products: [newFullProduct],
+		candidateProducts: [fullProduct],
 	});
 
 	// logger.info("Adding task to queue to detect base variant");
