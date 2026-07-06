@@ -62,7 +62,12 @@ export const sendSvixEvent = async ({
 
 		const svix = createSvixCli();
 		const appId = getSvixAppId({ org, env });
-		if (!appId) return null;
+		if (!appId) {
+			ctx.logger.warn(
+				`[svix] No app id for org ${org.id} (${env}); skipping ${eventType}`,
+			);
+			return null;
+		}
 
 		return await svix.message.create(
 			appId,
@@ -78,7 +83,12 @@ export const sendSvixEvent = async ({
 			idempotencyKey ? { idempotencyKey } : undefined,
 		);
 	} catch (error) {
-		ctx.logger.error(`[svix] Failed to send ${eventType}: ${error}`);
+		// Svix's ApiException carries the 422 reason on `.body`; log it plus the
+		// tags so tag-validation rejections aren't invisible.
+		const svixBody = (error as { body?: unknown }).body;
+		ctx.logger.error(
+			`[svix] Failed to send ${eventType}: ${error} | body=${JSON.stringify(svixBody)} | tags=${JSON.stringify(tags ?? [])}`,
+		);
 		Sentry.captureException(error, {
 			tags: getSentryTags({ ctx }),
 		});
