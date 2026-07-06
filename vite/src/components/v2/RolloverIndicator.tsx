@@ -29,8 +29,10 @@ export function RolloverIndicator({ rollover }: { rollover: RolloverConfig }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
+				{/* pointer-events-auto: read-only rows disable pointer events, which
+				 * would otherwise swallow the hover that opens this tooltip. */}
 				<CircleHalfTiltIcon
-					className="size-3.5 shrink-0 text-tertiary-foreground"
+					className="size-3.5 shrink-0 text-tertiary-foreground pointer-events-auto"
 					aria-label="Rolls over"
 				/>
 			</TooltipTrigger>

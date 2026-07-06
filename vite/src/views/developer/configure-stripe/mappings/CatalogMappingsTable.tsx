@@ -1,5 +1,5 @@
 import type { CatalogGetMappingsResponse, ProductV2 } from "@autumn/shared";
-import { Skeleton } from "@autumn/ui";
+import { CopyButton, Skeleton } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { useStripeProductsResolveQuery } from "@/hooks/queries/useStripeProductsResolveQuery";
 import {
@@ -58,16 +58,30 @@ export const CatalogMappingsTable = ({
 					});
 
 					return (
-						<button
-							className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 py-2.5 text-left hover:bg-accent"
+						// biome-ignore lint/a11y/useSemanticElements: row can't be a <button> — the copy chip inside is a button and buttons can't nest
+						<div
+							className="group -mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center gap-3 rounded-md px-2 py-2.5 text-left hover:bg-accent"
 							key={group.base.id}
 							onClick={() => onSelectPlan(group.base.id)}
-							type="button"
+							onKeyDown={(event) => {
+								if (event.key === "Enter" || event.key === " ") {
+									event.preventDefault();
+									onSelectPlan(group.base.id);
+								}
+							}}
+							role="button"
+							tabIndex={0}
 						>
 							<span className="flex min-w-0 flex-1 items-center gap-2">
 								<span className="truncate font-medium text-sm">
 									{group.base.name}
 								</span>
+								<CopyButton
+									className="shrink-0 text-tertiary-foreground"
+									innerClassName="max-w-30 text-tiny-id truncate"
+									size="mini"
+									text={group.base.id}
+								/>
 								{group.variants.length > 0 && (
 									<span className="shrink-0 text-tertiary-foreground text-xs">
 										{group.variants.length} variant
@@ -97,7 +111,7 @@ export const CatalogMappingsTable = ({
 								className="size-4 shrink-0 text-tertiary-foreground group-hover:text-foreground"
 								size={14}
 							/>
-						</button>
+						</div>
 					);
 				})}
 			</div>

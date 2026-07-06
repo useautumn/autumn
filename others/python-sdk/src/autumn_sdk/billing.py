@@ -3044,7 +3044,7 @@ class Billing(BaseSDK):
 
         :param customer_id: Autumn customer to image into.
         :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
-        :param customer_data: Optional identity fields to upsert if the customer is new.
+        :param customer_data: Optional identity fields upserted onto the customer (applied to existing customers too).
         :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
         :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
         :param retries: Override the default retry configuration for this method
@@ -3156,7 +3156,7 @@ class Billing(BaseSDK):
 
         :param customer_id: Autumn customer to image into.
         :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
-        :param customer_data: Optional identity fields to upsert if the customer is new.
+        :param customer_data: Optional identity fields upserted onto the customer (applied to existing customers too).
         :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
         :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
         :param retries: Override the default retry configuration for this method

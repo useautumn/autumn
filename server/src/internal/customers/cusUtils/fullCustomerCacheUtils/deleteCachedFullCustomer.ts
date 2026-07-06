@@ -23,12 +23,14 @@ export const deleteCachedFullCustomer = async ({
 	entityId,
 	source,
 	skipGuard = false,
+	flushBalances = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
 	skipGuard?: boolean;
+	flushBalances?: boolean;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 
@@ -49,6 +51,7 @@ export const deleteCachedFullCustomer = async ({
 			customerId,
 			entityId,
 			source,
+			flushBalances,
 		}),
 	];
 

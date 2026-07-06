@@ -17,6 +17,7 @@ const upstashLockedCommands = new Set([
 	"upsertInvoiceInFullSubjectV2",
 	"adjustSubjectBalance",
 	"rollUsageWindows",
+	"getDelFullSubjectBalanceFields",
 ]);
 
 const registerCommands = (supportsUpstashShebang: boolean) => {

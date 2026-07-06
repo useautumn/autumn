@@ -16,7 +16,7 @@ export type ImportGlobals = {
 };
 
 /**
- * Optional identity fields to upsert if the customer is new.
+ * Optional identity fields upserted onto the customer (applied to existing customers too).
  */
 export type ImportCustomerData = {
   /**
@@ -109,23 +109,28 @@ export type ImportFeatureQuantity = {
 };
 
 export const ImportInterval = {
+  Lifetime: "lifetime",
+  Minute: "minute",
   Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 export type ImportInterval = ClosedEnum<typeof ImportInterval>;
 
 /**
- * Selects the included vs prepaid entitlement line when a feature has both.
+ * Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several.
  */
 export const ImportBillingBehavior = {
   Included: "included",
   Prepaid: "prepaid",
+  UsageBased: "usage_based",
 } as const;
 /**
- * Selects the included vs prepaid entitlement line when a feature has both.
+ * Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several.
  */
 export type ImportBillingBehavior = ClosedEnum<typeof ImportBillingBehavior>;
 
@@ -134,11 +139,11 @@ export type ImportBillingBehavior = ClosedEnum<typeof ImportBillingBehavior>;
  */
 export type Filter = {
   /**
-   * Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).
+   * Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line).
    */
   interval?: ImportInterval | null | undefined;
   /**
-   * Selects the included vs prepaid entitlement line when a feature has both.
+   * Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several.
    */
   billingBehavior?: ImportBillingBehavior | undefined;
 };
@@ -225,7 +230,7 @@ export type DfuFlashParams = {
    */
   customerId: string;
   /**
-   * Optional identity fields to upsert if the customer is new.
+   * Optional identity fields upserted onto the customer (applied to existing customers too).
    */
   customerData?: ImportCustomerData | undefined;
   /**
@@ -268,7 +273,7 @@ export type Flashed = {
    */
   expired?: boolean | undefined;
   /**
-   * True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.
+   * True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, or a paid recurring plan with no linked subscription for Autumn to manage. The plan is still imaged; see `reason` and fix by supplying started_at or a subscription_id.
    */
   mismatch?: boolean | undefined;
   /**

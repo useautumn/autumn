@@ -40,6 +40,16 @@ const PRICE_CHIP_CLASS =
 const isTieredPrice = (item: ProductItem): boolean =>
 	(item.tiers?.length ?? 0) > 1;
 
+/** A rollover config can sit on any item of a feature; only items with a
+ * resetting included/prepaid balance actually roll anything over. */
+const itemCanRollOver = (item: ProductItem): boolean => {
+	if (!item.feature_id) return false;
+	if (intervalIsNone(item.interval)) return false;
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
+	return includedUsage > 0 || item.usage_model === UsageModel.Prepaid;
+};
+
 /** Volume-based tiers priced as a flat amount per band — the real price lives in
  * `flat_amount`, matching getFeaturePriceItemDisplay's formatting. */
 const isVolumeFlatAmountItem = (item: ProductItem): boolean =>
@@ -167,7 +177,13 @@ function TierBreakdownChip({
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<span className={cn(PRICE_CHIP_CLASS, "cursor-help")}>{priceStr}</span>
+				{/* pointer-events-auto: read-only rows disable pointer events, which
+				 * would otherwise swallow the hover that opens this tooltip. */}
+				<span
+					className={cn(PRICE_CHIP_CLASS, "cursor-help pointer-events-auto")}
+				>
+					{priceStr}
+				</span>
 			</TooltipTrigger>
 			<TooltipContent className="max-w-xs" side="top">
 				<div className="flex flex-col gap-2">
@@ -261,7 +277,7 @@ export function PlanItemLabel({
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
-	const rollover = item.config?.rollover;
+	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
 
 	const icons = <FeatureIconCluster item={item} />;
 

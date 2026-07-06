@@ -5,6 +5,7 @@ import {
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
+	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -73,6 +74,105 @@ const setupCreateScheduleCheckoutMode = ({
 	return null;
 };
 
+const phaseToImmediateParams = ({
+	params,
+	phase,
+}: {
+	params: CreateScheduleParamsV0;
+	phase: CreateScheduleParamsV0["phases"][number];
+}): MultiAttachParamsV0 => ({
+	customer_id: params.customer_id,
+	entity_id: params.entity_id,
+	plans: phase.plans.map((plan) => ({
+		plan_id: plan.plan_id,
+		customize: plan.customize,
+		feature_quantities: plan.feature_quantities,
+		version: plan.version,
+		subscription_id: plan.subscription_id,
+	})),
+	invoice_mode: params.invoice_mode,
+	discounts: params.discounts,
+	success_url: params.success_url,
+	checkout_session_params: params.checkout_session_params,
+	redirect_mode: params.redirect_mode ?? "if_required",
+	enable_plan_immediately: params.enable_plan_immediately,
+});
+
+const getCurrentPhaseIndex = ({
+	phases,
+	currentEpochMs,
+}: {
+	phases: ReturnType<typeof normalizeCreateSchedulePhases>;
+	currentEpochMs: number;
+}) => {
+	let currentPhaseIndex = 0;
+
+	for (let index = 0; index < phases.length; index++) {
+		const phase = phases[index];
+		if (!phase || phase.starts_at > currentEpochMs + FIRST_PHASE_TOLERANCE_MS) {
+			break;
+		}
+		currentPhaseIndex = index;
+	}
+
+	return currentPhaseIndex;
+};
+
+const hasScheduledCustomerProducts = ({
+	billingContext,
+}: {
+	billingContext: Pick<MultiAttachBillingContext, "fullCustomer">;
+}) =>
+	billingContext.fullCustomer.customer_products.some(
+		(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
+	);
+
+const setupCreateScheduleImmediatePhase = async ({
+	ctx,
+	params,
+	preview,
+	billingContext,
+	normalizedPhases,
+}: {
+	ctx: AutumnContext;
+	params: CreateScheduleParamsV0;
+	preview: boolean;
+	billingContext: MultiAttachBillingContext;
+	normalizedPhases: ReturnType<typeof normalizeCreateSchedulePhases>;
+}) => {
+	const isExistingScheduleUpdate =
+		billingContext.stripeSubscriptionSchedule ||
+		hasScheduledCustomerProducts({ billingContext });
+	const immediatePhaseIndex = isExistingScheduleUpdate
+		? getCurrentPhaseIndex({
+				phases: normalizedPhases,
+				currentEpochMs: billingContext.currentEpochMs,
+			})
+		: 0;
+	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
+
+	if (immediatePhaseIndex === 0) {
+		return {
+			billingContext,
+			immediatePhase,
+			futurePhases: normalizedPhases.slice(1),
+		};
+	}
+
+	return {
+		billingContext: await setupImmediateMultiProductBillingContext({
+			ctx,
+			params: phaseToImmediateParams({ params, phase: immediatePhase }),
+			preview,
+			billingStartsAt: immediatePhase.starts_at,
+			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+			includeScheduledProductsForScheduleLookup: true,
+		}),
+		immediatePhase,
+		futurePhases: normalizedPhases.slice(immediatePhaseIndex + 1),
+	};
+};
+
 /** Build billing context for the immediate phase. */
 export const setupCreateScheduleBillingContext = async ({
 	ctx,
@@ -87,32 +187,15 @@ export const setupCreateScheduleBillingContext = async ({
 		phases: params.phases,
 	});
 
-	const immediateParams = {
-		customer_id: params.customer_id,
-		entity_id: params.entity_id,
-		plans: initialPhase.plans.map((plan) => ({
-			plan_id: plan.plan_id,
-			customize: plan.customize,
-			feature_quantities: plan.feature_quantities,
-			version: plan.version,
-			subscription_id: plan.subscription_id,
-		})),
-		invoice_mode: params.invoice_mode,
-		discounts: params.discounts,
-		success_url: params.success_url,
-		checkout_session_params: params.checkout_session_params,
-		redirect_mode: params.redirect_mode ?? "if_required",
-		enable_plan_immediately: params.enable_plan_immediately,
-	} satisfies MultiAttachParamsV0;
-
-	const billingContext = await setupImmediateMultiProductBillingContext({
+	let billingContext = await setupImmediateMultiProductBillingContext({
 		ctx,
-		params: immediateParams,
+		params: phaseToImmediateParams({ params, phase: initialPhase }),
 		preview,
 		billingStartsAt: phaseHasNumericStart(initialPhase)
 			? initialPhase.starts_at
 			: undefined,
 		billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+		includeScheduledProductsForScheduleLookup: true,
 	});
 
 	validateCreateSchedulePhasePlans({
@@ -134,7 +217,15 @@ export const setupCreateScheduleBillingContext = async ({
 		currentEpochMs: billingContext.currentEpochMs,
 		cycleBoundaryMs,
 	});
-	const [immediatePhase, ...futurePhases] = normalizedPhases;
+	const immediatePhaseContext = await setupCreateScheduleImmediatePhase({
+		ctx,
+		params,
+		preview,
+		billingContext,
+		normalizedPhases,
+	});
+	billingContext = immediatePhaseContext.billingContext;
+	const { immediatePhase, futurePhases } = immediatePhaseContext;
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
@@ -163,11 +254,11 @@ export const setupCreateScheduleBillingContext = async ({
 		customPrices: [
 			...(billingContext.customPrices ?? []),
 			...scheduledCustomPrices,
-		], // combine custom prices from immediate and scheduled phases
+		],
 		customEnts: [
 			...(billingContext.customEnts ?? []),
 			...scheduledCustomEntitlements,
-		], // combine custom prices and entitlements from immediate and scheduled phases
+		],
 		isCustom:
 			billingContext.isCustom ||
 			scheduledCustomPrices.length > 0 ||

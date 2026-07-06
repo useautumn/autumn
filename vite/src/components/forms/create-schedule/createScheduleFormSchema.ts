@@ -35,6 +35,30 @@ export function hasPersistedCreateSchedule({
 	return phases[0]?.persistedStartsAt != null;
 }
 
+export function hasMultipleImmediateSchedulePlans({
+	phases,
+}: {
+	phases: SchedulePhase[];
+}) {
+	const immediatePhase = phases.find((phase) =>
+		phase.plans.some((plan) => plan.productId),
+	);
+	return (
+		(immediatePhase?.plans.filter((plan) => plan.productId).length ?? 0) > 1
+	);
+}
+
+export function canResetScheduleBillingCycle({
+	phases,
+}: {
+	phases: SchedulePhase[];
+}) {
+	return (
+		!hasMultipleImmediateSchedulePlans({ phases }) ||
+		hasPersistedCreateSchedule({ phases })
+	);
+}
+
 export function getCurrentCreateSchedulePhaseIndex({
 	phases,
 	nowMs = Date.now(),
