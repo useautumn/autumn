@@ -14,8 +14,8 @@ import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 import { roundSubjectBalance } from "../../roundCacheBalance.js";
 import { sanitizeCachedSubjectBalance } from "../../sanitize/index.js";
 
-// Kill switch: set to false to revert to the legacy blind-HDEL path (drops
-// unsynced deductions racing the invalidation).
+// Kill switch: set to false to force the legacy blind-HDEL path everywhere,
+// ignoring callers' flushBalances opt-in.
 const FLUSH_BALANCES_ON_INVALIDATION = true;
 
 /**
@@ -32,10 +32,15 @@ export const invalidateSharedBalanceFields = async ({
 	ctx,
 	customerId,
 	redisV2 = ctx.redisV2,
+	flushBalances = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	redisV2?: Redis;
+	/** Flush cached balances to Postgres before deleting them. Opt-in: only
+	 *  safe when the caller has NOT just written balances to Postgres directly
+	 *  (the cached balances must still be the source of truth). */
+	flushBalances?: boolean;
 }): Promise<void> => {
 	const { org, env } = ctx;
 	if (!customerId || redisV2.status !== "ready") return;
@@ -45,7 +50,7 @@ export const invalidateSharedBalanceFields = async ({
 	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
 	if (!cachedRaw) return;
 
-	if (!FLUSH_BALANCES_ON_INVALIDATION) {
+	if (!FLUSH_BALANCES_ON_INVALIDATION || !flushBalances) {
 		await deleteFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
 		return;
 	}

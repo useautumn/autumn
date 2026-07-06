@@ -104,10 +104,13 @@ describe(`${chalk.yellowBright("invalidation-flush: invalidation must not lose u
 			await autumnV2.customers.get<ApiCustomer>(customerId);
 		expect(getMessagesRemaining(cachedBeforeInvalidation)).toBe(95);
 
+		// flushBalances opt-in mirrors the customers.update route config — the
+		// only invalidation source where cached balances are the source of truth.
 		await invalidateCachedFullSubject({
 			ctx,
 			customerId,
 			source: "test-invalidation",
+			flushBalances: true,
 		});
 
 		// ── Contract: invalidation semantics preserved ───────────────────────
