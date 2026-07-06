@@ -13,7 +13,6 @@ import { handleGetPlanV2 } from "./handlers/handleGetPlan/handleGetPlanV2.js";
 import { handleGetPlanDeleteInfo } from "./handlers/handleGetPlanDeleteInfo.js";
 import { handleListPlansV2 } from "./handlers/handleListPlans/handleListPlansV2.js";
 import { handleListPlans } from "./handlers/handleListPlans.js";
-import { handleMigrateProductV2 } from "./handlers/handleMigrateProductV2.js";
 import { handlePreviewUpdatePlanV2 } from "./handlers/handlePreviewUpdatePlan/handlePreviewUpdatePlanV2.js";
 import { handleUpdatePlanV1 } from "./handlers/handleUpdatePlan/handleUpdatePlanV1.js";
 import { handleUpdatePlanV2 } from "./handlers/handleUpdatePlan/handleUpdatePlanV2.js";
@@ -23,10 +22,6 @@ honoProductBetaRouter.get("", ...handleListPlans);
 
 // Create a Hono app for products
 export const honoProductRouter = new Hono<HonoEnv>();
-export const migrationRouter = new Hono<HonoEnv>();
-
-// Migrations
-migrationRouter.post("/migrations", ...handleMigrateProductV2);
 
 // CRUD
 honoProductRouter.get("", ...handleListPlans);
