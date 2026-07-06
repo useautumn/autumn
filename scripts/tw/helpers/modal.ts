@@ -32,6 +32,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import chalk from "chalk";
+import pLimit from "p-limit";
 import {
 	type App,
 	type Image,
@@ -163,14 +164,25 @@ let baseImagePromise: Promise<Image> | undefined;
 const getBaseImage = (deps: BaseImageDeps): Promise<Image> => {
 	baseImagePromise ??= (async () => {
 		const app = await getApp();
-		const done = stage(
-			"building base services image + node_modules (first run ~2-3m; cached after)",
-			15_000,
-		);
-		try {
-			return await buildBaseImage(modal, app, deps);
-		} finally {
-			done();
+		for (let attempt = 0; ; attempt++) {
+			const done = stage(
+				"building base services image + node_modules (first run ~2-3m; cached after)",
+				15_000,
+			);
+			try {
+				return await buildBaseImage(modal, app, deps);
+			} catch (error) {
+				if (attempt >= IMAGE_BUILD_RETRIES || !isTransientExecError(error)) {
+					throw error;
+				}
+				narrate(
+					chalk.yellow(
+						`[modal] image build stream failed transiently (${(error as Error).message?.slice(0, 70)}…) — retry ${attempt + 1}/${IMAGE_BUILD_RETRIES}`,
+					),
+				);
+			} finally {
+				done();
+			}
 		}
 	})();
 	return baseImagePromise;
@@ -210,10 +222,32 @@ const tagsWithName = (
 // ---- create pacing (stay under the 5/s create limit, 150 burst allowance) ----
 const CREATE_BURST = 120;
 const CREATE_MIN_INTERVAL_MS = 220;
+const CREATE_CONCURRENCY = Number(process.env.TW_MODAL_CREATE_CONCURRENCY ?? 2);
+const createLimit = pLimit(CREATE_CONCURRENCY);
 let createCount = 0;
 let paceChain: Promise<void> = Promise.resolve();
 const sleep = (msDelay: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, msDelay));
+
+const EXIT_SENTINEL = "__TW_MODAL_EXEC_EXIT__";
+const EXEC_WAIT_GRACE_MS = Number(
+	process.env.TW_MODAL_EXEC_WAIT_GRACE_MS ?? 5000,
+);
+
+const shellQuote = (value: string): string =>
+	`'${value.replaceAll("'", "'\\''")}'`;
+
+const withExitSentinel = (argv: string[]): string[] => [
+	"bash",
+	"-lc",
+	`${argv.map(shellQuote).join(" ")}; code=$?; printf '\\n${EXIT_SENTINEL}%s\\n' "$code"; exit "$code"`,
+];
+
+class ModalExecStartTimeoutError extends Error {
+	constructor(label: string, timeoutMs: number) {
+		super(`modal ${label}: exec start timed out after ${timeoutMs}ms`);
+	}
+}
 
 /** Resolve when it's safe to issue the next `create` (no-op within the burst). */
 const pace = (): Promise<void> => {
@@ -252,14 +286,24 @@ const isTransientExecError = (error: unknown): boolean => {
 	const message = error instanceof Error ? error.message : String(error);
 	const code = (error as { code?: number })?.code;
 	return (
+		code === 13 /* gRPC INTERNAL */ ||
 		code === 14 /* gRPC UNAVAILABLE */ ||
-		/UNAVAILABLE|Name resolution failed|ECONNREFUSED|ECONNRESET|connection (closed|reset|refused)|deadline exceeded|temporarily unavailable|no healthy upstream/i.test(
+		error instanceof ModalExecStartTimeoutError ||
+		/UNAVAILABLE|RST_STREAM|Name resolution failed|ECONNREFUSED|ECONNRESET|connection (closed|reset|refused)|deadline exceeded|timed out|temporarily unavailable|no healthy upstream/i.test(
 			message,
 		)
 	);
 };
 
 const EXEC_RETRIES = 5;
+const IMAGE_BUILD_RETRIES = 2;
+const EXEC_START_TIMEOUT_MS = Number(
+	process.env.TW_MODAL_EXEC_START_TIMEOUT_MS ?? 120_000,
+);
+const EXEC_START_CONCURRENCY = Number(
+	process.env.TW_MODAL_EXEC_START_CONCURRENCY ?? 4,
+);
+const execStartLimit = pLimit(EXEC_START_CONCURRENCY);
 
 /**
  * Wrap a `sb.exec(...)` START in retry-with-backoff for transient transport
@@ -274,7 +318,14 @@ const withExecRetry = async <T>(
 ): Promise<T> => {
 	for (let attempt = 0; ; attempt++) {
 		try {
-			return await start();
+			return await execStartLimit(() =>
+				Promise.race([
+					start(),
+					sleep(EXEC_START_TIMEOUT_MS).then(() => {
+						throw new ModalExecStartTimeoutError(label, EXEC_START_TIMEOUT_MS);
+					}),
+				]),
+			);
 		} catch (error) {
 			if (attempt >= EXEC_RETRIES || !isTransientExecError(error)) {
 				throw error;
@@ -377,7 +428,6 @@ const createFromImage = async (
 		// V1 only: stay under the 5/s create + 100-concurrent caps. V2 doesn't need it.
 		await pace();
 	}
-	const done = stage(`create sandbox ${opts.name}`);
 	const base = {
 		cpu: opts.cpu,
 		memoryMiB: opts.memoryMiB,
@@ -387,20 +437,26 @@ const createFromImage = async (
 		workdir: MODAL_REPO_ROOT,
 		encryptedPorts: opts.encryptedPorts,
 	};
-	const sandbox = v2
-		? await modal.sandboxes.experimentalCreate(app, image, {
-				...base,
-				// V2 supports neither tags nor name lookups; pin the region instead.
-				regions: [MODAL_REGION],
-			})
-		: await modal.sandboxes.create(app, image, {
-				...base,
-				tags: tagsWithName(opts.name, opts.tags),
-				name: opts.name,
-			});
+	const sandbox = await createLimit(async () => {
+		const done = stage(`create sandbox ${opts.name}`);
+		try {
+			return v2
+				? await modal.sandboxes.experimentalCreate(app, image, {
+						...base,
+						// V2 supports neither tags nor name lookups; pin the region instead.
+						regions: [MODAL_REGION],
+					})
+				: await modal.sandboxes.create(app, image, {
+						...base,
+						tags: tagsWithName(opts.name, opts.tags),
+						name: opts.name,
+					});
+		} finally {
+			done();
+		}
+	});
 	liveSandboxes.set(opts.name, sandbox);
 	liveSandboxes.set(sandbox.sandboxId, sandbox);
-	done();
 	return sandbox;
 };
 
@@ -580,7 +636,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => ({
 		opts?: RunStreamingOptions,
 	): Promise<RunStreamingResult> {
 		const proc = await withExecRetry("exec", () =>
-			unwrap(sandbox).exec(argv, {
+			unwrap(sandbox).exec(withExitSentinel(argv), {
 				stdout: "pipe",
 				stderr: "pipe",
 				workdir: MODAL_REPO_ROOT,
@@ -588,8 +644,23 @@ const makeModalProvider = (v2: boolean): ProviderImpl => ({
 			}),
 		);
 		let stderrText = "";
+		let stdoutBuffer = "";
+		let sentinelExitCode: number | undefined;
+		const onStdout = (text: string): void => {
+			stdoutBuffer += text;
+			const lines = stdoutBuffer.split("\n");
+			stdoutBuffer = lines.pop() ?? "";
+			for (const line of lines) {
+				const match = line.match(new RegExp(`^${EXIT_SENTINEL}(\\d+)$`));
+				if (match) {
+					sentinelExitCode = Number(match[1]);
+				} else {
+					onChunk(`${line}\n`);
+				}
+			}
+		};
 		const pumps = Promise.all([
-			pumpStream(proc.stdout, onChunk),
+			pumpStream(proc.stdout, onStdout),
 			pumpStream(proc.stderr, (text) => {
 				stderrText += text;
 				onChunk(text);
@@ -602,7 +673,16 @@ const makeModalProvider = (v2: boolean): ProviderImpl => ({
 				throw error;
 			}
 		}
-		const exitCode = await proc.wait();
+		if (stdoutBuffer) {
+			onChunk(stdoutBuffer);
+		}
+		const exitCode = await Promise.race([
+			proc.wait(),
+			sleep(EXEC_WAIT_GRACE_MS).then(() => sentinelExitCode),
+		]);
+		if (exitCode === undefined) {
+			throw new Error("modal: exec completed output stream without exit status");
+		}
 		return { exitCode, stderr: stderrText };
 	},
 

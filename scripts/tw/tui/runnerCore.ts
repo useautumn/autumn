@@ -137,6 +137,7 @@ const runOneFile = async (params: {
 			tests: [],
 			attempt,
 			passedOnRetry: false,
+			crashError: error instanceof Error ? error.message : String(error),
 		};
 	}
 };
@@ -213,6 +214,10 @@ export const runSwarmTests = async (
 			willRetry: true,
 		});
 		if (first.status !== "failed") {
+			return;
+		}
+		if (first.crashError && first.tests.length === 0) {
+			emit(first, false);
 			return;
 		}
 

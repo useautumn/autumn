@@ -40,6 +40,23 @@ import type { WorkerPool } from "./pool.ts";
 import type { ProviderSandbox } from "./provider.ts";
 import { runStreaming } from "./provider.ts";
 
+const REMOTE_TEST_TIMEOUT_MS = Math.max(
+	1,
+	Number(process.env.TW_REMOTE_TEST_TIMEOUT_MS) || 10 * 60 * 1000,
+);
+
+class RemoteTestTimeoutError extends Error {
+	constructor(file: string, workerName: string) {
+		super(
+			`Remote test timed out after ${REMOTE_TEST_TIMEOUT_MS}ms: ${file} on ${workerName}`,
+		);
+		this.name = "RemoteTestTimeoutError";
+	}
+}
+
+const sleep = (ms: number): Promise<void> =>
+	new Promise((resolve) => setTimeout(resolve, ms));
+
 /** How the executor maps a {@link WorkerHandle} to a live sandbox handle. */
 export type SandboxResolver = (
 	worker: WorkerHandle,
@@ -177,9 +194,12 @@ export class RemoteExecutor implements TestExecutor {
 				appendFileOutput(args.file, text);
 				args.onChunk(text);
 			};
-			const { exitCode, stderr } = await runStreaming(sandbox, argv, tee, {
-				signal: args.signal,
-			});
+			const { exitCode, stderr } = await Promise.race([
+				runStreaming(sandbox, argv, tee, { signal: args.signal }),
+				sleep(REMOTE_TEST_TIMEOUT_MS).then(() => {
+					throw new RemoteTestTimeoutError(args.file, worker.name);
+				}),
+			]);
 			// Clean completion (real exit code, even if non-zero) — the worker is
 			// healthy, hand it back to the pool for the next file.
 			this.pool.release(worker);
@@ -189,6 +209,11 @@ export class RemoteExecutor implements TestExecutor {
 			// worker death — release the (healthy) worker and propagate untouched.
 			if (args.signal?.aborted) {
 				this.pool.release(worker);
+				throw error;
+			}
+			if (error instanceof RemoteTestTimeoutError) {
+				this.pool.markDead(worker);
+				setWorkerStatus(worker.name, "dead");
 				throw error;
 			}
 			// A WorkerDeathError raised above (gone sandbox) is already correctly

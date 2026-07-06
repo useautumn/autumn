@@ -138,6 +138,15 @@ import {
 import type { TwRunArgs, WorkerHandle } from "../types.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
 
+const MODAL_V2_WORKER_CAP = Math.max(
+	1,
+	Number(process.env.TW_MODAL_V2_WORKER_CAP) || 70,
+);
+const MODAL_V2_PER_WORKER_CAP = Math.max(
+	1,
+	Number(process.env.TW_MODAL_V2_PER_WORKER_CAP) || 1,
+);
+
 /**
  * The repo root INSIDE the µVM. Vercel Sandbox sessions default their cwd to
  * `/vercel/sandbox`, where the base snapshot's repo checkout lives; the image
@@ -1204,16 +1213,33 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// Pool sizing: never over-provision (plan §8.7). One worker covers ≥1 file.
 	// No dedicated svix shard anymore, so the whole pool runs the normal files.
 	const requestedWorkers = Math.max(1, args.workers);
-	const effectiveWorkers = Math.min(requestedWorkers, normalFiles.length);
+	const providerWorkerCap =
+		args.provider === "modalv2" ? MODAL_V2_WORKER_CAP : requestedWorkers;
+	const providerPerWorkerCap =
+		args.provider === "modalv2" ? MODAL_V2_PER_WORKER_CAP : args.perWorker;
+	const effectiveWorkers = Math.min(
+		requestedWorkers,
+		providerWorkerCap,
+		normalFiles.length,
+	);
+	const effectivePerWorker = Math.min(args.perWorker, providerPerWorkerCap);
 	const needsSvixShard = false;
 
 	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
 	// webhook → the ingress sandbox, which routes each event to the owning worker by
 	// `event.account` (§6a). This removes the old Stripe 16-webhook/account ceiling.
-	const maxParallel = effectiveWorkers * Math.max(1, args.perWorker);
+	const maxParallel = effectiveWorkers * Math.max(1, effectivePerWorker);
+	const capLabel =
+		providerWorkerCap < requestedWorkers
+			? `, provider cap ${providerWorkerCap}`
+			: "";
+	const perWorkerLabel =
+		effectivePerWorker < args.perWorker
+			? `, per-worker cap ${effectivePerWorker}`
+			: "";
 
 	log(
-		`pool: ${effectiveWorkers} worker(s) (requested ${requestedWorkers}, files ${normalFiles.length}), maxParallel=${maxParallel}`,
+		`pool: ${effectiveWorkers} worker(s) (requested ${requestedWorkers}, files ${normalFiles.length}${capLabel}${perWorkerLabel}), maxParallel=${maxParallel}`,
 	);
 
 	await registry.createRun({
@@ -1538,7 +1564,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			log(`running ${svixFiles.length} svix file(s) on the dedicated shard`);
 			const svixPool = new WorkerPool(
 				[svixShard.handle],
-				Math.max(1, args.perWorker),
+				Math.max(1, effectivePerWorker),
 			);
 			const svixExecutor = new RemoteExecutor({
 				pool: svixPool,
@@ -1546,7 +1572,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				toWorkerPath: toSandboxPath,
 			});
 			await runFiles(svixFiles, svixExecutor, {
-				maxParallel: Math.max(1, args.perWorker),
+				maxParallel: Math.max(1, effectivePerWorker),
 			});
 			svixPool.close();
 		}
@@ -1566,7 +1592,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			}
 			const normalPool = new WorkerPool(
 				normalHandles,
-				Math.max(1, args.perWorker),
+				Math.max(1, effectivePerWorker),
 			);
 			const normalExecutor = new RemoteExecutor({
 				pool: normalPool,
@@ -1575,7 +1601,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			});
 			const normalParallel = Math.max(
 				1,
-				normalHandles.length * Math.max(1, args.perWorker),
+				normalHandles.length * Math.max(1, effectivePerWorker),
 			);
 			// Demand-tracked culling: terminate idle workers beyond a 30%-of-initial
 			// buffer while the run drains, so we stop paying for the ~N idle sandboxes
