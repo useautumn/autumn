@@ -1,6 +1,7 @@
-import type {
-	FullCusEntWithFullCusProduct,
-	FullCustomer,
+import {
+	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
+	fullCustomerToFullSubject,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { currentRegion, redis } from "@/external/redis/initRedis.js";
@@ -258,8 +259,8 @@ export const executeRedisDeduction = async ({
 
 		fireTrackWebhooks({
 			ctx,
-			oldFullCus,
-			newFullCus: fullCustomer,
+			oldFullSubject: fullCustomerToFullSubject({ fullCustomer: oldFullCus }),
+			newFullSubject: fullCustomerToFullSubject({ fullCustomer }),
 			feature: deduction.feature,
 			entityId,
 			featuresFromMutationLogs,
