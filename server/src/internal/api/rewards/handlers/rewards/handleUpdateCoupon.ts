@@ -10,7 +10,10 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
+import {
+	createStripeCoupon,
+	resolveCouponStripeProductIds,
+} from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
@@ -92,16 +95,23 @@ export const handleUpdateCoupon = createRoute({
 			}
 		}
 
+		const willRecreateStripeCoupon =
+			rewardCat === RewardCategory.Discount ||
+			(rewardCat === RewardCategory.FreeProduct && prices.length > 0);
+
+		// Preflight before deleting the old Stripe coupon, so a plan missing
+		// in Stripe fails the update while the existing coupon is still intact.
+		if (willRecreateStripeCoupon) {
+			resolveCouponStripeProductIds({ reward: rewardBody, prices });
+		}
+
 		// Delete old prices from stripe
 		try {
 			await stripeCli.coupons.del(reward.id);
 			await stripeCli.coupons.del(reward.internal_id);
 		} catch (_) {}
 
-		if (
-			rewardCat === RewardCategory.Discount ||
-			(rewardCat === RewardCategory.FreeProduct && prices.length > 0)
-		) {
+		if (willRecreateStripeCoupon) {
 			await createStripeCoupon({
 				reward: rewardBody,
 				org,

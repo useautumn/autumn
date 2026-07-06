@@ -177,9 +177,9 @@ export const PlanFeatureRow = ({
 
 				<div
 					className={cn(
-						"flex items-center max-w-0 opacity-0 overflow-hidden group-hover:max-w-[200px] shrink-0",
+						"flex items-center max-w-0 opacity-0 overflow-hidden shrink-0",
 						isSelected && "max-w-[200px] opacity-100",
-						!readOnly && " group-hover:opacity-100",
+						!readOnly && "group-hover:max-w-[200px] group-hover:opacity-100",
 					)}
 				>
 					<IconButton
