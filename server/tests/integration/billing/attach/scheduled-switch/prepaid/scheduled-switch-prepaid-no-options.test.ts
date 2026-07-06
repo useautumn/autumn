@@ -39,102 +39,99 @@ import chalk from "chalk";
  * - Quantity carries over (300 units)
  * - After cycle: pro active with 300 units
  */
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-prepaid-no-options 1: quantity carries over")}`,
-	async () => {
-		const customerId = "sched-switch-prepaid-no-opts-carry";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 1: quantity carries over")}`, async () => {
+	const customerId = "sched-switch-prepaid-no-opts-carry";
 
-		const premiumPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 15,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumPrepaid],
-		});
+	const premiumPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 15,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPrepaid],
+	});
 
-		const proPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 10,
-		});
-		const pro = products.pro({
-			id: "pro",
-			items: [proPrepaid],
-		});
+	const proPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPrepaid],
+	});
 
-		const { autumnV1, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, pro] }),
-			],
-			actions: [
-				s.billing.attach({
-					productId: premium.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
-					timeout: 4000,
-				}),
-			],
-		});
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: premium.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+				timeout: 4000,
+			}),
+		],
+	});
 
-		// Verify Stripe subscription after initial attach
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+	// Verify Stripe subscription after initial attach
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 
-		// Verify initial state: 300 units
-		const customerBefore =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expectCustomerFeatureCorrect({
-			customer: customerBefore,
-			featureId: TestFeature.Messages,
-			balance: 300,
-			usage: 0,
-		});
+	// Verify initial state: 300 units
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		balance: 300,
+		usage: 0,
+	});
 
-		// Downgrade to pro - NO options passed
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			redirect_mode: "if_required",
-			// No options - quantity should carry over
-		});
+	// Downgrade to pro - NO options passed
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+		// No options - quantity should carry over
+	});
 
-		const customerMidCycle =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerMidCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify scheduled state
-		await expectProductCanceling({
-			customer: customerMidCycle,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer: customerMidCycle,
-			productId: pro.id,
-		});
+	// Verify scheduled state
+	await expectProductCanceling({
+		customer: customerMidCycle,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer: customerMidCycle,
+		productId: pro.id,
+	});
 
-		// Balance still at premium's 300 until cycle end
-		expectCustomerFeatureCorrect({
-			customer: customerMidCycle,
-			featureId: TestFeature.Messages,
-			balance: 300,
-			usage: 0,
-		});
+	// Balance still at premium's 300 until cycle end
+	expectCustomerFeatureCorrect({
+		customer: customerMidCycle,
+		featureId: TestFeature.Messages,
+		balance: 300,
+		usage: 0,
+	});
 
-		// Verify Stripe subscription after scheduling downgrade
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
-	},
-);
+	// Verify Stripe subscription after scheduling downgrade
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Prepaid downgrade no options, billing units change (100 → 50)
@@ -151,82 +148,79 @@ test.concurrent(
  * - New product has 6 packs (300 / 50)
  * - After cycle: pro active with 300 units
  */
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-prepaid-no-options 2: billing units 100 to 50")}`,
-	async () => {
-		const customerId = "sched-switch-prepaid-no-opts-units-100-50";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 2: billing units 100 to 50")}`, async () => {
+	const customerId = "sched-switch-prepaid-no-opts-units-100-50";
 
-		const premiumPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 15,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumPrepaid],
-		});
+	const premiumPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 15,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPrepaid],
+	});
 
-		const proPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 50,
-			price: 5,
-		});
-		const pro = products.pro({
-			id: "pro",
-			items: [proPrepaid],
-		});
+	const proPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 50,
+		price: 5,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPrepaid],
+	});
 
-		const { autumnV1, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, pro] }),
-			],
-			actions: [
-				s.billing.attach({
-					productId: premium.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
-				}),
-				s.billing.attach({ productId: pro.id }), // NO options
-				s.advanceToNextInvoice(),
-			],
-		});
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: premium.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+			s.billing.attach({ productId: pro.id }), // NO options
+			s.advanceToNextInvoice(),
+		],
+	});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+	// Verify Stripe subscription after all operations
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active
-		await expectCustomerProducts({
-			customer,
-			active: [pro.id],
-			notPresent: [premium.id],
-		});
+	// After cycle: pro active
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
 
-		// Verify balance carried over: 300 units (converted to 6 packs of 50)
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			balance: 300,
-			usage: 0,
-		});
+	// Verify balance carried over: 300 units (converted to 6 packs of 50)
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 300,
+		usage: 0,
+	});
 
-		// Invoices:
-		// 1. Premium ($50 base + 3 packs * $15 = $95)
-		// 2. Pro renewal ($20 base + 6 packs * $5 = $50)
-		await expectCustomerInvoiceCorrect({
-			customer,
-			count: 2,
-			latestTotal: 50,
-		});
-	},
-);
+	// Invoices:
+	// 1. Premium ($50 base + 3 packs * $15 = $95)
+	// 2. Pro renewal ($20 base + 6 packs * $5 = $50)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 50,
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Prepaid downgrade no options, billing units change (50 → 100)
@@ -243,82 +237,79 @@ test.concurrent(
  * - New product has 3 packs (300 / 100)
  * - After cycle: pro active with 300 units
  */
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-prepaid-no-options 3: billing units 50 to 100")}`,
-	async () => {
-		const customerId = "sched-switch-prepaid-no-opts-units-50-100";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 3: billing units 50 to 100")}`, async () => {
+	const customerId = "sched-switch-prepaid-no-opts-units-50-100";
 
-		const premiumPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 50,
-			price: 10,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumPrepaid],
-		});
+	const premiumPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 50,
+		price: 10,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPrepaid],
+	});
 
-		const proPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 10,
-		});
-		const pro = products.pro({
-			id: "pro",
-			items: [proPrepaid],
-		});
+	const proPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPrepaid],
+	});
 
-		const { autumnV1, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, pro] }),
-			],
-			actions: [
-				s.billing.attach({
-					productId: premium.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
-				}),
-				s.billing.attach({ productId: pro.id }), // NO options
-				s.advanceToNextInvoice(),
-			],
-		});
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: premium.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+			s.billing.attach({ productId: pro.id }), // NO options
+			s.advanceToNextInvoice(),
+		],
+	});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+	// Verify Stripe subscription after all operations
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active
-		await expectCustomerProducts({
-			customer,
-			active: [pro.id],
-			notPresent: [premium.id],
-		});
+	// After cycle: pro active
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
 
-		// Verify balance carried over: 300 units (converted to 3 packs of 100)
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			balance: 300,
-			usage: 0,
-		});
+	// Verify balance carried over: 300 units (converted to 3 packs of 100)
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 300,
+		usage: 0,
+	});
 
-		// Invoices:
-		// 1. Premium ($50 base + 6 packs * $10 = $110)
-		// 2. Pro renewal ($20 base + 3 packs * $10 = $50)
-		await expectCustomerInvoiceCorrect({
-			customer,
-			count: 2,
-			latestTotal: 50,
-		});
-	},
-);
+	// Invoices:
+	// 1. Premium ($50 base + 6 packs * $10 = $110)
+	// 2. Pro renewal ($20 base + 3 packs * $10 = $50)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 50,
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Prepaid downgrade no options, included usage changes
@@ -334,73 +325,70 @@ test.concurrent(
  * - Quantity carries over: 200 purchased
  * - After cycle: Balance = 100 (included) + 200 (purchased) = 300
  */
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-prepaid-no-options 4: included usage increases")}`,
-	async () => {
-		const customerId = "sched-switch-prepaid-no-opts-incl-inc";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 4: included usage increases")}`, async () => {
+	const customerId = "sched-switch-prepaid-no-opts-incl-inc";
 
-		const premiumPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 15,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumPrepaid],
-		});
+	const premiumPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 15,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPrepaid],
+	});
 
-		const proPrepaid = items.prepaidMessages({
-			includedUsage: 100,
-			billingUnits: 100,
-			price: 10,
-		});
-		const pro = products.pro({
-			id: "pro",
-			items: [proPrepaid],
-		});
+	const proPrepaid = items.prepaidMessages({
+		includedUsage: 100,
+		billingUnits: 100,
+		price: 10,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPrepaid],
+	});
 
-		const { autumnV1, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, pro] }),
-			],
-			actions: [
-				s.billing.attach({
-					productId: premium.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
-					timeout: 2000,
-				}),
-				s.billing.attach({ productId: pro.id, timeout: 2000 }), // NO options
-				s.advanceToNextInvoice(),
-			],
-		});
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: premium.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				timeout: 2000,
+			}),
+			s.billing.attach({ productId: pro.id, timeout: 2000 }), // NO options
+			s.advanceToNextInvoice(),
+		],
+	});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+	// Verify Stripe subscription after all operations
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active
-		await expectCustomerProducts({
-			customer,
-			active: [pro.id],
-			notPresent: [premium.id],
-		});
+	// After cycle: pro active
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
 
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			balance: 200,
-			usage: 0,
-		});
-	},
-);
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 200,
+		usage: 0,
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 5: Prepaid downgrade no options, all config changes
@@ -419,78 +407,75 @@ test.concurrent(
  * - New packs: 400 / 50 = 8 packs
  * - After cycle: Balance = 50 (included) + 400 (purchased) = 450
  */
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-prepaid-no-options 5: all config changes")}`,
-	async () => {
-		const customerId = "sched-switch-prepaid-no-opts-all-change";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-no-options 5: all config changes")}`, async () => {
+	const customerId = "sched-switch-prepaid-no-opts-all-change";
 
-		const premiumPrepaid = items.prepaidMessages({
-			includedUsage: 0,
-			billingUnits: 100,
-			price: 15,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumPrepaid],
-		});
+	const premiumPrepaid = items.prepaidMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 15,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumPrepaid],
+	});
 
-		const proPrepaid = items.prepaidMessages({
-			includedUsage: 50,
-			billingUnits: 50,
-			price: 10,
-		});
-		const pro = products.pro({
-			id: "pro",
-			items: [proPrepaid],
-		});
+	const proPrepaid = items.prepaidMessages({
+		includedUsage: 50,
+		billingUnits: 50,
+		price: 10,
+	});
+	const pro = products.pro({
+		id: "pro",
+		items: [proPrepaid],
+	});
 
-		const { autumnV1, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [premium, pro] }),
-			],
-			actions: [
-				s.billing.attach({
-					productId: premium.id,
-					options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
-				}),
-				s.billing.attach({ productId: pro.id }), // NO options
-				s.advanceToNextInvoice(),
-			],
-		});
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [premium, pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: premium.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 400 }],
+			}),
+			s.billing.attach({ productId: pro.id }), // NO options
+			s.advanceToNextInvoice(),
+		],
+	});
 
-		// Verify Stripe subscription after all operations
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+	// Verify Stripe subscription after all operations
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// After cycle: pro active
-		await expectCustomerProducts({
-			customer,
-			active: [pro.id],
-			notPresent: [premium.id],
-		});
+	// After cycle: pro active
+	await expectCustomerProducts({
+		customer,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
 
-		expectCustomerFeatureCorrect({
-			customer,
-			featureId: TestFeature.Messages,
-			balance: 400,
-			usage: 0,
-		});
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: 400,
+		usage: 0,
+	});
 
-		// Invoices:
-		// 1. Premium ($50 base + 4 packs * $15 = $110)
-		// 2. Pro renewal ($20 base + 7 packs * $10 = $100)
-		await expectCustomerInvoiceCorrect({
-			customer,
-			count: 2,
-			latestTotal: 90,
-		});
-	},
-);
+	// Invoices:
+	// 1. Premium ($50 base + 4 packs * $15 = $110)
+	// 2. Pro renewal ($20 base + 7 packs * $10 = $100)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 90,
+	});
+});

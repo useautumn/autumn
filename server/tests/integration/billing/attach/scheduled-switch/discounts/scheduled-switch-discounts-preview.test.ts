@@ -18,235 +18,223 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-discounts-preview 1: active subscription discount applies to next_cycle")}`,
-	async () => {
-		const customerId = "sched-switch-disc-preview-active";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 1: active subscription discount applies to next_cycle")}`, async () => {
+	const customerId = "sched-switch-disc-preview-active";
 
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
 
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 1000 })],
-		});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		const { stripeCli, subscription } = await getStripeSubscription({
-			customerId,
-		});
+	const { stripeCli, subscription } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-			duration: "repeating",
-			durationInMonths: 2,
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 2,
+	});
 
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subscription.id,
-			couponIds: [coupon.id],
-		});
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subscription.id,
+		couponIds: [coupon.id],
+	});
 
-		const preview = await autumnV1.billing.previewAttach({
-			customer_id: customerId,
-			product_id: pro.id,
-		});
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+	});
 
-		expect(preview.total).toBe(0);
+	expect(preview.total).toBe(0);
 
-		const nextCycle = expectPreviewNextCycleCorrect({
-			preview,
-			total: 16,
-		})!;
+	const nextCycle = expectPreviewNextCycleCorrect({
+		preview,
+		total: 16,
+	})!;
 
-		expect(
-			nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
-		).toBe(true);
-	},
-);
+	expect(
+		nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
+	).toBe(true);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-discounts-preview 2: fresh promo code applies to next_cycle")}`,
-	async () => {
-		const customerId = "sched-switch-disc-preview-promo";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 2: fresh promo code applies to next_cycle")}`, async () => {
+	const customerId = "sched-switch-disc-preview-promo";
 
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
 
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 1000 })],
-		});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		const { stripeCli } = await getStripeSubscription({
-			customerId,
-		});
+	const { stripeCli } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-			duration: "forever",
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "forever",
+	});
 
-		const promotionCode = await createPromotionCode({
-			stripeCli,
-			coupon,
-			code: "SCHEDPREVIEW",
-		});
+	const promotionCode = await createPromotionCode({
+		stripeCli,
+		coupon,
+		code: "SCHEDPREVIEW",
+	});
 
-		const preview = await autumnV1.billing.previewAttach({
-			customer_id: customerId,
-			product_id: pro.id,
-			discounts: [{ promotion_code: promotionCode.code! }],
-		});
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		discounts: [{ promotion_code: promotionCode.code! }],
+	});
 
-		expect(preview.total).toBe(0);
+	expect(preview.total).toBe(0);
 
-		const nextCycle = expectPreviewNextCycleCorrect({
-			preview,
-			total: 16,
-		})!;
+	const nextCycle = expectPreviewNextCycleCorrect({
+		preview,
+		total: 16,
+	})!;
 
-		expect(
-			nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
-		).toBe(true);
-	},
-);
+	expect(
+		nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
+	).toBe(true);
+});
 
 // Nothing is billed today on a scheduled switch, so a fresh once coupon
 // survives to the first invoice after the switch — next_cycle is discounted.
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fresh once coupon with no immediate invoice applies to next_cycle")}`,
-	async () => {
-		const customerId = "sched-switch-disc-preview-once";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fresh once coupon with no immediate invoice applies to next_cycle")}`, async () => {
+	const customerId = "sched-switch-disc-preview-once";
 
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 500 })],
-		});
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
 
-		const premium = products.premium({
-			id: "premium",
-			items: [items.monthlyMessages({ includedUsage: 1000 })],
-		});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 1000 })],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		const { stripeCli } = await getStripeSubscription({
-			customerId,
-		});
+	const { stripeCli } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-			duration: "once",
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "once",
+	});
 
-		const preview = await autumnV1.billing.previewAttach({
-			customer_id: customerId,
-			product_id: pro.id,
-			discounts: [{ reward_id: coupon.id }],
-		});
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: pro.id,
+		discounts: [{ reward_id: coupon.id }],
+	});
 
-		expect(preview.total).toBe(0);
+	expect(preview.total).toBe(0);
 
-		const nextCycle = expectPreviewNextCycleCorrect({
-			preview,
-			total: 16,
-		})!;
+	const nextCycle = expectPreviewNextCycleCorrect({
+		preview,
+		total: 16,
+	})!;
 
-		expect(
-			nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
-		).toBe(true);
-	},
-);
+	expect(
+		nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
+	).toBe(true);
+});
 
-test.concurrent(
-	`${chalk.yellowBright("scheduled-switch-discounts-preview 4: fresh 1-month coupon does not affect annual next_cycle")}`,
-	async () => {
-		const customerId = "sched-switch-disc-preview-one-month";
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 4: fresh 1-month coupon does not affect annual next_cycle")}`, async () => {
+	const customerId = "sched-switch-disc-preview-one-month";
 
-		const proAnnual = products.base({
-			id: "pro-annual",
-			items: [
-				items.monthlyMessages({ includedUsage: 500 }),
-				items.annualPrice({ price: 200 }),
-			],
-		});
+	const proAnnual = products.base({
+		id: "pro-annual",
+		items: [
+			items.monthlyMessages({ includedUsage: 500 }),
+			items.annualPrice({ price: 200 }),
+		],
+	});
 
-		const premiumAnnual = products.base({
-			id: "premium-annual",
-			items: [
-				items.monthlyMessages({ includedUsage: 1000 }),
-				items.annualPrice({ price: 500 }),
-			],
-		});
+	const premiumAnnual = products.base({
+		id: "premium-annual",
+		items: [
+			items.monthlyMessages({ includedUsage: 1000 }),
+			items.annualPrice({ price: 500 }),
+		],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [proAnnual, premiumAnnual] }),
-			],
-			actions: [s.billing.attach({ productId: premiumAnnual.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proAnnual, premiumAnnual] }),
+		],
+		actions: [s.billing.attach({ productId: premiumAnnual.id })],
+	});
 
-		const { stripeCli } = await getStripeSubscription({
-			customerId,
-		});
+	const { stripeCli } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-			duration: "repeating",
-			durationInMonths: 1,
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+		duration: "repeating",
+		durationInMonths: 1,
+	});
 
-		const preview = await autumnV1.billing.previewAttach({
-			customer_id: customerId,
-			product_id: proAnnual.id,
-			discounts: [{ reward_id: coupon.id }],
-		});
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: proAnnual.id,
+		discounts: [{ reward_id: coupon.id }],
+	});
 
-		expect(preview.total).toBe(0);
+	expect(preview.total).toBe(0);
 
-		const nextCycle = expectPreviewNextCycleCorrect({
-			preview,
-			total: 200,
-		})!;
+	const nextCycle = expectPreviewNextCycleCorrect({
+		preview,
+		total: 200,
+	})!;
 
-		expect(
-			nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
-		).toBe(false);
-	},
-);
+	expect(
+		nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
+	).toBe(false);
+});

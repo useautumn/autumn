@@ -71,135 +71,125 @@ const extractCouponId = (discount: unknown): string | null => {
  * - After cycle: pro is active, premium removed
  * - Discount should STILL be on the subscription after the phase transition
  */
-test.concurrent(
-	`${chalk.yellowBright("schedule-discounts 1: 20% discount preserved after scheduling and cycle advance")}`,
-	async () => {
-		const customerId = "sched-switch-discount-20pct";
+test.concurrent(`${chalk.yellowBright("schedule-discounts 1: 20% discount preserved after scheduling and cycle advance")}`, async () => {
+	const customerId = "sched-switch-discount-20pct";
 
-		const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-		const pro = products.pro({
-			id: "pro",
-			items: [proMessagesItem],
-		});
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
 
-		const premiumMessagesItem = items.monthlyMessages({
-			includedUsage: 1000,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumMessagesItem],
-		});
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
 
-		const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1, ctx, testClockId, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		// Apply 20% discount to the subscription
-		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-			customerId,
-		});
+	// Apply 20% discount to the subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+	});
 
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subBefore.id,
-			couponIds: [coupon.id],
-		});
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [coupon.id],
+	});
 
-		// Verify discount is applied before downgrade
-		const subWithDiscount = await stripeCli.subscriptions.retrieve(
-			subBefore.id,
-			{
-				expand: ["discounts.source.coupon"],
-			},
-		);
-		expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
+	// Verify discount is applied before downgrade
+	const subWithDiscount = await stripeCli.subscriptions.retrieve(subBefore.id, {
+		expand: ["discounts.source.coupon"],
+	});
+	expect(subWithDiscount.discounts?.length).toBeGreaterThanOrEqual(1);
 
-		// Schedule downgrade to pro
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			redirect_mode: "if_required",
-		});
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify product states after scheduling
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer,
-			productId: pro.id,
-		});
+	// Verify product states after scheduling
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+	});
 
-		// Verify discount is still on the subscription after scheduling the downgrade
-		const { subscription: subAfterSchedule } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterScheduleExpanded = await stripeCli.subscriptions.retrieve(
-			subAfterSchedule.id,
-			{ expand: ["discounts.source.coupon"] },
-		);
-		expect(subAfterScheduleExpanded.discounts?.length).toBeGreaterThanOrEqual(
-			1,
-		);
-		expect(extractCouponId(subAfterScheduleExpanded.discounts?.[0])).toBe(
-			coupon.id,
-		);
+	// Verify discount is still on the subscription after scheduling the downgrade
+	const { subscription: subAfterSchedule } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterScheduleExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterSchedule.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
+	expect(subAfterScheduleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterScheduleExpanded.discounts?.[0])).toBe(
+		coupon.id,
+	);
 
-		// Advance to next billing cycle
-		await advanceToNextInvoice({
-			stripeCli: ctx.stripeCli,
-			testClockId: testClockId!,
-			currentEpochMs: advancedTo,
-			withPause: true,
-		});
+	// Advance to next billing cycle
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		currentEpochMs: advancedTo,
+		withPause: true,
+	});
 
-		const customerAfterCycle =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterCycle =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		// Verify pro is active, premium removed
-		await expectCustomerProducts({
-			customer: customerAfterCycle,
-			active: [pro.id],
-			notPresent: [premium.id],
-		});
+	// Verify pro is active, premium removed
+	await expectCustomerProducts({
+		customer: customerAfterCycle,
+		active: [pro.id],
+		notPresent: [premium.id],
+	});
 
-		// Verify features updated to pro tier
-		expectCustomerFeatureCorrect({
-			customer: customerAfterCycle,
-			featureId: TestFeature.Messages,
-			includedUsage: 500,
-			balance: 500,
-			usage: 0,
-		});
+	// Verify features updated to pro tier
+	expectCustomerFeatureCorrect({
+		customer: customerAfterCycle,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500,
+		usage: 0,
+	});
 
-		// KEY BUG CHECK: verify discount survives the phase transition
-		const { subscription: subAfterCycle } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterCycleExpanded = await stripeCli.subscriptions.retrieve(
-			subAfterCycle.id,
-			{ expand: ["discounts.source.coupon"] },
-		);
+	// KEY BUG CHECK: verify discount survives the phase transition
+	const { subscription: subAfterCycle } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterCycleExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterCycle.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
 
-		// The discount should still be present after the scheduled switch completed
-		expect(subAfterCycleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-		expect(extractCouponId(subAfterCycleExpanded.discounts?.[0])).toBe(
-			coupon.id,
-		);
-	},
-);
+	// The discount should still be present after the scheduled switch completed
+	expect(subAfterCycleExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterCycleExpanded.discounts?.[0])).toBe(coupon.id);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Premium to Pro with $10 off discount - verify discount after schedule
@@ -213,83 +203,77 @@ test.concurrent(
  * Expected Result:
  * - Amount-off discount still present on subscription after scheduling
  */
-test.concurrent(
-	`${chalk.yellowBright("schedule-discounts 2: $10 off discount preserved after scheduling downgrade")}`,
-	async () => {
-		const customerId = "sched-switch-discount-10off";
+test.concurrent(`${chalk.yellowBright("schedule-discounts 2: $10 off discount preserved after scheduling downgrade")}`, async () => {
+	const customerId = "sched-switch-discount-10off";
 
-		const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-		const pro = products.pro({
-			id: "pro",
-			items: [proMessagesItem],
-		});
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
 
-		const premiumMessagesItem = items.monthlyMessages({
-			includedUsage: 1000,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumMessagesItem],
-		});
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		// Apply $10 off discount to the subscription
-		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-			customerId,
-		});
+	// Apply $10 off discount to the subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createAmountCoupon({
-			stripeCli,
-			amountOffCents: 1000,
-		});
+	const coupon = await createAmountCoupon({
+		stripeCli,
+		amountOffCents: 1000,
+	});
 
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subBefore.id,
-			couponIds: [coupon.id],
-		});
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [coupon.id],
+	});
 
-		// Schedule downgrade to pro
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			redirect_mode: "if_required",
-		});
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify product states
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer,
-			productId: pro.id,
-		});
+	// Verify product states
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+	});
 
-		// Verify discount is still on the subscription
-		const { subscription: subAfter } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterExpanded = await stripeCli.subscriptions.retrieve(
-			subAfter.id,
-			{
-				expand: ["discounts.source.coupon"],
-			},
-		);
+	// Verify discount is still on the subscription
+	const { subscription: subAfter } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterExpanded = await stripeCli.subscriptions.retrieve(subAfter.id, {
+		expand: ["discounts.source.coupon"],
+	});
 
-		expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-		expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
-	},
-);
+	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Premium to Pro (scheduled) to Free (replace) - discount preserved
@@ -307,106 +291,103 @@ test.concurrent(
  * The schedule is released and recreated during replacement. This test verifies
  * that the discount survives the release + recreate cycle.
  */
-test.concurrent(
-	`${chalk.yellowBright("schedule-discounts 3: discount preserved when replacing scheduled downgrade")}`,
-	async () => {
-		const customerId = "sched-switch-discount-replace";
+test.concurrent(`${chalk.yellowBright("schedule-discounts 3: discount preserved when replacing scheduled downgrade")}`, async () => {
+	const customerId = "sched-switch-discount-replace";
 
-		const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-		const free = products.base({
-			id: "free",
-			items: [messagesItem],
-		});
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+	});
 
-		const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-		const pro = products.pro({
-			id: "pro",
-			items: [proMessagesItem],
-		});
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
 
-		const premiumMessagesItem = items.monthlyMessages({
-			includedUsage: 1000,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumMessagesItem],
-		});
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [free, pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		// Apply 20% discount to the subscription
-		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-			customerId,
-		});
+	// Apply 20% discount to the subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+	});
 
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subBefore.id,
-			couponIds: [coupon.id],
-		});
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [coupon.id],
+	});
 
-		// Schedule downgrade to pro
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			redirect_mode: "if_required",
-		});
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify mid-state
-		const customerMid = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer: customerMid,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer: customerMid,
-			productId: pro.id,
-		});
+	// Verify mid-state
+	const customerMid = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerMid,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer: customerMid,
+		productId: pro.id,
+	});
 
-		// Replace scheduled pro with free
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: free.id,
-			redirect_mode: "if_required",
-		});
+	// Replace scheduled pro with free
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: free.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify product states after replacement
-		const customerAfterReplace =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer: customerAfterReplace,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer: customerAfterReplace,
-			productId: free.id,
-		});
+	// Verify product states after replacement
+	const customerAfterReplace =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerAfterReplace,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer: customerAfterReplace,
+		productId: free.id,
+	});
 
-		// Verify discount is still on the subscription after schedule replacement
-		const { subscription: subAfterReplace } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterExpanded = await stripeCli.subscriptions.retrieve(
-			subAfterReplace.id,
-			{ expand: ["discounts.source.coupon"] },
-		);
+	// Verify discount is still on the subscription after schedule replacement
+	const { subscription: subAfterReplace } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterExpanded = await stripeCli.subscriptions.retrieve(
+		subAfterReplace.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
 
-		expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-		expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
-	},
-);
+	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Multiple discounts preserved after scheduled downgrade
@@ -420,95 +401,89 @@ test.concurrent(
  * Expected Result:
  * - Both discounts still present on subscription after scheduling
  */
-test.concurrent(
-	`${chalk.yellowBright("schedule-discounts 4: multiple discounts preserved after scheduling")}`,
-	async () => {
-		const customerId = "sched-switch-discount-multi";
+test.concurrent(`${chalk.yellowBright("schedule-discounts 4: multiple discounts preserved after scheduling")}`, async () => {
+	const customerId = "sched-switch-discount-multi";
 
-		const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-		const pro = products.pro({
-			id: "pro",
-			items: [proMessagesItem],
-		});
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
 
-		const premiumMessagesItem = items.monthlyMessages({
-			includedUsage: 1000,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumMessagesItem],
-		});
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium] }),
-			],
-			actions: [s.billing.attach({ productId: premium.id })],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: premium.id })],
+	});
 
-		// Apply two discounts to the subscription
-		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-			customerId,
-		});
+	// Apply two discounts to the subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
 
-		const percentCoupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-		});
+	const percentCoupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+	});
 
-		const amountCoupon = await createAmountCoupon({
-			stripeCli,
-			amountOffCents: 500,
-		});
+	const amountCoupon = await createAmountCoupon({
+		stripeCli,
+		amountOffCents: 500,
+	});
 
-		// Apply both discounts
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subBefore.id,
-			couponIds: [percentCoupon.id, amountCoupon.id],
-		});
+	// Apply both discounts
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [percentCoupon.id, amountCoupon.id],
+	});
 
-		// Verify both discounts applied
-		const subWithDiscounts = await stripeCli.subscriptions.retrieve(
-			subBefore.id,
-			{ expand: ["discounts.source.coupon"] },
-		);
-		expect(subWithDiscounts.discounts?.length).toBe(2);
+	// Verify both discounts applied
+	const subWithDiscounts = await stripeCli.subscriptions.retrieve(
+		subBefore.id,
+		{ expand: ["discounts.source.coupon"] },
+	);
+	expect(subWithDiscounts.discounts?.length).toBe(2);
 
-		// Schedule downgrade to pro
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			redirect_mode: "if_required",
-		});
+	// Schedule downgrade to pro
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify product states
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer,
-			productId: pro.id,
-		});
+	// Verify product states
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+	});
 
-		// Verify BOTH discounts are still on the subscription
-		const { subscription: subAfter } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterExpanded = await stripeCli.subscriptions.retrieve(
-			subAfter.id,
-			{
-				expand: ["discounts.source.coupon"],
-			},
-		);
+	// Verify BOTH discounts are still on the subscription
+	const { subscription: subAfter } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterExpanded = await stripeCli.subscriptions.retrieve(subAfter.id, {
+		expand: ["discounts.source.coupon"],
+	});
 
-		expect(subAfterExpanded.discounts?.length).toBe(2);
-	},
-);
+	expect(subAfterExpanded.discounts?.length).toBe(2);
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 5: Upgrade from scheduled downgrade - discount preserved
@@ -524,100 +499,94 @@ test.concurrent(
  * - Discount should still be on the subscription after upgrade cancels the schedule
  * - Ultra is active, premium and pro are removed
  */
-test.concurrent(
-	`${chalk.yellowBright("schedule-discounts 5: discount preserved after upgrade cancels scheduled downgrade")}`,
-	async () => {
-		const customerId = "sched-switch-discount-upgrade";
+test.concurrent(`${chalk.yellowBright("schedule-discounts 5: discount preserved after upgrade cancels scheduled downgrade")}`, async () => {
+	const customerId = "sched-switch-discount-upgrade";
 
-		const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
-		const pro = products.pro({
-			id: "pro",
-			items: [proMessagesItem],
-		});
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro",
+		items: [proMessagesItem],
+	});
 
-		const premiumMessagesItem = items.monthlyMessages({
-			includedUsage: 1000,
-		});
-		const premium = products.premium({
-			id: "premium",
-			items: [premiumMessagesItem],
-		});
+	const premiumMessagesItem = items.monthlyMessages({
+		includedUsage: 1000,
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessagesItem],
+	});
 
-		const ultraMessagesItem = items.monthlyMessages({
-			includedUsage: 5000,
-		});
-		const ultra = products.ultra({
-			id: "ultra",
-			items: [ultraMessagesItem],
-		});
+	const ultraMessagesItem = items.monthlyMessages({
+		includedUsage: 5000,
+	});
+	const ultra = products.ultra({
+		id: "ultra",
+		items: [ultraMessagesItem],
+	});
 
-		const { autumnV1 } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro, premium, ultra] }),
-			],
-			actions: [
-				s.billing.attach({ productId: premium.id }),
-				s.billing.attach({ productId: pro.id }),
-			],
-		});
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium, ultra] }),
+		],
+		actions: [
+			s.billing.attach({ productId: premium.id }),
+			s.billing.attach({ productId: pro.id }),
+		],
+	});
 
-		// Apply 20% discount to the subscription
-		const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-			customerId,
-		});
+	// Apply 20% discount to the subscription
+	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
+		customerId,
+	});
 
-		const coupon = await createPercentCoupon({
-			stripeCli,
-			percentOff: 20,
-		});
+	const coupon = await createPercentCoupon({
+		stripeCli,
+		percentOff: 20,
+	});
 
-		await applySubscriptionDiscount({
-			stripeCli,
-			subscriptionId: subBefore.id,
-			couponIds: [coupon.id],
-		});
+	await applySubscriptionDiscount({
+		stripeCli,
+		subscriptionId: subBefore.id,
+		couponIds: [coupon.id],
+	});
 
-		// Verify scheduled state
-		const customerBefore =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductCanceling({
-			customer: customerBefore,
-			productId: premium.id,
-		});
-		await expectProductScheduled({
-			customer: customerBefore,
-			productId: pro.id,
-		});
+	// Verify scheduled state
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerBefore,
+		productId: premium.id,
+	});
+	await expectProductScheduled({
+		customer: customerBefore,
+		productId: pro.id,
+	});
 
-		// Upgrade to ultra (should cancel scheduled downgrade)
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: ultra.id,
-			redirect_mode: "if_required",
-		});
+	// Upgrade to ultra (should cancel scheduled downgrade)
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: ultra.id,
+		redirect_mode: "if_required",
+	});
 
-		// Verify ultra is active, premium and pro removed
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectCustomerProducts({
-			customer,
-			active: [ultra.id],
-			notPresent: [premium.id, pro.id],
-		});
+	// Verify ultra is active, premium and pro removed
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [ultra.id],
+		notPresent: [premium.id, pro.id],
+	});
 
-		// Verify discount is still on the subscription after upgrade
-		const { subscription: subAfter } = await getStripeSubscription({
-			customerId,
-		});
-		const subAfterExpanded = await stripeCli.subscriptions.retrieve(
-			subAfter.id,
-			{
-				expand: ["discounts.source.coupon"],
-			},
-		);
+	// Verify discount is still on the subscription after upgrade
+	const { subscription: subAfter } = await getStripeSubscription({
+		customerId,
+	});
+	const subAfterExpanded = await stripeCli.subscriptions.retrieve(subAfter.id, {
+		expand: ["discounts.source.coupon"],
+	});
 
-		expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
-		expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
-	},
-);
+	expect(subAfterExpanded.discounts?.length).toBeGreaterThanOrEqual(1);
+	expect(extractCouponId(subAfterExpanded.discounts?.[0])).toBe(coupon.id);
+});
