@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import { fullCustomerToTags } from "./fullCustomerToTags";
 
-// Svix rejects any message tag outside this set (or >128 chars) with HTTP 422,
-// dropping the whole webhook. See shared/.../fullCustomerToTags.ts.
-const SVIX_TAG_PATTERN = /^[a-zA-Z0-9\-_./\\#]+$/;
+// The set fullCustomerToTags guarantees its output stays within (a subset of
+// what Svix accepts); tags outside it, or >128 chars, are rejected with HTTP 422.
+const SVIX_TAG_PATTERN = /^[a-zA-Z0-9\-_./#]+$/;
 const SVIX_TAG_MAX_LENGTH = 128;
 
 const cus = (id: string, entityId?: string): FullCustomer =>
@@ -61,6 +61,17 @@ describe("fullCustomerToTags", () => {
 	test("emits only customer_id when there is no entity", () => {
 		expect(fullCustomerToTags({ fullCustomer: cus("cus_plain") })).toEqual([
 			"customer_id.cus_plain",
+		]);
+	});
+
+	test("falls back to internal_id (still sanitized) when id is nullish", () => {
+		const fullCustomer = {
+			id: undefined,
+			internal_id: "int:01hxyz",
+			entity: undefined,
+		} as unknown as FullCustomer;
+		expect(fullCustomerToTags({ fullCustomer })).toEqual([
+			"customer_id.int_01hxyz",
 		]);
 	});
 });
