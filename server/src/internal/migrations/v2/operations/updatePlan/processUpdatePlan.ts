@@ -98,10 +98,12 @@ export const processUpdatePlan = async ({
 				}),
 		});
 
-		assertNoChargeArtifacts({
-			plan: computedPlan,
-			customerProductId: customerProduct.id,
-		});
+		if (op.proration !== true) {
+			assertNoChargeArtifacts({
+				plan: computedPlan,
+				customerProductId: customerProduct.id,
+			});
+		}
 		const executablePlan = stripPreparedCatalogRows({
 			plan: computedPlan,
 			preparedIds: productContext.preparedIds,

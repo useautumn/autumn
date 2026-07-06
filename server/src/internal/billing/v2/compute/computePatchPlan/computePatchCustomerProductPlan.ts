@@ -37,14 +37,22 @@ export const computePatchCustomerProductPlan = ({
 			patchContext,
 		});
 
-	const { allLineItems } = buildAutumnLineItems({
-		ctx,
-		newCustomerProducts: [finalCustomerProduct],
-		deletedCustomerProduct: patchContext.originalCustomerProduct,
-		billingContext: updateSubscriptionContext,
-		includeArrearLineItems:
-			updateSubscriptionContext.chargeExistingOverages === true,
-	});
+	const isUpdatingScheduledProduct =
+		patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
+
+	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
+	// prorate — its future phase item swap is applied wholesale via
+	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
+	const { allLineItems } = isUpdatingScheduledProduct
+		? { allLineItems: [] }
+		: buildAutumnLineItems({
+				ctx,
+				newCustomerProducts: [finalCustomerProduct],
+				deletedCustomerProduct: patchContext.originalCustomerProduct,
+				billingContext: updateSubscriptionContext,
+				includeArrearLineItems:
+					updateSubscriptionContext.chargeExistingOverages === true,
+			});
 
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
@@ -60,9 +68,6 @@ export const computePatchCustomerProductPlan = ({
 	} satisfies Partial<AutumnBillingPlan>;
 
 	if (patchContext.mode === "new") {
-		const isUpdatingScheduledProduct =
-			patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
-
 		return {
 			...basePlan,
 			insertCustomerProducts: [finalCustomerProduct],

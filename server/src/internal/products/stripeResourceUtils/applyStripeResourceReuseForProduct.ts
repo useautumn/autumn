@@ -71,13 +71,21 @@ export const applyStripeResourceReuseForProduct = async ({
 	ctx,
 	product,
 	candidateProducts = [],
+	reuseProcessor = true,
 }: {
 	ctx: AutumnContext;
 	product: FullProduct;
 	candidateProducts?: FullProduct[];
+	/**
+	 * Copy `product.processor.id` (the product's own top-level Stripe Product)
+	 * from a candidate. Callers that group candidates across genuinely
+	 * different plans (e.g. migrations) should pass `false` — merging two
+	 * plans' Stripe Product identity is never correct there.
+	 */
+	reuseProcessor?: boolean;
 }) => {
 	for (const source of [product, ...candidateProducts]) {
-		await copyProcessor({ ctx, product, source });
+		if (reuseProcessor) await copyProcessor({ ctx, product, source });
 		await copyPrices({ ctx, product, source });
 		if (!hasMissingStripeResourcesForProduct({ product })) return;
 	}
