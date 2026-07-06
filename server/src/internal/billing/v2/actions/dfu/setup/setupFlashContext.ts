@@ -102,7 +102,8 @@ const upsertFullCustomer = async ({
 			};
 		}
 
-		const customerData = params.customer_data;
+		// dry_run must not persist anything, including identity updates.
+		const customerData = params.dry_run ? undefined : params.customer_data;
 		if (customerData?.name !== undefined && customerData.name !== existing.name)
 			update.name = customerData.name;
 		if (

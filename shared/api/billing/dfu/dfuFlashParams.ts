@@ -1,5 +1,6 @@
 import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
+import { CustomerEmailSchema } from "../../common/customerData";
 import { ApiCustomerV5Schema } from "../../customers/apiCustomerV5";
 
 /**
@@ -17,10 +18,9 @@ const FlashCustomerDataSchema = z.object({
 		.string()
 		.optional()
 		.meta({ description: "Display name for the customer." }),
-	email: z
-		.string()
-		.optional()
-		.meta({ description: "Email address for the customer." }),
+	email: CustomerEmailSchema.optional().meta({
+		description: "Email address for the customer.",
+	}),
 	fingerprint: z
 		.string()
 		.optional()
