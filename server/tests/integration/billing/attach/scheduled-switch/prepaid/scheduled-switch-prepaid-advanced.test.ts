@@ -32,71 +32,75 @@ import chalk from "chalk";
  * - Scheduled switch succeeds
  * - Total units preserved, converted to new billing units
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-prepaid-advanced 2: mixed product downgrade, no options")}`, async () => {
-	const customerId = "sched-switch-prepaid-adv-2";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-prepaid-advanced 2: mixed product downgrade, no options")}`,
+	async () => {
+		const customerId = "sched-switch-prepaid-adv-2";
 
-	const premiumOneOff = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 15,
-	});
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumOneOff],
-	});
+		const premiumOneOff = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 15,
+		});
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumOneOff],
+		});
 
-	const proOneOff = items.oneOffMessages({
-		includedUsage: 0,
-		billingUnits: 100,
-		price: 10,
-	});
-	const pro = products.pro({
-		id: "pro",
-		items: [proOneOff],
-	});
+		const proOneOff = items.oneOffMessages({
+			includedUsage: 0,
+			billingUnits: 100,
+			price: 10,
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [proOneOff],
+		});
 
-	const { autumnV1, ctx, testClockId } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro] }),
-		],
-		actions: [
-			s.billing.attach({
-				productId: premium.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
-				timeout: 2000,
-			}),
-		],
-	});
+		const { autumnV1, ctx, testClockId } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: premium.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 500 }],
+					timeout: 2000,
+				}),
+			],
+		});
 
-	// Downgrade with NO options
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
+		// Downgrade with NO options
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			redirect_mode: "if_required",
+		});
 
-	await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-	});
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+		});
 
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfter,
-		count: 2,
-		latestTotal: 20,
-	});
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfter,
+			count: 2,
+			latestTotal: 20,
+		});
 
-	await expectCustomerProducts({
-		customer: customerAfter,
-		active: [pro.id],
-		notPresent: [premium.id],
-	});
+		await expectCustomerProducts({
+			customer: customerAfter,
+			active: [pro.id],
+			notPresent: [premium.id],
+		});
 
-	await expectStripeSubscriptionCorrect({
-		ctx,
-		customerId,
-	});
-});
+		await expectStripeSubscriptionCorrect({
+			ctx,
+			customerId,
+		});
+	},
+);

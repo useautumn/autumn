@@ -26,11 +26,11 @@
 
 import { expect, test } from "bun:test";
 import { type ApiEntityV2, ApiEntityV2Schema } from "@autumn/shared";
-import chalk from "chalk";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Scheduled upgrade cus_product must not shadow active flag

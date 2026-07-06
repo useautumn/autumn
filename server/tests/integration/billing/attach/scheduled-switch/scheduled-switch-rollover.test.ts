@@ -43,78 +43,81 @@ import chalk from "chalk";
  * - Rollover of 200 carries over to free
  * - Total balance = 100 (free included) + 200 (rollover) = 300
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 1: downgrade with rollover carryover (same cap)")}`, async () => {
-	const customerId = "sched-switch-rollover-same-cap";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-rollover 1: downgrade with rollover carryover (same cap)")}`,
+	async () => {
+		const customerId = "sched-switch-rollover-same-cap";
 
-	// Pro plan: 500 messages with rollover (max: 500)
-	const proMessagesItem = items.monthlyMessagesWithRollover({
-		includedUsage: 500,
-		rolloverConfig: {
-			max: 500,
-			length: 1,
-			duration: RolloverExpiryDurationType.Month,
-		},
-	});
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
+		// Pro plan: 500 messages with rollover (max: 500)
+		const proMessagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 500,
+			rolloverConfig: {
+				max: 500,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessagesItem],
+		});
 
-	// Free plan: 100 messages with rollover (max: 500 - same cap)
-	const freeMessagesItem = items.monthlyMessagesWithRollover({
-		includedUsage: 100,
-		rolloverConfig: {
-			max: 500,
-			length: 1,
-			duration: RolloverExpiryDurationType.Month,
-		},
-	});
-	const free = products.base({
-		id: "free",
-		items: [freeMessagesItem],
-	});
+		// Free plan: 100 messages with rollover (max: 500 - same cap)
+		const freeMessagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 100,
+			rolloverConfig: {
+				max: 500,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const free = products.base({
+			id: "free",
+			items: [freeMessagesItem],
+		});
 
-	// Setup: attach pro, track usage, reset to create rollover, schedule downgrade, advance to trigger
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: true, paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
-			s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 200 (500 - 300)
-			s.billing.attach({ productId: free.id, timeout: 2000 }), // Schedule downgrade
-			s.advanceToNextInvoice(), // Triggers downgrade at cycle end
-		],
-	});
+		// Setup: attach pro, track usage, reset to create rollover, schedule downgrade, advance to trigger
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true, paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
+				s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 200 (500 - 300)
+				s.billing.attach({ productId: free.id, timeout: 2000 }), // Schedule downgrade
+				s.advanceToNextInvoice(), // Triggers downgrade at cycle end
+			],
+		});
 
-	// Verify rollover carried over to free
-	const customerAfterDowngrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		// Verify rollover carried over to free
+		const customerAfterDowngrade =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product states
-	await expectCustomerProducts({
-		customer: customerAfterDowngrade,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		// Verify product states
+		await expectCustomerProducts({
+			customer: customerAfterDowngrade,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
 
-	// Balance = 100 (free included) + 200 (rollover) = 300
-	expectCustomerFeatureCorrect({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-		balance: 300,
-	});
+		// Balance = 100 (free included) + 200 (rollover) = 300
+		expectCustomerFeatureCorrect({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+			balance: 300,
+		});
 
-	expectCustomerRolloverCorrect({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-		expectedRollovers: [{ balance: 200 }],
-		totalBalance: 300,
-	});
-});
+		expectCustomerRolloverCorrect({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+			expectedRollovers: [{ balance: 200 }],
+			totalBalance: 300,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Downgrade with rollover capped by new plan's lower max
@@ -131,78 +134,81 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 1: downgrade wi
  * - Rollover is CAPPED at new plan's max (150), not 400
  * - Total balance = 100 (free included) + 150 (capped rollover) = 250
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 2: downgrade with rollover capped by lower max")}`, async () => {
-	const customerId = "sched-switch-rollover-lower-cap";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-rollover 2: downgrade with rollover capped by lower max")}`,
+	async () => {
+		const customerId = "sched-switch-rollover-lower-cap";
 
-	// Pro plan: 500 messages with rollover (max: 500)
-	const proMessagesItem = items.monthlyMessagesWithRollover({
-		includedUsage: 500,
-		rolloverConfig: {
-			max: 500,
-			length: 1,
-			duration: RolloverExpiryDurationType.Month,
-		},
-	});
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
+		// Pro plan: 500 messages with rollover (max: 500)
+		const proMessagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 500,
+			rolloverConfig: {
+				max: 500,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessagesItem],
+		});
 
-	// Free plan: 100 messages with rollover (max: 150 - LOWER cap)
-	const freeMessagesItem = items.monthlyMessagesWithRollover({
-		includedUsage: 100,
-		rolloverConfig: {
-			max: 150,
-			length: 1,
-			duration: RolloverExpiryDurationType.Month,
-		},
-	});
-	const free = products.base({
-		id: "free",
-		items: [freeMessagesItem],
-	});
+		// Free plan: 100 messages with rollover (max: 150 - LOWER cap)
+		const freeMessagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 100,
+			rolloverConfig: {
+				max: 150,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const free = products.base({
+			id: "free",
+			items: [freeMessagesItem],
+		});
 
-	// Setup: attach pro, track low usage to create large rollover, reset, schedule downgrade, advance
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: true, paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
-			s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 400 (500 - 100)
-			s.billing.attach({ productId: free.id }), // Schedule downgrade
-			s.advanceToNextInvoice(), // Triggers downgrade at cycle end
-		],
-	});
+		// Setup: attach pro, track low usage to create large rollover, reset, schedule downgrade, advance
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true, paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
+				s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 400 (500 - 100)
+				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.advanceToNextInvoice(), // Triggers downgrade at cycle end
+			],
+		});
 
-	const customerAfterDowngrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customerAfterDowngrade =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product states
-	await expectCustomerProducts({
-		customer: customerAfterDowngrade,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		// Verify product states
+		await expectCustomerProducts({
+			customer: customerAfterDowngrade,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
 
-	// Verify rollover CAPPED at free's max (150)
-	// Balance = 100 (free included) + 150 (capped rollover) = 250
-	expectCustomerFeatureCorrect({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-		balance: 250,
-	});
+		// Verify rollover CAPPED at free's max (150)
+		// Balance = 100 (free included) + 150 (capped rollover) = 250
+		expectCustomerFeatureCorrect({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+			balance: 250,
+		});
 
-	expectCustomerRolloverCorrect({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-		expectedRollovers: [{ balance: 150 }], // Capped from 400 to 150
-		totalBalance: 250,
-	});
-});
+		expectCustomerRolloverCorrect({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+			expectedRollovers: [{ balance: 150 }], // Capped from 400 to 150
+			totalBalance: 250,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Downgrade where new plan has NO rollover config
@@ -219,66 +225,69 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 2: downgrade wi
  * - NO rollovers carried over (free doesn't support rollovers)
  * - Total balance = 100 (free included only)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-rollover 3: downgrade to plan without rollover - no carryover")}`, async () => {
-	const customerId = "sched-switch-rollover-no-rollover";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-rollover 3: downgrade to plan without rollover - no carryover")}`,
+	async () => {
+		const customerId = "sched-switch-rollover-no-rollover";
 
-	// Pro plan: 500 messages with rollover
-	const proMessagesItem = items.monthlyMessagesWithRollover({
-		includedUsage: 500,
-		rolloverConfig: {
-			max: 500,
-			length: 1,
-			duration: RolloverExpiryDurationType.Month,
-		},
-	});
-	const pro = products.pro({
-		id: "pro",
-		items: [proMessagesItem],
-	});
+		// Pro plan: 500 messages with rollover
+		const proMessagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 500,
+			rolloverConfig: {
+				max: 500,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [proMessagesItem],
+		});
 
-	// Free plan: 100 messages WITHOUT rollover
-	const freeMessagesItem = items.monthlyMessages({ includedUsage: 100 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessagesItem],
-	});
+		// Free plan: 100 messages WITHOUT rollover
+		const freeMessagesItem = items.monthlyMessages({ includedUsage: 100 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessagesItem],
+		});
 
-	// Setup: attach pro, track usage, reset to create rollover, schedule downgrade, advance
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: true, paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
-			s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 200
-			s.billing.attach({ productId: free.id }), // Schedule downgrade
-			s.advanceToNextInvoice(), // Triggers downgrade at cycle end
-		],
-	});
+		// Setup: attach pro, track usage, reset to create rollover, schedule downgrade, advance
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true, paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }),
+				s.resetFeature({ featureId: TestFeature.Messages }), // Creates rollover of 200
+				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.advanceToNextInvoice(), // Triggers downgrade at cycle end
+			],
+		});
 
-	const customerAfterDowngrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customerAfterDowngrade =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify product states
-	await expectCustomerProducts({
-		customer: customerAfterDowngrade,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		// Verify product states
+		await expectCustomerProducts({
+			customer: customerAfterDowngrade,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
 
-	// NO rollovers (free doesn't support them)
-	// Balance = 100 (free included only)
-	expectCustomerFeatureCorrect({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-		balance: 100,
-	});
+		// NO rollovers (free doesn't support them)
+		// Balance = 100 (free included only)
+		expectCustomerFeatureCorrect({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+			balance: 100,
+		});
 
-	expectNoRollovers({
-		customer: customerAfterDowngrade,
-		featureId: TestFeature.Messages,
-	});
-});
+		expectNoRollovers({
+			customer: customerAfterDowngrade,
+			featureId: TestFeature.Messages,
+		});
+	},
+);

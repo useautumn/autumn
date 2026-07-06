@@ -20,93 +20,96 @@ const VOLUME_TIERS = [
 	{ to: "inf" as const, amount: 0, flat_amount: 50 },
 ];
 
-test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-edge 1: volume prepaid downgrade keeps inline schedule items")}`, async () => {
-	const customerId = "sched-prepaid-ent-volume-inline";
-	const premiumQuantity = 600;
-	const proQuantity = 300;
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-entities-edge 1: volume prepaid downgrade keeps inline schedule items")}`,
+	async () => {
+		const customerId = "sched-prepaid-ent-volume-inline";
+		const premiumQuantity = 600;
+		const proQuantity = 300;
 
-	const volumePrepaidItem = items.volumePrepaidMessages({
-		includedUsage: INCLUDED_USAGE,
-		billingUnits: 1,
-		tiers: VOLUME_TIERS,
-	});
+		const volumePrepaidItem = items.volumePrepaidMessages({
+			includedUsage: INCLUDED_USAGE,
+			billingUnits: 1,
+			tiers: VOLUME_TIERS,
+		});
 
-	const premium = products.premium({
-		id: "premium-volume-prepaid",
-		items: [volumePrepaidItem],
-	});
-	const pro = products.pro({
-		id: "pro-volume-prepaid",
-		items: [volumePrepaidItem],
-	});
+		const premium = products.premium({
+			id: "premium-volume-prepaid",
+			items: [volumePrepaidItem],
+		});
+		const pro = products.pro({
+			id: "pro-volume-prepaid",
+			items: [volumePrepaidItem],
+		});
 
-	const { autumnV1, entities, ctx, testClockId } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro] }),
-			s.entities({ count: 1, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({
-				productId: premium.id,
-				entityIndex: 0,
-				options: [
-					{ feature_id: TestFeature.Messages, quantity: premiumQuantity },
-				],
-			}),
-		],
-	});
+		const { autumnV1, entities, ctx, testClockId } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({
+					productId: premium.id,
+					entityIndex: 0,
+					options: [
+						{ feature_id: TestFeature.Messages, quantity: premiumQuantity },
+					],
+				}),
+			],
+		});
 
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		entity_id: entities[0].id,
-		options: [{ feature_id: TestFeature.Messages, quantity: proQuantity }],
-		redirect_mode: "if_required",
-	});
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: pro.id,
+			entity_id: entities[0].id,
+			options: [{ feature_id: TestFeature.Messages, quantity: proQuantity }],
+			redirect_mode: "if_required",
+		});
 
-	const entityBeforeCycle = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	await expectProductCanceling({
-		customer: entityBeforeCycle,
-		productId: premium.id,
-	});
-	await expectProductScheduled({
-		customer: entityBeforeCycle,
-		productId: pro.id,
-	});
-	expectCustomerFeatureCorrect({
-		customer: entityBeforeCycle,
-		featureId: TestFeature.Messages,
-		balance: premiumQuantity,
-		usage: 0,
-	});
+		const entityBeforeCycle = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		await expectProductCanceling({
+			customer: entityBeforeCycle,
+			productId: premium.id,
+		});
+		await expectProductScheduled({
+			customer: entityBeforeCycle,
+			productId: pro.id,
+		});
+		expectCustomerFeatureCorrect({
+			customer: entityBeforeCycle,
+			featureId: TestFeature.Messages,
+			balance: premiumQuantity,
+			usage: 0,
+		});
 
-	await expectStripeSubscriptionCorrect({ ctx, customerId });
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
 
-	await advanceToNextInvoice({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-	});
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+		});
 
-	const entityAfterCycle = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
-	await expectCustomerProducts({
-		customer: entityAfterCycle,
-		active: [pro.id],
-		notPresent: [premium.id],
-	});
-	expectCustomerFeatureCorrect({
-		customer: entityAfterCycle,
-		featureId: TestFeature.Messages,
-		balance: proQuantity,
-		usage: 0,
-	});
+		const entityAfterCycle = await autumnV1.entities.get<ApiEntityV0>(
+			customerId,
+			entities[0].id,
+		);
+		await expectCustomerProducts({
+			customer: entityAfterCycle,
+			active: [pro.id],
+			notPresent: [premium.id],
+		});
+		expectCustomerFeatureCorrect({
+			customer: entityAfterCycle,
+			featureId: TestFeature.Messages,
+			balance: proQuantity,
+			usage: 0,
+		});
 
-	await expectStripeSubscriptionCorrect({ ctx, customerId });
-});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
