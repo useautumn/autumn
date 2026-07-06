@@ -117,6 +117,15 @@ const getCurrentPhaseIndex = ({
 	return currentPhaseIndex;
 };
 
+const hasScheduledCustomerProducts = ({
+	billingContext,
+}: {
+	billingContext: Pick<CreateScheduleBillingContext, "fullCustomer">;
+}) =>
+	billingContext.fullCustomer.customer_products.some(
+		(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
+	);
+
 /** Build billing context for the immediate phase. */
 export const setupCreateScheduleBillingContext = async ({
 	ctx,
@@ -160,7 +169,10 @@ export const setupCreateScheduleBillingContext = async ({
 		currentEpochMs: billingContext.currentEpochMs,
 		cycleBoundaryMs,
 	});
-	const immediatePhaseIndex = billingContext.stripeSubscriptionSchedule
+	const isExistingScheduleUpdate =
+		billingContext.stripeSubscriptionSchedule ||
+		hasScheduledCustomerProducts({ billingContext });
+	const immediatePhaseIndex = isExistingScheduleUpdate
 		? getCurrentPhaseIndex({
 				phases: normalizedPhases,
 				currentEpochMs: billingContext.currentEpochMs,
