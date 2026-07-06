@@ -5,6 +5,7 @@ import {
 	isOneOffProduct,
 	isPastStartDate,
 	isProductPaidAndRecurring,
+	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -120,11 +121,57 @@ const getCurrentPhaseIndex = ({
 const hasScheduledCustomerProducts = ({
 	billingContext,
 }: {
-	billingContext: Pick<CreateScheduleBillingContext, "fullCustomer">;
+	billingContext: Pick<MultiAttachBillingContext, "fullCustomer">;
 }) =>
 	billingContext.fullCustomer.customer_products.some(
 		(customerProduct) => (customerProduct.scheduled_ids?.length ?? 0) > 0,
 	);
+
+const setupCreateScheduleImmediatePhase = async ({
+	ctx,
+	params,
+	preview,
+	billingContext,
+	normalizedPhases,
+}: {
+	ctx: AutumnContext;
+	params: CreateScheduleParamsV0;
+	preview: boolean;
+	billingContext: MultiAttachBillingContext;
+	normalizedPhases: ReturnType<typeof normalizeCreateSchedulePhases>;
+}) => {
+	const isExistingScheduleUpdate =
+		billingContext.stripeSubscriptionSchedule ||
+		hasScheduledCustomerProducts({ billingContext });
+	const immediatePhaseIndex = isExistingScheduleUpdate
+		? getCurrentPhaseIndex({
+				phases: normalizedPhases,
+				currentEpochMs: billingContext.currentEpochMs,
+			})
+		: 0;
+	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
+
+	if (immediatePhaseIndex === 0) {
+		return {
+			billingContext,
+			immediatePhase,
+			futurePhases: normalizedPhases.slice(1),
+		};
+	}
+
+	return {
+		billingContext: await setupImmediateMultiProductBillingContext({
+			ctx,
+			params: phaseToImmediateParams({ params, phase: immediatePhase }),
+			preview,
+			billingStartsAt: immediatePhase.starts_at,
+			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
+			includeScheduledProductsForScheduleLookup: true,
+		}),
+		immediatePhase,
+		futurePhases: normalizedPhases.slice(immediatePhaseIndex + 1),
+	};
+};
 
 /** Build billing context for the immediate phase. */
 export const setupCreateScheduleBillingContext = async ({
@@ -170,29 +217,15 @@ export const setupCreateScheduleBillingContext = async ({
 		currentEpochMs: billingContext.currentEpochMs,
 		cycleBoundaryMs,
 	});
-	const isExistingScheduleUpdate =
-		billingContext.stripeSubscriptionSchedule ||
-		hasScheduledCustomerProducts({ billingContext });
-	const immediatePhaseIndex = isExistingScheduleUpdate
-		? getCurrentPhaseIndex({
-				phases: normalizedPhases,
-				currentEpochMs: billingContext.currentEpochMs,
-			})
-		: 0;
-	const immediatePhase = normalizedPhases[immediatePhaseIndex]!;
-
-	if (immediatePhaseIndex > 0) {
-		billingContext = await setupImmediateMultiProductBillingContext({
-			ctx,
-			params: phaseToImmediateParams({ params, phase: immediatePhase }),
-			preview,
-			billingStartsAt: immediatePhase.starts_at,
-			billingStartsAtToleranceMs: FIRST_PHASE_TOLERANCE_MS,
-			includeScheduledProductsForScheduleLookup: true,
-		});
-	}
-
-	const futurePhases = normalizedPhases.slice(immediatePhaseIndex + 1);
+	const immediatePhaseContext = await setupCreateScheduleImmediatePhase({
+		ctx,
+		params,
+		preview,
+		billingContext,
+		normalizedPhases,
+	});
+	billingContext = immediatePhaseContext.billingContext;
+	const { immediatePhase, futurePhases } = immediatePhaseContext;
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
