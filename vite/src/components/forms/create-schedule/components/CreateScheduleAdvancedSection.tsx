@@ -4,6 +4,10 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import {
+	canResetScheduleBillingCycle,
+	hasMultipleImmediateSchedulePlans,
+} from "../createScheduleFormSchema";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function CreateScheduleAdvancedSection() {
@@ -22,17 +26,23 @@ export function CreateScheduleAdvancedSection() {
 	}, [isCheckoutRedirect, enablePlanImmediately, form]);
 
 	const isProrate = billingBehavior !== "none";
-	const hasMultipleImmediatePlans = (phases[0]?.plans.length ?? 0) > 1;
-	const disabledReason = hasMultipleImmediatePlans
+	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({ phases });
+	const prorateDisabledReason = hasMultipleImmediatePlans
 		? "Not yet supported for multi attach"
 		: null;
+	const resetDisabledReason =
+		hasMultipleImmediatePlans && !canResetScheduleBillingCycle({ phases })
+			? "Not yet supported for multi attach"
+			: null;
 
 	const renderToggle = ({
 		checked,
 		onCheckedChange,
+		disabledReason,
 	}: {
 		checked: boolean;
 		onCheckedChange: (checked: boolean) => void;
+		disabledReason: string | null;
 	}): ReactNode => (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -57,6 +67,7 @@ export function CreateScheduleAdvancedSection() {
 					checked: isProrate,
 					onCheckedChange: (checked) =>
 						form.setFieldValue("billingBehavior", checked ? null : "none"),
+					disabledReason: prorateDisabledReason,
 				})}
 			/>
 			<ConfigRow
@@ -66,6 +77,7 @@ export function CreateScheduleAdvancedSection() {
 					checked: resetBillingCycle,
 					onCheckedChange: (checked) =>
 						form.setFieldValue("resetBillingCycle", !!checked),
+					disabledReason: resetDisabledReason,
 				})}
 			/>
 			{isCheckoutRedirect && (
