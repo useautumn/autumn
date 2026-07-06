@@ -52,6 +52,7 @@ export const customerProducts = pgTable(
 		quantity: numeric({ mode: "number" }).default(1),
 
 		is_custom: boolean("is_custom").default(false).notNull(),
+		license_assignment_id: text("license_assignment_id"),
 
 		// Optional...
 		customer_id: text("customer_id"),

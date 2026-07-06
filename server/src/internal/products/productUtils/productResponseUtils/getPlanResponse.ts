@@ -3,6 +3,8 @@ import {
 	ApiFreeTrialV2Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
+	billingControlsFromColumns,
+	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -12,11 +14,15 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
-	billingControlsFromColumns,
-	diffPlanV1,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/index.js";
+
+type PlanLicenseLink = Awaited<
+	ReturnType<typeof planLicenseRepo.listWithLicensePlanIdByParent>
+>[number];
+
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
@@ -50,6 +56,7 @@ export const getPlanResponse = async ({
 	currency = "usd",
 	baseFullProduct,
 	resolveBaseFullProduct = true,
+	licenseLinks,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -59,6 +66,7 @@ export const getPlanResponse = async ({
 	currency?: string;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
+	licenseLinks?: PlanLicenseLink[];
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -119,6 +127,29 @@ export const getPlanResponse = async ({
 		fullProduct: product,
 	});
 
+	const resolvedLicenseLinks =
+		licenseLinks ??
+		(ctx
+			? await planLicenseRepo.listWithLicensePlanIdByParent({
+					db: ctx.db,
+					parentInternalProductId: product.internal_id,
+				})
+			: []);
+	const licenses =
+		resolvedLicenseLinks.length > 0
+			? resolvedLicenseLinks.map(({ planLicense, licensePlanId }) => ({
+					license_plan_id: licensePlanId,
+					included: planLicense.included,
+					prepaid_only: planLicense.prepaid_only,
+					...(planLicense.pooled_feature_ids.length > 0
+						? { pooled_feature_ids: planLicense.pooled_feature_ids }
+						: {}),
+					...(planLicense.customize
+						? { customize: planLicense.customize }
+						: {}),
+				}))
+			: undefined;
+
 	// 9. Build Plan response
 	const plan = {
 		id: product.id,
@@ -132,6 +163,7 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
+		licenses,
 		free_trial: freeTrial,
 
 		created_at: product.created_at,

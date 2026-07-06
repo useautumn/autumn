@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/index.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -60,6 +61,21 @@ export const handleListPlansV2 = createRoute({
 		const endedAt = Date.now();
 		ctx.logger.debug(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
+		const licenseLinkRows =
+			await planLicenseRepo.listWithLicensePlanIdByParents({
+				db,
+				parentInternalProductIds: products.map(
+					(product) => product.internal_id,
+				),
+			});
+		const licenseLinksByParent = new Map<string, typeof licenseLinkRows>();
+		for (const row of licenseLinkRows) {
+			const parentId = row.planLicense.parent_internal_product_id;
+			const rows = licenseLinksByParent.get(parentId) ?? [];
+			rows.push(row);
+			licenseLinksByParent.set(parentId, rows);
+		}
+
 		const plansList = await Promise.all(
 			products.map((product) =>
 				getPlanResponse({
@@ -70,6 +86,7 @@ export const handleListPlansV2 = createRoute({
 					currency: org.default_currency || undefined,
 					baseFullProduct: findBaseFullProduct({ product, products }),
 					resolveBaseFullProduct: false,
+					licenseLinks: licenseLinksByParent.get(product.internal_id) ?? [],
 				}),
 			),
 		);
