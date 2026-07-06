@@ -1,7 +1,11 @@
-import type { AdditionalCurrencyPrice } from "@autumn/shared";
-import { IconButton, Input, InputGroup, InputGroupInput } from "@autumn/ui";
-import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
+import {
+	type AdditionalCurrencyPrice,
+	roundToCurrencyPrecision,
+} from "@autumn/shared";
+import { IconButton, InputGroup, InputGroupInput } from "@autumn/ui";
+import { TrashSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { CurrencyPicker } from "./CurrencyPicker";
 
 export const AdditionalCurrenciesEditor = ({
 	currencies,
@@ -17,12 +21,16 @@ export const AdditionalCurrenciesEditor = ({
 		Record<number, string | undefined>
 	>({});
 
-	const updateEntry = (
-		index: number,
-		patch: Partial<AdditionalCurrencyPrice>,
-	) => {
+	const updateAmount = (index: number, raw: string) => {
+		setEditingAmounts((prev) => ({ ...prev, [index]: raw }));
+		const parsed = Number.parseFloat(raw);
 		const next = [...entries];
-		next[index] = { ...next[index], ...patch };
+		next[index] = {
+			...next[index],
+			amount: Number.isNaN(parsed)
+				? 0
+				: roundToCurrencyPrecision(Math.max(0, parsed), next[index].currency),
+		};
 		onChange(next);
 	};
 
@@ -36,74 +44,56 @@ export const AdditionalCurrenciesEditor = ({
 		<div className="space-y-1.5">
 			{entries.map((entry, index) => (
 				<div
+					className="flex items-center gap-2"
 					key={`currency-${
-						// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional while codes are edited
+						// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional, codes are picked once
 						index
 					}`}
-					className="flex gap-2 items-center"
 				>
-					<Input
-						value={entry.currency}
-						onChange={(e) =>
-							updateEntry(index, {
-								currency: e.target.value
-									.replace(/[^a-zA-Z]/g, "")
-									.toLowerCase()
-									.slice(0, 3),
-							})
-						}
-						placeholder="eur"
-						className="w-16 shrink-0 uppercase"
-						maxLength={3}
-					/>
+					<span className="w-16 shrink-0 text-tertiary-foreground text-xs uppercase">
+						{entry.currency}
+					</span>
 					<InputGroup>
 						<InputGroupInput
-							value={displayAmount(index, entry.amount)}
+							inputMode="decimal"
+							onBlur={() =>
+								setEditingAmounts((prev) => ({ ...prev, [index]: undefined }))
+							}
+							onChange={(e) => updateAmount(index, e.target.value)}
 							onFocus={() =>
 								setEditingAmounts((prev) => ({
 									...prev,
 									[index]: entry.amount === 0 ? "" : entry.amount.toString(),
 								}))
 							}
-							onChange={(e) => {
-								const raw = e.target.value;
-								setEditingAmounts((prev) => ({ ...prev, [index]: raw }));
-								const parsed = Number.parseFloat(raw);
-								updateEntry(index, {
-									amount: Number.isNaN(parsed) ? 0 : Math.max(0, parsed),
-								});
-							}}
-							onBlur={() =>
-								setEditingAmounts((prev) => ({ ...prev, [index]: undefined }))
-							}
-							inputMode="decimal"
-							placeholder="0.00"
 							onKeyDown={(e) => {
 								if (e.key === "-" || e.key === "Minus") {
 									e.preventDefault();
 								}
 							}}
+							placeholder="0.00"
+							value={displayAmount(index, entry.amount)}
 						/>
 					</InputGroup>
 					<IconButton
-						variant="muted"
-						onClick={() => onChange(entries.filter((_, i) => i !== index))}
+						className="shrink-0 p-1 text-tertiary-foreground hover:text-red-500"
 						icon={<TrashSimpleIcon size={10} />}
-						className="p-1 text-tertiary-foreground hover:text-red-500 shrink-0"
+						onClick={() => onChange(entries.filter((_, i) => i !== index))}
+						variant="muted"
 					/>
 				</div>
 			))}
-			<IconButton
-				variant="muted"
-				className="text-tertiary-foreground text-xs"
-				onClick={() => onChange([...entries, { currency: "", amount: 0 }])}
-				icon={<PlusIcon size={10} />}
-				iconOrientation="left"
-			>
-				{entries.length === 0
-					? `Add currency (base ${baseCurrency.toUpperCase()})`
-					: "Add currency"}
-			</IconButton>
+			<CurrencyPicker
+				excludedCodes={[baseCurrency, ...entries.map((e) => e.currency)]}
+				label={
+					entries.length === 0
+						? `Add currency (base ${baseCurrency.toUpperCase()})`
+						: "Add currency"
+				}
+				onSelect={(code) =>
+					onChange([...entries, { currency: code, amount: 0 }])
+				}
+			/>
 		</div>
 	);
 };

@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
+import { isValidCurrencyCode } from "../../utils/currencyUtils/isoCurrencies";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
@@ -58,7 +59,7 @@ export const CustomerDataSchema = z
 
 		currency: z
 			.string()
-			.regex(/^[a-zA-Z]{3}$/, "must be a 3-letter ISO currency code")
+			.refine(isValidCurrencyCode, "must be a valid ISO 4217 currency code")
 			.nullish()
 			.meta({
 				description:

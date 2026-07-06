@@ -29,6 +29,7 @@ import {
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
 import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
+import { CurrencyPicker } from "../shared/CurrencyPicker";
 import { BillingUnits } from "./BillingUnits";
 
 const getTierToDisplay = ({
@@ -108,7 +109,6 @@ export function PriceTiers({
 		{},
 	);
 	const [isEditing, setIsEditing] = useState<Record<string, boolean>>({});
-	const [pendingCurrencyCode, setPendingCurrencyCode] = useState("");
 
 	// Auto-select prepaid when volume-based is active with multiple tiers
 	useEffect(() => {
@@ -252,22 +252,13 @@ export function PriceTiers({
 	const amountField = isFlatMode ? "flat_amount" : "amount";
 	const currencyCodes = itemCurrencyCodes(item);
 
-	const addPendingCurrency = () => {
-		const code = pendingCurrencyCode.toLowerCase();
-		if (
-			code.length !== 3 ||
-			code === currency.toLowerCase() ||
-			currencyCodes.includes(code)
-		) {
-			return;
-		}
+	const addCurrency = (code: string) => {
 		setItem(
 			stampBaseCurrency({
-				item: addCurrencyToTiers({ item, code }),
+				item: addCurrencyToTiers({ item, code: code.toLowerCase() }),
 				orgCurrency: currency,
 			}),
 		);
-		setPendingCurrencyCode("");
 	};
 
 	return (
@@ -383,38 +374,17 @@ export function PriceTiers({
 			</IconButton>
 
 			{org?.config?.multi_currency && (
-				<div className="flex gap-2 items-center">
-					<Input
-						value={pendingCurrencyCode}
-						onChange={(e) =>
-							setPendingCurrencyCode(
-								e.target.value
-									.replace(/[^a-zA-Z]/g, "")
-									.toLowerCase()
-									.slice(0, 3),
-							)
-						}
-						onKeyDown={(e) => {
-							if (e.key === "Enter") addPendingCurrency();
-						}}
-						placeholder="eur"
-						className="w-16 shrink-0 uppercase"
-						maxLength={3}
+				<div className="flex flex-wrap items-center gap-2">
+					<CurrencyPicker
+						excludedCodes={[currency, ...currencyCodes]}
+						label="Add currency"
+						onSelect={addCurrency}
 					/>
-					<IconButton
-						variant="muted"
-						className="text-tertiary-foreground text-xs"
-						onClick={addPendingCurrency}
-						icon={<PlusIcon size={10} />}
-						iconOrientation="left"
-					>
-						Add currency
-					</IconButton>
 					{currencyCodes.map((code) => (
 						<IconButton
-							key={code}
-							variant="muted"
 							className="text-tertiary-foreground text-xs uppercase"
+							icon={<TrashSimpleIcon size={10} />}
+							key={code}
 							onClick={() =>
 								setItem(
 									stampBaseCurrency({
@@ -423,7 +393,7 @@ export function PriceTiers({
 									}),
 								)
 							}
-							icon={<TrashSimpleIcon size={10} />}
+							variant="muted"
 						>
 							{code}
 						</IconButton>

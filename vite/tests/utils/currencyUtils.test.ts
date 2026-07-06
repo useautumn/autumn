@@ -71,6 +71,30 @@ describe("tier currency helpers", () => {
 		expect(item.tiers?.[0].additional_currencies?.[0].amount).toBe(0);
 		expect(item.tiers?.[1].additional_currencies?.[0].amount).toBe(0.25);
 	});
+
+	test("rounds tier currency amounts to the currency's precision", () => {
+		let item = addCurrencyToTiers({ item: tieredItem(), code: "eur" });
+		item = updateTierCurrencyAmount({
+			item,
+			tierIndex: 0,
+			code: "eur",
+			field: "amount",
+			value: "0.25678",
+		});
+		expect(item.tiers?.[0].additional_currencies?.[0].amount).toBe(0.26);
+	});
+
+	test("clamps negative tier currency amounts to zero", () => {
+		let item = addCurrencyToTiers({ item: tieredItem(), code: "eur" });
+		item = updateTierCurrencyAmount({
+			item,
+			tierIndex: 0,
+			code: "eur",
+			field: "amount",
+			value: "-5",
+		});
+		expect(item.tiers?.[0].additional_currencies?.[0].amount).toBe(0);
+	});
 });
 
 describe("normalizeItemCurrencies", () => {

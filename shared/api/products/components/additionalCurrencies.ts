@@ -1,13 +1,16 @@
 import { Infinite } from "@models/productModels/productEnums.js";
+import { isValidCurrencyCode } from "@utils/currencyUtils/isoCurrencies.js";
 import { z } from "zod/v4";
 
+const currencyCodeSchema = z
+	.string()
+	.refine(isValidCurrencyCode, "must be a valid ISO 4217 currency code")
+	.meta({
+		description: "Three-letter ISO 4217 currency code (e.g. 'eur', 'gbp').",
+	});
+
 export const AdditionalCurrencyPriceSchema = z.object({
-	currency: z
-		.string()
-		.regex(/^[a-zA-Z]{3}$/, "must be a 3-letter ISO currency code")
-		.meta({
-			description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
-		}),
+	currency: currencyCodeSchema,
 	amount: z.number().meta({
 		description:
 			"Price amount in this currency. Set explicitly per currency, not converted from the base amount.",
@@ -20,12 +23,7 @@ export type AdditionalCurrencyPrice = z.infer<
 
 export const AdditionalCurrencyTierSchema = z
 	.object({
-		currency: z
-			.string()
-			.regex(/^[a-zA-Z]{3}$/, "must be a 3-letter ISO currency code")
-			.meta({
-				description: "Three-letter ISO currency code (e.g. 'eur', 'gbp').",
-			}),
+		currency: currencyCodeSchema,
 		amount: z.number().optional().meta({
 			description: "Per-unit amount for this tier in this currency.",
 		}),

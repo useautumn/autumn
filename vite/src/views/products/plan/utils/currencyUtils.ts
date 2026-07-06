@@ -1,7 +1,8 @@
-import type {
-	AdditionalCurrencyPrice,
-	AdditionalCurrencyTier,
-	ProductItem,
+import {
+	type AdditionalCurrencyPrice,
+	type AdditionalCurrencyTier,
+	type ProductItem,
+	roundToCurrencyPrecision,
 } from "@autumn/shared";
 
 export const stampBaseCurrency = ({
@@ -92,7 +93,12 @@ export const updateTierCurrencyAmount = ({
 		...tier,
 		additional_currencies: (tier.additional_currencies ?? []).map((entry) =>
 			entry.currency.toLowerCase() === code.toLowerCase()
-				? { ...entry, [field]: Number.isNaN(parsed) ? 0 : Math.max(0, parsed) }
+				? {
+						...entry,
+						[field]: Number.isNaN(parsed)
+							? 0
+							: roundToCurrencyPrecision(Math.max(0, parsed), code),
+					}
 				: entry,
 		),
 	};
