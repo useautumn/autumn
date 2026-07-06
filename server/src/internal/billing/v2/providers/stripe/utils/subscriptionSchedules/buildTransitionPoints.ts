@@ -19,13 +19,18 @@ export const buildTransitionPoints = ({
 	customerProducts: FullCusProduct[];
 	nowMs?: number;
 	trialEndsAt?: number;
-	newBillingCycleAnchorMs?: number;
+	newBillingCycleAnchorMs?: number | number[];
 }): (number | undefined)[] => {
 	const timestamps = new Set<number>();
 
 	// Add new billing cycle anchor as a transition point
-	if (newBillingCycleAnchorMs && newBillingCycleAnchorMs > nowMs) {
-		timestamps.add(newBillingCycleAnchorMs);
+	const billingCycleAnchorMs = Array.isArray(newBillingCycleAnchorMs)
+		? newBillingCycleAnchorMs
+		: [newBillingCycleAnchorMs];
+	for (const anchorMs of billingCycleAnchorMs) {
+		if (anchorMs && anchorMs > nowMs) {
+			timestamps.add(anchorMs);
+		}
 	}
 
 	for (const customerProduct of customerProducts) {

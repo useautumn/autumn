@@ -79,7 +79,7 @@ const customerProductsToPhaseItems = ({
 	return [...storedItems, ...inlineItems];
 };
 
-const buildFreePhasePlaceholderItem = ({
+export const buildFreeRecurringPlaceholderItem = ({
 	ctx,
 	customerProducts,
 }: {
@@ -148,14 +148,14 @@ const stripeDiscountsToPhaseDiscounts = ({
 	);
 };
 
-const getBillingCycleAnchorResetAt = ({
+export const getBillingCycleAnchorResetAts = ({
 	customerProducts,
 	nowMs,
 }: {
 	customerProducts: FullCusProduct[];
 	nowMs: number;
 }) => {
-	const futureResetTimestamps = Array.from(
+	return Array.from(
 		new Set(
 			customerProducts
 				.map(
@@ -163,16 +163,25 @@ const getBillingCycleAnchorResetAt = ({
 				)
 				.filter(
 					(resetAt): resetAt is number =>
-						typeof resetAt === "number" && resetAt > nowMs,
+						typeof resetAt === "number" && resetAt >= nowMs,
 				),
 		),
 	).sort((a, b) => a - b);
+};
 
-	if (futureResetTimestamps.length === 0) {
-		return undefined;
-	}
+export const getBillingCycleAnchorResetAt = ({
+	customerProducts,
+	nowMs,
+}: {
+	customerProducts: FullCusProduct[];
+	nowMs: number;
+}) => {
+	const resetTimestamps = getBillingCycleAnchorResetAts({
+		customerProducts,
+		nowMs,
+	});
 
-	return futureResetTimestamps[0];
+	return resetTimestamps[0];
 };
 
 /**
@@ -201,7 +210,7 @@ export const buildStripePhasesUpdate = ({
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,
 	);
-	const billingCycleAnchorResetAt = getBillingCycleAnchorResetAt({
+	const billingCycleAnchorResetAts = getBillingCycleAnchorResetAts({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 	});
@@ -211,7 +220,7 @@ export const buildStripePhasesUpdate = ({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 		trialEndsAt: normalizedTrialEndsAt,
-		newBillingCycleAnchorMs: billingCycleAnchorResetAt,
+		newBillingCycleAnchorMs: billingCycleAnchorResetAts,
 	});
 
 	const debugLogs = false;
@@ -257,15 +266,20 @@ export const buildStripePhasesUpdate = ({
 			phaseStartMs: startMs,
 			phaseEndMs: endMs,
 		});
+		const needsFreePhasePlaceholder =
+			endMs &&
+			(activeCustomerProducts.length > 0 ||
+				(normalizedCustomerProducts.some(
+					(product) => product.starts_at < startMs,
+				) &&
+					normalizedCustomerProducts.some(
+						(product) => product.starts_at >= endMs,
+					)));
 		if (
 			phaseItems.length === 0 &&
-			endMs &&
-			normalizedCustomerProducts.some(
-				(product) => product.starts_at < startMs,
-			) &&
-			normalizedCustomerProducts.some((product) => product.starts_at >= endMs)
+			needsFreePhasePlaceholder
 		) {
-			const placeholderItem = buildFreePhasePlaceholderItem({
+			const placeholderItem = buildFreeRecurringPlaceholderItem({
 				ctx,
 				customerProducts: normalizedCustomerProducts,
 			});
@@ -292,7 +306,7 @@ export const buildStripePhasesUpdate = ({
 
 		const phaseStartDateSeconds = msToSeconds(startMs);
 		const isBillingCycleAnchorResetPhase =
-			billingCycleAnchorResetAt === startMs;
+			billingCycleAnchorResetAts.includes(startMs);
 		const hasOneOffInvoiceItems = phaseAddInvoiceItems.length > 0;
 		const shouldInvoicePhaseTransition =
 			phaseIndex > 0 && phaseItems.length > 0;
