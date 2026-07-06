@@ -170,7 +170,7 @@ const inheritStripeResourcesFromLatestVersion = async ({
 
 	let basePlanVersionsPromise = basePlanVersionsCache.get(basePlanId);
 	if (!basePlanVersionsPromise) {
-		basePlanVersionsPromise = ProductService.listFull({
+		basePlanVersionsPromise = PlanService.listFull({
 			db: ctx.db,
 			orgId: ctx.org.id,
 			env: ctx.env,
