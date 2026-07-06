@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	type ApiPlanV1,
 	ApiVersion,
 	type FullProduct,
 	ProductItemFeatureType,
@@ -147,6 +148,73 @@ test.concurrent(
 			base: baseFull,
 			variant: variantFull,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("variants stripe resources: renaming root product updates Stripe product")}`,
+	async () => {
+		const cid = readableVariantTestId("stripe_root_rename");
+		const base = products.base({
+			id: `stripe_base_${cid}`,
+			items: [
+				items.monthlyPrice({ price: 20 }),
+				prepaidMessages({
+					price: 3,
+					billingUnits: 100,
+					interval: ProductItemInterval.Month,
+				}),
+			],
+		});
+
+		const { ctx } = await initScenario({
+			customerId: cid,
+			setup: [s.customer(), s.products({ list: [base] })],
+			actions: [],
+		});
+
+		const rpc = new AutumnRpcCli({
+			secretKey: ctx.orgSecretKey,
+			version: ApiVersion.V2_1,
+		});
+		const variantId = `stripe_var_${cid}`;
+		const updatedName = "Stripe Root Product Updated";
+
+		await createVariantPlan({
+			rpc,
+			basePlanId: base.id,
+			variantPlanId: variantId,
+			name: "Stripe Root Rename Variant",
+		});
+
+		const baseFull = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: base.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const variantFull = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: variantId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		expectStripeResourcesCarriedToVariant({
+			base: baseFull,
+			variant: variantFull,
+		});
+
+		const stripeProductId = baseFull.processor?.id;
+		expect(stripeProductId).toBeTruthy();
+
+		await rpc.plans.update<ApiPlanV1>(base.id, {
+			name: updatedName,
+		});
+
+		const stripeProduct = await ctx.stripeCli.products.retrieve(
+			stripeProductId!,
+		);
+		expect(stripeProduct.name).toBe(updatedName);
 	},
 );
 
@@ -386,6 +454,124 @@ test.concurrent(
 				source: variantAAfterAttach,
 				target: variantBAfterAttach,
 			});
+		} finally {
+			await OrgService.update({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				updates: { config: originalConfig },
+			});
+		}
+	},
+);
+
+// Red: renaming a sibling variant mutates the shared Stripe Product name.
+// Green: shared Stripe Product names stay stable for existing subscriptions.
+test.concurrent(
+	`${chalk.yellowBright("variants stripe resources: renaming sibling does not rename shared Stripe product")}`,
+	async () => {
+		const cid = readableVariantTestId("stripe_rename_shared");
+		const siblingCustomerId = `${cid}_sibling`;
+		const base = products.base({
+			id: `stripe_base_${cid}`,
+			items: [
+				items.monthlyPrice({ price: 20 }),
+				prepaidMessages({
+					price: 3,
+					billingUnits: 100,
+					interval: ProductItemInterval.Month,
+				}),
+			],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId: cid,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.otherCustomers([
+					{ id: siblingCustomerId, paymentMethod: "success" },
+				]),
+				s.products({ list: [base], createInStripe: false }),
+			],
+			actions: [],
+		});
+
+		const originalConfig = ctx.org.config;
+		const rpc = new AutumnRpcCli({
+			secretKey: ctx.orgSecretKey,
+			version: ApiVersion.V2_1,
+		});
+		const variantAId = `stripe_var_a_${cid}`;
+		const variantBId = `stripe_var_b_${cid}`;
+		const variantAName = "Stripe Rename Variant A";
+
+		try {
+			await OrgService.update({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				updates: {
+					config: {
+						...originalConfig,
+						disable_stripe_writes: true,
+					},
+				},
+			});
+
+			await createVariantPlan({
+				rpc,
+				basePlanId: base.id,
+				variantPlanId: variantAId,
+				name: variantAName,
+			});
+			await createVariantPlan({
+				rpc,
+				basePlanId: base.id,
+				variantPlanId: variantBId,
+				name: "Stripe Rename Variant B",
+			});
+
+			await OrgService.update({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				updates: { config: originalConfig },
+			});
+
+			await autumnV2_2.billing.attach({
+				customer_id: cid,
+				plan_id: variantAId,
+			});
+			const variantAAfterAttach = await ProductService.getFull({
+				db: ctx.db,
+				idOrInternalId: variantAId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+
+			await autumnV2_2.billing.attach({
+				customer_id: siblingCustomerId,
+				plan_id: variantBId,
+			});
+			const variantBAfterAttach = await ProductService.getFull({
+				db: ctx.db,
+				idOrInternalId: variantBId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			});
+			expectStripeResourcesMatch({
+				source: variantAAfterAttach,
+				target: variantBAfterAttach,
+			});
+
+			const sharedStripeProductId = variantAAfterAttach.processor?.id;
+			expect(sharedStripeProductId).toBeTruthy();
+
+			await rpc.plans.update<ApiPlanV1>(variantBId, {
+				name: "Stripe Rename Variant B Updated",
+			});
+
+			const sharedStripeProduct = await ctx.stripeCli.products.retrieve(
+				sharedStripeProductId!,
+			);
+			expect(sharedStripeProduct.name).toBe(variantAName);
 		} finally {
 			await OrgService.update({
 				db: ctx.db,
