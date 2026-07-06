@@ -83,11 +83,11 @@ export const sendSvixEvent = async ({
 			idempotencyKey ? { idempotencyKey } : undefined,
 		);
 	} catch (error) {
-		// Svix's ApiException carries the 422 reason on `.body`; log it plus the
-		// tags so tag-validation rejections aren't invisible.
-		const svixBody = (error as { body?: unknown }).body;
+		// Log the tags (the usual culprit) so tag-validation rejections aren't
+		// invisible. Don't log Svix's raw error body — it can echo request data.
+		const status = error as { code?: number; statusCode?: number };
 		ctx.logger.error(
-			`[svix] Failed to send ${eventType}: ${error} | body=${JSON.stringify(svixBody)} | tags=${JSON.stringify(tags ?? [])}`,
+			`[svix] Failed to send ${eventType}: ${error} | status=${status.code ?? status.statusCode} | tags=${JSON.stringify(tags ?? [])}`,
 		);
 		Sentry.captureException(error, {
 			tags: getSentryTags({ ctx }),
