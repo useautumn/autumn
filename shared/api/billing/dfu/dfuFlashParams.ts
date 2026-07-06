@@ -56,6 +56,7 @@ const FlashStartingAfterSchema = z
 	.meta({ internal: true });
 
 const FlashBalanceFilterSchema = z.object({
+	// Intentionally the full EntInterval set: filters match against the line's own interval.
 	interval: z.enum(EntInterval).nullable().optional().meta({
 		description:
 			"Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line).",
