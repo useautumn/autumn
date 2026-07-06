@@ -279,8 +279,8 @@ function parseGetDelResult({
 			const isUsageWindowsField = fieldIndex === fields.length - 1;
 			try {
 				if (isUsageWindowsField) {
-					// Same fail-open semantics as getCachedFeatureBalances: a non-array
-					// blob reads as an empty counter set (still full-replaces).
+					// Empty/non-array snapshots mean no Redis rows to upsert; usage-window
+					// expiry and rolling are handled outside sync-back.
 					const parsedWindows = JSON.parse(value) as UsageWindow[];
 					usageWindowUpdates.push({
 						internal_customer_id: targets.internalCustomerId,
