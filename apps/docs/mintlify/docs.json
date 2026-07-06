@@ -208,7 +208,8 @@
 							"api-reference/billing/setupPayment",
 							"api-reference/billing/previewMultiAttach",
 							"api-reference/billing/multiAttach",
-							"api-reference/billing/createSchedule"
+							"api-reference/billing/createSchedule",
+							"api-reference/billing/import"
 						]
 					},
 					{

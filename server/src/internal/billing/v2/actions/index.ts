@@ -1,6 +1,7 @@
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { createSchedule } from "@/internal/billing/v2/actions/createSchedule/createSchedule";
 import { previewCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/previewCreateSchedule";
+import { flash } from "@/internal/billing/v2/actions/dfu/flash";
 import { legacyAttach } from "@/internal/billing/v2/actions/legacy/legacyAttach";
 import { renew } from "@/internal/billing/v2/actions/legacy/renew";
 import { updateQuantity } from "@/internal/billing/v2/actions/legacy/updateQuantity";
@@ -31,6 +32,7 @@ export const billingActions = {
 	syncProposals: syncProposals,
 	syncProposalsV2: syncProposalsV2,
 	verify: verify,
+	flash: flash,
 
 	legacy: {
 		attach: legacyAttach,

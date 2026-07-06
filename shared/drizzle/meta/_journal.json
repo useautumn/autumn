@@ -274,6 +274,13 @@
       "when": 1783090737295,
       "tag": "0038_exotic_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1783200161669,
+      "tag": "0039_unique_molecule_man",
+      "breakpoints": true
     }
   ]
 }

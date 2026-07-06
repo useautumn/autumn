@@ -74,14 +74,16 @@ export type CreateScheduleRedirectMode = ClosedEnum<
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export const BillingBehavior = {
+export const CreateScheduleBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
+export type CreateScheduleBillingBehavior = ClosedEnum<
+  typeof CreateScheduleBillingBehavior
+>;
 
 /**
  * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
@@ -1027,7 +1029,7 @@ export type CreateScheduleParams = {
   /**
    * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
    */
-  billingBehavior?: BillingBehavior | undefined;
+  billingBehavior?: CreateScheduleBillingBehavior | undefined;
   /**
    * Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
    */
@@ -1231,9 +1233,9 @@ export const CreateScheduleRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateScheduleRedirectMode);
 
 /** @internal */
-export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingBehavior
-> = z.enum(BillingBehavior);
+export const CreateScheduleBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleBillingBehavior
+> = z.enum(CreateScheduleBillingBehavior);
 
 /** @internal */
 export type StartsAt2$Outbound = number | string;
@@ -2432,7 +2434,7 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       CreateScheduleRedirectMode$outboundSchema,
       "if_required",
     ),
-    billingBehavior: z.optional(BillingBehavior$outboundSchema),
+    billingBehavior: z.optional(CreateScheduleBillingBehavior$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
     phases: z.array(z.lazy(() => PhaseStart$outboundSchema)),

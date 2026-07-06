@@ -5,9 +5,7 @@ import {
 	getCycleEnd,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
-	isBooleanEntitlement,
-	isLifetimeEntitlement,
-	isUnlimitedEntitlement,
+	isResettingEntitlement,
 } from "@autumn/shared";
 
 export const initCustomerEntitlementNextResetAt = ({
@@ -19,12 +17,7 @@ export const initCustomerEntitlementNextResetAt = ({
 	initOptions?: InitFullCustomerProductOptions;
 	entitlement: EntitlementWithFeature;
 }) => {
-	// 1. If entitlement is boolean, or unlimited, or lifetime, then next reset at is null
-	const isLifetime = isLifetimeEntitlement({ entitlement });
-	const isUnlimited = isUnlimitedEntitlement({ entitlement });
-	const isBoolean = isBooleanEntitlement({ entitlement });
-
-	if (isLifetime || isUnlimited || isBoolean) return null;
+	if (!isResettingEntitlement({ entitlement })) return null;
 
 	let { resetCycleAnchor, now, trialEndsAt, transitionConfig } = initContext;
 	const { resetAfterTrialEndFeatureIds } = transitionConfig ?? {};

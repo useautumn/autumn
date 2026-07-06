@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783072953299,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784282553299,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783259673472,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784469273472,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -492,6 +492,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
+* [import](docs/sdks/billing/README.md#import) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -852,7 +853,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783072953299,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784282553299,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783259673472,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784469273472,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -868,6 +869,7 @@ const response = await client.billing.createSchedule({ customerId: "cus_123", ph
 @param phases - Ordered phase definitions for the schedule.
 
 @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+- [`billingImport`](docs/sdks/billing/README.md#import) - Import
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
 Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.

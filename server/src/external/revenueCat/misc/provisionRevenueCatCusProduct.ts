@@ -8,9 +8,155 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { getRevenueCatCli } from "@/external/revenueCat/misc/getRevenueCatCli";
+import {
+	getRevenueCatStoreIdentifierMap,
+	mapRevenueCatProductToAutumn,
+} from "@/external/revenueCat/misc/revenueCatCatalogMapper";
+import type {
+	RevenueCatPurchase,
+	RevenueCatSubscription,
+} from "@/external/revenueCat/revenuecatTypes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
+
+type MatchedRcItem = { id: string; active: boolean; timestamp: number };
+
+const subscriptionGivesAccess = (sub: RevenueCatSubscription): boolean =>
+	sub.gives_access === true ||
+	sub.status === "active" ||
+	sub.status === "trialing";
+
+/**
+ * Best-effort: resolve the RC subscription/purchase that provisioned this
+ * cus_product and store its id on `cusProduct.processor.id`. NEVER throws or
+ * slows the insert — on any error/no-match the product stays inserted without
+ * the id. Logs the outcome under `rc_id_fetch`.
+ */
+const storeRevenueCatProcessorId = async ({
+	ctx,
+	cusProduct,
+	product,
+	appUserId,
+}: {
+	ctx: AutumnContext;
+	cusProduct: FullCusProduct;
+	product: FullProduct;
+	appUserId?: string;
+}): Promise<void> => {
+	const { db, org, env, logger } = ctx;
+	const logExtras = (extras: Record<string, unknown>) =>
+		logger.child({ context: { extras: { rc_id_fetch: true, ...extras } } });
+
+	if (!appUserId) {
+		logExtras({ attempted: false, skipped: "no_app_user_id" }).info(
+			"Skipping RevenueCat processor id store: no app_user_id",
+		);
+		return;
+	}
+
+	const handle = await getRevenueCatCli(ctx);
+	if (!handle) {
+		logExtras({ attempted: false, skipped: "no_client" }).info(
+			"Skipping RevenueCat processor id store: no RC client",
+		);
+		return;
+	}
+
+	try {
+		const { cli, isMock } = handle;
+		const [subscriptions, purchases] = await Promise.all([
+			cli.listCustomerSubscriptions(appUserId),
+			cli.listCustomerPurchases(appUserId),
+		]);
+
+		// Build fresh in mock mode so concurrent tests don't share a stale catalog.
+		const storeIdentifierMap = await getRevenueCatStoreIdentifierMap({
+			rcCli: cli,
+			orgId: org.id,
+			env,
+			logger,
+			forceRefresh: isMock,
+		});
+
+		const matchesProduct = async (
+			revenueCatInternalProductId: string | null,
+		): Promise<boolean> => {
+			if (!revenueCatInternalProductId) return false;
+			const autumnProductId = await mapRevenueCatProductToAutumn({
+				db,
+				orgId: org.id,
+				env,
+				revenueCatInternalProductId,
+				storeIdentifierMap,
+				logger,
+			});
+			return autumnProductId === product.id;
+		};
+
+		const candidates: MatchedRcItem[] = [];
+		for (const sub of subscriptions) {
+			if (await matchesProduct(sub.product_id)) {
+				candidates.push({
+					id: sub.id,
+					active: subscriptionGivesAccess(sub),
+					timestamp: sub.starts_at,
+				});
+			}
+		}
+		for (const purchase of purchases as RevenueCatPurchase[]) {
+			if (await matchesProduct(purchase.product_id)) {
+				candidates.push({
+					id: purchase.id,
+					active: purchase.status !== "refunded",
+					timestamp: purchase.purchased_at,
+				});
+			}
+		}
+
+		// Prefer active, then most recent.
+		candidates.sort((a, b) =>
+			a.active !== b.active
+				? Number(b.active) - Number(a.active)
+				: b.timestamp - a.timestamp,
+		);
+		const matchedId = candidates[0]?.id ?? null;
+
+		if (!matchedId) {
+			logExtras({
+				attempted: true,
+				stored: false,
+				matched_id: null,
+				subscription_count: subscriptions.length,
+				purchase_count: purchases.length,
+			}).info("No matching RevenueCat item for provisioned product");
+			return;
+		}
+
+		await CusProductService.update({
+			ctx,
+			cusProductId: cusProduct.id,
+			updates: {
+				processor: { type: ProcessorType.RevenueCat, id: matchedId },
+			},
+		});
+
+		logExtras({
+			attempted: true,
+			stored: true,
+			matched_id: matchedId,
+			candidate_count: candidates.length,
+		}).info("Stored RevenueCat processor id on cus_product");
+	} catch (error) {
+		logExtras({
+			attempted: true,
+			stored: false,
+			error: error instanceof Error ? error.message : String(error),
+		}).error("Failed to store RevenueCat processor id (best-effort)");
+	}
+};
 
 /**
  * Provisions a RevenueCat customer product via V2 attach.
@@ -33,12 +179,14 @@ export const provisionRevenueCatCusProduct = async ({
 	product,
 	revenuecatMetadata,
 	featureQuantities,
+	appUserId,
 }: {
 	ctx: AutumnContext;
 	customer: FullCustomer;
 	product: FullProduct;
 	revenuecatMetadata?: Record<string, string>;
 	featureQuantities?: Array<{ feature_id: string; quantity?: number }>;
+	appUserId?: string;
 }): Promise<{ cusProduct: FullCusProduct; product: FullProduct }> => {
 	const { db, org, env } = ctx;
 
@@ -94,6 +242,24 @@ export const provisionRevenueCatCusProduct = async ({
 			statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
 		});
 	}
+
+	// Fire-and-forget: must not block or slow the webhook response. The function
+	// self-logs every outcome; the outer catch guards the pre-try client await.
+	void storeRevenueCatProcessorId({ ctx, cusProduct, product, appUserId }).catch(
+		(error) => {
+			ctx.logger
+				.child({
+					context: {
+						extras: {
+							rc_id_fetch: true,
+							stored: false,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					},
+				})
+				.error("RevenueCat processor id store rejected (best-effort)");
+		},
+	);
 
 	return { cusProduct, product };
 };

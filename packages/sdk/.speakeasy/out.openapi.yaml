@@ -12751,7 +12751,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783072953299,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784282553299,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783259673472,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784469273472,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -19571,6 +19571,310 @@ paths:
                   - customer_id: cus_123
                     url: https://checkout.stripe.com/...
       x-speakeasy-name-override: setupPayment
+      parameters:
+        - *a1
+  /v1/billing.import:
+    post:
+      operationId: import
+      summary: Import
+      description: Image a customer into Autumn for live migration. Read-only against processors.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: Autumn customer to image into.
+                customer_data:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: Display name for the customer.
+                    email:
+                      type: string
+                      description: Email address for the customer.
+                    fingerprint:
+                      type: string
+                      description: Anti-fraud fingerprint for the customer.
+                  description: Optional identity fields to upsert if the customer is new.
+                processors:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        description: The processor this identity belongs to.
+                      id:
+                        type: string
+                        description: The customer's id in that processor (Stripe customer id, or RevenueCat app_user_id).
+                    required:
+                      - type
+                      - id
+                  description: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
+                billables:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      processor:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        description: The processor that owns this billable (stripe or revenuecat). Omit for plans with no processor, e.g. a free plan.
+                      link:
+                        type: object
+                        properties:
+                          subscription_id:
+                            type: string
+                            description: Existing processor subscription id this billable is adopted from.
+                          schedule_id:
+                            type: string
+                            description: Existing processor subscription-schedule id this billable is adopted from.
+                        description: Existing processor billing object this billable is adopted from; omit for paid one-offs.
+                      billing_cycle_anchor:
+                        type: number
+                        description: Unix ms billing anchor shared by co-billed plans on this billable.
+                      plan:
+                        type: object
+                        properties:
+                          plan_id:
+                            type: string
+                            description: The Autumn plan to attach to the customer.
+                          version:
+                            type: number
+                            description: Specific plan version to attach; defaults to the latest.
+                          status:
+                            enum:
+                              - active
+                              - trialing
+                              - past_due
+                              - canceled
+                              - expired
+                            type: string
+                            description: Set the status of the plan to be flashed. Active if undefined.
+                          started_at:
+                            type: number
+                            description: When the plan started (Unix ms). Defaults to the linked subscription's start, else the import time. Set this for one-off purchases to record the real purchase date.
+                          quantity:
+                            type: number
+                            description: Seat/unit quantity for the plan.
+                          feature_quantities:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                feature_id:
+                                  type: string
+                                  description: The prepaid feature being quantified.
+                                quantity:
+                                  type: number
+                                  description: Purchased quantity for this prepaid feature.
+                              required:
+                                - feature_id
+                                - quantity
+                            description: Purchased prepaid quantities per feature.
+                          balances:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                feature_id:
+                                  type: string
+                                  description: The feature whose balance is being set.
+                                filter:
+                                  type: object
+                                  properties:
+                                    interval:
+                                      anyOf:
+                                        - enum:
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                            - year
+                                          type: string
+                                        - type: "null"
+                                      description: Reset interval selecting which entitlement line to target when a feature has several (null = the non-resetting one-off line).
+                                    billing_behavior:
+                                      enum:
+                                        - included
+                                        - prepaid
+                                      type: string
+                                      description: Selects the included vs prepaid entitlement line when a feature has both.
+                                  description: Disambiguates which entitlement line to target when the feature has multiple.
+                                usage:
+                                  type: number
+                                  description: Units already consumed; remaining balance is derived from the plan allowance minus this.
+                                balance:
+                                  type: number
+                                  description: Explicit remaining balance override (mutually exclusive with usage).
+                                next_reset_at:
+                                  type: number
+                                  description: Unix ms timestamp of this line's next reset.
+                              required:
+                                - feature_id
+                            description: Per-feature balances to image onto the plan.
+                        required:
+                          - plan_id
+                        description: The single plan on this billable (provide either plan or phases, not both).
+                  description: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
+                dry_run:
+                  type: boolean
+                  description: If true, validate and compute without persisting; returns what would be flashed.
+              required:
+                - customer_id
+                - billables
+              title: DfuFlashParams
+              examples:
+                - customer_id: cus_123
+                  processors:
+                    - type: stripe
+                      id: cus_stripe_123
+                  billables:
+                    - processor: stripe
+                      link:
+                        subscription_id: sub_123
+                      plan:
+                        plan_id: pro
+                        status: active
+                        balances:
+                          - feature_id: messages
+                            usage: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The imaged customer's id.
+                  flashed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                          description: The plan that was imaged.
+                        processor:
+                          type: string
+                          description: The processor that owns the imaged plan.
+                        customer_product_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The created (or existing) customer product id, if any.
+                        status:
+                          type: string
+                          description: The resulting status of the imaged plan.
+                        skipped:
+                          type: boolean
+                          description: True if an active plan already existed and this one was left untouched.
+                        expired:
+                          type: boolean
+                          description: True if this was an existing active plan expired because it was absent from the imaged desired state.
+                        mismatch:
+                          type: boolean
+                          description: True when the imaged state may be wrong — e.g. a resetting plan with no resolvable billing anchor, so its cycle defaulted to the import time. The plan is still imaged; fix by supplying started_at or a resolvable subscription.
+                        reason:
+                          type: string
+                          description: Why the plan was skipped, expired, or flagged as a mismatch, when applicable.
+                      required:
+                        - plan_id
+                        - processor
+                        - customer_product_id
+                        - status
+                        - skipped
+                    description: Per-plan outcome of the flash.
+                  customer:
+                    anyOf:
+                      - $ref: "#/components/schemas/Customer"
+                      - type: "null"
+                    description: The freshly-read imaged customer; null for dry_run.
+                required:
+                  - customer_id
+                  - flashed
+                  - customer
+                title: DfuFlashResult
+                examples:
+                  - customer_id: cus_123
+                    flashed:
+                      - plan_id: pro
+                        processor: stripe
+                        customer_product_id: cus_prod_123
+                        status: active
+                        skipped: false
+                    customer:
+                      id: cus_123
+                      name: Jane Doe
+                      email: jane@example.com
+                      createdAt: 1771409161016
+                      fingerprint: null
+                      stripeId: cus_stripe_123
+                      processors:
+                        stripe:
+                          id: cus_stripe_123
+                      env: sandbox
+                      metadata: {}
+                      sendEmailReceipts: false
+                      billingControls:
+                        autoTopups: []
+                      subscriptions:
+                        - planId: pro
+                          autoEnable: false
+                          addOn: false
+                          status: active
+                          pastDue: false
+                          canceledAt: null
+                          expiresAt: null
+                          trialEndsAt: null
+                          startedAt: 1771431921437
+                          currentPeriodStart: 1771431921437
+                          currentPeriodEnd: 1771999921437
+                          quantity: 1
+                      purchases: []
+                      balances:
+                        messages:
+                          featureId: messages
+                          granted: 100
+                          remaining: 90
+                          usage: 10
+                          unlimited: false
+                          overageAllowed: false
+                          maxPurchase: null
+                          nextResetAt: 1773851121437
+                          breakdown:
+                            - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                              planId: pro
+                              includedGrant: 100
+                              prepaidGrant: 0
+                              remaining: 90
+                              usage: 10
+                              unlimited: false
+                              reset:
+                                interval: month
+                                resetsAt: 1773851121437
+                              price: null
+                              expiresAt: null
+                      flags: {}
+                      config:
+                        disable_pooled_balance: false
+                        disable_overage_billing: false
+      x-speakeasy-name-override: import
       parameters:
         - *a1
   /v1/balances.create:

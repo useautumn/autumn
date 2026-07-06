@@ -156,6 +156,81 @@ export type RevenueCatProductsResponse = {
 	url: string;
 };
 
+// Field names + enums mirror the RevenueCat OpenAPI v2 spec (Subscription/Purchase schemas).
+export type RevenueCatStore =
+	| "amazon"
+	| "app_store"
+	| "mac_app_store"
+	| "play_store"
+	| "promotional"
+	| "stripe"
+	| "rc_billing"
+	| "external"
+	| "roku"
+	| "paddle"
+	| "paypal"
+	| "galaxy"
+	| "test_store";
+
+export type RevenueCatSubscriptionStatus =
+	| "trialing"
+	| "active"
+	| "expired"
+	| "in_grace_period"
+	| "in_billing_retry"
+	| "paused"
+	| "unknown"
+	| "incomplete";
+
+export type RevenueCatAutoRenewalStatus =
+	| "will_renew"
+	| "will_not_renew"
+	| "will_change_product"
+	| "will_pause"
+	| "requires_price_increase_consent"
+	| "has_already_renewed";
+
+export type RevenueCatSubscription = {
+	object: "subscription";
+	id: string;
+	// RevenueCat-internal product id (null for promotional). Bridge to store via listAllProducts.
+	product_id: string | null;
+	store: RevenueCatStore;
+	store_subscription_identifier: string;
+	status: RevenueCatSubscriptionStatus;
+	starts_at: number;
+	current_period_starts_at: number;
+	current_period_ends_at: number | null;
+	ends_at?: number | null;
+	auto_renewal_status: RevenueCatAutoRenewalStatus;
+	gives_access?: boolean;
+};
+
+export type RevenueCatSubscriptionsResponse = {
+	object: "list";
+	items: RevenueCatSubscription[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatPurchaseStatus = "owned" | "refunded";
+
+export type RevenueCatPurchase = {
+	object: "purchase";
+	id: string;
+	product_id: string;
+	store: RevenueCatStore;
+	purchased_at: number;
+	status?: RevenueCatPurchaseStatus;
+};
+
+export type RevenueCatPurchasesResponse = {
+	object: "list";
+	items: RevenueCatPurchase[];
+	next_page: string | null;
+	url: string;
+};
+
 export type RevenueCatPrice = {
 	id: string;
 	amount_micros: number;
