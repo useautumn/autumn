@@ -10,6 +10,7 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { ensureLicenseLifecycleForActivatedParents } from "@/internal/licenses/actions/ensureLicenseLifecycleForActivatedParents";
 
 /**
  * Activates a scheduled customer product.
@@ -67,6 +68,14 @@ export const activateScheduledCustomerProduct = async ({
 		ctx,
 		cusProductId: customerProduct.id,
 		updates,
+	});
+
+	// Activation bypasses billing execute, so the insert-side license lifecycle
+	// (pools + pooled grants) must run here.
+	await ensureLicenseLifecycleForActivatedParents({
+		ctx,
+		customerId: fullCustomer.id || fullCustomer.internal_id,
+		customerProducts: [{ ...customerProduct, status: CusProductStatus.Active }],
 	});
 
 	// 2. Send webhook

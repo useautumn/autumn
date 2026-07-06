@@ -9,6 +9,7 @@ import {
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { licensePoolRepo } from "@/internal/licenses/repos/index.js";
 import { PlanService } from "@/internal/products/PlanService.js";
 import { CusService } from "../CusService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
@@ -98,6 +99,17 @@ export const handleTransferProductV2 = createRoute({
 				customerId: customer_id,
 				productId: product_id,
 				entityId: from_entity_id || undefined,
+			});
+		}
+
+		const licenseParentPools =
+			await licensePoolRepo.listByParentCustomerProductIds({
+				db,
+				parentCustomerProductIds: [cusProduct.id],
+			});
+		if (licenseParentPools.length > 0) {
+			throw new RecaseError({
+				message: `Product ${product_id} has license pools for this customer and cannot be transferred.`,
 			});
 		}
 

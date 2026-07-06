@@ -101,8 +101,14 @@ export const getMigrationCustomers = async ({
 		(cusProd) => cusProd.canceled_at !== null,
 	).length;
 
-	const customCount = cusProducts.filter((cusProd) => cusProd.is_custom).length;
-	const filteredCusProducts = cusProducts.filter((cp) => !cp.is_custom);
+	// Customized license sets can't be reproduced on the new version's inherited
+	// pools, so those customers are skipped alongside custom plans.
+	const isCustomized = (cusProd: {
+		is_custom: boolean | null;
+		license_set_customized: boolean | null;
+	}) => cusProd.is_custom || cusProd.license_set_customized;
+	const customCount = cusProducts.filter(isCustomized).length;
+	const filteredCusProducts = cusProducts.filter((cp) => !isCustomized(cp));
 	const customers = filteredCusProducts.map((cusProd) => cusProd.customer);
 
 	if (migrationJobId) {

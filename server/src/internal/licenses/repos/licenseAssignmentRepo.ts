@@ -41,6 +41,33 @@ const findActive = async ({
 		),
 	});
 
+const listActiveByInternalEntityId = async ({
+	db,
+	orgId,
+	env,
+	internalEntityId,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	internalEntityId: string;
+}) =>
+	await db
+		.select({
+			id: licenseAssignments.id,
+			provisioned_customer_product_id:
+				licenseAssignments.provisioned_customer_product_id,
+		})
+		.from(licenseAssignments)
+		.where(
+			and(
+				eq(licenseAssignments.org_id, orgId),
+				eq(licenseAssignments.env, env),
+				eq(licenseAssignments.internal_entity_id, internalEntityId),
+				isNull(licenseAssignments.ended_at),
+			),
+		);
+
 const getById = async ({
 	db,
 	orgId,
@@ -426,6 +453,7 @@ const listWithEntityAndProductByCustomer = async ({
 
 export const licenseAssignmentRepo = {
 	findActive,
+	listActiveByInternalEntityId,
 	getById,
 	insert,
 	countActiveByPoolId,
