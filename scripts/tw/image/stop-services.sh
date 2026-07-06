@@ -85,15 +85,20 @@ fi
 # 4. Tinybird Local — supervisorctl shutdown TERMs every program (Redis persists
 #    via AOF, ClickHouse checkpoints), then wait so the snapshot is consistent.
 # ---------------------------------------------------------------------------
-if pgrep -x supervisord >/dev/null 2>&1 && [ -f "$SUPERVISORD_CONF" ]; then
+# Zombie-aware liveness: supervisord is nohup-launched, so after exit it can
+# linger as a defunct child no one reaps — pgrep alone would stall the wait.
+supervisord_alive() {
+  ps -eo stat=,comm= | awk '$2 == "supervisord" && $1 !~ /Z/' | grep -q .
+}
+if supervisord_alive && [ -f "$SUPERVISORD_CONF" ]; then
   log "Shutting down Tinybird Local (supervisorctl shutdown)"
   supervisorctl -c "$SUPERVISORD_CONF" shutdown >/dev/null 2>&1 || true
   # Redis has stopwaitsecs=60 and ClickHouse checkpoints — allow up to 3 min.
   for _ in $(seq 1 720); do
-    pgrep -x supervisord >/dev/null 2>&1 || break
+    supervisord_alive || break
     sleep 0.25
   done
-  if pgrep -x supervisord >/dev/null 2>&1; then
+  if supervisord_alive; then
     log "WARN: supervisord still alive after 180s — SIGKILL stragglers"
     pkill -KILL -x supervisord || true
     pkill -KILL -x clickhouse-serv || true
