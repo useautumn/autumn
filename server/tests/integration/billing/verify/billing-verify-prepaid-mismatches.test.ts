@@ -12,6 +12,7 @@
  */
 
 import { expect, test } from "bun:test";
+import { findPriceByFeatureId } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -25,6 +26,12 @@ import {
 	corruptStripeSubscription,
 	listActiveStripeSubscriptions,
 } from "../restore/utils/corruptStripeSubscription";
+
+type StripePriceConfig = {
+	stripe_price_id?: string | null;
+	stripe_empty_price_id?: string | null;
+	stripe_prepaid_price_v2_id?: string | null;
+};
 
 const stripeCustomerIdFor = async ({
 	ctx,
@@ -43,12 +50,16 @@ const stripeCustomerIdFor = async ({
 	return stripeCustomerId;
 };
 
-const firstStripePriceIdFor = async ({
+const stripeSubItemForFeature = async ({
 	ctx,
 	productId,
+	featureId,
+	sub,
 }: {
 	ctx: TestContext;
 	productId: string;
+	featureId: string;
+	sub: Awaited<ReturnType<typeof listActiveStripeSubscriptions>>[number];
 }) => {
 	const fullProduct = await ProductService.getFull({
 		db: ctx.db,
@@ -56,12 +67,30 @@ const firstStripePriceIdFor = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-	for (const price of fullProduct.prices) {
-		const id =
-			price.config.stripe_price_id ?? price.config.stripe_empty_price_id;
-		if (id) return id;
+	const price = findPriceByFeatureId({
+		prices: fullProduct.prices,
+		featureId,
+	});
+	if (!price) {
+		throw new Error(`No price found for feature ${featureId}`);
 	}
-	throw new Error(`No Stripe price id on product ${productId}`);
+	const config = price.config as StripePriceConfig;
+	const stripePriceIds = new Set(
+		[
+			config.stripe_price_id,
+			config.stripe_empty_price_id,
+			config.stripe_prepaid_price_v2_id,
+		].filter(Boolean),
+	);
+	const subItem = sub.items.data.find(
+		(item) =>
+			item.metadata?.autumn_price_id === price.id ||
+			stripePriceIds.has(item.price.id),
+	);
+	if (!subItem) {
+		throw new Error(`No Stripe subscription item found for feature ${featureId}`);
+	}
+	return subItem;
 };
 
 test.concurrent(
@@ -90,17 +119,17 @@ test.concurrent(
 			],
 		});
 
-		const basePriceId = await firstStripePriceIdFor({ ctx, productId: pro.id });
 		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 		const [sub] = await listActiveStripeSubscriptions({
 			ctx,
 			stripeCustomerId,
 		});
-
-		const prepaidSubItem = sub.items.data.find(
-			(item) => item.price.id !== basePriceId,
-		);
-		if (!prepaidSubItem) throw new Error("Expected a prepaid item on sub");
+		const prepaidSubItem = await stripeSubItemForFeature({
+			ctx,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+			sub,
+		});
 
 		await corruptStripeSubscription({
 			ctx,
@@ -160,18 +189,17 @@ test.concurrent(
 		});
 		expect(entities.length).toBe(1);
 
-		const basePriceId = await firstStripePriceIdFor({ ctx, productId: pro.id });
 		const stripeCustomerId = await stripeCustomerIdFor({ ctx, customerId });
 		const [sub] = await listActiveStripeSubscriptions({
 			ctx,
 			stripeCustomerId,
 		});
-
-		const prepaidSubItem = sub.items.data.find(
-			(item) => item.price.id !== basePriceId,
-		);
-		if (!prepaidSubItem)
-			throw new Error("Expected an inline prepaid item on sub");
+		const prepaidSubItem = await stripeSubItemForFeature({
+			ctx,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+			sub,
+		});
 		expect(prepaidSubItem.metadata?.autumn_customer_price_id).toBeDefined();
 
 		const originalUnitAmount = prepaidSubItem.price.unit_amount as number;

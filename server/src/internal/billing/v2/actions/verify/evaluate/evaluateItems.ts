@@ -34,7 +34,9 @@ export const normalizeActualSubItem = ({
 		quantity: item.quantity ?? 0,
 		isInline: !!autumnCusPriceId,
 		unitAmountDecimal: autumnCusPriceId
-			? (item.price.unit_amount_decimal ?? undefined)
+			? (item.price.unit_amount_decimal ??
+				item.price.unit_amount?.toString() ??
+				undefined)
 			: undefined,
 	};
 };
@@ -53,7 +55,9 @@ export const normalizeActualPhaseItem = ({
 			: undefined;
 	const unitAmountDecimal =
 		autumnCusPriceId && priceObj
-			? (priceObj.unit_amount_decimal ?? undefined)
+			? (priceObj.unit_amount_decimal ??
+				priceObj.unit_amount?.toString() ??
+				undefined)
 			: undefined;
 	return {
 		priceId,
