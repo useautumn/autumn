@@ -12,6 +12,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils";
 
@@ -102,7 +103,7 @@ test.concurrent(
 		const aiCreditsItem = items.free({ featureId, includedUsage: 1000 });
 		const freeProd = products.base({ id: "free-mut", items: [aiCreditsItem] });
 
-		const { customerId, autumnV2_2 } = await initScenario({
+		const { customerId, autumnV2_2, ctx } = await initScenario({
 			customerId: "track-tokens-res-2",
 			setup: [
 				s.customer({ testClock: false }),
@@ -125,6 +126,18 @@ test.concurrent(
 			trackBody,
 		);
 		expect(trackRes1.value).toBeCloseTo(0.2, 10);
+
+		// The markup update queues a customer-cache wipe; wait until track #1's
+		// deduction is durable in the DB, or the rebuild-from-DB loses it.
+		const syncDeadline = Date.now() + 30_000;
+		let dbBalance: number | null | undefined;
+		while (Date.now() < syncDeadline) {
+			const cusEnt = await findCustomerEntitlement({ ctx, customerId, featureId });
+			dbBalance = cusEnt?.balance;
+			if (dbBalance === 999.8) break;
+			await timeout(500);
+		}
+		expect(dbBalance).toBe(999.8);
 
 		// Bump the model markup to 100%
 		await autumn.post("/features.update", {
