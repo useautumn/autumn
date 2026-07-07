@@ -34,8 +34,12 @@ export const SetPlanLicenseParamsSchema = z.object({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const CustomizePlanLicenseSchema = SetPlanLicenseParamsSchema.omit({
-	parent_plan_id: true,
+export const CustomizePlanLicenseSchema = z.object({
+	license_plan_id: z.string(),
+	included: z.number().int().min(0).optional(),
+	prepaid_only: z.boolean().optional(),
+	customize: LicenseCustomizeSchema.nullish(),
+	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ListPlanLicensesParamsSchema = z.object({
@@ -93,6 +97,11 @@ export const LicensePoolResponseSchema = z.object({
 		}),
 	),
 });
+
+export type LicensePatchParams = {
+	add_licenses?: z.infer<typeof CustomizePlanLicenseSchema>[];
+	remove_licenses?: string[];
+};
 
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
