@@ -2,10 +2,10 @@
  * Freestyle backend for the provider seam (helpers/provider.ts) — `--provider=freestyle`.
  *
  * The differentiator vs Modal/Vercel is MEMORY snapshots: `snapshotAndStop`
- * captures the warm parent with PG + Dragonfly + goaws RUNNING, and every worker
- * restores from that snapshot already serving those services — boot.ts's
- * start-services step no-ops on its probe gates and only the app procs start
- * (~8s to READY instead of 30–60s of service cold-start).
+ * captures the warm parent with PG + Dragonfly + goaws AND the Autumn server +
+ * SQS workers + cron all RUNNING. Every worker restores already serving; boot is
+ * swapped for freestyleBoot.ts (bind-only: svix/stripe DB binds + the pool-key
+ * file the initMasterStripe seam reads) — seconds to READY, no process startup.
  *
  * ## Lifecycle mapping
  *   - **createWarmSandbox** — `vms.create()` (fresh Debian) → clone repo @ ref →
@@ -31,7 +31,17 @@
  */
 import chalk from "chalk";
 import { Freestyle } from "freestyle";
-import { INGRESS_PORT, SERVER_PORT, WORKER_TIMEOUT_MS } from "../constants.ts";
+import {
+	DATABASE_CRITICAL_URL,
+	DATABASE_URL,
+	EDGE_CONFIG_OVERRIDE_B64,
+	INGRESS_PORT,
+	REDIS_URL,
+	SERVER_PORT,
+	SQS_QUEUE_URL_V2,
+	TRACK_SQS_QUEUE_URL,
+	WORKER_TIMEOUT_MS,
+} from "../constants.ts";
 import { narrate, sink } from "./logSink.ts";
 import type {
 	CreateSandboxOptions,
@@ -54,6 +64,11 @@ const TW_PREFIX = "/opt/autumn-tw";
 const VM_ENV_FILE = "/root/tw-vm.env";
 const BASE_SCRIPT = `${REPO_ROOT}/scripts/tw/image/freestyle-base.sh`;
 const START_SERVICES = `${REPO_ROOT}/scripts/tw/image/start-services.sh`;
+/** boot.ts is swapped for this in runDetached: forks resume a RUNNING server,
+ * so only per-worker binds run (see worker/freestyleBoot.ts). */
+const FREESTYLE_BOOT_SCRIPT = "scripts/tw/worker/freestyleBoot.ts";
+const STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
+const WARM_SERVER_HEALTH_TIMEOUT_S = 180;
 /** Long enough for apt + initdb on the cold path; execs are buffered. */
 const EXEC_TIMEOUT_MS = 15 * 60 * 1000;
 /** Patience for create-from-snapshot 429 backoff (quota bucket refill). */
@@ -176,6 +191,48 @@ const createVmWithBackoff = async (options: {
 	}
 };
 
+/** The env the SNAPSHOTTED server runs with. Per-worker identity (pool key,
+ * sub-account, svix) arrives later via the key-file seam + DB binds. */
+const warmServerEnv = (): Record<string, string> => {
+	const requireSecret = (name: string): string => {
+		const value = process.env[name];
+		if (!value) {
+			throw new Error(`freestyle: missing secret ${name} in orchestrator env`);
+		}
+		return value;
+	};
+	const placeholderKey =
+		process.env.STRIPE_TEST_KEY_POOL?.split(",")[0]?.trim() ||
+		requireSecret("STRIPE_SANDBOX_SECRET_KEY");
+	const env: Record<string, string> = {
+		NODE_ENV: "development",
+		SERVER_PORT: String(SERVER_PORT),
+		DATABASE_URL,
+		DATABASE_CRITICAL_URL,
+		BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
+		REDIS_URL,
+		CACHE_URL: REDIS_URL,
+		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
+		SQS_QUEUE_URL_V2,
+		TRACK_SQS_QUEUE_URL,
+		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
+		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
+		BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
+		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
+		STRIPE_SANDBOX_SECRET_KEY: placeholderKey,
+		STRIPE_SANDBOX_WEBHOOK_SECRET: "whsec_tw_skipverify",
+		AUTUMN_DB_DIRECT: "1",
+		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
+		TW_WORKER_MODE: "1",
+	};
+	// Baked unconditionally: only the svix shard binds an app, so it's inert
+	// on every other worker but present when that shard's server sends.
+	if (process.env.SVIX_API_KEY) {
+		env.SVIX_API_KEY = process.env.SVIX_API_KEY;
+	}
+	return env;
+};
+
 const cloneUrl = (source: GitSource): string =>
 	source.username && source.password
 		? source.url.replace(
@@ -282,6 +339,12 @@ export const freestyleProvider: ProviderImpl = {
 				ephemeral: true,
 				signal: opts.signal,
 			});
+			// The snapshot's resumed Autumn app holds :8080 — the ingress needs it.
+			await execOnVm(
+				vmRef.vm,
+				"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+				30_000,
+			);
 		} else {
 			if (!opts.source) {
 				throw new Error(
@@ -339,7 +402,39 @@ export const freestyleProvider: ProviderImpl = {
 				`freestyle: start-services before snapshot failed (exit ${start.exitCode}): ${start.stderr.slice(-1500)}`,
 			);
 		}
-		const done = stage("memory-snapshot warm parent (services running)", 15_000);
+
+		// Bake the RUNNING app into the snapshot: server + SQS workers + cron start
+		// here once, so forks resume them instead of paying ~30s of bun startup each.
+		const serverEnv = warmServerEnv();
+		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(serverEnv));
+		const appDone = stage("start server + workers + cron in the warm parent", 20_000);
+		// Canonically clean cache slate for every fork (clearMasterOrg tail, local-only
+		// dragonfly) happens after health, right before the snapshot.
+		const appStart = await execOnVm(
+			vm,
+			[
+				"set -e",
+				`mkdir -p ${TW_PREFIX}/logs`,
+				`printf '%s' ${shellQuote(serverEnv.STRIPE_SANDBOX_SECRET_KEY)} > ${STRIPE_KEY_FILE}`,
+				`chmod 600 ${STRIPE_KEY_FILE}`,
+				`cd ${REPO_ROOT}/server`,
+				`nohup bun src/index.ts > ${TW_PREFIX}/logs/server.log 2>&1 &`,
+				`nohup bun src/workers.ts > ${TW_PREFIX}/logs/workers.log 2>&1 &`,
+				`nohup bun src/cron.ts > ${TW_PREFIX}/logs/cron.log 2>&1 &`,
+				'code=""',
+				`for i in $(seq 1 ${WARM_SERVER_HEALTH_TIMEOUT_S * 2}); do code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:${SERVER_PORT}/ || true); [ "$code" = 200 ] && break; sleep 0.5; done`,
+				`[ "$code" = 200 ] || { echo "server never became healthy (last=$code)"; tail -40 ${TW_PREFIX}/logs/server.log; exit 1; }`,
+				"redis-cli -p 6379 flushall",
+			].join("\n"),
+		);
+		appDone();
+		if (appStart.exitCode !== 0) {
+			throw new Error(
+				`freestyle: warm app start failed (exit ${appStart.exitCode}): ${(appStart.stdout + appStart.stderr).slice(-2000)}`,
+			);
+		}
+
+		const done = stage("memory-snapshot warm parent (services + server running)", 15_000);
 		try {
 			const snap = await vm.snapshot({ name: sandbox.name });
 			snapshotIdByName.set(sandbox.name, snap.snapshotId);
@@ -471,6 +566,11 @@ export const freestyleProvider: ProviderImpl = {
 		opts: RunDetachedOptions,
 	): Promise<DetachedCommand> {
 		const vm = unwrap(sandbox);
+		// The snapshot resumes a RUNNING server — boot.ts would EADDRINUSE on 8080.
+		// Swap in the prebooted bind-only boot (all divergence lives freestyle-side).
+		if (argv[1]?.endsWith("worker/boot.ts")) {
+			argv = [argv[0], FREESTYLE_BOOT_SCRIPT, ...argv.slice(2)];
+		}
 		const tag = Math.random().toString(36).slice(2, 8);
 		const logFile = `${TW_PREFIX}/logs/detached-${tag}.log`;
 		const pidFile = `${TW_PREFIX}/logs/detached-${tag}.pid`;
