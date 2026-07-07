@@ -224,6 +224,45 @@ Use `invoice.stripe_id` as a stable dedupe key. The top-level `id` field (e.g. `
 }
 ```
 
+### billing.auto_topup_failed
+
+Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) is skipped, blocked, declined, or fails before granting additional prepaid balance. This includes charge failures, purchase/attempt limits, missing payment methods, disabled or unavailable configuration, lock contention, and transient infrastructure issues.
+
+Use `reason` to branch on the failure mode and `retryable` to decide whether retrying later may succeed without changing customer or billing configuration.
+
+**Example payload:**
+
+```json expandable
+{
+  "type": "billing.auto_topup_failed",
+  "id": "evt_auto_topup_failed_2abc123",
+  "occurred_at": 1761840000000,
+  "data": {
+    "customer_id": "user_123",
+    "feature_id": "credits",
+    "reason": "charge_failed",
+    "retryable": false,
+    "quantity": 1000,
+    "threshold": 500,
+    "balance": 250,
+    "invoice_mode": false,
+    "invoice": {
+      "stripe_id": "in_1A2B3C4D5E6F",
+      "status": "void",
+      "total": 1000,
+      "currency": "usd",
+      "hosted_invoice_url": "https://invoice.stripe.com/i/..."
+    },
+    "error": {
+      "code": "card_declined",
+      "message": "Your card was declined.",
+      "type": "card_error",
+      "decline_code": "generic_decline"
+    }
+  }
+}
+```
+
 ### balances.usage_alert_triggered
 
 Fired when a customer crosses a configured usage alert threshold. Usage alerts let you monitor when customers approach or exceed specific usage levels for a feature.
