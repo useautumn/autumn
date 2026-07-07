@@ -605,6 +605,9 @@ const buildWorkerEnv = ({
 		STRIPE_SANDBOX_WEBHOOK_SECRET: "whsec_tw_skipverify",
 		STRIPE_ACCOUNT_ID: stripeAccountId,
 		ORG_ID: TEST_ORG_CONFIG.id,
+		// The exact commit under test — freestyle workers fast-forward to it at
+		// boot (inert on other providers).
+		TW_TARGET_SHA: resolvedTargetSha,
 		// The bun-test preload (server/tests/setup-integration-tests.ts) only builds
 		// the default TestContext when TESTS_ORG is set, and createTestContext reads
 		// it as the org SLUG (OrgService.getBySlug). Without it EVERY integration test
