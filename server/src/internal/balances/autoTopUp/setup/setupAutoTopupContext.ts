@@ -1,5 +1,7 @@
 import {
 	ACTIVE_STATUSES,
+	type AutoTopup,
+	type BillingAutoTopupFailureReason,
 	BillingVersion,
 	cusEntToCusPrice,
 	cusProductToProduct,
@@ -19,6 +21,18 @@ import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
 import { fullCustomerToAutoTopupObjects } from "../helpers/fullCustomerToAutoTopupObjects.js";
 import { preflightAutoTopupLimits } from "../helpers/limits/preflightAutoTopupLimits.js";
+
+export type AutoTopupSetupFailure = {
+	reason: BillingAutoTopupFailureReason;
+	retryable: boolean;
+	message: string;
+	fullCustomer?: FullCustomer;
+	autoTopupConfig?: AutoTopup;
+};
+
+export type SetupAutoTopupContextResult =
+	| { ok: true; autoTopupContext: AutoTopupContext }
+	| { ok: false; failure: AutoTopupSetupFailure };
 
 const getAutoTopupFullCustomer = async ({
 	ctx,
@@ -75,14 +89,14 @@ const getAutoTopupFullCustomer = async ({
 	return fullCustomer;
 };
 
-/** Fetch full customer, auto-topup config, cusEnt, and Stripe context. Returns null if any prerequisite is missing. */
+/** Fetch full customer, auto-topup config, cusEnt, and Stripe context. */
 export const setupAutoTopupContext = async ({
 	ctx,
 	payload,
 }: {
 	ctx: AutumnContext;
 	payload: AutoTopUpPayload;
-}): Promise<AutoTopupContext | null> => {
+}): Promise<SetupAutoTopupContextResult> => {
 	const { logger } = ctx;
 	const { customerId, featureId } = payload;
 
@@ -95,10 +109,17 @@ export const setupAutoTopupContext = async ({
 	});
 
 	if (!fullCustomer?.processor?.id) {
-		logger.warn(
-			`[setupAutoTopupContext] Customer ${customerId} not found or no Stripe customer ID, skipping`,
-		);
-		return null;
+		const message = `Customer ${customerId} not found or no Stripe customer ID, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "customer_unavailable",
+				retryable: false,
+				message,
+				fullCustomer,
+			},
+		};
 	}
 
 	// 2. Extract auto-topup objects (config, cusEnt) from fullCustomer
@@ -107,14 +128,35 @@ export const setupAutoTopupContext = async ({
 		featureId,
 	});
 
-	if (!resolved?.balanceBelowThreshold) {
-		ctx.logger.info(
-			`[setupAutoTopupContext] balance not below threshold, skipping`,
-			{
-				data: resolved,
+	if (!resolved) {
+		const message = `No enabled auto top-up configuration or chargeable prepaid entitlement for feature ${featureId}, customer ${customerId}, skipping`;
+		ctx.logger.info(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "configuration_unavailable",
+				retryable: false,
+				message,
+				fullCustomer,
 			},
-		);
-		return null;
+		};
+	}
+
+	if (!resolved.balanceBelowThreshold) {
+		const message = `Balance not below threshold for feature ${featureId}, customer ${customerId}, skipping`;
+		ctx.logger.info(`[setupAutoTopupContext] ${message}`, {
+			data: resolved,
+		});
+		return {
+			ok: false,
+			failure: {
+				reason: "balance_above_threshold",
+				retryable: false,
+				message,
+				fullCustomer,
+				autoTopupConfig: resolved.autoTopupConfig,
+			},
+		};
 	}
 
 	const { autoTopupConfig, customerEntitlement } = resolved;
@@ -141,10 +183,18 @@ export const setupAutoTopupContext = async ({
 	});
 
 	if (!allowed) {
-		logger.info(
-			`[setupAutoTopupContext] Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`,
-		);
-		return null;
+		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
+		logger.info(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: reason ?? "execution_error",
+				retryable: false,
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
 	}
 
 	const vercelInstallationId =
@@ -160,10 +210,18 @@ export const setupAutoTopupContext = async ({
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
 
 	if (!paymentMethod && !invoiceMode) {
-		logger.warn(
-			`[setupAutoTopupContext] No payment method for customer ${stripeCus?.id}, skipping`,
-		);
-		return null;
+		const message = `No payment method for customer ${stripeCus?.id}, skipping`;
+		logger.warn(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_payment_method",
+				retryable: false,
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
 	}
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -171,29 +229,40 @@ export const setupAutoTopupContext = async ({
 	const cusProduct = customerEntitlement.customer_product;
 
 	if (!cusProduct) {
-		logger.error(
-			`[setupAutoTopupContext] No customer product found for customer ${customerId}`,
-		);
-		return null;
+		const message = `No customer product found for customer ${customerId}`;
+		logger.error(`[setupAutoTopupContext] ${message}`);
+		return {
+			ok: false,
+			failure: {
+				reason: "missing_customer_product",
+				retryable: false,
+				message,
+				fullCustomer,
+				autoTopupConfig: normalizedAutoTopupConfig,
+			},
+		};
 	}
 
 	return {
-		// BillingContext fields
-		fullCustomer,
-		fullProducts: [cusProductToProduct({ cusProduct })],
-		featureQuantities: [],
-		invoiceMode,
-		currentEpochMs,
-		billingCycleAnchorMs: "now",
-		resetCycleAnchorMs: "now",
-		stripeCustomer: stripeCus,
-		paymentMethod,
-		billingVersion: BillingVersion.V2,
+		ok: true,
+		autoTopupContext: {
+			// BillingContext fields
+			fullCustomer,
+			fullProducts: [cusProductToProduct({ cusProduct })],
+			featureQuantities: [],
+			invoiceMode,
+			currentEpochMs,
+			billingCycleAnchorMs: "now",
+			resetCycleAnchorMs: "now",
+			stripeCustomer: stripeCus,
+			paymentMethod,
+			billingVersion: BillingVersion.V2,
 
-		// Auto top-up specific fields
-		autoTopupConfig: normalizedAutoTopupConfig,
-		customerEntitlement,
+			// Auto top-up specific fields
+			autoTopupConfig: normalizedAutoTopupConfig,
+			customerEntitlement,
 
-		limitState,
+			limitState,
+		},
 	};
 };

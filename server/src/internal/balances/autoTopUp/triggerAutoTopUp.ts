@@ -6,6 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { fullCustomerToAutoTopupObjects } from "./helpers/fullCustomerToAutoTopupObjects.js";
+import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook.js";
 
 /** Lightweight pre-check + SQS enqueue for auto top-ups after a deduction. */
 export const triggerAutoTopUp = async ({
@@ -33,10 +34,23 @@ export const triggerAutoTopUp = async ({
 		// Enqueue the auto top-up job
 		const customerId = newFullCus.id || newFullCus.internal_id;
 
-		await enqueueAutoTopupWithBurstSuppression({
+		const enqueueResult = await enqueueAutoTopupWithBurstSuppression({
 			ctx,
 			customerId,
 			featureId: relevantFeature.id,
 		});
+
+		if (enqueueResult?.reason === "redis_unavailable") {
+			await sendAutoTopupFailedWebhook({
+				ctx,
+				customerId,
+				featureId: relevantFeature.id,
+				reason: "redis_unavailable",
+				retryable: true,
+				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${relevantFeature.id}`,
+				fullCustomer: newFullCus,
+				autoTopupConfig: resolved.autoTopupConfig,
+			});
+		}
 	}
 };

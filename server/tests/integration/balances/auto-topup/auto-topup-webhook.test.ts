@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	type BillingAutoTopupFailed,
 	type BillingAutoTopupSucceeded,
+	PurchaseLimitInterval,
 	WebhookEventType,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -27,6 +29,13 @@ type AutoTopupSucceededPayload = {
 	data: BillingAutoTopupSucceeded;
 };
 
+type AutoTopupFailedPayload = {
+	type: WebhookEventType.BillingAutoTopupFailed;
+	id: string;
+	occurred_at: number;
+	data: BillingAutoTopupFailed;
+};
+
 let webhook: WebhookTestSetup;
 let playToken: string;
 const RUN_ID = Date.now();
@@ -35,7 +44,10 @@ beforeAll(async () => {
 	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
 	webhook = await setupWebhookTest({
 		appId,
-		filterTypes: [WebhookEventType.BillingAutoTopupSucceeded],
+		filterTypes: [
+			WebhookEventType.BillingAutoTopupSucceeded,
+			WebhookEventType.BillingAutoTopupFailed,
+		],
 	});
 	playToken = webhook.playToken;
 });
@@ -216,3 +228,160 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 
 	expect(result).toBeNull();
 }, 60_000);
+
+test.concurrent(`${chalk.yellowBright("auto-topup webhook: failed charge sends failure webhook")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const oneOffProduct = products.oneOffAddOn({
+		id: `topup-webhook-charge-failed-${RUN_ID}`,
+		items: [oneOffItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: `auto-topup-webhook-charge-failed-${RUN_ID}`,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [oneOffProduct] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProduct.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+			}),
+			s.removePaymentMethod(),
+			s.attachPaymentMethod({ type: "fail" }),
+		],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 20,
+			quantity: 100,
+		}),
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 85,
+	});
+
+	const result = await waitForWebhook<AutoTopupFailedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === WebhookEventType.BillingAutoTopupFailed &&
+			payload.data?.customer_id === customerId,
+		timeoutMs: 30_000,
+	});
+
+	expect(result).not.toBeNull();
+	const payload = result!.payload;
+	expect(payload.id).toStartWith("evt_auto_topup_failed_");
+	expect(payload.occurred_at).toBeGreaterThan(0);
+	const data = payload.data;
+	expect(data.customer_id).toBe(customerId);
+	expect(data.feature_id).toBe(TestFeature.Messages);
+	expect(data.reason).toBe("charge_failed");
+	expect(data.retryable).toBe(false);
+	expect(data.quantity).toBe(100);
+	expect(data.threshold).toBe(20);
+	expect(data.balance).toBe(15);
+	expect(data.invoice_mode).toBe(false);
+	expect(data.invoice?.stripe_id).toStartWith("in_");
+	expect(data.invoice?.status).toBe("void");
+	expect(data.invoice?.total).toBe(1000);
+	expect(data.invoice?.currency).toBe("usd");
+
+	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: after,
+		featureId: TestFeature.Messages,
+		remaining: 15,
+	});
+}, 60_000);
+
+test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends failure webhook")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const oneOffProduct = products.oneOffAddOn({
+		id: `topup-webhook-limit-failed-${RUN_ID}`,
+		items: [oneOffItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: `auto-topup-webhook-limit-failed-${RUN_ID}`,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [oneOffProduct] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProduct.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+		],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 50,
+			quantity: 100,
+			purchaseLimit: {
+				interval: PurchaseLimitInterval.Month,
+				limit: 1,
+			},
+		}),
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 260,
+	});
+
+	const successResult = await waitForWebhook<AutoTopupSucceededPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === WebhookEventType.BillingAutoTopupSucceeded &&
+			payload.data?.customer_id === customerId,
+		timeoutMs: 30_000,
+		logWebhook: false,
+	});
+	expect(successResult).not.toBeNull();
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 100,
+	});
+
+	const failedResult = await waitForWebhook<AutoTopupFailedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === WebhookEventType.BillingAutoTopupFailed &&
+			payload.data?.customer_id === customerId,
+		timeoutMs: 30_000,
+	});
+
+	expect(failedResult).not.toBeNull();
+	const data = failedResult!.payload.data;
+	expect(data.reason).toBe("purchase_limit_reached");
+	expect(data.retryable).toBe(false);
+	expect(data.quantity).toBe(100);
+	expect(data.threshold).toBe(50);
+	expect(data.balance).toBe(40);
+	expect(data.invoice).toBeNull();
+
+	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: after,
+		featureId: TestFeature.Messages,
+		remaining: 40,
+	});
+}, 90_000);

@@ -1,6 +1,7 @@
 import type { AutoTopup, Customer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression";
+import { sendAutoTopupFailedWebhook } from "./webhooks/sendAutoTopupFailedWebhook";
 
 /** Triggers an auto top-up for the first feature that transitions to enabled. */
 export const triggerAutoTopUpsOnEnabled = async ({
@@ -31,11 +32,24 @@ export const triggerAutoTopUpsOnEnabled = async ({
 			continue;
 		}
 
-		await enqueueAutoTopupWithBurstSuppression({
+		const enqueueResult = await enqueueAutoTopupWithBurstSuppression({
 			ctx,
 			customerId,
 			featureId: feature.id,
 		});
+
+		if (enqueueResult?.reason === "redis_unavailable") {
+			await sendAutoTopupFailedWebhook({
+				ctx,
+				customerId,
+				featureId: feature.id,
+				reason: "redis_unavailable",
+				retryable: true,
+				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${feature.id}`,
+				autoTopupConfig: autoTopup,
+			});
+		}
+
 		break;
 	}
 };

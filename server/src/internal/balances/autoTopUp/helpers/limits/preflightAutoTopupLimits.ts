@@ -1,5 +1,6 @@
 import type {
 	AutoTopup,
+	BillingAutoTopupFailureReason,
 	AutoTopupLimitState,
 	FullCustomer,
 	InsertAutoTopupLimitState,
@@ -26,7 +27,7 @@ export const preflightAutoTopupLimits = async ({
 	autoTopupConfig: AutoTopup;
 }): Promise<{
 	allowed: boolean;
-	reason?: string;
+	reason?: BillingAutoTopupFailureReason;
 	limitState: AutoTopupLimitState;
 }> => {
 	const now = Date.now();
