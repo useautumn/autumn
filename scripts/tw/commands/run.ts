@@ -26,7 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
@@ -308,15 +308,59 @@ const copyToClipboard = (text: string): void => {
 
 /**
  * Build the dashboard SPA (apps/testbench) once so the WS server can serve it
- * same-origin → one-click open. Skips if already built; best-effort (a failure
- * just means the WS server falls back to the dev-server URL).
+ * same-origin → one-click open. Rebuilds whenever any dashboard source is newer
+ * than the built bundle — a stale dist once hid five chart fixes from the user.
  */
 const ensureDashboardSpa = (): void => {
 	const dir = join(PROJECT_ROOT, "apps", "testbench");
-	if (existsSync(join(dir, "dist", "index.html"))) {
+	const builtAt = (() => {
+		try {
+			return statSync(join(dir, "dist", "index.html")).mtimeMs;
+		} catch {
+			return 0;
+		}
+	})();
+	const newestSourceMtime = (root: string): number => {
+		let newest = 0;
+		try {
+			for (const entry of readdirSync(root, {
+				recursive: true,
+				withFileTypes: true,
+			})) {
+				if (!entry.isFile()) {
+					continue;
+				}
+				const mtime = statSync(
+					join(entry.parentPath ?? root, entry.name),
+				).mtimeMs;
+				if (mtime > newest) {
+					newest = mtime;
+				}
+			}
+		} catch {
+			/* missing dir — treat as no sources */
+		}
+		return newest;
+	};
+	const sourcesAt = Math.max(
+		newestSourceMtime(join(dir, "src")),
+		newestSourceMtime(join(PROJECT_ROOT, "packages", "ui", "src")),
+		(() => {
+			try {
+				return statSync(join(dir, "index.html")).mtimeMs;
+			} catch {
+				return 0;
+			}
+		})(),
+	);
+	if (builtAt > 0 && builtAt >= sourcesAt) {
 		return;
 	}
-	process.stdout.write("📊 building dashboard (first run, ~once)…\n");
+	process.stdout.write(
+		builtAt === 0
+			? "📊 building dashboard (first run)…\n"
+			: "📊 dashboard sources changed — rebuilding…\n",
+	);
 	Bun.spawnSync(["bun", "run", "build"], {
 		cwd: dir,
 		stdout: "ignore",
