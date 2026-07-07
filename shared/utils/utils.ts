@@ -67,6 +67,15 @@ export function sleepUntil(epochMs: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
+export const findDuplicate = <T>(array: T[]): T | undefined => {
+	const seen = new Set<T>();
+	for (const value of array) {
+		if (seen.has(value)) return value;
+		seen.add(value);
+	}
+	return undefined;
+};
+
 export const deduplicateArray = <T>(array: T[]): T[] => {
 	return Array.from(new Set(array));
 };

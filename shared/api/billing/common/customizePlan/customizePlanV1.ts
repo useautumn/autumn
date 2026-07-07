@@ -5,6 +5,7 @@ import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter"
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
+import { findDuplicate } from "@utils/utils";
 import { z } from "zod/v4";
 
 /** Deprecated: use remove_items and add_items to replace plan items. */
@@ -44,15 +45,6 @@ type CustomizePlanRefinementData = {
 	billing_controls?: unknown;
 	add_licenses?: { license_plan_id: string }[];
 	remove_licenses?: string[];
-};
-
-const findDuplicateId = (ids: string[]): string | undefined => {
-	const seen = new Set<string>();
-	for (const id of ids) {
-		if (seen.has(id)) return id;
-		seen.add(id);
-	}
-	return undefined;
 };
 
 export const refineCustomizePlanV1Schema = <
@@ -107,7 +99,7 @@ export const refineCustomizePlanV1Schema = <
 			);
 			const removeIds = data.remove_licenses ?? [];
 
-			const duplicateAdd = findDuplicateId(addIds);
+			const duplicateAdd = findDuplicate(addIds);
 			if (duplicateAdd !== undefined) {
 				refinementCtx.addIssue({
 					code: "custom",
@@ -115,7 +107,7 @@ export const refineCustomizePlanV1Schema = <
 					path: ["add_licenses"],
 				});
 			}
-			const duplicateRemove = findDuplicateId(removeIds);
+			const duplicateRemove = findDuplicate(removeIds);
 			if (duplicateRemove !== undefined) {
 				refinementCtx.addIssue({
 					code: "custom",
