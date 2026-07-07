@@ -42,6 +42,7 @@ import {
 	TRACK_SQS_QUEUE_URL,
 	WORKER_TIMEOUT_MS,
 } from "../constants.ts";
+import { READY_SENTINEL } from "../worker/boot.ts";
 import { narrate, sink } from "./logSink.ts";
 import type {
 	CreateSandboxOptions,
@@ -403,6 +404,21 @@ export const freestyleProvider: ProviderImpl = {
 			);
 		}
 
+		// Playwright Chromium for the browser-driven groups (same bake as Modal's
+		// image step 9; needs the repo's node_modules, so it runs post-warmup).
+		const chromiumDone = stage("bake Playwright Chromium (browser groups)", 20_000);
+		const chromium = await execOnVm(
+			vm,
+			`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
+				"apt-get update -qq && bun x playwright@$PWV install --with-deps chromium",
+		);
+		chromiumDone();
+		if (chromium.exitCode !== 0) {
+			throw new Error(
+				`freestyle: chromium bake failed (exit ${chromium.exitCode}): ${chromium.stderr.slice(-1500)}`,
+			);
+		}
+
 		// Bake the RUNNING app into the snapshot: server + SQS workers + cron start
 		// here once, so forks resume them instead of paying ~30s of bun startup each.
 		const serverEnv = warmServerEnv();
@@ -594,6 +610,7 @@ export const freestyleProvider: ProviderImpl = {
 		// (run.ts stops consuming after READY); the pump itself never rejects.
 		let offset = 0;
 		let exited: { exitCode: number } | undefined;
+		let readySeen = false;
 		const exitWaiters: ((result: { exitCode: number }) => void)[] = [];
 		let stopped = false;
 		const poll = async (): Promise<void> => {
@@ -610,6 +627,9 @@ export const freestyleProvider: ProviderImpl = {
 					if (body) {
 						offset += Buffer.byteLength(body, "utf8");
 						opts.onChunk(body);
+						if (body.includes(READY_SENTINEL)) {
+							readySeen = true;
+						}
 					}
 					const exitMatch = marker?.match(/EXIT=(\d+)/);
 					if (exitMatch) {
@@ -629,7 +649,11 @@ export const freestyleProvider: ProviderImpl = {
 					}
 					// transient exec fault — keep polling
 				}
-				await sleep(1500 + Math.random() * 500);
+				// Fast until READY (run.ts is watching for the sentinel); slow liveness
+				// poll after — 200 workers × 1.5s for a whole run would hammer the API.
+				await sleep(
+					readySeen ? 20_000 + Math.random() * 5_000 : 1_500 + Math.random() * 500,
+				);
 			}
 		};
 		void poll().catch(() => {
