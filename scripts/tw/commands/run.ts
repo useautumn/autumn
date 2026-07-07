@@ -42,6 +42,7 @@ import type { TestExecutor } from "../../testScripts/testExecutor.ts";
 import {
 	DATABASE_CRITICAL_URL,
 	DATABASE_URL,
+	EDGE_CONFIG_OVERRIDE_B64,
 	PROJECT_ROOT,
 	REDIS_URL,
 	REGISTRY_DIR,
@@ -185,31 +186,6 @@ const BOOT_SCRIPT = "scripts/tw/worker/boot.ts";
 
 /** Default owner email stamped on Stripe sub-accounts (contact_email). */
 const OWNER_EMAIL_FALLBACK = "tw@autumn.test";
-
-/**
- * Base64 edge-config override injected into every worker (`AUTUMN_EDGE_CONFIG_OVERRIDE_B64`).
- * The server's `createEdgeConfigStore` decodes this `{ [s3Key]: config }` map and
- * serves each store from memory instead of polling S3 (which has no creds in the
- * µVM). We force the `v2-cache` rollout to 100% so track/check use the atomic
- * cache-v2 (Dragonfly) path; every other edge config falls back to its safe
- * default (no S3 chatter). The key mirrors `ADMIN_ROLLOUT_CONFIG_KEY`
- * ("admin/rollout-config.json") on the server (inlined to avoid importing the AWS
- * SDK into the orchestrator).
- */
-const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
-	JSON.stringify({
-		"admin/rollout-config.json": {
-			rollouts: {
-				"v2-cache": {
-					percent: 100,
-					previousPercent: 100,
-					changedAt: 0,
-					orgs: {},
-				},
-			},
-		},
-	}),
-).toString("base64");
 
 /** How long a single resource's teardown may take before we give up on it (§9a). */
 const TEARDOWN_PER_RESOURCE_TIMEOUT_MS = 20_000;

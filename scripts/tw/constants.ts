@@ -155,6 +155,23 @@ export const CLICKHOUSE_PORT = 8123;
  * Build-time localhost service URLs for a worker (plan §5a / §11a). All point at
  * the µVM's own daemons; `DATABASE_CRITICAL_URL` equals `DATABASE_URL`.
  */
+/** Serves every edge config from memory (no S3 in the µVM) and pins the
+ * v2-cache rollout to 100% — mirrors ADMIN_ROLLOUT_CONFIG_KEY on the server. */
+export const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
+	JSON.stringify({
+		"admin/rollout-config.json": {
+			rollouts: {
+				"v2-cache": {
+					percent: 100,
+					previousPercent: 100,
+					changedAt: 0,
+					orgs: {},
+				},
+			},
+		},
+	}),
+).toString("base64");
+
 export const DATABASE_URL = `postgresql://postgres:postgres@localhost:${PG_PORT}/autumn`;
 export const DATABASE_CRITICAL_URL = DATABASE_URL;
 export const REDIS_URL = `redis://localhost:${DRAGONFLY_PORT}`;

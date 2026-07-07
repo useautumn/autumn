@@ -115,7 +115,7 @@ const waitForTcpPort = async (
 };
 
 /** Waits for the Autumn server health endpoint (`GET /`) to return 200. */
-const waitForServerHealth = async (
+export const waitForServerHealth = async (
 	port: number,
 	timeoutMs: number,
 ): Promise<void> => {
@@ -176,7 +176,7 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
  * `svix_config.sandbox_app_id` so the tests' `getTestSvixAppId` resolves — it
  * does NOT call `createSvixApp`.
  */
-const provisionSvixApp = async (orgId: string): Promise<void> => {
+export const provisionSvixApp = async (orgId: string): Promise<void> => {
 	const svixAppId = process.env.SVIX_APP_ID;
 	if (!svixAppId) {
 		throw new Error(

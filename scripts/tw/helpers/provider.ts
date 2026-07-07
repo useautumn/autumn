@@ -13,7 +13,7 @@
  * `helpers/modal.ts` (`modalProvider`) wraps the `modal` SDK.
  */
 
-export type ProviderName = "vercel" | "modal" | "modalv2";
+export type ProviderName = "vercel" | "modal" | "modalv2" | "freestyle";
 
 /** Provider-neutral sandbox handle: the backend-native object + its name. */
 export type ProviderSandbox = {
@@ -137,6 +137,8 @@ export const setProvider = async (name: ProviderName): Promise<void> => {
 		impl = (await import("./modal.ts")).modalV2Provider;
 	} else if (name === "modal") {
 		impl = (await import("./modal.ts")).modalProvider;
+	} else if (name === "freestyle") {
+		impl = (await import("./freestyle.ts")).freestyleProvider;
 	} else {
 		impl = (await import("./vercel.ts")).vercelProvider;
 	}
