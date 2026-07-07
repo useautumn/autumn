@@ -96,6 +96,11 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 		);
 	}
 	if (snap.phase === "fanout") {
+		const booting = snap.workers.filter((w) => w.status === "booting").length;
+		const provisioning = snap.workers.filter(
+			(w) => w.status === "provisioning",
+		).length;
+		const workersFailed = snap.fanout.workersFailed ?? 0;
 		return (
 			<div className="flex flex-col gap-2.5">
 				<div className="flex items-center justify-between text-muted-foreground text-xs">
@@ -118,6 +123,21 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 						total={snap.fanout.workersTotal}
 						value={snap.fanout.workersReady}
 					/>
+					{workersFailed > 0 ? (
+						<span className="text-red-500 text-xs">
+							· {workersFailed} failed
+						</span>
+					) : null}
+				</div>
+				<div className="flex flex-wrap items-center gap-x-2 text-muted-foreground text-xs tabular-nums">
+					<span>
+						ready {snap.fanout.workersReady}/{snap.fanout.workersTotal}
+					</span>
+					<span>· booting {booting}</span>
+					<span>· provisioning {provisioning}</span>
+					{workersFailed > 0 ? (
+						<span className="text-red-500">· failed {workersFailed}</span>
+					) : null}
 				</div>
 				{snap.workers.length > 0 ? <WorkerDots workers={snap.workers} /> : null}
 				{snap.activity ? (
@@ -175,7 +195,11 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 		return (
 			<div className="flex flex-col gap-1.5">
 				<InfoRow label="passed" value={snap.summary.passed} />
-				<InfoRow label="failed" value={snap.summary.failed} />
+				<InfoRow label="asserts failed" value={snap.summary.failed} />
+				<InfoRow
+					label="files failed"
+					value={snap.summary.filesFailed ?? snap.summary.failed}
+				/>
 				<InfoRow label="crashed" value={snap.summary.crashed} />
 				<InfoRow label="wall" mono value={fmtWall(snap.summary.wallMs)} />
 				{snap.summary.costLine ? (

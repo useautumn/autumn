@@ -24,7 +24,9 @@ export type FileRow = {
 
 export type WorkerRow = {
 	name: string;
-	status: "booting" | "ready" | "dead";
+	status: "provisioning" | "booting" | "ready" | "dead" | "failed";
+	/** Why the worker is dead/failed (provision or boot error), when known. */
+	reason?: string;
 	fileCount: number;
 	files: { file: string; name: string }[];
 };
@@ -47,6 +49,7 @@ export type Snapshot = {
 		stripeTotal: number;
 		workersReady: number;
 		workersTotal: number;
+		workersFailed: number;
 	};
 	teardown: {
 		sandboxesDone: number;
@@ -69,6 +72,8 @@ export type Snapshot = {
 	summary: {
 		passed: number;
 		failed: number;
+		/** FILE-level failures — nonzero even when `failed` (test asserts) is 0 (exec deaths). */
+		filesFailed: number;
 		crashed: number;
 		wallMs: number;
 		costLine?: string;

@@ -82,11 +82,11 @@ export function WarmStepper({ stage }: { stage: number }) {
 	);
 }
 
-/** Compact per-worker status grid (booting → ready → dead) for the fan-out phase. */
+/** Compact per-worker status grid (provisioning → booting → ready → dead/failed). */
 export function WorkerDots({
 	workers,
 }: {
-	workers: { name: string; status: string }[];
+	workers: { name: string; status: string; reason?: string }[];
 }) {
 	return (
 		<div className="flex flex-wrap gap-1">
@@ -96,10 +96,12 @@ export function WorkerDots({
 						"size-2.5 rounded-[3px]",
 						w.status === "ready" && "bg-green-500",
 						w.status === "booting" && "animate-pulse bg-sandbox",
-						w.status === "dead" && "bg-destructive",
+						w.status === "provisioning" && "bg-muted-foreground/25",
+						(w.status === "dead" || w.status === "failed") &&
+							"bg-destructive",
 					)}
 					key={w.name}
-					title={`${w.name} · ${w.status}`}
+					title={`${w.name} · ${w.status}${w.reason ? ` — ${w.reason}` : ""}`}
 				/>
 			))}
 		</div>
@@ -207,7 +209,9 @@ export function FileStatusBadge({ status }: { status: string }) {
 const WORKER_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	ready: { tone: "green", label: "ready" },
 	booting: { tone: "blue", label: "booting" },
+	provisioning: { tone: "muted", label: "provisioning" },
 	dead: { tone: "red", label: "dead" },
+	failed: { tone: "red", label: "failed" },
 };
 
 export function WorkerStatusBadge({ status }: { status: string }) {

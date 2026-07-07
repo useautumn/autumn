@@ -55,6 +55,7 @@ import {
 } from "../constants.ts";
 import {
 	appendWorkerOutput,
+	registerExpectedWorkers,
 	resetHub,
 	setWorkerStatus,
 } from "../dashboard/hub.ts";
@@ -125,6 +126,7 @@ import {
 	bumpAccountDone,
 	bumpSandboxDone,
 	bumpStripeDone,
+	bumpWorkerFailed,
 	bumpWorkerReady,
 	getTuiState,
 	resetTui,
@@ -1362,10 +1364,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 		setPhase("fanout");
 		setFanoutTotals(effectiveWorkers);
+		// Worker names are deterministic, so the dashboard can show the FULL grid
+		// (as gray "provisioning" placeholders) before any worker registers itself.
+		const expectedNames = Array.from({ length: effectiveWorkers }, (_, idx) =>
+			sandboxName(owner, runId, idx),
+		);
+		registerExpectedWorkers(expectedNames);
 		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
 			const isSvixShard = needsSvixShard && idx === 0;
+			const workerName = expectedNames[idx];
 			provisionTasks.push(
 				provisionWorker({
 					idx,
@@ -1379,6 +1388,14 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					ingressToken: ingress.token,
 					fanoutStart,
 					signal,
+				}).catch((error: unknown) => {
+					// Surface the provision failure (red dot + reason, `N failed` counter)
+					// instead of the worker silently never appearing.
+					const reason =
+						error instanceof Error ? error.message : String(error);
+					setWorkerStatus(workerName, "failed", reason.slice(0, 300));
+					bumpWorkerFailed();
+					throw error;
 				}),
 			);
 		}
@@ -1596,6 +1613,11 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				totalCrashed++;
 			}
 		}
+		// FILE-level failures: an exec death fails a file with 0 test-assert
+		// failures, so `totalFailed` alone can read "0 failed" while files failed.
+		const totalFilesFailed = runResults.filter(
+			(file) => file.status === "failed",
+		).length;
 		// Kept in scope for the final stdout line after the TUI exits.
 		let costLine: string | undefined;
 		const publishSummary = (lifetimeMs: number): void => {
@@ -1610,6 +1632,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			setSummary({
 				passed: totalPassed,
 				failed: totalFailed,
+				filesFailed: totalFilesFailed,
 				crashed: totalCrashed,
 				wallMs: lastRunWallMs,
 				costLine,
@@ -1686,7 +1709,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			disableQuietMode();
 		}
 		log(
-			`done — ${totalPassed} passed, ${totalFailed} failed, ${totalCrashed} crashed · ${formatWall(lastRunWallMs)}${costLine ? ` · ${costLine}` : ""}`,
+			totalFilesFailed > 0
+				? `done — ${totalPassed} passed · ${totalFilesFailed} file(s) failed (${totalFailed} test assert(s) failed, ${totalCrashed} crashed) · ${formatWall(lastRunWallMs)}${costLine ? ` · ${costLine}` : ""}`
+				: `done — ${totalPassed} passed, ${totalFailed} failed, ${totalCrashed} crashed · ${formatWall(lastRunWallMs)}${costLine ? ` · ${costLine}` : ""}`,
 		);
 
 		// Surface the failures right in the terminal (TUI is down now → stdout).

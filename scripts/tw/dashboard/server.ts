@@ -55,6 +55,7 @@ const snapshot = () => {
 			stripeTotal: s.stripeTotal,
 			workersReady: s.workersReady,
 			workersTotal: s.workersTotal,
+			workersFailed: s.workersFailed,
 		},
 		teardown: {
 			sandboxesDone: s.sandboxesDone,
@@ -86,6 +87,7 @@ const snapshot = () => {
 		workers: getWorkers().map((w) => ({
 			name: w.name,
 			status: w.status,
+			reason: w.reason,
 			fileCount: w.files.length,
 			files: w.files.map((file) => ({ file, name: basename(file) })),
 		})),

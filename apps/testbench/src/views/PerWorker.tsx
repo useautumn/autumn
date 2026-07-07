@@ -28,6 +28,7 @@ function WorkerList({
 					)}
 					key={w.name}
 					onClick={() => onPick(w.name)}
+					title={`${w.name} · ${w.status}${w.reason ? ` — ${w.reason}` : ""}`}
 					type="button"
 				>
 					<span className="truncate font-mono text-tertiary-foreground">
@@ -79,6 +80,11 @@ export function PerWorker({
 							<span className="text-muted-foreground text-xs">
 								{row.fileCount} files
 							</span>
+							{row.reason ? (
+								<span className="truncate text-red-500 text-xs" title={row.reason}>
+									{row.reason}
+								</span>
+							) : null}
 						</div>
 					) : (
 						<div className="shrink-0 text-muted-foreground text-sm">
