@@ -104,10 +104,11 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	if (
 		providerArg !== "vercel" &&
 		providerArg !== "modal" &&
-		providerArg !== "modalv2"
+		providerArg !== "modalv2" &&
+		providerArg !== "freestyle"
 	) {
 		fatal(
-			`--provider must be "vercel", "modal", or "modalv2" (got "${providerArg}")`,
+			`--provider must be "vercel", "modal", "modalv2", or "freestyle" (got "${providerArg}")`,
 		);
 	}
 	const provider = providerArg as ProviderName;
@@ -186,7 +187,7 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
-			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), or vercel",
+			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), vercel, or freestyle (memory-snapshot restores)",
 			"  --fanout-bench   provision + report fan-out timings, then tear down (no tests)",
 			"",
 			chalk.bold("Env:"),
