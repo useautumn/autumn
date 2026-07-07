@@ -86,9 +86,20 @@ const freestyleApiKey = (): string => {
 	return key;
 };
 
+/** Snapshots of a fat VM (chromium + running server) exceed the SDK fetch's
+ * default budget — give every API call a 15-min ceiling instead. */
+const API_FETCH_TIMEOUT_MS = 15 * 60 * 1000;
+
 let clientInstance: Freestyle | undefined;
 const client = (): Freestyle => {
-	clientInstance ??= new Freestyle({ apiKey: freestyleApiKey() });
+	clientInstance ??= new Freestyle({
+		apiKey: freestyleApiKey(),
+		fetch: (input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+			fetch(input, {
+				...init,
+				signal: AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
+			}),
+	});
 	return clientInstance;
 };
 
@@ -561,8 +572,59 @@ export const freestyleProvider: ProviderImpl = {
 
 		const done = stage("memory-snapshot warm parent (services + server running)", 15_000);
 		try {
-			const snap = await vm.snapshot({ name: sandbox.name });
-			snapshotIdByName.set(sandbox.name, snap.snapshotId);
+			// Slow-capture tolerance: if the snapshot CALL times out, the build may
+			// still be running server-side — poll by name before declaring failure.
+			let snapshotId: string | undefined;
+			try {
+				snapshotId = (await vm.snapshot({ name: sandbox.name })).snapshotId;
+			} catch (error) {
+				if (!/timed? ?out|abort/i.test((error as Error).message ?? "")) {
+					throw error;
+				}
+				narrate(
+					chalk.yellow(
+						"[freestyle] snapshot call timed out — polling for server-side completion",
+					),
+				);
+				const deadline = Date.now() + 12 * 60 * 1000;
+				while (Date.now() < deadline && !snapshotId) {
+					await sleep(5_000);
+					const { snapshots } = await client().vms.snapshots.list({
+						includeBuilding: true,
+						includeFailed: true,
+					});
+					const match = snapshots
+						.filter((snap) => snap.name === sandbox.name && !snap.deleted)
+						.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+					if (match?.state === "ready") {
+						snapshotId = match.snapshotId;
+					} else if (match?.state === "failed") {
+						throw new Error("freestyle: snapshot build failed server-side");
+					} else if (!match && Date.now() > deadline - 11 * 60 * 1000) {
+						throw error;
+					}
+				}
+				if (!snapshotId) {
+					throw new Error("freestyle: snapshot never became ready");
+				}
+			}
+			// The API can return before the build finishes — confirm READY before
+			// anything forks from it.
+			const readyDeadline = Date.now() + 12 * 60 * 1000;
+			for (;;) {
+				const info = await client().vms.snapshots.get({ snapshotId });
+				if (info.state === "ready" || info.state === undefined) {
+					break;
+				}
+				if (info.state === "failed") {
+					throw new Error("freestyle: snapshot build failed server-side");
+				}
+				if (Date.now() > readyDeadline) {
+					throw new Error("freestyle: snapshot stuck building");
+				}
+				await sleep(5_000);
+			}
+			snapshotIdByName.set(sandbox.name, snapshotId);
 			ffSourceByWarmName.delete(sandbox.name);
 			await vm.delete().catch(() => {
 				/* best-effort */
@@ -575,7 +637,7 @@ export const freestyleProvider: ProviderImpl = {
 			await gcWarmSnapshots().catch(() => {
 				/* best-effort */
 			});
-			return snap.snapshotId;
+			return snapshotId;
 		} finally {
 			done();
 		}
