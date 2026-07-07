@@ -173,7 +173,7 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	connectTimeout: isProd ? 5 : 30,
 	poolConfig: {
 		application_name: "autumn-general",
-		statement_timeout: isProd ? generalStatementTimeoutMs : undefined,
+		...(isProd ? { statement_timeout: generalStatementTimeoutMs } : {}),
 	},
 });
 
