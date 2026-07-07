@@ -84,26 +84,11 @@ export const payForInvoice = async ({
 		};
 	}
 
+	let paidInvoice: Stripe.Response<Stripe.Invoice>;
 	try {
-		const invoice = await stripeCli.invoices.pay(invoiceId, {
+		paidInvoice = await stripeCli.invoices.pay(invoiceId, {
 			payment_method: paymentMethod?.id,
 		});
-		const paid = invoice.status === "paid";
-		const error = paid
-			? null
-			: new RecaseError({
-					message: `Invoice ${invoiceId} is ${invoice.status ?? "not paid"}`,
-					code: ErrCode.PayInvoiceFailed,
-					data: invoice,
-				});
-
-		if (!paid && errorOnFail) throw error;
-
-		return {
-			paid,
-			error,
-			invoice,
-		};
 	} catch (error: any) {
 		logger.error(
 			`❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
@@ -134,6 +119,23 @@ export const payForInvoice = async ({
 			};
 		}
 	}
+
+	const paid = paidInvoice.status === "paid";
+	const error = paid
+		? null
+		: new RecaseError({
+				message: `Invoice ${invoiceId} is ${paidInvoice.status ?? "not paid"}`,
+				code: ErrCode.PayInvoiceFailed,
+				data: paidInvoice,
+			});
+
+	if (!paid && errorOnFail) throw error;
+
+	return {
+		paid,
+		error,
+		invoice: paidInvoice,
+	};
 };
 
 export const getInvoiceDiscounts = ({

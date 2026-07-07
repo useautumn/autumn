@@ -70,11 +70,12 @@ export const payStripeInvoice = async ({
 	}
 
 	if (paidInvoice.status !== "paid") {
+		const isProcessing = paidInvoice.status === "open";
 		return {
 			paid: false,
 			invoice: paidInvoice,
 			requiredAction: {
-				code: "payment_failed",
+				code: isProcessing ? "payment_processing" : "payment_failed",
 				reason: `Invoice is ${paidInvoice.status ?? "not paid"}`,
 			},
 		};
