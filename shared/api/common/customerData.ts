@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
-import { isValidCurrencyCode } from "../../utils/currencyUtils/isoCurrencies";
+import { isValidCurrencyCode } from "../../utils/currencyUtils/stripeCurrencies";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
@@ -59,7 +59,7 @@ export const CustomerDataSchema = z
 
 		currency: z
 			.string()
-			.refine(isValidCurrencyCode, "must be a valid ISO 4217 currency code")
+			.refine(isValidCurrencyCode, "must be a Stripe-supported currency code")
 			.nullish()
 			.meta({
 				description:

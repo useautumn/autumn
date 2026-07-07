@@ -1,7 +1,7 @@
 // Billing utils
 export * from "./common/unixUtils";
 // Currency utils
-export * from "./currencyUtils/isoCurrencies";
+export * from "./currencyUtils/stripeCurrencies";
 // Cursor pagination utils
 export * from "./cursorUtils";
 // Balance utils

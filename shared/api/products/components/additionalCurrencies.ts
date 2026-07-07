@@ -1,12 +1,13 @@
 import { Infinite } from "@models/productModels/productEnums.js";
-import { isValidCurrencyCode } from "@utils/currencyUtils/isoCurrencies.js";
+import { isValidCurrencyCode } from "@utils/currencyUtils/stripeCurrencies.js";
 import { z } from "zod/v4";
 
 const currencyCodeSchema = z
 	.string()
-	.refine(isValidCurrencyCode, "must be a valid ISO 4217 currency code")
+	.refine(isValidCurrencyCode, "must be a Stripe-supported currency code")
 	.meta({
-		description: "Three-letter ISO 4217 currency code (e.g. 'eur', 'gbp').",
+		description:
+			"Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').",
 	});
 
 export const AdditionalCurrencyPriceSchema = z.object({

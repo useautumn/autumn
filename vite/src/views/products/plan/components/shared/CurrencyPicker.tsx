@@ -47,21 +47,29 @@ export const CurrencyPicker = ({
 							No currency found.
 						</CommandEmpty>
 						<CommandGroup>
-							{options.map((code) => (
-								<CommandItem
-									key={code}
-									onSelect={() => {
-										onSelect(code);
-										setOpen(false);
-									}}
-									value={`${code} ${currencyDisplayName(code)}`}
-								>
-									<span className="font-medium uppercase">{code}</span>
-									<span className="ml-2 truncate text-tertiary-foreground">
-										{currencyDisplayName(code)}
-									</span>
-								</CommandItem>
-							))}
+							{options.map((code) => {
+								const name = currencyDisplayName(code);
+								const showName = name.toLowerCase() !== code.toLowerCase();
+								return (
+									<CommandItem
+										key={code}
+										onSelect={() => {
+											onSelect(code);
+											setOpen(false);
+										}}
+										value={`${code} ${name}`}
+									>
+										<span className="w-10 shrink-0 font-medium uppercase">
+											{code}
+										</span>
+										{showName && (
+											<span className="truncate text-tertiary-foreground">
+												{name}
+											</span>
+										)}
+									</CommandItem>
+								);
+							})}
 						</CommandGroup>
 					</CommandList>
 				</Command>
