@@ -5,9 +5,6 @@ import type { DbProbe } from "./types.js";
 
 const PROBE_TIMEOUT_MS = 10_000;
 
-// Single-flight: skip a tick while the previous run is still in flight, so a
-// slow probe (exactly when the DB is under pressure) can't stack up ticks and
-// pile connections onto the cron pool.
 let running = false;
 
 const withTimeout = <T>(
@@ -33,8 +30,6 @@ const runProbe = async (
 	try {
 		await withTimeout(probe.run({ db }), timeoutMs, `db probe ${probe.name}`);
 	} catch (error) {
-		// A probe must never break the cron tick or the other probes. Pass the
-		// raw Error so the structured logger keeps the stack/cause.
 		logger.warn(
 			{ type: "db_probe_error", probe: probe.name, err: error },
 			"DB probe failed",
@@ -42,7 +37,6 @@ const runProbe = async (
 	}
 };
 
-/** Runs every registered DB health probe once — each isolated and time-bounded. */
 export const runDbProbes = async ({
 	db,
 	probes = dbProbes,

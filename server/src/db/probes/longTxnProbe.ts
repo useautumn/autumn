@@ -7,12 +7,10 @@ type LongTxnRow = {
 	max_xmin_lag: number | null;
 	pid: number | null;
 	wait_event: string | null;
+	query_kind: string | null;
 	visible_backends: number | null;
 };
 
-// Longest-running client transaction + how far any backend holds the xmin
-// horizon back. Leading signal for the xmin-pin / sync-convoy failure mode: a
-// long client txn pins xmin, blocks HOT-prune/VACUUM, and stalls the primary.
 export const longTxnProbe: DbProbe = {
 	name: "db_long_txn",
 	run: async ({ db }) => {
@@ -31,28 +29,31 @@ export const longTxnProbe: DbProbe = {
 					FROM pg_stat_activity
 					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
 					ORDER BY xact_start ASC LIMIT 1) AS wait_event,
+				(SELECT upper(substring(query FROM '[a-zA-Z]+'))
+					FROM pg_stat_activity
+					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
+					ORDER BY xact_start ASC LIMIT 1) AS query_kind,
 				(SELECT count(*)::int FROM pg_stat_activity) AS visible_backends
 		`);
 
 		const visibleBackends = row?.visible_backends ?? 0;
-		// Without pg_monitor visibility the role sees only its own session, so
-		// every metric reads 0 — surface that instead of giving false confidence.
-		if (visibleBackends <= 1) {
+		const blind = visibleBackends <= 1;
+		if (blind) {
 			logger.warn(
 				{ type: "db_long_txn_blind", visible_backends: visibleBackends },
 				"DB long-txn probe sees <=1 backend — missing pg_monitor visibility?",
 			);
 		}
 
-		// The offending query text is intentionally NOT logged (it can contain
-		// customer literals). Triage the pinner by pid via `ops db-long`.
 		logger.info(
 			{
 				type: "db_long_txn",
-				longest_txn_seconds: row?.longest_txn_seconds ?? 0,
-				max_xmin_lag: row?.max_xmin_lag ?? 0,
-				pid: row?.pid ?? null,
-				wait_event: row?.wait_event ?? null,
+				blind,
+				longest_txn_seconds: blind ? null : (row?.longest_txn_seconds ?? 0),
+				max_xmin_lag: blind ? null : (row?.max_xmin_lag ?? 0),
+				pid: blind ? null : (row?.pid ?? null),
+				wait_event: blind ? null : (row?.wait_event ?? null),
+				query_kind: blind ? null : (row?.query_kind ?? null),
 				visible_backends: visibleBackends,
 			},
 			"DB long-txn probe",

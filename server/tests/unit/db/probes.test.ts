@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { DbProbe } from "@/db/probes/types.js";
 
-// Mock the logger before importing the SUT so probe emits are captured, not shipped.
 const info = mock((..._args: unknown[]) => {});
 const warn = mock((..._args: unknown[]) => {});
 mock.module("@/external/logtail/logtailUtils.js", () => ({
@@ -92,7 +91,7 @@ describe("runDbProbes", () => {
 });
 
 describe("longTxnProbe", () => {
-	it("emits db_long_txn and never logs raw query text", async () => {
+	it("emits db_long_txn with query_kind and never logs raw query text", async () => {
 		const db = {
 			execute: async () => [
 				{
@@ -100,6 +99,7 @@ describe("longTxnProbe", () => {
 					max_xmin_lag: 123,
 					pid: 999,
 					wait_event: "on_cpu",
+					query_kind: "UPDATE",
 					visible_backends: 60,
 				},
 			],
@@ -112,30 +112,17 @@ describe("longTxnProbe", () => {
 		const [fields] = info.mock.calls[0];
 		expect(fields).toMatchObject({
 			type: "db_long_txn",
+			blind: false,
 			longest_txn_seconds: 42,
 			max_xmin_lag: 123,
 			pid: 999,
 			wait_event: "on_cpu",
+			query_kind: "UPDATE",
 		});
 		expect(fields).not.toHaveProperty("query");
 	});
 
-	it("defaults to zeros on an empty result", async () => {
-		// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
-		const db = { execute: async () => [] } as any;
-
-		await longTxnProbe.run({ db });
-
-		const [fields] = info.mock.calls[0];
-		expect(fields).toMatchObject({
-			type: "db_long_txn",
-			longest_txn_seconds: 0,
-			max_xmin_lag: 0,
-			pid: null,
-		});
-	});
-
-	it("warns when it can see <=1 backend (missing pg_monitor visibility)", async () => {
+	it("marks blind readings with null metrics so they can't look healthy", async () => {
 		const db = {
 			execute: async () => [
 				{
@@ -143,6 +130,7 @@ describe("longTxnProbe", () => {
 					max_xmin_lag: 0,
 					pid: null,
 					wait_event: null,
+					query_kind: null,
 					visible_backends: 1,
 				},
 			],
@@ -155,6 +143,29 @@ describe("longTxnProbe", () => {
 		expect(warn.mock.calls[0][0]).toMatchObject({
 			type: "db_long_txn_blind",
 			visible_backends: 1,
+		});
+		const [fields] = info.mock.calls[0];
+		expect(fields).toMatchObject({
+			type: "db_long_txn",
+			blind: true,
+			longest_txn_seconds: null,
+			max_xmin_lag: null,
+		});
+	});
+
+	it("treats an empty result as blind (no fake-healthy zero)", async () => {
+		// biome-ignore lint/suspicious/noExplicitAny: minimal db stub
+		const db = { execute: async () => [] } as any;
+
+		await longTxnProbe.run({ db });
+
+		expect(warn).toHaveBeenCalledTimes(1);
+		const [fields] = info.mock.calls[0];
+		expect(fields).toMatchObject({
+			type: "db_long_txn",
+			blind: true,
+			longest_txn_seconds: null,
+			max_xmin_lag: null,
 		});
 	});
 });
