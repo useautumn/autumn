@@ -1,16 +1,9 @@
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
 import type { Snapshot } from "../types";
 import { FileStatusBadge } from "../widgets";
 
-const HISTOGRAM_CONFIG = {
-	count: { label: "files", color: "#27a7ff" },
-};
+// Literal hex — theme chart vars proved unreliable in this standalone app.
+const BAR_COLOR = "#27a7ff";
 
 /** Bucket edges in seconds — log-ish steps so both 5s and 5min files read well. */
 const BUCKETS_S = [10, 20, 30, 45, 60, 90, 120, 180, 240, 360, 600];
@@ -26,6 +19,48 @@ const bucketLabel = (index: number): string => {
 	const hi = BUCKETS_S[index];
 	return hi >= 120 ? `${lo / 60}-${hi / 60}m` : `${lo}-${hi}s`;
 };
+
+/** Plain-div bar chart — no chart library, so it cannot render blank. */
+function DurationHistogram({
+	histogram,
+}: {
+	histogram: { bucket: string; count: number }[];
+}) {
+	const max = Math.max(1, ...histogram.map((b) => b.count));
+	return (
+		<div className="flex h-56 w-full items-stretch">
+			<div className="flex min-w-0 flex-1 items-stretch gap-1.5 border-border border-l pl-1.5">
+				{histogram.map(({ bucket, count }) => (
+					<div
+						className="flex min-w-0 flex-1 flex-col"
+						key={bucket}
+						title={`${bucket}: ${count} file${count === 1 ? "" : "s"}`}
+					>
+						<div className="flex min-h-0 flex-1 flex-col justify-end border-border border-b">
+							{count > 0 ? (
+								<>
+									<div className="pb-0.5 text-center font-mono text-[10px] text-muted-foreground tabular-nums">
+										{count}
+									</div>
+									<div
+										className="w-full rounded-t-[3px]"
+										style={{
+											backgroundColor: BAR_COLOR,
+											height: `${Math.max(2, (count / max) * 82)}%`,
+										}}
+									/>
+								</>
+							) : null}
+						</div>
+						<div className="h-5 truncate pt-1 text-center text-[10px] text-muted-foreground">
+							{bucket}
+						</div>
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
 
 /**
  * Live distribution of per-file wall durations (dispatch → verdict) plus the
@@ -85,34 +120,7 @@ export function Timings({ snap }: { snap: Snapshot }) {
 				<div className="mb-2 font-medium text-muted-foreground text-xs">
 					duration distribution
 				</div>
-				<ChartContainer className="h-56 w-full" config={HISTOGRAM_CONFIG}>
-					<BarChart
-						data={histogram}
-						margin={{ left: 0, right: 8, top: 8, bottom: 0 }}
-					>
-						<CartesianGrid stroke="var(--chart-grid-stroke)" vertical={false} />
-						<XAxis
-							axisLine={false}
-							dataKey="bucket"
-							fontSize={11}
-							tickLine={false}
-						/>
-						<YAxis
-							allowDecimals={false}
-							axisLine={false}
-							fontSize={11}
-							tickLine={false}
-							width={28}
-						/>
-						<ChartTooltip content={<ChartTooltipContent />} />
-						<Bar
-							dataKey="count"
-							fill="#27a7ff"
-							isAnimationActive={false}
-							radius={[3, 3, 0, 0]}
-						/>
-					</BarChart>
-				</ChartContainer>
+				<DurationHistogram histogram={histogram} />
 			</div>
 			<div className="min-h-0 rounded-lg border bg-card">
 				<div className="border-b p-3 font-medium text-muted-foreground text-xs">
