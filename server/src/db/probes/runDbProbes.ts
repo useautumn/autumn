@@ -43,7 +43,7 @@ export const runDbProbes = async ({
 	timeoutMs = PROBE_TIMEOUT_MS,
 }: {
 	db: DrizzleCli;
-	probes?: DbProbe[];
+	probes?: readonly DbProbe[];
 	timeoutMs?: number;
 }): Promise<void> => {
 	if (running) {
