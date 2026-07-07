@@ -1825,6 +1825,7 @@ AttachCode = Union[
         "3ds_required",
         "payment_method_required",
         "payment_failed",
+        "payment_processing",
     ],
     UnrecognizedStr,
 ]

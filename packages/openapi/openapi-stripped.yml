@@ -13331,6 +13331,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                          - payment_processing
                         type: string
                         description: The type of action required to complete the payment.
                       reason:
@@ -14864,6 +14865,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                          - payment_processing
                         type: string
                         description: The type of action required to complete the payment.
                       reason:
@@ -15471,6 +15473,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                          - payment_processing
                         type: string
                         description: The type of action required to complete the payment.
                       reason:
@@ -18530,6 +18533,7 @@ paths:
                           - 3ds_required
                           - payment_method_required
                           - payment_failed
+                          - payment_processing
                         type: string
                         description: The type of action required to complete the payment.
                       reason:

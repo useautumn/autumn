@@ -1145,6 +1145,7 @@ export const AttachCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
+  PaymentProcessing: "payment_processing",
 } as const;
 /**
  * The type of action required to complete the payment.
