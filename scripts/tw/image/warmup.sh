@@ -89,7 +89,13 @@ log "HEAD at $(git rev-parse --short HEAD)"
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)
 # ---------------------------------------------------------------------------
 log "bun install --frozen-lockfile"
-bun install --frozen-lockfile
+# Self-repair: a failing lifecycle script (native-dep rebuild on a delta
+# install) must not abort the warm-up — deps land, optional builds are skipped.
+if ! bun install --frozen-lockfile; then
+  log "install failed — retrying with --ignore-scripts"
+  bun install --frozen-lockfile --ignore-scripts \
+    || die "bun install FAILED even with --ignore-scripts"
+fi
 
 # ---------------------------------------------------------------------------
 # Ensure services are up for migrate + seed (idempotent).

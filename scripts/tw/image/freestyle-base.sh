@@ -76,6 +76,10 @@ curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" >/dev/null
 ln -sf /root/.bun/bin/bun /usr/local/bin/bun
 ln -sf /root/.bun/bin/bun /usr/local/bin/node
 bun --version
+# node-gyp for native-dep install fallbacks (e.g. better-sqlite3's
+# `prebuild-install || node-gyp rebuild`) during delta installs.
+bun install -g node-gyp >/dev/null
+ln -sf /root/.bun/bin/node-gyp /usr/local/bin/node-gyp || true
 
 echo "[freestyle-base] 7/7 initdb PG18 cluster (empty db + pg_trgm)"
 export PATH="/usr/lib/postgresql/18/bin:$PATH"
