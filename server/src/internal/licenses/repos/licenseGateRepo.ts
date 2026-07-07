@@ -70,9 +70,7 @@ const touchesLicenses = async ({
 			OR EXISTS (
 				SELECT 1
 				FROM ${licensePoolGrants}
-				WHERE ${licensePoolGrants.org_id} = ${orgId}
-					AND ${licensePoolGrants.env} = ${env}
-					AND ${licensePoolGrants.internal_customer_id} = ${internalCustomerId}
+				WHERE ${licensePoolGrants.internal_customer_id} = ${internalCustomerId}
 			)
 			AS touches
 	`);

@@ -20,8 +20,6 @@ CREATE TABLE "license_entitlements" (
 --> statement-breakpoint
 CREATE TABLE "license_pool_grant" (
 	"id" text PRIMARY KEY NOT NULL,
-	"org_id" text NOT NULL,
-	"env" text NOT NULL,
 	"internal_customer_id" text NOT NULL,
 	"parent_customer_product_id" text NOT NULL,
 	"license_internal_product_id" text NOT NULL,
@@ -76,7 +74,7 @@ CREATE UNIQUE INDEX CONCURRENTLY "unique_customer_license" ON "customer_licenses
 CREATE INDEX CONCURRENTLY "idx_customer_licenses_customer" ON "customer_licenses" USING btree ("org_id","env","internal_customer_id");--> statement-breakpoint
 CREATE UNIQUE INDEX CONCURRENTLY "unique_license_entitlement" ON "license_entitlements" USING btree ("plan_license_id","entitlement_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_entitlements_entitlement" ON "license_entitlements" USING btree ("entitlement_id");--> statement-breakpoint
-CREATE UNIQUE INDEX CONCURRENTLY "unique_license_pool_grant" ON "license_pool_grant" USING btree ("org_id","env","internal_customer_id","parent_customer_product_id","license_internal_product_id","internal_feature_id");--> statement-breakpoint
+CREATE UNIQUE INDEX CONCURRENTLY "unique_license_pool_grant" ON "license_pool_grant" USING btree ("internal_customer_id","parent_customer_product_id","license_internal_product_id","internal_feature_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_pool_grant_customer" ON "license_pool_grant" USING btree ("internal_customer_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_pool_grant_license_product" ON "license_pool_grant" USING btree ("license_internal_product_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_pool_grant_customer_entitlement" ON "license_pool_grant" USING btree ("customer_entitlement_id");--> statement-breakpoint
