@@ -1,6 +1,7 @@
 import {
 	type ApiFreeTrialV2,
 	ApiFreeTrialV2Schema,
+	type ApiPlanLicenseV1,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
 	billingControlsFromColumns,
@@ -17,12 +18,6 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { deriveLicenseCustomizeByLinkIds } from "@/internal/licenses/actions/licenseCustomizeContent.js";
-import { planLicenseRepo } from "@/internal/licenses/repos/index.js";
-
-type PlanLicenseLink = Awaited<
-	ReturnType<typeof planLicenseRepo.listWithLicensePlanIdByParents>
->[number];
 
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
@@ -57,7 +52,7 @@ export const getPlanResponse = async ({
 	currency = "usd",
 	baseFullProduct,
 	resolveBaseFullProduct = true,
-	licenseLinks,
+	planLicenses,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -67,7 +62,7 @@ export const getPlanResponse = async ({
 	currency?: string;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
-	licenseLinks?: PlanLicenseLink[];
+	planLicenses?: ApiPlanLicenseV1[];
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -128,39 +123,8 @@ export const getPlanResponse = async ({
 		fullProduct: product,
 	});
 
-	const resolvedLicenseLinks =
-		licenseLinks ??
-		(ctx
-			? await planLicenseRepo.listWithLicensePlanIdByParents({
-					db: ctx.db,
-					parentInternalProductIds: [product.internal_id],
-				})
-			: []);
-	const customizeByLinkId = ctx
-		? await deriveLicenseCustomizeByLinkIds({
-				ctx,
-				links: resolvedLicenseLinks.map(({ planLicense }) => planLicense),
-			})
-		: new Map<
-				string,
-				Awaited<ReturnType<typeof deriveLicenseCustomizeByLinkIds>> extends Map<
-					string,
-					infer V
-				>
-					? V
-					: never
-			>();
 	const licenses =
-		resolvedLicenseLinks.length > 0
-			? resolvedLicenseLinks.map(({ planLicense, licensePlanId }) => ({
-					license_plan_id: licensePlanId,
-					included: planLicense.included,
-					prepaid_only: planLicense.prepaid_only,
-					...(customizeByLinkId.get(planLicense.id)
-						? { customize: customizeByLinkId.get(planLicense.id) }
-						: {}),
-				}))
-			: undefined;
+		planLicenses && planLicenses.length > 0 ? planLicenses : undefined;
 
 	// 9. Build Plan response
 	const plan = {
