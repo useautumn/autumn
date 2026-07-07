@@ -1,10 +1,4 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
 /** mm:ss-style live elapsed timer, re-rendering once a second from `since` (epoch ms). */
@@ -219,11 +213,9 @@ export function WorkerStatusBadge({ status }: { status: string }) {
 	return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
-const SPEED_CONFIG = {
-	// Fixed hue: --chart-1 aliases --primary, which lands near-invisible on the
-	// dark card in some themes.
-	rate: { label: "files/sec", color: "#27a7ff" },
-};
+// Literal colors — theme chart vars proved unreliable in this standalone app.
+const LINE_COLOR = "#27a7ff";
+const GRID_COLOR = "#80808030";
 
 /** Live files-completed-per-second chart, binning completion timestamps into 2s buckets. */
 export function SpeedChart({ completions }: { completions: number[] }) {
@@ -246,28 +238,54 @@ export function SpeedChart({ completions }: { completions: number[] }) {
 	for (let b = 0; b <= maxB; b++) {
 		data.push({ t: b * 2, rate: (buckets.get(b) ?? 0) / 2 });
 	}
+	const maxRate = Math.max(0.5, ...data.map((d) => d.rate));
+	// Fixed viewBox + preserveAspectRatio=none: renders at any CSS size with no
+	// runtime measurement (the failure mode of ResponsiveContainer-style charts).
+	const points = data
+		.map((d, index) => {
+			const x = data.length === 1 ? 0 : (index / (data.length - 1)) * 100;
+			const y = 100 - (d.rate / maxRate) * 92;
+			return `${x.toFixed(2)},${y.toFixed(2)}`;
+		})
+		.join(" ");
 	return (
-		<ChartContainer className="h-48 w-full" config={SPEED_CONFIG}>
-			<LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-				<CartesianGrid stroke="var(--chart-grid-stroke)" vertical={false} />
-				<XAxis
-					axisLine={false}
-					dataKey="t"
-					fontSize={11}
-					tickFormatter={(v) => `${v}s`}
-					tickLine={false}
-				/>
-				<YAxis axisLine={false} fontSize={11} tickLine={false} width={28} />
-				<ChartTooltip content={<ChartTooltipContent />} />
-				<Line
-					dataKey="rate"
-					dot={false}
-					isAnimationActive={false}
-					stroke="#27a7ff"
-					strokeWidth={2}
-					type="monotone"
-				/>
-			</LineChart>
-		</ChartContainer>
+		<div className="flex h-48 w-full items-stretch gap-1 text-muted-foreground">
+			<div className="flex shrink-0 flex-col justify-between pb-4 text-right font-mono text-[10px] tabular-nums">
+				<span>{maxRate.toFixed(1)}/s</span>
+				<span>0</span>
+			</div>
+			<div className="flex min-w-0 flex-1 flex-col border-border border-l pl-1.5">
+				<svg
+					aria-label="files completed per second"
+					className="min-h-0 w-full flex-1"
+					preserveAspectRatio="none"
+					role="img"
+					viewBox="0 0 100 100"
+				>
+					{[25, 50, 75, 100].map((y) => (
+						<line
+							key={y}
+							stroke={GRID_COLOR}
+							vectorEffect="non-scaling-stroke"
+							x1="0"
+							x2="100"
+							y1={y}
+							y2={y}
+						/>
+					))}
+					<polyline
+						fill="none"
+						points={points}
+						stroke={LINE_COLOR}
+						strokeWidth="1.5"
+						vectorEffect="non-scaling-stroke"
+					/>
+				</svg>
+				<div className="flex h-4 items-end justify-between font-mono text-[10px] tabular-nums">
+					<span>0s</span>
+					<span>{maxB * 2}s</span>
+				</div>
+			</div>
+		</div>
 	);
 }
