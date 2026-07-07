@@ -23,7 +23,7 @@ export type TuiFailedTest = {
 
 export type TuiTestFile = {
 	file: string;
-	status: "pending" | "running" | "passed" | "failed" | "retrying";
+	status: "pending" | "running" | "passed" | "failed" | "retrying" | "skipped";
 	passed: number;
 	failed: number;
 	currentTest?: string;
@@ -213,7 +213,7 @@ export const setRunTotal = (total: number): void => {
 };
 
 const isTerminal = (status: TuiTestFile["status"]): boolean =>
-	status === "passed" || status === "failed";
+	status === "passed" || status === "failed" || status === "skipped";
 
 /**
  * Insert/replace a per-file test result. When a file first reaches a terminal
@@ -230,7 +230,9 @@ export const upsertTestFile = (result: TuiTestFile): void => {
 		return;
 	}
 	const name = result.file.split("/").pop() ?? result.file;
-	if (result.status === "passed") {
+	if (result.status === "skipped") {
+		appendLog(`⊘ ${name} — skipped from the dashboard`);
+	} else if (result.status === "passed") {
 		appendLog(
 			`✓ ${name} (✓${result.passed})${result.passedOnRetry ? " (retry)" : ""}`,
 		);
@@ -293,8 +295,10 @@ export const runTallies = (): {
 	failed: number;
 	running: number;
 	retrying: number;
+	skipped: number;
 } => {
 	let done = 0;
+	let skipped = 0;
 	let passed = 0;
 	let failed = 0;
 	let running = 0;
@@ -310,7 +314,10 @@ export const runTallies = (): {
 			running++;
 		} else if (file.status === "retrying") {
 			retrying++;
+		} else if (file.status === "skipped") {
+			done++;
+			skipped++;
 		}
 	}
-	return { done, passed, failed, running, retrying };
+	return { done, passed, failed, running, retrying, skipped };
 };

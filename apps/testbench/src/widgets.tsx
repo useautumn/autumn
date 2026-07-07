@@ -176,7 +176,28 @@ const FILE_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	running: { tone: "blue", label: "running" },
 	retrying: { tone: "yellow", label: "retry" },
 	pending: { tone: "muted", label: "pending" },
+	skipped: { tone: "muted", label: "skipped" },
 };
+
+/** Triage order for file tables: active work first, then failures to look at. */
+const STATUS_RANK: Record<string, number> = {
+	running: 0,
+	retrying: 1,
+	failed: 2,
+	pending: 3,
+	skipped: 4,
+	passed: 5,
+};
+
+/** Stable sort: running → retrying → failed → queued → skipped → passed. */
+export const sortFilesForTriage = <T extends { status: string; name: string }>(
+	files: T[],
+): T[] =>
+	[...files].sort(
+		(a, b) =>
+			(STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9) ||
+			a.name.localeCompare(b.name),
+	);
 
 export function FileStatusBadge({ status }: { status: string }) {
 	const s = FILE_STATUS[status] ?? FILE_STATUS.pending;
@@ -195,7 +216,9 @@ export function WorkerStatusBadge({ status }: { status: string }) {
 }
 
 const SPEED_CONFIG = {
-	rate: { label: "files/sec", color: "var(--chart-1)" },
+	// Fixed hue: --chart-1 aliases --primary, which lands near-invisible on the
+	// dark card in some themes.
+	rate: { label: "files/sec", color: "#27a7ff" },
 };
 
 /** Live files-completed-per-second chart, binning completion timestamps into 2s buckets. */

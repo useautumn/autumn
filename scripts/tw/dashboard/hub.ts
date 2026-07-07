@@ -23,7 +23,8 @@ export type HubEvent =
 	| { type: "workerOutput"; worker: string; chunk: string }
 	| { type: "fileWorker"; file: string; worker: string }
 	| { type: "workerStatus"; worker: string; status: WorkerStatus }
-	| { type: "completion"; file: string; at: number };
+	| { type: "completion"; file: string; at: number }
+	| { type: "errorsOutput"; chunk: string };
 
 type Listener = (event: HubEvent) => void;
 
@@ -40,6 +41,14 @@ const workerFiles = new Map<string, string[]>();
 const workerStatus = new Map<string, WorkerStatus>();
 /** Epoch-ms timestamps of file completions (for the speed graph). */
 const completions: number[] = [];
+/** Dispatch time per file (latest attempt) — durations for the timings view. */
+const fileStarts = new Map<string, number>();
+/** Wall duration of each file's LAST completed attempt. */
+const fileDurations = new Map<string, number>();
+/** Rolling failure feed: every failed file's failure detail, appended live. */
+let errorsBuffer = "";
+/** Files the dashboard asked to skip (honored while still pending). */
+const skipRequests = new Set<string>();
 
 let enabled = false;
 
@@ -78,6 +87,7 @@ export const setFileWorker = (file: string, worker: string): void => {
 		return;
 	}
 	fileWorker.set(file, worker);
+	fileStarts.set(file, Date.now());
 	const files = workerFiles.get(worker) ?? [];
 	if (!files.includes(file)) {
 		files.push(file);
@@ -116,8 +126,30 @@ export const recordCompletion = (file: string): void => {
 	}
 	const at = Date.now();
 	completions.push(at);
+	const startedAt = fileStarts.get(file);
+	if (startedAt) {
+		fileDurations.set(file, at - startedAt);
+	}
 	emit({ type: "completion", file, at });
 };
+
+/** Append one failed file's failure detail to the live errors feed. */
+export const appendErrorsOutput = (chunk: string): void => {
+	if (!enabled) {
+		return;
+	}
+	errorsBuffer =
+		errorsBuffer.length + chunk.length > MAX_BUFFER_CHARS * 4
+			? errorsBuffer.slice(chunk.length) + chunk
+			: errorsBuffer + chunk;
+	emit({ type: "errorsOutput", chunk });
+};
+
+export const requestSkip = (file: string): void => {
+	skipRequests.add(file);
+};
+export const isSkipRequested = (file: string): boolean =>
+	skipRequests.has(file);
 
 // ---- readers (used by the WebSocket server) -------------------------------
 
@@ -128,6 +160,9 @@ export const getWorkerOutput = (worker: string): string =>
 export const getWorkerOf = (file: string): string | undefined =>
 	fileWorker.get(file);
 export const getCompletions = (): number[] => completions;
+export const getErrorsOutput = (): string => errorsBuffer;
+export const getDurationMs = (file: string): number | undefined =>
+	fileDurations.get(file);
 
 /** Worker list with status + the files each ran (for the per-worker view). */
 export const getWorkers = (): {
@@ -152,4 +187,8 @@ export const resetHub = (): void => {
 	workerFiles.clear();
 	workerStatus.clear();
 	completions.length = 0;
+	fileStarts.clear();
+	fileDurations.clear();
+	errorsBuffer = "";
+	skipRequests.clear();
 };

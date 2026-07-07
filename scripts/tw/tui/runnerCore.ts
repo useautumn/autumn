@@ -11,6 +11,11 @@
 
 import pLimit from "p-limit";
 import {
+	appendErrorsOutput,
+	getFileOutput,
+	isSkipRequested,
+} from "../dashboard/hub.ts";
+import {
 	type TestExecutor,
 	WorkerDeathError,
 } from "../../testScripts/testExecutor.ts";
@@ -29,7 +34,8 @@ type InternalStatus =
 	| "passed"
 	| "failed"
 	| "retry_queued"
-	| "retrying";
+	| "retrying"
+	| "skipped";
 
 type InternalResult = {
 	file: string;
@@ -50,6 +56,20 @@ const toFailedTests = (tests: ParsedTest[]): TuiTestFile["failedTests"] =>
 			location: test.error?.location,
 			message: test.error?.message,
 		}));
+
+/** Feed the dashboard's live errors tab: file header + failures + output tail. */
+const emitFailureFeed = (result: InternalResult, willRetry: boolean): void => {
+	const failures = toFailedTests(result.tests);
+	const header = `\n\x1b[31m✗ ${result.file}\x1b[0m${willRetry ? " \x1b[33m(retrying)\x1b[0m" : ""}\n`;
+	const lines = failures
+		.map(
+			(t) =>
+				`  \x1b[31m✗\x1b[0m ${t.name}\n${t.location ? `      ${t.location}\n` : ""}${t.message ? `      ${t.message}\n` : ""}`,
+		)
+		.join("");
+	const tail = failures.length === 0 ? `${getFileOutput(result.file).slice(-1500)}\n` : "";
+	appendErrorsOutput(header + lines + tail);
+};
 
 /** Project an internal result into the store's display shape. */
 const emit = (result: InternalResult, willRetry: boolean): void => {
@@ -83,6 +103,17 @@ const runOneFile = async (params: {
 	executor: TestExecutor;
 }): Promise<InternalResult> => {
 	const { file, attempt, failedTestNames, executor } = params;
+	// Dashboard-requested skip: honored when the slot opens and the file hasn't
+	// started yet (first attempt only — a retry is already half-run work).
+	if (attempt === 1 && isSkipRequested(file)) {
+		return {
+			file,
+			status: "skipped",
+			tests: [],
+			attempt,
+			passedOnRetry: false,
+		};
+	}
 	const running: InternalResult = {
 		file,
 		status: "running",
@@ -166,7 +197,11 @@ const runWithReschedule = async (params: {
 					executor: params.executor,
 				}),
 			);
-			emit(result, params.willRetry && result.status === "failed");
+			const willRetry = params.willRetry && result.status === "failed";
+			emit(result, willRetry);
+			if (result.status === "failed") {
+				emitFailureFeed(result, willRetry);
+			}
 			return result;
 		} catch (error) {
 			if (!(error instanceof WorkerDeathError)) {

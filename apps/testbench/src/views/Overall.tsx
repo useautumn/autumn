@@ -26,6 +26,7 @@ import {
 	SpeedChart,
 	WarmStepper,
 	WorkerDots,
+	sortFilesForTriage,
 } from "../widgets";
 
 const PHASE_TONE: Record<Phase, PillTone> = {
@@ -221,7 +222,7 @@ function FileTable({
 					</TableRow>
 				</TableHeader>
 				<TableBody className="divide-y bg-interactive-secondary">
-					{snap.files.map((f) => (
+					{sortFilesForTriage(snap.files).map((f) => (
 						<TableRow
 							className="h-12 cursor-pointer text-tertiary-foreground transition-none hover:bg-interactive-secondary-hover"
 							key={f.file}

@@ -11,10 +11,12 @@ export type FailedTest = {
 export type FileRow = {
 	file: string;
 	name: string;
-	status: "pending" | "running" | "passed" | "failed" | "retrying";
+	status: "pending" | "running" | "passed" | "failed" | "retrying" | "skipped";
 	passed: number;
 	failed: number;
 	worker?: string;
+	/** Wall duration of the last completed attempt (dispatch → verdict). */
+	durationMs?: number;
 	currentTest?: string;
 	willRetry: boolean;
 	failedTests: FailedTest[];
@@ -59,6 +61,7 @@ export type Snapshot = {
 		failed: number;
 		running: number;
 		retrying: number;
+		skipped: number;
 	};
 	files: FileRow[];
 	workers: WorkerRow[];
