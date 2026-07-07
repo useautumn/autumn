@@ -7,6 +7,7 @@ import {
 	numeric,
 	pgTable,
 	text,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
@@ -52,7 +53,9 @@ export const customerProducts = pgTable(
 		quantity: numeric({ mode: "number" }).default(1),
 
 		is_custom: boolean("is_custom").default(false).notNull(),
-		license_assignment_id: text("license_assignment_id"),
+		license_parent_customer_product_id: text(
+			"license_parent_customer_product_id",
+		),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -126,6 +129,20 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_license_parent")
+			.on(table.license_parent_customer_product_id)
+			.where(sql`${table.license_parent_customer_product_id} IS NOT NULL`)
+			.concurrently(),
+		uniqueIndex("unique_active_license_assignment")
+			.on(
+				table.license_parent_customer_product_id,
+				table.internal_entity_id,
+				table.internal_product_id,
+			)
+			.where(
+				sql`${table.license_parent_customer_product_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due', 'trialing')`,
+			)
+			.concurrently(),
 		index("idx_customer_products_free_trial_id")
 			.on(table.free_trial_id)
 			.where(sql`${table.free_trial_id} IS NOT NULL`)

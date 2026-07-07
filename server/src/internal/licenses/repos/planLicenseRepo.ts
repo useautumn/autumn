@@ -2,14 +2,12 @@ import {
 	type AppEnv,
 	customerProducts,
 	type DbPlanLicense,
-	type LicenseCustomize,
 	planLicenses,
 	products,
 } from "@autumn/shared";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { licensePoolParentStatuses } from "../licenseUtils.js";
 
 const licenseProducts = alias(products, "license_products");
 
@@ -23,8 +21,6 @@ const upsert = async ({
 	licenseInternalProductId,
 	included,
 	prepaidOnly,
-	pooledFeatureIds,
-	customize,
 	metadata,
 }: {
 	db: DrizzleCli;
@@ -36,8 +32,6 @@ const upsert = async ({
 	licenseInternalProductId: string;
 	included: number;
 	prepaidOnly: boolean;
-	pooledFeatureIds: string[];
-	customize?: LicenseCustomize | null;
 	metadata?: Record<string, unknown>;
 }): Promise<DbPlanLicense> => {
 	const [planLicense] = await db
@@ -51,8 +45,6 @@ const upsert = async ({
 			license_internal_product_id: licenseInternalProductId,
 			included,
 			prepaid_only: prepaidOnly,
-			pooled_feature_ids: pooledFeatureIds,
-			customize: customize ?? null,
 			metadata: metadata ?? {},
 			created_at: Date.now(),
 			updated_at: Date.now(),
@@ -66,8 +58,6 @@ const upsert = async ({
 			set: {
 				included,
 				prepaid_only: prepaidOnly,
-				pooled_feature_ids: pooledFeatureIds,
-				...(customize !== undefined ? { customize } : {}),
 				...(metadata !== undefined ? { metadata } : {}),
 				updated_at: Date.now(),
 			},
@@ -124,30 +114,6 @@ const listCustomerByParentCustomerProductIds = async ({
 			parentCustomerProductIds,
 		),
 	});
-
-const listWithLicensePlanIdByParent = async ({
-	db,
-	parentInternalProductId,
-}: {
-	db: DrizzleCli;
-	parentInternalProductId: string;
-}) =>
-	await db
-		.select({
-			planLicense: planLicenses,
-			licensePlanId: licenseProducts.id,
-		})
-		.from(planLicenses)
-		.innerJoin(
-			licenseProducts,
-			eq(planLicenses.license_internal_product_id, licenseProducts.internal_id),
-		)
-		.where(
-			and(
-				eq(planLicenses.parent_internal_product_id, parentInternalProductId),
-				isNull(planLicenses.parent_customer_product_id),
-			),
-		);
 
 const listWithLicensePlanIdByParents = async ({
 	db,
@@ -211,45 +177,6 @@ const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
 	await db.delete(planLicenses).where(inArray(planLicenses.id, ids));
 };
 
-const existsForCustomerParents = async ({
-	db,
-	internalCustomerId,
-}: {
-	db: DrizzleCli;
-	internalCustomerId: string;
-}) => {
-	const [catalogRow] = await db
-		.select({ id: planLicenses.id })
-		.from(planLicenses)
-		.innerJoin(
-			customerProducts,
-			eq(
-				customerProducts.internal_product_id,
-				planLicenses.parent_internal_product_id,
-			),
-		)
-		.where(
-			and(
-				eq(customerProducts.internal_customer_id, internalCustomerId),
-				isNull(customerProducts.internal_entity_id),
-				inArray(customerProducts.status, licensePoolParentStatuses),
-			),
-		)
-		.limit(1);
-	if (catalogRow) return true;
-
-	const [customerRow] = await db
-		.select({ id: planLicenses.id })
-		.from(planLicenses)
-		.innerJoin(
-			customerProducts,
-			eq(customerProducts.id, planLicenses.parent_customer_product_id),
-		)
-		.where(eq(customerProducts.internal_customer_id, internalCustomerId))
-		.limit(1);
-	return customerRow !== undefined;
-};
-
 const listProductsByInternalIds = async ({
 	db,
 	internalProductIds,
@@ -277,12 +204,10 @@ export const planLicenseRepo = {
 	getCatalogByParentAndLicense,
 	listCatalogByParentInternalProductIds,
 	listCustomerByParentCustomerProductIds,
-	listWithLicensePlanIdByParent,
 	listWithLicensePlanIdByParents,
 	listCatalogByOrgEnv,
 	listByLicenseInternalProductId,
 	deleteByIds,
-	existsForCustomerParents,
 	listProductsByInternalIds,
 	getParentCustomerProductById,
 } as const;

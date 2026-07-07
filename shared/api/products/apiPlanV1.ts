@@ -71,7 +71,7 @@ export const ApiPlanLicenseV1Schema = z.object({
 	}),
 	prepaid_only: z.boolean().meta({
 		description:
-			"When true, assignments are capped at the included quantity. When false, assignments beyond it attach the license plan to the entity and bill as normal.",
+			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
 	}),
 	pooled_feature_ids: z.array(z.string()).optional().meta({
 		description:
@@ -137,6 +137,7 @@ export const ApiPlanV1Schema = z.object({
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
 	}),
 	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
+		internal: true,
 		description:
 			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),

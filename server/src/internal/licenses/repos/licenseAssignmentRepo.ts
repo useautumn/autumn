@@ -1,133 +1,70 @@
 import {
-	type AppEnv,
 	CusProductStatus,
 	customerProducts,
 	customers,
-	type DbLicenseAssignment,
 	entities,
-	licenseAssignments,
 	products,
 } from "@autumn/shared";
-import { and, count, eq, inArray, isNull, notInArray } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	isNotNull,
+	isNull,
+	notInArray,
+} from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-const findActive = async ({
+export type DbLicenseAssignment = typeof customerProducts.$inferSelect;
+
+const activeStatuses = [
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Trialing,
+];
+
+const seatConditions = () => [
+	isNotNull(customerProducts.license_parent_customer_product_id),
+	isNotNull(customerProducts.internal_entity_id),
+];
+
+const activeAssignmentConditions = () => [
+	...seatConditions(),
+	inArray(customerProducts.status, activeStatuses),
+];
+
+const findActiveAssignment = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 	internalEntityId,
 	licenseInternalProductId,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 	internalEntityId: string;
 	licenseInternalProductId: string;
-}) =>
-	await db.query.licenseAssignments.findFirst({
+}): Promise<DbLicenseAssignment | undefined> =>
+	await db.query.customerProducts.findFirst({
 		where: and(
-			eq(licenseAssignments.org_id, orgId),
-			eq(licenseAssignments.env, env),
-			eq(licenseAssignments.internal_customer_id, internalCustomerId),
-			eq(licenseAssignments.internal_entity_id, internalEntityId),
-			eq(
-				licenseAssignments.license_internal_product_id,
-				licenseInternalProductId,
-			),
-			isNull(licenseAssignments.ended_at),
+			eq(customerProducts.internal_customer_id, internalCustomerId),
+			eq(customerProducts.internal_entity_id, internalEntityId),
+			eq(customerProducts.internal_product_id, licenseInternalProductId),
+			...activeAssignmentConditions(),
 		),
 	});
 
-const listActiveByInternalEntityId = async ({
+const getAssignmentById = async ({
 	db,
-	orgId,
-	env,
-	internalEntityId,
+	seatId,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	internalEntityId: string;
-}) =>
-	await db
-		.select({
-			id: licenseAssignments.id,
-			provisioned_customer_product_id:
-				licenseAssignments.provisioned_customer_product_id,
-		})
-		.from(licenseAssignments)
-		.where(
-			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(licenseAssignments.internal_entity_id, internalEntityId),
-				isNull(licenseAssignments.ended_at),
-			),
-		);
-
-const getById = async ({
-	db,
-	orgId,
-	env,
-	assignmentId,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	assignmentId: string;
-}) =>
-	await db.query.licenseAssignments.findFirst({
-		where: and(
-			eq(licenseAssignments.id, assignmentId),
-			eq(licenseAssignments.org_id, orgId),
-			eq(licenseAssignments.env, env),
-		),
+	seatId: string;
+}): Promise<DbLicenseAssignment | undefined> =>
+	await db.query.customerProducts.findFirst({
+		where: and(eq(customerProducts.id, seatId), ...seatConditions()),
 	});
-
-const insert = async ({
-	db,
-	orgId,
-	env,
-	id,
-	parentCustomerProductId,
-	internalCustomerId,
-	internalEntityId,
-	licenseInternalProductId,
-	provisionedCustomerProductId,
-	metadata,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	id: string;
-	parentCustomerProductId: string;
-	internalCustomerId: string;
-	internalEntityId: string;
-	licenseInternalProductId: string;
-	provisionedCustomerProductId: string;
-	metadata?: Record<string, unknown>;
-}): Promise<DbLicenseAssignment> => {
-	const [assignment] = await db
-		.insert(licenseAssignments)
-		.values({
-			id,
-			org_id: orgId,
-			env,
-			parent_customer_product_id: parentCustomerProductId,
-			internal_customer_id: internalCustomerId,
-			internal_entity_id: internalEntityId,
-			license_internal_product_id: licenseInternalProductId,
-			provisioned_customer_product_id: provisionedCustomerProductId,
-			started_at: Date.now(),
-			ended_at: null,
-			metadata: metadata ?? {},
-		})
-		.returning();
-
-	return assignment;
-};
 
 const countActiveByParentAndLicense = async ({
 	db,
@@ -138,91 +75,145 @@ const countActiveByParentAndLicense = async ({
 	parentCustomerProductId: string;
 	licenseInternalProductId: string;
 }): Promise<number> => {
-	const [{ value }] = await db
+	const [row] = await db
 		.select({ value: count() })
-		.from(licenseAssignments)
+		.from(customerProducts)
 		.where(
 			and(
 				eq(
-					licenseAssignments.parent_customer_product_id,
+					customerProducts.license_parent_customer_product_id,
 					parentCustomerProductId,
 				),
-				eq(
-					licenseAssignments.license_internal_product_id,
-					licenseInternalProductId,
-				),
-				isNull(licenseAssignments.ended_at),
+				eq(customerProducts.internal_product_id, licenseInternalProductId),
+				...activeAssignmentConditions(),
 			),
 		);
-
-	return value;
+	return row?.value ?? 0;
 };
 
-const lockCustomerProductById = async ({
+const listAssignmentsWithEntityAndProductByCustomer = async ({
 	db,
-	customerProductId,
-}: {
-	db: DrizzleCli;
-	customerProductId: string;
-}) => {
-	await db
-		.select({ id: customerProducts.id })
-		.from(customerProducts)
-		.where(eq(customerProducts.id, customerProductId))
-		.for("update");
-};
-
-const listActiveWithEntityByCustomer = async ({
-	db,
-	orgId,
-	env,
 	internalCustomerId,
+	entityId,
+	licenseInternalProductId,
+	parentCustomerProductId,
+	activeOnly = true,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	internalCustomerId: string;
+	internalCustomerId?: string;
+	entityId?: string;
+	licenseInternalProductId?: string;
+	parentCustomerProductId?: string;
+	activeOnly?: boolean;
 }) =>
 	await db
 		.select({
-			assignment: licenseAssignments,
+			assignment: customerProducts,
 			entity_id: entities.id,
+			license_product_id: products.id,
 		})
-		.from(licenseAssignments)
+		.from(customerProducts)
 		.innerJoin(
 			entities,
-			eq(licenseAssignments.internal_entity_id, entities.internal_id),
+			eq(customerProducts.internal_entity_id, entities.internal_id),
+		)
+		.innerJoin(
+			products,
+			eq(customerProducts.internal_product_id, products.internal_id),
 		)
 		.where(
 			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(licenseAssignments.internal_customer_id, internalCustomerId),
-				isNull(licenseAssignments.ended_at),
+				...(internalCustomerId
+					? [eq(customerProducts.internal_customer_id, internalCustomerId)]
+					: []),
+				...seatConditions(),
+				...(activeOnly
+					? [inArray(customerProducts.status, activeStatuses)]
+					: []),
+				...(entityId ? [eq(entities.id, entityId)] : []),
+				...(licenseInternalProductId
+					? [eq(customerProducts.internal_product_id, licenseInternalProductId)]
+					: []),
+				...(parentCustomerProductId
+					? [
+							eq(
+								customerProducts.license_parent_customer_product_id,
+								parentCustomerProductId,
+							),
+						]
+					: []),
 			),
 		);
 
-const findLatestActiveEntityCustomerProduct = async ({
+const listActiveStrandedByCustomer = async ({
 	db,
 	internalCustomerId,
-	internalProductId,
-	internalEntityId,
+	validParentCustomerProductIds,
 }: {
 	db: DrizzleCli;
 	internalCustomerId: string;
-	internalProductId: string;
-	internalEntityId: string;
-}) =>
-	await db.query.customerProducts.findFirst({
+	validParentCustomerProductIds: string[];
+}): Promise<DbLicenseAssignment[]> =>
+	await db.query.customerProducts.findMany({
 		where: and(
 			eq(customerProducts.internal_customer_id, internalCustomerId),
-			eq(customerProducts.internal_product_id, internalProductId),
-			eq(customerProducts.internal_entity_id, internalEntityId),
-			eq(customerProducts.status, CusProductStatus.Active),
-			isNull(customerProducts.license_assignment_id),
+			...activeAssignmentConditions(),
+			...(validParentCustomerProductIds.length > 0
+				? [
+						notInArray(
+							customerProducts.license_parent_customer_product_id,
+							validParentCustomerProductIds,
+						),
+					]
+				: []),
 		),
-		orderBy: (table, { desc }) => [desc(table.created_at)],
 	});
+
+const listActiveAssignmentsByInternalEntityId = async ({
+	db,
+	internalEntityId,
+}: {
+	db: DrizzleCli;
+	internalEntityId: string;
+}): Promise<DbLicenseAssignment[]> =>
+	await db.query.customerProducts.findMany({
+		where: and(
+			eq(customerProducts.internal_entity_id, internalEntityId),
+			...activeAssignmentConditions(),
+		),
+	});
+
+const reparentAssignmentsByIds = async ({
+	db,
+	assignmentIds,
+	parentCustomerProductId,
+}: {
+	db: DrizzleCli;
+	assignmentIds: string[];
+	parentCustomerProductId: string;
+}) => {
+	if (assignmentIds.length === 0) return;
+	await db
+		.update(customerProducts)
+		.set({ license_parent_customer_product_id: parentCustomerProductId })
+		.where(inArray(customerProducts.id, assignmentIds));
+};
+
+const expireAssignmentsByIds = async ({
+	db,
+	assignmentIds,
+	endedAt,
+}: {
+	db: DrizzleCli;
+	assignmentIds: string[];
+	endedAt: number;
+}) => {
+	if (assignmentIds.length === 0) return;
+	await db
+		.update(customerProducts)
+		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
+		.where(inArray(customerProducts.id, assignmentIds));
+};
 
 const maxActiveCountByCatalogLink = async ({
 	db,
@@ -233,192 +224,49 @@ const maxActiveCountByCatalogLink = async ({
 	parentInternalProductId: string;
 	licenseInternalProductId: string;
 }): Promise<number> => {
-	const rows = await db
-		.select({ value: count() })
-		.from(licenseAssignments)
-		.innerJoin(
-			customerProducts,
-			eq(licenseAssignments.parent_customer_product_id, customerProducts.id),
-		)
-		.where(
-			and(
-				eq(customerProducts.internal_product_id, parentInternalProductId),
-				eq(
-					licenseAssignments.license_internal_product_id,
-					licenseInternalProductId,
-				),
-				isNull(licenseAssignments.ended_at),
-			),
-		)
-		.groupBy(licenseAssignments.parent_customer_product_id);
-
-	return rows.reduce((max, row) => Math.max(max, row.value), 0);
-};
-
-const existsActiveByCustomer = async ({
-	db,
-	orgId,
-	env,
-	internalCustomerId,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	internalCustomerId: string;
-}) => {
+	const parent = db
+		.select({ id: customerProducts.id })
+		.from(customerProducts)
+		.where(eq(customerProducts.internal_product_id, parentInternalProductId))
+		.as("license_parents");
 	const [row] = await db
-		.select({ id: licenseAssignments.id })
-		.from(licenseAssignments)
+		.select({ value: count() })
+		.from(customerProducts)
+		.innerJoin(
+			parent,
+			eq(customerProducts.license_parent_customer_product_id, parent.id),
+		)
 		.where(
 			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(licenseAssignments.internal_customer_id, internalCustomerId),
-				isNull(licenseAssignments.ended_at),
+				eq(customerProducts.internal_product_id, licenseInternalProductId),
+				...activeAssignmentConditions(),
 			),
 		)
+		.groupBy(customerProducts.license_parent_customer_product_id)
+		.orderBy(desc(count()))
 		.limit(1);
-	return row !== undefined;
+	return row?.value ?? 0;
 };
 
-const listActiveStrandedByCustomer = async ({
+const findLatestActiveCustomerLevelCustomerProduct = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
-	validParentCustomerProductIds,
+	internalProductId,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
-	validParentCustomerProductIds: string[];
+	internalProductId: string;
 }) =>
-	await db
-		.select({
-			assignmentId: licenseAssignments.id,
-			provisionedCustomerProductId:
-				licenseAssignments.provisioned_customer_product_id,
-			licenseInternalProductId: licenseAssignments.license_internal_product_id,
-		})
-		.from(licenseAssignments)
-		.where(
-			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(licenseAssignments.internal_customer_id, internalCustomerId),
-				isNull(licenseAssignments.ended_at),
-				validParentCustomerProductIds.length > 0
-					? notInArray(
-							licenseAssignments.parent_customer_product_id,
-							validParentCustomerProductIds,
-						)
-					: undefined,
-			),
-		);
-
-const listActiveWithProductByParentCustomerProductId = async ({
-	db,
-	orgId,
-	env,
-	parentCustomerProductId,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	parentCustomerProductId: string;
-}) =>
-	await db
-		.select({
-			assignmentId: licenseAssignments.id,
-			entityId: entities.id,
-			licenseInternalProductId: licenseAssignments.license_internal_product_id,
-			licenseProductId: products.id,
-		})
-		.from(licenseAssignments)
-		.innerJoin(
-			products,
-			eq(licenseAssignments.license_internal_product_id, products.internal_id),
-		)
-		.innerJoin(
-			entities,
-			eq(licenseAssignments.internal_entity_id, entities.internal_id),
-		)
-		.where(
-			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(
-					licenseAssignments.parent_customer_product_id,
-					parentCustomerProductId,
-				),
-				isNull(licenseAssignments.ended_at),
-			),
-		);
-
-const reparentByIds = async ({
-	db,
-	assignmentIds,
-	parentCustomerProductId,
-}: {
-	db: DrizzleCli;
-	assignmentIds: string[];
-	parentCustomerProductId: string;
-}) => {
-	await db
-		.update(licenseAssignments)
-		.set({ parent_customer_product_id: parentCustomerProductId })
-		.where(inArray(licenseAssignments.id, assignmentIds));
-};
-
-const endById = async ({
-	db,
-	assignmentId,
-	endedAt,
-}: {
-	db: DrizzleCli;
-	assignmentId: string;
-	endedAt: number;
-}) => {
-	await db
-		.update(licenseAssignments)
-		.set({ ended_at: endedAt })
-		.where(eq(licenseAssignments.id, assignmentId));
-};
-
-const endByIds = async ({
-	db,
-	assignmentIds,
-	endedAt,
-}: {
-	db: DrizzleCli;
-	assignmentIds: string[];
-	endedAt: number;
-}) => {
-	await db
-		.update(licenseAssignments)
-		.set({ ended_at: endedAt })
-		.where(inArray(licenseAssignments.id, assignmentIds));
-};
-
-const expireProvisionedCustomerProductsByIds = async ({
-	db,
-	customerProductIds,
-	endedAt,
-}: {
-	db: DrizzleCli;
-	customerProductIds: string[];
-	endedAt: number;
-}) => {
-	await db
-		.update(customerProducts)
-		.set({
-			status: CusProductStatus.Expired,
-			ended_at: endedAt,
-			updated_at: endedAt,
-		})
-		.where(inArray(customerProducts.id, customerProductIds));
-};
+	await db.query.customerProducts.findFirst({
+		where: and(
+			eq(customerProducts.internal_customer_id, internalCustomerId),
+			eq(customerProducts.internal_product_id, internalProductId),
+			isNull(customerProducts.internal_entity_id),
+			eq(customerProducts.status, CusProductStatus.Active),
+			isNull(customerProducts.license_parent_customer_product_id),
+		),
+		orderBy: (table, { desc }) => [desc(table.created_at)],
+	});
 
 const getCustomerByInternalId = async ({
 	db,
@@ -453,73 +301,18 @@ const getProductByInternalId = async ({
 		where: eq(products.internal_id, internalProductId),
 	});
 
-const listWithEntityAndProductByCustomer = async ({
-	db,
-	orgId,
-	env,
-	internalCustomerId,
-	entityId,
-	licenseInternalProductId,
-	activeOnly,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	internalCustomerId: string;
-	entityId?: string;
-	licenseInternalProductId?: string;
-	activeOnly: boolean;
-}) =>
-	await db
-		.select({
-			assignment: licenseAssignments,
-			entity_id: entities.id,
-			license_product_id: products.id,
-		})
-		.from(licenseAssignments)
-		.innerJoin(
-			entities,
-			eq(licenseAssignments.internal_entity_id, entities.internal_id),
-		)
-		.innerJoin(
-			products,
-			eq(licenseAssignments.license_internal_product_id, products.internal_id),
-		)
-		.where(
-			and(
-				eq(licenseAssignments.org_id, orgId),
-				eq(licenseAssignments.env, env),
-				eq(licenseAssignments.internal_customer_id, internalCustomerId),
-				entityId ? eq(entities.id, entityId) : undefined,
-				licenseInternalProductId
-					? eq(
-							licenseAssignments.license_internal_product_id,
-							licenseInternalProductId,
-						)
-					: undefined,
-				activeOnly ? isNull(licenseAssignments.ended_at) : undefined,
-			),
-		);
-
 export const licenseAssignmentRepo = {
-	findActive,
-	listActiveByInternalEntityId,
-	listActiveStrandedByCustomer,
-	existsActiveByCustomer,
-	maxActiveCountByCatalogLink,
-	findLatestActiveEntityCustomerProduct,
-	getById,
-	insert,
+	findActiveAssignment,
+	getAssignmentById,
 	countActiveByParentAndLicense,
-	lockCustomerProductById,
-	listActiveWithEntityByCustomer,
-	listActiveWithProductByParentCustomerProductId,
-	reparentByIds,
-	endById,
-	endByIds,
-	expireProvisionedCustomerProductsByIds,
+	listAssignmentsWithEntityAndProductByCustomer,
+	listActiveAssignmentsByInternalEntityId,
+	listActiveStrandedByCustomer,
+	reparentAssignmentsByIds,
+	expireAssignmentsByIds,
+	maxActiveCountByCatalogLink,
+	findLatestActiveCustomerLevelCustomerProduct,
 	getCustomerByInternalId,
 	getEntityByInternalId,
 	getProductByInternalId,
-	listWithEntityAndProductByCustomer,
 } as const;

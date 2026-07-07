@@ -30,6 +30,7 @@ export const entitlements = pgTable(
 		interval_count: numeric({ mode: "number" }).default(1),
 
 		carry_from_previous: boolean("carry_from_previous").default(false),
+		pooled: boolean("pooled").notNull().default(false),
 		entity_feature_id: text("entity_feature_id").default(sql`null`),
 
 		// Optional fields

@@ -49,8 +49,10 @@ import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
 import {
-	licenseAssignments,
+	customerLicenses,
+	licenseEntitlements,
 	licensePoolGrants,
+	licensePrices,
 	planLicenses,
 } from "../models/licenseModels/licenseTable.js";
 // Migration Relations
@@ -158,8 +160,10 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
-	licenseAssignments,
+	customerLicenses,
+	licenseEntitlements,
 	licensePoolGrants,
+	licensePrices,
 	// OAuth Provider
 	jwks,
 	member,

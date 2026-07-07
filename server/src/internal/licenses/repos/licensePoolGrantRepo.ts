@@ -2,37 +2,18 @@ import {
 	type AppEnv,
 	customerEntitlements,
 	type DbLicensePoolGrant,
-	entitlements,
 	type InsertLicensePoolGrant,
 	licensePoolGrants,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-
-const listByCustomer = async ({
-	db,
-	orgId,
-	env,
-	internalCustomerId,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	internalCustomerId: string;
-}) =>
-	await db.query.licensePoolGrants.findMany({
-		where: and(
-			eq(licensePoolGrants.org_id, orgId),
-			eq(licensePoolGrants.env, env),
-			eq(licensePoolGrants.internal_customer_id, internalCustomerId),
-		),
-	});
 
 const getForUpdateByNaturalKey = async ({
 	db,
 	orgId,
 	env,
 	internalCustomerId,
+	parentCustomerProductId,
 	licenseInternalProductId,
 	internalFeatureId,
 }: {
@@ -40,6 +21,7 @@ const getForUpdateByNaturalKey = async ({
 	orgId: string;
 	env: AppEnv;
 	internalCustomerId: string;
+	parentCustomerProductId: string;
 	licenseInternalProductId: string;
 	internalFeatureId: string;
 }): Promise<DbLicensePoolGrant | undefined> => {
@@ -51,6 +33,10 @@ const getForUpdateByNaturalKey = async ({
 				eq(licensePoolGrants.org_id, orgId),
 				eq(licensePoolGrants.env, env),
 				eq(licensePoolGrants.internal_customer_id, internalCustomerId),
+				eq(
+					licensePoolGrants.parent_customer_product_id,
+					parentCustomerProductId,
+				),
 				eq(
 					licensePoolGrants.license_internal_product_id,
 					licenseInternalProductId,
@@ -78,6 +64,7 @@ const insertIgnoringDuplicate = async ({
 				licensePoolGrants.org_id,
 				licensePoolGrants.env,
 				licensePoolGrants.internal_customer_id,
+				licensePoolGrants.parent_customer_product_id,
 				licensePoolGrants.license_internal_product_id,
 				licensePoolGrants.internal_feature_id,
 			],
@@ -87,18 +74,85 @@ const insertIgnoringDuplicate = async ({
 	return inserted;
 };
 
-const updatePeriodMarker = async ({
+const findOrphanForAdoption = async ({
+	db,
+	orgId,
+	env,
+	internalCustomerId,
+	licenseInternalProductId,
+	internalFeatureId,
+	activeParentIds,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	internalCustomerId: string;
+	licenseInternalProductId: string;
+	internalFeatureId: string;
+	activeParentIds: string[];
+}): Promise<DbLicensePoolGrant | undefined> => {
+	const [orphan] = await db
+		.select()
+		.from(licensePoolGrants)
+		.where(
+			and(
+				eq(licensePoolGrants.org_id, orgId),
+				eq(licensePoolGrants.env, env),
+				eq(licensePoolGrants.internal_customer_id, internalCustomerId),
+				eq(
+					licensePoolGrants.license_internal_product_id,
+					licenseInternalProductId,
+				),
+				eq(licensePoolGrants.internal_feature_id, internalFeatureId),
+				activeParentIds.length > 0
+					? notInArray(
+							licensePoolGrants.parent_customer_product_id,
+							activeParentIds,
+						)
+					: undefined,
+			),
+		)
+		.orderBy(desc(licensePoolGrants.updated_at))
+		.limit(1)
+		.for("update");
+
+	return orphan;
+};
+
+const updateParent = async ({
+	db,
+	grantId,
+	parentCustomerProductId,
+	updatedAt,
+}: {
+	db: DrizzleCli;
+	grantId: string;
+	parentCustomerProductId: string;
+	updatedAt: number;
+}) => {
+	await db
+		.update(licensePoolGrants)
+		.set({
+			parent_customer_product_id: parentCustomerProductId,
+			updated_at: updatedAt,
+		})
+		.where(eq(licensePoolGrants.id, grantId));
+};
+
+const updateMarker = async ({
 	db,
 	grantId,
 	periodGrantedAllowance,
 	periodKey,
 	updatedAt,
+	customerEntitlementId,
 }: {
 	db: DrizzleCli;
 	grantId: string;
 	periodGrantedAllowance: number;
 	periodKey: number | null;
 	updatedAt: number;
+	customerEntitlementId?: string;
 }) => {
 	await db
 		.update(licensePoolGrants)
@@ -106,6 +160,9 @@ const updatePeriodMarker = async ({
 			period_granted_allowance: periodGrantedAllowance,
 			period_key: periodKey,
 			updated_at: updatedAt,
+			...(customerEntitlementId !== undefined
+				? { customer_entitlement_id: customerEntitlementId }
+				: {}),
 		})
 		.where(eq(licensePoolGrants.id, grantId));
 };
@@ -128,26 +185,11 @@ const getCustomerEntitlementById = async ({
 	return customerEntitlement;
 };
 
-const getEntitlementById = async ({
-	db,
-	entitlementId,
-}: {
-	db: DrizzleCli;
-	entitlementId: string;
-}) => {
-	const [entitlement] = await db
-		.select()
-		.from(entitlements)
-		.where(eq(entitlements.id, entitlementId));
-
-	return entitlement;
-};
-
 export const licensePoolGrantRepo = {
-	listByCustomer,
 	getForUpdateByNaturalKey,
+	findOrphanForAdoption,
+	updateParent,
 	insertIgnoringDuplicate,
-	updatePeriodMarker,
+	updateMarker,
 	getCustomerEntitlementById,
-	getEntitlementById,
 } as const;
