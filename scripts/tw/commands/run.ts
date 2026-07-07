@@ -563,6 +563,9 @@ const requireSecret = (name: string): string => {
  * resolved once on the orchestrator and injected. `SVIX_API_KEY` / `NEEDS_SVIX`
  * are added only for the dedicated svix shard.
  */
+/** Resolved commit sha for this run (set in run()); workers fast-forward to it. */
+let resolvedTargetSha = "";
+
 const buildWorkerEnv = ({
 	stripeAccountId,
 	stripeSecretKey,
@@ -1292,6 +1295,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	try {
 		// ----- WARM-UP (cached per ref-sha) -----------------------------------
 		const refSha = resolveRefSha(args.ref);
+		resolvedTargetSha = refSha;
 		const warmName = await getOrBuildWarmParent({
 			ref: args.ref,
 			sha: refSha,

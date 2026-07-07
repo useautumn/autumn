@@ -218,7 +218,7 @@ export const provisionSvixApp = async (orgId: string): Promise<void> => {
  * off and the legacy seeder demands a webhook secret we never stored (§6a gotcha
  * a, §11a). Returns the long-lived subprocess so the caller keeps it alive.
  */
-const startServer = (repoRoot: string, port: number): Subprocess => {
+export const startServer = (repoRoot: string, port: number): Subprocess => {
 	const serverRoot = join(repoRoot, "server");
 	log(`starting Autumn server (bun src/index.ts) on :${port}`);
 	return spawn(["bun", "src/index.ts"], {
@@ -244,7 +244,7 @@ const startServer = (repoRoot: string, port: number): Subprocess => {
  * service env from `process.env`. NODE_ENV=development keeps the dev process
  * counts + skip-verify consistent with the server.
  */
-const startBackgroundProcs = (
+export const startBackgroundProcs = (
 	repoRoot: string,
 ): { workersProc: Subprocess; cronProc: Subprocess } => {
 	const serverRoot = join(repoRoot, "server");

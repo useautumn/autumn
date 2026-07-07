@@ -18,12 +18,15 @@
  */
 
 import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
+import { spawn } from "bun";
 import chalk from "chalk";
 import { SERVER_PORT, TW_ENV } from "../constants.js";
 import {
 	provisionSvixApp,
 	READY_SENTINEL,
+	startBackgroundProcs,
+	startServer,
 	waitForServerHealth,
 } from "./boot.js";
 
@@ -68,9 +71,47 @@ const main = async (): Promise<void> => {
 		);
 	}
 
-	// 1. The snapshot carries a running server; it must answer near-instantly.
-	await waitForServerHealth(serverPort, RESUME_HEALTH_TIMEOUT_MS);
-	log(`snapshot-resumed server healthy on :${serverPort}`);
+	// Stale snapshot → fast-forward in place: the orchestrator already checked
+	// out the target sha (so THIS script is current); re-run warmup (install
+	// delta + migrate + seed, services stay up) and restart the app procs on the
+	// new code. All workers do this in parallel — wall cost is one worker's ff.
+	if (isTruthyEnv(process.env.TW_SNAPSHOT_STALE)) {
+		const repoRoot = process.cwd();
+		log("stale snapshot — fast-forwarding worker to the target sha");
+		for (const pattern of ["bun src/index.ts", "bun src/workers.ts", "bun src/cron.ts"]) {
+			Bun.spawnSync(["pkill", "-f", pattern]);
+		}
+		const warmup = spawn(
+			["bash", join(repoRoot, "scripts/tw/image/warmup.sh"), process.env.TW_TARGET_SHA ?? "HEAD"],
+			{
+				cwd: repoRoot,
+				stdout: "inherit",
+				stderr: "inherit",
+				env: {
+					...process.env,
+					TW_SKIP_CLEAN_STOP: "1",
+				} as Record<string, string>,
+			},
+		);
+		const warmupExit = await warmup.exited;
+		if (warmupExit !== 0) {
+			throw new Error(`[tw-fsboot] fast-forward warmup.sh exited ${warmupExit}`);
+		}
+		const serverProc = startServer(repoRoot, serverPort);
+		void serverProc.exited.then((code) => {
+			if (code !== 0) {
+				console.error(chalk.red(`[tw-fsboot] server exited early (code ${code})`));
+			}
+		});
+		startBackgroundProcs(repoRoot);
+	}
+
+	// 1. The snapshot carries a running server (or the ff just restarted it).
+	await waitForServerHealth(
+		serverPort,
+		isTruthyEnv(process.env.TW_SNAPSHOT_STALE) ? 120_000 : RESUME_HEALTH_TIMEOUT_MS,
+	);
+	log(`server healthy on :${serverPort}`);
 
 	// 2 + 3. Per-worker DB binds.
 	if (isTruthyEnv(process.env.NEEDS_SVIX)) {

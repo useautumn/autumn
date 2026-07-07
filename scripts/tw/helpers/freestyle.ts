@@ -29,6 +29,7 @@
  *   - **getPublicUrl** — `domains.mappings.create` on `<name>.style.dev` (auto
  *     HTTPS; the inbound Stripe webhook target).
  */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import chalk from "chalk";
 import { Freestyle } from "freestyle";
 import {
@@ -107,23 +108,62 @@ const secs = (ms: number): string => (ms / 1000).toFixed(1);
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Timed stage breadcrumb with optional heartbeat (same UX as modal.ts). */
-const stage = (label: string, heartbeatMs?: number): (() => void) => {
+// ---- stage-timing history (the "~Xs typical" ETA in heartbeats) ------------
+const TIMINGS_FILE = `${process.env.HOME}/.autumn-tw/freestyle-stage-times.json`;
+const readTimings = (): Record<string, number[]> => {
+	try {
+		return JSON.parse(readFileSync(TIMINGS_FILE, "utf8"));
+	} catch {
+		return {};
+	}
+};
+const typicalMs = (key: string): number | undefined => {
+	const samples = readTimings()[key];
+	if (!samples?.length) {
+		return undefined;
+	}
+	return samples.reduce((a, b) => a + b, 0) / samples.length;
+};
+const recordTiming = (key: string, ms: number): void => {
+	try {
+		const all = readTimings();
+		all[key] = [...(all[key] ?? []), ms].slice(-5);
+		mkdirSync(`${process.env.HOME}/.autumn-tw`, { recursive: true });
+		writeFileSync(TIMINGS_FILE, JSON.stringify(all));
+	} catch {
+		/* best-effort */
+	}
+};
+
+/** Timed stage breadcrumb with optional heartbeat (same UX as modal.ts).
+ * `timingKey` persists durations across runs → "~Xs typical" ETAs. */
+const stage = (
+	label: string,
+	heartbeatMs?: number,
+	timingKey?: string,
+): (() => void) => {
 	const startedAt = Date.now();
-	narrate(chalk.cyan(`[freestyle] ▸ ${label}`));
+	const typical = timingKey ? typicalMs(timingKey) : undefined;
+	const typicalNote = typical
+		? ` (~${Math.round(typical / 1000)}s typical)`
+		: "";
+	narrate(chalk.cyan(`[freestyle] ▸ ${label}${typicalNote}`));
 	const ticker =
 		heartbeatMs === undefined
 			? undefined
 			: setInterval(() => {
 					narrate(
 						chalk.cyan.dim(
-							`[freestyle]   … ${label} — still running (+${secs(Date.now() - startedAt)}s)`,
+							`[freestyle]   … ${label} — ${secs(Date.now() - startedAt)}s elapsed${typicalNote}`,
 						),
 					);
 				}, heartbeatMs);
 	return () => {
 		if (ticker) {
 			clearInterval(ticker);
+		}
+		if (timingKey) {
+			recordTiming(timingKey, Date.now() - startedAt);
 		}
 		narrate(
 			chalk.cyan(`[freestyle] ✓ ${label} (+${secs(Date.now() - startedAt)}s)`),
@@ -359,6 +399,75 @@ const isSandboxStreamClosed = (error: unknown): boolean =>
 		error instanceof Error ? error.message : String(error),
 	);
 
+/** One refresh at a time; runs detached so no run ever waits on it. */
+let refreshInFlight = false;
+const refreshWarmSnapshotInBackground = (warmName: string): void => {
+	if (refreshInFlight) {
+		return;
+	}
+	refreshInFlight = true;
+	void (async () => {
+		const done = stage(
+			`background warm refresh → ${warmName} (nothing waits on this)`,
+			60_000,
+			"warm-refresh",
+		);
+		try {
+			const source = await latestWarmSnapshot();
+			if (!source) {
+				return;
+			}
+			const targetSha = warmName.slice(WARM_NAME_PREFIX.length);
+			const { vm, vmId } = await createVmWithBackoff({
+				snapshotId: source.snapshotId,
+				name: `${warmName}-refresh`,
+				idleTimeoutSeconds: 3600,
+				ephemeral: true,
+			});
+			try {
+				await execOnVm(
+					vm,
+					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+					30_000,
+				);
+				const checkout = await execOnVm(
+					vm,
+					`cd ${REPO_ROOT} && (git fetch --quiet origin ${shellQuote(targetSha)} || git fetch --quiet --all) && git checkout --quiet --force ${shellQuote(targetSha)}`,
+					180_000,
+				);
+				if (checkout.exitCode !== 0) {
+					throw new Error(`checkout failed: ${checkout.stderr.slice(-300)}`);
+				}
+				await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(warmServerEnv()));
+				const warmupRun = await execOnVm(
+					vm,
+					`cd ${REPO_ROOT} && bash scripts/tw/image/warmup.sh ${shellQuote(targetSha)}`,
+				);
+				if (warmupRun.exitCode !== 0) {
+					throw new Error(`warmup failed: ${warmupRun.stderr.slice(-300)}`);
+				}
+				await freestyleProvider.snapshotAndStop(wrap(warmName, vm, vmId));
+			} catch (error) {
+				await client()
+					.vms.delete({ vmId })
+					.catch(() => {
+						/* best-effort */
+					});
+				throw error;
+			}
+		} finally {
+			refreshInFlight = false;
+			done();
+		}
+	})().catch((error) => {
+		narrate(
+			chalk.yellow(
+				`[freestyle] background warm refresh failed (${(error as Error).message?.slice(0, 120)}) — workers keep fast-forwarding`,
+			),
+		);
+	});
+};
+
 export const freestyleProvider: ProviderImpl = {
 	async createWarmSandbox(opts: CreateSandboxOptions): Promise<ProviderSandbox> {
 		if (!opts.source) {
@@ -429,8 +538,9 @@ export const freestyleProvider: ProviderImpl = {
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(opts.env));
 		await cloneRepo(vm, opts.source);
 		const baseDone = stage(
-			"freestyle-base.sh (apt PG18 + Dragonfly + goaws + bun, ~2-3m)",
+			"freestyle-base.sh (apt PG18 + Dragonfly + goaws + bun)",
 			20_000,
+			"base-provision",
 		);
 		const base = await execOnVm(vm, `bash ${BASE_SCRIPT}`);
 		baseDone();
@@ -488,11 +598,21 @@ export const freestyleProvider: ProviderImpl = {
 	},
 
 	async forkWorker(opts: ForkWorkerOptions): Promise<ProviderSandbox> {
-		const snapshotId = await findSnapshotByName(opts.sourceSandbox);
+		// Exact-sha snapshot → fresh restore (8s boots). Otherwise restore the
+		// NEWEST generation and mark the worker stale: the orchestrator checks the
+		// target sha out below (so boot scripts are current) and freestyleBoot
+		// fast-forwards in place — all workers in parallel, no snapshot wait.
+		let snapshotId = await findSnapshotByName(opts.sourceSandbox);
+		let stale = false;
 		if (!snapshotId) {
-			throw new Error(
-				`freestyle: no warm snapshot named "${opts.sourceSandbox}" — snapshotAndStop must run first`,
-			);
+			const newest = await latestWarmSnapshot();
+			if (!newest) {
+				throw new Error(
+					`freestyle: no warm snapshot at all — snapshotAndStop must run first`,
+				);
+			}
+			snapshotId = newest.snapshotId;
+			stale = true;
 		}
 		const { vm, vmId } = await createVmWithBackoff({
 			snapshotId,
@@ -507,7 +627,28 @@ export const freestyleProvider: ProviderImpl = {
 		liveVms.set(vmId, { vm, vmId });
 		// Per-worker env (its pool Stripe key, sub-account, svix flags) replaces the
 		// warm parent's env file baked into the snapshot.
-		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(opts.env));
+		const env = stale
+			? { ...opts.env, TW_SNAPSHOT_STALE: "1" }
+			: opts.env;
+		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(env));
+		if (stale) {
+			const targetSha = opts.env.TW_TARGET_SHA;
+			if (!targetSha) {
+				throw new Error("freestyle: stale worker needs TW_TARGET_SHA in env");
+			}
+			// Current-code checkout BEFORE boot launches — the snapshot's own boot
+			// scripts are stale and must not run.
+			const checkout = await execOnVm(
+				vm,
+				`cd ${REPO_ROOT} && (git fetch --quiet origin ${shellQuote(targetSha)} || git fetch --quiet --all) && git checkout --quiet --force ${shellQuote(targetSha)}`,
+				180_000,
+			);
+			if (checkout.exitCode !== 0) {
+				throw new Error(
+					`freestyle: stale-worker checkout failed (exit ${checkout.exitCode}): ${checkout.stderr.slice(-500)}`,
+				);
+			}
+		}
 		return wrap(opts.name, vm, vmId);
 	},
 
@@ -526,7 +667,11 @@ export const freestyleProvider: ProviderImpl = {
 
 		// Playwright Chromium for the browser-driven groups (same bake as Modal's
 		// image step 9; needs the repo's node_modules, so it runs post-warmup).
-		const chromiumDone = stage("bake Playwright Chromium (browser groups)", 20_000);
+		const chromiumDone = stage(
+			"bake Playwright Chromium (browser groups)",
+			20_000,
+			"chromium",
+		);
 		const chromium = await execOnVm(
 			vm,
 			`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
@@ -543,7 +688,11 @@ export const freestyleProvider: ProviderImpl = {
 		// here once, so forks resume them instead of paying ~30s of bun startup each.
 		const serverEnv = warmServerEnv();
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(serverEnv));
-		const appDone = stage("start server + workers + cron in the warm parent", 20_000);
+		const appDone = stage(
+			"start server + workers + cron in the warm parent",
+			20_000,
+			"app-start",
+		);
 		// Canonically clean cache slate for every fork (clearMasterOrg tail, local-only
 		// dragonfly) happens after health, right before the snapshot.
 		const appStart = await execOnVm(
@@ -574,7 +723,11 @@ export const freestyleProvider: ProviderImpl = {
 			);
 		}
 
-		const done = stage("memory-snapshot warm parent (services + server running)", 15_000);
+		const done = stage(
+			"memory-snapshot warm parent (services + server running)",
+			15_000,
+			"snapshot",
+		);
 		try {
 			// Slow-capture tolerance: if the snapshot CALL times out, the build may
 			// still be running server-side — poll by name before declaring failure.
@@ -681,6 +834,20 @@ export const freestyleProvider: ProviderImpl = {
 		if (snapshotId) {
 			return { name, handle: undefined, id: undefined };
 		}
+		// STALE hit: any recent generation serves — workers restore it and
+		// fast-forward at boot; a detached refresh converges the cache to HEAD.
+		if (name.startsWith(WARM_NAME_PREFIX)) {
+			const newest = await latestWarmSnapshot();
+			if (newest) {
+				narrate(
+					chalk.cyan(
+						`[freestyle] stale warm hit (${newest.name} → ${name}) — workers fast-forward at boot; background refresh kicked`,
+					),
+				);
+				refreshWarmSnapshotInBackground(name);
+				return { name, handle: undefined, id: undefined };
+			}
+		}
 		return undefined;
 	},
 
@@ -734,7 +901,11 @@ export const freestyleProvider: ProviderImpl = {
 		// `bun test` execs stay silent like the other providers.
 		const isScriptRun = argv[0] === "bash";
 		const done = isScriptRun
-			? stage(`exec ${argv.slice(0, 2).join(" ")}`, 20_000)
+			? stage(
+					`exec ${argv.slice(0, 2).join(" ")}`,
+					20_000,
+					argv[1]?.endsWith("warmup.sh") ? "warmup" : undefined,
+				)
 			: undefined;
 		try {
 			const res = await execOnVm(

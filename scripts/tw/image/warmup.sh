@@ -149,8 +149,12 @@ bun scripts/setup/setup-test.ts --yes || die "setup-test seed FAILED"
 # ---------------------------------------------------------------------------
 # 6. Clean-stop services for a snapshot-consistent filesystem (plan §5a step 6).
 # ---------------------------------------------------------------------------
-log "Clean-stopping services for snapshot consistency"
-TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
-  bash "$SCRIPT_DIR/stop-services.sh"
+if [ "${TW_SKIP_CLEAN_STOP:-}" = "1" ]; then
+  log "TW_SKIP_CLEAN_STOP=1 — leaving services running (worker fast-forward path)"
+else
+  log "Clean-stopping services for snapshot consistency"
+  TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
+    bash "$SCRIPT_DIR/stop-services.sh"
+fi
 
 log "WARM layer ready on ref $(git rev-parse --short HEAD). Snapshot now -> fork N workers."
