@@ -352,20 +352,33 @@ const deleteSnapshot = async (snapshotId: string): Promise<void> => {
 
 /** Rolling GC: keep the newest N warm snapshots, delete the rest. */
 const gcWarmSnapshots = async (): Promise<void> => {
-	const { snapshots } = await client().vms.snapshots.list();
+	const { snapshots } = await client().vms.snapshots.list({
+		includeBuilding: true,
+		includeFailed: true,
+	});
 	const warm = snapshots
-		.filter(
-			(snap) =>
-				snap.name?.startsWith(WARM_NAME_PREFIX) &&
-				!snap.deleted &&
-				snap.state !== "failed",
-		)
+		.filter((snap) => snap.name?.startsWith(WARM_NAME_PREFIX) && !snap.deleted)
 		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-	for (const stale of warm.slice(WARM_SNAPSHOTS_TO_KEEP)) {
+	// Keep the newest N READY generations; failed and stuck-building (>2h, e.g.
+	// a refresh whose orchestrator exited mid-snapshot) get swept.
+	let readyKept = 0;
+	for (const snap of warm) {
+		const ageMs = Date.now() - new Date(snap.createdAt).getTime();
+		const stuckBuilding = snap.state === "building" && ageMs > 2 * 60 * 60 * 1000;
+		const isReady = snap.state === "ready";
+		if (isReady && readyKept < WARM_SNAPSHOTS_TO_KEEP) {
+			readyKept++;
+			continue;
+		}
+		if (snap.state === "building" && !stuckBuilding) {
+			continue;
+		}
 		narrate(
-			chalk.cyan.dim(`[freestyle] gc: deleting old warm snapshot ${stale.name}`),
+			chalk.cyan.dim(
+				`[freestyle] gc: deleting warm snapshot ${snap.name} (${snap.state})`,
+			),
 		);
-		await deleteSnapshot(stale.snapshotId);
+		await deleteSnapshot(snap.snapshotId);
 	}
 };
 
