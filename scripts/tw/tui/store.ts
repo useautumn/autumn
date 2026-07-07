@@ -37,6 +37,8 @@ export type TuiTestFile = {
 export type TuiSummary = {
 	passed: number;
 	failed: number;
+	/** FILE-level failures — can be nonzero while `failed` (test asserts) is 0 (exec deaths). */
+	filesFailed: number;
 	crashed: number;
 	wallMs: number;
 	costLine?: string;
@@ -65,6 +67,8 @@ export type TuiState = {
 	stripeTotal: number;
 	workersReady: number;
 	workersTotal: number;
+	/** Workers that failed to provision (restore/checkout/boot error before READY). */
+	workersFailed: number;
 	/** RUN: per-file results keyed by absolute path, + the total file count. */
 	files: Map<string, TuiTestFile>;
 	runTotal: number;
@@ -119,6 +123,7 @@ const state: TuiState = {
 	stripeTotal: 0,
 	workersReady: 0,
 	workersTotal: 0,
+	workersFailed: 0,
 	files: new Map(),
 	runTotal: 0,
 	sandboxesDone: 0,
@@ -150,6 +155,7 @@ export const resetTui = (): void => {
 	state.stripeTotal = 0;
 	state.workersReady = 0;
 	state.workersTotal = 0;
+	state.workersFailed = 0;
 	state.files = new Map();
 	state.runTotal = 0;
 	state.sandboxesDone = 0;
@@ -198,6 +204,10 @@ export const bumpStripeDone = (): void => {
 
 export const bumpWorkerReady = (): void => {
 	state.workersReady++;
+};
+
+export const bumpWorkerFailed = (): void => {
+	state.workersFailed++;
 };
 
 export const bumpSandboxDone = (): void => {
