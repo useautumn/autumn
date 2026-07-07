@@ -36,8 +36,6 @@ There are three ways to connect your Stripe account to Autumn:
 | **OAuth** | Recommended for production. Connect via the deploy dialog in the Autumn dashboard |
 | **Secret key** | Paste your Stripe secret key directly. Autumn creates a webhook endpoint automatically |
 
-When you connect a Stripe **sandbox** account, Autumn automatically syncs all your existing plans into it as Stripe products and prices, so you can test the full flow immediately.
-
 For **production** Stripe accounts, Autumn does not create products and prices at connect time. They're created lazily on the first `attach` that uses them, so you can pre-map plans to existing Stripe products before that first attach and Autumn will reuse them instead of creating duplicates. See [How products and prices map](#how-products-and-prices-map) for details.
 
 <Note>
@@ -86,12 +84,7 @@ The table below shows what maps to what:
 | Subscription | Subscription |
 
 <Note>
-  **When Stripe products and prices are created**
-
-  - **Sandbox**: Autumn creates Stripe products and prices eagerly — when a plan is created or updated, and when you connect a new Stripe sandbox account (Autumn syncs all existing plans over).
-  - **Production**: Autumn creates Stripe products and prices lazily — only on the first `attach` that uses them. Nothing is created at connect time or when you push a plan.
-
-  Because production is lazy, you can pre-map an Autumn plan to an existing Stripe product/price before the first attach, and Autumn will reuse it instead of creating a duplicate.
+  In production, Stripe products and prices are lazily created — only on the first `attach` that uses them, not when you create or update a plan in Autumn. This means you can pre-map an Autumn plan to an existing Stripe product/price before the first attach, and Autumn will reuse it instead of creating a duplicate.
 </Note>
 
 ### Fixed prices
