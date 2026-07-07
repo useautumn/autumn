@@ -142,6 +142,9 @@ test.concurrent(
 			items: [aiCreditsItem],
 		});
 
+		const timestampModelId = await pickRandomModel({
+			label: "track-tokens-timestamp",
+		});
 		const runId = Date.now();
 		const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId: `track-tokens-timestamp-${runId}`,
@@ -157,7 +160,7 @@ test.concurrent(
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCredits,
-			model_id: "anthropic/claude-sonnet-4-20250514",
+			model_id: timestampModelId,
 			input_tokens: 100,
 			output_tokens: 50,
 			properties: { marker: "backdated" },
@@ -167,7 +170,7 @@ test.concurrent(
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCredits,
-			model_id: "anthropic/claude-sonnet-4-20250514",
+			model_id: timestampModelId,
 			input_tokens: 100,
 			output_tokens: 50,
 			properties: { marker: "default-now" },
