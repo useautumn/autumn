@@ -93,14 +93,9 @@ export const runCheckWithTrackV2 = async ({
 		});
 	}
 
-	// When using locks, reject immediately if customer has no entitlement for the feature.
-	// Without this check, the Lua deduction script returns success with empty mutation logs,
-	// causing check to incorrectly return allowed: true.
-	if (
-		body.lock &&
-		!customerHasEntitlementForFeature(checkData) &&
-		requiredBalance > 0
-	) {
+	// No entitlement means the Lua deduction script no-ops successfully,
+	// which would incorrectly surface as allowed: true.
+	if (!customerHasEntitlementForFeature(checkData) && requiredBalance > 0) {
 		return buildNoEntitlementResponse({ checkData, requiredBalance });
 	}
 

@@ -1,13 +1,9 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { CheckDataV2 } from "@/internal/balances/check/checkTypes/CheckDataV2.js";
-import type { ParsedCheckParams } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
 
 /**
- * Unit test for the fix: check with lock on feature customer doesn't have
- * returns allowed: false
- *
- * This tests the helper functions and logic without needing full integration test setup.
+ * Unit test for the fix: check with track (lock or send_event) on a feature the
+ * customer doesn't have returns allowed: false.
  */
 
 describe("runCheckWithTrackV2 - no entitlement edge case", () => {
@@ -64,12 +60,7 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 		expect(response.balance).toBe(null);
 	});
 
-	test("early return condition is triggered when lock is enabled, no entitlement, and requiredBalance > 0", () => {
-		// biome-ignore lint/suspicious/noExplicitAny: Test data
-		const body: any = {
-			lock: { enabled: true, lock_id: "test-lock" },
-		};
-
+	test("early return condition is triggered when no entitlement and requiredBalance > 0", () => {
 		// biome-ignore lint/suspicious/noExplicitAny: Test data
 		const checkData: any = {
 			apiBalance: undefined, // No entitlement
@@ -79,17 +70,12 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 
 		// Simulate the early return condition
 		const shouldReturnEarly =
-			body.lock && checkData.apiBalance === undefined && requiredBalance > 0;
+			checkData.apiBalance === undefined && requiredBalance > 0;
 
 		expect(shouldReturnEarly).toBe(true);
 	});
 
 	test("early return condition is NOT triggered when requiredBalance is 0", () => {
-		// biome-ignore lint/suspicious/noExplicitAny: Test data
-		const body: any = {
-			lock: { enabled: true, lock_id: "test-lock" },
-		};
-
 		// biome-ignore lint/suspicious/noExplicitAny: Test data
 		const checkData: any = {
 			apiBalance: undefined, // No entitlement
@@ -99,28 +85,7 @@ describe("runCheckWithTrackV2 - no entitlement edge case", () => {
 
 		// Should not trigger early return for requiredBalance = 0
 		const shouldReturnEarly =
-			body.lock && checkData.apiBalance === undefined && requiredBalance > 0;
-
-		expect(shouldReturnEarly).toBe(false);
-	});
-
-	test("early return condition is NOT triggered when lock is not enabled", () => {
-		// biome-ignore lint/suspicious/noExplicitAny: Test data
-		const body: any = {
-			lock: undefined,
-		};
-
-		// biome-ignore lint/suspicious/noExplicitAny: Test data
-		const checkData: any = {
-			apiBalance: undefined, // No entitlement
-		};
-
-		const requiredBalance = 10;
-
-		// Should not trigger early return when lock is not enabled
-		const shouldReturnEarly = Boolean(
-			body.lock && checkData.apiBalance === undefined && requiredBalance > 0,
-		);
+			checkData.apiBalance === undefined && requiredBalance > 0;
 
 		expect(shouldReturnEarly).toBe(false);
 	});
