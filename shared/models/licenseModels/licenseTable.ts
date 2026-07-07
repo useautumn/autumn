@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	foreignKey,
 	index,
 	integer,
@@ -181,62 +182,49 @@ export const licensePoolGrants = pgTable(
 	],
 );
 
-export const licenseEntitlements = pgTable(
-	"license_entitlements",
+// Item-shaped license content: each row pairs a plan license with an
+// entitlement, a price, or both — mirroring how customer products pair content.
+export const licenseItems = pgTable(
+	"license_items",
 	{
 		id: text("id").primaryKey(),
 		plan_license_id: text("plan_license_id").notNull(),
-		entitlement_id: text("entitlement_id").notNull(),
+		entitlement_id: text("entitlement_id"),
+		price_id: text("price_id"),
 		created_at: numeric("created_at", { mode: "number" }).notNull(),
 	},
 	(table) => [
 		foreignKey({
 			columns: [table.plan_license_id],
 			foreignColumns: [planLicenses.id],
-			name: "license_entitlements_plan_license_fkey",
+			name: "license_items_plan_license_fkey",
 		}).onDelete("cascade"),
 		foreignKey({
 			columns: [table.entitlement_id],
 			foreignColumns: [entitlements.id],
-			name: "license_entitlements_entitlement_fkey",
+			name: "license_items_entitlement_fkey",
 		}).onDelete("restrict"),
-		uniqueIndex("unique_license_entitlement")
-			.on(table.plan_license_id, table.entitlement_id)
-			.concurrently(),
-		index("idx_license_entitlements_entitlement")
-			.on(table.entitlement_id)
-			.concurrently(),
-	],
-);
-
-export const licensePrices = pgTable(
-	"license_prices",
-	{
-		id: text("id").primaryKey(),
-		plan_license_id: text("plan_license_id").notNull(),
-		price_id: text("price_id").notNull(),
-		created_at: numeric("created_at", { mode: "number" }).notNull(),
-	},
-	(table) => [
-		foreignKey({
-			columns: [table.plan_license_id],
-			foreignColumns: [planLicenses.id],
-			name: "license_prices_plan_license_fkey",
-		}).onDelete("cascade"),
 		foreignKey({
 			columns: [table.price_id],
 			foreignColumns: [prices.id],
-			name: "license_prices_price_fkey",
+			name: "license_items_price_fkey",
 		}).onDelete("restrict"),
-		uniqueIndex("unique_license_price")
-			.on(table.plan_license_id, table.price_id)
+		check(
+			"license_items_content_check",
+			sql`${table.entitlement_id} IS NOT NULL OR ${table.price_id} IS NOT NULL`,
+		),
+		unique("unique_license_item")
+			.on(table.plan_license_id, table.entitlement_id, table.price_id)
+			.nullsNotDistinct(),
+		index("idx_license_items_entitlement")
+			.on(table.entitlement_id)
 			.concurrently(),
-		index("idx_license_prices_price").on(table.price_id).concurrently(),
+		index("idx_license_items_price").on(table.price_id).concurrently(),
 	],
 );
 
-export type DbLicenseEntitlement = typeof licenseEntitlements.$inferSelect;
-export type DbLicensePrice = typeof licensePrices.$inferSelect;
+export type DbLicenseItem = typeof licenseItems.$inferSelect;
+export type InsertLicenseItem = typeof licenseItems.$inferInsert;
 
 export type DbPlanLicense = typeof planLicenses.$inferSelect;
 export type InsertPlanLicense = typeof planLicenses.$inferInsert;
