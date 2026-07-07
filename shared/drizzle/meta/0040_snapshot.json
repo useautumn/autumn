@@ -1,5 +1,5 @@
 {
-  "id": "c23e9d1b-e6d4-4eed-8d11-3ec9ef20b57e",
+  "id": "60ff66c5-676a-4923-9333-efd17bbfb99c",
   "prevId": "ef3189c9-0d6c-4df2-86d6-7604d86d3414",
   "version": "7",
   "dialect": "postgresql",
@@ -5181,8 +5181,8 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
-    "public.license_entitlements": {
-      "name": "license_entitlements",
+    "public.license_items": {
+      "name": "license_items",
       "schema": "",
       "columns": {
         "id": {
@@ -5201,7 +5201,13 @@
           "name": "entitlement_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "price_id": {
+          "name": "price_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -5211,29 +5217,8 @@
         }
       },
       "indexes": {
-        "unique_license_entitlement": {
-          "name": "unique_license_entitlement",
-          "columns": [
-            {
-              "expression": "plan_license_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entitlement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_license_entitlements_entitlement": {
-          "name": "idx_license_entitlements_entitlement",
+        "idx_license_items_entitlement": {
+          "name": "idx_license_items_entitlement",
           "columns": [
             {
               "expression": "entitlement_id",
@@ -5246,12 +5231,27 @@
           "concurrently": true,
           "method": "btree",
           "with": {}
+        },
+        "idx_license_items_price": {
+          "name": "idx_license_items_price",
+          "columns": [
+            {
+              "expression": "price_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "license_entitlements_plan_license_fkey": {
-          "name": "license_entitlements_plan_license_fkey",
-          "tableFrom": "license_entitlements",
+        "license_items_plan_license_fkey": {
+          "name": "license_items_plan_license_fkey",
+          "tableFrom": "license_items",
           "tableTo": "plan_license",
           "columnsFrom": [
             "plan_license_id"
@@ -5262,9 +5262,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "license_entitlements_entitlement_fkey": {
-          "name": "license_entitlements_entitlement_fkey",
-          "tableFrom": "license_entitlements",
+        "license_items_entitlement_fkey": {
+          "name": "license_items_entitlement_fkey",
+          "tableFrom": "license_items",
           "tableTo": "entitlements",
           "columnsFrom": [
             "entitlement_id"
@@ -5274,12 +5274,40 @@
           ],
           "onDelete": "restrict",
           "onUpdate": "no action"
+        },
+        "license_items_price_fkey": {
+          "name": "license_items_price_fkey",
+          "tableFrom": "license_items",
+          "tableTo": "prices",
+          "columnsFrom": [
+            "price_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "unique_license_item": {
+          "name": "unique_license_item",
+          "nullsNotDistinct": true,
+          "columns": [
+            "plan_license_id",
+            "entitlement_id",
+            "price_id"
+          ]
+        }
+      },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "license_items_content_check": {
+          "name": "license_items_content_check",
+          "value": "\"license_items\".\"entitlement_id\" IS NOT NULL OR \"license_items\".\"price_id\" IS NOT NULL"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.license_pool_grant": {
@@ -5494,107 +5522,6 @@
             "id"
           ],
           "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.license_prices": {
-      "name": "license_prices",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "plan_license_id": {
-          "name": "plan_license_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price_id": {
-          "name": "price_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "unique_license_price": {
-          "name": "unique_license_price",
-          "columns": [
-            {
-              "expression": "plan_license_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "price_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_license_prices_price": {
-          "name": "idx_license_prices_price",
-          "columns": [
-            {
-              "expression": "price_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "license_prices_plan_license_fkey": {
-          "name": "license_prices_plan_license_fkey",
-          "tableFrom": "license_prices",
-          "tableTo": "plan_license",
-          "columnsFrom": [
-            "plan_license_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "license_prices_price_fkey": {
-          "name": "license_prices_price_fkey",
-          "tableFrom": "license_prices",
-          "tableTo": "prices",
-          "columnsFrom": [
-            "price_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },

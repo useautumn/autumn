@@ -1,8 +1,8 @@
 import type { ApiPlanLicenseV1, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { licenseContentRepo, planLicenseRepo } from "../repos/index.js";
-import { deriveCustomizeFromMembers } from "./licenseCustomizeContent.js";
+import { licenseItemRepo, planLicenseRepo } from "../repos/index.js";
+import { deriveCustomizeFromItems } from "./licenseCustomize.js";
 
 /**
  * Plan-response license data, fully derived: response handlers fetch through
@@ -25,14 +25,14 @@ export const loadApiPlanLicenses = async ({
 	});
 	if (links.length === 0) return result;
 
-	// 2. Customized content: member rows grouped per link
-	const members = await licenseContentRepo.listMemberRows({
+	// 2. Customized content: content rows grouped per link
+	const content = await licenseItemRepo.listByPlanLicenseIds({
 		db: ctx.db,
 		planLicenseIds: links.map(({ planLicense }) => planLicense.id),
 	});
 	const customizedLinkIds = new Set([
-		...members.entitlements.map((row) => row.plan_license_id),
-		...members.prices.map((row) => row.plan_license_id),
+		...content.entitlements.map((row) => row.plan_license_id),
+		...content.prices.map((row) => row.plan_license_id),
 	]);
 
 	// 3. License products, fetched once per distinct customized license
@@ -58,14 +58,14 @@ export const loadApiPlanLicenses = async ({
 			planLicense.license_internal_product_id,
 		);
 		const customize = licenseProduct
-			? deriveCustomizeFromMembers({
+			? deriveCustomizeFromItems({
 					ctx,
 					licenseProduct,
-					members: {
-						entitlements: members.entitlements.filter(
+					content: {
+						entitlements: content.entitlements.filter(
 							(row) => row.plan_license_id === planLicense.id,
 						),
-						prices: members.prices.filter(
+						prices: content.prices.filter(
 							(row) => row.plan_license_id === planLicense.id,
 						),
 					},
