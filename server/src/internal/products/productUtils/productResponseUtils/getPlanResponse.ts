@@ -17,10 +17,11 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { deriveLicenseCustomizeByLinkIds } from "@/internal/licenses/actions/licenseCustomizeContent.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/index.js";
 
 type PlanLicenseLink = Awaited<
-	ReturnType<typeof planLicenseRepo.listWithLicensePlanIdByParent>
+	ReturnType<typeof planLicenseRepo.listWithLicensePlanIdByParents>
 >[number];
 
 import { ProductService } from "../../ProductService.js";
@@ -130,22 +131,33 @@ export const getPlanResponse = async ({
 	const resolvedLicenseLinks =
 		licenseLinks ??
 		(ctx
-			? await planLicenseRepo.listWithLicensePlanIdByParent({
+			? await planLicenseRepo.listWithLicensePlanIdByParents({
 					db: ctx.db,
-					parentInternalProductId: product.internal_id,
+					parentInternalProductIds: [product.internal_id],
 				})
 			: []);
+	const customizeByLinkId = ctx
+		? await deriveLicenseCustomizeByLinkIds({
+				ctx,
+				links: resolvedLicenseLinks.map(({ planLicense }) => planLicense),
+			})
+		: new Map<
+				string,
+				Awaited<ReturnType<typeof deriveLicenseCustomizeByLinkIds>> extends Map<
+					string,
+					infer V
+				>
+					? V
+					: never
+			>();
 	const licenses =
 		resolvedLicenseLinks.length > 0
 			? resolvedLicenseLinks.map(({ planLicense, licensePlanId }) => ({
 					license_plan_id: licensePlanId,
 					included: planLicense.included,
 					prepaid_only: planLicense.prepaid_only,
-					...(planLicense.pooled_feature_ids.length > 0
-						? { pooled_feature_ids: planLicense.pooled_feature_ids }
-						: {}),
-					...(planLicense.customize
-						? { customize: planLicense.customize }
+					...(customizeByLinkId.get(planLicense.id)
+						? { customize: customizeByLinkId.get(planLicense.id) }
 						: {}),
 				}))
 			: undefined;

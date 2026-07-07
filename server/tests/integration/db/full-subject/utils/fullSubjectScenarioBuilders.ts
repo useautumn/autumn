@@ -195,6 +195,7 @@ const buildEntitlement = ({
 	expiry_duration: null,
 	expiry_length: null,
 	internal_reward_id: null,
+	pooled: false,
 	rollover: null,
 });
 
@@ -290,7 +291,7 @@ const buildCustomerProduct = ({
 	stripe_checkout_session_id: null,
 	previous_customer_product_id: null,
 	on_trial_end: null,
-	license_assignment_id: null,
+	license_parent_customer_product_id: null,
 });
 
 const buildCustomerPrice = ({

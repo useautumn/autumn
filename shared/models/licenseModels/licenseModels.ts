@@ -1,13 +1,9 @@
 import { z } from "zod/v4";
 import { CreatePlanItemParamsV1Schema } from "../../api/products/items/crud/createPlanItemParamsV1";
 
-export const LicenseCustomizeSchema = z
-	.object({
-		items: z.array(CreatePlanItemParamsV1Schema),
-	})
-	.refine((customize) => customize.items.every((item) => !item.price), {
-		message: "License customize.items cannot include priced items.",
-	});
+export const LicenseCustomizeSchema = z.object({
+	items: z.array(CreatePlanItemParamsV1Schema),
+});
 
 export const PlanLicenseSchema = z.object({
 	id: z.string(),
@@ -15,7 +11,6 @@ export const PlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
 	included: z.number(),
 	prepaid_only: z.boolean(),
-	pooled_feature_ids: z.array(z.string()).default([]),
 	customize: LicenseCustomizeSchema.nullish(),
 	metadata: z.record(z.string(), z.unknown()).nullish(),
 	created_at: z.number(),
@@ -28,7 +23,6 @@ export const LicenseAttachParamsSchema = z.object({
 	plan_id: z.string(),
 	pool_id: z.string().optional(),
 	parent_subscription_id: z.string().optional(),
-	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const SetPlanLicenseParamsSchema = z.object({
@@ -36,7 +30,6 @@ export const SetPlanLicenseParamsSchema = z.object({
 	license_plan_id: z.string(),
 	included: z.number().int().min(0).default(0),
 	prepaid_only: z.boolean().default(true),
-	pooled_feature_ids: z.array(z.string()).default([]),
 	customize: LicenseCustomizeSchema.nullish().optional(),
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
@@ -49,12 +42,23 @@ export const ListPlanLicensesParamsSchema = z.object({
 	parent_plan_id: z.string(),
 });
 
-export const LicenseDetachParamsSchema = z.object({
-	assignment_id: z.string().optional(),
-	customer_id: z.string().optional(),
-	entity_id: z.string().optional(),
-	plan_id: z.string().optional(),
-});
+export const LicenseDetachParamsSchema = z
+	.object({
+		assignment_id: z.string().optional(),
+		customer_id: z.string().optional(),
+		entity_id: z.string().optional(),
+		plan_id: z.string().optional(),
+	})
+	.refine(
+		(params) =>
+			Boolean(
+				params.assignment_id ||
+					(params.customer_id && params.entity_id && params.plan_id),
+			),
+		{
+			message: "Provide assignment_id or customer_id, entity_id, and plan_id.",
+		},
+	);
 
 export const LicenseListAssignmentsParamsSchema = z.object({
 	customer_id: z.string(),
