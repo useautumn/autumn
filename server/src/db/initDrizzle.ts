@@ -133,6 +133,12 @@ const replicaPoolMax = poolMaxFromEnv({
 	fallback: PROD_POOL_MAX.replica,
 });
 
+// Backstop so one slow query can't pin the xmin horizon; tune via env without a redeploy.
+const generalStatementTimeoutMs = (() => {
+	const parsed = Number(process.env.GENERAL_DB_STATEMENT_TIMEOUT_MS);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : 300_000;
+})();
+
 const budgetedFleetConnections =
 	BUDGETED_FLEET_PROCESSES *
 		(criticalPoolMax + generalPoolMax + replicaPoolMax) +
@@ -165,6 +171,10 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
 	maxConnections: generalPoolMax,
 	connectTimeout: isProd ? 5 : 30,
+	poolConfig: {
+		application_name: "autumn-general",
+		statement_timeout: isProd ? generalStatementTimeoutMs : undefined,
+	},
 });
 
 // -- Replica pool: used as fallback when primary is degraded --
