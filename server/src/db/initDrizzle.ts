@@ -136,7 +136,7 @@ const replicaPoolMax = poolMaxFromEnv({
 // Backstop so one slow query can't pin the xmin horizon; tune via env without a redeploy.
 const generalStatementTimeoutMs = (() => {
 	const parsed = Number(process.env.GENERAL_DB_STATEMENT_TIMEOUT_MS);
-	return Number.isInteger(parsed) && parsed > 0 ? parsed : 300_000;
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : 600_000;
 })();
 
 const budgetedFleetConnections =
