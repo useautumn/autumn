@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	customerEntitlements,
 	type DbLicensePoolGrant,
 	type InsertLicensePoolGrant,
@@ -10,16 +9,12 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getForUpdateByNaturalKey = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 	parentCustomerProductId,
 	licenseInternalProductId,
 	internalFeatureId,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 	parentCustomerProductId: string;
 	licenseInternalProductId: string;
@@ -30,8 +25,6 @@ const getForUpdateByNaturalKey = async ({
 		.from(licensePoolGrants)
 		.where(
 			and(
-				eq(licensePoolGrants.org_id, orgId),
-				eq(licensePoolGrants.env, env),
 				eq(licensePoolGrants.internal_customer_id, internalCustomerId),
 				eq(
 					licensePoolGrants.parent_customer_product_id,
@@ -61,8 +54,6 @@ const insertIgnoringDuplicate = async ({
 		.values(grant)
 		.onConflictDoNothing({
 			target: [
-				licensePoolGrants.org_id,
-				licensePoolGrants.env,
 				licensePoolGrants.internal_customer_id,
 				licensePoolGrants.parent_customer_product_id,
 				licensePoolGrants.license_internal_product_id,
@@ -76,16 +67,12 @@ const insertIgnoringDuplicate = async ({
 
 const findOrphanForAdoption = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 	licenseInternalProductId,
 	internalFeatureId,
 	activeParentIds,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 	licenseInternalProductId: string;
 	internalFeatureId: string;
@@ -96,8 +83,6 @@ const findOrphanForAdoption = async ({
 		.from(licensePoolGrants)
 		.where(
 			and(
-				eq(licensePoolGrants.org_id, orgId),
-				eq(licensePoolGrants.env, env),
 				eq(licensePoolGrants.internal_customer_id, internalCustomerId),
 				eq(
 					licensePoolGrants.license_internal_product_id,
