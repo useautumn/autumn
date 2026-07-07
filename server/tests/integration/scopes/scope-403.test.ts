@@ -2323,19 +2323,6 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
-		handlerName: "handleMigrateProductV2",
-		handlerFile: "src/internal/products/handlers/handleMigrateProductV2.ts",
-		method: "POST",
-		path: "/v1/migrations",
-		style: "REST",
-		group: "v1/migrations",
-		mountChain: ["/v1", "", "/migrations"],
-		sourceRouterFile: "src/internal/products/planRouter.ts",
-		routeKind: "createRoute",
-		needsScopes: true,
-		isWebhookExempt: false,
-	},
-	{
 		handlerName: "handleGetOrg",
 		handlerFile: "src/internal/orgs/handlers/crudHandlers/handleGetOrg.ts",
 		method: "GET",
@@ -4696,12 +4683,6 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["billing:read"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:40:49.153Z",
-	},
-	"POST|/v1/migrations|handleMigrateProductV2": {
-		decision: "decided",
-		scopes: ["billing:write"],
-		shape: "array",
-		decidedAt: "2026-04-24T15:41:37.994Z",
 	},
 	"GET|/v1/organization|handleGetOrg": {
 		decision: "decided",
