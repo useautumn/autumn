@@ -1,14 +1,8 @@
-import type {
-	ApiPlanLicenseV1,
-	Entitlement,
-	FullProduct,
-} from "@autumn/shared";
+import type { ApiPlanLicenseV1, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { licenseContentRepo, planLicenseRepo } from "../repos/index.js";
-import { productToCreatePlanItems } from "./licenseCustomizeContent.js";
+import { deriveCustomizeFromMembers } from "./licenseCustomizeContent.js";
 
 /**
  * Plan-response license data, fully derived: response handlers fetch through
@@ -63,29 +57,20 @@ export const loadApiPlanLicenses = async ({
 		const licenseProduct = licenseProducts.get(
 			planLicense.license_internal_product_id,
 		);
-		const customize =
-			customizedLinkIds.has(planLicense.id) && licenseProduct
-				? {
-						items: productToCreatePlanItems({
-							ctx,
-							productV2: mapToProductV2({
-								product: {
-									...licenseProduct,
-									prices: members.prices.filter(
-										(row) => row.plan_license_id === planLicense.id,
-									) as unknown as FullProduct["prices"],
-									entitlements: getEntsWithFeature({
-										ents: members.entitlements.filter(
-											(row) => row.plan_license_id === planLicense.id,
-										) as Entitlement[],
-										features: ctx.features,
-									}),
-								},
-								features: ctx.features,
-							}),
-						}),
-					}
-				: undefined;
+		const customize = licenseProduct
+			? deriveCustomizeFromMembers({
+					ctx,
+					licenseProduct,
+					members: {
+						entitlements: members.entitlements.filter(
+							(row) => row.plan_license_id === planLicense.id,
+						),
+						prices: members.prices.filter(
+							(row) => row.plan_license_id === planLicense.id,
+						),
+					},
+				})
+			: null;
 
 		const existing = result.get(planLicense.parent_internal_product_id) ?? [];
 		existing.push({
