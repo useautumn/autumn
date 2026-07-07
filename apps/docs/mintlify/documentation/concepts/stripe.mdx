@@ -36,8 +36,6 @@ There are three ways to connect your Stripe account to Autumn:
 | **OAuth** | Recommended for production. Connect via the deploy dialog in the Autumn dashboard |
 | **Secret key** | Paste your Stripe secret key directly. Autumn creates a webhook endpoint automatically |
 
-For **production** Stripe accounts, Autumn does not create products and prices at connect time. They're created lazily on the first `attach` that uses them, so you can pre-map plans to existing Stripe products before that first attach and Autumn will reuse them instead of creating duplicates. See [How products and prices map](#how-products-and-prices-map) for details.
-
 <Note>
 When disconnecting and reconnecting a different Stripe account, existing Stripe IDs on your plans become invalid. Autumn will recreate the products and prices in the new account when you `attach` it, but old customers and subscriptions will no longer be linked.
 </Note>
