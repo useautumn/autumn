@@ -4,7 +4,7 @@ import type { DbProbe } from "./types.js";
 
 type LongTxnRow = {
 	longest_txn_seconds: number | null;
-	max_xmin_lag: number | null;
+	xmin_lag: number | null;
 	pid: number | null;
 	wait_event: string | null;
 	query_kind: string | null;
@@ -15,10 +15,11 @@ export const longTxnProbe: DbProbe = {
 	name: "db_long_txn",
 	run: async ({ db }) => {
 		const [row] = await db.execute<LongTxnRow>(sql`
-			WITH oldest AS (
+			WITH top_txn AS (
 				SELECT
-					round(extract(epoch FROM (now() - xact_start)))::int AS longest_txn_seconds,
 					pid,
+					round(extract(epoch FROM (now() - xact_start)))::int AS longest_txn_seconds,
+					age(backend_xmin) AS xmin_lag,
 					coalesce(wait_event_type || '/' || wait_event, 'on_cpu') AS wait_event,
 					CASE WHEN upper(substring(query FROM '[a-zA-Z]+')) IN (
 							'SELECT','INSERT','UPDATE','DELETE','WITH','MERGE','CALL','VACUUM',
@@ -32,12 +33,11 @@ export const longTxnProbe: DbProbe = {
 				LIMIT 1
 			)
 			SELECT
-				coalesce((SELECT longest_txn_seconds FROM oldest), 0) AS longest_txn_seconds,
-				coalesce((SELECT max(age(backend_xmin))
-					FROM pg_stat_activity WHERE backend_xmin IS NOT NULL), 0) AS max_xmin_lag,
-				(SELECT pid FROM oldest) AS pid,
-				(SELECT wait_event FROM oldest) AS wait_event,
-				(SELECT query_kind FROM oldest) AS query_kind,
+				coalesce((SELECT longest_txn_seconds FROM top_txn), 0) AS longest_txn_seconds,
+				coalesce((SELECT xmin_lag FROM top_txn), 0) AS xmin_lag,
+				(SELECT pid FROM top_txn) AS pid,
+				(SELECT wait_event FROM top_txn) AS wait_event,
+				(SELECT query_kind FROM top_txn) AS query_kind,
 				(SELECT count(*)::int FROM pg_stat_activity) AS visible_backends
 		`);
 
@@ -55,7 +55,7 @@ export const longTxnProbe: DbProbe = {
 				type: "db_long_txn",
 				blind,
 				longest_txn_seconds: blind ? null : (row?.longest_txn_seconds ?? 0),
-				max_xmin_lag: blind ? null : (row?.max_xmin_lag ?? 0),
+				xmin_lag: blind ? null : (row?.xmin_lag ?? 0),
 				pid: blind ? null : (row?.pid ?? null),
 				wait_event: blind ? null : (row?.wait_event ?? null),
 				query_kind: blind ? null : (row?.query_kind ?? null),

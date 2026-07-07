@@ -96,7 +96,7 @@ describe("longTxnProbe", () => {
 			execute: async () => [
 				{
 					longest_txn_seconds: 42,
-					max_xmin_lag: 123,
+					xmin_lag: 123,
 					pid: 999,
 					wait_event: "on_cpu",
 					query_kind: "UPDATE",
@@ -114,7 +114,7 @@ describe("longTxnProbe", () => {
 			type: "db_long_txn",
 			blind: false,
 			longest_txn_seconds: 42,
-			max_xmin_lag: 123,
+			xmin_lag: 123,
 			pid: 999,
 			wait_event: "on_cpu",
 			query_kind: "UPDATE",
@@ -127,7 +127,7 @@ describe("longTxnProbe", () => {
 			execute: async () => [
 				{
 					longest_txn_seconds: 0,
-					max_xmin_lag: 0,
+					xmin_lag: 0,
 					pid: null,
 					wait_event: null,
 					query_kind: null,
@@ -149,7 +149,7 @@ describe("longTxnProbe", () => {
 			type: "db_long_txn",
 			blind: true,
 			longest_txn_seconds: null,
-			max_xmin_lag: null,
+			xmin_lag: null,
 		});
 	});
 
@@ -160,12 +160,16 @@ describe("longTxnProbe", () => {
 		await longTxnProbe.run({ db });
 
 		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn.mock.calls[0][0]).toMatchObject({
+			type: "db_long_txn_blind",
+			visible_backends: 0,
+		});
 		const [fields] = info.mock.calls[0];
 		expect(fields).toMatchObject({
 			type: "db_long_txn",
 			blind: true,
 			longest_txn_seconds: null,
-			max_xmin_lag: null,
+			xmin_lag: null,
 		});
 	});
 });

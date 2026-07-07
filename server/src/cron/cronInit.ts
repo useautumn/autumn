@@ -21,6 +21,11 @@ import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
+const { db: probeDb, client: probeClient } = initDrizzle({
+	name: "db-probe",
+	maxConnections: 2,
+	connectTimeout: 5,
+});
 startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
@@ -94,7 +99,7 @@ const oneOffCleanupTick = async () => {
 // billing cron can't delay detection. Slot-gated like the other jobs.
 const dbProbesTick = async () => {
 	if (!shouldRunTick()) return;
-	await runDbProbes({ db });
+	await runDbProbes({ db: probeDb });
 };
 
 new CronJob(
@@ -131,6 +136,7 @@ process.on("SIGTERM", async () => {
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();
+	await probeClient.end();
 	process.exit(0);
 });
 
@@ -140,5 +146,6 @@ process.on("SIGINT", async () => {
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();
+	await probeClient.end();
 	process.exit(0);
 });
