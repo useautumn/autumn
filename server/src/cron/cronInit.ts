@@ -2,6 +2,7 @@ import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
+import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import {
 	describeSlotGate,
@@ -89,6 +90,13 @@ const oneOffCleanupTick = async () => {
 	await runOneOffCleanup({ ctx });
 };
 
+// DB health probes (long-txn / xmin pin, ...) — a separate tick so a heavy
+// billing cron can't delay detection. Slot-gated like the other jobs.
+const dbProbesTick = async () => {
+	if (!shouldRunTick()) return;
+	await runDbProbes({ db });
+};
+
 new CronJob(
 	"* * * * *", // Run every minute
 	main,
@@ -105,8 +113,17 @@ new CronJob(
 	"UTC", // timezone (adjust as needed)
 );
 
+new CronJob(
+	"* * * * *", // Run every minute
+	dbProbesTick,
+	null, // onComplete
+	true, // start immediately
+	"UTC", // timezone (adjust as needed)
+);
+
 main();
 oneOffCleanupTick();
+dbProbesTick();
 
 process.on("SIGTERM", async () => {
 	console.log("Received SIGTERM signal, closing database connection...");
