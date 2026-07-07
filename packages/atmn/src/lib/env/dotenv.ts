@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { parse } from "dotenv";
 
 /**
  * Low-level .env file reading/writing utilities
@@ -11,32 +12,10 @@ export interface DotenvEntry {
 }
 
 /**
- * Parse .env file content into key-value pairs
+ * Parse .env file content into key-value pairs (delegates to dotenv)
  */
 export function parseDotenv(content: string): Map<string, string> {
-	const entries = new Map<string, string>();
-
-	for (const line of content.split("\n")) {
-		const trimmed = line.trim();
-
-		// Skip comments and empty lines
-		if (!trimmed || trimmed.startsWith("#")) {
-			continue;
-		}
-
-		// Parse KEY=VALUE
-		const match = trimmed.match(/^([^=]+)=(.*)$/);
-		if (match) {
-			const [, key, value] = match;
-			if (key && value !== undefined) {
-				// Remove quotes if present
-				const cleanValue = value.replace(/^["']|["']$/g, "");
-				entries.set(key.trim(), cleanValue);
-			}
-		}
-	}
-
-	return entries;
+	return new Map(Object.entries(parse(content)));
 }
 
 /**
