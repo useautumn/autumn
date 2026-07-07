@@ -21,9 +21,11 @@
  *     "Quota burst allowance" admits ~22 instantly then refills; measured 163
  *     restores → healthy in 66s). Ephemeral persistence + idle timeout self-clean
  *     leaked workers.
- *   - **exec** — freestyle's REST exec is BUFFERED (no streaming, no env param):
- *     runStreaming delivers output as one chunk at the end (heartbeat keeps the
- *     terminal alive); env rides an on-VM env file every exec sources.
+ *   - **exec** — freestyle's REST exec-await is BUFFERED and has a server-side
+ *     ceiling (~324s) that kills long commands and loses their output, so
+ *     runStreaming launches via nohup + log/exit files and polls the log by byte
+ *     offset (live chunks, survives arbitrarily long runs); env rides an on-VM
+ *     env file every exec sources.
  *   - **runDetached** — nohup + pid/exit files + a polling log pump that feeds
  *     onChunk until the READY sentinel, then slows to a liveness poll.
  *   - **getPublicUrl** — `domains.mappings.create` on `<name>.style.dev` (auto
@@ -408,6 +410,81 @@ const findSnapshotByName = async (
 /** Sandbox names are valid *.style.dev labels apart from case/underscores. */
 const domainForName = (name: string): string =>
 	`${name.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 60)}.style.dev`;
+
+/** Per-poll read cap; an exact-cap read means more bytes are pending. */
+const POLL_READ_CAP = 200_000;
+const POLL_INTERVAL_MS = 2_500;
+/** Transient poll faults tolerated before giving up on a run. */
+const MAX_POLL_FAULTS = 10;
+
+/** Tail a detached command's log by byte offset until its exit file appears.
+ * Chunks feed `onChunk` live; a dead VM throws (stream-closed) instead of
+ * fabricating an exit code. */
+const pollDetachedLog = async (opts: {
+	vm: Vm;
+	logFile: string;
+	exitFile: string;
+	pidFile: string;
+	onChunk: (text: string) => void;
+	signal?: AbortSignal;
+	deadlineMs: number;
+}): Promise<{ exitCode: number }> => {
+	const deadline = Date.now() + opts.deadlineMs;
+	let offset = 0;
+	let faults = 0;
+	for (;;) {
+		opts.signal?.throwIfAborted?.();
+		if (Date.now() > deadline) {
+			await opts.vm
+				.exec({
+					command: `kill "$(cat ${opts.pidFile} 2>/dev/null)" 2>/dev/null || true`,
+					timeoutMs: 15_000,
+				})
+				.catch(() => {
+					/* best-effort */
+				});
+			throw new Error(
+				`freestyle: detached run exceeded ${Math.round(opts.deadlineMs / 60_000)}min deadline`,
+			);
+		}
+		let bodyBytes = 0;
+		try {
+			const res = await opts.vm.exec({
+				command:
+					`tail -c +${offset + 1} ${opts.logFile} 2>/dev/null | head -c ${POLL_READ_CAP}; ` +
+					`printf '\\n__TW_EOF__'; [ -f ${opts.exitFile} ] && printf 'EXIT=%s' "$(cat ${opts.exitFile})"`,
+				timeoutMs: 30_000,
+			});
+			faults = 0;
+			const stdout = res.stdout ?? "";
+			const eofIndex = stdout.lastIndexOf("\n__TW_EOF__");
+			const body = eofIndex >= 0 ? stdout.slice(0, eofIndex) : "";
+			const marker = eofIndex >= 0 ? stdout.slice(eofIndex) : "";
+			if (body) {
+				bodyBytes = Buffer.byteLength(body, "utf8");
+				offset += bodyBytes;
+				opts.onChunk(body);
+			}
+			const exitMatch = marker.match(/EXIT=(\d+)/);
+			// Finish only once the log is fully drained (an exact-cap read means more).
+			if (exitMatch && bodyBytes < POLL_READ_CAP) {
+				return { exitCode: Number(exitMatch[1]) };
+			}
+		} catch (error) {
+			if (isSandboxStreamClosed(error)) {
+				throw error;
+			}
+			faults++;
+			if (faults >= MAX_POLL_FAULTS) {
+				throw error;
+			}
+		}
+		// Drain a capped read immediately; otherwise poll on the normal cadence.
+		if (bodyBytes < POLL_READ_CAP) {
+			await sleep(POLL_INTERVAL_MS + Math.random() * 500);
+		}
+	}
+};
 
 const isSandboxStreamClosed = (error: unknown): boolean =>
 	/VM_NOT_RUNNING|VM_DELETED|VmDeleted|VmNotRunning|not running|deleted|EXEC_TIMED_OUT|IsSuspending|suspended/i.test(
@@ -915,9 +992,9 @@ export const freestyleProvider: ProviderImpl = {
 					.map(([key, value]) => `export ${key}=${shellQuote(value)};`)
 					.join(" ")} `
 			: "";
-		// Buffered exec: output arrives as ONE chunk at the end. Only long-lived
-		// script runs (warmup/build — bash argv) get a narrated heartbeat; per-file
-		// `bun test` execs stay silent like the other providers.
+		// Detached launch + log polling: exec-await's server-side ceiling (~324s)
+		// kills long buffered execs and loses their output, so every run — test
+		// files included — goes through nohup + exit-file + a live log tail.
 		const isScriptRun = argv[0] === "bash";
 		const done = isScriptRun
 			? stage(
@@ -926,20 +1003,37 @@ export const freestyleProvider: ProviderImpl = {
 					argv[1]?.endsWith("warmup.sh") ? "warmup" : undefined,
 				)
 			: undefined;
+		const tag = `run-${Math.random().toString(36).slice(2, 8)}`;
+		const logFile = `${TW_PREFIX}/logs/${tag}.log`;
+		const pidFile = `${TW_PREFIX}/logs/${tag}.pid`;
+		const exitFile = `${TW_PREFIX}/logs/${tag}.exit`;
 		try {
-			const res = await execOnVm(
+			const inner = `cd ${REPO_ROOT} && ${envPrefix}${argvToCommand(argv)}; echo $? > ${exitFile}`;
+			const launch = await execOnVm(
 				vm,
-				`cd ${REPO_ROOT} && ${envPrefix}${argvToCommand(argv)}`,
+				`mkdir -p ${TW_PREFIX}/logs && rm -f ${logFile} ${pidFile} ${exitFile} && ` +
+					`nohup bash -c ${shellQuote(withVmEnv(inner))} > ${logFile} 2>&1 & echo $! > ${pidFile}`,
+				60_000,
 			);
-			onChunk(res.stdout);
-			if (res.stderr) {
-				onChunk(res.stderr);
+			if (launch.exitCode !== 0) {
+				throw new Error(
+					`freestyle: run launch failed (exit ${launch.exitCode}): ${launch.stderr.slice(-800)}`,
+				);
 			}
+			const { exitCode } = await pollDetachedLog({
+				vm,
+				logFile,
+				exitFile,
+				pidFile,
+				onChunk,
+				signal: opts?.signal,
+				deadlineMs: EXEC_TIMEOUT_MS,
+			});
 			// A failed warmup on a fast-forwarded base poisons its SOURCE snapshot —
 			// otherwise every future run repeats the same broken fast-forward.
 			const ffSource = ffSourceByWarmName.get(sandbox.name);
 			if (
-				res.exitCode !== 0 &&
+				exitCode !== 0 &&
 				ffSource &&
 				argv.some((part) => part.endsWith("warmup.sh"))
 			) {
@@ -951,7 +1045,8 @@ export const freestyleProvider: ProviderImpl = {
 				await deleteSnapshot(ffSource);
 				ffSourceByWarmName.delete(sandbox.name);
 			}
-			return { exitCode: res.exitCode, stderr: res.stderr };
+			// stderr rides the merged log through onChunk — parsers read the stream.
+			return { exitCode, stderr: "" };
 		} catch (error) {
 			if (opts?.swallowStreamClose && isSandboxStreamClosed(error)) {
 				return { exitCode: 0, stderr: "" };
