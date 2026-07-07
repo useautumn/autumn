@@ -125,6 +125,12 @@ const liveVms = new Map<string, { vm: Vm; vmId: string }>();
 const snapshotIdByName = new Map<string, string>();
 /** Domains we mapped, keyed by sandbox name/id — deleted with the sandbox. */
 const domainsBySandbox = new Map<string, string>();
+/** Warm VMs fast-forwarded from an older snapshot → that source snapshot id,
+ * so a failed warmup on it poisons (deletes) the source instead of wedging. */
+const ffSourceByWarmName = new Map<string, string>();
+const WARM_NAME_PREFIX = "tw-warm-";
+/** Rolling GC keeps this many newest warm snapshots (current + one fallback). */
+const WARM_SNAPSHOTS_TO_KEEP = 2;
 
 const wrap = (name: string, vm: Vm, vmId: string): ProviderSandbox => ({
 	name,
@@ -261,6 +267,57 @@ const cloneRepo = async (vm: Vm, source: GitSource): Promise<void> => {
 	}
 };
 
+/** Newest READY warm snapshot (any ref) — the rolling fast-forward base. */
+const latestWarmSnapshot = async (): Promise<
+	{ snapshotId: string; name: string } | undefined
+> => {
+	const { snapshots } = await client().vms.snapshots.list();
+	const match = snapshots
+		.filter(
+			(snap) =>
+				snap.name?.startsWith(WARM_NAME_PREFIX) &&
+				!snap.deleted &&
+				snap.state === "ready",
+		)
+		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
+	return match?.name
+		? { snapshotId: match.snapshotId, name: match.name }
+		: undefined;
+};
+
+/** Best-effort snapshot delete (the SDK exposes list/get only). */
+const deleteSnapshot = async (snapshotId: string): Promise<void> => {
+	await client()
+		.fetch(`/v1/vms/snapshots/${snapshotId}`, { method: "DELETE" })
+		.catch(() => {
+			/* best-effort */
+		});
+	for (const [name, id] of snapshotIdByName) {
+		if (id === snapshotId) {
+			snapshotIdByName.delete(name);
+		}
+	}
+};
+
+/** Rolling GC: keep the newest N warm snapshots, delete the rest. */
+const gcWarmSnapshots = async (): Promise<void> => {
+	const { snapshots } = await client().vms.snapshots.list();
+	const warm = snapshots
+		.filter(
+			(snap) =>
+				snap.name?.startsWith(WARM_NAME_PREFIX) &&
+				!snap.deleted &&
+				snap.state !== "failed",
+		)
+		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+	for (const stale of warm.slice(WARM_SNAPSHOTS_TO_KEEP)) {
+		narrate(
+			chalk.cyan.dim(`[freestyle] gc: deleting old warm snapshot ${stale.name}`),
+		);
+		await deleteSnapshot(stale.snapshotId);
+	}
+};
+
 /** Resolve a warm name to its snapshot id (in-process map, else named lookup). */
 const findSnapshotByName = async (
 	name: string,
@@ -296,7 +353,46 @@ export const freestyleProvider: ProviderImpl = {
 		if (!opts.source) {
 			throw new Error("freestyle: createWarmSandbox requires a git source");
 		}
-		const done = stage(`create warm VM ${opts.name}`);
+
+		// Rolling fast-forward: restore the newest warm snapshot (any ref) and let
+		// run.ts's normal warmup.sh fast-forward it — checkout + delta install +
+		// migrate (self-repairing) + seed. New-commit warm cost drops from a full
+		// cold build (~8 min) to roughly checkout + restart + re-snapshot (~2-3 min).
+		const rollingBase = await latestWarmSnapshot().catch(() => undefined);
+		if (rollingBase) {
+			const ffDone = stage(
+				`fast-forward warm ${opts.name} from ${rollingBase.name}`,
+			);
+			try {
+				const { vm, vmId } = await createVmWithBackoff({
+					snapshotId: rollingBase.snapshotId,
+					name: opts.name,
+					idleTimeoutSeconds: 3600,
+					signal: opts.signal,
+				});
+				// The resumed app procs hold ports + run OLD code; warmup restarts state.
+				await execOnVm(
+					vm,
+					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
+					30_000,
+				);
+				liveVms.set(opts.name, { vm, vmId });
+				liveVms.set(vmId, { vm, vmId });
+				ffSourceByWarmName.set(opts.name, rollingBase.snapshotId);
+				await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(opts.env));
+				ffDone();
+				return wrap(opts.name, vm, vmId);
+			} catch (error) {
+				ffDone();
+				narrate(
+					chalk.yellow(
+						`[freestyle] fast-forward restore failed (${(error as Error).message?.slice(0, 120)}) — falling back to cold build`,
+					),
+				);
+			}
+		}
+
+		const done = stage(`create warm VM ${opts.name} (cold build)`);
 		const { vm, vmId } = await createVmWithBackoff({
 			name: opts.name,
 			// The warm build takes minutes of quiet exec time — don't let it suspend.
@@ -454,6 +550,7 @@ export const freestyleProvider: ProviderImpl = {
 		try {
 			const snap = await vm.snapshot({ name: sandbox.name });
 			snapshotIdByName.set(sandbox.name, snap.snapshotId);
+			ffSourceByWarmName.delete(sandbox.name);
 			await vm.delete().catch(() => {
 				/* best-effort */
 			});
@@ -461,6 +558,10 @@ export const freestyleProvider: ProviderImpl = {
 			if (sandbox.id) {
 				liveVms.delete(sandbox.id);
 			}
+			// The new snapshot is live — retire old generations (keep a fallback).
+			await gcWarmSnapshots().catch(() => {
+				/* best-effort */
+			});
 			return snap.snapshotId;
 		} finally {
 			done();
@@ -564,6 +665,22 @@ export const freestyleProvider: ProviderImpl = {
 			onChunk(res.stdout);
 			if (res.stderr) {
 				onChunk(res.stderr);
+			}
+			// A failed warmup on a fast-forwarded base poisons its SOURCE snapshot —
+			// otherwise every future run repeats the same broken fast-forward.
+			const ffSource = ffSourceByWarmName.get(sandbox.name);
+			if (
+				res.exitCode !== 0 &&
+				ffSource &&
+				argv.some((part) => part.endsWith("warmup.sh"))
+			) {
+				narrate(
+					chalk.yellow(
+						`[freestyle] warmup failed on fast-forwarded base — deleting source snapshot ${ffSource} (next run cold-builds)`,
+					),
+				);
+				await deleteSnapshot(ffSource);
+				ffSourceByWarmName.delete(sandbox.name);
 			}
 			return { exitCode: res.exitCode, stderr: res.stderr };
 		} catch (error) {

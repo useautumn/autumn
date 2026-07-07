@@ -104,7 +104,24 @@ TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
 #    non-zero exit aborts the whole warm-up before any worker is forked.
 # ---------------------------------------------------------------------------
 log "bun db migrate --bootstrap (DATABASE_URL=localhost autumn)"
-bun db migrate --bootstrap || die "migration FAILED — aborting warm-up, no workers forked"
+# Self-repair: on ANY migrate error (e.g. journal/DB drift on a fast-forwarded
+# warm base), drop the throwaway DB and bootstrap from zero instead of dying.
+if ! bun db migrate --bootstrap; then
+  log "migrate failed — self-repair: dropping DB and bootstrapping from zero"
+  for candidate in /usr/pgsql-18/bin /usr/lib/postgresql/18/bin /usr/bin; do
+    [ -x "$candidate/dropdb" ] && export PATH="$candidate:$PATH" && break
+  done
+  export PGPASSWORD=postgres
+  dropdb -h localhost -p "$PG_PORT" -U postgres --if-exists autumn \
+    || die "self-repair dropdb FAILED"
+  createdb -h localhost -p "$PG_PORT" -U postgres autumn \
+    || die "self-repair createdb FAILED"
+  psql -h localhost -p "$PG_PORT" -U postgres -d autumn \
+    -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;' >/dev/null \
+    || die "self-repair pg_trgm FAILED"
+  bun db migrate --bootstrap \
+    || die "migration FAILED even after DB rebuild — aborting warm-up"
+fi
 
 # ---------------------------------------------------------------------------
 # 4. Load DB functions (separate step!). 10 SQL procs in dependency order
