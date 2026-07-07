@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
+	AppEnv,
 	type ApiCustomerV5,
 	type BillingAutoTopupFailed,
 	type BillingAutoTopupSucceeded,
@@ -8,7 +9,9 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import {
+	getPlayHistory,
 	getTestSvixAppId,
+	parseEventBody,
 	setupWebhookTest,
 	type WebhookTestSetup,
 	waitForWebhook,
@@ -16,10 +19,12 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { makeAutoTopupConfig } from "./utils/makeAutoTopupConfig.js";
 
 type AutoTopupSucceededPayload = {
@@ -39,6 +44,47 @@ type AutoTopupFailedPayload = {
 let webhook: WebhookTestSetup;
 let playToken: string;
 const RUN_ID = Date.now();
+
+const waitForAnyAutoTopupWebhook = async ({
+	customerId,
+	timeoutMs = 10_000,
+}: {
+	customerId: string;
+	timeoutMs?: number;
+}) =>
+	waitForWebhook<AutoTopupSucceededPayload | AutoTopupFailedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			(payload.type === WebhookEventType.BillingAutoTopupSucceeded ||
+				payload.type === WebhookEventType.BillingAutoTopupFailed) &&
+			payload.data?.customer_id === customerId,
+		timeoutMs,
+	});
+
+const countAutoTopupFailedWebhooks = async ({
+	customerId,
+	reason,
+}: {
+	customerId: string;
+	reason: BillingAutoTopupFailed["reason"];
+}) => {
+	const history = await getPlayHistory({ token: playToken });
+	return history.data.reduce((count, event) => {
+		try {
+			const payload = parseEventBody<AutoTopupFailedPayload>(event);
+			if (
+				payload.type === WebhookEventType.BillingAutoTopupFailed &&
+				payload.data?.customer_id === customerId &&
+				payload.data?.reason === reason
+			) {
+				return count + 1;
+			}
+		} catch {
+			return count;
+		}
+		return count;
+	}, 0);
+};
 
 beforeAll(async () => {
 	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
@@ -218,17 +264,87 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 		value: 50,
 	});
 
-	const result = await waitForWebhook<
-		AutoTopupSucceededPayload | AutoTopupFailedPayload
-	>({
-		token: playToken,
-		predicate: (payload) =>
-			(payload.type === WebhookEventType.BillingAutoTopupSucceeded ||
-				payload.type === WebhookEventType.BillingAutoTopupFailed) &&
-			payload.data?.customer_id === customerId,
-		timeoutMs: 10_000,
+	const result = await waitForAnyAutoTopupWebhook({ customerId });
+
+	expect(result).toBeNull();
+}, 60_000);
+
+test.concurrent(`${chalk.yellowBright("auto-topup webhook: dry run emits no webhook")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const oneOffProduct = products.oneOffAddOn({
+		id: `topup-webhook-dry-run-${RUN_ID}`,
+		items: [oneOffItem],
+		billingControls: makeAutoTopupConfig({
+			threshold: 20,
+			quantity: 100,
+		}),
 	});
 
+	const { customerId } = await initScenario({
+		customerId: `auto-topup-webhook-dry-run-${RUN_ID}`,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [oneOffProduct] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProduct.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 10 }],
+			}),
+		],
+	});
+
+	await autoTopup({
+		ctx: {
+			...ctx,
+			org: {
+				...ctx.org,
+				config: {
+					...ctx.org.config,
+					dryrun_autotopups: true,
+				},
+			},
+		},
+		payload: {
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			featureId: TestFeature.Messages,
+		},
+	});
+
+	const result = await waitForAnyAutoTopupWebhook({ customerId });
+	expect(result).toBeNull();
+}, 60_000);
+
+test.concurrent(`${chalk.yellowBright("auto-topup webhook: org disabled emits no webhook")}`, async () => {
+	const customerId = `auto-topup-webhook-org-disabled-${RUN_ID}`;
+
+	await autoTopup({
+		ctx: {
+			...ctx,
+			env: AppEnv.Live,
+			org: {
+				...ctx.org,
+				config: {
+					...ctx.org.config,
+					disabled_auto_topup: true,
+				},
+			},
+		},
+		payload: {
+			orgId: ctx.org.id,
+			env: AppEnv.Live,
+			customerId,
+			featureId: TestFeature.Messages,
+		},
+	});
+
+	const result = await waitForAnyAutoTopupWebhook({ customerId });
 	expect(result).toBeNull();
 }, 60_000);
 
@@ -381,10 +497,29 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends fai
 	expect(data.balance).toBe(40);
 	expect(data.invoice).toBeNull();
 
+	const failureCountAfterFirstBlock = await countAutoTopupFailedWebhooks({
+		customerId,
+		reason: "purchase_limit_reached",
+	});
+	expect(failureCountAfterFirstBlock).toBe(1);
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 1,
+	});
+	await timeout(10_000);
+
+	const failureCountAfterSecondBlock = await countAutoTopupFailedWebhooks({
+		customerId,
+		reason: "purchase_limit_reached",
+	});
+	expect(failureCountAfterSecondBlock).toBe(1);
+
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: after,
 		featureId: TestFeature.Messages,
-		remaining: 40,
+		remaining: 39,
 	});
 }, 90_000);

@@ -12,10 +12,49 @@ import {
 	WebhookEventType,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { redis } from "@/external/redis/initRedis.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import type { AutoTopupContext } from "../autoTopupContext.js";
+
+const shouldEmitSuppressedWebhook = async ({
+	ctx,
+	suppressionKey,
+	suppressionTtlMs,
+}: {
+	ctx: AutumnContext;
+	suppressionKey?: string;
+	suppressionTtlMs?: number;
+}): Promise<boolean> => {
+	if (!suppressionKey || !suppressionTtlMs || suppressionTtlMs <= 0) {
+		return true;
+	}
+
+	if (redis.status !== "ready") {
+		ctx.logger.warn(
+			`[sendAutoTopupFailedWebhook] Redis unavailable, cannot suppress duplicate webhook for ${suppressionKey}`,
+		);
+		return true;
+	}
+
+	try {
+		const ttlSeconds = Math.max(1, Math.ceil(suppressionTtlMs / 1000));
+		const result = await redis.set(suppressionKey, "1", "EX", ttlSeconds, "NX");
+		if (result === "OK") return true;
+
+		ctx.logger.info(
+			`[sendAutoTopupFailedWebhook] Suppressing duplicate webhook for ${suppressionKey}`,
+		);
+		return false;
+	} catch (error) {
+		ctx.logger.warn(
+			`[sendAutoTopupFailedWebhook] Failed to check suppression key ${suppressionKey}: ${error}`,
+			{ error },
+		);
+		return true;
+	}
+};
 
 const getInvoicePayload = ({
 	billingResult,
@@ -120,6 +159,8 @@ export const sendAutoTopupFailedWebhook = async ({
 	autoTopupConfig,
 	billingResult,
 	stripeInvoice,
+	suppressionKey,
+	suppressionTtlMs,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
@@ -133,8 +174,17 @@ export const sendAutoTopupFailedWebhook = async ({
 	autoTopupConfig?: AutoTopup;
 	billingResult?: BillingResult;
 	stripeInvoice?: Stripe.Invoice;
+	suppressionKey?: string;
+	suppressionTtlMs?: number;
 }) => {
 	try {
+		const shouldEmit = await shouldEmitSuppressedWebhook({
+			ctx,
+			suppressionKey,
+			suppressionTtlMs,
+		});
+		if (!shouldEmit) return;
+
 		const customer = autoTopupContext?.fullCustomer ?? fullCustomer;
 		const config = autoTopupContext?.autoTopupConfig ?? autoTopupConfig;
 		const invoice = getInvoicePayload({ billingResult, stripeInvoice });
@@ -175,6 +225,7 @@ export const sendAutoTopupFailedWebhook = async ({
 						fullCustomer: customer,
 					})
 				: undefined,
+			idempotencyKey: suppressionKey,
 		});
 	} catch (webhookError) {
 		ctx.logger.error(

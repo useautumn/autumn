@@ -230,6 +230,8 @@ Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) is bl
 
 Use `reason` to branch on the failure mode and `retryable` to decide whether retrying later may succeed without changing customer or billing configuration.
 
+Limit-blocked failures are suppressed per blocking window, so repeated attempts while the same purchase, attempt, or failed-attempt limit is active do not emit duplicate webhooks.
+
 **Example payload:**
 
 ```json expandable

@@ -28,6 +28,8 @@ export type AutoTopupSetupFailure = {
 	message: string;
 	fullCustomer?: FullCustomer;
 	autoTopupConfig?: AutoTopup;
+	suppressionKey?: string;
+	suppressionTtlMs?: number;
 };
 
 export type SetupAutoTopupContextResult =
@@ -166,12 +168,13 @@ export const setupAutoTopupContext = async ({
 		quantity: roundedQuantity,
 	};
 
-	const { allowed, reason, limitState } = await preflightAutoTopupLimits({
-		ctx,
-		payload,
-		fullCustomer,
-		autoTopupConfig: normalizedAutoTopupConfig,
-	});
+	const { allowed, reason, blockedWindowEndsAt, limitState } =
+		await preflightAutoTopupLimits({
+			ctx,
+			payload,
+			fullCustomer,
+			autoTopupConfig: normalizedAutoTopupConfig,
+		});
 
 	if (!allowed) {
 		const message = `Preflight blocked for feature ${featureId}, customer ${customerId}, reason: ${reason}`;
@@ -184,6 +187,23 @@ export const setupAutoTopupContext = async ({
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,
+				...(reason && blockedWindowEndsAt
+					? {
+							suppressionKey: [
+								"auto_topup_failed_webhook",
+								ctx.org.id,
+								ctx.env,
+								customerId,
+								featureId,
+								reason,
+								blockedWindowEndsAt,
+							].join(":"),
+							suppressionTtlMs: Math.max(
+								blockedWindowEndsAt - Date.now(),
+								60_000,
+							),
+						}
+					: {}),
 			},
 		};
 	}

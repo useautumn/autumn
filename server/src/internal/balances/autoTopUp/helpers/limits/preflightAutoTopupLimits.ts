@@ -28,6 +28,7 @@ export const preflightAutoTopupLimits = async ({
 }): Promise<{
 	allowed: boolean;
 	reason?: BillingAutoTopupFailureReason;
+	blockedWindowEndsAt?: number;
 	limitState: AutoTopupLimitState;
 }> => {
 	const now = Date.now();
@@ -111,6 +112,7 @@ export const preflightAutoTopupLimits = async ({
 		return {
 			allowed: false,
 			reason: "purchase_limit_reached",
+			blockedWindowEndsAt: normalizedPurchase.windowEndsAt,
 			limitState: state,
 		};
 	}
@@ -119,6 +121,7 @@ export const preflightAutoTopupLimits = async ({
 		return {
 			allowed: false,
 			reason: "attempt_limit_reached",
+			blockedWindowEndsAt: normalizedAttempt.windowEndsAt,
 			limitState: state,
 		};
 	}
@@ -127,6 +130,7 @@ export const preflightAutoTopupLimits = async ({
 		return {
 			allowed: false,
 			reason: "failed_attempt_limit_reached",
+			blockedWindowEndsAt: normalizedFailedAttempt.windowEndsAt,
 			limitState: state,
 		};
 	}
