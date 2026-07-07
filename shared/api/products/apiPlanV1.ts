@@ -56,7 +56,8 @@ export const API_PLAN_V1_EXAMPLE = {
 const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
-		licenses: true,
+		add_licenses: true,
+		remove_licenses: true,
 	}).strict(),
 	{ includeItems: false, includeLicenses: false },
 );
@@ -70,18 +71,17 @@ export const ApiPlanLicenseV1Schema = z.object({
 			"Number of license assignments included with this plan for free.",
 	}),
 	prepaid_only: z.boolean().meta({
+		internal: true,
 		description:
 			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
-	}),
-	pooled_feature_ids: z.array(z.string()).optional().meta({
-		description:
-			"Features granted as one shared customer-level pool sized by the license capacity, instead of per assigned entity.",
 	}),
 	customize: LicenseCustomizeSchema.nullish().meta({
 		description:
 			"Item overrides applied to the license plan when offered under this plan.",
 	}),
 });
+
+export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
 
 export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({

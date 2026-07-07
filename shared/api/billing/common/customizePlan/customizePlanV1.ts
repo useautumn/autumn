@@ -42,7 +42,17 @@ type CustomizePlanRefinementData = {
 	update_items?: unknown;
 	free_trial?: unknown;
 	billing_controls?: unknown;
-	licenses?: unknown;
+	add_licenses?: { license_plan_id: string }[];
+	remove_licenses?: string[];
+};
+
+const findDuplicateId = (ids: string[]): string | undefined => {
+	const seen = new Set<string>();
+	for (const id of ids) {
+		if (seen.has(id)) return id;
+		seen.add(id);
+	}
+	return undefined;
 };
 
 export const refineCustomizePlanV1Schema = <
@@ -71,7 +81,9 @@ export const refineCustomizePlanV1Schema = <
 				data.remove_items !== undefined ||
 				(includeUpdateItems && data.update_items !== undefined) ||
 				data.billing_controls !== undefined ||
-				(includeLicenses && data.licenses !== undefined),
+				(includeLicenses &&
+					(data.add_licenses !== undefined ||
+						data.remove_licenses !== undefined)),
 			{
 				message: `When using customize, at least one of ${[
 					"price",
@@ -81,12 +93,46 @@ export const refineCustomizePlanV1Schema = <
 					includeUpdateItems ? "deprecated update_items" : null,
 					includeFreeTrial ? "free_trial" : null,
 					"billing_controls",
-					includeLicenses ? "licenses" : null,
+					includeLicenses ? "add_licenses" : null,
+					includeLicenses ? "remove_licenses" : null,
 				]
 					.filter(Boolean)
 					.join(", ")} must be provided`,
 			},
 		)
+		.superRefine((data, refinementCtx) => {
+			if (!includeLicenses) return;
+			const addIds = (data.add_licenses ?? []).map(
+				(license) => license.license_plan_id,
+			);
+			const removeIds = data.remove_licenses ?? [];
+
+			const duplicateAdd = findDuplicateId(addIds);
+			if (duplicateAdd !== undefined) {
+				refinementCtx.addIssue({
+					code: "custom",
+					message: `Duplicate license ${duplicateAdd} in add_licenses`,
+					path: ["add_licenses"],
+				});
+			}
+			const duplicateRemove = findDuplicateId(removeIds);
+			if (duplicateRemove !== undefined) {
+				refinementCtx.addIssue({
+					code: "custom",
+					message: `Duplicate license ${duplicateRemove} in remove_licenses`,
+					path: ["remove_licenses"],
+				});
+			}
+			const addIdSet = new Set(addIds);
+			const overlapping = removeIds.find((id) => addIdSet.has(id));
+			if (overlapping !== undefined) {
+				refinementCtx.addIssue({
+					code: "custom",
+					message: `License ${overlapping} cannot appear in both add_licenses and remove_licenses`,
+					path: ["remove_licenses"],
+				});
+			}
+		})
 		.refine(
 			(data) =>
 				!(
@@ -135,9 +181,13 @@ export const CustomizePlanV1BaseSchema = z.object({
 		description:
 			"Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.",
 	}),
-	licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+	add_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
 		description:
-			"Override the plan's licenses for this customer. When provided, replaces the base plan license set.",
+			"License links to add or override for this customer. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.",
+	}),
+	remove_licenses: z.array(z.string()).optional().meta({
+		description:
+			"License plan IDs to remove from this customer's effective license set.",
 	}),
 });
 

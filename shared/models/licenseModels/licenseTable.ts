@@ -76,9 +76,8 @@ export const planLicenses = pgTable(
 	],
 );
 
-// Seat balance per (parent customer product, license): granted = included
-// seats from the resolved link, remaining = granted - assigned. Negative
-// remaining = billable overflow seats.
+// Assignment balance per (parent customer product, license): granted =
+// included assignments from the resolved link, remaining = granted - assigned.
 export const customerLicenses = pgTable(
 	"customer_licenses",
 	{
