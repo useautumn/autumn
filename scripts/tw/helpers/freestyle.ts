@@ -561,6 +561,10 @@ export const freestyleProvider: ProviderImpl = {
 				`for i in $(seq 1 ${WARM_SERVER_HEALTH_TIMEOUT_S * 2}); do code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:${SERVER_PORT}/ || true); [ "$code" = 200 ] && break; sleep 0.5; done`,
 				`[ "$code" = 200 ] || { echo "server never became healthy (last=$code)"; tail -40 ${TW_PREFIX}/logs/server.log; exit 1; }`,
 				"redis-cli -p 6379 flushall",
+				// Shrink the memory capture: drop the page cache (GBs of install/bake
+				// file reads forks never need — they re-read from the captured disk).
+				"sync",
+				"echo 3 > /proc/sys/vm/drop_caches || true",
 			].join("\n"),
 		);
 		appDone();
