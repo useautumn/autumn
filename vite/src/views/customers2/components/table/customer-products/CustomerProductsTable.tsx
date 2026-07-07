@@ -92,7 +92,8 @@ export function CustomerProductsTable() {
 	const showFooter = totalCount >= CUSTOMER_PRODUCTS_PAGE_SIZES[0];
 
 	const hasActiveFilters = kind !== "all" || showExpired;
-	const showFilter = totalCount > 0 || hasActiveFilters;
+	const hasAnyProducts = customer.customer_products.length > 0;
+	const showFilter = hasAnyProducts || hasActiveFilters;
 
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
