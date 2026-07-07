@@ -15,29 +15,29 @@ export const longTxnProbe: DbProbe = {
 	name: "db_long_txn",
 	run: async ({ db }) => {
 		const [row] = await db.execute<LongTxnRow>(sql`
+			WITH oldest AS (
+				SELECT
+					round(extract(epoch FROM (now() - xact_start)))::int AS longest_txn_seconds,
+					pid,
+					coalesce(wait_event_type || '/' || wait_event, 'on_cpu') AS wait_event,
+					CASE WHEN upper(substring(query FROM '[a-zA-Z]+')) IN (
+							'SELECT','INSERT','UPDATE','DELETE','WITH','MERGE','CALL','VACUUM',
+							'ANALYZE','COPY','TRUNCATE','CREATE','ALTER','DROP','BEGIN','COMMIT',
+							'ROLLBACK','SAVEPOINT','SET','SHOW','EXPLAIN','REFRESH','GRANT',
+							'REVOKE','LOCK','FETCH','DECLARE','PREPARE','EXECUTE')
+						THEN upper(substring(query FROM '[a-zA-Z]+')) END AS query_kind
+				FROM pg_stat_activity
+				WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
+				ORDER BY xact_start ASC, pid ASC
+				LIMIT 1
+			)
 			SELECT
-				coalesce((SELECT round(extract(epoch FROM (now() - min(xact_start))))::int
-					FROM pg_stat_activity
-					WHERE state <> 'idle' AND xact_start IS NOT NULL
-						AND backend_type = 'client backend'), 0) AS longest_txn_seconds,
+				coalesce((SELECT longest_txn_seconds FROM oldest), 0) AS longest_txn_seconds,
 				coalesce((SELECT max(age(backend_xmin))
 					FROM pg_stat_activity WHERE backend_xmin IS NOT NULL), 0) AS max_xmin_lag,
-				(SELECT pid FROM pg_stat_activity
-					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
-					ORDER BY xact_start ASC LIMIT 1) AS pid,
-				(SELECT coalesce(wait_event_type || '/' || wait_event, 'on_cpu')
-					FROM pg_stat_activity
-					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
-					ORDER BY xact_start ASC LIMIT 1) AS wait_event,
-				(SELECT CASE WHEN upper(substring(query FROM '[a-zA-Z]+')) IN (
-						'SELECT','INSERT','UPDATE','DELETE','WITH','MERGE','CALL','VACUUM',
-						'ANALYZE','COPY','TRUNCATE','CREATE','ALTER','DROP','BEGIN','COMMIT',
-						'ROLLBACK','SAVEPOINT','SET','SHOW','EXPLAIN','REFRESH','GRANT',
-						'REVOKE','LOCK','FETCH','DECLARE','PREPARE','EXECUTE')
-					THEN upper(substring(query FROM '[a-zA-Z]+')) END
-					FROM pg_stat_activity
-					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
-					ORDER BY xact_start ASC LIMIT 1) AS query_kind,
+				(SELECT pid FROM oldest) AS pid,
+				(SELECT wait_event FROM oldest) AS wait_event,
+				(SELECT query_kind FROM oldest) AS query_kind,
 				(SELECT count(*)::int FROM pg_stat_activity) AS visible_backends
 		`);
 
