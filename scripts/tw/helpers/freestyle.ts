@@ -376,6 +376,19 @@ export const freestyleProvider: ProviderImpl = {
 					"pkill -f 'bun src/index.ts' || true; pkill -f 'bun src/workers.ts' || true; pkill -f 'bun src/cron.ts' || true",
 					30_000,
 				);
+				// Check out the TARGET ref before run.ts invokes warmup.sh — otherwise
+				// the OLD commit's warmup runs (and gets swapped mid-execution by its
+				// own checkout step).
+				const checkout = await execOnVm(
+					vm,
+					`cd ${REPO_ROOT} && git fetch --quiet ${cloneUrl(opts.source)} ${shellQuote(opts.source.revision)} && git checkout --quiet --force FETCH_HEAD`,
+					120_000,
+				);
+				if (checkout.exitCode !== 0) {
+					throw new Error(
+						`fast-forward checkout failed: ${checkout.stderr.slice(-500)}`,
+					);
+				}
 				liveVms.set(opts.name, { vm, vmId });
 				liveVms.set(vmId, { vm, vmId });
 				ffSourceByWarmName.set(opts.name, rollingBase.snapshotId);
