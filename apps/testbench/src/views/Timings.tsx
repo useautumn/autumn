@@ -107,7 +107,7 @@ export function Timings({ snap }: { snap: Snapshot }) {
 						<ChartTooltip content={<ChartTooltipContent />} />
 						<Bar
 							dataKey="count"
-							fill="var(--color-count)"
+							fill="#27a7ff"
 							isAnimationActive={false}
 							radius={[3, 3, 0, 0]}
 						/>

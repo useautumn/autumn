@@ -557,9 +557,13 @@ export const freestyleProvider: ProviderImpl = {
 	async createIngressSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
-		// The ingress restores from the warm snapshot (bun + repo + services all
-		// present) — a fresh Debian VM would need its own provisioning pass.
-		const snapshotEntry = [...snapshotIdByName.entries()].at(-1);
+		// The ingress restores from the newest READY warm snapshot (bun + repo +
+		// services all present) — a fresh Debian VM would need its own provisioning
+		// pass. API lookup, NOT the in-process map (empty on stale warm hits).
+		const newestWarm = await latestWarmSnapshot().catch(() => undefined);
+		const snapshotEntry = newestWarm
+			? ([newestWarm.name, newestWarm.snapshotId] as const)
+			: undefined;
 		const done = stage(`create ingress ${opts.name}`);
 		let vmRef: { vm: Vm; vmId: string };
 		if (snapshotEntry) {

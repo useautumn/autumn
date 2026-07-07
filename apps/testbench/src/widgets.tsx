@@ -259,7 +259,7 @@ export function SpeedChart({ completions }: { completions: number[] }) {
 					dataKey="rate"
 					dot={false}
 					isAnimationActive={false}
-					stroke="var(--color-rate)"
+					stroke="#27a7ff"
 					strokeWidth={2}
 					type="monotone"
 				/>
