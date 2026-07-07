@@ -6,8 +6,9 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildEvaluationSubject } from "@/internal/balances/check/buildEvaluationSubject.js";
+import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
+import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { checkLimitReached } from "./checkLimitReached.js";
-import { checkLimitReachedLegacy } from "./checkLimitReachedLegacy.js";
 import { checkUsageAlerts } from "./checkUsageAlerts.js";
 import { handleThresholdReached } from "./handleThresholdReached.js";
 
@@ -65,39 +66,48 @@ export const fireTrackWebhooks = ({
 		});
 	}
 
-	if (oldFullSubject && newFullSubject) {
-		(async () => {
-			const [oldEvalSubject, newEvalSubject] = await Promise.all([
+	(async () => {
+		let oldEvalSubject: Awaited<ReturnType<typeof buildEvaluationSubject>>;
+		let newEvalSubject: Awaited<ReturnType<typeof buildEvaluationSubject>>;
+
+		if (oldFullSubject && newFullSubject) {
+			[oldEvalSubject, newEvalSubject] = await Promise.all([
 				buildEvaluationSubject({ ctx, fullSubject: oldFullSubject, entityId }),
 				buildEvaluationSubject({ ctx, fullSubject: newFullSubject, entityId }),
 			]);
+		} else {
+			const entity = entityId
+				? newFullCus.entities?.find((e) => e.id === entityId)
+				: undefined;
+			const buildSubject = async (fullCus: FullCustomer) => {
+				if (entity) {
+					const { apiEntity } = await getApiEntityBase({
+						ctx,
+						entity,
+						fullCus,
+					});
+					return apiEntity;
+				}
+				const { apiCustomer } = await getApiCustomerBase({ ctx, fullCus });
+				return apiCustomer;
+			};
+			[oldEvalSubject, newEvalSubject] = await Promise.all([
+				buildSubject(oldFullCus),
+				buildSubject(newFullCus),
+			]);
+		}
 
-			for (const affectedFeature of featuresForUsageAlertsAndLimit) {
-				await checkLimitReached({
-					ctx,
-					oldEvalSubject,
-					newEvalSubject,
-					newFullCus,
-					feature: affectedFeature,
-					entityId,
-				});
-			}
-		})().catch((error) => {
-			ctx.logger.error(`[fireTrackWebhooks] checkLimitReached: ${error}`);
-		});
-	} else {
 		for (const affectedFeature of featuresForUsageAlertsAndLimit) {
-			checkLimitReachedLegacy({
+			await checkLimitReached({
 				ctx,
-				oldFullCus,
+				oldEvalSubject,
+				newEvalSubject,
 				newFullCus,
 				feature: affectedFeature,
 				entityId,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[fireTrackWebhooks] checkLimitReachedLegacy: ${error}`,
-				);
 			});
 		}
-	}
+	})().catch((error) => {
+		ctx.logger.error(`[fireTrackWebhooks] checkLimitReached: ${error}`);
+	});
 };
