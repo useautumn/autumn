@@ -38,7 +38,7 @@ export const longTxnProbe: DbProbe = {
 				(SELECT pid FROM top_txn) AS pid,
 				(SELECT wait_event FROM top_txn) AS wait_event,
 				(SELECT query_kind FROM top_txn) AS query_kind,
-				(SELECT count(*)::int FROM pg_stat_activity) AS visible_backends
+				(SELECT count(state)::int FROM pg_stat_activity) AS visible_backends
 		`);
 
 		const visibleBackends = row?.visible_backends ?? 0;
