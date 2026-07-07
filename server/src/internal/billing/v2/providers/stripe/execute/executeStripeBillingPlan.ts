@@ -13,6 +13,7 @@ import { executeStripeRefundAction } from "@/internal/billing/v2/providers/strip
 import { rollbackAfterSubscriptionFailure } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlanRollback";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 
 export const executeStripeBillingPlan = async ({
@@ -54,6 +55,10 @@ export const executeStripeBillingPlan = async ({
 
 	const resumeAfterSubscriptionAction =
 		resumeAfter === StripeBillingStage.SubscriptionAction;
+
+	if (!resumeAfterSubscriptionAction) {
+		validatePromotionCodeMinimums({ ctx, billingContext, billingPlan });
+	}
 
 	if (stripeInvoiceAction && !resumeAfterInvoiceAction) {
 		invoiceResult = await executeStripeInvoiceAction({

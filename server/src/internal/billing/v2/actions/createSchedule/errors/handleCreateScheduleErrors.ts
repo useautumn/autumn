@@ -1,4 +1,5 @@
 import {
+	type BillingPlan,
 	type CreateScheduleBillingContext,
 	ErrCode,
 	isFreeProduct,
@@ -6,6 +7,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
@@ -68,4 +71,16 @@ export const handleCreateScheduleErrors = async ({
 			});
 		}
 	}
+};
+
+export const handleCreateScheduleBillingPlanErrors = ({
+	ctx,
+	billingContext,
+	billingPlan,
+}: {
+	ctx: AutumnContext;
+	billingContext: CreateScheduleBillingContext;
+	billingPlan: BillingPlan;
+}) => {
+	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 };
