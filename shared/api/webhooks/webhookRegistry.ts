@@ -51,7 +51,7 @@ export const webhookRegistry: WebhookDefinition[] = [
 		schema: BillingAutoTopupFailedSchema,
 		group: "Billing",
 		description:
-			"Fired when an automatic top-up is skipped, blocked, declined, or fails before granting additional prepaid balance.",
+			"Fired when an automatic top-up is blocked, declined, or fails before granting additional prepaid balance.",
 	},
 	{
 		eventType: WebhookEventType.BillingAutoTopupSucceeded,

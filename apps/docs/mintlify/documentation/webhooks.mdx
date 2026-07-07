@@ -226,7 +226,7 @@ Use `invoice.stripe_id` as a stable dedupe key. The top-level `id` field (e.g. `
 
 ### billing.auto_topup_failed
 
-Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) is skipped, blocked, declined, or fails before granting additional prepaid balance. This includes charge failures, purchase/attempt limits, missing payment methods, disabled or unavailable configuration, lock contention, and transient infrastructure issues.
+Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) is blocked, declined, or fails before granting additional prepaid balance. This includes charge failures, purchase/attempt limits, missing payment methods, unavailable customer billing setup, lock contention, and transient infrastructure issues.
 
 Use `reason` to branch on the failure mode and `retryable` to decide whether retrying later may succeed without changing customer or billing configuration.
 

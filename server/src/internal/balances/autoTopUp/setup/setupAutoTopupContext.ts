@@ -32,7 +32,7 @@ export type AutoTopupSetupFailure = {
 
 export type SetupAutoTopupContextResult =
 	| { ok: true; autoTopupContext: AutoTopupContext }
-	| { ok: false; failure: AutoTopupSetupFailure };
+	| { ok: false; failure?: AutoTopupSetupFailure };
 
 const getAutoTopupFullCustomer = async ({
 	ctx,
@@ -147,16 +147,7 @@ export const setupAutoTopupContext = async ({
 		ctx.logger.info(`[setupAutoTopupContext] ${message}`, {
 			data: resolved,
 		});
-		return {
-			ok: false,
-			failure: {
-				reason: "balance_above_threshold",
-				retryable: false,
-				message,
-				fullCustomer,
-				autoTopupConfig: resolved.autoTopupConfig,
-			},
-		};
+		return { ok: false };
 	}
 
 	const { autoTopupConfig, customerEntitlement } = resolved;

@@ -29289,8 +29289,8 @@ webhooks:
     post:
       operationId: billingAutoTopupFailed
       summary: Auto Top-Up Failed
-      description: Fired when an automatic top-up is skipped, blocked, declined, or
-        fails before granting additional prepaid balance.
+      description: Fired when an automatic top-up is blocked, declined, or fails
+        before granting additional prepaid balance.
       requestBody:
         required: true
         content:
@@ -29342,11 +29342,8 @@ webhooks:
                         - purchase_limit_reached
                         - attempt_limit_reached
                         - failed_attempt_limit_reached
-                        - org_disabled
-                        - dry_run
                         - customer_unavailable
                         - configuration_unavailable
-                        - balance_above_threshold
                         - missing_payment_method
                         - missing_customer_product
                         - invalid_amount

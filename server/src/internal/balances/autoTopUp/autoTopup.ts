@@ -61,11 +61,6 @@ export const autoTopup = async ({
 		if (org.config.disabled_auto_topup && env === AppEnv.Live) {
 			const message = `Auto top-up is disabled for organization ${org.id}, skipping`;
 			logger.info(`[autoTopup] ${message}`);
-			await sendFailureWebhook({
-				reason: "org_disabled",
-				retryable: false,
-				message,
-			});
 			return;
 		}
 
@@ -73,7 +68,9 @@ export const autoTopup = async ({
 		const setupResult = await setupAutoTopupContext({ ctx, payload });
 
 		if (!setupResult.ok) {
-			await sendFailureWebhook(setupResult.failure);
+			if (setupResult.failure) {
+				await sendFailureWebhook(setupResult.failure);
+			}
 			return;
 		}
 
@@ -102,12 +99,6 @@ export const autoTopup = async ({
 		if (org.config.dryrun_autotopups) {
 			const message = "Dry run enabled, skipping recordAutoTopupAttempt";
 			logger.info(`[autoTopup] ${message}`, { extras: ctx.extraLogs });
-			await sendFailureWebhook({
-				reason: "dry_run",
-				retryable: false,
-				message,
-				autoTopupContext,
-			});
 			return;
 		}
 

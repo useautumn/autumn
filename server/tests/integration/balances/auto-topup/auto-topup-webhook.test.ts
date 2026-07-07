@@ -218,10 +218,13 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 		value: 50,
 	});
 
-	const result = await waitForWebhook<AutoTopupSucceededPayload>({
+	const result = await waitForWebhook<
+		AutoTopupSucceededPayload | AutoTopupFailedPayload
+	>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === WebhookEventType.BillingAutoTopupSucceeded &&
+			(payload.type === WebhookEventType.BillingAutoTopupSucceeded ||
+				payload.type === WebhookEventType.BillingAutoTopupFailed) &&
 			payload.data?.customer_id === customerId,
 		timeoutMs: 10_000,
 	});
