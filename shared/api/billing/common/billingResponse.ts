@@ -1,10 +1,15 @@
 import { z } from "zod/v4";
 
 export const PaymentFailureCodeEnum = z
-	.enum(["3ds_required", "payment_method_required", "payment_failed"])
+	.enum([
+		"3ds_required",
+		"payment_method_required",
+		"payment_failed",
+		"payment_processing",
+	])
 	.meta({
 		description:
-			"The type of payment failure. '3ds_required' means 3D Secure authentication is needed, 'payment_method_required' means the customer needs to add a payment method, 'payment_failed' means the payment was declined.",
+			"The type of payment action. '3ds_required' means 3D Secure authentication is needed, 'payment_method_required' means the customer needs to add a payment method, 'payment_failed' means the payment was declined, 'payment_processing' means payment is still settling.",
 	});
 
 export type PaymentFailureCode = z.infer<typeof PaymentFailureCodeEnum>;

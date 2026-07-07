@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "migration_item_runs_live_c_idx" ON "migration_item_runs" USING btree ("migration_internal_id","item_kind","item_id" COLLATE "C") WHERE "migration_item_runs"."dry_run" = false;

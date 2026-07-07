@@ -1,7 +1,4 @@
-import type {
-	BillingPlan,
-	UpdateSubscriptionBillingContext,
-} from "@autumn/shared";
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { ErrCode, InternalError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
@@ -16,7 +13,7 @@ export const handleStripeBillingPlanErrors = ({
 	billingPlan,
 }: {
 	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionBillingContext;
+	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }) => {
 	const { stripeSubscriptionSchedule } = billingContext;
