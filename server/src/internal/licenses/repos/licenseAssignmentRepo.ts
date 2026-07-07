@@ -25,13 +25,13 @@ const activeStatuses = [
 	CusProductStatus.Trialing,
 ];
 
-const seatConditions = () => [
+const assignmentConditions = () => [
 	isNotNull(customerProducts.license_parent_customer_product_id),
 	isNotNull(customerProducts.internal_entity_id),
 ];
 
 const activeAssignmentConditions = () => [
-	...seatConditions(),
+	...assignmentConditions(),
 	inArray(customerProducts.status, activeStatuses),
 ];
 
@@ -57,13 +57,16 @@ const findActiveAssignment = async ({
 
 const getAssignmentById = async ({
 	db,
-	seatId,
+	assignmentId,
 }: {
 	db: DrizzleCli;
-	seatId: string;
+	assignmentId: string;
 }): Promise<DbLicenseAssignment | undefined> =>
 	await db.query.customerProducts.findFirst({
-		where: and(eq(customerProducts.id, seatId), ...seatConditions()),
+		where: and(
+			eq(customerProducts.id, assignmentId),
+			...assignmentConditions(),
+		),
 	});
 
 const countActiveByParentAndLicense = async ({
@@ -126,7 +129,7 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 				...(internalCustomerId
 					? [eq(customerProducts.internal_customer_id, internalCustomerId)]
 					: []),
-				...seatConditions(),
+				...assignmentConditions(),
 				...(activeOnly
 					? [inArray(customerProducts.status, activeStatuses)]
 					: []),
