@@ -378,10 +378,12 @@ const findSnapshotByName = async (
 		return local;
 	}
 	const { snapshots } = await client().vms.snapshots.list();
+	// READY only: a mid-build refresh snapshot must be a MISS (restoring from it
+	// fails with SOURCE_SNAPSHOT_BUILDING) — the stale path serves instead.
 	const match = snapshots
 		.filter(
 			(snap) =>
-				snap.name === name && !snap.deleted && snap.state !== "failed",
+				snap.name === name && !snap.deleted && snap.state === "ready",
 		)
 		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
 	if (match) {
