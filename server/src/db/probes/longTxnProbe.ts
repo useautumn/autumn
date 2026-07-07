@@ -29,7 +29,12 @@ export const longTxnProbe: DbProbe = {
 					FROM pg_stat_activity
 					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
 					ORDER BY xact_start ASC LIMIT 1) AS wait_event,
-				(SELECT upper(substring(query FROM '[a-zA-Z]+'))
+				(SELECT CASE WHEN upper(substring(query FROM '[a-zA-Z]+')) IN (
+						'SELECT','INSERT','UPDATE','DELETE','WITH','MERGE','CALL','VACUUM',
+						'ANALYZE','COPY','TRUNCATE','CREATE','ALTER','DROP','BEGIN','COMMIT',
+						'ROLLBACK','SAVEPOINT','SET','SHOW','EXPLAIN','REFRESH','GRANT',
+						'REVOKE','LOCK','FETCH','DECLARE','PREPARE','EXECUTE')
+					THEN upper(substring(query FROM '[a-zA-Z]+')) END
 					FROM pg_stat_activity
 					WHERE state <> 'idle' AND xact_start IS NOT NULL AND backend_type = 'client backend'
 					ORDER BY xact_start ASC LIMIT 1) AS query_kind,
