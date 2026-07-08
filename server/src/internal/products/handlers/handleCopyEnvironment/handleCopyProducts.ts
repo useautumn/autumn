@@ -9,6 +9,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { copyPlanLicenseLinks } from "@/internal/licenses/actions/links/copyPlanLicenseLinks.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
 import { ProductService } from "../../ProductService.js";
@@ -132,4 +133,15 @@ export const handleCopyProducts = async ({
 	});
 
 	await Promise.all(operations);
+
+	const copiedToProducts = await ProductService.listFull({
+		db,
+		orgId: toOrg.id,
+		env: toEnv,
+	});
+	await copyPlanLicenseLinks({
+		db,
+		fromProducts,
+		toProducts: copiedToProducts,
+	});
 };
