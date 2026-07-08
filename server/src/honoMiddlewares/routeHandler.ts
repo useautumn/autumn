@@ -12,10 +12,6 @@ import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	markBillingLockHeld,
-	unmarkBillingLockHeld,
-} from "@/internal/billing/v2/utils/billingLock/runWithBillingLock.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
@@ -304,7 +300,6 @@ export function createRoute<
 					ttlMs: opts.lock.ttlMs,
 					errorMessage: opts.lock.errorMessage,
 				});
-				markBillingLockHeld({ ctx: c.get("ctx"), lockKey });
 			}
 		}
 
@@ -325,7 +320,6 @@ export function createRoute<
 		} finally {
 			// Always release lock
 			if (lockKey) {
-				unmarkBillingLockHeld({ ctx: c.get("ctx"), lockKey });
 				await clearLock({ lockKey });
 			}
 		}

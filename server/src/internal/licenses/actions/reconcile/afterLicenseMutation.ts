@@ -1,13 +1,14 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { runWithBillingLock } from "@/internal/billing/v2/utils/billingLock/runWithBillingLock.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { reconcileLicenseStateForCustomer } from "./reconcileLicenseState.js";
 
 /**
- * Single exit ramp for every license mutation: converges assignment balances
- * and billing carriers under the customer billing lock, then drops the
+ * Single exit ramp for every license mutation. CONTRACT: the caller holds
+ * the customer billing lock (route lock config or runWithBillingLock at the
+ * entry point) — this function never acquires. It converges assignment
+ * balances and billing carriers, then drops the
  * customer cache. Catalog-wide events (link edits, version bumps) stay
  * lazy-converged — each customer converges on their next mutation.
  */
@@ -40,17 +41,10 @@ export const afterLicenseMutation = async ({
 	}
 	if (!externalCustomerId) return;
 
-	await runWithBillingLock({
+	await reconcileLicenseStateForCustomer({
 		ctx,
 		customerId: externalCustomerId,
-		errorMessage:
-			"License update already in progress for this customer, try again in a few seconds",
-		fn: () =>
-			reconcileLicenseStateForCustomer({
-				ctx,
-				customerId: externalCustomerId,
-				internalCustomerId,
-			}),
+		internalCustomerId,
 	});
 
 	await deleteCachedFullCustomer({
