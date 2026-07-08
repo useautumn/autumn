@@ -571,7 +571,8 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					ttlMs: WARM_IMAGE_TTL_MS,
 				});
 				await publishWarmImage(image, targetSha12);
-				staleWarmNames.delete(warmName);
+				// Keep warmName in staleWarmNames: forks in this run still hold the stale
+				// :latest image, so dropping it here would silently skip their fast-forward.
 			} catch (error) {
 				narrate(
 					chalk.yellow(

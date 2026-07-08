@@ -1,4 +1,4 @@
-import type { FullProduct } from "@autumn/shared";
+import type { FullProduct, Price } from "@autumn/shared";
 import type {
 	ItemDiff,
 	ItemMatch,
@@ -11,13 +11,43 @@ import { findStripeMatchForAutumnPrice } from "../matchUtils/findStripeMatchForA
 import { findStripeMatchForAutumnProduct } from "../matchUtils/findStripeMatchForAutumnProduct";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
 
+export type PriceMatchCandidate = {
+	price: Price;
+	product: FullProduct;
+};
+
+/** All prices keyed to the item's Stripe product — callers disambiguate. */
+export const collectStripeProductIdPriceCandidates = ({
+	item,
+	fullProducts,
+}: {
+	item: StripeItemSnapshot;
+	fullProducts: FullProduct[];
+}): PriceMatchCandidate[] => {
+	const stripeProductIds = new Set([item.stripe_product_id]);
+	const candidates: PriceMatchCandidate[] = [];
+	for (const product of fullProducts) {
+		for (const price of product.prices) {
+			const matched_on = findStripeMatchForAutumnPrice({
+				price,
+				product,
+				stripePriceIds: new Set<string>(),
+				stripeProductIds,
+			});
+			if (matched_on?.type === "stripe_product_id") {
+				candidates.push({ price, product });
+			}
+		}
+	}
+	return candidates;
+};
+
 /**
  * Match a single StripeItemSnapshot against the supplied Autumn products.
  *
- * Walks every Autumn price (priority 1+2) before falling back to the
- * product-level match (priority 3). The matched Autumn resource(s) are
- * embedded on the returned ItemMatch so callers never need to re-look-up
- * by id.
+ * Priority is global across the whole catalog: an exact `stripe_price_id`
+ * match on ANY price beats every `stripe_product_id` match, which beats the
+ * product-level base-shape fallback.
  *
  * Pure: no I/O, no sibling-aware decisions.
  */
@@ -37,7 +67,7 @@ export const findAutumnMatchForStripeItem = ({
 				price,
 				product,
 				stripePriceIds,
-				stripeProductIds,
+				stripeProductIds: new Set<string>(),
 			});
 			if (matched_on) {
 				return {
@@ -51,6 +81,26 @@ export const findAutumnMatchForStripeItem = ({
 				};
 			}
 		}
+	}
+
+	const priceCandidates = collectStripeProductIdPriceCandidates({
+		item,
+		fullProducts,
+	});
+	if (priceCandidates.length > 0) {
+		const [chosen] = priceCandidates;
+		return {
+			stripe: item,
+			match: {
+				kind: "autumn_price",
+				matched_on: {
+					type: "stripe_product_id",
+					stripe_product_id: item.stripe_product_id,
+				},
+				price: chosen.price,
+				product: chosen.product,
+			},
+		};
 	}
 
 	const productCandidates: ProductLevelMatchCandidate[] = [];
