@@ -1,6 +1,6 @@
 import {
-	AllowanceType,
 	AllocatedBillingBehavior,
+	AllowanceType,
 	BillingInterval,
 	BillingType,
 	BillWhen,
