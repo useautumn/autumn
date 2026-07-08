@@ -21,6 +21,7 @@ export const fireTrackWebhooks = ({
 	feature,
 	entityId,
 	featuresFromMutationLogs,
+	eventProperties,
 }: {
 	ctx: AutumnContext;
 	oldFullSubject?: FullSubject;
@@ -30,6 +31,7 @@ export const fireTrackWebhooks = ({
 	feature: Feature;
 	entityId?: string;
 	featuresFromMutationLogs?: Feature[];
+	eventProperties?: Record<string, unknown> | null;
 }) => {
 	const oldFullCus = oldFullSubject
 		? fullSubjectToFullCustomer({ fullSubject: oldFullSubject })
@@ -105,6 +107,7 @@ export const fireTrackWebhooks = ({
 				newFullCus,
 				feature: affectedFeature,
 				entityId,
+				eventProperties,
 			});
 		}
 	})().catch((error) => {
