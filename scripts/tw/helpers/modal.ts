@@ -17,8 +17,11 @@
  *   - **createWarmSandbox** — `sandboxes.create(app, baseImage, {command:["sleep",
  *     "infinity"]})` then `git clone @ ref` into /repo (Modal's create does NOT
  *     clone a git source the way Vercel's SDK does).
- *   - **snapshotAndStop** — `sb.snapshotFilesystem()` → an `Image`; stored by warm
- *     name. The warm parent is terminated (workers fork from the Image, not it).
+ *   - **snapshotAndStop** — `sb.snapshotFilesystem()` → an `Image`, PUBLISHED as
+ *     `tw-warm:<sha12>` + `tw-warm:latest` (account-wide cross-run/teammate warm
+ *     cache). Exact-sha lookups skip the whole warm build; a stale `:latest` hit
+ *     serves immediately (workers fast-forward checkout at fork) while a detached
+ *     refresh converges the cache. The warm parent is terminated after snapshot.
  *   - **forkWorker** — create from the stored warm snapshot, `encryptedPorts:
  *     [SERVER_PORT]` for the tunnel. V1 paces creates (120 burst + ~4.5/s, ≤100
  *     concurrent cap); V2 has no pacing.
