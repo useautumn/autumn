@@ -13,7 +13,9 @@ export const useLeafThreadsQuery = ({ enabled }: { enabled: boolean }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
-	const { data, isLoading } = useQuery<{ threads?: LeafThreadSummary[] }>({
+	const { data, isError, isLoading } = useQuery<{
+		threads?: LeafThreadSummary[];
+	}>({
 		enabled,
 		queryFn: async () => {
 			const { data: body } = await axiosInstance.get("/agent/chat/threads");
@@ -23,5 +25,9 @@ export const useLeafThreadsQuery = ({ enabled }: { enabled: boolean }) => {
 		staleTime: 15_000,
 	});
 
-	return { threads: data?.threads ?? [], threadsLoading: isLoading };
+	return {
+		threads: data?.threads ?? [],
+		threadsError: isError,
+		threadsLoading: isLoading,
+	};
 };

@@ -280,6 +280,9 @@ export const eveEngine: AgentEngine = {
 
 						if (event.type === "turn.started") {
 							turnStarted = true;
+							// A follow-up turn must not inherit the prior turn's preview,
+							// or a preview-less turn ends on a stale catalog decision.
+							lastPreview = undefined;
 						} else if (event.type === "step.started") {
 							if (turnStarted) onThinking?.();
 						} else if (event.type === "actions.requested") {

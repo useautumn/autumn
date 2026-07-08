@@ -71,9 +71,11 @@ export const drainParkedEveTurn = async ({
 	session: EveSessionRef;
 }) => {
 	let denies = 0;
-	let turnStarted = false;
 	while (true) {
 		let parkedAgain = false;
+		// Per-iteration: a chained deny reopens the stream, and replayed terminal
+		// events must not be accepted before that stream's own turn.started.
+		let turnStarted = false;
 		try {
 			for await (const event of streamEveEvents({
 				auth,
@@ -378,11 +380,15 @@ const insertChainedApproval = async ({
 	const options = approvalOptionIds({ options: chained.options });
 	let preview: unknown;
 	try {
+		// Credentials are keyed by Autumn user id: web principals carry it as
+		// providerUserId; Slack falls back to the installer credential when unset.
+		const credentialUserId =
+			provider === "web" ? providerUserId : auth.autumnUserId;
 		const { accessToken } = await getOrgInstallationToken({
 			env,
 			orgId: auth.orgId,
 			provider,
-			userId: providerUserId,
+			userId: credentialUserId,
 			workspaceId: auth.workspaceId,
 		});
 		const input = chained.input ?? {};

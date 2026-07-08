@@ -2,9 +2,13 @@ import { type AuthFn, localDev, vercelOidc } from "eve/channels/auth";
 import { eveChannel } from "eve/channels/eve";
 
 const leafInternalAuth = (): AuthFn<Request> => async (request) => {
+	// Must mirror env.ts's EVE_INTERNAL_AUTH_TOKEN fallback chain exactly, or
+	// leaf and eve derive different tokens and every request 401s.
 	const expectedToken =
 		process.env.EVE_INTERNAL_AUTH_TOKEN ??
 		process.env.CHAT_STATE_SECRET ??
+		process.env.SLACK_STATE_SECRET ??
+		process.env.BETTER_AUTH_SECRET ??
 		process.env.ENCRYPTION_PASSWORD;
 	const authorization = request.headers.get("authorization");
 	if (!expectedToken || authorization !== `Bearer ${expectedToken}`) {

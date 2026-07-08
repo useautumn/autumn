@@ -19,7 +19,7 @@ const domain = {
 		operation({
 			id: "previewUpdateCatalog",
 			description:
-				"Preview a batch catalog change (features + plans) WITHOUT applying it. Returns each plan resolved to the latest plan shape plus impact (will_version, has_customers, migration_draft), and each feature resolved plus any blockers that would reject the update. Check feature blockers before calling updateCatalog so you don't attempt an update the server will reject. Use to show the user a live preview while iterating on pricing; pass the same params you would pass to updateCatalog.",
+				"Preview a batch catalog change (features + plans) WITHOUT applying it. Returns each plan resolved to the latest plan shape plus impact (versionable, has_customers, migration_draft), and each feature resolved plus any blockers that would reject the update. Check feature blockers before calling updateCatalog so you don't attempt an update the server will reject. Use to show the user a live preview while iterating on pricing; pass the same params you would pass to updateCatalog.",
 		}),
 		operation({
 			id: "updateCatalog",

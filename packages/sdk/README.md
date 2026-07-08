@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783348981363,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784558581363,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783530724692,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784740324692,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -458,6 +458,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -486,6 +487,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -853,7 +855,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783348981363,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784558581363,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783530724692,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784740324692,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -992,6 +994,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -1033,6 +1036,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 

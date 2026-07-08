@@ -357,9 +357,9 @@ export const handleApprovalActionWithDeps = async ({
 		}
 		// The resumed turn can park again (chained write or a question) where
 		// nothing streams — surface those as fresh cards or they stay invisible.
-		if (!failed && "chainedApprovalId" in result && event.thread) {
+		if (!failed && event.thread) {
 			try {
-				if (result.chainedApprovalId) {
+				if ("chainedApprovalId" in result && result.chainedApprovalId) {
 					const chained = await deps.getApproval({
 						approvalId: result.chainedApprovalId,
 					});
@@ -371,7 +371,7 @@ export const handleApprovalActionWithDeps = async ({
 						});
 					}
 				}
-				if (result.question) {
+				if ("question" in result && result.question) {
 					await event.thread.post(
 						questionCard({
 							env: claimed.env,

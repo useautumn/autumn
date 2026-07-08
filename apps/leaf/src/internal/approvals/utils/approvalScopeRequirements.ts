@@ -8,6 +8,7 @@ export const approvalScopeRequirements: Record<string, RouteScopeRequirement> =
 		createPlan: [Scopes.Plans.Write],
 		createSchedule: [Scopes.Billing.Write],
 		updateCatalog: { ALL: [Scopes.Plans.Write, Scopes.Features.Write] },
+		updateCustomer: [Scopes.Customers.Write],
 		updatePlan: [Scopes.Plans.Write],
 		updateSubscription: [Scopes.Billing.Write],
 	};

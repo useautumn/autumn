@@ -91,7 +91,7 @@ const logsQuerySyntaxHint = ({
 	const example = aggregate
 		? "where customer_id == 'cus_123' | summarize failed = countif(status_code >= 400) by request_path | order by failed desc"
 		: "where customer_id == 'cus_123' and status_code >= 400 | order by timestamp desc | limit 50";
-	return `Supported stages (joined by '|'): ${stages}. Example: ${example}. String values use single quotes. ${QUERYABLE_FIELDS_HINT}`;
+	return `Supported stages (joined by '|'): ${stages}. Example: ${example}. String values use single or double quotes. ${QUERYABLE_FIELDS_HINT}`;
 };
 
 export const parseLogsQueryOrThrow = ({

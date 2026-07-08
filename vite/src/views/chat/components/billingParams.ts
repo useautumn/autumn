@@ -5,7 +5,7 @@ const asRecord = (value: unknown): Record<string, unknown> =>
 
 const CANCEL_LABELS: Record<string, string> = {
 	cancel_immediately: "Cancel now",
-	cancel_next_cycle: "Cancel at cycle end",
+	cancel_end_of_cycle: "Cancel at cycle end",
 	uncancel: "Uncancel",
 };
 

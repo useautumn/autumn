@@ -348,6 +348,9 @@ class Parser {
 			} else {
 				const alias = this.expectSafeAlias();
 				this.expectSymbol("=");
+				if (usedAliases.has(alias)) {
+					throw new Error(`Duplicate summarize alias '${alias}'`);
+				}
 				usedAliases.add(alias);
 				aggregations.push({ alias, fn: this.parseSummarizeFunction() });
 			}

@@ -25,7 +25,7 @@ export const LeafButton = () => {
 				togglePanel();
 			}}
 			className={cn(
-				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none",
+				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
 				open &&
 					"border border-border !text-foreground bg-interactive-secondary",
 			)}

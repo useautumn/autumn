@@ -33,7 +33,7 @@ Heavy list queries over wide ranges waste calls and truncate. Locate first, then
 where customer_id == 'cus_123' | summarize failed = countif(status_code >= 400), total = count() by bin(timestamp, 1d) | order by timestamp desc
 ```
 
-**Pass B — inspect (searchRequestLogs).** Bound the range to the interesting bucket(s), list full records:
+**Pass B — inspect (searchRequestLogs).** Bound the range to the interesting bucket(s), list full records (always pass an explicit `range` — the 30-minute default silently misses most windows):
 
 ```
 where customer_id == 'cus_123' and status_code >= 400 | order by timestamp desc | limit 50
@@ -111,7 +111,7 @@ Billing activity is on RPC-style dotted routes; older orgs may also have REST-st
 | Customer portal | `/v1/billing.open_customer_portal` | — |
 | Schedules | `/v1/billing.create_schedule`, `/v1/billing.preview_create_schedule` | — |
 
-Filter with `request_path contains 'billing'` to cover all of them, or a specific segment like `request_path contains 'billing.attach'`.
+Filter with `request_path contains 'billing'` to cover all of them — plus `request_path == '/v1/attach'` for older orgs still on the bare legacy path, which `contains 'billing'` misses. A specific segment like `request_path contains 'billing.attach'` also works.
 
 ## Payload fields that matter
 

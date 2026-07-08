@@ -36,9 +36,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
 		}),
 
-		refund_last_payment: RefundLastPaymentSchema.optional().meta({
-			internal: true,
-		}),
+		refund_last_payment: RefundLastPaymentSchema.optional(),
 
 		recalculate_balances: z
 			.object({

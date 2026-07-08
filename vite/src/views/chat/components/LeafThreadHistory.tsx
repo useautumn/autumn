@@ -10,16 +10,20 @@ import { ClockCounterClockwiseIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNowStrict } from "date-fns";
 import { useState } from "react";
+import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useLeafPanelStore } from "@/hooks/stores/useLeafPanelStore";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { useLeafThreadsQuery } from "../hooks/useLeafThreadsQuery";
 
 /** History dropdown in the Leaf panel header: the user's last ~10 chats. */
 export const LeafThreadHistory = () => {
 	const [open, setOpen] = useState(false);
-	const { threads, threadsLoading } = useLeafThreadsQuery({ enabled: open });
+	const { threads, threadsError, threadsLoading } = useLeafThreadsQuery({
+		enabled: open,
+	});
 	const activeThreadId = useLeafPanelStore((s) => s.threadId);
 	const openThread = useLeafPanelStore((s) => s.openThread);
 	const newThread = useLeafPanelStore((s) => s.newThread);
@@ -29,6 +33,9 @@ export const LeafThreadHistory = () => {
 
 	const { mutate: clearAll, isPending: clearing } = useMutation({
 		mutationFn: () => axiosInstance.delete("/agent/chat/threads"),
+		onError: (error) => {
+			toast.error(getBackendErr(error, "Failed to clear chats"));
+		},
 		onSuccess: () => {
 			// Write the empty list directly — invalidate alone leaves the old list
 			// visible (stale-while-refetch) if the dropdown reopens immediately.
@@ -62,7 +69,11 @@ export const LeafThreadHistory = () => {
 			<DropdownMenuContent align="end" className="w-64">
 				{threads.length === 0 && (
 					<div className="px-2 py-1.5 text-tertiary-foreground text-xs">
-						{threadsLoading ? "Loading…" : "No previous chats"}
+						{threadsLoading
+							? "Loading…"
+							: threadsError
+								? "Couldn't load chats — try again"
+								: "No previous chats"}
 					</div>
 				)}
 				{threads.map((thread) => (

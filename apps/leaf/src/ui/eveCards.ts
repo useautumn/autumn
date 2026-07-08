@@ -39,6 +39,7 @@ export type CatalogDecisionButtonPayload = {
 };
 
 const PROMPT_PAYLOAD_MAX = 400;
+const SLACK_BUTTON_VALUE_MAX = 2000;
 
 const truncatePrompt = (prompt: string) =>
 	prompt.length > PROMPT_PAYLOAD_MAX
@@ -203,13 +204,21 @@ export const catalogDecisionCard = ({
 		v: choice,
 	});
 
+	// Slack rejects button values over the cap outright, which would leave the
+	// click dead; shedding the propagate list degrades to a model re-confirm.
+	const payloadValue = (payload: CatalogDecisionButtonPayload) => {
+		const value = JSON.stringify(payload);
+		if (value.length <= SLACK_BUTTON_VALUE_MAX) return value;
+		return JSON.stringify({ ...payload, pv: [] });
+	};
+
 	const buttons = [
 		...model.versioningOptions.map((option, index) =>
 			Button({
 				id: `${CATALOG_DECISION_ACTION}_${index}`,
 				label: buttonLabel(option.label),
 				style: index === 0 ? ("primary" as const) : undefined,
-				value: JSON.stringify(
+				value: payloadValue(
 					payloadFor({
 						choice: option.value,
 						label: option.label,
@@ -223,7 +232,7 @@ export const catalogDecisionCard = ({
 					Button({
 						id: `${CATALOG_DECISION_ACTION}_${model.versioningOptions.length}`,
 						label: "Update current + migrate customers",
-						value: JSON.stringify(
+						value: payloadValue(
 							payloadFor({
 								choice: "update_current",
 								label: "Update current + migrate customers",

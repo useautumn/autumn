@@ -38,7 +38,7 @@ Heavy list queries over wide ranges waste calls and truncate. Locate first, then
 where customer_id == 'cus_123' | summarize failed = countif(status_code >= 400), total = count() by bin(timestamp, 1d) | order by timestamp desc
 ```
 
-**Pass B — inspect (searchRequestLogs).** Bound the range to the interesting bucket(s), list full records:
+**Pass B — inspect (searchRequestLogs).** Bound the range to the interesting bucket(s), list full records (always pass an explicit `range` — the 30-minute default silently misses most windows):
 
 ```
 where customer_id == 'cus_123' and status_code >= 400 | order by timestamp desc | limit 50

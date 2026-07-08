@@ -16,7 +16,11 @@ SQL >
     %
     {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
     {% set use_no_props = (String(group_column, 'property') in ['customer_id', 'entity_id', 'plan_id']) and no_property_filters %}
-    {% set use_property_rollup = (String(group_column, 'property') == 'property') and no_property_filters %}
+    {# skip_property_rollup: set by the server when the key is absent from events_property_mv
+       (its value-shape gate drops UUID/high-entropy values at insert), forcing the ungated
+       events_hourly_mv path instead of silently returning nothing. #}
+    {% set skip_rollup = defined(skip_property_rollup) and String(skip_property_rollup, '0') == '1' %}
+    {% set use_property_rollup = (String(group_column, 'property') == 'property') and no_property_filters and not skip_rollup %}
 
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}

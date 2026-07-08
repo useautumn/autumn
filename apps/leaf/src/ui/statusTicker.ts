@@ -109,11 +109,6 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 				clearInterval(timer);
 				timer = null;
 			}
-			// Clear the status line — Slack auto-clears on reply, but error paths
-			// and card-only turns would otherwise leave "Thinking…" hanging.
-			if (lastRendered) {
-				target.startTyping("").catch(() => {});
-			}
 		},
 	};
 };

@@ -71,14 +71,18 @@ export const approvalOptionIds = (request: EveInputRequest) => {
 	const options = request.options ?? [];
 	const optionText = (option: { id?: string; label?: string }) =>
 		`${option.id ?? ""} ${option.label ?? ""}`.toLowerCase();
+	const byPattern = (pattern: RegExp) =>
+		options.find((option) => pattern.test(optionText(option)))?.id;
+	// Never invent an id absent from the request — eve rejects unknown option
+	// ids, so fall back to a real option before the bare literal.
 	const approve =
-		options.find((option) =>
-			/\b(approve|apply|confirm|allow|yes)\b/.test(optionText(option)),
-		)?.id ?? "approve";
+		byPattern(/\b(approve|apply|confirm|allow|yes)\b/) ??
+		options[0]?.id ??
+		"approve";
 	const deny =
-		options.find((option) =>
-			/\b(deny|reject|discard|cancel|no)\b/.test(optionText(option)),
-		)?.id ?? "deny";
+		byPattern(/\b(deny|reject|discard|cancel|no)\b/) ??
+		options.at(-1)?.id ??
+		"deny";
 	return { approve, deny };
 };
 

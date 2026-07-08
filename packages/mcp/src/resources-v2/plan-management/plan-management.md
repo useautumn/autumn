@@ -43,7 +43,7 @@ Use this resource for plan-management queries: creating plans, configuring prici
 - Use the `previewUpdateCatalog` plan preview fields (`versionable`, `has_customers`, `customer_count`, `price_change`, and `item_changes`) to decide whether to version, update in place, or create a migration draft.
 - Many updates should NOT version — e.g. adding or removing a boolean feature the user wants applied to all current customers. Apply those with `disable_version: true`.
 - Rule of thumb: if there are no pricing changes (neither the base price nor any plan-item price), `disable_version: true` is safe and usually right.
-- Also prefer `disable_version: true` when `will_version` is false, or in Sandbox with few customers (the user is likely still integrating, not in production).
+- Also prefer `disable_version: true` when `versionable` is false, or in Sandbox with few customers (the user is likely still integrating, not in production).
 - When there ARE pricing changes and the plan has customers, default to versioning (omit `disable_version`) and confirm with the user first.
 
 </versioning>
