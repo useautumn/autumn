@@ -1,12 +1,10 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { serializeLicenseAssignment } from "../../../licenseResponseUtils.js";
 import { logLicenseAction } from "../../logs/logLicenseAction.js";
-import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
 import { computeLicenseAssignmentPlan } from "./computeLicenseAssignmentPlan.js";
-import { executeLicenseAssignment } from "./executeLicenseAssignment.js";
 import { setupLicenseAssignmentContext } from "./setupLicenseAssignmentContext.js";
 
-export const attachLicense = async ({
+export const previewAttachLicense = async ({
 	ctx,
 	customerId,
 	entityId,
@@ -30,11 +28,11 @@ export const attachLicense = async ({
 		},
 	});
 
-	// 2. Compute
+	// 2. Compute only — previews never execute or converge
 	const plan = await computeLicenseAssignmentPlan({ ctx, context });
 	logLicenseAction({
 		ctx,
-		action: "attach",
+		action: "preview_attach",
 		details: plan.existing
 			? { customer: customerId, entity: entityId, existing: plan.existing.id }
 			: {
@@ -46,28 +44,21 @@ export const attachLicense = async ({
 	});
 
 	if (plan.existing) {
-		return serializeLicenseAssignment({
-			assignment: plan.existing,
-			entityId: context.entity.id ?? context.entity.internal_id,
-			licenseProductId: context.licenseProduct.id,
-		});
+		return {
+			customer_id: customerId,
+			intent: "none" as const,
+			assignment: serializeLicenseAssignment({
+				assignment: plan.existing,
+				entityId: context.entity.id ?? context.entity.internal_id,
+				licenseProductId: context.licenseProduct.id,
+			}),
+		};
 	}
-
-	// 3. Execute
-	const assignment = await executeLicenseAssignment({ ctx, context, plan });
-
-	// 4. Converge: repairs stranded assignments and balances; assignment
-	// itself never bills
-	await afterLicenseMutation({
-		ctx,
-		customerId: context.fullCustomer.id ?? undefined,
-		internalCustomerId: context.fullCustomer.internal_id,
-		entityId,
-	});
-
-	return serializeLicenseAssignment({
-		assignment,
-		entityId: context.entity.id ?? context.entity.internal_id,
-		licenseProductId: context.licenseProduct.id,
-	});
+	return {
+		customer_id: customerId,
+		intent: "assign" as const,
+		parent_plan_id: plan.parent.product.id,
+		license_plan_id: planId,
+		available: plan.available,
+	};
 };

@@ -1,13 +1,10 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getLicenseAssignmentResponse } from "../../../licenseResponseUtils.js";
 import { logLicenseAction } from "../../logs/logLicenseAction.js";
-import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
 import { computeLicenseUpdatePlan } from "./computeLicenseUpdatePlan.js";
-import { executeLicenseUpdate } from "./executeLicenseUpdate.js";
 import { setupLicenseUpdateContext } from "./setupLicenseUpdateContext.js";
 import type { LicenseCancelAction } from "./types.js";
 
-export const updateLicense = async ({
+export const previewUpdateLicense = async ({
 	ctx,
 	customerId,
 	assignmentId,
@@ -25,15 +22,14 @@ export const updateLicense = async ({
 		assignmentId,
 	});
 
-	// 2. Compute: already-ended assignments only converge, never re-execute
+	// 2. Compute only — previews never execute or converge
 	const plan = computeLicenseUpdatePlan({
 		assignment: context.assignment,
 		cancelAction,
 	});
-
 	logLicenseAction({
 		ctx,
-		action: "update",
+		action: "preview_update",
 		details: {
 			customer: customerId,
 			assignment: assignmentId,
@@ -42,23 +38,10 @@ export const updateLicense = async ({
 		},
 	});
 
-	// 3. Execute
-	if (plan.endedAt) {
-		await executeLicenseUpdate({ ctx, context, plan });
-	}
-
-	const response = await getLicenseAssignmentResponse({
-		ctx,
-		assignment: context.assignment,
-	});
-
-	// 4. Converge
-	await afterLicenseMutation({
-		ctx,
-		customerId: context.fullCustomer.id ?? undefined,
-		internalCustomerId: context.fullCustomer.internal_id,
-		entityId: response.entity_id,
-	});
-
-	return plan.endedAt ? { ...response, ended_at: plan.endedAt } : response;
+	return {
+		customer_id: customerId,
+		intent: plan.endedAt ? ("cancel_immediately" as const) : ("none" as const),
+		assignment_id: assignmentId,
+		ended_at: plan.endedAt ?? context.assignment.ended_at,
+	};
 };

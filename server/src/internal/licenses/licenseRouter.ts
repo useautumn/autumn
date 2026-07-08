@@ -10,6 +10,8 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { attachLicense } from "./actions/assignments/attach/attachLicense.js";
+import { previewAttachLicense } from "./actions/assignments/attach/previewAttachLicense.js";
+import { previewUpdateLicense } from "./actions/assignments/update/previewUpdateLicense.js";
 import { updateLicense } from "./actions/assignments/update/updateLicense.js";
 
 export const licenseRpcRouter = new Hono<HonoEnv>();
@@ -89,13 +91,12 @@ const handlePreviewAttachLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const previewResult = await attachLicense({
+		const previewResult = await previewAttachLicense({
 			ctx,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			planId: body.plan_id,
 			parentPlanId: body.parent_plan_id,
-			preview: true,
 		});
 
 		return c.json(previewResult);
@@ -108,12 +109,11 @@ const handlePreviewUpdateLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const previewResult = await updateLicense({
+		const previewResult = await previewUpdateLicense({
 			ctx,
 			customerId: body.customer_id,
 			assignmentId: body.assignment_id,
 			cancelAction: body.cancel_action,
-			preview: true,
 		});
 
 		return c.json(previewResult);
