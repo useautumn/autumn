@@ -1,5 +1,6 @@
 import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { useMemo } from "react";
+import { CancelAdvancedSection } from "@/components/forms/cancel-subscription/components/CancelAdvancedSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
 import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
 import { UncancelFooter } from "@/components/forms/uncancel-subscription/components/UncancelFooter";
@@ -55,7 +56,8 @@ function SheetContent() {
 					</div>
 				)}
 
-				{isCancelMode && <RefundBehaviorSection proratedOnly />}
+				{isCancelMode && <RefundBehaviorSection />}
+				{isCancelMode && <CancelAdvancedSection />}
 				{isCancelMode ? <CancelPreviewSection /> : <UncancelPreviewSection />}
 				<UncancelFooter />
 			</div>

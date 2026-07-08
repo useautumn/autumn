@@ -60,12 +60,19 @@ export default defineMcpClientConnection({
 			const workspaceId = stringAttr(attributes, "workspaceId") ?? orgId;
 			const providerUserId =
 				stringAttr(attributes, "providerUserId") ?? principal.id;
+			// Credentials are keyed by Autumn user id. Web principals carry it as
+			// providerUserId; Slack callers resolve it via email (autumnUserId) or
+			// fall back to the installer's credential when unset.
+			const credentialUserId =
+				provider === "web"
+					? providerUserId
+					: stringAttr(attributes, "autumnUserId");
 			const { accessToken } = await getOrgInstallationToken({
 				env: appEnv,
 				orgId,
 				provider,
 				workspaceId,
-				userId: providerUserId,
+				userId: credentialUserId,
 			});
 			return { token: accessToken };
 		},

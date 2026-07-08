@@ -12,6 +12,7 @@ import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
+import { resolveSlackCallerAuth } from "./setup/resolveSlackCallerAuth.js";
 import { getDefaultChatEnv, selectChatEnv } from "./setup/selectChatEnv.js";
 import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
@@ -88,6 +89,27 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
+			// Admin installs act as Autumn staff, never as org members.
+			let autumnUserId: string | undefined;
+			if (!orgContext.admin) {
+				const callerAuth = await resolveSlackCallerAuth({
+					installation: effectiveInstallation,
+					logger,
+					orgId: org.id,
+					slackUserId: providerUserId,
+				});
+				if (callerAuth.usePerUser && !callerAuth.ok) {
+					await onAgentReady?.();
+					return {
+						env: getDefaultChatEnv(),
+						text: callerAuth.text,
+					};
+				}
+				if (callerAuth.usePerUser) {
+					autumnUserId = callerAuth.userId;
+				}
+			}
+
 			const preparedPromise = prepareAttachmentMessage({
 				attachments,
 				fetchFallback: attachmentFetchFallback,
@@ -100,6 +122,7 @@ export const runMessage = async ({
 						db,
 						orgId: org.id,
 						thread: effectiveThread,
+						userId: autumnUserId,
 					});
 				}
 				if (engine.name === "eve") {
@@ -146,10 +169,20 @@ export const runMessage = async ({
 				},
 			});
 
+			// Legacy/admin installs resolve no per-user id; fall back to the
+			// installer's credential.
+			const tokenUserId =
+				autumnUserId ?? effectiveInstallation.installed_by_user_id;
+			if (!tokenUserId) {
+				throw new Error(
+					"Missing installer user id for chat MCP OAuth credentials",
+				);
+			}
 			const token = await getInstallationOAuthAccessToken({
 				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
+				userId: tokenUserId,
 			});
 
 			const agentTools =
@@ -159,6 +192,7 @@ export const runMessage = async ({
 
 			const ctx: MessageContext = {
 				agentTools,
+				autumnUserId,
 				claudeManagedSession:
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)

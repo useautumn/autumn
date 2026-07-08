@@ -1,23 +1,33 @@
-import type { ChatApproval } from "@autumn/shared";
+import {
+	type ChatApproval,
+	chatInstallations,
+	checkScopes,
+} from "@autumn/shared";
 import type { ActionEvent } from "chat";
+import { and, eq } from "drizzle-orm";
+import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
 import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
 import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
-import {
-	isSlackAdminProvider,
-	validateSlackAdminAccess,
-} from "../../../slackAdmin/access.js";
+import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
+import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
+import { isInternalAutumnSlackProvider } from "../../../slackAdmin/provider.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
-import type { ApprovalActionDeps, ApprovalCardStatus } from "../../types.js";
+import type {
+	ApprovalActionDeps,
+	ApprovalAuthorization,
+	ApprovalCardStatus,
+} from "../../types.js";
 import {
 	approvalErrorResult,
 	isErrorResult,
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
+import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
 import { postApprovalCardForRow } from "./present.js";
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
@@ -30,12 +40,90 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	preview: approval?.preview ?? undefined,
 });
 
+const authorizeSlackApprovalClicker = async ({
+	approval,
+	providerUserId,
+}: {
+	approval: ChatApproval;
+	providerUserId: string;
+}): Promise<ApprovalAuthorization> => {
+	const { toolName } = detailsFromApproval({ approval });
+
+	// Slack-admin approvals are gated upstream by validateSlackAdminAccess.
+	if (isInternalAutumnSlackProvider({ provider: approval.provider })) {
+		return { allowed: true };
+	}
+
+	// A gated tool without a declared scope requirement fails closed.
+	const required = approvalScopeRequirements[approval.tool_name];
+	if (!required) {
+		rootLogger.warn("Approval tool missing scope requirement", {
+			event: "leaf.approval_scope_requirement_missing",
+			tool: approval.tool_name,
+			data: { org_id: approval.org_id, provider: approval.provider },
+		});
+		return {
+			allowed: false,
+			text: `I can't determine the permissions required to approve ${toolName}, so I won't run it.`,
+		};
+	}
+
+	const installation = await db.query.chatInstallations.findFirst({
+		where: and(
+			eq(chatInstallations.org_id, approval.org_id),
+			eq(chatInstallations.provider, approval.provider),
+			eq(chatInstallations.workspace_id, approval.workspace_id),
+		),
+	});
+	if (!installation) {
+		return {
+			allowed: false,
+			text: "I couldn't verify your Slack workspace installation, so I can't approve this action.",
+		};
+	}
+
+	const callerAuth = await resolveSlackCallerAuth({
+		installation,
+		logger: rootLogger,
+		orgId: approval.org_id,
+		slackUserId: providerUserId,
+	});
+	if (!callerAuth.usePerUser) {
+		// The session already runs under the installer token; no approver token needed.
+		return { allowed: true };
+	}
+
+	if (!callerAuth.ok) {
+		return { allowed: false, text: callerAuth.text };
+	}
+
+	const { allowed, missing } = checkScopes(required, callerAuth.scopes);
+	if (!allowed) {
+		return {
+			allowed: false,
+			text: `You don't have permission to approve ${toolName}. Missing: ${missing.join(", ")}.`,
+		};
+	}
+
+	const approverToken = await getInstallationOAuthAccessToken({
+		installation,
+		env: approval.env,
+		orgId: approval.org_id,
+		userId: callerAuth.userId,
+	});
+
+	return { allowed: true, approverToken };
+};
+
 const defaultApprovalActionDeps: ApprovalActionDeps = {
 	resolveApproval,
 	cancelApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.cancel({ approvalId, db, providerUserId }),
+	authorizeApprovalClicker: authorizeSlackApprovalClicker,
 	claimApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.claim({ approvalId, db, providerUserId }),
+	releaseApproval: ({ approvalId, providerUserId }) =>
+		chatApprovalRepo.release({ approvalId, db, providerUserId }),
 	editActionMessage: async ({ content, event }) => {
 		await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 	},
@@ -98,7 +186,7 @@ export const handleApprovalActionWithDeps = async ({
 		}
 		if (
 			approval.provider &&
-			isSlackAdminProvider({ provider: approval.provider })
+			isInternalAutumnSlackProvider({ provider: approval.provider })
 		) {
 			const access = validateSlackAdminAccess({
 				workspaceId: approval.workspace_id,
@@ -161,7 +249,7 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// Claim first so exactly one click wins, then acknowledge in place.
+		// Claim first so exactly one click wins; losers never reach authorization.
 		const claimed = await deps.claimApproval({ approvalId, providerUserId });
 		if (!claimed) {
 			deps.logger.warn("Approval claim rejected", {
@@ -169,6 +257,43 @@ export const handleApprovalActionWithDeps = async ({
 				approval_id: approvalId,
 			});
 			await editToCurrentStatus();
+			return;
+		}
+
+		// On denial, release the claim so another authorized user can still approve.
+		let authorization: ApprovalAuthorization | undefined;
+		try {
+			authorization = await deps.authorizeApprovalClicker?.({
+				approval: claimed,
+				providerUserId,
+			});
+		} catch (error) {
+			await deps.releaseApproval?.({ approvalId, providerUserId });
+			deps.logger.error("[chat] Approval authorization failed", error, {
+				event: "leaf.approval_authorization_failed",
+				approval_id: approvalId,
+				tool: claimed.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await deps.postThreadReply({
+				event,
+				markdown:
+					"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
+			});
+			return;
+		}
+		if (authorization && !authorization.allowed) {
+			await deps.releaseApproval?.({ approvalId, providerUserId });
+			deps.logger.warn("Approval action denied by Autumn scopes", {
+				event: "leaf.approval_scope_denied",
+				approval_id: approvalId,
+				tool: approval.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await deps.postThreadReply({
+				event,
+				markdown: authorization.text,
+			});
 			return;
 		}
 		const details = detailsFromApproval({ approval: claimed });
@@ -190,11 +315,6 @@ export const handleApprovalActionWithDeps = async ({
 				deps.editActionMessage({ content: renderRunningCard(), event }),
 		});
 		editor.requestEdit();
-		try {
-			await event.thread?.startTyping("Running the approved action…");
-		} catch {
-			// Typing status is cosmetic; never block the run on it.
-		}
 
 		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
 		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
@@ -206,6 +326,9 @@ export const handleApprovalActionWithDeps = async ({
 					editor.requestEdit();
 				},
 				providerUserId,
+				approverToken: authorization?.allowed
+					? authorization.approverToken
+					: undefined,
 			});
 		} finally {
 			clearInterval(heartbeat);

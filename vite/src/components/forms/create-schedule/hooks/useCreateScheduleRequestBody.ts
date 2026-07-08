@@ -21,6 +21,7 @@ type CreatePlanItemParams = Omit<
 
 import {
 	getCreateSchedulePhaseTimingError,
+	hasPersistedCreateSchedule,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
 
@@ -131,16 +132,14 @@ export function buildCreateScheduleRequestBody({
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
+	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
-		// The first phase starts immediately (now) unless backdating is allowed —
-		// only when a brand-new Stripe subscription will be created — in which case
-		// a past starts_at flows through to backdate that subscription.
 		const startsAt =
 			index === 0
 				? allowFirstPhaseBackdate
 					? (phase.startsAt ?? now)
-					: now
+					: (phase.persistedStartsAt ?? now)
 				: phase.startsAt;
 		if (startsAt === null) return null;
 
@@ -167,7 +166,10 @@ export function buildCreateScheduleRequestBody({
 			});
 
 		if (plans.length === 0) return null;
-		return { starts_at: startsAt, plans };
+		return {
+			starts_at: startsAt,
+			plans,
+		};
 	});
 
 	const validPhases = apiPhases.filter(
@@ -175,21 +177,30 @@ export function buildCreateScheduleRequestBody({
 	);
 	if (validPhases.length === 0) return null;
 
+	const hasMultipleImmediatePlans = (validPhases[0]?.plans.length ?? 0) > 1;
+	const canResetFuturePhases =
+		resetBillingCycle && (!hasMultipleImmediatePlans || hasPersistedSchedule);
+	const phasesWithBillingAnchors = validPhases.map((phase, index) => ({
+		...phase,
+		...(index > 0 && canResetFuturePhases
+			? { billing_cycle_anchor: "phase_start" as const }
+			: {}),
+	}));
+
 	const body: Record<string, unknown> = {
 		customer_id: customerId,
-		phases: validPhases,
+		phases: phasesWithBillingAnchors,
 	};
 	if (entityId) body.entity_id = entityId;
 
-	// `billing_behavior` / `billing_cycle_anchor` aren't supported when the
-	// immediate phase is a multi-attach. The review UI disables the toggles in
-	// that case; mirror the same guard here so stale values don't leak into the
-	// request if the user flips from single-plan to multi-plan after toggling.
-	const immediatePlanCount = validPhases[0]?.plans.length ?? 0;
-	const supportsBillingFlags = immediatePlanCount === 1;
+	// Top-level billing flags aren't supported when the immediate phase is a
+	// multi-attach; future phase anchor resets are allowed for persisted schedules.
+	const supportsBillingFlags = !hasMultipleImmediatePlans;
 	if (supportsBillingFlags) {
 		if (billingBehavior) body.billing_behavior = billingBehavior;
-		if (resetBillingCycle) body.billing_cycle_anchor = "now";
+		if (resetBillingCycle && !hasPersistedSchedule) {
+			body.billing_cycle_anchor = "now";
+		}
 	}
 	return body as CreateScheduleParamsV0;
 }

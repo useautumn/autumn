@@ -36,8 +36,6 @@ There are three ways to connect your Stripe account to Autumn:
 | **OAuth** | Recommended for production. Connect via the deploy dialog in the Autumn dashboard |
 | **Secret key** | Paste your Stripe secret key directly. Autumn creates a webhook endpoint automatically |
 
-When you connect a Stripe account, Autumn automatically syncs all your existing plans into the new account as Stripe products and prices. This means you can set up your pricing model in sandbox, then connect your live Stripe account and everything carries over.
-
 <Note>
 When disconnecting and reconnecting a different Stripe account, existing Stripe IDs on your plans become invalid. Autumn will recreate the products and prices in the new account when you `attach` it, but old customers and subscriptions will no longer be linked.
 </Note>
@@ -73,15 +71,19 @@ Once linked, the mapping is bidirectional:
 
 ## How products and prices map
 
-Autumn creates Stripe objects lazily. The table below shows what maps to what:
+The table below shows what maps to what:
 
-| Autumn object | Stripe object | Created when |
-|---|---|---|
-| Plan | Product | Plan is created or updated in Autumn |
-| Fixed price (on a plan) | Price | Plan is created or updated |
-| Usage-based price (on a plan) | Separate Product + Price per feature | Plan is created or updated |
-| Customer | Customer | First billing call (or immediately with `createInStripe`) |
-| Subscription | Subscription | Plan is attached to a customer |
+| Autumn object | Stripe object |
+|---|---|
+| Plan | Product |
+| Fixed price (on a plan) | Price |
+| Usage-based price (on a plan) | Separate Product + Price per feature |
+| Customer | Customer |
+| Subscription | Subscription |
+
+<Note>
+  In production, Stripe products and prices are lazily created — only on the first `attach` that uses them, not when you create or update a plan in Autumn. This means you can pre-map an Autumn plan to an existing Stripe product/price before the first attach, and Autumn will reuse it instead of creating a duplicate.
+</Note>
 
 ### Fixed prices
 

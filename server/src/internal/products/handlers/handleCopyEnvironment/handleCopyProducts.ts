@@ -1,15 +1,17 @@
 import {
 	type AppEnv,
 	type CreateProductV2Params,
+	type Feature,
 	mapToProductV2,
+	type Organization,
 	type ProductV2,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { ProductService } from "../../ProductService.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
+import { ProductService } from "../../ProductService.js";
 
 const conformProductToSchema = (
 	product: ProductV2,
@@ -34,33 +36,60 @@ const conformProductToSchema = (
 	};
 };
 
+/**
+ * Copies products from one (org, env) into another (org, env).
+ *
+ * Generalised from the original sandbox→live copy so the source and target may
+ * be different organizations (e.g. two sandbox sub-orgs of the same master
+ * org). Processor-specific ids (price/entitlement ids, price_config) are
+ * stripped so the target gets a clean copy, and the write context is rebuilt
+ * around an explicit `toOrg`/`toEnv`.
+ */
 export const handleCopyProducts = async ({
 	ctx,
+	fromOrg,
 	fromEnv,
+	toOrg,
 	toEnv,
+	productIds,
+	fromFeatures: providedFromFeatures,
 }: {
 	ctx: AutumnContext;
+	fromOrg: Organization;
 	fromEnv: AppEnv;
+	toOrg: Organization;
 	toEnv: AppEnv;
+	productIds?: string[];
+	fromFeatures?: Feature[];
 }) => {
-	const { db, org } = ctx;
+	const { db } = ctx;
 
-	const [sandboxFeatures, liveFeatures, sandboxProducts, liveProducts] =
+	// Feature-only copy: nothing to read or map on the product side.
+	if (productIds?.length === 0) return;
+
+	const [fromFeatures, toFeatures, fromProductsAll, toProducts] =
 		await Promise.all([
-			FeatureService.list({ db, orgId: org.id, env: fromEnv }),
-			FeatureService.list({ db, orgId: org.id, env: toEnv }),
-			ProductService.listFull({ db, orgId: org.id, env: fromEnv }),
-			ProductService.listFull({ db, orgId: org.id, env: toEnv }),
+			providedFromFeatures ??
+				FeatureService.list({ db, orgId: fromOrg.id, env: fromEnv }),
+			FeatureService.list({ db, orgId: toOrg.id, env: toEnv }),
+			ProductService.listFull({ db, orgId: fromOrg.id, env: fromEnv }),
+			ProductService.listFull({ db, orgId: toOrg.id, env: toEnv }),
 		]);
 
-	const liveProductsV2 = liveProducts.map((p) =>
-		mapToProductV2({ product: p, features: liveFeatures }),
+	// undefined => copy every product (original behavior); a list (incl. empty)
+	// => only those ids.
+	const fromProducts = productIds
+		? fromProductsAll.filter((p) => productIds.includes(p.id))
+		: fromProductsAll;
+
+	const toProductsV2 = toProducts.map((p) =>
+		mapToProductV2({ product: p, features: toFeatures }),
 	);
 
-	const sandboxProductsV2 = sandboxProducts.map((p) => {
+	const fromProductsV2 = fromProducts.map((p) => {
 		const productV2 = mapToProductV2({
 			product: p,
-			features: sandboxFeatures,
+			features: fromFeatures,
 		});
 		productV2.items = productV2.items.map((i) => {
 			const {
@@ -77,21 +106,20 @@ export const handleCopyProducts = async ({
 
 	const newContext = {
 		...ctx,
-		features: liveFeatures,
+		org: toOrg,
+		features: toFeatures,
 		env: toEnv,
 	};
 
-	const operations = sandboxProductsV2.map((sandboxProductV2) => {
-		const liveProductV2 = liveProductsV2.find(
-			(p) => p.id === sandboxProductV2.id,
-		);
+	const operations = fromProductsV2.map((fromProductV2) => {
+		const toProductV2 = toProductsV2.find((p) => p.id === fromProductV2.id);
 
-		const conformedProduct = conformProductToSchema(sandboxProductV2);
+		const conformedProduct = conformProductToSchema(fromProductV2);
 
-		if (liveProductV2) {
+		if (toProductV2) {
 			return updateProduct({
 				ctx: newContext,
-				productId: sandboxProductV2.id,
+				productId: fromProductV2.id,
 				query: { disable_version: true },
 				updates: conformedProduct,
 			});

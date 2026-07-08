@@ -23,6 +23,9 @@ const eveHeaders = (auth: EveAuthContext, init?: HeadersInit) => {
 	if (auth.chatInstallationId) {
 		headers.set("x-leaf-chat-installation-id", auth.chatInstallationId);
 	}
+	if (auth.autumnUserId) {
+		headers.set("x-leaf-autumn-user-id", auth.autumnUserId);
+	}
 	return headers;
 };
 

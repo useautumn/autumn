@@ -78,6 +78,17 @@ export const productToStripeId = ({
 	product: Product | FullProduct;
 }): string | null => product.processor?.id ?? null;
 
+/** Primary + alias Stripe product ids (legacy products mapped to this plan). */
+export const productToStripeIds = ({
+	product,
+}: {
+	product: Product | FullProduct;
+}): string[] => {
+	const processor = product.processor;
+	if (!processor?.id) return [];
+	return [processor.id, ...(processor.additional_ids ?? [])];
+};
+
 export const productToEnt = ({
 	product,
 	featureId,

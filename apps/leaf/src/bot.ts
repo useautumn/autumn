@@ -330,6 +330,7 @@ const runAndReply = async ({
 		run = registerRun({
 			key: runKey,
 			kind: "message",
+			ownerProviderUserId: providerUserId,
 			...(env.SLACK_AGENT_HARNESS === "eve"
 				? {
 						sendInterrupt: async () => undefined,
@@ -351,9 +352,12 @@ const runAndReply = async ({
 			!(isFollowUp || clientContext) && text.trim()
 				? generateThreadTitle({ logger, text })
 				: undefined;
-		const logAction = (message: string) => ticker.activity(message);
-		const logKeyed = ({ message }: { key: string; message: string }) =>
+		const logAction = (message: string) => {
 			ticker.activity(message);
+		};
+		const logKeyed = ({ message }: { key: string; message: string }) => {
+			ticker.activity(message);
+		};
 		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
@@ -549,6 +553,7 @@ const runAndReply = async ({
 		if (postedApproval) return;
 
 		await finishLoading(target, loading, "Done.");
+
 		await target.post({ markdown: output.text || "Done." });
 		logger.info("Posted Slack response", {
 			event: "leaf.slack_response_posted",

@@ -2,18 +2,15 @@ import type { LineItem, StripeDiscountWithCoupon } from "@autumn/shared";
 import { applyAmountOffDiscountToLineItems } from "./applyAmountOffDiscountToLineItems";
 import { applyPercentOffDiscountToLineItems } from "./applyPercentOffDiscountToLineItems";
 
-const hasFreshRecurringDiscount = ({
+const hasFreshDiscount = ({
 	discounts,
 }: {
 	discounts: StripeDiscountWithCoupon[];
 }) => {
-	return discounts.some(
-		(discount) =>
-			!discount.id && discount.source.coupon.duration === "repeating",
-	);
+	return discounts.some((discount) => !discount.id);
 };
 
-const disableDiscountableForRecurringDiscounts = ({
+const disableDiscountableForFreshDiscounts = ({
 	lineItems,
 }: {
 	lineItems: LineItem[];
@@ -40,14 +37,14 @@ export const applyStripeDiscountsToLineItems = ({
 	discounts: StripeDiscountWithCoupon[];
 	options?: {
 		skipDescriptionTag?: boolean;
-		disableDiscountableForRecurringDiscounts?: boolean;
+		disableDiscountableForFreshDiscounts?: boolean;
 	};
 }): LineItem[] => {
 	if (
-		options.disableDiscountableForRecurringDiscounts &&
-		hasFreshRecurringDiscount({ discounts })
+		options.disableDiscountableForFreshDiscounts &&
+		hasFreshDiscount({ discounts })
 	) {
-		lineItems = disableDiscountableForRecurringDiscounts({ lineItems });
+		lineItems = disableDiscountableForFreshDiscounts({ lineItems });
 	}
 
 	const percentOffDiscounts = discounts.filter(

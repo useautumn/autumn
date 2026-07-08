@@ -2,6 +2,8 @@ import {
 	FreeTrialDuration,
 	type FrontendProduct,
 	type ProductItem,
+	type ProductV2,
+	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 
@@ -83,9 +85,19 @@ export const getProductWithSupportedPlanFormValues = ({
 	const freeTrialValue =
 		freeTrial === null ? null : (freeTrial ?? baseProduct.free_trial ?? null);
 
+	const items = formValues.items ?? baseProduct.items;
+
+	// Custom items (e.g. a per-customer base price absent from the catalog plan)
+	// can change planType/basePriceType, so derive them from the merged items.
+	const { planType, basePriceType } = productV2ToFrontendProduct({
+		product: { ...baseProduct, items } as ProductV2,
+	});
+
 	return {
 		...baseProduct,
-		items: formValues.items ?? baseProduct.items,
+		items,
+		planType,
+		basePriceType,
 		free_trial: freeTrialValue,
 		version: formValues.version ?? baseProduct.version,
 	};

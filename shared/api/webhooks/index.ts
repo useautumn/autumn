@@ -1,5 +1,6 @@
 export * from "./balances/balancesLimitReached.js";
 export * from "./balances/balancesUsageAlertTriggered.js";
+export * from "./billing/billingAutoTopupFailed.js";
 export * from "./billing/billingAutoTopupSucceeded.js";
 export * from "./billing/billingUpdated.js";
 export * from "./vercel/index.js";

@@ -24,6 +24,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { getPrepaidItems } from "@/utils/product/productItemUtils";
 
 interface RevenueCatSyncSheetProps {
 	open: boolean;
@@ -65,20 +66,24 @@ export function RevenueCatSyncSheet({
 
 	const rows = useMemo(() => {
 		const byPlan = new Map(preflight.map((item) => [item.plan_id, item]));
-		return (products ?? []).map((product) => {
-			const item = byPlan.get(product.id);
-			const name = product.name || product.id;
-			let action: SyncAction = "create";
-			if (item?.rc_exists) {
-				action = item.rc_name !== name ? "rename" : "in_sync";
-			}
-			return {
-				id: product.id,
-				name,
-				action,
-				priceWarning: getPriceWarning(item),
-			};
-		});
+		// Prepaid plans are managed via raw mappings (per-SKU quantities), not the
+		// OAuth product sync — hide them here to avoid mismatched store products.
+		return (products ?? [])
+			.filter((product) => getPrepaidItems(product).length === 0)
+			.map((product) => {
+				const item = byPlan.get(product.id);
+				const name = product.name || product.id;
+				let action: SyncAction = "create";
+				if (item?.rc_exists) {
+					action = item.rc_name !== name ? "rename" : "in_sync";
+				}
+				return {
+					id: product.id,
+					name,
+					action,
+					priceWarning: getPriceWarning(item),
+				};
+			});
 	}, [products, preflight]);
 
 	const selectedIds = Object.keys(selected).filter((id) => selected[id]);

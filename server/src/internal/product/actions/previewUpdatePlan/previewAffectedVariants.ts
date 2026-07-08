@@ -1,4 +1,3 @@
-import { planUpdatePreviewHasDiff } from "@autumn/shared";
 import type {
 	ApiPlanV1,
 	DiffedCustomizePlanV1,
@@ -7,11 +6,13 @@ import type {
 	PreviewUpdatePlanParamsV2,
 	UpdateVariantParams,
 } from "@autumn/shared";
+import { planUpdatePreviewHasDiff } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import {
 	applyDiffToVariantPlan,
+	omitVariantOwnedSettings,
 	type VariantSettingsPatch,
 } from "../common/planTransformUtils.js";
 import { resolveVariantUpdateSource } from "../common/variantUpdateSource.js";
@@ -45,6 +46,9 @@ export const previewAffectedVariants = async ({
 	variantUpdates?: UpdateVariantParams[];
 }): Promise<PlanUpdatePreviewVariant[]> => {
 	const { db, org, env, features } = ctx;
+	const variantSettingsPatch = settingsPatch
+		? omitVariantOwnedSettings(settingsPatch)
+		: undefined;
 	const variantUpdateById = new Map(
 		variantUpdates.map((variantUpdate) => [
 			variantUpdate.variant_plan_id,
@@ -79,11 +83,12 @@ export const previewAffectedVariants = async ({
 			Math.max(latestVersionById.get(variant.id) ?? 0, variant.version),
 		);
 	}
-	const previewVariants = data.include_versions || data.all_versions
-		? variants
-		: variants.filter(
-				(variant) => variant.version === latestVersionById.get(variant.id),
-			);
+	const previewVariants =
+		data.include_versions || data.all_versions
+			? variants
+			: variants.filter(
+					(variant) => variant.version === latestVersionById.get(variant.id),
+				);
 
 	return Promise.all(
 		previewVariants.map(async (variant) => {
@@ -107,7 +112,7 @@ export const previewAffectedVariants = async ({
 				: applyDiffToVariantPlan({
 						plan: currentPlan,
 						diff,
-						settingsPatch,
+						settingsPatch: variantSettingsPatch,
 					});
 			const { hasCustomers, customerCount } = await getPlanCustomerUsage({
 				ctx,
@@ -118,7 +123,8 @@ export const previewAffectedVariants = async ({
 				(variantUpdate
 					? diffHasVersionableChanges(variantUpdate.customize)
 					: false);
-			const forceVariantVersion = variantUpdate?.force_version ?? data.force_version;
+			const forceVariantVersion =
+				variantUpdate?.force_version ?? data.force_version;
 			const disableVariantVersion =
 				variantUpdate?.disable_version || data.disable_version;
 			const versionable =

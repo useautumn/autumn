@@ -74,14 +74,16 @@ export type CreateScheduleRedirectMode = ClosedEnum<
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export const BillingBehavior = {
+export const CreateScheduleBillingBehavior = {
   ProrateImmediately: "prorate_immediately",
   None: "none",
 } as const;
 /**
  * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
  */
-export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
+export type CreateScheduleBillingBehavior = ClosedEnum<
+  typeof CreateScheduleBillingBehavior
+>;
 
 /**
  * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
@@ -963,7 +965,18 @@ export type CreateSchedulePlan2 = {
   subscriptionId?: string | undefined;
 };
 
-export type PhaseRequest2 = {
+/**
+ * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+ */
+export const BillingCycleAnchor2 = {
+  PhaseStart: "phase_start",
+} as const;
+/**
+ * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+ */
+export type BillingCycleAnchor2 = ClosedEnum<typeof BillingCycleAnchor2>;
+
+export type PhaseStart = {
   /**
    * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
    */
@@ -976,9 +989,13 @@ export type PhaseRequest2 = {
    * Plans to materialize for this phase.
    */
   plans: Array<CreateSchedulePlan2>;
+  /**
+   * Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts.
+   */
+  billingCycleAnchor?: BillingCycleAnchor2 | undefined;
 };
 
-export type Phase = PhaseRequest2;
+export type PhaseStartUnion = PhaseStart;
 
 export type CreateScheduleParams = {
   /**
@@ -1012,7 +1029,7 @@ export type CreateScheduleParams = {
   /**
    * Whether to prorate the immediate phase. 'none' skips proration charges and credits.
    */
-  billingBehavior?: BillingBehavior | undefined;
+  billingBehavior?: CreateScheduleBillingBehavior | undefined;
   /**
    * Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
    */
@@ -1024,7 +1041,7 @@ export type CreateScheduleParams = {
   /**
    * Ordered phase definitions for the schedule.
    */
-  phases: Array<PhaseRequest2>;
+  phases: Array<PhaseStart>;
 };
 
 /**
@@ -1087,6 +1104,7 @@ export const CreateScheduleCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
+  PaymentProcessing: "payment_processing",
 } as const;
 /**
  * The type of action required to complete the payment.
@@ -1216,9 +1234,9 @@ export const CreateScheduleRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateScheduleRedirectMode);
 
 /** @internal */
-export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingBehavior
-> = z.enum(BillingBehavior);
+export const CreateScheduleBillingBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleBillingBehavior
+> = z.enum(CreateScheduleBillingBehavior);
 
 /** @internal */
 export type StartsAt2$Outbound = number | string;
@@ -2331,43 +2349,55 @@ export function createSchedulePlan2ToJSON(
 }
 
 /** @internal */
-export type PhaseRequest2$Outbound = {
+export const BillingCycleAnchor2$outboundSchema: z.ZodMiniEnum<
+  typeof BillingCycleAnchor2
+> = z.enum(BillingCycleAnchor2);
+
+/** @internal */
+export type PhaseStart$Outbound = {
   starts_at?: number | string | undefined;
   starting_after?: StartingAfter2$Outbound | undefined;
   plans: Array<CreateSchedulePlan2$Outbound>;
+  billing_cycle_anchor?: string | undefined;
 };
 
 /** @internal */
-export const PhaseRequest2$outboundSchema: z.ZodMiniType<
-  PhaseRequest2$Outbound,
-  PhaseRequest2
+export const PhaseStart$outboundSchema: z.ZodMiniType<
+  PhaseStart$Outbound,
+  PhaseStart
 > = z.pipe(
   z.object({
     startsAt: z.optional(smartUnion([z.number(), z.string()])),
     startingAfter: z.optional(z.lazy(() => StartingAfter2$outboundSchema)),
     plans: z.array(z.lazy(() => CreateSchedulePlan2$outboundSchema)),
+    billingCycleAnchor: z.optional(BillingCycleAnchor2$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       startsAt: "starts_at",
       startingAfter: "starting_after",
+      billingCycleAnchor: "billing_cycle_anchor",
     });
   }),
 );
 
-export function phaseRequest2ToJSON(phaseRequest2: PhaseRequest2): string {
-  return JSON.stringify(PhaseRequest2$outboundSchema.parse(phaseRequest2));
+export function phaseStartToJSON(phaseStart: PhaseStart): string {
+  return JSON.stringify(PhaseStart$outboundSchema.parse(phaseStart));
 }
 
 /** @internal */
-export type Phase$Outbound = PhaseRequest2$Outbound;
+export type PhaseStartUnion$Outbound = PhaseStart$Outbound;
 
 /** @internal */
-export const Phase$outboundSchema: z.ZodMiniType<Phase$Outbound, Phase> = z
-  .lazy(() => PhaseRequest2$outboundSchema);
+export const PhaseStartUnion$outboundSchema: z.ZodMiniType<
+  PhaseStartUnion$Outbound,
+  PhaseStartUnion
+> = z.lazy(() => PhaseStart$outboundSchema);
 
-export function phaseToJSON(phase: Phase): string {
-  return JSON.stringify(Phase$outboundSchema.parse(phase));
+export function phaseStartUnionToJSON(
+  phaseStartUnion: PhaseStartUnion,
+): string {
+  return JSON.stringify(PhaseStartUnion$outboundSchema.parse(phaseStartUnion));
 }
 
 /** @internal */
@@ -2382,7 +2412,7 @@ export type CreateScheduleParams$Outbound = {
   billing_behavior?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   enable_plan_immediately?: boolean | undefined;
-  phases: Array<PhaseRequest2$Outbound>;
+  phases: Array<PhaseStart$Outbound>;
 };
 
 /** @internal */
@@ -2405,10 +2435,10 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
       CreateScheduleRedirectMode$outboundSchema,
       "if_required",
     ),
-    billingBehavior: z.optional(BillingBehavior$outboundSchema),
+    billingBehavior: z.optional(CreateScheduleBillingBehavior$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     enablePlanImmediately: z.optional(z.boolean()),
-    phases: z.array(z.lazy(() => PhaseRequest2$outboundSchema)),
+    phases: z.array(z.lazy(() => PhaseStart$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

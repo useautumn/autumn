@@ -42,7 +42,6 @@ import {
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
 import {
-	type AllVersionsUpdateMigrationTarget,
 	buildInPlaceUpdatePlanParams,
 	buildPreviewUpdatePlanParams,
 } from "./buildMigrationDraft";
@@ -96,55 +95,43 @@ function ConfirmInput({
 	);
 }
 
-const previewHasCustomersAcrossVersions = ({
-	preview,
-}: {
-	preview: Pick<PlanUpdatePreview, "has_customers" | "other_versions">;
-}) =>
-	preview.has_customers ||
-	(preview.other_versions ?? []).some((version) => version.has_customers);
+// A version needs a migration only when it has customers to move AND a
+// migratable diff (item/price changes; free-trial edits version without one).
+const entryNeedsMigration = (
+	entry: Pick<
+		PlanUpdatePreview,
+		"item_changes" | "price_change" | "has_customers"
+	>,
+) =>
+	entry.has_customers &&
+	((entry.item_changes?.length ?? 0) > 0 || entry.price_change !== undefined);
 
-// Only item/price changes move existing customers; free-trial and billing-
-// controls edits version without a migration. Sourced from the backend preview.
-const entryHasMigratableDiff = (
-	entry: Pick<PlanUpdatePreview, "item_changes" | "price_change"> | undefined,
-) => (entry?.item_changes?.length ?? 0) > 0 || entry?.price_change !== undefined;
-
-const collectAllVersionMigrationTargets = ({
+const hasMigrationTargets = ({
 	preview,
 	selectedVariantIds,
+	versionChoice,
 }: {
 	preview: PlanUpdatePreview | undefined;
 	selectedVariantIds: string[];
-}): AllVersionsUpdateMigrationTarget[] => {
-	if (!preview) return [];
+	versionChoice: VersionChoice;
+}): boolean => {
+	// New-version grandfathers everyone; update/all patch live versions.
+	if (!preview || versionChoice === "new") return false;
+	const includeHistorical = versionChoice === "all";
 
-	const targets: AllVersionsUpdateMigrationTarget[] = [];
-	if (
-		entryHasMigratableDiff(preview) &&
-		previewHasCustomersAcrossVersions({ preview })
-	) {
-		targets.push({ id: preview.plan_id, customize: preview.customize });
-	}
+	const baseEntries = [
+		preview,
+		...(includeHistorical ? (preview.other_versions ?? []) : []),
+	];
+	if (baseEntries.some(entryNeedsMigration)) return true;
 
-	for (const variantId of selectedVariantIds) {
-		const variantRows = preview.variants.filter(
-			(variant) => variant.plan_id === variantId,
-		);
-		const variantPreview = variantRows[0];
-		if (
-			variantPreview &&
-			entryHasMigratableDiff(variantPreview) &&
-			variantRows.some((row) => row.has_customers)
-		) {
-			targets.push({
-				id: variantPreview.plan_id,
-				customize: variantPreview.customize,
-			});
-		}
-	}
-
-	return targets;
+	return selectedVariantIds.some((variantId) => {
+		const entries = preview.variants
+			.filter((variant) => variant.plan_id === variantId)
+			.sort((a, b) => b.version - a.version);
+		const candidates = includeHistorical ? entries : entries.slice(0, 1);
+		return candidates.some(entryNeedsMigration);
+	});
 };
 
 export default function PlanChangeDialog({
@@ -215,13 +202,9 @@ export default function PlanChangeDialog({
 		() => previousAttributesToSettingChanges(preview?.previous_attributes),
 		[preview],
 	);
-	// customize holds the items/price/trial diff; billing_controls is versionable
-	// too but isn't in customize, so read it from previous_attributes. Everything
-	// else is metadata.
-	const billingControlsChanged =
-		!!preview?.previous_attributes &&
-		"billing_controls" in preview.previous_attributes;
-	const isVersionableChange = !!preview?.customize || billingControlsChanged;
+	// customize holds the items/price/trial diff — the only versionable change.
+	// Billing controls and other settings are non-versionable metadata patches.
+	const isVersionableChange = !!preview?.customize;
 	const isMetadataOnly = !!preview && !isVersionableChange;
 
 	const customCount = useMemo(
@@ -248,21 +231,16 @@ export default function PlanChangeDialog({
 		[showScope, selectedVariantIds],
 	);
 
-	// Only item/price changes are migratable; billing-controls and free-trial
-	// edits version without ever moving existing customers.
-	const hasMigratableDiff = entryHasMigratableDiff(preview);
-	// Patch-in-place applies the change to the loaded version, so its existing
-	// customers need a migration. New-version intentionally grandfathers.
-	const baseNeedsMigration = versionChoice === "update" && hasMigratableDiff;
-	const allVersionsMigrationTargets = useMemo(
+	// Existing customers only need migrating when a patched version actually
+	// changes and has customers on it.
+	const migrateNeeded = useMemo(
 		() =>
-			versionChoice === "all"
-				? collectAllVersionMigrationTargets({
-						preview,
-						selectedVariantIds: effectiveVariantIds,
-					})
-				: [],
-		[versionChoice, preview, effectiveVariantIds],
+			hasMigrationTargets({
+				preview,
+				selectedVariantIds: effectiveVariantIds,
+				versionChoice,
+			}),
+		[preview, effectiveVariantIds, versionChoice],
 	);
 
 	const variantConflicts = useMemo<VariantConflictInfo[]>(
@@ -313,15 +291,6 @@ export default function PlanChangeDialog({
 			setVersionChoice("update");
 		}
 	}, [isMetadataOnly, isLatest, versionChoice]);
-
-	// New grandfathers everyone; update/all patch live versions, so their
-	// existing customers are migration targets. Variants only migrate when
-	// there's a migratable diff to push (not for billing-controls-only edits).
-	const migrateNeeded =
-		(versionChoice === "update" &&
-			(baseNeedsMigration ||
-				(effectiveVariantIds.length > 0 && hasMigratableDiff))) ||
-		allVersionsMigrationTargets.length > 0;
 
 	const migrateTargets = useMemo(() => {
 		if (!preview) return [];
@@ -522,149 +491,193 @@ export default function PlanChangeDialog({
 					)}
 				</DialogHeader>
 
-				<motion.div
-					initial={false}
-					animate={{ height: bodyHeight ?? "auto" }}
-					transition={LAYOUT_TRANSITION}
-					style={{ overflow: "clip" }}
-					className="min-h-0 shrink-0"
-				>
-					<div ref={bodyRef} className="px-4 pt-1 pb-4">
-						<motion.div
-							key={step}
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							transition={{ duration: 0.15, ease: "easeOut" }}
-							className="text-sm flex flex-col gap-4"
-						>
-							{step === "review" && (
-								<div className="flex flex-col gap-2.5">
-									<FieldLabel>Preview changes</FieldLabel>
-									<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
-										{priceChange && (
-											<PlanPriceHeader
-												priceChange={priceChange}
-												product={product}
-												currency={currency}
+				<div className="min-h-0 flex-1 overflow-y-auto">
+					<motion.div
+						initial={false}
+						animate={{ height: bodyHeight ?? "auto" }}
+						transition={LAYOUT_TRANSITION}
+						style={{ overflow: "clip" }}
+					>
+						<div ref={bodyRef} className="px-4 pt-1 pb-4">
+							<motion.div
+								key={step}
+								initial={{ opacity: 0 }}
+								animate={{ opacity: 1 }}
+								transition={{ duration: 0.15, ease: "easeOut" }}
+								className="text-sm flex flex-col gap-4"
+							>
+								{step === "review" && (
+									<div className="flex flex-col gap-2.5">
+										<FieldLabel>Preview changes</FieldLabel>
+										<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
+											{priceChange && (
+												<PlanPriceHeader
+													priceChange={priceChange}
+													product={product}
+													currency={currency}
+												/>
+											)}
+											<ItemChangeList
+												itemChanges={preview?.item_changes ?? []}
 											/>
-										)}
-										<ItemChangeList itemChanges={preview?.item_changes ?? []} />
-										<PlanSettingsChanges changes={settingsChanges} />
+											<PlanSettingsChanges changes={settingsChanges} />
+										</div>
 									</div>
-								</div>
-							)}
+								)}
 
-							{step === "scope" && (
-								<div className="flex flex-col gap-2.5">
-									<div className="flex flex-col gap-0.5">
-										<FieldLabel>Apply to variants</FieldLabel>
-										<span className="text-tertiary-foreground text-xs">
-											Select which variants receive this change. Unselected
-											variants stay as they are.
-										</span>
-									</div>
-									<PropagateVariantsStep
-										variants={variantConflicts}
-										selectedIds={selectedVariantIds}
-										onToggle={(id) =>
-											setSelectedVariantIds((prev) =>
-												prev.includes(id)
-													? prev.filter((v) => v !== id)
-													: [...prev, id],
-											)
-										}
-									/>
-								</div>
-							)}
-
-							{step === "strategy" && (
-								<div className="flex flex-col gap-2.5">
-									<FieldLabel>How should this apply?</FieldLabel>
-									<RadioGroup
-										value={versionChoice}
-										onValueChange={(val) =>
-											setVersionChoice(val as VersionChoice)
-										}
-									>
-										{isLatest && (
-											<AreaRadioGroupItem
-												value="new"
-												label="Create new version"
-												description="Existing customers stay grandfathered on their current versions."
-											/>
-										)}
-										<AreaRadioGroupItem
-											value="update"
-											label={
-												isLatest
-													? "Update existing version"
-													: "Update this version"
-											}
-											description={
-												isLatest
-													? hasVariants
-														? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
-														: "Updates the latest version of this plan. You can migrate current customers after."
-													: `Updates only v${product.version}. Other versions and variants stay as they are.`
-											}
-										/>
-										{(!isLatest || hasHistoricalVersions) && (
-											<AreaRadioGroupItem
-												value="all"
-												label="Update all versions"
-												description="Applies this change to every version of this plan and its variants."
-											/>
-										)}
-									</RadioGroup>
-								</div>
-							)}
-
-							{step === "migrate" && (
-								<>
+								{step === "scope" && (
 									<div className="flex flex-col gap-2.5">
 										<div className="flex flex-col gap-0.5">
-											<FieldLabel>Review &amp; confirm</FieldLabel>
+											<FieldLabel>Apply to variants</FieldLabel>
 											<span className="text-tertiary-foreground text-xs">
-												{migrateSubtitle}
+												Select which variants receive this change. Unselected
+												variants stay as they are.
 											</span>
 										</div>
-										{isMetadataOnly ? (
-											<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
-												<PlanSettingsChanges changes={settingsChanges} />
-											</div>
-										) : (
-											<MigrateTargetsStep
-												showCustomers={migrateNeeded}
-												targets={migrateTargets}
-											/>
-										)}
+										<PropagateVariantsStep
+											variants={variantConflicts}
+											selectedIds={selectedVariantIds}
+											onToggle={(id) =>
+												setSelectedVariantIds((prev) =>
+													prev.includes(id)
+														? prev.filter((v) => v !== id)
+														: [...prev, id],
+												)
+											}
+										/>
 									</div>
+								)}
 
-									{migrateNeeded && customCount > 0 && (
-										<div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-2.5">
+								{step === "strategy" && (
+									<div className="flex flex-col gap-2.5">
+										<FieldLabel>How should this apply?</FieldLabel>
+										<RadioGroup
+											value={versionChoice}
+											onValueChange={(val) =>
+												setVersionChoice(val as VersionChoice)
+											}
+										>
+											{isLatest && (
+												<AreaRadioGroupItem
+													value="new"
+													label="Create new version"
+													description="Existing customers stay grandfathered on their current versions."
+												/>
+											)}
+											<AreaRadioGroupItem
+												value="update"
+												label={
+													isLatest
+														? "Update existing version"
+														: "Update this version"
+												}
+												description={
+													isLatest
+														? hasVariants
+															? "Updates the latest version of this plan and the variants you select next. You can migrate current customers after."
+															: "Updates the latest version of this plan. You can migrate current customers after."
+														: `Updates only v${product.version}. Other versions and variants stay as they are.`
+												}
+											/>
+											{(!isLatest || hasHistoricalVersions) && (
+												<AreaRadioGroupItem
+													value="all"
+													label="Update all versions"
+													description="Applies this change to every version of this plan and its variants."
+												/>
+											)}
+										</RadioGroup>
+									</div>
+								)}
+
+								{step === "migrate" && (
+									<>
+										<div className="flex flex-col gap-2.5">
 											<div className="flex flex-col gap-0.5">
-												<span className="text-sm font-medium text-foreground">
-													Apply to custom plans
-												</span>
-												<span className="text-xs text-muted-foreground">
-													There {customCount === 1 ? "is" : "are"} {customCount}{" "}
-													user{customCount !== 1 ? "s" : ""} on custom versions.
+												<FieldLabel>Review &amp; confirm</FieldLabel>
+												<span className="text-tertiary-foreground text-xs">
+													{migrateSubtitle}
 												</span>
 											</div>
-											<Switch
-												checked={includeCustom}
-												onCheckedChange={setIncludeCustom}
-											/>
+											{isMetadataOnly ? (
+												<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
+													<PlanSettingsChanges changes={settingsChanges} />
+												</div>
+											) : (
+												<div className="flex flex-col gap-3">
+													{settingsChanges.length > 0 && (
+														<div className="flex flex-col gap-1.5">
+															<div className="flex items-center gap-1.5 text-xs">
+																<SlidersIcon
+																	size={14}
+																	className="text-muted-foreground"
+																/>
+																<span className="font-medium text-foreground">
+																	Plan settings
+																</span>
+																<span className="text-tertiary-foreground">
+																	· applies to all versions &amp; variants
+																</span>
+															</div>
+															<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
+																<PlanSettingsChanges
+																	changes={settingsChanges}
+																/>
+															</div>
+														</div>
+													)}
+													<div className="flex flex-col gap-1.5">
+														{settingsChanges.length > 0 && (
+															<div className="flex items-center gap-1.5 text-xs">
+																<StackIcon
+																	size={14}
+																	className="text-muted-foreground"
+																/>
+																<span className="font-medium text-foreground">
+																	Items
+																</span>
+																<span className="text-tertiary-foreground">
+																	· applies only to the versions below
+																</span>
+															</div>
+														)}
+														<MigrateTargetsStep
+															showCustomers={migrateNeeded}
+															showSettings={false}
+															targets={migrateTargets}
+														/>
+													</div>
+												</div>
+											)}
 										</div>
-									)}
-								</>
-							)}
-						</motion.div>
-					</div>
-				</motion.div>
+
+										{migrateNeeded && customCount > 0 && (
+											<div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 px-3 py-2.5">
+												<div className="flex flex-col gap-0.5">
+													<span className="text-sm font-medium text-foreground">
+														Apply to custom plans
+													</span>
+													<span className="text-xs text-muted-foreground">
+														There {customCount === 1 ? "is" : "are"}{" "}
+														{customCount} user{customCount !== 1 ? "s" : ""} on
+														custom versions.
+													</span>
+												</div>
+												<Switch
+													checked={includeCustom}
+													onCheckedChange={setIncludeCustom}
+												/>
+											</div>
+										)}
+									</>
+								)}
+							</motion.div>
+						</div>
+					</motion.div>
+				</div>
 
 				{step === "migrate" && (
-					<div className="px-4 pb-1">
+					<div className="px-4 pt-3 pb-2">
 						<ConfirmInput
 							productId={product.id}
 							value={confirmText}

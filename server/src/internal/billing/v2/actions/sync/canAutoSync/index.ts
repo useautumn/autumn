@@ -63,8 +63,10 @@ export const canAutoSync = ({
 		};
 	}
 
+	// Add-ons may legitimately have no base price (feature-only billing,
+	// e.g. a prepaid add-on) — only non-add-on plans block on absent base.
 	const absentBase = currentPhase.plans.find(
-		(plan) => plan.base.kind === "absent",
+		(plan) => plan.base.kind === "absent" && plan.product.is_add_on !== true,
 	);
 	if (absentBase) {
 		return {

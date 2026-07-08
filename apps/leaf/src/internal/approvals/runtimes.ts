@@ -9,6 +9,7 @@ export type ApprovalRuntime = (input: {
 	approval: ChatApproval;
 	onProgress?: (statusLine: string) => void;
 	providerUserId: string;
+	approverToken?: string;
 }) => Promise<ApprovalRunResult>;
 
 // Registered per harness. "mastra" has no suspend/resume session model, so it

@@ -28,6 +28,7 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 			redis_config: org.redis_config
 				? {
 						host: org.redis_config.url,
+						hasPublicUrl: Boolean(org.redis_config.publicConnectionString),
 						migrationPercent: org.redis_config.migrationPercent,
 						previousMigrationPercent: org.redis_config.previousMigrationPercent,
 						migrationChangedAt: org.redis_config.migrationChangedAt,
@@ -45,13 +46,20 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 export const handleUpsertAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
-	body: z.object({ connectionString: z.string().min(1) }),
+	body: z.object({
+		connectionString: z.string().min(1),
+		publicConnectionString: z.string().min(1).optional(),
+	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
 		const { org_id: orgId } = c.req.param();
-		const { connectionString: rawConnectionString } = c.req.valid("json");
+		const {
+			connectionString: rawConnectionString,
+			publicConnectionString: rawPublicConnectionString,
+		} = c.req.valid("json");
 		const connectionString = rawConnectionString.trim();
+		const publicConnectionString = rawPublicConnectionString?.trim();
 
 		const org = await OrgService.get({ db, orgId });
 
@@ -82,6 +90,27 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 			});
 		}
 
+		if (publicConnectionString) {
+			let publicRedisUrl: URL;
+			try {
+				publicRedisUrl = new URL(publicConnectionString);
+			} catch {
+				throw new RecaseError({
+					message: "Invalid public connection string: could not parse URL",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+			if (!REDIS_PROTOCOLS.has(publicRedisUrl.protocol)) {
+				throw new RecaseError({
+					message:
+						"Invalid public connection string: expected redis:// or rediss://",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+		}
+
 		const now = Date.now();
 		const updatedOrg = await OrgService.update({
 			db,
@@ -89,6 +118,9 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 			updates: {
 				redis_config: {
 					connectionString: encryptData(connectionString),
+					publicConnectionString: publicConnectionString
+						? encryptData(publicConnectionString)
+						: undefined,
 					url: redisUrl.host,
 					migrationPercent: 0,
 					previousMigrationPercent: 0,

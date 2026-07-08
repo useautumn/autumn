@@ -257,15 +257,43 @@
     {
       "idx": 36,
       "version": "7",
-      "when": 1782926946819,
-      "tag": "0036_clean_hulk",
+      "when": 1782907607380,
+      "tag": "0036_remarkable_spirit",
       "breakpoints": true
     },
     {
       "idx": 37,
       "version": "7",
-      "when": 1783011544240,
-      "tag": "0037_grey_liz_osborn",
+      "when": 1782981605443,
+      "tag": "0037_match_slack_auth_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1783090737295,
+      "tag": "0038_exotic_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1783200161669,
+      "tag": "0039_unique_molecule_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1783416274113,
+      "tag": "0040_abnormal_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783529369844,
+      "tag": "0041_sweet_klaw",
       "breakpoints": true
     }
   ]

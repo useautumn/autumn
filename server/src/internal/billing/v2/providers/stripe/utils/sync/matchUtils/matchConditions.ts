@@ -12,6 +12,11 @@ export type PriceMatchCondition =
 			type: "stripe_base_price_shape";
 			stripe_product_id: string;
 			stripe_price_id: string;
+	  }
+	| {
+			type: "stripe_prepaid_price_shape";
+			stripe_product_id: string;
+			stripe_price_id: string;
 	  };
 
 export type ProductMatchCondition = {

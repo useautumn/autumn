@@ -1,3 +1,12 @@
+/**
+ * Pre-fix: a non-add-on linked product with no `product.group` set made
+ * `linkedCustomerProductsToTargetGroupMap` bail with `{ ok: false }` even when
+ * it was the only linked product -- blocking Stripe-portal downgrades from
+ * auto-syncing for any catalog that doesn't configure product groups (the
+ * common case). Post-fix: missing/blank group is itself a valid group key;
+ * ambiguity now only fires on an actual collision between two non-add-on
+ * products sharing the same entity+group key.
+ */
 import { describe, expect, test } from "bun:test";
 import type {
 	FeatureOptions,
@@ -8,6 +17,7 @@ import type {
 } from "@autumn/shared";
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 import type {
+	ItemDiff,
 	MatchedPlan,
 	SubscriptionMatch,
 } from "@/internal/billing/v2/actions/sync/detect/types";
@@ -78,14 +88,36 @@ const linkedCustomerProduct = ({
 		internal_entity_id: entityId,
 	}) as unknown as FullCusProduct;
 
+const unmatchedItemDiff = (id: string): ItemDiff => ({
+	stripe: {
+		id,
+		stripe_price_id: `price_${id}`,
+		stripe_product_id: `prod_${id}`,
+		unit_amount: null,
+		unit_amount_decimal: null,
+		currency: "usd",
+		quantity: 1,
+		billing_scheme: "per_unit",
+		tiers_mode: null,
+		tiers: null,
+		recurring_interval: "month",
+		recurring_interval_count: null,
+		recurring_usage_type: "metered",
+		metadata: {},
+	} as ItemDiff["stripe"],
+	match: { kind: "none" },
+});
+
 const draft = ({
 	matchedPlans,
 	syncPlans = matchedPlans.map((plan) =>
 		syncPlan({ productId: plan.product.id }),
 	),
+	itemDiffs = [],
 }: {
 	matchedPlans: MatchedPlan[];
 	syncPlans?: SyncPlanInstance[];
+	itemDiffs?: ItemDiff[];
 }): { match: SubscriptionMatch; params: SyncParamsV1 } => ({
 	match: {
 		stripe_subscription_id: "sub_incremental",
@@ -95,7 +127,7 @@ const draft = ({
 				start_date: 123,
 				end_date: null,
 				is_current: true,
-				item_diffs: [],
+				item_diffs: itemDiffs,
 				plans: matchedPlans,
 			},
 		],
@@ -125,6 +157,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
 			"pro",
 		]);
@@ -161,6 +194,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans).toHaveLength(1);
 		expect(result.params.phases?.[0]?.plans[0]?.plan_id).toBe("premium");
 	});
@@ -203,6 +237,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.customer_id).toBe(params.customer_id);
 		expect(result.params.stripe_subscription_id).toBe(params.stripe_subscription_id);
 		expect(result.params.stripe_schedule_id).toBe("sched_incremental");
@@ -229,6 +264,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans[0]?.entity_id).toBe("entity_b");
 	});
 
@@ -252,7 +288,7 @@ describe("buildIncrementalSyncParams", () => {
 		});
 	});
 
-	test("rejects unsupported targets with no product group", () => {
+	test("syncs a single ungrouped product with no linked customer product", () => {
 		const noGroup = product({ id: "no_group", group: null });
 		const blankGroup = product({ id: "blank_group", group: "" });
 
@@ -267,11 +303,54 @@ describe("buildIncrementalSyncParams", () => {
 				linkedCustomerProducts: [],
 			});
 
-			expect(result).toMatchObject({
-				shouldSync: false,
-				reason: "unsupported_target",
-			});
+			expect(result.shouldSync).toBe(true);
+			if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
+			expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
+				unsupported.id,
+			]);
 		}
+	});
+
+	test("syncs a downgrade between two ungrouped products with a single linked target (production regression)", () => {
+		const ultra = product({ id: "poke_ultra", group: "" });
+		const pro = product({ id: "poke_pro", group: "" });
+		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [linkedCustomerProduct({ product: ultra })],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
+		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
+			"poke_pro",
+		]);
+	});
+
+	test("rejects genuinely ambiguous ungrouped linked targets", () => {
+		const ultra = product({ id: "poke_ultra", group: null });
+		const credits = product({ id: "poke_credits", group: "" });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: ultra })],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: ultra, id: "cp_ultra" }),
+				linkedCustomerProduct({ product: credits, id: "cp_credits" }),
+			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "ambiguous_linked_targets",
+		});
 	});
 
 	test("keeps add-ons when linked quantity is below desired quantity", () => {
@@ -291,9 +370,39 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
+		// Adding instances must not expire the ones already linked — add-on
+		// expire_previous now replaces the linked same-product instance.
 		expect(result.params.phases?.[0]?.plans).toEqual([
-			{ expire_previous: true, plan_id: "addon", quantity: 2 },
+			{ expire_previous: false, plan_id: "addon", quantity: 2 },
 		]);
+	});
+
+	test("does not expire a linked add-on whose Stripe item merely failed to match (detection miss, not removal)", () => {
+		const addOn = product({ id: "addon", isAddOn: true });
+		// No matched plans at all for this phase — simulates a detection miss
+		// (e.g. the tiered-prepaid enrichment gap) rather than a true removal:
+		// the add-on's Stripe item is still on the subscription as an
+		// unmatched item_diff, not absent from it.
+		const { match, params } = draft({
+			matchedPlans: [],
+			syncPlans: [],
+			itemDiffs: [unmatchedItemDiff("addon_item")],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: addOn, id: "cp_addon_1" }),
+			],
+		});
+
+		if (result.shouldSync) {
+			expect(result.removedCustomerProducts).toEqual([]);
+		} else {
+			expect(result.reason).toBe("no_changed_targets");
+		}
 	});
 
 	test("prunes add-ons when linked quantity already satisfies desired quantity", () => {

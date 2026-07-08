@@ -1,4 +1,4 @@
-import type { ReplyTarget } from "./progress.js";
+import { formatTypingStatus, type ReplyTarget } from "./progress.js";
 
 // Generic "still working" verbs cycled during model inference, when there's no
 // concrete tool action to show — a calm rotation like the dashboard's.
@@ -42,7 +42,9 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 		if (stopped || text === lastRendered) return;
 		lastRendered = text;
 		lastRenderAt = Date.now();
-		target.startTyping(text).catch((error) => {
+		// formatTypingStatus enforces Slack's length cap; the empty-string clear
+		// in stop() stays raw because the formatter swaps "" for a default label.
+		target.startTyping(formatTypingStatus(text)).catch((error) => {
 			console.warn("[chat] Could not update status", error);
 		});
 	};

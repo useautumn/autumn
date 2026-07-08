@@ -1,0 +1,64 @@
+import { getRefreshTokenForConsentLookup } from "@/internal/auth/oauth/tokenRequestFields.js";
+import { describe, expect, test } from "bun:test";
+
+const formRequest = (fields: Record<string, string>) =>
+	new Request("http://localhost/api/auth/oauth2/token", {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams(fields),
+	});
+
+describe("OAuth token request fields", () => {
+	test("ignores refresh_token fields on non-refresh grants", () => {
+		return expect(
+			getRefreshTokenForConsentLookup(
+				formRequest({
+					grant_type: "authorization_code",
+					code: "code_1",
+					refresh_token: "refresh_unrelated",
+				}),
+			),
+		).resolves.toBeNull();
+	});
+
+	test("returns refresh_token only for refresh grants", () => {
+		return expect(
+			getRefreshTokenForConsentLookup(
+				formRequest({
+					grant_type: "refresh_token",
+					refresh_token: "refresh_1",
+				}),
+			),
+		).resolves.toBe("refresh_1");
+	});
+
+	test("supports JSON token requests", () => {
+		return expect(
+			getRefreshTokenForConsentLookup(
+				new Request("http://localhost/api/auth/oauth2/token", {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({
+						grant_type: "refresh_token",
+						refresh_token: "refresh_json",
+					}),
+				}),
+			),
+		).resolves.toBe("refresh_json");
+	});
+
+	test("supports case-insensitive JSON content types", () => {
+		return expect(
+			getRefreshTokenForConsentLookup(
+				new Request("http://localhost/api/auth/oauth2/token", {
+					method: "POST",
+					headers: { "content-type": "Application/JSON; charset=utf-8" },
+					body: JSON.stringify({
+						grant_type: "refresh_token",
+						refresh_token: "refresh_json_upper",
+					}),
+				}),
+			),
+		).resolves.toBe("refresh_json_upper");
+	});
+});

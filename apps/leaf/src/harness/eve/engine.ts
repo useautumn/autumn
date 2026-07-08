@@ -91,6 +91,7 @@ export const eveEngine: AgentEngine = {
 
 		const auth: EveAuthContext = {
 			appEnv: env,
+			autumnUserId: ctx.autumnUserId,
 			channelId: thread.channelId,
 			orgId: org.id,
 			provider: thread.provider,

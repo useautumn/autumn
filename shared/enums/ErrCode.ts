@@ -127,6 +127,7 @@ export const ErrCode = {
 
 	// Rewards
 	InvalidReward: "invalid_reward",
+	ProductNotInStripe: "product_not_in_stripe",
 	DuplicateRewardId: "duplicate_reward_id",
 	DuplicatePromoCode: "duplicate_promo_code",
 	PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",

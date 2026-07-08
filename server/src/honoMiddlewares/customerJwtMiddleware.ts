@@ -17,9 +17,10 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 
 /**
- * Default-deny allowlists keyed by token audience. Access tokens reach the 6
- * data routes; refresh tokens reach ONLY keys.refresh. Anything else is 403 by
- * virtue of not being listed — bidirectional aud isolation.
+ * Default-deny allowlists keyed by token audience. Access tokens reach the
+ * allowlisted data + analytics routes; refresh tokens reach ONLY keys.refresh.
+ * Anything else is 403 by virtue of not being listed — bidirectional aud
+ * isolation.
  */
 const ACCESS_ROUTES = new Set([
 	"POST /v1/check",
@@ -28,6 +29,8 @@ const ACCESS_ROUTES = new Set([
 	"POST /v1/balances.track",
 	"POST /v1/customers.get",
 	"POST /v1/entities.get",
+	"POST /v1/events.list",
+	"POST /v1/events.aggregate",
 ]);
 const REFRESH_ROUTES = new Set(["POST /v1/keys.refresh"]);
 
@@ -37,6 +40,7 @@ const TOKEN_SCOPES: string[] = [
 	Scopes.Customers.Read,
 	Scopes.Balances.Read,
 	Scopes.Balances.Write,
+	Scopes.Analytics.Read,
 ];
 
 export const customerJwtMiddleware = async (

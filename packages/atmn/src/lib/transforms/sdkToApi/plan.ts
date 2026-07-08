@@ -46,7 +46,8 @@ export interface ApiPlanItemParams {
 		on_decrease: string;
 	};
 	rollover?: {
-		max: number;
+		max?: number;
+		max_percentage?: number;
 		expiry_duration_type: string;
 		expiry_duration_length?: number;
 	};
@@ -140,8 +141,13 @@ export function transformPlanItem(planItem: PlanItem): ApiPlanItemParams {
 
 	if (planItem.rollover) {
 		result.rollover = {
-			// API expects number, SDK allows null (treat null as 0 or very large number)
-			max: planItem.rollover.max ?? 0,
+			...(planItem.rollover.maxPercentage == null && {
+				// API expects number, SDK allows null (treat null as 0 or very large number)
+				max: planItem.rollover.max ?? 0,
+			}),
+			...(planItem.rollover.maxPercentage != null && {
+				max_percentage: planItem.rollover.maxPercentage,
+			}),
 			expiry_duration_type: planItem.rollover.expiryDurationType,
 			...(planItem.rollover.expiryDurationLength !== undefined && {
 				expiry_duration_length: planItem.rollover.expiryDurationLength,

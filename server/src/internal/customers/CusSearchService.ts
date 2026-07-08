@@ -22,6 +22,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import type { CustomerListFilters } from "./customerListFilters.js";
@@ -855,6 +856,7 @@ export class CusSearchService {
 				${cursorClause}
 				ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
 				LIMIT ${fetchLimit}
+				${planetScaleTag({ query: "searchCustomersByProductMode" })}
 			`)) as unknown as Array<{
 				internal_id: string;
 				created_at: number;
@@ -872,6 +874,7 @@ export class CusSearchService {
 			${cursorClause}
 			ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
 			LIMIT ${fetchLimit}
+			${planetScaleTag({ query: "searchCustomersByProduct" })}
 		`)) as unknown as Array<{
 			internal_id: string;
 			created_at: number;

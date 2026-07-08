@@ -1,5 +1,5 @@
 {
-  "id": "8ee2fcf9-e143-4678-b20f-dd6bd714b2b0",
+  "id": "442bd3fe-6549-429e-ac25-0bb5f05dc192",
   "prevId": "ba26c994-a166-4a27-a112-805583f32edb",
   "version": "7",
   "dialect": "postgresql",
@@ -3907,23 +3907,7 @@
           "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
         }
       },
-      "indexes": {
-        "idx_harness_sessions_session_id": {
-          "name": "idx_harness_sessions_session_id",
-          "columns": [
-            {
-              "expression": "session_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "harness_sessions_org_id_env_thread_key_pk": {
@@ -7039,6 +7023,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'"
+        },
+        "feature_quantities": {
+          "name": "feature_quantities",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

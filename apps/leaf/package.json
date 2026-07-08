@@ -40,6 +40,7 @@
 		"drizzle-orm": "catalog:",
 		"eve": "^0.16.2",
 		"hono": "4.12.7",
+		"lru-cache": "^11.2.7",
 		"postgres": "catalog:",
 		"zod": "3.25.76"
 	},

@@ -10,8 +10,10 @@ import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
 import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
+import { rollbackAfterSubscriptionFailure } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlanRollback";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
+import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 
 export const executeStripeBillingPlan = async ({
@@ -54,6 +56,10 @@ export const executeStripeBillingPlan = async ({
 	const resumeAfterSubscriptionAction =
 		resumeAfter === StripeBillingStage.SubscriptionAction;
 
+	if (!resumeAfterSubscriptionAction) {
+		validatePromotionCodeMinimums({ ctx, billingContext, billingPlan });
+	}
+
 	if (stripeInvoiceAction && !resumeAfterInvoiceAction) {
 		invoiceResult = await executeStripeInvoiceAction({
 			ctx,
@@ -89,11 +95,27 @@ export const executeStripeBillingPlan = async ({
 	}
 
 	if (stripeSubscriptionAction && !resumeAfterSubscriptionAction) {
-		subscriptionResult = await executeStripeSubscriptionAction({
-			ctx,
-			billingPlan,
-			billingContext,
-		});
+		try {
+			subscriptionResult = await executeStripeSubscriptionAction({
+				ctx,
+				billingPlan,
+				billingContext,
+			});
+		} catch (error) {
+			const rollbackError = await rollbackAfterSubscriptionFailure({
+				ctx,
+				billingContext,
+				invoiceResult,
+				stripeInvoiceItems,
+			});
+			if (rollbackError) {
+				throw new AggregateError(
+					[error, rollbackError],
+					"[executeStripeBillingPlan] Subscription action failed and rollback was incomplete",
+				);
+			}
+			throw error;
+		}
 		if (subscriptionResult?.deferred) return subscriptionResult;
 		stripeSubscription =
 			subscriptionResult.stripeSubscription ?? stripeSubscription;

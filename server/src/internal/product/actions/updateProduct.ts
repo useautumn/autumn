@@ -12,6 +12,7 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
@@ -21,7 +22,6 @@ import { handleUpdateProductDetails } from "@/internal/products/handlers/handleU
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -218,7 +218,6 @@ export const updateProduct = async ({
 			},
 		});
 	};
-
 	const newFreeTrial =
 		"free_trial" in productUpdates
 			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
@@ -265,60 +264,6 @@ export const updateProduct = async ({
 	const versionableCustomerProductExists =
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
-	const billingControlsProvided = "billing_controls" in productUpdates;
-
-	if (
-		versionableCustomerProductExists &&
-		!effectiveDisableVersion &&
-		!force_version &&
-		billingControlsProvided
-	) {
-		const {
-			billingControlsSame,
-			itemsSame,
-			freeTrialsSame,
-			detailsSame,
-			configSame,
-			optionsSame,
-			metadataSame,
-		} = productsAreSame({
-			newProductV2: newProductV2,
-			curProductV2,
-			features,
-		});
-
-		// Only take the billing-controls-only shortcut when nothing else changed;
-		// otherwise fall through so detail/default guards run on other fields.
-		const onlyBillingControlsChanged =
-			!billingControlsSame &&
-			itemsSame &&
-			freeTrialsSame &&
-			detailsSame &&
-			configSame &&
-			optionsSame &&
-			metadataSame;
-
-		if (onlyBillingControlsChanged) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-				baseInternalProductId: nextBaseInternalProductId,
-			});
-
-			const latestBase = await ProductService.getFull({
-				db,
-				idOrInternalId: newProduct.id,
-				orgId: org.id,
-				env,
-			});
-			await applyVariantUpdates({ latestBase });
-
-			return newProduct;
-		}
-	}
 
 	await handleUpdateProductDetails({
 		db,
@@ -367,13 +312,13 @@ export const updateProduct = async ({
 		!effectiveDisableVersion &&
 		(itemsExist || freeTrialProvided)
 	) {
-		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
 			features,
 		});
 
-		const productSame = itemsSame && freeTrialsSame && billingControlsSame;
+		const productSame = itemsSame && freeTrialsSame;
 
 		if (!productSame) {
 			const newProduct = await handleVersionProductV2({
@@ -454,9 +399,10 @@ export const updateProduct = async ({
 	await applyHistoricalVersions({ latestProduct: newFullProduct });
 	await applyVariantUpdates({ latestBase: newFullProduct });
 
-	await initProductInStripe({
+	await initStripeResourcesForProducts({
 		ctx,
-		product: newFullProduct,
+		products: [newFullProduct],
+		candidateProducts: [fullProduct],
 	});
 
 	// logger.info("Adding task to queue to detect base variant");

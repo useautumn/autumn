@@ -26,6 +26,8 @@ const leafInternalAuth = (): AuthFn<Request> => async (request) => {
 	};
 	const chatInstallationId = request.headers.get("x-leaf-chat-installation-id");
 	if (chatInstallationId) attributes.chatInstallationId = chatInstallationId;
+	const autumnUserId = request.headers.get("x-leaf-autumn-user-id");
+	if (autumnUserId) attributes.autumnUserId = autumnUserId;
 
 	return {
 		attributes,
