@@ -30,6 +30,12 @@ export const runWebMessage = async ({
 	// The per-user credential is minted at the cookie boundary (bot.ts getUser);
 	// here we only read this user's scoped token.
 	const harness = chatEnv.WEB_AGENT_HARNESS;
+	if (harness === "eve") {
+		await thread.post(
+			"Eve is only supported by the dashboard streaming route.",
+		);
+		return;
+	}
 	const { accessToken } = await getOrgInstallationToken({
 		env,
 		orgId,

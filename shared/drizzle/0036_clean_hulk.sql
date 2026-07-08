@@ -1,0 +1,1 @@
+CREATE INDEX CONCURRENTLY "idx_harness_sessions_session_id" ON "leaf"."harness_sessions" USING btree ("session_id");

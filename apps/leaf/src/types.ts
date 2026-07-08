@@ -21,6 +21,10 @@ export const agentOutputSchema = z.preprocess(
 		const suspension = payload.suspension as
 			| Record<string, unknown>
 			| undefined;
+		const catalogDecision = payload.catalogDecision as
+			| Record<string, unknown>
+			| undefined;
+		const question = payload.question as Record<string, unknown> | undefined;
 		return {
 			text: payload.text,
 			env: payload.env,
@@ -32,6 +36,14 @@ export const agentOutputSchema = z.preprocess(
 				toolName: suspension.toolName,
 				toolArgs: suspension.toolArgs,
 				preview: suspension.preview,
+			},
+			catalogDecision: catalogDecision && {
+				plan: catalogDecision.plan,
+			},
+			question: question && {
+				prompt: question.prompt,
+				options: question.options,
+				requestId: question.requestId,
 			},
 		};
 	},
@@ -48,6 +60,27 @@ export const agentOutputSchema = z.preprocess(
 				toolName: z.string(),
 				toolArgs: z.record(z.string(), z.unknown()),
 				preview: z.unknown(),
+			})
+			.optional(),
+		// Set when `previewUpdateCatalog` returned a plan that needs a
+		// versioning/variant/migration decision before the write can run.
+		catalogDecision: z
+			.strictObject({
+				plan: z.unknown(),
+			})
+			.optional(),
+		// Set when the agent paused on ask_question with structured options;
+		// `text` still carries the flat prompt+options for text-only surfaces.
+		question: z
+			.strictObject({
+				prompt: z.string(),
+				requestId: z.string(),
+				options: z.array(
+					z.strictObject({
+						id: z.string().optional(),
+						label: z.string().optional(),
+					}),
+				),
 			})
 			.optional(),
 	}),
@@ -71,6 +104,8 @@ export type BotMessage = {
 		attachment: Attachment;
 	}) => Promise<Buffer | null>;
 	attachments?: Attachment[];
+	/** One-turn structured context (e.g. a submitted catalog decision card). */
+	clientContext?: Record<string, unknown>;
 	installation: LeafChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
@@ -83,6 +118,8 @@ export type BotMessage = {
 	onAgentReady?: () => Promise<void> | void;
 	/** Fires when the agent starts an inference or emits thinking — drives the live status. */
 	onThinking?: () => void;
+	/** Streams interim narration (message deltas before the final reply). */
+	onReasoning?: (input: { id: string; text: string }) => void;
 	onTurnComplete?: (text: string) => Promise<void> | void;
 	providerUserId: string;
 	run?: ActiveRun;

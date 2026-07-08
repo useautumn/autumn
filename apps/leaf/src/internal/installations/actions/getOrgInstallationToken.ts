@@ -5,8 +5,8 @@ import {
 	chatInstallations,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import { db } from "../../../lib/db.js";
+import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import { getInstallationOAuthAccessToken } from "./getInstallationOAuthAccessToken.js";
 
 /** Resolve an org's chat installation and a fresh Autumn OAuth access token for

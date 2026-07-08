@@ -40,17 +40,26 @@ export const getInstallationOAuthAccessToken = async ({
 			workspaceId: installation.workspace_id,
 		});
 		if (!access.allowed) {
-			throw new Error("Slack admin workspace is not authorized for OAuth token access");
+			throw new Error(
+				"Slack admin workspace is not authorized for OAuth token access",
+			);
 		}
 	}
 
-	let credential = await getChatOAuthCredentialByInstallationEnv({
-		db,
-		chatInstallationId: installation.id,
-		env,
-		orgId,
-		userId,
-	});
+	const getCredential = (credentialUserId?: string | null) =>
+		getChatOAuthCredentialByInstallationEnv({
+			db,
+			chatInstallationId: installation.id,
+			env,
+			orgId,
+			userId: credentialUserId,
+		});
+
+	let credential = await getCredential(userId);
+
+	if (!credential && userId && installation.provider !== "web") {
+		credential = await getCredential(null);
+	}
 
 	if (
 		isSlackAdminProvider({ provider: installation.provider }) &&
@@ -65,17 +74,12 @@ export const getInstallationOAuthAccessToken = async ({
 			});
 		});
 
-		credential = await getChatOAuthCredentialByInstallationEnv({
-			db,
-			chatInstallationId: installation.id,
-			env,
-			orgId,
-		});
+		credential = await getCredential();
 	}
 
 	if (!credential) {
 		throw new Error(
-			`Missing ${env} Autumn OAuth credentials for Slack install`,
+			`Missing ${env} Autumn OAuth credentials for ${installation.provider} install`,
 		);
 	}
 
@@ -100,7 +104,7 @@ export const getInstallationOAuthAccessToken = async ({
 
 	if (!response.ok) {
 		throw new Error(
-			`Could not refresh ${env} Autumn OAuth token for Slack install`,
+			`Could not refresh ${env} Autumn OAuth token for ${installation.provider} install`,
 		);
 	}
 

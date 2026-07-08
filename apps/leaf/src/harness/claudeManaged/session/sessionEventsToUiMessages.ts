@@ -21,7 +21,21 @@ export type LeafUiMessage = UIMessage<
 			status: LeafApprovalStatus;
 			toolName?: string;
 		};
-		step: { label: string; status: "running" | "done" | "error" };
+		// Key drives the wire type (`data-${key}`) — hyphenated to match
+		// vite's `LeafUIMessage["catalog-decision"]` part.
+		"catalog-decision": { plan: unknown; status: "pending" | "submitted" };
+		question: {
+			options: { id?: string; label?: string }[];
+			requestId?: string;
+			status: "pending" | "answered";
+		};
+		reasoning: { text: string };
+		step: {
+			finishedAt?: number;
+			label: string;
+			startedAt?: number;
+			status: "running" | "done" | "error";
+		};
 	}
 >;
 
