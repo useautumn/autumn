@@ -280,6 +280,13 @@ export const SpendLimitRow = ({
 	);
 };
 
+const FILTER_VALUE_DISPLAY_LENGTH = 24;
+
+const truncateFilterValue = (value: string) =>
+	value.length > FILTER_VALUE_DISPLAY_LENGTH
+		? `${value.slice(0, FILTER_VALUE_DISPLAY_LENGTH - 1)}…`
+		: value;
+
 export const UsageLimitRow = ({
 	item: usageLimit,
 	featureNameById,
@@ -288,6 +295,10 @@ export const UsageLimitRow = ({
 }: EditableRowProps<ApiUsageLimit | DbUsageLimit>) => {
 	const usage = "usage" in usageLimit ? usageLimit.usage : undefined;
 	const enabled = "enabled" in usageLimit ? usageLimit.enabled : true;
+	const filterProperties = usageLimit.filter?.properties;
+	const filterEntries = filterProperties
+		? Object.entries(filterProperties)
+		: [];
 	return (
 		<RowButton enabled={enabled} onClick={onClick}>
 			<RowHeader
@@ -303,6 +314,23 @@ export const UsageLimitRow = ({
 					{
 						label: "Limit",
 						value: `${usageLimit.limit.toLocaleString()} / ${usageLimit.interval}`,
+					},
+					{
+						label: "Filter",
+						value: filterEntries.length ? (
+							<span
+								title={filterEntries
+									.map(([key, value]) => `${key} = ${value}`)
+									.join(", ")}
+							>
+								{filterEntries
+									.map(
+										([key, value]) =>
+											`${key} = ${truncateFilterValue(String(value))}`,
+									)
+									.join(", ")}
+							</span>
+						) : null,
 					},
 					{
 						label: "Usage",

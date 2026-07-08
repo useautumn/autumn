@@ -31,6 +31,9 @@ export const UsageWindowSchema = z.object({
 	internal_entity_id: z.string().nullable(),
 	feature_id: z.string(),
 	internal_feature_id: z.string(),
+	// Canonical filter identity of the limit this counter serves; null/'' =
+	// the unfiltered aggregate counter. Defaulted so pre-filter cached rows parse.
+	filter_key: z.string().nullable().default(null),
 	anchor_customer_entitlement_id: z.string().nullable(),
 	window_start_at: z.number(),
 	window_end_at: z.number(),
@@ -46,6 +49,7 @@ export const usageWindows = pgTable(
 		internal_entity_id: text("internal_entity_id"),
 		feature_id: text("feature_id").notNull(),
 		internal_feature_id: text("internal_feature_id").notNull(),
+		filter_key: text("filter_key"),
 		anchor_customer_entitlement_id: text("anchor_customer_entitlement_id"),
 		window_start_at: numeric({ mode: "number" }).notNull(),
 		window_end_at: numeric({ mode: "number" }).notNull(),
@@ -84,14 +88,18 @@ export const usageWindows = pgTable(
 		index("idx_uw_internal_feature_id")
 			.on(table.internal_feature_id)
 			.concurrently(),
-		// ONE mutable counter row per scope: bounds roll forward in place, usage
-		// zeroes when its window closes. NULL internal_entity_id = customer
-		// scope; COALESCE makes the key unique across both scopes.
-		uniqueIndex("idx_usage_windows_customer_feature_scope").on(
-			table.internal_customer_id,
-			table.internal_feature_id,
-			sql`COALESCE(${table.internal_entity_id}, '')`,
-		),
+		// ONE mutable counter row per scope + filter: bounds roll forward in
+		// place, usage zeroes when its window closes. NULL internal_entity_id =
+		// customer scope, NULL filter_key = the unfiltered aggregate counter;
+		// COALESCE makes the key unique across all combinations.
+		uniqueIndex("idx_usage_windows_customer_feature_scope")
+			.on(
+				table.internal_customer_id,
+				table.internal_feature_id,
+				sql`COALESCE(${table.internal_entity_id}, '')`,
+				sql`COALESCE(${table.filter_key}, '')`,
+			)
+			.concurrently(),
 	],
 ).enableRLS();
 
