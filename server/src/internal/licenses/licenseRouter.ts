@@ -86,5 +86,51 @@ const handleUpdateLicense = createRoute({
 	},
 });
 
+const handlePreviewAttachLicense = createRoute({
+	scopes: [Scopes.Billing.Read],
+	body: LicenseAttachParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const previewResult = await attachLicense({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			planId: body.plan_id,
+			poolId: body.pool_id,
+			parentSubscriptionId: body.parent_subscription_id,
+			preview: true,
+		});
+
+		return c.json(previewResult);
+	},
+});
+
+const handlePreviewUpdateLicense = createRoute({
+	scopes: [Scopes.Billing.Read],
+	body: UpdateLicenseParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const previewResult = await updateLicense({
+			ctx,
+			customerId: body.customer_id,
+			assignmentId: body.assignment_id,
+			cancelAction: body.cancel_action,
+			preview: true,
+		});
+
+		return c.json(previewResult);
+	},
+});
+
 licenseRpcRouter.post("/licenses.attach", ...handleAttachLicense);
 licenseRpcRouter.post("/licenses.update", ...handleUpdateLicense);
+licenseRpcRouter.post(
+	"/licenses.preview_attach",
+	...handlePreviewAttachLicense,
+);
+licenseRpcRouter.post(
+	"/licenses.preview_update",
+	...handlePreviewUpdateLicense,
+);

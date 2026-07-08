@@ -2,7 +2,7 @@
  * TDD tests for license assign/unassign edge cases.
  *
  * Red-failure mode (current behavior):
- *  - licenses.detach with an unknown assignment_id returns 200 with an
+ *  - licenses.update with an unknown assignment_id returns 200 with an
  *    undefined assignment (silent no-op) instead of 404.
  *  - When two active pools offer the same license and the parents are free
  *    plans (no subscription id), assignment is impossible: the API demands
@@ -112,5 +112,184 @@ test.concurrent(
 		})) as { assignment: { id: string; ended_at: number | null } };
 		expect(assignment.id).toBeTruthy();
 		expect(assignment.ended_at).toBeNull();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses-attach-edge: raised catalog grant is assignable before any reconcile")}`,
+	async () => {
+		const customerId = "license-raise-included";
+		const parent = products.base({
+			id: "raise-included-parent",
+			items: [items.dashboard()],
+		});
+		const license = products.base({
+			id: "raise-included-seat",
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { entities, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [s.billing.attach({ productId: parent.id })],
+		});
+
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 1,
+		});
+		await autumnV2_2.post("/licenses.attach", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		});
+		await expectAutumnError({
+			errMessage: "No available licenses",
+			func: async () =>
+				await autumnV2_2.post("/licenses.attach", {
+					customer_id: customerId,
+					entity_id: entities[1].id,
+					plan_id: license.id,
+				}),
+		});
+
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 3,
+		});
+		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			plan_id: license.id,
+		})) as { assignment: { id: string } };
+		expect(assignment.id).toBeTruthy();
+
+		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+			customer_id: customerId,
+		})) as { list: LicensePoolResponse[] };
+		expect(pools.list[0].inventory).toMatchObject({
+			included: 3,
+			assigned: 2,
+			available: 1,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses-attach-edge: update rejects an assignment owned by another customer")}`,
+	async () => {
+		const parent = products.base({
+			id: "ownership-parent",
+			items: [items.dashboard()],
+		});
+		const license = products.base({
+			id: "ownership-seat",
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { customerId, entities, autumnV2_2 } = await initScenario({
+			customerId: "license-ownership-a",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [s.billing.attach({ productId: parent.id })],
+		});
+		await initScenario({
+			customerId: "license-ownership-b",
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 1,
+		});
+		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		})) as { assignment: { id: string } };
+
+		await expectAutumnError({
+			errMessage: "not found",
+			func: async () =>
+				await autumnV2_2.post("/licenses.update", {
+					customer_id: "license-ownership-b",
+					assignment_id: assignment.id,
+					cancel_action: "cancel_immediately",
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses-attach-edge: preview_attach and preview_update report without executing")}`,
+	async () => {
+		const customerId = "license-preview";
+		const parent = products.base({
+			id: "preview-parent",
+			items: [items.dashboard()],
+		});
+		const license = products.base({
+			id: "preview-seat",
+			items: [items.monthlyMessages({ includedUsage: 25 })],
+		});
+
+		const { entities, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [s.billing.attach({ productId: parent.id })],
+		});
+
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 2,
+		});
+
+		const attachPreview = (await autumnV2_2.post("/licenses.preview_attach", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		})) as { intent: string; available: number };
+		expect(attachPreview.intent).toBe("assign");
+		expect(attachPreview.available).toBe(2);
+
+		const assignments = (await autumnV2_2.post("/licenses.list_assignments", {
+			customer_id: customerId,
+		})) as { list: unknown[] };
+		expect(assignments.list).toHaveLength(0);
+
+		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		})) as { assignment: { id: string } };
+
+		const updatePreview = (await autumnV2_2.post("/licenses.preview_update", {
+			customer_id: customerId,
+			assignment_id: assignment.id,
+			cancel_action: "cancel_immediately",
+		})) as { intent: string; ended_at: number };
+		expect(updatePreview.intent).toBe("cancel_immediately");
+		expect(updatePreview.ended_at).toBeGreaterThan(0);
+
+		const stillActive = (await autumnV2_2.post("/licenses.list_assignments", {
+			customer_id: customerId,
+		})) as { list: { id: string }[] };
+		expect(stillActive.list).toHaveLength(1);
 	},
 );

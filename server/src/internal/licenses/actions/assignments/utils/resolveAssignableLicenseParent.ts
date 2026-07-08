@@ -36,7 +36,11 @@ export const resolveAssignableLicenseParent = async ({
 	planId: string;
 	poolId?: string;
 	parentSubscriptionId?: string;
-}): Promise<{ parent: FullCusProduct; licenseDefinition: DbPlanLicense }> => {
+}): Promise<{
+	parent: FullCusProduct;
+	licenseDefinition: DbPlanLicense;
+	available: number;
+}> => {
 	const assignableParents = fullCustomer.customer_products.filter(
 		(customerProduct) =>
 			isLicenseAssignableParentCustomerProduct({ customerProduct }),
@@ -76,7 +80,7 @@ export const resolveAssignableLicenseParent = async ({
 			statusCode: 400,
 		});
 	}
-	if (candidates.length > 1 && !parentSubscriptionId && !poolId) {
+	if (candidates.length > 1) {
 		throw new RecaseError({
 			message:
 				"Multiple license pools match this license. Provide pool_id or parent_subscription_id.",
@@ -91,7 +95,12 @@ export const resolveAssignableLicenseParent = async ({
 		parentCustomerProductId: parent.id,
 		licenseInternalProductId: licenseProduct.internal_id,
 	});
-	const available = balance?.remaining ?? licenseDefinition.included;
+	// Project the granted delta the attach tx will apply (upsertGranted shifts
+	// remaining by included - granted), so a raised catalog grant is usable
+	// before any reconcile has refreshed the balance row.
+	const available = balance
+		? balance.remaining + (licenseDefinition.included - balance.granted)
+		: licenseDefinition.included;
 
 	if (available <= 0) {
 		throw new RecaseError({
@@ -101,5 +110,5 @@ export const resolveAssignableLicenseParent = async ({
 		});
 	}
 
-	return { parent, licenseDefinition };
+	return { parent, licenseDefinition, available };
 };

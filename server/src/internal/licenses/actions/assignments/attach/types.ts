@@ -22,4 +22,5 @@ export type LicenseAssignmentPlan =
 			existing?: undefined;
 			parent: FullCusProduct;
 			licenseDefinition: DbPlanLicense;
+			available: number;
 	  };

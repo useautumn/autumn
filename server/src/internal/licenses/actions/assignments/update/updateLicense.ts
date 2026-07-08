@@ -1,5 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getLicenseAssignmentResponse } from "../../../licenseResponseUtils.js";
+import { logLicenseAction } from "../../logs/logLicenseAction.js";
 import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
 import { computeLicenseUpdatePlan } from "./computeLicenseUpdatePlan.js";
 import { executeLicenseUpdate } from "./executeLicenseUpdate.js";
@@ -11,11 +12,13 @@ export const updateLicense = async ({
 	customerId,
 	assignmentId,
 	cancelAction,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	assignmentId: string;
 	cancelAction: LicenseCancelAction;
+	preview?: boolean;
 }) => {
 	// 1. Setup
 	const context = await setupLicenseUpdateContext({
@@ -29,6 +32,25 @@ export const updateLicense = async ({
 		assignment: context.assignment,
 		cancelAction,
 	});
+
+	logLicenseAction({
+		ctx,
+		action: preview ? "preview_update" : "update",
+		details: {
+			customer: customerId,
+			assignment: assignmentId,
+			action: plan.action,
+			endedAt: plan.endedAt ?? context.assignment.ended_at,
+		},
+	});
+	if (preview) {
+		return {
+			customer_id: customerId,
+			intent: plan.endedAt ? ("cancel_immediately" as const) : ("none" as const),
+			assignment_id: assignmentId,
+			ended_at: plan.endedAt ?? context.assignment.ended_at,
+		};
+	}
 
 	// 3. Execute
 	if (plan.endedAt) {

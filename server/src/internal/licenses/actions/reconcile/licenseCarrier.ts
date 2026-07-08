@@ -2,6 +2,7 @@ import {
 	AttachParamsV1Schema,
 	type CreatePlanItemParamsV1,
 	type CustomizePlanV1,
+	diffPlanV1,
 	ErrCode,
 	ExtUpdateSubscriptionV1ParamsSchema,
 	type FullCusProduct,
@@ -101,6 +102,22 @@ const attachCarrier = async ({
 		},
 	});
 
+	await stampCarrierParent({ ctx, fullCustomer, licenseProduct, parent });
+};
+
+/** Billing attach/update mints a fresh customer product without the carrier
+ * link; re-stamp it so the next reconcile recognizes the carrier. */
+const stampCarrierParent = async ({
+	ctx,
+	fullCustomer,
+	licenseProduct,
+	parent,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	licenseProduct: FullProduct;
+	parent: FullCusProduct;
+}) => {
 	const carrier =
 		await licenseAssignmentRepo.findLatestActiveCustomerLevelCustomerProduct({
 			db: ctx.db,
@@ -119,6 +136,71 @@ const attachCarrier = async ({
 		cusProductId: carrier.id,
 		updates: { license_parent_customer_product_id: parent.id },
 	});
+};
+
+/** A carrier is stale when its subscription rows no longer diff-equal the
+ * rows attach would create today — same diffPlanV1 used for plan variants. */
+const carrierIsStale = async ({
+	ctx,
+	carrier,
+	licenseProduct,
+	customize,
+}: {
+	ctx: AutumnContext;
+	carrier: FullCusProduct;
+	licenseProduct: FullProduct;
+	customize: CustomizePlanV1;
+}) => {
+	const desired = await setupCustomFullProduct({
+		ctx,
+		currentFullProduct: licenseProduct,
+		customizePlan: customize,
+	});
+	const toApiPlan = (product: FullProduct) =>
+		productV2ToApiPlanV1({
+			product: mapToProductV2({ product, features: ctx.features }),
+			features: ctx.features,
+			currency: ctx.org.default_currency ?? "USD",
+		});
+	const diff = diffPlanV1({
+		from: toApiPlan({
+			...licenseProduct,
+			prices: carrier.customer_prices.map(
+				(customerPrice) => customerPrice.price,
+			) as FullProduct["prices"],
+			entitlements: carrier.customer_entitlements.map(
+				(customerEntitlement) => customerEntitlement.entitlement,
+			),
+		}),
+		to: toApiPlan(desired.fullProduct),
+	});
+	return Object.keys(diff).length > 0;
+};
+
+const updateCarrier = async ({
+	ctx,
+	fullCustomer,
+	carrier,
+	licenseProduct,
+	parent,
+	customize,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	carrier: FullCusProduct;
+	licenseProduct: FullProduct;
+	parent: FullCusProduct;
+	customize: CustomizePlanV1;
+}) => {
+	await billingActions.updateSubscription({
+		ctx,
+		params: ExtUpdateSubscriptionV1ParamsSchema.parse({
+			customer_id: fullCustomer.id ?? fullCustomer.internal_id,
+			subscription_id: carrier.id,
+			customize,
+		}),
+	});
+	await stampCarrierParent({ ctx, fullCustomer, licenseProduct, parent });
 };
 
 const cancelCarrier = async ({
@@ -186,6 +268,18 @@ const syncCarrierForDefinition = async ({
 			fullCustomer,
 			parent,
 			licenseProduct,
+			customize,
+		});
+		return;
+	}
+
+	if (await carrierIsStale({ ctx, carrier, licenseProduct, customize })) {
+		await updateCarrier({
+			ctx,
+			fullCustomer,
+			carrier,
+			licenseProduct,
+			parent,
 			customize,
 		});
 	}

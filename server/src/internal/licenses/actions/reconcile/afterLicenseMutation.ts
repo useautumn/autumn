@@ -41,16 +41,20 @@ export const afterLicenseMutation = async ({
 	}
 	if (!externalCustomerId) return;
 
-	await reconcileLicenseStateForCustomer({
-		ctx,
-		customerId: externalCustomerId,
-		internalCustomerId,
-	});
-
-	await deleteCachedFullCustomer({
-		ctx,
-		customerId: externalCustomerId,
-		entityId,
-		source: "license.mutation",
-	});
+	try {
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			customerId: externalCustomerId,
+			internalCustomerId,
+		});
+	} finally {
+		// The mutation is already committed; the cache must drop even when
+		// convergence fails so reads never serve pre-mutation state.
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: externalCustomerId,
+			entityId,
+			source: "license.mutation",
+		});
+	}
 };

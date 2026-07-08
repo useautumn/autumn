@@ -10,6 +10,7 @@ import { customerLicenseRepo } from "../../repos/customerLicenseRepo.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { endProvisionedCustomerProducts } from "../assignments/utils/endProvisionedCustomerProducts.js";
+import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { syncLicenseCarriersForCustomer } from "./licenseCarrier.js";
 import { resolveLicenseDefinitionsForParents } from "./resolveLicenseDefinitions.js";
 
@@ -218,6 +219,15 @@ export const reconcileLicenseStateForCustomer = async ({
 		ctx,
 		fullCustomer: customer,
 		topology,
+	});
+	logLicenseAction({
+		ctx,
+		action: "reconcile",
+		details: {
+			customer: customerId,
+			parents: topology.validParents.length,
+			definitions: [...topology.definitionsByParentId.values()].flat().length,
+		},
 	});
 	return topology;
 };

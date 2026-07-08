@@ -4,7 +4,7 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import type { LicenseDefinition } from "../../../licenseTypes.js";
@@ -33,7 +33,7 @@ export const provisionLicenseCustomerProduct = async ({
 
 	// Prices are emptied BEFORE init so assignment entitlements never derive
 	// usage_allowed from them — overage must fall through to the carrier.
-	const customerProduct = initFullCustomerProduct({
+	const base = initFullCustomerProduct({
 		ctx,
 		initContext: {
 			fullCustomer,
@@ -48,16 +48,19 @@ export const provisionLicenseCustomerProduct = async ({
 			status: CusProductStatus.Active,
 		},
 	});
-	customerProduct.license_parent_customer_product_id =
-		licenseParentCustomerProductId;
-	customerProduct.customer_prices = [];
-	customerProduct.subscription_ids = [];
-	customerProduct.scheduled_ids = [];
-	customerProduct.customer_entitlements =
-		customerProduct.customer_entitlements.map((customerEntitlement) => ({
-			...customerEntitlement,
-			internal_entity_id: internalEntityId,
-		}));
+
+	// The builder leaves cusEnt entity ids null; assignment balances are
+	// entity-scoped, so stamp them to match the assignment's entity.
+	const customerProduct = {
+		...base,
+		license_parent_customer_product_id: licenseParentCustomerProductId,
+		customer_entitlements: base.customer_entitlements.map(
+			(customerEntitlement) => ({
+				...customerEntitlement,
+				internal_entity_id: internalEntityId,
+			}),
+		),
+	};
 
 	await CusProductService.insert({ db: ctx.db, data: customerProduct });
 	await CusEntService.insert({
