@@ -951,7 +951,11 @@ export class AutumnInt {
 		aggregate: async (params: {
 			customer_id: string;
 			entity_id?: string;
-			feature_id?: string;
+			feature_id?: string | string[];
+			group_by?: string;
+			range?: string;
+			bin_size?: string;
+			max_groups?: number;
 		}) => {
 			const data = await this.post(`/events/aggregate`, params);
 			return data;
