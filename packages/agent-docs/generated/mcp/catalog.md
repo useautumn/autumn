@@ -17,11 +17,11 @@ First read the `autumn-concepts` knowledge â€” it defines Autumn's data model â€
 Follow the same preview-decision-apply shape as `atmn` and the dashboard:
 
 1. Build or edit the desired catalog shape.
-2. Preview it: use `atmn` for `autumn.config.ts` projects, or `catalog.preview_update` / `plans.preview_update` for MCP/API flows.
+2. Preview it: use `atmn` for `autumn.config.ts` projects, or `catalog.preview_update` for MCP/API flows.
 3. Summarize feature changes first: created, updated, skipped, deleted/archived, and blocked updates.
 4. For each changed base plan or plan family, surface the plan diff, customer impact, versioning choices, variants, conflicts, and migration option.
 5. If the user changes any decision, revise the config or params and preview again.
-6. Apply only the exact previewed update, following the global write approval rules for `catalog.update`, `plans.update`, or `atmn --headless push --yes`.
+6. Apply only the exact previewed update, following the global write approval rules for `catalog.update` or `atmn --headless push --yes`.
 
 For plan families with customers or variants, ask decisions in this order:
 
@@ -40,7 +40,7 @@ For plan families with customers or variants, ask decisions in this order:
 
 # Catalog update flow
 
-Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same flow with `plans.preview_update` and `plans.update`.
+Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same catalog flow with a one-plan `plans` array.
 
 ## Loop
 
@@ -51,7 +51,7 @@ Use this when changing an existing Autumn catalog through MCP/API or when mappin
 5. Revise params or config based on the decisions, then preview again if anything changed.
 6. Run `catalog.update` with the exact previewed params, following the global write approval rules.
 
-For `plans.preview_update`, include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope. `catalog.preview_update` accepts the same per-plan detail flags inside each plan in `plans[]`.
+For single-plan updates, pass that plan inside `catalog.preview_update.plans[]`. Include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope.
 
 ## Preview summary checklist
 

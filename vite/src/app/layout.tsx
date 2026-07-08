@@ -17,6 +17,7 @@ import { useSyncSandboxFromUrl } from "@/hooks/sandbox/useSyncSandboxFromUrl";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { LeafPanel } from "@/views/chat/LeafPanel";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -96,6 +97,7 @@ const DashboardShell = ({
 				onOpenMobileSidebar={() => onMobileSidebarOpenChange(true)}
 			/>
 			<CommandBar />
+			<LeafPanel />
 		</>
 	);
 };

@@ -70,7 +70,7 @@ describe("chat environment selection", () => {
 			"Use Autumn MCP tools for Autumn customer",
 		);
 		expect(autumnChatInstructions).toContain(
-			"If the relevant Autumn skill is loaded",
+			"load the matching skill BEFORE acting",
 		);
 	});
 

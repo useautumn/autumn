@@ -44,6 +44,33 @@ const startMcpServer = () =>
 		});
 	});
 
+const legacyJsonSchemaIdPaths = (schema: unknown, path = "$"): string[] => {
+	if (!schema || typeof schema !== "object") return [];
+	if (Array.isArray(schema)) {
+		return schema.flatMap((item, index) =>
+			legacyJsonSchemaIdPaths(item, `${path}[${index}]`),
+		);
+	}
+
+	const paths: string[] = [];
+	for (const [key, value] of Object.entries(schema)) {
+		if (key === "id") paths.push(`${path}.id`);
+		if (key === "properties" && value && typeof value === "object") {
+			for (const [propertyName, propertySchema] of Object.entries(value)) {
+				paths.push(
+					...legacyJsonSchemaIdPaths(
+						propertySchema,
+						`${path}.properties.${propertyName}`,
+					),
+				);
+			}
+			continue;
+		}
+		paths.push(...legacyJsonSchemaIdPaths(value, `${path}.${key}`));
+	}
+	return paths;
+};
+
 describe("Autumn MCP server", () => {
 	test("advertises Autumn MCP instructions during initialize", async () => {
 		const server = await startMcpServer();
@@ -120,7 +147,7 @@ describe("Autumn MCP server", () => {
 			"updateSubscription",
 		]) {
 			const tool = tools.tools.find((tool) => tool.name === name);
-			expect(JSON.stringify(tool?.inputSchema)).not.toContain('"id":');
+			expect(legacyJsonSchemaIdPaths(tool?.inputSchema)).toEqual([]);
 		}
 	});
 
@@ -246,10 +273,10 @@ describe("Autumn MCP server", () => {
 
 		const logs = await server.readResource("autumn://docs/logs");
 		const logsText = String(logs.contents[0]?.text ?? "");
-		expect(logsText).toContain("# Logs");
+		expect(logsText).toContain("# Investigate");
 		expect(logsText).toContain("searchRequestLogs");
 		expect(logsText).toContain("queryRequestLogs");
-		expect(logsText).toContain("## Stripe Webhooks");
+		expect(logsText).toContain("# Stripe Webhook Investigations");
 		expect(logsText).toContain("## Analytics");
 		expect(billingText).toContain(
 			"Once approved, apply the exact previewed billing action",

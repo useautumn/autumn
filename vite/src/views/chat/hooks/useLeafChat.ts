@@ -7,6 +7,8 @@ import type {
 	ApprovalStatus,
 	DecidingState,
 	LeafApproval,
+	LeafCatalogDecision,
+	LeafQuestionResponse,
 	LeafUIMessage,
 } from "../chatTypes";
 import { unwrapRequestParams } from "../chatTypes";
@@ -31,6 +33,29 @@ const approvalIdsIn = (messages: LeafUIMessage[]): Set<string> => {
 		}
 	}
 	return ids;
+};
+
+const versioningLabel: Record<LeafCatalogDecision["versioning"], string> = {
+	create_version: "Create a new version",
+	update_all_versions: "Update all versions",
+	update_current: "Update the current version",
+};
+
+/** Human-readable summary sent as the message text alongside the structured
+ * `catalogDecision` metadata, so the transcript reads naturally too. */
+const decisionSummaryText = (decision: LeafCatalogDecision): string => {
+	const parts = [
+		`Apply the change now: ${versioningLabel[decision.versioning].toLowerCase()}`,
+	];
+	if (decision.propagateVariantIds.length > 0) {
+		parts.push(`propagate to ${decision.propagateVariantIds.join(", ")}`);
+	} else {
+		parts.push("don't propagate to variants");
+	}
+	parts.push(
+		decision.migrationDraft ? "create a migration draft" : "no migration draft",
+	);
+	return `${parts.join("; ")}.`;
 };
 
 const approvalMessage = (approval: LeafApproval): LeafUIMessage => ({
@@ -70,8 +95,8 @@ export function useLeafChat({
 	const [hydrationDone, setHydrationDone] = useState(!shouldHydrate);
 	const env = useEnv();
 
-	const { messages, sendMessage, status, setMessages } = useChat<LeafUIMessage>(
-		{
+	const { error, messages, sendMessage, status, setMessages, stop } =
+		useChat<LeafUIMessage>({
 			id: threadId,
 			transport: new DefaultChatTransport({
 				api: `${BACKEND}/agent/chat`,
@@ -81,8 +106,7 @@ export function useLeafChat({
 				// other chat calls; the stream transport must too).
 				headers: { "x-client-type": "dashboard", app_env: env },
 			}),
-		},
-	);
+		});
 
 	const isLoading = status === "streaming" || status === "submitted";
 
@@ -109,13 +133,27 @@ export function useLeafChat({
 		if (status === "ready" && hydrationDone) void refetchInteractions();
 	}, [status, hydrationDone, refetchInteractions]);
 	useEffect(() => {
-		if (!approvals?.length) return;
+		if (!approvals) return;
+		const pendingIds = new Set(approvals.map((approval) => approval.id));
 		setMessages((prev) => {
 			const present = approvalIdsIn(prev);
 			const fresh = approvals.filter((approval) => !present.has(approval.id));
+			// A pending card the server no longer lists was superseded (the user
+			// moved on and the agent auto-discarded it) — resolve it in place so
+			// stale Apply/Discard buttons never linger.
+			const swept = prev.map((message) => ({
+				...message,
+				parts: message.parts.map((part) =>
+					part.type === "data-approval" &&
+					part.data.status === "pending" &&
+					!pendingIds.has(part.data.approvalId)
+						? { ...part, data: { ...part.data, status: "rejected" as const } }
+						: part,
+				),
+			}));
 			return fresh.length === 0
-				? prev
-				: [...prev, ...fresh.map(approvalMessage)];
+				? swept
+				: [...swept, ...fresh.map(approvalMessage)];
 		});
 	}, [approvals, setMessages]);
 
@@ -166,7 +204,13 @@ export function useLeafChat({
 					approvalId,
 					action === "approve" ? "approved" : "rejected",
 				);
-				if (action === "approve" && data.text) appendAssistant(data.text);
+				if (action === "approve") {
+					appendAssistant(data.text?.trim() || "Applied.");
+				} else if (data.text?.trim()) {
+					// The agent's reaction to the discard (eve denies the parked call
+					// and the turn finishes with a message).
+					appendAssistant(data.text.trim());
+				}
 				void refetchInteractions();
 			} catch {
 				appendAssistant(`Couldn't ${verb} the changes. Please try again.`);
@@ -177,22 +221,98 @@ export function useLeafChat({
 		[appendAssistant, decide, refetchInteractions, setApprovalStatus],
 	);
 
+	const answerQuestion = useCallback(
+		(messageId: string, answer: string, response?: LeafQuestionResponse) => {
+			// Retire the chips in place, then send the label as the visible message
+			// with the structured answer in metadata (resolved via inputResponses).
+			setMessages((prev) =>
+				prev.map((message) =>
+					message.id === messageId
+						? {
+								...message,
+								parts: message.parts.map((part) =>
+									part.type === "data-question"
+										? { ...part, data: { ...part.data, status: "answered" } }
+										: part,
+								),
+							}
+						: message,
+				),
+			);
+			sendMessage({
+				metadata: response ? { questionResponse: response } : undefined,
+				text: answer,
+			});
+		},
+		[sendMessage, setMessages],
+	);
+
+	const submitCatalogDecision = useCallback(
+		(messageId: string, decision: LeafCatalogDecision) => {
+			setMessages((prev) =>
+				prev.map((message) =>
+					message.id === messageId
+						? {
+								...message,
+								parts: message.parts.map((part) =>
+									part.type === "data-catalog-decision" &&
+									part.data.plan.plan_id === decision.planId
+										? { ...part, data: { ...part.data, status: "submitted" } }
+										: part,
+								),
+							}
+						: message,
+				),
+			);
+			sendMessage({
+				metadata: { catalogDecision: decision },
+				text: decisionSummaryText(decision),
+			});
+		},
+		[sendMessage, setMessages],
+	);
+
+	// ChatGPT/Claude-style queueing: messages typed mid-turn are queued and
+	// auto-sent when the turn completes; "Send now" interrupts the stream first.
+	// "error" is a settled state, not busy — sends must not queue behind it.
+	const [queue, setQueue] = useState<PromptInputMessage[]>([]);
+	useEffect(() => {
+		if (isLoading || queue.length === 0) return;
+		const [next, ...rest] = queue;
+		setQueue(rest);
+		sendMessage({ files: next.files, text: next.text });
+	}, [isLoading, queue, sendMessage]);
+
 	const handleSubmit = useCallback(
 		(message: PromptInputMessage) => {
-			if (
-				(!message.text.trim() && message.files.length === 0) ||
-				status !== "ready"
-			) {
+			if (!message.text.trim() && message.files.length === 0) return;
+			if (isLoading) {
+				setQueue((prev) => [...prev, message]);
+				setInput("");
 				return;
 			}
 			if (messages.length === 0) onFirstMessage?.();
 			sendMessage({ files: message.files, text: message.text });
 			setInput("");
 		},
-		[messages.length, onFirstMessage, status, sendMessage],
+		[messages.length, onFirstMessage, isLoading, sendMessage],
 	);
 
+	// Interrupting flushes the queue via the status effect once the stream stops.
+	const sendQueuedNow = useCallback(() => {
+		void stop();
+	}, [stop]);
+
+	const removeQueued = useCallback((index: number) => {
+		setQueue((prev) => prev.filter((_, i) => i !== index));
+	}, []);
+
 	return {
+		answerQuestion,
+		error,
+		queue,
+		removeQueued,
+		sendQueuedNow,
 		approve: (id: string) => resolveApproval("approve", id),
 		deciding,
 		handleSubmit,
@@ -201,5 +321,6 @@ export function useLeafChat({
 		messages,
 		reject: (id: string) => resolveApproval("reject", id),
 		setInput,
+		submitCatalogDecision,
 	};
 }

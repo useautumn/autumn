@@ -39,7 +39,9 @@ try {
 		`MCP tools: ${entries.length}  TOTAL schema ${total} chars (~${est(total)} tok)\n`,
 	);
 	for (const [name, size] of rows) {
-		process.stdout.write(`  ${size.toString().padStart(6)} chars (~${est(size)} tok)  ${name}\n`);
+		process.stdout.write(
+			`  ${size.toString().padStart(6)} chars (~${est(size)} tok)  ${name}\n`,
+		);
 	}
 } finally {
 	await client.disconnect();

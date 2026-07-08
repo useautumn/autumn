@@ -1,6 +1,9 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { ChatInstallation } from "@autumn/shared";
-import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
+import type { ChatApproval, ChatInstallation } from "@autumn/shared";
+import {
+	normalizeToolName,
+	toolLabel,
+} from "../../../../agent/tools/toolPolicy.js";
 import { db } from "../../../../lib/db.js";
 import { env as chatEnv } from "../../../../lib/env.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
@@ -20,6 +23,53 @@ const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
 		? (args.request as Record<string, unknown>)
 		: args;
+
+const publicToolArgs = (args: Record<string, unknown>) =>
+	Object.fromEntries(
+		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
+	);
+
+/** Posts the card for an approval row that already exists (a chained write
+ * surfaced by an approve/answer resume, which never flows through
+ * `presentApproval`). */
+export const postApprovalCardForRow = async ({
+	approval,
+	logger = rootLogger,
+	target,
+}: {
+	approval: ChatApproval;
+	logger?: AutumnLogger;
+	/** Structural post-only view so ActionEvent threads (unknown state generic) fit. */
+	target: { post: (message: unknown) => Promise<{ id: string }> };
+}) => {
+	const toolArgs =
+		approval.tool_args && typeof approval.tool_args === "object"
+			? (approval.tool_args as Record<string, unknown>)
+			: {};
+	const sent = await target.post(
+		approvalCard({
+			id: approval.id,
+			env: approval.env,
+			preview: approval.preview ?? undefined,
+			requesterId: approval.provider_user_id,
+			toolArgs: publicToolArgs(toolArgs),
+			toolName: approval.tool_name,
+		}),
+	);
+	try {
+		await chatApprovalRepo.setMessageTs({
+			approvalId: approval.id,
+			db,
+			messageTs: sent.id,
+		});
+	} catch (error) {
+		logger.warn("Could not store chained approval message id", {
+			event: "leaf.approval_message_ts_failed",
+			approval_id: approval.id,
+			error,
+		});
+	}
+};
 
 /** Posts an approval card when the agent output suspended on a destructive tool. */
 export const presentApproval = async ({
@@ -59,14 +109,17 @@ export const presentApproval = async ({
 
 	// Suspended without a fresh preview (it ran in an earlier turn) — fetch
 	// one so the card always carries the money facts.
-	if (!approval.preview) {
+	if (
+		!approval.preview ||
+		normalizeToolName(approval.toolName) === "updatePlan"
+	) {
 		try {
 			const token = await getInstallationOAuthAccessToken({
 				installation,
 				env: approval.env,
 				orgId,
 			});
-			const request = getRequest(approval.toolArgs);
+			const request = getRequest(publicToolArgs(approval.toolArgs));
 			if (request) {
 				approval.preview = await fetchApprovalPreview({
 					env: approval.env,
@@ -123,7 +176,7 @@ export const presentApproval = async ({
 			preview: approval.preview,
 			requesterId: providerUserId,
 			summary: output.text,
-			toolArgs: approval.toolArgs,
+			toolArgs: publicToolArgs(approval.toolArgs),
 			toolName: approval.toolName,
 		}),
 	);

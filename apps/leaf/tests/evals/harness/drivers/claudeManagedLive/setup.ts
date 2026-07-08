@@ -66,7 +66,9 @@ const buildAgentConfig = async ({
 	// Opt-in (LEAF_FAST_MODE) so correctness evals stay on standard pricing/limits.
 	model: {
 		id: model.replace(/^anthropic\//, ""),
-		speed: process.env.LEAF_FAST_MODE ? ("fast" as const) : ("standard" as const),
+		speed: process.env.LEAF_FAST_MODE
+			? ("fast" as const)
+			: ("standard" as const),
 	},
 	name: "Autumn Leaf (eval)",
 	system: [

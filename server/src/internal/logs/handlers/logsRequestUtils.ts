@@ -1,11 +1,14 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
-import type {
-	RestrictedAplAst,
-	RestrictedAplExpr,
-	RestrictedAplField,
+import {
+	parseRestrictedApl,
+	type RestrictedAplAst,
+	type RestrictedAplExpr,
+	type RestrictedAplField,
+	RestrictedAplStageNotAllowedError,
 } from "../parser/restrictedApl.js";
+import type { RestrictedAplStageKind } from "../parser/restrictedAplConfig.js";
 
 const days = (count: number) => count * 24 * 60 * 60 * 1000;
 
@@ -26,12 +29,16 @@ export const LogsRangeSchema = z
 	})
 	.strict();
 
+const SEARCH_RANGE_HINT =
+	"Search consecutive 7-day windows for longer periods, or use logs.query aggregates (up to 30 days with a customer_id filter).";
+
 export const resolveLogsRange = ({
 	startDate,
 	endDate,
 	defaultRangeMs = DEFAULT_RANGE_MS,
 	maxRangeMs = SEARCH_MAX_RANGE_MS,
 	maxRangeLabel = "7 days",
+	maxRangeHint = SEARCH_RANGE_HINT,
 	now = new Date(),
 }: {
 	startDate?: string;
@@ -39,6 +46,7 @@ export const resolveLogsRange = ({
 	defaultRangeMs?: number;
 	maxRangeMs?: number;
 	maxRangeLabel?: string;
+	maxRangeHint?: string;
 	now?: Date;
 }) => {
 	const end = endDate ? new Date(endDate) : now;
@@ -56,7 +64,7 @@ export const resolveLogsRange = ({
 
 	if (end.getTime() - start.getTime() > maxRangeMs) {
 		throw new RecaseError({
-			message: `Log range cannot exceed ${maxRangeLabel}`,
+			message: `Log range cannot exceed ${maxRangeLabel}. ${maxRangeHint}`,
 			code: ErrCode.InvalidInputs,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
@@ -66,6 +74,48 @@ export const resolveLogsRange = ({
 		startDate: start.toISOString(),
 		endDate: end.toISOString(),
 	};
+};
+
+const QUERYABLE_FIELDS_HINT =
+	"Queryable fields: timestamp, source, status_code, request_method, request_url, request_path, request_body, response_body, org_id, customer_id, entity_id, stripe_event_id, stripe_event_type, stripe_object_id, plus dot paths like request_body.feature_id. For free-text matching use: where request_body contains 'text' or response_body contains 'text'.";
+
+const logsQuerySyntaxHint = ({
+	allowedStages,
+}: {
+	allowedStages: RestrictedAplStageKind[];
+}): string => {
+	const aggregate = allowedStages.includes("summarize");
+	const stages = aggregate
+		? "where, summarize, project, order by, limit"
+		: "where, order by, limit";
+	const example = aggregate
+		? "where customer_id == 'cus_123' | summarize failed = countif(status_code >= 400) by request_path | order by failed desc"
+		: "where customer_id == 'cus_123' and status_code >= 400 | order by timestamp desc | limit 50";
+	return `Supported stages (joined by '|'): ${stages}. Example: ${example}. String values use single or double quotes. ${QUERYABLE_FIELDS_HINT}`;
+};
+
+export const parseLogsQueryOrThrow = ({
+	query,
+	allowedStages,
+}: {
+	query: string | undefined;
+	allowedStages: RestrictedAplStageKind[];
+}): RestrictedAplAst => {
+	try {
+		return parseRestrictedApl({ query, allowedStages });
+	} catch (error) {
+		const message =
+			error instanceof RestrictedAplStageNotAllowedError
+				? `The ${error.stage} stage is only available on the logs.query endpoint — use logs.query for aggregates`
+				: error instanceof Error
+					? error.message
+					: String(error);
+		throw new RecaseError({
+			message: `Invalid logs query: ${message}. ${logsQuerySyntaxHint({ allowedStages })}`,
+			code: ErrCode.InvalidInputs,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 };
 
 const isCustomerIdField = (field: RestrictedAplField) =>
@@ -96,10 +146,13 @@ export const getQueryLogsRangePolicy = (ast: RestrictedAplAst) => {
 				defaultRangeMs: QUERY_CUSTOMER_MAX_RANGE_MS,
 				maxRangeMs: QUERY_CUSTOMER_MAX_RANGE_MS,
 				maxRangeLabel: "30 days",
+				maxRangeHint: "Query consecutive windows for longer periods.",
 			}
 		: {
 				defaultRangeMs: QUERY_ORG_MAX_RANGE_MS,
 				maxRangeMs: QUERY_ORG_MAX_RANGE_MS,
 				maxRangeLabel: "15 days",
+				maxRangeHint:
+					"Add a customer_id filter to extend the range to 30 days.",
 			};
 };
