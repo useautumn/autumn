@@ -46,7 +46,9 @@ export const updateLicense = async ({
 	if (preview) {
 		return {
 			customer_id: customerId,
-			intent: plan.endedAt ? ("cancel_immediately" as const) : ("none" as const),
+			intent: plan.endedAt
+				? ("cancel_immediately" as const)
+				: ("none" as const),
 			assignment_id: assignmentId,
 			ended_at: plan.endedAt ?? context.assignment.ended_at,
 		};

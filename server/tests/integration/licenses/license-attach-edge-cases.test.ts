@@ -4,19 +4,17 @@
  * Red-failure mode (current behavior):
  *  - licenses.update with an unknown assignment_id returns 200 with an
  *    undefined assignment (silent no-op) instead of 404.
- *  - When two active pools offer the same license and the parents are free
- *    plans (no subscription id), assignment is impossible: the API demands
- *    parent_subscription_id but free parents have none, and pool_id is not
- *    accepted.
+ *  - When two plans on the customer offer the same license, attach is
+ *    ambiguous and requires parent_plan_id.
  *
  * Green-success criteria (after fix):
  *  - Unknown assignment_id → 404.
- *  - licenses.attach accepts pool_id to target an exact pool; without it the
- *    ambiguous case still fails with a clear error.
+ *  - licenses.attach accepts parent_plan_id to target an exact plan; without
+ *    it the ambiguous case fails with a clear error.
  */
 
 import { expect, test } from "bun:test";
-import type { LicensePoolResponse } from "@autumn/shared";
+import type { LicenseBalanceResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -88,14 +86,14 @@ test.concurrent(
 			});
 		}
 
-		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 			entity_id: entities[0].id,
-		})) as { list: LicensePoolResponse[] };
+		})) as { list: LicenseBalanceResponse[] };
 		expect(pools.list).toHaveLength(2);
 
 		await expectAutumnError({
-			errMessage: "Multiple license pools",
+			errMessage: "Multiple plans offer",
 			func: async () =>
 				await autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
@@ -108,7 +106,7 @@ test.concurrent(
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			plan_id: license.id,
-			pool_id: pools.list[0].pool_id,
+			parent_plan_id: pools.list[0].parent_plan_id,
 		})) as { assignment: { id: string; ended_at: number | null } };
 		expect(assignment.id).toBeTruthy();
 		expect(assignment.ended_at).toBeNull();
@@ -170,9 +168,9 @@ test.concurrent(
 		})) as { assignment: { id: string } };
 		expect(assignment.id).toBeTruthy();
 
-		const pools = (await autumnV2_2.post("/licenses.list_pools", {
+		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicensePoolResponse[] };
+		})) as { list: LicenseBalanceResponse[] };
 		expect(pools.list[0].inventory).toMatchObject({
 			included: 3,
 			assigned: 2,

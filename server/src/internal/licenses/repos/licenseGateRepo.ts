@@ -6,7 +6,7 @@ import {
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { licensePoolParentStatuses } from "../licenseUtils.js";
+import { licenseParentStatuses } from "../licenseUtils.js";
 import { activeAssignmentConditions } from "./licenseAssignmentRepo.js";
 
 /** Single-roundtrip union gate: does this customer touch licenses at all? */
@@ -33,7 +33,7 @@ const touchesLicenses = async ({
 			and(
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				isNull(customerProducts.internal_entity_id),
-				inArray(customerProducts.status, licensePoolParentStatuses),
+				inArray(customerProducts.status, licenseParentStatuses),
 			),
 		)
 		.limit(1);

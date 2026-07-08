@@ -1,6 +1,7 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
 import { resolveAssignableLicenseParent } from "../utils/resolveAssignableLicenseParent.js";
+import { validatePricedLicenseAttached } from "../utils/validatePricedLicenseAttached.js";
 import type {
 	LicenseAssignmentContext,
 	LicenseAssignmentPlan,
@@ -22,12 +23,18 @@ export const computeLicenseAssignmentPlan = async ({
 	});
 	if (existing) return { existing };
 
-	return await resolveAssignableLicenseParent({
+	const plan = await resolveAssignableLicenseParent({
 		ctx,
 		fullCustomer,
 		licenseProduct,
 		planId: context.planId,
-		poolId: context.poolId,
-		parentSubscriptionId: context.parentSubscriptionId,
+		parentPlanId: context.parentPlanId,
 	});
+	await validatePricedLicenseAttached({
+		ctx,
+		fullCustomer,
+		licenseProduct,
+		licenseDefinition: plan.licenseDefinition,
+	});
+	return plan;
 };

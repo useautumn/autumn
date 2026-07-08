@@ -8,7 +8,7 @@ import { reconcileLicenseStateForCustomer } from "./reconcileLicenseState.js";
  * Single exit ramp for every license mutation. CONTRACT: the caller holds
  * the customer billing lock (route lock config or withLock with
  * buildBillingLockKey at the entry point) — this function never acquires. It converges assignment
- * balances and billing carriers, then drops the
+ * balances, then drops the
  * customer cache. Catalog-wide events (link edits, version bumps) stay
  * lazy-converged — each customer converges on their next mutation.
  */

@@ -11,7 +11,6 @@ import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { endProvisionedCustomerProducts } from "../assignments/utils/endProvisionedCustomerProducts.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
-import { syncLicenseCarriersForCustomer } from "./licenseCarrier.js";
 import { resolveLicenseDefinitionsForParents } from "./resolveLicenseDefinitions.js";
 
 const loadLicenseTopology = async ({
@@ -161,7 +160,7 @@ const reconcileAssignmentBalances = async ({
 
 /**
  * Whole-customer license recompute: re-parents or ends stranded assignments,
- * converges assignment balances and billing carriers. Idempotent;
+ * converges assignment balances. Idempotent;
  * call after any parent mutation commits. Returns the topology it converged
  * against, or null when the customer touches no licenses.
  *
@@ -211,11 +210,6 @@ export const reconcileLicenseStateForCustomer = async ({
 		topology,
 	});
 	await reconcileAssignmentBalances({
-		ctx,
-		fullCustomer: customer,
-		topology,
-	});
-	await syncLicenseCarriersForCustomer({
 		ctx,
 		fullCustomer: customer,
 		topology,

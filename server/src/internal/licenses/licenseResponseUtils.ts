@@ -15,7 +15,7 @@ export const serializeLicenseAssignment = ({
 }) => ({
 	id: assignment.id,
 	entity_id: entityId,
-	license_product_id: licenseProductId,
+	license_plan_id: licenseProductId,
 	started_at: assignment.created_at,
 	ended_at: assignment.ended_at ?? null,
 });

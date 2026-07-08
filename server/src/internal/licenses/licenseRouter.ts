@@ -1,7 +1,5 @@
 import {
 	LicenseAttachParamsSchema,
-	LicenseListAssignmentsParamsSchema,
-	LicenseListPoolsParamsSchema,
 	LinkLicenseParamsSchema,
 	ListLicenseLinksParamsSchema,
 	Scopes,
@@ -44,8 +42,7 @@ const handleAttachLicense = createRoute({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			planId: body.plan_id,
-			poolId: body.pool_id,
-			parentSubscriptionId: body.parent_subscription_id,
+			parentPlanId: body.parent_plan_id,
 		});
 
 		return c.json({ assignment });
@@ -97,8 +94,7 @@ const handlePreviewAttachLicense = createRoute({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			planId: body.plan_id,
-			poolId: body.pool_id,
-			parentSubscriptionId: body.parent_subscription_id,
+			parentPlanId: body.parent_plan_id,
 			preview: true,
 		});
 

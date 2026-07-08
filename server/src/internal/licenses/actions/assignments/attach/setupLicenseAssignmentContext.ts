@@ -15,8 +15,7 @@ export const setupLicenseAssignmentContext = async ({
 		customer_id: string;
 		entity_id: string;
 		plan_id: string;
-		pool_id?: string;
-		parent_subscription_id?: string;
+		parent_plan_id?: string;
 	};
 }): Promise<LicenseAssignmentContext> => {
 	const licenseProduct = await getFullLicenseProduct({
@@ -47,7 +46,6 @@ export const setupLicenseAssignmentContext = async ({
 		entity: fullCustomer.entity,
 		licenseProduct,
 		planId: params.plan_id,
-		poolId: params.pool_id,
-		parentSubscriptionId: params.parent_subscription_id,
+		parentPlanId: params.parent_plan_id,
 	};
 };

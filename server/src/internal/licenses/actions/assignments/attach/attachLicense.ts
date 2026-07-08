@@ -1,5 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getLicenseAssignmentResponse } from "../../../licenseResponseUtils.js";
+import { serializeLicenseAssignment } from "../../../licenseResponseUtils.js";
 import { logLicenseAction } from "../../logs/logLicenseAction.js";
 import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
 import { computeLicenseAssignmentPlan } from "./computeLicenseAssignmentPlan.js";
@@ -11,16 +11,14 @@ export const attachLicense = async ({
 	customerId,
 	entityId,
 	planId,
-	poolId,
-	parentSubscriptionId,
+	parentPlanId,
 	preview = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
 	planId: string;
-	poolId?: string;
-	parentSubscriptionId?: string;
+	parentPlanId?: string;
 	preview?: boolean;
 }) => {
 	// 1. Setup
@@ -30,8 +28,7 @@ export const attachLicense = async ({
 			customer_id: customerId,
 			entity_id: entityId,
 			plan_id: planId,
-			pool_id: poolId,
-			parent_subscription_id: parentSubscriptionId,
+			parent_plan_id: parentPlanId,
 		},
 	});
 
@@ -45,15 +42,16 @@ export const attachLicense = async ({
 			: {
 					customer: customerId,
 					entity: entityId,
-					pool: plan.parent.id,
+					parent: plan.parent.product.id,
 					available: plan.available,
 				},
 	});
 
 	if (plan.existing) {
-		const assignment = await getLicenseAssignmentResponse({
-			ctx,
+		const assignment = serializeLicenseAssignment({
 			assignment: plan.existing,
+			entityId: context.entity.id ?? context.entity.internal_id,
+			licenseProductId: context.licenseProduct.id,
 		});
 		return preview
 			? { customer_id: customerId, intent: "none" as const, assignment }
@@ -63,7 +61,7 @@ export const attachLicense = async ({
 		return {
 			customer_id: customerId,
 			intent: "assign" as const,
-			pool_id: plan.parent.id,
+			parent_plan_id: plan.parent.product.id,
 			license_plan_id: planId,
 			available: plan.available,
 		};
@@ -72,8 +70,8 @@ export const attachLicense = async ({
 	// 3. Execute
 	const assignment = await executeLicenseAssignment({ ctx, context, plan });
 
-	// 4. Converge: balances + billing carriers (pool-level charging lives in
-	// the shared reconcile, reacting to assignment state like every mutation)
+	// 4. Converge: repairs stranded assignments and balances; assignment
+	// itself never bills
 	await afterLicenseMutation({
 		ctx,
 		customerId: context.fullCustomer.id ?? undefined,
@@ -81,5 +79,9 @@ export const attachLicense = async ({
 		entityId,
 	});
 
-	return await getLicenseAssignmentResponse({ ctx, assignment });
+	return serializeLicenseAssignment({
+		assignment,
+		entityId: context.entity.id ?? context.entity.internal_id,
+		licenseProductId: context.licenseProduct.id,
+	});
 };

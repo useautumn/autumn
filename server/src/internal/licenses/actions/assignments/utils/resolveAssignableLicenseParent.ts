@@ -11,31 +11,18 @@ import { isLicenseAssignableParentCustomerProduct } from "../../../licenseUtils.
 import { customerLicenseRepo } from "../../../repos/customerLicenseRepo.js";
 import { resolveLicenseDefinitionsForParents } from "../../reconcile/resolveLicenseDefinitions.js";
 
-const matchesParentSubscription = ({
-	parent,
-	parentSubscriptionId,
-}: {
-	parent: FullCusProduct;
-	parentSubscriptionId: string;
-}) =>
-	parent.id === parentSubscriptionId ||
-	parent.external_id === parentSubscriptionId ||
-	(parent.subscription_ids ?? []).includes(parentSubscriptionId);
-
 export const resolveAssignableLicenseParent = async ({
 	ctx,
 	fullCustomer,
 	licenseProduct,
 	planId,
-	poolId,
-	parentSubscriptionId,
+	parentPlanId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	licenseProduct: FullProduct;
 	planId: string;
-	poolId?: string;
-	parentSubscriptionId?: string;
+	parentPlanId?: string;
 }): Promise<{
 	parent: FullCusProduct;
 	licenseDefinition: DbPlanLicense;
@@ -67,23 +54,21 @@ export const resolveAssignableLicenseParent = async ({
 			} => candidate.licenseDefinition !== undefined,
 		)
 		.filter(
-			({ parent }) =>
-				(!poolId || parent.id === poolId) &&
-				(!parentSubscriptionId ||
-					matchesParentSubscription({ parent, parentSubscriptionId })),
+			({ parent }) => !parentPlanId || parent.product.id === parentPlanId,
 		);
 
 	if (candidates.length === 0) {
 		throw new RecaseError({
-			message: `No license pool found for ${planId}.`,
+			message: `No plan on this customer offers license ${planId}.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
 	if (candidates.length > 1) {
 		throw new RecaseError({
-			message:
-				"Multiple license pools match this license. Provide pool_id or parent_subscription_id.",
+			message: parentPlanId
+				? `Multiple instances of plan ${parentPlanId} offer license ${planId}.`
+				: `Multiple plans offer license ${planId}. Provide parent_plan_id.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -101,14 +86,6 @@ export const resolveAssignableLicenseParent = async ({
 	const available = balance
 		? balance.remaining + (licenseDefinition.included - balance.granted)
 		: licenseDefinition.included;
-
-	if (available <= 0) {
-		throw new RecaseError({
-			message: `No available licenses for ${planId}.`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
 
 	return { parent, licenseDefinition, available };
 };

@@ -12,8 +12,7 @@ export type LicenseAssignmentContext = {
 	entity: Entity;
 	licenseProduct: FullProduct;
 	planId: string;
-	poolId?: string;
-	parentSubscriptionId?: string;
+	parentPlanId?: string;
 };
 
 export type LicenseAssignmentPlan =

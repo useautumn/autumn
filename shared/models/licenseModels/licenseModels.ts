@@ -27,8 +27,7 @@ export const LicenseAttachParamsSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string(),
 	plan_id: z.string(),
-	pool_id: z.string().optional(),
-	parent_subscription_id: z.string().optional(),
+	parent_plan_id: z.string().optional(),
 });
 
 export const LinkLicenseParamsSchema = z.object({
@@ -119,7 +118,7 @@ export const LicenseListAssignmentsParamsSchema = z.object({
 	active: z.boolean().optional().default(true),
 });
 
-export const LicenseListPoolsParamsSchema = z.object({
+export const LicenseListParamsSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string().optional(),
 });
@@ -130,17 +129,16 @@ export const LicenseInventorySchema = z.object({
 	available: z.number(),
 });
 
-export const LicensePoolResponseSchema = z.object({
-	pool_id: z.string(),
-	license_product_id: z.string(),
-	license_product_name: z.string(),
-	parent_subscription_id: z.string().optional(),
+export const LicenseBalanceResponseSchema = z.object({
+	parent_plan_id: z.string(),
+	license_plan_id: z.string(),
+	license_plan_name: z.string(),
 	inventory: LicenseInventorySchema,
 	assignments: z.array(
 		z.object({
 			assignment_id: z.string(),
 			entity_id: z.string(),
-			license_product_id: z.string(),
+			license_plan_id: z.string(),
 			started_at: z.number(),
 		}),
 	),
@@ -163,7 +161,7 @@ export type UpdateLicenseParams = z.infer<typeof UpdateLicenseParamsSchema>;
 export type LicenseListAssignmentsParams = z.infer<
 	typeof LicenseListAssignmentsParamsSchema
 >;
-export type LicenseListPoolsParams = z.infer<
-	typeof LicenseListPoolsParamsSchema
+export type LicenseListParams = z.infer<typeof LicenseListParamsSchema>;
+export type LicenseBalanceResponse = z.infer<
+	typeof LicenseBalanceResponseSchema
 >;
-export type LicensePoolResponse = z.infer<typeof LicensePoolResponseSchema>;
