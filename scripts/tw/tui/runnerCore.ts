@@ -297,20 +297,16 @@ export const runSwarmTests = async (
 		const firstAttemptFailures = first.tests.filter(
 			(test) => test.status === "failed",
 		);
-		const hasUnnamed = firstAttemptFailures.some((test) =>
-			test.name.includes("(unnamed)"),
-		);
-		const failedTestNames = hasUnnamed
-			? []
-			: firstAttemptFailures.map((test) => test.name);
 
 		emit({ ...first, status: "retrying", firstAttemptFailures }, false);
 
+		// Whole-file retry (no --test-name-pattern): files are stateful sequences,
+		// so a filtered retry of a later test lacks earlier tests' state and can't pass.
 		const retryResult = await runWithReschedule({
 			limit,
 			file,
 			attempt: 2,
-			failedTestNames,
+			failedTestNames: [],
 			executor,
 			willRetry: false,
 		});
