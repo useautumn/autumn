@@ -13872,7 +13872,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783437963565,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784647563565,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783530724692,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784740324692,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -18450,6 +18450,10 @@ paths:
         @param noBillingChanges - If true, the subscription is updated
         internally without applying billing changes in Stripe. (optional)
 
+        @param refundLastPayment - Controls how the last payment is refunded on
+        immediate cancellation. 'prorated' refunds the unused portion, 'full'
+        refunds the entire last payment. (optional)
+
         @param recalculateBalances - Controls whether balances should be
         recalculated during the subscription update. (optional)
 
@@ -19197,6 +19201,15 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                refund_last_payment:
+                  enum:
+                    - prorated
+                    - full
+                  type: string
+                  title: RefundLastPayment
+                  description: Controls how the last payment is refunded on immediate
+                    cancellation. 'prorated' refunds the unused portion, 'full'
+                    refunds the entire last payment.
                 recalculate_balances:
                   type: object
                   properties:
@@ -19389,6 +19402,10 @@ paths:
 
         @param noBillingChanges - If true, the subscription is updated
         internally without applying billing changes in Stripe. (optional)
+
+        @param refundLastPayment - Controls how the last payment is refunded on
+        immediate cancellation. 'prorated' refunds the unused portion, 'full'
+        refunds the entire last payment. (optional)
 
         @param recalculateBalances - Controls whether balances should be
         recalculated during the subscription update. (optional)
@@ -20137,6 +20154,15 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                refund_last_payment:
+                  enum:
+                    - prorated
+                    - full
+                  type: string
+                  title: RefundLastPayment
+                  description: Controls how the last payment is refunded on immediate
+                    cancellation. 'prorated' refunds the unused portion, 'full'
+                    refunds the entire last payment.
                 recalculate_balances:
                   type: object
                   properties:
