@@ -19,20 +19,23 @@ export const licenseRpcRouter = new Hono<HonoEnv>();
 const handleAttachLicense = createRoute({
 	scopes: [Scopes.Billing.Write],
 	body: LicenseAttachParamsSchema,
-	lock: {
-		ttlMs: 120000,
-		errorMessage:
-			"License assignment already in progress for this customer, try again in a few seconds",
-		getKey: (c) => {
-			const ctx = c.get("ctx");
-			const body = c.req.valid("json");
-			return buildBillingLockKey({
-				orgId: ctx.org.id,
-				env: ctx.env,
-				customerId: body.customer_id,
-			});
-		},
-	},
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"License assignment already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const body = c.req.valid("json");
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: body.customer_id,
+						});
+					},
+				}
+			: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
@@ -52,11 +55,29 @@ const handleAttachLicense = createRoute({
 const handleUpdateLicense = createRoute({
 	scopes: [Scopes.Billing.Write],
 	body: UpdateLicenseParamsSchema,
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"License update already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						const body = c.req.valid("json");
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: body.customer_id,
+						});
+					},
+				}
+			: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
 		const assignment = await updateLicense({
 			ctx,
+			customerId: body.customer_id,
 			assignmentId: body.assignment_id,
 			cancelAction: body.cancel_action,
 		});

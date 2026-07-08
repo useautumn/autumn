@@ -12,11 +12,11 @@ export const executeLicenseUpdate = async ({
 	context: LicenseUpdateContext;
 	plan: { action: LicenseCancelAction; endedAt: number };
 }) => {
-	const { assignment, detachCustomerId } = context;
+	const { assignment, fullCustomer } = context;
 
 	await endProvisionedCustomerProducts({
 		ctx,
-		customerId: detachCustomerId,
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 		assignmentIds: [assignment.id],
 		endedAt: plan.endedAt,
 	});

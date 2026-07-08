@@ -1,12 +1,11 @@
-import type { Customer } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import type { DbLicenseAssignment } from "../../../repos/licenseAssignmentRepo.js";
 
 export type LicenseCancelAction = "cancel_immediately";
 
 export type LicenseUpdateContext = {
+	fullCustomer: FullCustomer;
 	assignment: DbLicenseAssignment;
-	customer: Customer | null;
-	detachCustomerId: string;
 };
 
 export type LicenseUpdatePlan =

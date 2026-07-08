@@ -27,8 +27,9 @@ import chalk from "chalk";
 test.concurrent(
 	`${chalk.yellowBright("licenses-attach-edge: detach with unknown assignment_id returns 404")}`,
 	async () => {
+		const customerId = "license-unassign-404";
 		const { autumnV2_2 } = await initScenario({
-			customerId: "license-unassign-404",
+			customerId,
 			setup: [s.customer({ testClock: false })],
 			actions: [],
 		});
@@ -37,6 +38,7 @@ test.concurrent(
 			errMessage: "not found",
 			func: async () =>
 				await autumnV2_2.post("/licenses.update", {
+					customer_id: customerId,
 					cancel_action: "cancel_immediately",
 					assignment_id: "lic_asn_does_not_exist",
 				}),

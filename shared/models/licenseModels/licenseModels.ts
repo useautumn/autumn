@@ -100,6 +100,9 @@ export const ListLicenseLinksParamsSchema = z.object({
 });
 
 export const UpdateLicenseParamsSchema = z.object({
+	customer_id: z.string().meta({
+		description: "The customer that owns the assignment.",
+	}),
 	assignment_id: z.string().meta({
 		description: "The assignment to update, as returned by licenses.attach.",
 	}),
