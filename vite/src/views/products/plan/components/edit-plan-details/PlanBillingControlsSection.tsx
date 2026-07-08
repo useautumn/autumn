@@ -31,6 +31,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -219,7 +220,11 @@ function SelectFieldRow({
 	options,
 }: {
 	form: UsePlanBillingControlForm;
-	name: "purchase_limit_interval" | "usage_interval" | "threshold_type";
+	name:
+		| "purchase_limit_interval"
+		| "usage_interval"
+		| "threshold_type"
+		| "overage_billing";
 	label: string;
 	placeholder: string;
 	options: SelectOption[];
@@ -382,6 +387,13 @@ function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 					/>
 				)}
 			</form.Subscribe>
+			<SelectFieldRow
+				form={form}
+				name="overage_billing"
+				label="Overage billing"
+				placeholder="Default"
+				options={OVERAGE_BILLING_OPTIONS}
+			/>
 		</div>
 	);
 }
