@@ -34,6 +34,7 @@ export const runCheckV2 = async ({
 			: await getCheckResponseV2({
 					checkData,
 					requiredBalance,
+					properties: body.properties,
 				});
 
 	return {

@@ -9,9 +9,14 @@ import type {
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
+import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import { getCurrentUsageWindowUsage } from "../usageWindowUtils/getCurrentUsageWindowUsage.js";
 import { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 import { resolveBillingControl } from "./planBillingControlUtils.js";
+
+/** Usage limits are identified per (feature, filter); other controls per feature. */
+const usageLimitIdentity = (entry: DbUsageLimit): string =>
+	`${entry.feature_id}|${usageLimitFilterKey(entry.filter)}`;
 
 const mergeControlsByFeature = <
 	TControl extends { feature_id?: string },
@@ -22,29 +27,34 @@ const mergeControlsByFeature = <
 	planCustomerProducts,
 	controlKey,
 	normalizeForCompare,
+	identityOf,
 }: {
 	entityControls: TControl[];
 	customerControls: TControl[];
 	planCustomerProducts: FullCusProduct[];
 	controlKey: TKey;
 	normalizeForCompare?: (control: TControl) => TControl;
+	/** Inheritance identity; defaults to feature_id. */
+	identityOf?: (control: TControl) => string | undefined;
 }): TControl[] => {
-	const inheritedFeatureIds = new Set(
+	const identity = identityOf ?? ((entry: TControl) => entry.feature_id);
+	const inheritedIdentities = new Set(
 		entityControls
-			.map((entry) => entry.feature_id)
+			.map((entry) => identity(entry))
 			.filter((id): id is string => !!id),
 	);
 
 	const inheritedCustomerControls = customerControls.filter((entry) => {
-		if (!entry.feature_id || inheritedFeatureIds.has(entry.feature_id)) {
+		const entryIdentity = identity(entry);
+		if (!entryIdentity || inheritedIdentities.has(entryIdentity)) {
 			return false;
 		}
 
-		inheritedFeatureIds.add(entry.feature_id);
+		inheritedIdentities.add(entryIdentity);
 		return true;
 	});
 
-	const planFeatureIds = [
+	const planIdentities = [
 		...new Set(
 			planCustomerProducts.flatMap(
 				(customerProduct) =>
@@ -53,17 +63,17 @@ const mergeControlsByFeature = <
 							| TControl[]
 							| null
 							| undefined
-					)?.map((entry) => entry.feature_id) ?? [],
+					)?.map((entry) => identity(entry)) ?? [],
 			),
 		),
-	].filter((id): id is string => !!id && !inheritedFeatureIds.has(id));
+	].filter((id): id is string => !!id && !inheritedIdentities.has(id));
 
-	const planControls = planFeatureIds.flatMap((featureId) => {
+	const planControls = planIdentities.flatMap((planIdentity) => {
 		const control = resolveBillingControl<TControl, TKey>({
 			controlLists: [],
 			customerProducts: planCustomerProducts,
 			controlKey,
-			matches: (entry) => entry.feature_id === featureId,
+			matches: (entry) => identity(entry) === planIdentity,
 			normalizeForCompare,
 		});
 
@@ -108,8 +118,11 @@ const decorateInheritedPlanUsageLimits = ({
 	return usageLimits.map((usageLimit) => {
 		if ("usage" in usageLimit) return usageLimit;
 
+		const filterKey = usageLimitFilterKey(usageLimit.filter);
 		const resolved = resolvedLimits.find(
-			(limit) => limit.feature_id === usageLimit.feature_id,
+			(limit) =>
+				limit.feature_id === usageLimit.feature_id &&
+				(limit.filter_key || "") === filterKey,
 		);
 		if (!resolved) return usageLimit;
 
@@ -174,6 +187,7 @@ export const mergeCustomerBillingControlsForCheck = ({
 			customerControls: customerUsageLimits,
 			planCustomerProducts,
 			controlKey: "usage_limits",
+			identityOf: usageLimitIdentity,
 		}),
 		fullSubject,
 		features,

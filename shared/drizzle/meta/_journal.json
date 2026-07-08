@@ -288,6 +288,13 @@
       "when": 1783416274113,
       "tag": "0040_abnormal_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783507699570,
+      "tag": "0041_noisy_roland_deschain",
+      "breakpoints": true
     }
   ]
 }

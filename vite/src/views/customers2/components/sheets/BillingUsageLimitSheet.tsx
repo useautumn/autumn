@@ -4,6 +4,10 @@ import {
 	FeatureType,
 	type FullCustomer,
 	ResetInterval,
+	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
+	USAGE_LIMIT_FILTER_MAX_KEYS,
+	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	usageLimitFilterKey,
 } from "@autumn/shared";
 import {
 	Button,
@@ -31,6 +35,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import {
+	type UsageLimitCondition,
+	UsageLimitConditionRows,
+} from "./UsageLimitConditionRows";
+import { useCustomerPropertyKeys } from "./useCustomerPropertyKeys";
 
 // Interval is required (no inherit) and one_off intervals are not supported.
 const INTERVAL_OPTIONS: Record<string, string> = {
@@ -45,15 +54,76 @@ export const buildUsageLimitItem = ({
 	featureId,
 	limit,
 	interval,
+	filter,
 }: {
 	featureId: string;
 	limit: number;
 	interval: string;
+	filter?: DbUsageLimit["filter"];
 }): DbUsageLimit => ({
 	feature_id: featureId,
 	limit,
 	interval: interval as ResetInterval,
+	...(filter && { filter }),
 });
+
+const conditionsFromFilter = (
+	filter: DbUsageLimit["filter"],
+): UsageLimitCondition[] =>
+	Object.entries(filter?.properties ?? {}).map(([key, value]) => ({
+		key,
+		value: String(value),
+	}));
+
+/** Trimmed, non-empty rows -> filter.properties; error on partial rows. */
+const conditionsToFilter = (
+	conditions: UsageLimitCondition[],
+): { filter?: DbUsageLimit["filter"]; error?: string } => {
+	const filled = conditions
+		.map(({ key, value }) => ({ key: key.trim(), value: value.trim() }))
+		.filter(({ key, value }) => key || value);
+	if (filled.length === 0) return {};
+
+	if (filled.some(({ key, value }) => !key || !value)) {
+		return { error: "Each condition needs both a property and a value" };
+	}
+	if (filled.length > USAGE_LIMIT_FILTER_MAX_KEYS) {
+		return {
+			error: `At most ${USAGE_LIMIT_FILTER_MAX_KEYS} conditions are allowed`,
+		};
+	}
+	if (
+		filled.some(({ key }) => key.length > USAGE_LIMIT_FILTER_MAX_KEY_LENGTH)
+	) {
+		return {
+			error: `Property names must be at most ${USAGE_LIMIT_FILTER_MAX_KEY_LENGTH} characters`,
+		};
+	}
+	if (
+		filled.some(
+			({ value }) => value.length > USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+		)
+	) {
+		return {
+			error: `Values must be at most ${USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH} characters`,
+		};
+	}
+	const keys = filled.map(({ key }) => key);
+	const duplicateKey = keys.find((key, index) => keys.indexOf(key) !== index);
+	if (duplicateKey) {
+		return {
+			error: `"${duplicateKey}" can only be used once. To cap several values, create a separate limit for each.`,
+		};
+	}
+
+	return {
+		filter: {
+			properties: Object.fromEntries(
+				filled.map(({ key, value }) => [key, value]),
+			),
+		},
+	};
+};
 
 export function BillingUsageLimitSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -83,6 +153,12 @@ export function BillingUsageLimitSheet() {
 	const [selectedInterval, setSelectedInterval] = useState<string>(
 		existingItem?.interval ?? ResetInterval.Month,
 	);
+	const [conditions, setConditions] = useState<UsageLimitCondition[]>(
+		conditionsFromFilter(existingItem?.filter),
+	);
+	const propertySuggestions = useCustomerPropertyKeys({
+		customerId: fullCustomer?.id || fullCustomer?.internal_id,
+	});
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
@@ -125,13 +201,36 @@ export function BillingUsageLimitSheet() {
 			return;
 		}
 
+		const { filter, error: filterError } = conditionsToFilter(conditions);
+		if (filterError) {
+			toast.error(filterError);
+			return;
+		}
+
 		const item = buildUsageLimitItem({
 			featureId,
 			limit: parsedLimit,
 			interval: selectedInterval,
+			filter,
 		});
 
 		const usageLimits = getCurrentUsageLimits();
+		const itemIdentity = `${item.feature_id}|${usageLimitFilterKey(item.filter)}`;
+		const duplicate = usageLimits.some(
+			(existing, index) =>
+				!(isEdit && index === existingIndex) &&
+				`${existing.feature_id}|${usageLimitFilterKey(existing.filter)}` ===
+					itemIdentity,
+		);
+		if (duplicate) {
+			toast.error(
+				item.filter
+					? "A usage limit with these conditions already exists for this feature"
+					: "This feature already has a usage limit without conditions",
+			);
+			return;
+		}
+
 		if (isEdit && existingIndex !== undefined) {
 			usageLimits[existingIndex] = item;
 		} else {
@@ -223,6 +322,18 @@ export function BillingUsageLimitSheet() {
 									))}
 								</SelectContent>
 							</Select>
+						</div>
+
+						<div>
+							<FormLabel>Conditions</FormLabel>
+							<UsageLimitConditionRows
+								conditions={conditions}
+								onChange={setConditions}
+								suggestions={propertySuggestions}
+							/>
+							<p className="mt-2 text-tertiary-foreground text-xs">
+								Only usage matching every condition counts toward this limit.
+							</p>
 						</div>
 					</div>
 				</SheetSection>

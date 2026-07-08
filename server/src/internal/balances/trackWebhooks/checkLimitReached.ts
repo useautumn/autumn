@@ -5,6 +5,7 @@ import {
 	type Feature,
 	type FullCustomer,
 	fullCustomerToTags,
+	usageLimitFilterMatchesProperties,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -19,6 +20,7 @@ export const checkLimitReached = async ({
 	newFullCus,
 	feature,
 	entityId,
+	eventProperties,
 }: {
 	ctx: AutumnContext;
 	oldEvalSubject: ApiCustomerV5 | ApiEntityV2;
@@ -26,6 +28,7 @@ export const checkLimitReached = async ({
 	newFullCus: FullCustomer;
 	feature: Feature;
 	entityId?: string;
+	eventProperties?: Record<string, unknown> | null;
 }) => {
 	try {
 		const oldBalance = oldEvalSubject.balances?.[feature.id];
@@ -38,6 +41,7 @@ export const checkLimitReached = async ({
 			apiSubject: oldEvalSubject,
 			feature,
 			requiredBalance: 0.0000001,
+			properties: eventProperties,
 		});
 
 		const newResult = apiBalanceToAllowed({
@@ -45,9 +49,27 @@ export const checkLimitReached = async ({
 			apiSubject: newEvalSubject,
 			feature,
 			requiredBalance: 0.0000001,
+			properties: eventProperties,
 		});
 
 		if (!oldResult.allowed || newResult.allowed) return;
+
+		// When the blocking cap is a filtered usage limit, attach its filter so
+		// the receiver knows WHICH slice (e.g. which API key) hit its cap.
+		const blockedFilter =
+			newResult.limitType === "usage_limit" && eventProperties
+				? newEvalSubject.billing_controls?.usage_limits?.find(
+						(usageLimit) =>
+							usageLimit.feature_id === feature.id &&
+							usageLimit.enabled !== false &&
+							usageLimit.filter != null &&
+							usageLimitFilterMatchesProperties({
+								filterProperties: usageLimit.filter.properties,
+								eventProperties,
+							}) &&
+							(usageLimit.usage ?? 0) >= usageLimit.limit,
+					)?.filter
+				: undefined;
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
 		const tags = fullCustomerToTags({ fullCustomer: newFullCus });
@@ -60,6 +82,7 @@ export const checkLimitReached = async ({
 				feature_id: feature.id,
 				limit_type: newResult.limitType ?? "included",
 				...(entityId && { entity_id: entityId }),
+				...(blockedFilter && { filter: blockedFilter }),
 			},
 			tags,
 		});
