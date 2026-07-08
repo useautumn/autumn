@@ -1,0 +1,51 @@
+name: TW Warm Snapshot Refresh
+
+# Converges the freestyle `tw-warm-<sha12>` memory snapshot to every dev push,
+# so `bun tw` runs hit a fresh cache. Secrets: see the refresh step's env block.
+on:
+  push:
+    branches:
+      - dev
+
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref (or sha) to refresh the warm snapshot to'
+        required: false
+        default: 'dev'
+
+# A newer dev push supersedes an in-flight refresh — only the latest sha matters.
+concurrency:
+  group: tw-warm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  refresh-warm:
+    name: Refresh freestyle warm snapshot
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `bun tw` (package.json) wraps infisical, which the runner doesn't have —
+      # invoke the CLI directly with the warm-build secrets from GitHub secrets.
+      - name: Refresh warm snapshot
+        env:
+          FREESTYLE_API_KEY: ${{ secrets.FREESTYLE_API_KEY }}
+          ENCRYPTION_IV: ${{ secrets.ENCRYPTION_IV }}
+          ENCRYPTION_PASSWORD: ${{ secrets.ENCRYPTION_PASSWORD }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          STRIPE_SANDBOX_SECRET_KEY: ${{ secrets.STRIPE_SANDBOX_SECRET_KEY }}
+          STRIPE_TEST_KEY_POOL: ${{ secrets.STRIPE_TEST_KEY_POOL }}
+          SVIX_API_KEY: ${{ secrets.SVIX_API_KEY }}
+        run: bun scripts/tw/index.ts refresh-warm --ref=${{ github.event.inputs.ref || github.sha }}

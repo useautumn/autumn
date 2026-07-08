@@ -22,6 +22,7 @@ import {
 } from "../../server/tests/_groups/index.ts";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";
+import { refreshWarm } from "./commands/refreshWarm.ts";
 import { getLastRunExitCode, run } from "./commands/run.ts";
 import {
 	DEFAULT_PER_WORKER,
@@ -32,7 +33,12 @@ import { runPreflight } from "./helpers/preflight.ts";
 import type { ProviderName } from "./helpers/provider.ts";
 import type { TwRunArgs } from "./types.ts";
 
-const RESERVED_SUBCOMMANDS = new Set(["list", "kill", "kill-all"]);
+const RESERVED_SUBCOMMANDS = new Set([
+	"list",
+	"kill",
+	"kill-all",
+	"refresh-warm",
+]);
 
 const fatal = (message: string): never => {
 	console.error(chalk.red(`[tw] ${message}`));
@@ -178,6 +184,7 @@ const printUsage = (): void => {
 			"  bun tw kill <runId>               tear down one run's resources",
 			"  bun tw kill --orphans             tag-sweep fallback for SIGKILL'd runs",
 			"  bun tw kill-all [--all-users]     tear down all your non-completed runs",
+			"  bun tw refresh-warm [--ref=<ref>] synchronously refresh the freestyle warm snapshot (default ref: dev)",
 			"",
 			"Flags:",
 			`  --max=N      pool size (default ${DEFAULT_WORKERS}); auto-capped to file count`,
@@ -250,6 +257,17 @@ const main = async (): Promise<void> => {
 			await killAll({ allUsers: argv.includes("--all-users") });
 			process.exit(0);
 			break;
+
+		case "refresh-warm": {
+			try {
+				process.exit(await refreshWarm(argv.slice(1)));
+			} catch (error) {
+				fatal(
+					`refresh-warm failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+			break;
+		}
 
 		default:
 			fatal(
