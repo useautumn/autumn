@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
-import { deriveCustomizeFromItems } from "../customize/licenseCustomize.js";
+import { deriveCustomizeFromItems } from "../customize/deriveLicenseCustomize.js";
 
 /**
  * Plan-response license data, fully derived: response handlers fetch through
