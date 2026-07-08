@@ -33,14 +33,14 @@ Use this resource for plan-management queries: creating plans, configuring prici
 4. Metered features: add the remaining metered allowances and limits.
 5. Boolean features: finalize on/off features per plan.
 - At each step: if you have enough to take a confident stab, build it and surface it for confirmation; if not, ask until you do — then move on.
-- To apply a step: `createPlan` if the plan doesn't exist yet, otherwise `updatePlan`. Before any `updatePlan`, call `hasCustomers` with the proposed plan and follow <versioning>.
+- For catalog changes, preview with `previewUpdateCatalog` and then apply with `updateCatalog` using the exact previewed params. `previewUpdateCatalog` returns plan diffs, customer impact, versioning, variants, and migration context.
 
 </workflow>
 
 <versioning>
 
 - Versioning grandfathers existing customers on their current terms (a production concern) — e.g. raising the base price while keeping current customers on the old price.
-- `hasCustomers` returns `will_version`: true when the change differs from the live plan AND the plan has customers, so a plain `updatePlan` would create a new version.
+- Use the `previewUpdateCatalog` plan preview fields (`versionable`, `has_customers`, `customer_count`, `price_change`, and `item_changes`) to decide whether to version, update in place, or create a migration draft.
 - Many updates should NOT version — e.g. adding or removing a boolean feature the user wants applied to all current customers. Apply those with `disable_version: true`.
 - Rule of thumb: if there are no pricing changes (neither the base price nor any plan-item price), `disable_version: true` is safe and usually right.
 - Also prefer `disable_version: true` when `will_version` is false, or in Sandbox with few customers (the user is likely still integrating, not in production).

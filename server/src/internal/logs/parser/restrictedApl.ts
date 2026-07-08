@@ -71,6 +71,10 @@ export type SummarizeAggregation = {
 	fn: SummarizeFunction;
 };
 
+export type SummarizeByColumn =
+	| { kind: "field"; field: RestrictedAplField }
+	| { kind: "bin"; interval: string };
+
 export type AplReference =
 	| {
 			kind: "field";
@@ -97,7 +101,7 @@ export type RestrictedAplStage =
 	| {
 			kind: "summarize";
 			aggregations: SummarizeAggregation[];
-			by: RestrictedAplField[];
+			by: SummarizeByColumn[];
 	  }
 	| {
 			kind: "project";
@@ -130,8 +134,7 @@ type Token =
 
 type SymbolValue = Extract<Token, { kind: "symbol" }>["value"];
 
-const textDecoder = (value: string) =>
-	value.replace(/\\'/g, "'").replace(/\\\\/g, "\\");
+const textDecoder = (value: string) => value.replace(/\\(['"\\])/g, "$1");
 
 const assertNoDangerousText = (query: string) => {
 	for (const { pattern, message } of RESTRICTED_APL_DANGEROUS_TEXT_PATTERNS) {
@@ -153,6 +156,15 @@ const tokenize = (query: string): Token[] => {
 			continue;
 		}
 
+		const two = query.slice(i, i + 2);
+
+		// Agents habitually write C-style logical operators.
+		if (two === "&&" || two === "||") {
+			tokens.push({ kind: "identifier", value: two === "&&" ? "and" : "or" });
+			i += 2;
+			continue;
+		}
+
 		if (char === "|") {
 			tokens.push({ kind: "symbol", value: "|" });
 			i++;
@@ -165,7 +177,6 @@ const tokenize = (query: string): Token[] => {
 			continue;
 		}
 
-		const two = query.slice(i, i + 2);
 		if (two === "==" || two === "!=" || two === ">=" || two === "<=") {
 			tokens.push({ kind: "symbol", value: two });
 			i += 2;
@@ -184,14 +195,15 @@ const tokenize = (query: string): Token[] => {
 			continue;
 		}
 
-		if (char === "'") {
+		if (char === "'" || char === '"') {
+			const quote = char;
 			let j = i + 1;
 			let raw = "";
 			while (j < query.length) {
 				const current = query[j];
 				if (current === "\\") {
 					const next = query[j + 1];
-					if (next !== "\\" && next !== "'") {
+					if (next !== "\\" && next !== quote) {
 						throw new Error(
 							"Only escaped quotes and backslashes are supported",
 						);
@@ -200,11 +212,11 @@ const tokenize = (query: string): Token[] => {
 					j += 2;
 					continue;
 				}
-				if (current === "'") break;
+				if (current === quote) break;
 				raw += current;
 				j++;
 			}
-			if (j >= query.length || query[j] !== "'") {
+			if (j >= query.length || query[j] !== quote) {
 				throw new Error("Unterminated string literal");
 			}
 			tokens.push({ kind: "string", value: textDecoder(raw) });
@@ -287,11 +299,13 @@ class Parser {
 	}
 
 	private parseStage(): RestrictedAplStage {
+		const start = this.index;
 		const keyword = this.expectIdentifier().toLowerCase();
 		switch (keyword) {
 			case "where":
 				return { kind: "where", expr: this.parseOrExpr() };
-			case "order": {
+			case "order":
+			case "sort": {
 				this.expectKeyword("by");
 				const target = this.expectSafeIdentifierOrField();
 				const direction = this.peekIdentifierLower();
@@ -311,17 +325,32 @@ class Parser {
 			case "project":
 				return this.parseProject();
 			default:
-				throw new Error(`Unsupported query stage: ${keyword}`);
+				// Bare predicates like "customer_id == 'x'" get an implicit where.
+				this.index = start;
+				return { kind: "where", expr: this.parseOrExpr() };
 		}
 	}
 
 	private parseSummarize(): RestrictedAplStage {
 		const aggregations: SummarizeAggregation[] = [];
+		const usedAliases = new Set<string>();
 
 		while (this.peekIdentifierLower() !== "by" && !this.isStageBoundary()) {
-			const alias = this.expectSafeAlias();
-			this.expectSymbol("=");
-			aggregations.push({ alias, fn: this.parseSummarizeFunction() });
+			// Anonymous aggregates ("summarize count() by x") alias to the function name.
+			if (this.peekSymbolAhead(1, "(")) {
+				const fn = this.parseSummarizeFunction();
+				const base: string = fn.kind === "numeric" ? fn.name : fn.kind;
+				let alias = base;
+				let suffix = 2;
+				while (usedAliases.has(alias)) alias = `${base}_${suffix++}`;
+				usedAliases.add(alias);
+				aggregations.push({ alias, fn });
+			} else {
+				const alias = this.expectSafeAlias();
+				this.expectSymbol("=");
+				usedAliases.add(alias);
+				aggregations.push({ alias, fn: this.parseSummarizeFunction() });
+			}
 
 			if (this.peekSymbol(",")) {
 				this.index++;
@@ -334,11 +363,11 @@ class Parser {
 			throw new Error("summarize requires at least one aggregation");
 		}
 
-		const by: RestrictedAplField[] = [];
+		const by: SummarizeByColumn[] = [];
 		if (this.peekIdentifierLower() === "by") {
 			this.index++;
 			while (!this.isStageBoundary()) {
-				by.push(this.expectField());
+				by.push(this.parseSummarizeByColumn());
 				if (this.peekSymbol(",")) {
 					this.index++;
 					continue;
@@ -349,6 +378,34 @@ class Parser {
 		}
 
 		return { kind: "summarize", aggregations, by };
+	}
+
+	private parseSummarizeByColumn(): SummarizeByColumn {
+		if (this.peekIdentifierLower() === "bin") {
+			this.index++;
+			this.expectSymbol("(");
+			const field = this.expectField();
+			if (field.kind !== "topLevel" || field.name !== "timestamp") {
+				throw new Error("bin() only supports the timestamp field");
+			}
+			this.expectSymbol(",");
+			const interval = this.expectBinInterval();
+			this.expectSymbol(")");
+			return { kind: "bin", interval };
+		}
+		return { kind: "field", field: this.expectField() };
+	}
+
+	private expectBinInterval(): string {
+		const value = this.expectNumberLiteral();
+		if (!Number.isInteger(value) || value < 1) {
+			throw new Error("bin() interval must be a positive integer");
+		}
+		const unit = this.expectIdentifier().toLowerCase();
+		if (unit !== "m" && unit !== "h" && unit !== "d") {
+			throw new Error("bin() interval unit must be m, h, or d");
+		}
+		return `${value}${unit}`;
 	}
 
 	private parseSummarizeFunction(): SummarizeFunction {
@@ -474,13 +531,17 @@ class Parser {
 			}
 		}
 
-		if (opToken.kind === "symbol" && this.isCompareOperator(opToken.value)) {
-			return {
-				kind: "comparison",
-				field,
-				op: opToken.value,
-				value: this.expectLiteral(),
-			};
+		if (opToken.kind === "symbol") {
+			// Lone "=" in a predicate is an unambiguous equality comparison.
+			const op = opToken.value === "=" ? "==" : opToken.value;
+			if (this.isCompareOperator(op)) {
+				return {
+					kind: "comparison",
+					field,
+					op,
+					value: this.expectLiteral(),
+				};
+			}
 		}
 
 		throw new Error("Unsupported predicate operator");
@@ -516,10 +577,8 @@ class Parser {
 
 	private expectNumericAggregateField(): RestrictedAplField {
 		const field = this.expectField();
-		if (
-			field.kind !== "topLevel" ||
-			!RESTRICTED_APL_NUMERIC_AGGREGATE_FIELDS.has(field.name)
-		) {
+		if (field.kind === "nested") return field;
+		if (!RESTRICTED_APL_NUMERIC_AGGREGATE_FIELDS.has(field.name)) {
 			throw new Error(
 				`Field cannot be used in numeric aggregation: ${fieldDisplayName(field)}`,
 			);
@@ -605,6 +664,11 @@ class Parser {
 
 	private peekSymbol(value: string): boolean {
 		const token = this.tokens[this.index];
+		return token?.kind === "symbol" && token.value === value;
+	}
+
+	private peekSymbolAhead(offset: number, value: string): boolean {
+		const token = this.tokens[this.index + offset];
 		return token?.kind === "symbol" && token.value === value;
 	}
 
@@ -699,6 +763,17 @@ const fieldToSummarizeByApl = (field: RestrictedAplField): string => {
 	return `${nestedFieldAlias(field)} = tostring(${fieldToApl(field)})`;
 };
 
+// Aliased back to `timestamp` so later order/project stages keep working.
+const summarizeByColumnToApl = (column: SummarizeByColumn): string =>
+	column.kind === "bin"
+		? `timestamp = bin(timestamp, ${column.interval})`
+		: fieldToSummarizeByApl(column.field);
+
+const fieldToNumericAggregateApl = (field: RestrictedAplField): string =>
+	field.kind === "nested"
+		? `todouble(${fieldToApl(field)})`
+		: fieldToApl(field);
+
 const referenceToApl = (reference: AplReference): string => {
 	if (reference.kind === "identifier") return reference.name;
 	const { field } = reference;
@@ -714,6 +789,12 @@ const referenceToProjectApl = ({ alias, source }: ProjectColumn): string => {
 	return referenceToApl(source);
 };
 
+export class RestrictedAplStageNotAllowedError extends Error {
+	constructor(readonly stage: RestrictedAplStageKind) {
+		super(`Unsupported query stage: ${stage}`);
+	}
+}
+
 export const parseRestrictedApl = ({
 	query,
 	allowedStages,
@@ -727,7 +808,7 @@ export const parseRestrictedApl = ({
 	const allowed = allowedStages ?? DEFAULT_RESTRICTED_APL_STAGES;
 	for (const stage of ast.stages) {
 		if (!allowed.includes(stage.kind)) {
-			throw new Error(`Unsupported query stage: ${stage.kind}`);
+			throw new RestrictedAplStageNotAllowedError(stage.kind);
 		}
 	}
 	return ast;
@@ -763,9 +844,9 @@ const summarizeFunctionToApl = (fn: SummarizeFunction): string => {
 		case "countif":
 			return `countif(${exprToApl(fn.expr)})`;
 		case "numeric":
-			return `${fn.name}(${fieldToApl(fn.field)})`;
+			return `${fn.name}(${fieldToNumericAggregateApl(fn.field)})`;
 		case "percentile":
-			return `percentile(${fieldToApl(fn.field)}, ${fn.percentile})`;
+			return `percentile(${fieldToNumericAggregateApl(fn.field)}, ${fn.percentile})`;
 	}
 };
 
@@ -784,7 +865,7 @@ export const restrictedAplToApl = (ast: RestrictedAplAst): string[] =>
 					.join(", ");
 				const by =
 					stage.by.length > 0
-						? ` by ${stage.by.map(fieldToSummarizeByApl).join(", ")}`
+						? ` by ${stage.by.map(summarizeByColumnToApl).join(", ")}`
 						: "";
 				return `| summarize ${aggregations}${by}`;
 			}

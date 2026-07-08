@@ -21,9 +21,16 @@ const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 const CHAT_PORT = process.env.CHAT_PORT
 	? Number.parseInt(process.env.CHAT_PORT, 10)
 	: 3099 + portOffset;
+const EVE_PORT = process.env.EVE_PORT
+	? Number.parseInt(process.env.EVE_PORT, 10)
+	: 3999 + portOffset;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
+const LOCAL_EVE_URL = `http://localhost:${EVE_PORT}`;
+const EVE_SERVER_URL = process.env.EVE_SERVER_URL ?? LOCAL_EVE_URL;
+const EVE_INTERNAL_AUTH_TOKEN =
+	process.env.EVE_INTERNAL_AUTH_TOKEN ?? "local-eve-internal-token";
 const publicTunnelUrl = process.env.NGROK_URL?.replace(/\/$/, "");
 const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
 const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
@@ -120,7 +127,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT, EVE_PORT],
 				});
 			}
 
@@ -156,6 +163,7 @@ async function startDev() {
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
 		console.log(`  leaf:     http://localhost:${CHAT_PORT}/health`);
+		console.log(`  eve:      ${EVE_SERVER_URL}/eve/v1/info`);
 		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
 		// Use cmd on Windows, sh on Unix
@@ -219,9 +227,13 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			names.push("leaf");
-			colors.push("gray");
+			names.push("eve", "leaf");
+			colors.push("white", "gray");
 			cmds.push(
+				isWindows
+					? `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`
+					: `"cd apps/leaf && npx eve dev --no-ui --port ${EVE_PORT}"`,
+				// Harness defaults live in apps/leaf/src/lib/chatAgentConfig.ts.
 				isWindows
 					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
 					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
@@ -270,6 +282,9 @@ async function startDev() {
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				CHAT_PORT: CHAT_PORT.toString(),
+				EVE_PORT: EVE_PORT.toString(),
+				EVE_SERVER_URL,
+				EVE_INTERNAL_AUTH_TOKEN,
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
 				// public NGROK_URL (proxied to leaf's /mcp) so Slack → CMA works locally.

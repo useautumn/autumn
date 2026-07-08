@@ -1,0 +1,1 @@
+ALTER TABLE "leaf"."harness_sessions" ADD COLUMN "title" text;

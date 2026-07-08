@@ -1,0 +1,30 @@
+{
+	"compilerOptions": {
+		"allowUnreachableCode": false,
+		"allowUnusedLabels": false,
+		"declaration": true,
+		"declarationMap": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"incremental": false,
+		"isolatedModules": true,
+		"lib": ["es2024"],
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"noFallthroughCasesInSwitch": true,
+		"noEmit": true,
+		"paths": {
+			"@api/*": ["../../shared/api/*"],
+			"@models/*": ["../../shared/models/*"],
+			"@utils/*": ["../../shared/utils/*"]
+		},
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "es2022",
+		"types": ["bun", "node"],
+		"useUnknownInCatchVariables": true
+	},
+	"exclude": ["node_modules"],
+	"include": ["src/**/*.ts", "tests/**/*.ts"]
+}

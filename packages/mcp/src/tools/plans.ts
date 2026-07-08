@@ -48,12 +48,12 @@ const domain = {
 		operation({
 			id: "hasCustomers",
 			description:
-				"Check the impact of updating an existing plan. Send the proposed plan (plan_id + the changes you intend to apply); returns current_version, will_version (true if the change differs from the live plan AND the plan has customers, so updating would create a new version), and archived. Call before updatePlan to decide disable_version. Follow Plan Management.",
+				"Legacy lightweight version check for an existing plan. For catalog edits, use previewUpdateCatalog because it returns item changes, price changes, customer impact, variants, and versioning data.",
 		}),
 		operation({
 			id: "updatePlan",
 			description:
-				"Update an existing Autumn plan. Destructive configuration write: call hasCustomers first with the same proposed plan, then set disable_version per Plan Management (true applies to all current customers; omit to version and grandfather them). Follow Plan Management and Concepts.",
+				"Update an existing Autumn plan. Destructive configuration write: prefer catalog.update for catalog changes and preview first with previewUpdateCatalog. If using updatePlan directly, set disable_version per Plan Management.",
 			destructive: true,
 		}),
 	],

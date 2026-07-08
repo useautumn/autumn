@@ -253,6 +253,20 @@
       "when": 1782844933101,
       "tag": "0035_boring_maggott",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782926946819,
+      "tag": "0036_clean_hulk",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1783011544240,
+      "tag": "0037_grey_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

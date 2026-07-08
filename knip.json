@@ -48,12 +48,6 @@
 		"vite": {
 			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": [
-				"src/components/ai-elements/**",
-				"src/components/ui/scroll-area.tsx",
-				"src/hooks/useControllableState.ts",
-				"src/types/**/*.d.ts"
-			],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
@@ -101,10 +95,13 @@
 			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
+		"packages/render": {
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"apps/testbench": {
 			"entry": ["**/*.ts"],
-			"project": ["**/*.ts"],
-			"ignore": ["vite-env.d.ts"]
+			"project": ["**/*.ts"]
 		}
 	},
 	"ignoreBinaries": ["infisical", "lsof", "serve"]

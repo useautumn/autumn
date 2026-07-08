@@ -5,7 +5,6 @@ import {
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
-	ChatCircleIcon,
 	CubeIcon,
 	GearIcon,
 	KeyIcon,
@@ -24,7 +23,6 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
@@ -93,7 +91,6 @@ export const MainSidebar = ({
 
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
-	const { isAdmin } = useAdmin();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
 	const canSeeMigrations = has(Scopes.Migrations.Read);
 
@@ -239,14 +236,6 @@ export const MainSidebar = ({
 							title="Settings"
 							env={env}
 						/>
-						{isAdmin && (
-							<NavButton
-								value="chat"
-								icon={<ChatCircleIcon size={16} weight="fill" />}
-								title="Chat"
-								env={env}
-							/>
-						)}
 					</div>
 				</div>
 

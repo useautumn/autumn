@@ -28,13 +28,13 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
 - Gather all remaining missing questions from the checklist and ask them together.
 - If there are no missing questions, call the preview tool.
-- Surface the preview's immediate billing impact, then obtain approval via your client's approval mechanism.
+- Surface the preview's immediate billing impact in one line, then immediately call the write tool — the write tool call itself IS the approval mechanism (it triggers your client's approval prompt/card before executing). Never ask for confirmation with a question tool or in prose.
 - If params change, update them and repeat from the relevant checklist step.
 - Once approved, apply the exact previewed billing action.
 
 ## Rules
 
-- **A mutating billing action requires approval before it takes effect — obtain it via your client's approval mechanism.**
+- **A mutating billing action requires approval before it takes effect. The approval mechanism is the write tool call itself: calling `attach`/`updateSubscription`/`createSchedule` pauses for the user's approval before executing. Do NOT pre-confirm with `ask_question` or prose — that double-prompts the user.**
 - **Apply the default billing params on every action unless the user explicitly asks otherwise — invoice mode (draft), enable immediately, and no proration. The full rules and field names are in the Billing behavior section below; follow them exactly.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.

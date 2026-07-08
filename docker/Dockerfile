@@ -36,6 +36,7 @@ COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
+COPY packages/render/package.json packages/render/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
 COPY packages/ui/package.json packages/ui/
