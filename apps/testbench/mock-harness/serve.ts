@@ -23,7 +23,8 @@ const sockets = new Set<Bun.ServerWebSocket<WsData>>();
 if (errorsEnabled) {
 	setInterval(() => {
 		errorSeq++;
-		const chunk = `\n\x1b[31m✗ server/tests/mock/file${errorSeq}.test.ts\x1b[0m\n    \x1b[31m✗\x1b[0m mock failure #${errorSeq}\n        expected ${errorSeq} to be ${errorSeq + 1}\n`;
+		const longLocation = `server/tests/integration/billing/attach/upgrades/prorations/very/deep/path/segment/another/file${errorSeq}.test.ts:412:17 — expected subscription.items[0].price.unit_amount to equal 12345 but received 99999 (customer cus_mock_${errorSeq}, subscription sub_mock_${errorSeq})`;
+		const chunk = `\n\x1b[31m✗ server/tests/mock/file${errorSeq}.test.ts\x1b[0m\n    \x1b[31m✗\x1b[0m mock failure #${errorSeq}\n        ${longLocation}\n        expected ${errorSeq} to be ${errorSeq + 1}\n`;
 		errorsBuffer += chunk;
 		const payload = JSON.stringify({ type: "errorsOutput", chunk });
 		for (const socket of sockets) {

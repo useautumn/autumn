@@ -69,6 +69,8 @@ export type Snapshot = {
 	files: FileRow[];
 	workers: WorkerRow[];
 	completions: number[];
+	/** Epoch-ms the first test file was dispatched — null until the run stage starts. */
+	runStartedAt: number | null;
 	summary: {
 		passed: number;
 		failed: number;

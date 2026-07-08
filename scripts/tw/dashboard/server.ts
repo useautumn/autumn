@@ -26,6 +26,7 @@ import {
 	getDurationMs,
 	getErrorsOutput,
 	getFileOutput,
+	getRunStartedAt,
 	getWorkerOf,
 	getWorkerOutput,
 	getWorkers,
@@ -92,6 +93,7 @@ const snapshot = () => {
 			files: w.files.map((file) => ({ file, name: basename(file) })),
 		})),
 		completions: getCompletions(),
+		runStartedAt: getRunStartedAt(),
 		summary: s.summary ?? null,
 		now: Date.now(),
 	};
