@@ -79,6 +79,7 @@ export const buildMockSnapshot = (): Snapshot => {
 			files: [],
 		})),
 		completions,
+		runStartedAt: now - 192_000,
 		summary: null,
 		now,
 	};

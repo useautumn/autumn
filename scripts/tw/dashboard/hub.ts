@@ -50,6 +50,8 @@ const workerReason = new Map<string, string>();
 const completions: number[] = [];
 /** Dispatch time per file (latest attempt) — durations for the timings view. */
 const fileStarts = new Map<string, number>();
+/** Epoch-ms the RUN stage started (first file dispatched). */
+let runStartedAt: number | null = null;
 /** Wall duration of each file's LAST completed attempt. */
 const fileDurations = new Map<string, number>();
 /** Rolling failure feed: every failed file's failure detail, appended live. */
@@ -94,6 +96,7 @@ export const setFileWorker = (file: string, worker: string): void => {
 		return;
 	}
 	fileWorker.set(file, worker);
+	runStartedAt ??= Date.now();
 	fileStarts.set(file, Date.now());
 	const files = workerFiles.get(worker) ?? [];
 	if (!files.includes(file)) {
@@ -188,6 +191,7 @@ export const getCompletions = (): number[] => completions;
 export const getErrorsOutput = (): string => errorsBuffer;
 export const getDurationMs = (file: string): number | undefined =>
 	fileDurations.get(file);
+export const getRunStartedAt = (): number | null => runStartedAt;
 
 /** Worker list with status + the files each ran (for the per-worker view). */
 // Registration order first, so the dot grid keeps the deterministic idx order.
@@ -217,6 +221,7 @@ export const resetHub = (): void => {
 	workerReason.clear();
 	completions.length = 0;
 	fileStarts.clear();
+	runStartedAt = null;
 	fileDurations.clear();
 	errorsBuffer = "";
 	skipRequests.clear();

@@ -214,6 +214,9 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 			<InfoRow label="passed" value={snap.run.passed} />
 			<InfoRow label="failed" value={snap.run.failed} />
 			<InfoRow label="running" value={snap.run.running} />
+			{snap.runStartedAt ? (
+				<InfoRow label="elapsed" value={<Elapsed since={snap.runStartedAt} />} />
+			) : null}
 		</div>
 	);
 }

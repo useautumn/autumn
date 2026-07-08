@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { TerminalOutput } from "../Terminal";
+import { AnsiLog } from "../AnsiLog";
 import type { Snapshot } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
 import { Pill } from "../widgets";
@@ -36,7 +36,7 @@ export function Errors({
 			</div>
 			<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card">
 				{socket.errorsOutput ? (
-					<TerminalOutput text={socket.errorsOutput} />
+					<AnsiLog text={socket.errorsOutput} />
 				) : (
 					<div className="flex h-full items-center justify-center text-muted-foreground text-xs">
 						no failures yet 🤞
