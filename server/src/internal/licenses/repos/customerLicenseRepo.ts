@@ -1,7 +1,4 @@
-import {
-	customerLicenses,
-	type DbCustomerLicense,
-} from "@autumn/shared";
+import { customerLicenses, type DbCustomerLicense } from "@autumn/shared";
 import { and, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";

@@ -63,9 +63,7 @@ const touchesLicenses = async ({
 	const balances = db
 		.select(one)
 		.from(customerLicenses)
-		.where(
-			eq(customerLicenses.internal_customer_id, internalCustomerId),
-		)
+		.where(eq(customerLicenses.internal_customer_id, internalCustomerId))
 		.limit(1);
 
 	const grantMarkers = db

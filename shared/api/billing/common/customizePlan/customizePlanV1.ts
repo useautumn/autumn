@@ -3,9 +3,11 @@ import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePr
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
-import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
+import {
+	CustomizePlanLicenseSchema,
+	licensePatchIssues,
+} from "@models/licenseModels/licenseModels";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import { findDuplicate } from "@utils/utils";
 import { z } from "zod/v4";
 
 /** Deprecated: use remove_items and add_items to replace plan items. */
@@ -62,67 +64,34 @@ export const refineCustomizePlanV1Schema = <
 		includeUpdateItems?: boolean;
 		includeLicenses?: boolean;
 	} = {},
-) =>
-	schema
-		.refine(
-			(data) =>
-				(includeItems && data.items !== undefined) ||
-				data.price !== undefined ||
-				(includeFreeTrial && data.free_trial !== undefined) ||
-				data.add_items !== undefined ||
-				data.remove_items !== undefined ||
-				(includeUpdateItems && data.update_items !== undefined) ||
-				data.billing_controls !== undefined ||
-				(includeLicenses &&
-					(data.add_licenses !== undefined ||
-						data.remove_licenses !== undefined)),
-			{
-				message: `When using customize, at least one of ${[
-					"price",
-					includeItems ? "items" : null,
-					"add_items",
-					"remove_items",
-					includeUpdateItems ? "deprecated update_items" : null,
-					includeFreeTrial ? "free_trial" : null,
-					"billing_controls",
-					includeLicenses ? "add_licenses" : null,
-					includeLicenses ? "remove_licenses" : null,
-				]
-					.filter(Boolean)
-					.join(", ")} must be provided`,
-			},
-		)
+) => {
+	const enabledKeys = [
+		"price",
+		includeItems && "items",
+		"add_items",
+		"remove_items",
+		includeUpdateItems && "update_items",
+		includeFreeTrial && "free_trial",
+		"billing_controls",
+		includeLicenses && "add_licenses",
+		includeLicenses && "remove_licenses",
+	].filter(Boolean) as (keyof CustomizePlanRefinementData)[];
+	const keyLabel = (key: string) =>
+		key === "update_items" ? "deprecated update_items" : key;
+
+	return schema
+		.refine((data) => enabledKeys.some((key) => data[key] !== undefined), {
+			message: `When using customize, at least one of ${enabledKeys
+				.map(keyLabel)
+				.join(", ")} must be provided`,
+		})
 		.superRefine((data, refinementCtx) => {
 			if (!includeLicenses) return;
-			const addIds = (data.add_licenses ?? []).map(
-				(license) => license.license_plan_id,
-			);
-			const removeIds = data.remove_licenses ?? [];
-
-			const duplicateAdd = findDuplicate(addIds);
-			if (duplicateAdd !== undefined) {
-				refinementCtx.addIssue({
-					code: "custom",
-					message: `Duplicate license ${duplicateAdd} in add_licenses`,
-					path: ["add_licenses"],
-				});
-			}
-			const duplicateRemove = findDuplicate(removeIds);
-			if (duplicateRemove !== undefined) {
-				refinementCtx.addIssue({
-					code: "custom",
-					message: `Duplicate license ${duplicateRemove} in remove_licenses`,
-					path: ["remove_licenses"],
-				});
-			}
-			const addIdSet = new Set(addIds);
-			const overlapping = removeIds.find((id) => addIdSet.has(id));
-			if (overlapping !== undefined) {
-				refinementCtx.addIssue({
-					code: "custom",
-					message: `License ${overlapping} cannot appear in both add_licenses and remove_licenses`,
-					path: ["remove_licenses"],
-				});
+			for (const issue of licensePatchIssues({
+				addLicenses: data.add_licenses,
+				removeLicenses: data.remove_licenses,
+			})) {
+				refinementCtx.addIssue({ code: "custom", ...issue });
 			}
 		})
 		.refine(
@@ -143,6 +112,7 @@ export const refineCustomizePlanV1Schema = <
 					.join(" / ")} (PATCH-style); pick one approach`,
 			},
 		);
+};
 
 export const CustomizePlanV1BaseSchema = z.object({
 	price: BasePriceParamsSchema.nullable().optional().meta({
