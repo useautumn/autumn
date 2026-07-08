@@ -6,6 +6,7 @@ import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migratio
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
+import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import {
 	executeRunMigration,
 	type RunMigrationPayload,
@@ -13,14 +14,6 @@ import {
 } from "@/trigger/migrations/runMigrationTask.js";
 
 const MAX_CONCURRENCY = 5;
-
-// tw-swarm-only fallback: keyless VMs run migrations in-process. Gated on
-// TW_WORKER_MODE so a forgotten prod key fails loudly (migrations need Trigger's durable layer).
-const shouldRunMigrationInline = () =>
-	process.env.TW_WORKER_MODE === "1" &&
-	process.env.NODE_ENV !== "production" &&
-	!process.env.TRIGGER_SERVER_SECRET_KEY &&
-	!process.env.TRIGGER_SECRET_KEY;
 
 const RunMigrationBody = z.object({
 	id: z.string(),

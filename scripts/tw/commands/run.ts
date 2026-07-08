@@ -664,6 +664,9 @@ const buildWorkerEnv = ({
 		AUTUMN_TEST_BASE_URL: `http://localhost:${SERVER_PORT}`,
 		// keep the DB CLI / preload paths off Infisical inside the µVM.
 		AUTUMN_DB_DIRECT: "1",
+		// Workers have no trigger.dev key: migrations run inline in-process
+		// (shouldRunMigrationInline) instead of via the durable layer.
+		TW_WORKER_MODE: "1",
 		// The µVM is isolated and has NO AWS creds, so the S3-backed edge configs
 		// (rollout, cache-v2-ramp, redis-v2-cache, blue-green, …) can't be read —
 		// they'd poll S3 every 1s and spam CredentialsProviderError, AND the
@@ -673,6 +676,16 @@ const buildWorkerEnv = ({
 		// S3) and forces the v2-cache rollout to 100% — the prod default for months.
 		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 	};
+
+	// Shared dev Tinybird (no in-µVM instance — gVisor blocks it). Flows per-run
+	// like the other secrets, never baked into the warm image/snapshot.
+	if (
+		process.env.TINYBIRD_US_EAST_API_URL &&
+		process.env.TINYBIRD_US_EAST_TOKEN
+	) {
+		env.TINYBIRD_US_EAST_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
+		env.TINYBIRD_US_EAST_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+	}
 
 	// Browser tests (Stripe checkout / setup-payment) use the LOCAL Playwright
 	// Chromium baked into the image (build-base §9). `USE_KERNEL_BROWSER` stays
