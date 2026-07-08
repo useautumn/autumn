@@ -53,6 +53,7 @@ export const buildMockSnapshot = (): Snapshot => {
 		warmActivity: "",
 		warmBuilding: false,
 		warmStage: 5,
+		warmHit: null,
 		phaseStartedAt: now - 300_000,
 		activity: "mock harness snapshot",
 		fanout: { stripeDone: 8, stripeTotal: 8, workersReady: 8, workersTotal: 8 },

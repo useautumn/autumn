@@ -785,7 +785,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							`[modal] warm cache HIT (${WARM_IMAGE_REPO}:${sha12}) — skipping the entire warm build`,
 						),
 					);
-					return { name, handle: undefined };
+					return { name, handle: undefined, warmHit: "exact" };
 				}
 				if (!STALE_WARM_DISABLED) {
 					const latest = await lookupPublishedWarmImage("latest");
@@ -798,7 +798,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							),
 						);
 						refreshWarmImageInBackground(name, sha12, latest);
-						return { name, handle: undefined };
+						return { name, handle: undefined, warmHit: "stale" };
 					}
 				}
 			}

@@ -49,6 +49,7 @@ const snapshot = () => {
 		warmActivity: s.warmActivity,
 		warmBuilding: s.warmBuilding,
 		warmStage: s.warmStage,
+		warmHit: s.warmHit,
 		phaseStartedAt: s.phaseStartedAt,
 		activity: s.lastLine,
 		fanout: {
