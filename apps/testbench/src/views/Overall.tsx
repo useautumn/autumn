@@ -1,5 +1,6 @@
 import { Activity, FileText, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { InfoRow } from "@/components/general/info-row";
 // Light section primitives imported DIRECTLY (not via the barrel, which pulls in
 // motion/react-router/ErrorScreen) — these only depend on `cn`.
 import { TableActions } from "@/components/table/table-actions";
@@ -14,7 +15,6 @@ import {
 	TableRow,
 	Table as UiTable,
 } from "@/components/ui/table";
-import { InfoRow } from "@/components/general/info-row";
 import type { Phase, Snapshot } from "../types";
 import {
 	Elapsed,
@@ -24,9 +24,9 @@ import {
 	type PillTone,
 	ProgressBar,
 	SpeedChart,
+	sortFilesForTriage,
 	WarmStepper,
 	WorkerDots,
-	sortFilesForTriage,
 } from "../widgets";
 
 const PHASE_TONE: Record<Phase, PillTone> = {
@@ -72,6 +72,40 @@ function Section({
 }
 
 function PhaseProgress({ snap }: { snap: Snapshot }) {
+	// Warm cache HIT: no pipeline ran, so the 6-step stepper would be a lie —
+	// show the single real step instead (the ingress spin-up we're waiting on).
+	if (snap.phase === "warm" && snap.warmHit) {
+		return (
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center justify-between text-sm">
+					<span className="text-muted-foreground">
+						warm snapshot found ({snap.warmHit}
+						{snap.warmHit === "stale" ? " — workers fast-forward" : ""})
+					</span>
+					<span className="text-muted-foreground text-xs">
+						elapsed <Elapsed since={snap.phaseStartedAt} />
+					</span>
+				</div>
+				<div className="flex items-center gap-1.5">
+					<span className="flex size-4 items-center justify-center rounded-full border border-green-500 bg-green-500/15 text-[9px] text-green-500">
+						✓
+					</span>
+					<span className="text-muted-foreground text-xs">warm found</span>
+					<span className="text-subtle text-xs">·</span>
+					<span className="flex size-4 animate-pulse items-center justify-center rounded-full border border-sandbox bg-sandbox/15 text-[9px] text-sandbox tabular-nums">
+						1
+					</span>
+					<span className="text-foreground text-xs">spinning up ingress</span>
+				</div>
+				<IndeterminateBar />
+				{snap.activity ? (
+					<div className="truncate rounded-md border bg-interactive-secondary px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
+						{snap.activity}
+					</div>
+				) : null}
+			</div>
+		);
+	}
 	if (snap.phase === "warm") {
 		return (
 			<div className="flex flex-col gap-3">
@@ -215,7 +249,10 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 			<InfoRow label="failed" value={snap.run.failed} />
 			<InfoRow label="running" value={snap.run.running} />
 			{snap.runStartedAt ? (
-				<InfoRow label="elapsed" value={<Elapsed since={snap.runStartedAt} />} />
+				<InfoRow
+					label="elapsed"
+					value={<Elapsed since={snap.runStartedAt} />}
+				/>
 			) : null}
 		</div>
 	);

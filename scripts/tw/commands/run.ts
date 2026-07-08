@@ -26,12 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
-import {
-	readdirSync,
-	readFileSync,
-	statSync,
-	writeFileSync,
-} from "node:fs";
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
@@ -147,6 +142,7 @@ import {
 	setSummary,
 	setTeardownAccounts,
 	setTeardownSandboxes,
+	setWarmHit,
 } from "../tui/store.ts";
 import type { TwRunArgs, WorkerHandle } from "../types.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
@@ -790,6 +786,8 @@ const getOrBuildWarmParent = async ({
 
 	const cached = await getSandboxByName(warmName);
 	if (cached) {
+		// Collapse the dashboard's warm stepper — there is no pipeline to show.
+		setWarmHit(cached.warmHit ?? "exact");
 		log(
 			`warm-up: reusing cached warm parent ${warmName} (ref ${ref} @ ${sha.slice(0, 7)}) — skipping build`,
 		);
@@ -1524,6 +1522,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 						orgId: TEST_ORG_CONFIG.id,
 						orgNameForIdx: (idx) =>
 							`${TEST_ORG_CONFIG.name} (${sandboxName(owner, runId, idx)})`,
+						log: (line) => log(line),
 					}),
 			});
 			pooledAccounts = claim.byWorker;

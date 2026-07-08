@@ -56,10 +56,31 @@ const server = Bun.serve<WsData>({
 			sockets.add(ws);
 			// PROGRESSIVE=1 mimics a live run: warm phase first, files complete over time.
 			const progressive = process.env.PROGRESSIVE === "1";
+			// WARM_HIT=exact|stale pins the compact warm-cache-hit state (screenshots).
+			const warmHit = process.env.WARM_HIT;
 			let tick = 0;
 			const send = () => {
 				const full = buildMockSnapshot();
-				if (progressive) {
+				if (warmHit === "exact" || warmHit === "stale") {
+					full.phase = "warm";
+					full.warmHit = warmHit;
+					full.warmStage = -1;
+					full.phaseStartedAt = Date.now() - 8000;
+					full.activity =
+						"[modal] warm cache HIT (tw-warm:ab12cd34ef56) — skipping the entire warm build";
+					full.files = [];
+					full.completions = [];
+					full.run = {
+						total: 60,
+						done: 0,
+						passed: 0,
+						failed: 0,
+						running: 0,
+						retrying: 0,
+						skipped: 0,
+					};
+					full.runStartedAt = null;
+				} else if (progressive) {
 					if (tick < 2) {
 						full.phase = "warm";
 						full.files = [];

@@ -40,6 +40,8 @@ export type Snapshot = {
 	warmBuilding: boolean;
 	/** Monotonic warm-up stage index (-1 until first marker); see Overall view. */
 	warmStage: number;
+	/** Warm cache hit kind — non-null collapses the stepper to the compact state. */
+	warmHit?: "exact" | "stale" | null;
 	/** Epoch-ms the current phase started — for the live elapsed timer. */
 	phaseStartedAt: number;
 	/** Latest non-empty log line in any phase (activity ticker). */

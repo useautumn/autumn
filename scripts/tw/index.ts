@@ -20,6 +20,7 @@ import {
 	getAllGroups,
 	getAllSuites,
 } from "../../server/tests/_groups/index.ts";
+import { doctor } from "./commands/doctor.ts";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";
 import { refreshWarm } from "./commands/refreshWarm.ts";
@@ -38,6 +39,7 @@ const RESERVED_SUBCOMMANDS = new Set([
 	"kill",
 	"kill-all",
 	"refresh-warm",
+	"doctor",
 ]);
 
 const fatal = (message: string): never => {
@@ -185,6 +187,7 @@ const printUsage = (): void => {
 			"  bun tw kill --orphans             tag-sweep fallback for SIGKILL'd runs",
 			"  bun tw kill-all [--all-users]     tear down all your non-completed runs",
 			"  bun tw refresh-warm [--ref=<ref>] synchronously refresh the freestyle warm snapshot (default ref: dev)",
+			"  bun tw doctor                     health check: warm cache, stripe pool, locks, env",
 			"",
 			"Flags:",
 			`  --max=N      pool size (default ${DEFAULT_WORKERS}); auto-capped to file count`,
@@ -237,6 +240,10 @@ const main = async (): Promise<void> => {
 			process.exit(0);
 			break;
 
+		case "doctor":
+			process.exit(await doctor());
+			break;
+
 		case "kill": {
 			const rest = argv.slice(1);
 			if (rest.includes("--orphans")) {
@@ -271,7 +278,7 @@ const main = async (): Promise<void> => {
 
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: list | kill | kill-all, or a test target)`,
+				`unknown subcommand: ${sub} (use: list | kill | kill-all | doctor, or a test target)`,
 			);
 	}
 };

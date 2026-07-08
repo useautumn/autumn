@@ -6,11 +6,13 @@
  * api.stripe.com — so it boots on a bare `oven/bun` registry image with no
  * install step.
  *
- * For each target `{ accountId, keyIndex }` it deletes/deactivates everything a
- * test run creates ON the sub-account (test clocks, customers — which cascades
- * their subscriptions — leftover subscriptions, prices, products, coupons,
- * billing meters), then flips the account's pool metadata back to
- * `autumn_tw_pool_state=clean` on the PLATFORM key so the next run can claim it.
+ * Each target `{ accountId, keyIndex }` is first marked
+ * `autumn_tw_pool_state=nuking` (+ timestamp) so concurrent claims can WAIT on
+ * the in-flight teardown instead of top-up-creating. Then everything a test run
+ * creates ON the sub-account is deleted/deactivated (test clocks, customers —
+ * which cascades their subscriptions — leftover subscriptions, prices, products,
+ * coupons, billing meters), and the pool metadata flips back to `clean` on the
+ * PLATFORM key so the next run can claim it.
  *
  * Env contract (standalone mode):
  *   NUKE_TARGETS  JSON: [{ "accountId": "acct_x", "keyIndex": 0 }, ...]
@@ -263,6 +265,15 @@ export const setPoolState = async ({ accountId, key, state, extra }) => {
 	});
 };
 
+/** Mark one target as being nuked (claims skip it; short claims WAIT on it). */
+export const markNuking = ({ accountId, key }) =>
+	setPoolState({
+		accountId,
+		key,
+		state: "nuking",
+		extra: { autumn_tw_nuking_at: String(Date.now()) },
+	});
+
 /** Nuke one target end-to-end: contents, then mark clean. */
 export const nukeTarget = async ({ accountId, key }) => {
 	const result = await nukeAccountContents({ accountId, key });
@@ -276,8 +287,8 @@ export const nukeTarget = async ({ accountId, key }) => {
 };
 
 /**
- * Reclaim pool accounts left dirty by crashed runs: dirty + claimed longer ago
- * than `staleAfterMs`. Newest-first scan, capped, per key.
+ * Reclaim pool accounts left dirty (or stuck `nuking` by a crashed nuke) longer
+ * ago than `staleAfterMs`. Newest-first scan, capped, per key.
  */
 const findStaleDirtyTargets = async ({ keys, staleAfterMs, knownIds }) => {
 	const cutoff = Date.now() - staleAfterMs;
@@ -296,13 +307,18 @@ const findStaleDirtyTargets = async ({ keys, staleAfterMs, knownIds }) => {
 				for (const account of page.data ?? []) {
 					scanned++;
 					const metadata = account.metadata ?? {};
-					const claimedAt = Number(metadata.autumn_tw_claimed_at);
+					const state = metadata.autumn_tw_pool_state;
+					const staleSince = Number(
+						state === "nuking"
+							? metadata.autumn_tw_nuking_at
+							: metadata.autumn_tw_claimed_at,
+					);
 					if (
 						metadata.autumn_tw_pool === "1" &&
-						metadata.autumn_tw_pool_state === "dirty" &&
+						(state === "dirty" || state === "nuking") &&
 						!knownIds.has(account.id) &&
-						Number.isFinite(claimedAt) &&
-						claimedAt < cutoff
+						Number.isFinite(staleSince) &&
+						staleSince < cutoff
 					) {
 						stale.push({ accountId: account.id, keyIndex });
 					}
@@ -364,6 +380,20 @@ const main = async () => {
 		list.push(target);
 		byKey.set(target.keyIndex, list);
 	}
+
+	// Mark everything `nuking` FIRST so concurrent claims see the in-flight
+	// teardown (they wait instead of top-up-creating). Best-effort per account.
+	await Promise.all(
+		[...byKey.entries()].map(([keyIndex, keyTargets]) =>
+			boundedAll(keyTargets, perKeyConcurrency, (target) =>
+				markNuking({
+					accountId: target.accountId,
+					key: keys[keyIndex] ?? keys[0],
+				}),
+			),
+		),
+	);
+	console.log(`[nuke] marked ${targets.length} account(s) nuking`);
 
 	let failed = 0;
 	await Promise.all(

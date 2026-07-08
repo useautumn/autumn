@@ -87,6 +87,29 @@ const releaseRef = async (name: string, expectedSha: string): Promise<void> => {
 	]);
 };
 
+export type HeldLock = { name: string; meta: LockMeta | null };
+
+/** All currently-held global locks on the remote (for `bun tw doctor`). */
+export const listHeldLocks = async (): Promise<HeldLock[]> => {
+	let lines: string;
+	try {
+		lines = await git(["ls-remote", "origin", "refs/tw/locks/*"]);
+	} catch {
+		return [];
+	}
+	const names = lines
+		.split("\n")
+		.map((line) => line.split("\t")[1])
+		.filter((ref): ref is string => Boolean(ref))
+		.map((ref) => ref.replace("refs/tw/locks/", ""));
+	return Promise.all(
+		names.map(async (name) => {
+			const holder = await readHolder(name);
+			return { name, meta: holder?.meta ?? null };
+		}),
+	);
+};
+
 /**
  * Run `fn` under the named global lock. Acquire = atomic ref create; contested
  * = poll; holder older than `breakAfterMs` = break it (logged) and retry.

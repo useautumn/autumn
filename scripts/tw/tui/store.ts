@@ -58,6 +58,8 @@ export type TuiState = {
 	 * snapshot/build phase shows real per-stage progress instead of looking frozen.
 	 */
 	warmStage: number;
+	/** Warm cache hit kind (exact sha / stale `:latest`) — null when building. */
+	warmHit: "exact" | "stale" | null;
 	/** Epoch-ms the CURRENT phase started — lets the UI show a live elapsed timer. */
 	phaseStartedAt: number;
 	/** Latest non-empty log line in ANY phase — the dashboard's activity ticker. */
@@ -117,6 +119,7 @@ const state: TuiState = {
 	warmActivity: "",
 	warmBuilding: false,
 	warmStage: -1,
+	warmHit: null,
 	phaseStartedAt: Date.now(),
 	lastLine: "",
 	stripeDone: 0,
@@ -149,6 +152,7 @@ export const resetTui = (): void => {
 	state.warmActivity = "";
 	state.warmBuilding = false;
 	state.warmStage = -1;
+	state.warmHit = null;
 	state.phaseStartedAt = Date.now();
 	state.lastLine = "";
 	state.stripeDone = 0;
@@ -180,6 +184,11 @@ export const setRunMeta = (target: string, workers: number): void => {
 export const setWarmActivity = (activity: string, building: boolean): void => {
 	state.warmActivity = activity;
 	state.warmBuilding = building;
+};
+
+/** Mark the warm phase as a cache hit — the dashboard collapses the stepper. */
+export const setWarmHit = (kind: "exact" | "stale"): void => {
+	state.warmHit = kind;
 };
 
 export const setStripeProgress = (done: number, total: number): void => {
