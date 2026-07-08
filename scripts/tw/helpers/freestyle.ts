@@ -17,10 +17,10 @@
  *     cross-run + cross-teammate warm cache), then delete the parent VM.
  *   - **getSandboxByName** — live map, else NAMED SNAPSHOT lookup (the warm cache
  *     hit path: run.ts only needs truthiness + the name).
- *   - **forkWorker** — `vms.create({snapshotId})` with 429 backoff (the platform's
- *     "Quota burst allowance" admits ~22 instantly then refills; measured 163
- *     restores → healthy in 66s). Ephemeral persistence + idle timeout self-clean
- *     leaked workers.
+ *   - **forkWorker** — `vms.create({snapshotId})` through a proactive global
+ *     pacer (50 creates / 10s account limit, spread inside the window) with 429
+ *     backoff kept as a safety net. Ephemeral persistence + idle timeout
+ *     self-clean leaked workers.
  *   - **exec** — freestyle's REST exec-await is BUFFERED and has a server-side
  *     ceiling (~324s) that kills long commands and loses their output, so
  *     runStreaming launches via nohup + log/exit files and polls the log by byte
@@ -75,7 +75,7 @@ const STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
 const WARM_SERVER_HEALTH_TIMEOUT_S = 180;
 /** Long enough for apt + initdb on the cold path; execs are buffered. */
 const EXEC_TIMEOUT_MS = 15 * 60 * 1000;
-/** Patience for create-from-snapshot 429 backoff (quota bucket refill). */
+/** Patience for a paced create (a 199-fleet drains in ~40s at 50/10s). */
 const CREATE_DEADLINE_MS = 5 * 60 * 1000;
 const INGRESS_IDLE_TIMEOUT_S = 3600;
 
@@ -97,11 +97,12 @@ let clientInstance: Freestyle | undefined;
 const client = (): Freestyle => {
 	clientInstance ??= new Freestyle({
 		apiKey: freestyleApiKey(),
-		fetch: (input: Parameters<typeof fetch>[0], init?: RequestInit) =>
+		// Cast: bun-types' fetch declares `preconnect`, which the SDK never calls.
+		fetch: ((input: Parameters<typeof fetch>[0], init?: RequestInit) =>
 			fetch(input, {
 				...init,
 				signal: AbortSignal.timeout(API_FETCH_TIMEOUT_MS),
-			}),
+			})) as typeof fetch,
 	});
 	return clientInstance;
 };
@@ -223,7 +224,57 @@ const is429 = (error: unknown): boolean =>
 		error instanceof Error ? error.message : String(error),
 	);
 
-/** `vms.create` with patient jittered backoff against the burst quota. */
+// ---- proactive create pacer --------------------------------------------------
+/** Freestyle account limit: 50 VM creates per rolling 10s window. */
+const CREATES_PER_WINDOW = 50;
+const CREATE_WINDOW_MS = 10_000;
+/** Spread admissions across the window instead of thundering 50 at once. */
+const CREATE_SPACING_MS = CREATE_WINDOW_MS / CREATES_PER_WINDOW;
+
+const createAdmissions: number[] = [];
+let lastAdmissionAt = 0;
+/** Set on a real 429 (safety net) — pauses all admissions for a full window. */
+let createPenaltyUntil = 0;
+let admissionQueue: Promise<void> = Promise.resolve();
+
+/** Serialize callers, admitting one create per spacing slot within the window. */
+const admitCreate = (signal?: AbortSignal): Promise<void> => {
+	const turn = admissionQueue.then(async () => {
+		for (;;) {
+			signal?.throwIfAborted();
+			const now = Date.now();
+			while (
+				createAdmissions.length > 0 &&
+				(createAdmissions[0] as number) <= now - CREATE_WINDOW_MS
+			) {
+				createAdmissions.shift();
+			}
+			const windowWait =
+				createAdmissions.length >= CREATES_PER_WINDOW
+					? (createAdmissions[0] as number) + CREATE_WINDOW_MS - now
+					: 0;
+			const spacingWait = lastAdmissionAt + CREATE_SPACING_MS - now;
+			const penaltyWait = createPenaltyUntil - now;
+			const waitMs = Math.max(windowWait, spacingWait, penaltyWait, 0);
+			if (waitMs === 0) {
+				createAdmissions.push(now);
+				lastAdmissionAt = now;
+				return;
+			}
+			await sleep(waitMs);
+		}
+	});
+	admissionQueue = turn.catch(() => {
+		/* an aborted waiter must not wedge the queue */
+	});
+	return turn;
+};
+
+const penalizeCreateWindow = (): void => {
+	createPenaltyUntil = Date.now() + CREATE_WINDOW_MS;
+};
+
+/** Paced `vms.create` (proactive rate limiter) with 429 backoff as safety net. */
 const createVmWithBackoff = async (options: {
 	snapshotId?: string;
 	name: string;
@@ -233,7 +284,7 @@ const createVmWithBackoff = async (options: {
 }): Promise<{ vm: Vm; vmId: string }> => {
 	const deadline = Date.now() + CREATE_DEADLINE_MS;
 	for (let attempt = 0; ; attempt++) {
-		options.signal?.throwIfAborted();
+		await admitCreate(options.signal);
 		try {
 			const created = await client().vms.create({
 				snapshotId: options.snapshotId ?? null,
@@ -246,6 +297,12 @@ const createVmWithBackoff = async (options: {
 			if (!is429(error) || Date.now() > deadline) {
 				throw error;
 			}
+			narrate(
+				chalk.yellow(
+					`[freestyle] create 429 (pacer safety net) — penalizing window ${CREATE_WINDOW_MS}ms`,
+				),
+			);
+			penalizeCreateWindow();
 			await sleep(400 + Math.random() * 800 * Math.min(attempt + 1, 8));
 		}
 	}
@@ -366,7 +423,8 @@ const gcWarmSnapshots = async (): Promise<void> => {
 	let readyKept = 0;
 	for (const snap of warm) {
 		const ageMs = Date.now() - new Date(snap.createdAt).getTime();
-		const stuckBuilding = snap.state === "building" && ageMs > 2 * 60 * 60 * 1000;
+		const stuckBuilding =
+			snap.state === "building" && ageMs > 2 * 60 * 60 * 1000;
 		const isReady = snap.state === "ready";
 		if (isReady && readyKept < WARM_SNAPSHOTS_TO_KEEP) {
 			readyKept++;
@@ -397,8 +455,7 @@ const findSnapshotByName = async (
 	// fails with SOURCE_SNAPSHOT_BUILDING) — the stale path serves instead.
 	const match = snapshots
 		.filter(
-			(snap) =>
-				snap.name === name && !snap.deleted && snap.state === "ready",
+			(snap) => snap.name === name && !snap.deleted && snap.state === "ready",
 		)
 		.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0];
 	if (match) {
@@ -409,7 +466,10 @@ const findSnapshotByName = async (
 
 /** Sandbox names are valid *.style.dev labels apart from case/underscores. */
 const domainForName = (name: string): string =>
-	`${name.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 60)}.style.dev`;
+	`${name
+		.toLowerCase()
+		.replace(/[^a-z0-9-]/g, "-")
+		.slice(0, 60)}.style.dev`;
 
 /** Per-poll read cap; an exact-cap read means more bytes are pending. */
 const POLL_READ_CAP = 200_000;
@@ -561,7 +621,9 @@ const refreshWarmSnapshotInBackground = (warmName: string): void => {
 };
 
 export const freestyleProvider: ProviderImpl = {
-	async createWarmSandbox(opts: CreateSandboxOptions): Promise<ProviderSandbox> {
+	async createWarmSandbox(
+		opts: CreateSandboxOptions,
+	): Promise<ProviderSandbox> {
 		if (!opts.source) {
 			throw new Error("freestyle: createWarmSandbox requires a git source");
 		}
@@ -713,9 +775,7 @@ export const freestyleProvider: ProviderImpl = {
 		const { vm, vmId } = await createVmWithBackoff({
 			snapshotId,
 			name: opts.name,
-			idleTimeoutSeconds: Math.ceil(
-				(opts.timeout ?? WORKER_TIMEOUT_MS) / 1000,
-			),
+			idleTimeoutSeconds: Math.ceil((opts.timeout ?? WORKER_TIMEOUT_MS) / 1000),
 			ephemeral: true,
 			signal: opts.signal,
 		});
@@ -723,9 +783,7 @@ export const freestyleProvider: ProviderImpl = {
 		liveVms.set(vmId, { vm, vmId });
 		// Per-worker env (its pool Stripe key, sub-account, svix flags) replaces the
 		// warm parent's env file baked into the snapshot.
-		const env = stale
-			? { ...opts.env, TW_SNAPSHOT_STALE: "1" }
-			: opts.env;
+		const env = stale ? { ...opts.env, TW_SNAPSHOT_STALE: "1" } : opts.env;
 		await vm.fs.writeTextFile(VM_ENV_FILE, envFileContent(env));
 		if (stale) {
 			const targetSha = opts.env.TW_TARGET_SHA;
@@ -763,21 +821,32 @@ export const freestyleProvider: ProviderImpl = {
 
 		// Playwright Chromium for the browser-driven groups (same bake as Modal's
 		// image step 9; needs the repo's node_modules, so it runs post-warmup).
-		const chromiumDone = stage(
-			"bake Playwright Chromium (browser groups)",
-			20_000,
-			"chromium",
-		);
-		const chromium = await execOnVm(
+		// executablePath embeds the resolved playwright-core version's browser
+		// revision, so a version bump between commits misses and re-bakes.
+		const chromiumProbe = await execOnVm(
 			vm,
-			`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
-				"apt-get update -qq && bun x playwright@$PWV install --with-deps chromium",
+			`cd ${REPO_ROOT} && CHROME=$(bun -p "require('playwright-core').chromium.executablePath()" 2>/dev/null) && [ -n "$CHROME" ] && [ -x "$CHROME" ]`,
+			60_000,
 		);
-		chromiumDone();
-		if (chromium.exitCode !== 0) {
-			throw new Error(
-				`freestyle: chromium bake failed (exit ${chromium.exitCode}): ${chromium.stderr.slice(-1500)}`,
+		if (chromiumProbe.exitCode === 0) {
+			narrate(chalk.cyan("[freestyle] chromium already baked — skipping"));
+		} else {
+			const chromiumDone = stage(
+				"bake Playwright Chromium (browser groups)",
+				20_000,
+				"chromium",
 			);
+			const chromium = await execOnVm(
+				vm,
+				`cd ${REPO_ROOT} && PWV=$(bun -p "require('playwright-core/package.json').version" 2>/dev/null || echo 1.60.0) && ` +
+					"apt-get update -qq && bun x playwright@$PWV install --with-deps chromium",
+			);
+			chromiumDone();
+			if (chromium.exitCode !== 0) {
+				throw new Error(
+					`freestyle: chromium bake failed (exit ${chromium.exitCode}): ${chromium.stderr.slice(-1500)}`,
+				);
+			}
 		}
 
 		// Bake the RUNNING app into the snapshot: server + SQS workers + cron start
@@ -913,7 +982,9 @@ export const freestyleProvider: ProviderImpl = {
 		domainsBySandbox.set(sandbox.name, domain);
 		if (port !== SERVER_PORT && port !== INGRESS_PORT) {
 			narrate(
-				chalk.yellow(`[freestyle] mapped non-standard port ${port} for ${sandbox.name}`),
+				chalk.yellow(
+					`[freestyle] mapped non-standard port ${port} for ${sandbox.name}`,
+				),
 			);
 		}
 		return `https://${domain}`;
@@ -1133,7 +1204,9 @@ export const freestyleProvider: ProviderImpl = {
 				// Fast until READY (run.ts is watching for the sentinel); slow liveness
 				// poll after — 200 workers × 1.5s for a whole run would hammer the API.
 				await sleep(
-					readySeen ? 20_000 + Math.random() * 5_000 : 1_500 + Math.random() * 500,
+					readySeen
+						? 20_000 + Math.random() * 5_000
+						: 1_500 + Math.random() * 500,
 				);
 			}
 		};
