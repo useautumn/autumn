@@ -589,345 +589,385 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 	};
 
 	return {
-	async createWarmSandbox(
-		opts: CreateSandboxOptions,
-	): Promise<ProviderSandbox> {
-		if (!opts.source) {
-			throw new Error("modal: createWarmSandbox requires a git source");
-		}
-		// Fast-forward: build the new warm ON TOP of the newest published warm
-		// image (fetch + checkout delta) instead of a fresh clone on the base
-		// image — warmup.sh then only pays the install/migrate/seed delta.
-		{
-			const latest = await lookupPublishedWarmImage("latest");
-			if (latest) {
-				const ffDone = stage(
-					`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
-				);
-				try {
-					const sandbox = await createFromImage(
-						latest,
-						{
-							name: opts.name,
-							env: opts.env,
-							tags: opts.tags,
-							cpu: opts.vcpus ?? WORKER_CPU,
-							memoryMiB: WORKER_MEMORY_MIB,
-							timeout: opts.timeout,
-							encryptedPorts: opts.ports ?? [SERVER_PORT],
-						},
-						v2,
-					);
-					await fastForwardCheckout(
-						sandbox,
-						opts.source.revision,
-						"warm-fast-forward",
-					);
-					ffDone();
-					return wrap(opts.name, sandbox);
-				} catch (error) {
-					ffDone();
-					narrate(
-						chalk.yellow(
-							`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
-						),
-					);
-				}
+		async createWarmSandbox(
+			opts: CreateSandboxOptions,
+		): Promise<ProviderSandbox> {
+			if (!opts.source) {
+				throw new Error("modal: createWarmSandbox requires a git source");
 			}
-		}
-		// The base image bakes node_modules for THIS ref (cache-keyed on the
-		// lockfile), so the warm clone + workers read deps from a fast local layer.
-		const image = await getBaseImage({
-			gitUrl: cloneUrl(opts.source),
-			gitRef: opts.source.revision,
-			lockHash: lockHash(),
-		});
-		const sandbox = await createFromImage(
-			image,
+			// Fast-forward: build the new warm ON TOP of the newest published warm
+			// image (fetch + checkout delta) instead of a fresh clone on the base
+			// image — warmup.sh then only pays the install/migrate/seed delta.
 			{
-				name: opts.name,
-				env: opts.env,
-				tags: opts.tags,
-				cpu: opts.vcpus ?? WORKER_CPU,
-				memoryMiB: WORKER_MEMORY_MIB,
-				timeout: opts.timeout,
-				encryptedPorts: opts.ports ?? [SERVER_PORT],
-			},
-			v2,
-		);
-		await cloneRepo(sandbox, opts.source);
-		return wrap(opts.name, sandbox);
-	},
-
-	async createIngressSandbox(
-		opts: CreateSandboxOptions,
-	): Promise<ProviderSandbox> {
-		if (!opts.source) {
-			throw new Error("modal: createIngressSandbox requires a git source");
-		}
-		const image = await getBaseImage({
-			gitUrl: cloneUrl(opts.source),
-			gitRef: opts.source.revision,
-			lockHash: lockHash(),
-		});
-		const sandbox = await createFromImage(
-			image,
-			{
-				name: opts.name,
-				env: opts.env,
-				tags: opts.tags,
-				cpu: opts.vcpus ?? 1,
-				memoryMiB: INGRESS_MEMORY_MIB,
-				timeout: opts.timeout,
-				encryptedPorts: opts.ports ?? [INGRESS_PORT],
-			},
-			v2,
-		);
-		await cloneRepo(sandbox, opts.source);
-		return wrap(opts.name, sandbox);
-	},
-
-	async forkWorker(opts: ForkWorkerOptions): Promise<ProviderSandbox> {
-		const image = warmImageByName.get(opts.sourceSandbox);
-		if (!image) {
-			throw new Error(
-				`modal: no warm snapshot for "${opts.sourceSandbox}" — snapshotAndStop must run first`,
-			);
-		}
-		// node_modules is in the base image layer (fast local reads); the worker
-		// forks from the warm snapshot for the source + migrated PGDATA.
-		const sandbox = await createFromImage(
-			image,
-			{
-				name: opts.name,
-				env: opts.env,
-				tags: opts.tags,
-				cpu: opts.vcpus ?? WORKER_CPU,
-				memoryMiB: WORKER_MEMORY_MIB,
-				timeout: opts.timeout,
-				encryptedPorts: opts.ports ?? [SERVER_PORT],
-			},
-			v2,
-		);
-		// Stale warm image: the source is `tw-warm:latest`, not the exact sha —
-		// check the exact commit out before boot so tests run the code under test.
-		if (staleWarmNames.has(opts.sourceSandbox)) {
-			const targetSha = opts.env.TW_TARGET_SHA;
-			if (!targetSha) {
-				throw new Error("modal: stale worker needs TW_TARGET_SHA in env");
-			}
-			await fastForwardCheckout(sandbox, targetSha, `worker-ff ${opts.name}`);
-		}
-		return wrap(opts.name, sandbox);
-	},
-
-	async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
-		const sb = unwrap(sandbox);
-		// Services were clean-stopped by warmup.sh; capture the filesystem (/repo
-		// source + migrated PGDATA + any node_modules delta — the bulk of
-		// node_modules is in the base image layer, NOT this diff). Workers fork from
-		// this Image. Generous budget + heartbeat so the terminal isn't silent.
-		const done = stage("snapshot warm filesystem (source + pgdata)", 15_000);
-		try {
-			const image = await sb.snapshotFilesystem({
-				timeoutMs: SNAPSHOT_TIMEOUT_MS,
-				ttlMs: WARM_IMAGE_TTL_MS,
-			});
-			warmImageByName.set(sandbox.name, image);
-			// Cross-run warm cache: publish under the sha tag + rolling `:latest`.
-			const sha12 = warmShaFromName(sandbox.name);
-			if (sha12) {
-				await publishWarmImage(image, sha12);
-				staleWarmNames.delete(sandbox.name);
-			}
-			// The warm parent is no longer needed (forks use the Image) — free it.
-			await sb.terminate().catch(() => {
-				/* best-effort */
-			});
-			liveSandboxes.delete(sandbox.name);
-			liveSandboxes.delete(sb.sandboxId);
-			return image.imageId;
-		} finally {
-			done();
-		}
-	},
-
-	async getPublicUrl(sandbox: ProviderSandbox, port: number): Promise<string> {
-		const tunnels = await unwrap(sandbox).tunnels();
-		const tunnel = tunnels[port];
-		if (!tunnel) {
-			throw new Error(
-				`modal: no tunnel for port ${port} (encryptedPorts must include it at create)`,
-			);
-		}
-		return tunnel.url;
-	},
-
-	async getSandboxByName(name: string): Promise<ProviderSandbox | undefined> {
-		const local = liveSandboxes.get(name);
-		if (local) {
-			return wrap(name, local);
-		}
-		// Cross-run warm cache: a published warm image counts as "the warm parent
-		// exists" (run.ts only needs truthiness; forkWorker resolves the same name).
-		const sha12 = warmShaFromName(name);
-		if (sha12) {
-			const exact = await lookupPublishedWarmImage(sha12);
-			if (exact) {
-				warmImageByName.set(name, exact);
-				staleWarmNames.delete(name);
-				narrate(
-					chalk.magenta(
-						`[modal] warm cache HIT (${WARM_IMAGE_REPO}:${sha12}) — skipping the entire warm build`,
-					),
-				);
-				return { name, handle: undefined };
-			}
-			if (!STALE_WARM_DISABLED) {
 				const latest = await lookupPublishedWarmImage("latest");
 				if (latest) {
-					warmImageByName.set(name, latest);
-					staleWarmNames.add(name);
-					narrate(
-						chalk.magenta(
-							`[modal] stale warm hit (${WARM_IMAGE_REPO}:latest → ${name}) — workers fast-forward at boot; background refresh kicked`,
-						),
+					const ffDone = stage(
+						`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
 					);
-					refreshWarmImageInBackground(name, sha12, latest);
-					return { name, handle: undefined };
+					try {
+						const sandbox = await createFromImage(
+							latest,
+							{
+								name: opts.name,
+								env: opts.env,
+								tags: opts.tags,
+								cpu: opts.vcpus ?? WORKER_CPU,
+								memoryMiB: WORKER_MEMORY_MIB,
+								timeout: opts.timeout,
+								encryptedPorts: opts.ports ?? [SERVER_PORT],
+							},
+							v2,
+						);
+						await fastForwardCheckout(
+							sandbox,
+							opts.source.revision,
+							"warm-fast-forward",
+						);
+						ffDone();
+						return wrap(opts.name, sandbox);
+					} catch (error) {
+						ffDone();
+						narrate(
+							chalk.yellow(
+								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
+							),
+						);
+					}
 				}
 			}
-		}
-		// V2 has no fromName at all → undefined makes run.ts build fresh.
-		if (v2) {
-			return undefined;
-		}
-		try {
-			const sb = await modal.sandboxes.fromName(APP_NAME, name);
-			return wrap(name, sb);
-		} catch {
-			return undefined;
-		}
-	},
-
-	async deleteSandbox(sandboxOrName: ProviderSandbox | string): Promise<void> {
-		// Callers pass the sandboxId (preferred) or our name. In-run: hit the live
-		// map (keyed by both). Cross-process (`bun tw kill`): reattach via fromId
-		// (V2 has no fromName; V1 falls back to it).
-		const key =
-			typeof sandboxOrName === "string"
-				? sandboxOrName
-				: (sandboxOrName.id ?? sandboxOrName.name);
-		let target: Sandbox | undefined =
-			typeof sandboxOrName === "string"
-				? liveSandboxes.get(key)
-				: unwrap(sandboxOrName);
-		if (!target) {
-			target = await modal.sandboxes.fromId(key).catch(() => undefined);
-			if (!target && !v2) {
-				target = await modal.sandboxes
-					.fromName(APP_NAME, key)
-					.catch(() => undefined);
-			}
-		}
-		if (target) {
-			await target.terminate().catch(() => {
-				/* already gone */
+			// The base image bakes node_modules for THIS ref (cache-keyed on the
+			// lockfile), so the warm clone + workers read deps from a fast local layer.
+			const image = await getBaseImage({
+				gitUrl: cloneUrl(opts.source),
+				gitRef: opts.source.revision,
+				lockHash: lockHash(),
 			});
-		}
-		liveSandboxes.delete(key);
-		warmImageByName.delete(key);
-		if (typeof sandboxOrName !== "string") {
-			liveSandboxes.delete(sandboxOrName.name);
-		}
-	},
+			const sandbox = await createFromImage(
+				image,
+				{
+					name: opts.name,
+					env: opts.env,
+					tags: opts.tags,
+					cpu: opts.vcpus ?? WORKER_CPU,
+					memoryMiB: WORKER_MEMORY_MIB,
+					timeout: opts.timeout,
+					encryptedPorts: opts.ports ?? [SERVER_PORT],
+				},
+				v2,
+			);
+			await cloneRepo(sandbox, opts.source);
+			return wrap(opts.name, sandbox);
+		},
 
-	async runStreaming(
-		sandbox: ProviderSandbox,
-		argv: string[],
-		onChunk: (text: string) => void,
-		opts?: RunStreamingOptions,
-	): Promise<RunStreamingResult> {
-		const proc = await withExecRetry("exec", () =>
-			unwrap(sandbox).exec(argv, {
-				stdout: "pipe",
-				stderr: "pipe",
-				workdir: MODAL_REPO_ROOT,
-				env: opts?.env,
-			}),
-		);
-		let stderrText = "";
-		const pumps = Promise.all([
-			pumpStream(proc.stdout, onChunk),
-			pumpStream(proc.stderr, (text) => {
-				stderrText += text;
-				onChunk(text);
-			}),
-		]);
-		try {
-			await pumps;
-		} catch (error) {
-			if (!(opts?.swallowStreamClose && isSandboxStreamClosed(error))) {
-				throw error;
+		async createIngressSandbox(
+			opts: CreateSandboxOptions,
+		): Promise<ProviderSandbox> {
+			if (!opts.source) {
+				throw new Error("modal: createIngressSandbox requires a git source");
 			}
-		}
-		const exitCode = await proc.wait();
-		return { exitCode, stderr: stderrText };
-	},
+			const image = await getBaseImage({
+				gitUrl: cloneUrl(opts.source),
+				gitRef: opts.source.revision,
+				lockHash: lockHash(),
+			});
+			const sandbox = await createFromImage(
+				image,
+				{
+					name: opts.name,
+					env: opts.env,
+					tags: opts.tags,
+					cpu: opts.vcpus ?? 1,
+					memoryMiB: INGRESS_MEMORY_MIB,
+					timeout: opts.timeout,
+					encryptedPorts: opts.ports ?? [INGRESS_PORT],
+				},
+				v2,
+			);
+			await cloneRepo(sandbox, opts.source);
+			return wrap(opts.name, sandbox);
+		},
 
-	async runDetached(
-		sandbox: ProviderSandbox,
-		argv: string[],
-		opts: RunDetachedOptions,
-	): Promise<DetachedCommand> {
-		const proc = await withExecRetry("boot", () =>
-			unwrap(sandbox).exec(argv, {
-				stdout: "pipe",
-				stderr: "pipe",
-				workdir: opts.cwd ?? MODAL_REPO_ROOT,
-				env: opts.env,
-			}),
-		);
-		// Long-lived (boot/server): drain output in the background; resolve `wait`
-		// only if/when the process exits. Modal exec returns immediately.
-		void pumpStream(proc.stdout, opts.onChunk).catch(() => {
-			/* stream closed on teardown */
-		});
-		void pumpStream(proc.stderr, opts.onChunk).catch(() => {
-			/* stream closed on teardown */
-		});
-		return {
-			wait: async () => ({ exitCode: await proc.wait() }),
-		};
-	},
+		async forkWorker(opts: ForkWorkerOptions): Promise<ProviderSandbox> {
+			const image = warmImageByName.get(opts.sourceSandbox);
+			if (!image) {
+				throw new Error(
+					`modal: no warm snapshot for "${opts.sourceSandbox}" — snapshotAndStop must run first`,
+				);
+			}
+			// node_modules is in the base image layer (fast local reads); the worker
+			// forks from the warm snapshot for the source + migrated PGDATA.
+			const sandbox = await createFromImage(
+				image,
+				{
+					name: opts.name,
+					env: opts.env,
+					tags: opts.tags,
+					cpu: opts.vcpus ?? WORKER_CPU,
+					memoryMiB: WORKER_MEMORY_MIB,
+					timeout: opts.timeout,
+					encryptedPorts: opts.ports ?? [SERVER_PORT],
+				},
+				v2,
+			);
+			// Stale warm image: the source is `tw-warm:latest`, not the exact sha —
+			// check the exact commit out before boot so tests run the code under test.
+			if (staleWarmNames.has(opts.sourceSandbox)) {
+				const targetSha = opts.env.TW_TARGET_SHA;
+				if (!targetSha) {
+					throw new Error("modal: stale worker needs TW_TARGET_SHA in env");
+				}
+				await fastForwardCheckout(sandbox, targetSha, `worker-ff ${opts.name}`);
+			}
+			return wrap(opts.name, sandbox);
+		},
 
-	async listSandboxesByOwner(owner: string): Promise<ListedSandbox[]> {
-		// V2 sandboxes aren't returned by list() and have no tags — cross-run
-		// enumeration relies on the run registry (sandboxIds) + each sandbox's
-		// timeoutMs auto-expiry instead.
-		if (v2) {
-			return [];
-		}
-		const listed: ListedSandbox[] = [];
-		for await (const sb of modal.sandboxes.list({ tags: { owner } })) {
-			let tags: Record<string, string> = {};
+		async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
+			const sb = unwrap(sandbox);
+			// Services were clean-stopped by warmup.sh; capture the filesystem (/repo
+			// source + migrated PGDATA + any node_modules delta — the bulk of
+			// node_modules is in the base image layer, NOT this diff). Workers fork from
+			// this Image. Generous budget + heartbeat so the terminal isn't silent.
+			const done = stage("snapshot warm filesystem (source + pgdata)", 15_000);
 			try {
-				tags = await sb.getTags();
-			} catch {
-				/* tags unavailable — fall back to the sandbox id as the name */
+				const image = await sb.snapshotFilesystem({
+					timeoutMs: SNAPSHOT_TIMEOUT_MS,
+					ttlMs: WARM_IMAGE_TTL_MS,
+				});
+				warmImageByName.set(sandbox.name, image);
+				// Cross-run warm cache: publish under the sha tag + rolling `:latest`.
+				const sha12 = warmShaFromName(sandbox.name);
+				if (sha12) {
+					await publishWarmImage(image, sha12);
+					staleWarmNames.delete(sandbox.name);
+				}
+				// The warm parent is no longer needed (forks use the Image) — free it.
+				await sb.terminate().catch(() => {
+					/* best-effort */
+				});
+				liveSandboxes.delete(sandbox.name);
+				liveSandboxes.delete(sb.sandboxId);
+				return image.imageId;
+			} finally {
+				done();
 			}
-			listed.push({
-				name: tags.name ?? sb.sandboxId,
-				status: "running",
-				createdAt: 0,
-				tags,
-			});
-		}
-		return listed;
-	},
+		},
 
-	isSandboxStreamClosed,
+		async getPublicUrl(
+			sandbox: ProviderSandbox,
+			port: number,
+		): Promise<string> {
+			const tunnels = await unwrap(sandbox).tunnels();
+			const tunnel = tunnels[port];
+			if (!tunnel) {
+				throw new Error(
+					`modal: no tunnel for port ${port} (encryptedPorts must include it at create)`,
+				);
+			}
+			return tunnel.url;
+		},
+
+		async getSandboxByName(name: string): Promise<ProviderSandbox | undefined> {
+			const local = liveSandboxes.get(name);
+			if (local) {
+				return wrap(name, local);
+			}
+			// Cross-run warm cache: a published warm image counts as "the warm parent
+			// exists" (run.ts only needs truthiness; forkWorker resolves the same name).
+			const sha12 = warmShaFromName(name);
+			if (sha12) {
+				const exact = await lookupPublishedWarmImage(sha12);
+				if (exact) {
+					warmImageByName.set(name, exact);
+					staleWarmNames.delete(name);
+					narrate(
+						chalk.magenta(
+							`[modal] warm cache HIT (${WARM_IMAGE_REPO}:${sha12}) — skipping the entire warm build`,
+						),
+					);
+					return { name, handle: undefined };
+				}
+				if (!STALE_WARM_DISABLED) {
+					const latest = await lookupPublishedWarmImage("latest");
+					if (latest) {
+						warmImageByName.set(name, latest);
+						staleWarmNames.add(name);
+						narrate(
+							chalk.magenta(
+								`[modal] stale warm hit (${WARM_IMAGE_REPO}:latest → ${name}) — workers fast-forward at boot; background refresh kicked`,
+							),
+						);
+						refreshWarmImageInBackground(name, sha12, latest);
+						return { name, handle: undefined };
+					}
+				}
+			}
+			// V2 has no fromName at all → undefined makes run.ts build fresh.
+			if (v2) {
+				return undefined;
+			}
+			try {
+				const sb = await modal.sandboxes.fromName(APP_NAME, name);
+				return wrap(name, sb);
+			} catch {
+				return undefined;
+			}
+		},
+
+		async deleteSandbox(
+			sandboxOrName: ProviderSandbox | string,
+		): Promise<void> {
+			// Callers pass the sandboxId (preferred) or our name. In-run: hit the live
+			// map (keyed by both). Cross-process (`bun tw kill`): reattach via fromId
+			// (V2 has no fromName; V1 falls back to it).
+			const key =
+				typeof sandboxOrName === "string"
+					? sandboxOrName
+					: (sandboxOrName.id ?? sandboxOrName.name);
+			let target: Sandbox | undefined =
+				typeof sandboxOrName === "string"
+					? liveSandboxes.get(key)
+					: unwrap(sandboxOrName);
+			if (!target) {
+				target = await modal.sandboxes.fromId(key).catch(() => undefined);
+				if (!target && !v2) {
+					target = await modal.sandboxes
+						.fromName(APP_NAME, key)
+						.catch(() => undefined);
+				}
+			}
+			if (target) {
+				await target.terminate().catch(() => {
+					/* already gone */
+				});
+			}
+			liveSandboxes.delete(key);
+			warmImageByName.delete(key);
+			if (typeof sandboxOrName !== "string") {
+				liveSandboxes.delete(sandboxOrName.name);
+			}
+		},
+
+		async runStreaming(
+			sandbox: ProviderSandbox,
+			argv: string[],
+			onChunk: (text: string) => void,
+			opts?: RunStreamingOptions,
+		): Promise<RunStreamingResult> {
+			const proc = await withExecRetry("exec", () =>
+				unwrap(sandbox).exec(argv, {
+					stdout: "pipe",
+					stderr: "pipe",
+					workdir: MODAL_REPO_ROOT,
+					env: opts?.env,
+				}),
+			);
+			let stderrText = "";
+			const pumps = Promise.all([
+				pumpStream(proc.stdout, onChunk),
+				pumpStream(proc.stderr, (text) => {
+					stderrText += text;
+					onChunk(text);
+				}),
+			]);
+			try {
+				await pumps;
+			} catch (error) {
+				if (!(opts?.swallowStreamClose && isSandboxStreamClosed(error))) {
+					throw error;
+				}
+			}
+			const exitCode = await proc.wait();
+			return { exitCode, stderr: stderrText };
+		},
+
+		async runDetached(
+			sandbox: ProviderSandbox,
+			argv: string[],
+			opts: RunDetachedOptions,
+		): Promise<DetachedCommand> {
+			const proc = await withExecRetry("boot", () =>
+				unwrap(sandbox).exec(argv, {
+					stdout: "pipe",
+					stderr: "pipe",
+					workdir: opts.cwd ?? MODAL_REPO_ROOT,
+					env: opts.env,
+				}),
+			);
+			// Long-lived (boot/server): drain output in the background; resolve `wait`
+			// only if/when the process exits. Modal exec returns immediately.
+			void pumpStream(proc.stdout, opts.onChunk).catch(() => {
+				/* stream closed on teardown */
+			});
+			void pumpStream(proc.stderr, opts.onChunk).catch(() => {
+				/* stream closed on teardown */
+			});
+			return {
+				wait: async () => ({ exitCode: await proc.wait() }),
+			};
+		},
+
+		async listSandboxesByOwner(owner: string): Promise<ListedSandbox[]> {
+			// V2 sandboxes aren't returned by list() and have no tags — cross-run
+			// enumeration relies on the run registry (sandboxIds) + each sandbox's
+			// timeoutMs auto-expiry instead.
+			if (v2) {
+				return [];
+			}
+			const listed: ListedSandbox[] = [];
+			for await (const sb of modal.sandboxes.list({ tags: { owner } })) {
+				let tags: Record<string, string> = {};
+				try {
+					tags = await sb.getTags();
+				} catch {
+					/* tags unavailable — fall back to the sandbox id as the name */
+				}
+				listed.push({
+					name: tags.name ?? sb.sandboxId,
+					status: "running",
+					createdAt: 0,
+					tags,
+				});
+			}
+			return listed;
+		},
+
+		isSandboxStreamClosed,
 	};
+};
+
+/** Registry image for the detached teardown nuke — tiny, cached, boots in ~1s. */
+const NUKE_IMAGE = "oven/bun:1";
+const NUKE_SANDBOX_TIMEOUT_MS = 15 * 60 * 1000;
+const NUKE_CPU = 1;
+const NUKE_MEMORY_MIB = 512;
+
+/**
+ * Fire-and-forget teardown sandbox: boots a bare bun registry image and runs
+ * `script` via `bun -e` as the sandbox COMMAND (no exec, nothing to await —
+ * the orchestrator returns as soon as the create call does). The sandbox exits
+ * when the script does; `timeoutMs` is the hung-script backstop.
+ */
+export const spawnDetachedNukeSandbox = async ({
+	name,
+	script,
+	env,
+}: {
+	name: string;
+	script: string;
+	env: Record<string, string>;
+}): Promise<string> => {
+	const app = await getApp();
+	const image = await modal.images.fromRegistry(NUKE_IMAGE);
+	const sandbox = await modal.sandboxes.create(app, image, {
+		cpu: NUKE_CPU,
+		memoryMiB: NUKE_MEMORY_MIB,
+		timeoutMs: NUKE_SANDBOX_TIMEOUT_MS,
+		command: ["bun", "-e", script],
+		env,
+		name,
+		tags: tagsWithName(name, { kind: "bun-tw-nuke" }),
+	});
+	return sandbox.sandboxId;
 };
 
 /** Classic V1 backend (tags, list, fromName, 5/s + 100-concurrent caps). */
