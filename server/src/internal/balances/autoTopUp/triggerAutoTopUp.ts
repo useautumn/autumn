@@ -3,6 +3,7 @@ import {
 	type FullCustomer,
 	getRelevantFeatures,
 } from "@autumn/shared";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { fullCustomerToAutoTopupObjects } from "./helpers/fullCustomerToAutoTopupObjects.js";
@@ -34,11 +35,22 @@ export const triggerAutoTopUp = async ({
 		// Enqueue the auto top-up job
 		const customerId = newFullCus.id || newFullCus.internal_id;
 
-		const enqueueResult = await enqueueAutoTopupWithBurstSuppression({
-			ctx,
-			customerId,
-			featureId: relevantFeature.id,
-		});
+		let enqueueResult: Awaited<
+			ReturnType<typeof enqueueAutoTopupWithBurstSuppression>
+		>;
+		try {
+			enqueueResult = await enqueueAutoTopupWithBurstSuppression({
+				ctx,
+				customerId,
+				featureId: relevantFeature.id,
+			});
+		} catch (error) {
+			if (!(error instanceof RedisUnavailableError)) throw error;
+			enqueueResult = {
+				enqueued: false as const,
+				reason: "redis_unavailable" as const,
+			};
+		}
 
 		if (enqueueResult?.reason === "redis_unavailable") {
 			await sendAutoTopupFailedWebhook({

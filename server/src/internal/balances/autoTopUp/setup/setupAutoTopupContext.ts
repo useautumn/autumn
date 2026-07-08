@@ -183,7 +183,7 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: reason ?? "execution_error",
-				retryable: false,
+				retryable: true,
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,
@@ -208,8 +208,7 @@ export const setupAutoTopupContext = async ({
 		};
 	}
 
-	const vercelInstallationId =
-		fullCustomer.processors?.vercel?.installation_id;
+	const vercelInstallationId = fullCustomer.processors?.vercel?.installation_id;
 	const shouldUseInvoiceMode =
 		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
 

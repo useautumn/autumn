@@ -56,6 +56,23 @@ const shouldEmitSuppressedWebhook = async ({
 	}
 };
 
+const releaseSuppressionKey = async ({
+	ctx,
+	suppressionKey,
+}: {
+	ctx: AutumnContext;
+	suppressionKey: string;
+}): Promise<void> => {
+	if (redis.status !== "ready") return;
+	try {
+		await redis.del(suppressionKey);
+	} catch (error) {
+		ctx.logger.warn(
+			`[sendAutoTopupFailedWebhook] Failed to release suppression key ${suppressionKey}: ${error}`,
+		);
+	}
+};
+
 const getInvoicePayload = ({
 	billingResult,
 	stripeInvoice,
@@ -99,7 +116,7 @@ const getErrorPayload = ({
 
 	const payload = {
 		code: err?.code ?? err?.raw?.code ?? null,
-		message: message ?? err?.message ?? err?.raw?.message ?? null,
+		message: message ?? null,
 		type: err?.type ?? err?.raw?.type ?? null,
 		decline_code: err?.decline_code ?? err?.raw?.decline_code ?? null,
 	};
@@ -199,7 +216,7 @@ export const sendAutoTopupFailedWebhook = async ({
 			);
 		}
 
-		await sendSvixEvent({
+		const sent = await sendSvixEvent({
 			ctx,
 			eventType: WebhookEventType.BillingAutoTopupFailed,
 			payloadFields: {
@@ -227,6 +244,10 @@ export const sendAutoTopupFailedWebhook = async ({
 				: undefined,
 			idempotencyKey: suppressionKey,
 		});
+
+		if (suppressionKey && !sent) {
+			await releaseSuppressionKey({ ctx, suppressionKey });
+		}
 	} catch (webhookError) {
 		ctx.logger.error(
 			`[sendAutoTopupFailedWebhook] Failed to send webhook: ${webhookError}`,
@@ -277,6 +298,6 @@ export const classifyAutoTopupError = ({
 	return {
 		reason: "execution_error",
 		retryable: true,
-		message: err?.message,
+		message: "An unexpected error occurred while processing the auto top-up.",
 	};
 };
