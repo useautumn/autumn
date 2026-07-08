@@ -1,5 +1,6 @@
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { runWithBillingLock } from "@/internal/billing/v2/utils/billingLock/runWithBillingLock.js";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { getLicenseAssignmentResponse } from "../../../licenseResponseUtils.js";
 import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
 import { computeLicenseUpdatePlan } from "./computeLicenseUpdatePlan.js";
@@ -19,9 +20,13 @@ export const updateLicense = async ({
 	// 1. Setup
 	const context = await setupLicenseUpdateContext({ ctx, assignmentId });
 
-	return await runWithBillingLock({
-		ctx,
-		customerId: context.detachCustomerId,
+	return await withLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: context.detachCustomerId,
+		}),
+		ttlMs: 120000,
 		errorMessage:
 			"License assignment already in progress for this customer, try again in a few seconds",
 		fn: async () => {
