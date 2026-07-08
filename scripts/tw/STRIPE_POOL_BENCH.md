@@ -55,6 +55,18 @@ concurrency 64 the projected 200-account mark-dirty is ~8-10 s.
 account-create into a ~10-15 s claim. Zero rate-limit incidents at 50; the pool
 also *reduces* total Stripe write load (metadata update ≪ account create+delete).
 
+## Live verification (implemented pool, `bun tw` 4 files × 4 workers)
+
+- Run 1 (empty pool): `stripe pool: 0 reused + 4 created in 20.1s`; teardown
+  spawned nuke sandbox and returned immediately (`teardown complete` right
+  after the spawn line). Nuke flipped all 4 accounts to `clean`; probe of a
+  used account: `customers=0 activeProducts=0 coupons=0 testClocks=0`.
+- Run 2 (warm pool): `stripe pool: 4 reused + 0 created in 18.5s` (dominated by
+  the per-key `accounts.list` scan — roughly flat in N); identical test results
+  on reused accounts as on fresh ones (same 24 passed / 6 pre-existing assert
+  failures), confirming no cross-run residue affects tests.
+- No lock refs left on origin after either run.
+
 Notes:
 - Pool state lives in Stripe metadata (`autumn_tw_pool=1`,
   `autumn_tw_pool_state=clean|dirty`) — no local state file is authoritative.
