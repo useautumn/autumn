@@ -302,6 +302,7 @@
 							{
 								"group": "Billing",
 								"pages": [
+									"api-reference/webhooks/billingAutoTopupFailed",
 									"api-reference/webhooks/billingAutoTopupSucceeded",
 									"api-reference/webhooks/billingUpdated"
 								]
