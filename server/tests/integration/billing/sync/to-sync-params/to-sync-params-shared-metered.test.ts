@@ -37,6 +37,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import {
 	fetchFullProduct,
@@ -107,6 +108,9 @@ const initSharedMeteredScenario = async ({
 			},
 		});
 	}
+	// updateConfig writes straight to the DB — invalidate the org's cached
+	// product list so detectSubscriptionMatch doesn't read a stale mapping.
+	await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 	return { pro, scale, sharedMeteredPrice };
 };

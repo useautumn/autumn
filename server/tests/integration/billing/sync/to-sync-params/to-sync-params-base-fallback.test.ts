@@ -30,6 +30,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
+import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { PriceService } from "@/internal/products/prices/PriceService";
 import {
@@ -217,6 +218,9 @@ test.concurrent(
 				},
 			});
 		}
+		// updateConfig writes straight to the DB — invalidate the org's cached
+		// product list so detectSubscriptionMatch doesn't read a stale mapping.
+		await invalidateProductsCache({ orgId: ctx.org.id, env: ctx.env });
 
 		const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
 		const subscription = await ctx.stripeCli.subscriptions.create({

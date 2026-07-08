@@ -213,17 +213,16 @@ export const setupSyncContext = async ({
 					})
 				: null;
 
-			const isImmediatePhase = phase.starts_at === "now";
-
 			const productContextsPerPlan = await Promise.all(
 				phase.plans.map((plan) =>
 					buildProductContext({
 						ctx,
 						fullCustomer,
 						plan,
-						shouldFindCurrentCustomerProduct:
-							plan.expire_previous === true &&
-							(isImmediatePhase || plan.enable_plan_immediately === true),
+						// Future phases also expire the current same-group product on
+						// expire_previous — computeSyncFuturePhases relies on it being
+						// set, not just the immediate/enable-now cases.
+						shouldFindCurrentCustomerProduct: plan.expire_previous === true,
 						accessStartsAt: plan.enable_plan_immediately
 							? currentEpochMs
 							: undefined,
