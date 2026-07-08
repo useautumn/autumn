@@ -1,6 +1,5 @@
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
-import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
@@ -75,9 +74,9 @@ export const ApiPlanLicenseV1Schema = z.object({
 		description:
 			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
 	}),
-	customize: LicenseCustomizeSchema.nullish().meta({
+	customize: VariantCustomizeSchema.nullish().meta({
 		description:
-			"Item overrides applied to the license plan when offered under this plan.",
+			"Customization applied to the license plan when offered under this plan, as a diff from the stock license plan.",
 	}),
 });
 
