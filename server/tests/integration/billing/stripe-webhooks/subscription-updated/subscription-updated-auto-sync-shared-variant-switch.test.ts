@@ -58,6 +58,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: base shape 
 	expectStripeSubscriptionCreated({ subscription: createdSubscription });
 
 	await waitForCustomerProducts({
+		label: "initial-sync",
 		autumnV1,
 		customerId,
 		active: [variantAId],
@@ -78,6 +79,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: base shape 
 	});
 
 	const customer = await waitForCustomerProducts({
+		label: "after-switch",
 		autumnV1,
 		customerId,
 		active: [variantBId],

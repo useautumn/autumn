@@ -76,6 +76,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: adding anot
 	expectStripeSubscriptionCreated({ subscription: createdSubscription });
 
 	await waitForCustomerProducts({
+		label: "initial-sync",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId],
@@ -96,6 +97,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: adding anot
 	});
 
 	const customer = await waitForCustomerProducts({
+		label: "after-add-group-b",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId, groupBVariantId],

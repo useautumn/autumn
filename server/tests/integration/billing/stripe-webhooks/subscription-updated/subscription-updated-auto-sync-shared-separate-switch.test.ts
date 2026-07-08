@@ -94,6 +94,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: separate su
 	expectStripeSubscriptionCreated({ subscription: groupBSubscription });
 
 	await waitForCustomerProducts({
+		label: "initial-sync",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId, groupBVariantAId],
@@ -125,6 +126,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: separate su
 	});
 
 	const customer = await waitForCustomerProducts({
+		label: "after-switch-sub-b",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId, groupBVariantBId],

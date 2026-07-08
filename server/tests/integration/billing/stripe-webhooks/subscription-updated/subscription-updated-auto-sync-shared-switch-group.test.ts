@@ -83,6 +83,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: switching o
 	expectStripeSubscriptionCreated({ subscription: createdSubscription });
 
 	await waitForCustomerProducts({
+		label: "initial-sync",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId],
@@ -102,6 +103,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: switching o
 	});
 
 	await waitForCustomerProducts({
+		label: "after-add-group-b",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId, groupBVariantAId],
@@ -133,6 +135,7 @@ test(`${chalk.yellowBright("customer.subscription.updated auto-sync: switching o
 	});
 
 	const customer = await waitForCustomerProducts({
+		label: "after-switch-group-b",
 		autumnV1,
 		customerId,
 		active: [groupAVariantId, groupBVariantBId],
