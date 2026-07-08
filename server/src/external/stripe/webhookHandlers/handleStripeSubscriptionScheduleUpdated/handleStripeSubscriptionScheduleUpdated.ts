@@ -1,7 +1,7 @@
 import { CusProductStatus } from "@autumn/shared";
 import type Stripe from "stripe";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
+import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
 // Stripe stores phase starts at second precision; Autumn stores ms. Ignore
 // sub-second drift so Autumn's own schedule writes don't echo back as updates.
@@ -12,7 +12,7 @@ const STRIPE_SECOND_PRECISION_MS = 1000;
  * is rescheduled outside Autumn (e.g. Stripe dashboard). Started schedules and
  * multi-phase schedules are intentionally left alone.
  */
-export const handleSubscriptionScheduleUpdated = async ({
+export const handleStripeSubscriptionScheduleUpdated = async ({
 	ctx,
 	schedule,
 }: {
@@ -47,7 +47,7 @@ export const handleSubscriptionScheduleUpdated = async ({
 		});
 
 		logger.info(
-			`[handleSubScheduleUpdated] resynced starts_at ${customerProduct.starts_at} -> ${phaseStartMs} for customerProduct ${customerProduct.id} (schedule ${schedule.id})`,
+			`[handleStripeSubscriptionScheduleUpdated] resynced starts_at ${customerProduct.starts_at} -> ${phaseStartMs} for customerProduct ${customerProduct.id} (schedule ${schedule.id})`,
 		);
 	}
 };
