@@ -76,11 +76,21 @@ warm timings from `[tw-warmup] +Ns`, provider stage lines from `[modal] ✓ (+Xs
 ~2s saved at 4× cost — the server module-load doesn't parallelize. Default stays
 2 vCPU; `TW_MODAL_WORKER_CPU/_MEM_MIB` remain the knobs.
 
-### Warm-refresh install skip
+### Warm-refresh install skip (measured)
 
 `bun install --frozen-lockfile` costs ~65s even when NOTHING changed (relink
 scan). warmup.sh now stamps the lockfile sha (`$TW_PREFIX/bun-lock.sha256`) and
-skips the install when it matches — measured below.
+skips the install when it matches: warmup.sh 66.8s → **6.0s**; a full
+`refresh-warm` (new commit, same lockfile) 83.5s → **24.4s**. Warm cache misses
+on new commits now cost ~25s instead of ~104s, and in-run background refreshes
+finish well within a normal test run.
+
+### 40-wide validation (fan-out empirics)
+
+`core --max=40 --per-worker=1 --fanout-bench`, exact warm hit: Stripe accounts
+all created in 11s (conc 20, 11 pool keys) · fork ~1s/worker (V2, no pacing, no
+429s) · restore ~0s · boot avg 14s (12–18s) · **40/40 READY in 29s from fan-out
+start**, zero provision failures. No pacing needed at this width.
 
 ### Expected 200-wide timeline (invocation → tests executing)
 
@@ -90,7 +100,7 @@ skips the install when it matches — measured below.
 | warm lookup | ~1s | published-image hit (exact or stale) |
 | ingress + Connect webhooks | ~15s | |
 | Stripe sub-accounts ×200 | ~15-20s | conc 20 across 11 pool keys |
-| fork ×200 (V2, no pacing) | ~1s each, parallel | prior 100-wide: all-created ~41s incl. boots |
+| fork ×200 (V2, no pacing) | ~1s each, parallel | 40-wide measured: all READY in 29s; prior 100-wide ~41s |
 | boot ×200 (parallel) | ~12-20s each | stale adds ~6s ff |
 | **invocation → tests executing** | **~60-90s** | was ~3-4 min (warm rebuild every run) |
 
