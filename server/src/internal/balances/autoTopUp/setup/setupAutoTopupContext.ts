@@ -24,7 +24,6 @@ import { preflightAutoTopupLimits } from "../helpers/limits/preflightAutoTopupLi
 
 export type AutoTopupSetupFailure = {
 	reason: BillingAutoTopupFailureReason;
-	retryable: boolean;
 	message: string;
 	fullCustomer?: FullCustomer;
 	autoTopupConfig?: AutoTopup;
@@ -117,7 +116,6 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: "customer_unavailable",
-				retryable: false,
 				message,
 				fullCustomer,
 			},
@@ -137,7 +135,6 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: "configuration_unavailable",
-				retryable: false,
 				message,
 				fullCustomer,
 			},
@@ -183,7 +180,6 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: reason ?? "execution_error",
-				retryable: true,
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,
@@ -226,7 +222,6 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: "missing_payment_method",
-				retryable: false,
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,
@@ -245,7 +240,6 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: "missing_customer_product",
-				retryable: false,
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,

@@ -27929,7 +27929,6 @@ webhooks:
                     - customer_id: cus_123
                       feature_id: messages
                       reason: charge_failed
-                      retryable: false
                       quantity: 100
                       threshold: 20
                       balance: 15
@@ -27963,10 +27962,6 @@ webhooks:
                         - lock_contention
                         - redis_unavailable
                         - execution_error
-                    retryable:
-                      description: Whether retrying later may succeed without changing customer or
-                        billing configuration.
-                      type: boolean
                     quantity:
                       description: The normalized amount of balance Autumn attempted to grant, when a
                         matching auto top-up config was available.
@@ -28025,7 +28020,6 @@ webhooks:
                     - customer_id
                     - feature_id
                     - reason
-                    - retryable
                   additionalProperties: false
             example:
               type: billing.auto_topup_failed
@@ -28033,7 +28027,6 @@ webhooks:
                 customer_id: cus_123
                 feature_id: messages
                 reason: charge_failed
-                retryable: false
                 quantity: 100
                 threshold: 20
                 balance: 15

@@ -41,7 +41,6 @@ export const BILLING_AUTO_TOPUP_FAILED_EXAMPLE = {
 	customer_id: "cus_123",
 	feature_id: "messages",
 	reason: "charge_failed",
-	retryable: false,
 	quantity: 100,
 	threshold: 20,
 	balance: 15,
@@ -63,10 +62,6 @@ export const BillingAutoTopupFailedSchema = z
 			description: "The feature ID that Autumn attempted to auto top-up.",
 		}),
 		reason: BillingAutoTopupFailureReasonSchema,
-		retryable: z.boolean().meta({
-			description:
-				"Whether retrying later may succeed without changing customer or billing configuration.",
-		}),
 		quantity: z.number().nullish().meta({
 			description:
 				"The normalized amount of balance Autumn attempted to grant, when a matching auto top-up config was available.",

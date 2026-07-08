@@ -141,7 +141,6 @@ export const sendAutoTopupFailedWebhook = async ({
 	customerId,
 	featureId,
 	reason,
-	retryable,
 	message,
 	error,
 	autoTopupContext,
@@ -154,7 +153,6 @@ export const sendAutoTopupFailedWebhook = async ({
 	customerId: string;
 	featureId: string;
 	reason: BillingAutoTopupFailureReason;
-	retryable: boolean;
 	message?: string;
 	error?: unknown;
 	autoTopupContext?: AutoTopupContext;
@@ -195,7 +193,6 @@ export const sendAutoTopupFailedWebhook = async ({
 				customer_id: customerId,
 				feature_id: featureId,
 				reason,
-				retryable,
 				quantity: config?.quantity ?? null,
 				threshold: config?.threshold ?? null,
 				balance,
@@ -229,7 +226,6 @@ export const classifyAutoTopupError = ({
 	error: unknown;
 }): {
 	reason: BillingAutoTopupFailureReason;
-	retryable: boolean;
 	message?: string;
 } => {
 	const err = error as { code?: string; message?: string };
@@ -237,7 +233,6 @@ export const classifyAutoTopupError = ({
 	if (err?.code === ErrCode.LockAlreadyExists) {
 		return {
 			reason: "lock_contention",
-			retryable: true,
 			message:
 				"Another billing operation is already in progress for this customer.",
 		};
@@ -250,7 +245,6 @@ export const classifyAutoTopupError = ({
 	) {
 		return {
 			reason: "charge_failed",
-			retryable: false,
 			message: "The auto top-up payment could not be completed.",
 		};
 	}
@@ -258,14 +252,12 @@ export const classifyAutoTopupError = ({
 	if (err?.message?.includes("[computeAutoTopupPlan] Calculated amount")) {
 		return {
 			reason: "invalid_amount",
-			retryable: false,
 			message: "The calculated auto top-up amount was invalid.",
 		};
 	}
 
 	return {
 		reason: "execution_error",
-		retryable: true,
 		message: "An unexpected error occurred while processing the auto top-up.",
 	};
 };

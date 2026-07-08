@@ -404,7 +404,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: failed charge sends f
 	expect(data.customer_id).toBe(customerId);
 	expect(data.feature_id).toBe(TestFeature.Messages);
 	expect(data.reason).toBe("charge_failed");
-	expect(data.retryable).toBe(false);
 	expect(data.quantity).toBe(100);
 	expect(data.threshold).toBe(20);
 	expect(data.balance).toBe(15);
@@ -488,7 +487,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends fai
 	expect(failedResult).not.toBeNull();
 	const data = failedResult!.payload.data;
 	expect(data.reason).toBe("purchase_limit_reached");
-	expect(data.retryable).toBe(true);
 	expect(data.quantity).toBe(100);
 	expect(data.threshold).toBe(50);
 	expect(data.balance).toBe(40);

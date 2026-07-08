@@ -228,7 +228,7 @@ Use `invoice.stripe_id` as a stable dedupe key. The top-level `id` field (e.g. `
 
 Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) is blocked, declined, or fails before granting additional prepaid balance. This includes charge failures, purchase/attempt limits, missing payment methods, unavailable customer billing setup, lock contention, and transient infrastructure issues.
 
-Use `reason` to branch on the failure mode and `retryable` to decide whether retrying later may succeed without changing customer or billing configuration.
+Use `reason` to branch on the failure mode.
 
 Limit-blocked failures are suppressed per blocking window, so repeated attempts while the same purchase, attempt, or failed-attempt limit is active do not emit duplicate webhooks.
 
@@ -243,7 +243,6 @@ Limit-blocked failures are suppressed per blocking window, so repeated attempts 
     "customer_id": "user_123",
     "feature_id": "credits",
     "reason": "charge_failed",
-    "retryable": false,
     "quantity": 1000,
     "threshold": 500,
     "balance": 250,

@@ -131,7 +131,6 @@ export const autoTopup = async ({
 			} finally {
 				await sendFailureWebhook({
 					reason: "charge_failed",
-					retryable: false,
 					message: `Auto top-up invoice status was ${invoiceStatus ?? "missing"}, expected paid`,
 					autoTopupContext,
 				});

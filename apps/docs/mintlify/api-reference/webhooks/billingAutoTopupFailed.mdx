@@ -17,10 +17,6 @@ openapi: "api/openapi.yml webhook billing.auto_topup_failed"
   Machine-readable reason the automatic top-up did not grant balance.
 </ParamField>
 
-<ParamField body="retryable" type="boolean" required>
-  Whether retrying later may succeed without changing customer or billing configuration.
-</ParamField>
-
 <ParamField body="quantity" type="number | null">
   The normalized amount of balance Autumn attempted to grant, when a matching auto top-up config was available.
 </ParamField>

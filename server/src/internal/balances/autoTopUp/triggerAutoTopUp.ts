@@ -58,7 +58,6 @@ export const triggerAutoTopUp = async ({
 				customerId,
 				featureId: relevantFeature.id,
 				reason: "redis_unavailable",
-				retryable: true,
 				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${relevantFeature.id}`,
 				fullCustomer: newFullCus,
 				autoTopupConfig: resolved.autoTopupConfig,
