@@ -17,6 +17,7 @@ import type {
 } from "@autumn/shared";
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 import type {
+	ItemDiff,
 	MatchedPlan,
 	SubscriptionMatch,
 } from "@/internal/billing/v2/actions/sync/detect/types";
@@ -87,14 +88,36 @@ const linkedCustomerProduct = ({
 		internal_entity_id: entityId,
 	}) as unknown as FullCusProduct;
 
+const unmatchedItemDiff = (id: string): ItemDiff => ({
+	stripe: {
+		id,
+		stripe_price_id: `price_${id}`,
+		stripe_product_id: `prod_${id}`,
+		unit_amount: null,
+		unit_amount_decimal: null,
+		currency: "usd",
+		quantity: 1,
+		billing_scheme: "per_unit",
+		tiers_mode: null,
+		tiers: null,
+		recurring_interval: "month",
+		recurring_interval_count: null,
+		recurring_usage_type: "metered",
+		metadata: {},
+	} as ItemDiff["stripe"],
+	match: { kind: "none" },
+});
+
 const draft = ({
 	matchedPlans,
 	syncPlans = matchedPlans.map((plan) =>
 		syncPlan({ productId: plan.product.id }),
 	),
+	itemDiffs = [],
 }: {
 	matchedPlans: MatchedPlan[];
 	syncPlans?: SyncPlanInstance[];
+	itemDiffs?: ItemDiff[];
 }): { match: SubscriptionMatch; params: SyncParamsV1 } => ({
 	match: {
 		stripe_subscription_id: "sub_incremental",
@@ -104,7 +127,7 @@ const draft = ({
 				start_date: 123,
 				end_date: null,
 				is_current: true,
-				item_diffs: [],
+				item_diffs: itemDiffs,
 				plans: matchedPlans,
 			},
 		],
@@ -134,6 +157,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
 			"pro",
 		]);
@@ -170,6 +194,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans).toHaveLength(1);
 		expect(result.params.phases?.[0]?.plans[0]?.plan_id).toBe("premium");
 	});
@@ -212,6 +237,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.customer_id).toBe(params.customer_id);
 		expect(result.params.stripe_subscription_id).toBe(params.stripe_subscription_id);
 		expect(result.params.stripe_schedule_id).toBe("sched_incremental");
@@ -238,6 +264,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans[0]?.entity_id).toBe("entity_b");
 	});
 
@@ -278,6 +305,7 @@ describe("buildIncrementalSyncParams", () => {
 
 			expect(result.shouldSync).toBe(true);
 			if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 			expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
 				unsupported.id,
 			]);
@@ -297,6 +325,7 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
 			"poke_pro",
 		]);
@@ -341,9 +370,39 @@ describe("buildIncrementalSyncParams", () => {
 
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
+		if (!result.params) throw new Error("expected incremental params");
+		// Adding instances must not expire the ones already linked — add-on
+		// expire_previous now replaces the linked same-product instance.
 		expect(result.params.phases?.[0]?.plans).toEqual([
-			{ expire_previous: true, plan_id: "addon", quantity: 2 },
+			{ expire_previous: false, plan_id: "addon", quantity: 2 },
 		]);
+	});
+
+	test("does not expire a linked add-on whose Stripe item merely failed to match (detection miss, not removal)", () => {
+		const addOn = product({ id: "addon", isAddOn: true });
+		// No matched plans at all for this phase — simulates a detection miss
+		// (e.g. the tiered-prepaid enrichment gap) rather than a true removal:
+		// the add-on's Stripe item is still on the subscription as an
+		// unmatched item_diff, not absent from it.
+		const { match, params } = draft({
+			matchedPlans: [],
+			syncPlans: [],
+			itemDiffs: [unmatchedItemDiff("addon_item")],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [
+				linkedCustomerProduct({ product: addOn, id: "cp_addon_1" }),
+			],
+		});
+
+		if (result.shouldSync) {
+			expect(result.removedCustomerProducts).toEqual([]);
+		} else {
+			expect(result.reason).toBe("no_changed_targets");
+		}
 	});
 
 	test("prunes add-ons when linked quantity already satisfies desired quantity", () => {

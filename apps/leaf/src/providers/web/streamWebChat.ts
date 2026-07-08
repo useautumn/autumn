@@ -11,18 +11,21 @@ import type {
 	MessageContext,
 } from "../../agent/runMessage/types.js";
 import type { LeafUiMessage } from "../../harness/claudeManaged/session/sessionEventsToUiMessages.js";
+import { redirectCatalogSuspensionToDecision } from "../../harness/eve/catalogDecision.js";
 import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,
 	WEB_CHAT_PROVIDER,
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
+import { db } from "../../lib/db.js";
+import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import { parsePreviewPayload } from "../../ui/previewContent.js";
 import { resolveDashboardEnv } from "./dashboardEnv.js";
+import { generateThreadTitle, persistThreadTitle } from "./threadTitle.js";
 import { buildWebChatThreadId, webThreadRef } from "./webThread.js";
 
-const HARNESS = "claude-managed" as const;
 const DATA_URL_REGEX = /^data:([^;]+);base64,(.*)$/s;
 
 const dataUrlToAttachment = (
@@ -36,9 +39,10 @@ const dataUrlToAttachment = (
 };
 
 const parseRequest = (body: { id?: string; messages?: UIMessage[] }) => {
-	const lastUser = [...(body.messages ?? [])]
-		.reverse()
-		.find((message) => message.role === "user");
+	const userMessages = (body.messages ?? []).filter(
+		(message) => message.role === "user",
+	);
+	const lastUser = userMessages.at(-1);
 	const parts = lastUser?.parts ?? [];
 	const text = parts
 		.filter((part) => part.type === "text")
@@ -51,7 +55,26 @@ const parseRequest = (body: { id?: string; messages?: UIMessage[] }) => {
 				) as MessageAttachment[])
 			: [],
 	);
-	return { attachments, conversationId: body.id, text };
+	// Structured, one-turn-only context (e.g. a submitted CatalogDecisionCard
+	// choice or a clicked question chip), sent as AI SDK message `metadata`
+	// alongside the readable text.
+	const metadata = lastUser?.metadata as
+		| {
+				catalogDecision?: Record<string, unknown>;
+				questionResponse?: { optionId: string; requestId: string };
+		  }
+		| undefined;
+	const clientContext = metadata?.catalogDecision
+		? { catalogDecision: metadata.catalogDecision }
+		: undefined;
+	return {
+		attachments,
+		clientContext,
+		conversationId: body.id,
+		isFirstUserMessage: userMessages.length <= 1,
+		questionResponse: metadata?.questionResponse,
+		text,
+	};
 };
 
 const withCors = (response: Response, origin?: string) => {
@@ -68,10 +91,10 @@ const withCors = (response: Response, origin?: string) => {
 };
 
 /**
- * Dashboard chat for the claude-managed harness: run the agent and emit a native
+ * Dashboard chat for durable harnesses: run the agent and emit a native
  * AI SDK stream (text + `data-step` tool activity + `data-approval`) instead of
- * the chat-sdk web adapter's text-only path. The CMA session is the transcript,
- * so no chat-sdk persistence is needed — refresh hydrates from session events.
+ * the chat-sdk web adapter's text-only path. Harness session state is persisted
+ * separately, so refresh can hydrate from session/approval history.
  */
 export const streamWebChat = async ({
 	auth,
@@ -86,7 +109,14 @@ export const streamWebChat = async ({
 		id?: string;
 		messages?: UIMessage[];
 	};
-	const { attachments, conversationId, text } = parseRequest(body);
+	const {
+		attachments,
+		clientContext,
+		conversationId,
+		isFirstUserMessage,
+		questionResponse,
+		text,
+	} = parseRequest(body);
 	if (!conversationId) {
 		return new Response("Missing conversation id", { status: 400 });
 	}
@@ -95,9 +125,17 @@ export const streamWebChat = async ({
 	// Scope the session + vault + OAuth credential to the dashboard's active env,
 	// forwarded as the `app_env` header (server chat proxy passes it through).
 	const env = resolveDashboardEnv(request.headers.get("app_env"));
+	const harness = chatEnv.WEB_AGENT_HARNESS;
 	const logger = rootLogger;
 	const chatThreadId = buildWebChatThreadId({ conversationId, orgId, userId });
 	const thread = webThreadRef({ chatThreadId, orgId });
+
+	// Title the thread off its opening message, in parallel with the run — the
+	// session row it lands on is upserted by the engine during the run.
+	const titlePromise =
+		isFirstUserMessage && text.trim()
+			? generateThreadTitle({ logger, text })
+			: undefined;
 
 	const stream = createUIMessageStream<LeafUiMessage>({
 		execute: async ({ writer }) => {
@@ -110,11 +148,19 @@ export const streamWebChat = async ({
 				userId,
 			});
 
-			let lastStep: { id: string; label: string } | undefined;
+			let lastStep:
+				| { id: string; label: string; startedAt: number }
+				| undefined;
 			const finishLastStep = () => {
 				if (!lastStep) return;
+				const finishedAt = Date.now();
 				writer.write({
-					data: { label: lastStep.label, status: "done" },
+					data: {
+						finishedAt,
+						label: lastStep.label,
+						startedAt: lastStep.startedAt,
+						status: "done",
+					},
 					id: lastStep.id,
 					type: "data-step",
 				});
@@ -136,9 +182,10 @@ export const streamWebChat = async ({
 				onAction: (label) => {
 					finishLastStep();
 					const id = crypto.randomUUID();
-					lastStep = { id, label };
+					const startedAt = Date.now();
+					lastStep = { id, label, startedAt };
 					writer.write({
-						data: { label, status: "running" },
+						data: { label, startedAt, status: "running" },
 						id,
 						type: "data-step",
 					});
@@ -147,8 +194,14 @@ export const streamWebChat = async ({
 				// user sees something went wrong mid-turn.
 				onActionKeyed: ({ message }) => {
 					finishLastStep();
+					const now = Date.now();
 					writer.write({
-						data: { label: message, status: "error" },
+						data: {
+							finishedAt: now,
+							label: message,
+							startedAt: now,
+							status: "error",
+						},
 						id: crypto.randomUUID(),
 						type: "data-step",
 					});
@@ -157,6 +210,14 @@ export const streamWebChat = async ({
 				// text). Use it to close the last tool step once inference resumes, so
 				// it stops showing a running clock while the model reasons.
 				onThinking: () => finishLastStep(),
+				onReasoning: ({ id, text }) => {
+					finishLastStep();
+					writer.write({
+						data: { text },
+						id,
+						type: "data-reasoning",
+					});
+				},
 				onTurnComplete: (turnText) => {
 					finishLastStep();
 					writeText(turnText);
@@ -168,13 +229,84 @@ export const streamWebChat = async ({
 				token: accessToken,
 			};
 
-			const output = await agentEngines[HARNESS].run({
-				ctx,
-				params: { attachments, text },
-			});
+			let output: Awaited<
+				ReturnType<(typeof agentEngines)[typeof harness]["run"]>
+			>;
+			try {
+				output = await agentEngines[harness].run({
+					ctx,
+					params: { attachments, clientContext, questionResponse, text },
+				});
+			} finally {
+				// Fire-and-forget so a failed run still labels the thread (the
+				// session row is upserted early in the run) and teardown stays fast.
+				if (titlePromise) {
+					void persistThreadTitle({
+						db,
+						env,
+						logger,
+						orgId,
+						thread,
+						titlePromise,
+					});
+				}
+			}
 
 			finishLastStep();
-			if (output.text) writeText(output.text);
+			// updateCatalog is the chokepoint the model can't skip: if the change
+			// needs versioning/variant/migration decisions and none were given,
+			// deny the parked call and render the decision card instead.
+			if (output.suspension && harness === "eve") {
+				const decisionPlan = await redirectCatalogSuspensionToDecision({
+					decisionProvided: Boolean(clientContext?.catalogDecision),
+					env,
+					logger,
+					orgId,
+					providerUserId: userId,
+					runId: output.runId,
+					suspension: output.suspension,
+					thread,
+					token: accessToken,
+				});
+				if (decisionPlan) {
+					writeText(
+						"A couple of decisions are needed before this can be applied:",
+					);
+					writer.write({
+						data: { plan: decisionPlan, status: "pending" },
+						id: decisionPlan.plan_id,
+						type: "data-catalog-decision",
+					});
+					return;
+				}
+			}
+			// The model stopped after a decision-needing preview (no write call):
+			// render the decision card directly. Skip when this very turn carried
+			// the user's decision — the model is about to apply it.
+			if (output.catalogDecision && !clientContext?.catalogDecision) {
+				const plan = output.catalogDecision.plan as { plan_id: string };
+				writer.write({
+					data: { plan, status: "pending" },
+					id: plan.plan_id,
+					type: "data-catalog-decision",
+				});
+			}
+			if (output.question) {
+				// The prompt as normal prose + a data part with the answer options —
+				// richer than output.text's flat "Options: A / B" fallback.
+				writeText(output.question.prompt);
+				writer.write({
+					data: {
+						options: output.question.options,
+						requestId: output.question.requestId,
+						status: "pending",
+					},
+					id: crypto.randomUUID(),
+					type: "data-question",
+				});
+			} else if (output.text) {
+				writeText(output.text);
+			}
 
 			if (output.suspension) {
 				// presentWebApproval backfills the preview (the agent may write
@@ -182,7 +314,7 @@ export const streamWebChat = async ({
 				// not output.suspension.preview, which can be empty.
 				const approval = await presentWebApproval({
 					channelId: thread.channelId,
-					harness: HARNESS,
+					harness,
 					logger,
 					orgId,
 					output,

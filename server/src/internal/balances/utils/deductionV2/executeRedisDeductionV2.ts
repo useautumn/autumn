@@ -390,11 +390,12 @@ export const executeRedisDeductionV2 = async ({
 
 		fireTrackWebhooks({
 			ctx,
-			oldFullCus: oldFullCustomer,
-			newFullCus: newFullCustomer,
+			oldFullSubject,
+			newFullSubject: fullSubject,
 			feature: deduction.feature,
 			entityId,
 			featuresFromMutationLogs,
+			eventProperties: options.eventProperties,
 		});
 
 		if (options.triggerAutoTopUp) {

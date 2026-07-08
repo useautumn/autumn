@@ -6,9 +6,11 @@ import {
 import type { ActionEvent } from "chat";
 import { and, eq } from "drizzle-orm";
 import { resolveSlackCallerAuth } from "../../../../agent/runMessage/setup/resolveSlackCallerAuth.js";
+import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { questionCard } from "../../../../ui/eveCards.js";
 import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { validateSlackAdminAccess } from "../../../slackAdmin/access.js";
@@ -26,6 +28,7 @@ import {
 } from "../../utils/approvalErrors.js";
 import { formatElapsed } from "../../utils/approvalProgress.js";
 import { approvalScopeRequirements } from "../../utils/approvalScopeRequirements.js";
+import { postApprovalCardForRow } from "./present.js";
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -199,6 +202,25 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		if (event.actionId === "cancel_billing_action") {
+			// Eve parks the whole turn on the approval — deny it in the session too,
+			// or it keeps waiting, holds the next message behind the stale approval,
+			// and the discarded write can still run later.
+			if (approval.harness === "eve" && approval.status === "pending") {
+				const denied = await denyEveApproval({ approval, providerUserId });
+				if ("error" in denied && denied.error) {
+					deps.logger.warn("Could not deny Eve approval on dismiss", {
+						event: "leaf.eve_dismiss_deny_failed",
+						approval_id: approvalId,
+						data: { message: denied.message },
+					});
+				} else if ("text" in denied && denied.text.trim()) {
+					try {
+						await deps.postThreadReply({ event, markdown: denied.text });
+					} catch {
+						// The acknowledgement reply is cosmetic.
+					}
+				}
+			}
 			const cancelled = await deps.cancelApproval({
 				approvalId,
 				providerUserId,
@@ -328,6 +350,42 @@ export const handleApprovalActionWithDeps = async ({
 			} catch (error) {
 				deps.logger.warn("Could not post approval outcome reply", {
 					event: "leaf.approval_reply_failed",
+					approval_id: approvalId,
+					error,
+				});
+			}
+		}
+		// The resumed turn can park again (chained write or a question) where
+		// nothing streams — surface those as fresh cards or they stay invisible.
+		if (!failed && event.thread) {
+			try {
+				if ("chainedApprovalId" in result && result.chainedApprovalId) {
+					const chained = await deps.getApproval({
+						approvalId: result.chainedApprovalId,
+					});
+					if (chained) {
+						await postApprovalCardForRow({
+							approval: chained,
+							logger: rootLogger,
+							target: event.thread,
+						});
+					}
+				}
+				if ("question" in result && result.question) {
+					await event.thread.post(
+						questionCard({
+							env: claimed.env,
+							options: result.question.options,
+							orgId: claimed.org_id,
+							prompt: result.question.prompt,
+							requestId: result.question.requestId,
+							sessionId: result.question.sessionId,
+						}),
+					);
+				}
+			} catch (error) {
+				deps.logger.warn("Could not surface chained interaction", {
+					event: "leaf.approval_chained_surface_failed",
 					approval_id: approvalId,
 					error,
 				});

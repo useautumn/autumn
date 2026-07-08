@@ -20,6 +20,7 @@ import { motion } from "motion/react";
 import { createContext, Fragment, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
+import { skipOverageBillingLabel } from "./overageBillingOptions";
 
 const ROW_SWAP_TRANSITION = {
 	duration: 0.2,
@@ -269,11 +270,22 @@ export const SpendLimitRow = ({
 				entries={[
 					{ label: "Type", value: isPercent ? "Usage %" : "Absolute" },
 					{ label: "Overage limit", value: overageLimitValue },
+					{
+						label: "Overage billing",
+						value: skipOverageBillingLabel(spendLimit.skip_overage_billing),
+					},
 				]}
 			/>
 		</RowButton>
 	);
 };
+
+const FILTER_VALUE_DISPLAY_LENGTH = 24;
+
+const truncateFilterValue = (value: string) =>
+	value.length > FILTER_VALUE_DISPLAY_LENGTH
+		? `${value.slice(0, FILTER_VALUE_DISPLAY_LENGTH - 1)}…`
+		: value;
 
 export const UsageLimitRow = ({
 	item: usageLimit,
@@ -283,6 +295,10 @@ export const UsageLimitRow = ({
 }: EditableRowProps<ApiUsageLimit | DbUsageLimit>) => {
 	const usage = "usage" in usageLimit ? usageLimit.usage : undefined;
 	const enabled = "enabled" in usageLimit ? usageLimit.enabled : true;
+	const filterProperties = usageLimit.filter?.properties;
+	const filterEntries = filterProperties
+		? Object.entries(filterProperties)
+		: [];
 	return (
 		<RowButton enabled={enabled} onClick={onClick}>
 			<RowHeader
@@ -298,6 +314,23 @@ export const UsageLimitRow = ({
 					{
 						label: "Limit",
 						value: `${usageLimit.limit.toLocaleString()} / ${usageLimit.interval}`,
+					},
+					{
+						label: "Filter",
+						value: filterEntries.length ? (
+							<span
+								title={filterEntries
+									.map(([key, value]) => `${key} = ${value}`)
+									.join(", ")}
+							>
+								{filterEntries
+									.map(
+										([key, value]) =>
+											`${key} = ${truncateFilterValue(String(value))}`,
+									)
+									.join(", ")}
+							</span>
+						) : null,
 					},
 					{
 						label: "Usage",

@@ -24,6 +24,12 @@ export const isStopMessage = (text: string) =>
 // serialized per thread, while messages arriving mid-run are routed live —
 // stop keywords interrupt, everything else is injected as the next turn.
 const newRunTails = new Map<string, Promise<void>>();
+const queuedCounts = new Map<string, number>();
+
+/** Whether a newer message is already queued behind the active run — the
+ * active run should fold its reply into the next turn instead of posting. */
+export const hasQueuedThreadMessage = (runKey: string) =>
+	(queuedCounts.get(runKey) ?? 0) > 0;
 
 export const dispatchThreadMessage = async ({
 	hasAttachments,
@@ -80,7 +86,15 @@ export const dispatchThreadMessage = async ({
 	// New runs (and non-injectable messages) wait for the thread's current
 	// run — the engine can't drive two turns on one session.
 	const tail = newRunTails.get(runKey) ?? Promise.resolve();
-	const next = tail.then(runNewMessage).catch(() => {});
+	queuedCounts.set(runKey, (queuedCounts.get(runKey) ?? 0) + 1);
+	const next = tail
+		.then(() => {
+			const remaining = (queuedCounts.get(runKey) ?? 1) - 1;
+			if (remaining > 0) queuedCounts.set(runKey, remaining);
+			else queuedCounts.delete(runKey);
+			return runNewMessage();
+		})
+		.catch(() => {});
 	newRunTails.set(runKey, next);
 	try {
 		await next;

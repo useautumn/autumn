@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-	BillWhen,
 	BillingInterval,
+	BillWhen,
 	type FullProduct,
 	Infinite,
 	type Price,
@@ -9,8 +9,8 @@ import {
 } from "@autumn/shared";
 import {
 	findProductLevelMatchForStripeItem,
-	stripeItemMatchesBasePrice,
 	type ProductLevelMatchCandidate,
+	stripeItemMatchesBasePrice,
 } from "@/internal/billing/v2/providers/stripe/utils/sync/matchUtils/findProductLevelMatchForStripeItem";
 import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
 
@@ -39,7 +39,11 @@ const fixedPrice = ({
 		proration_config: null,
 	}) as Price;
 
-const usagePrice = (): Price =>
+const usagePrice = ({
+	stripeProductId,
+}: {
+	stripeProductId?: string;
+} = {}): Price =>
 	({
 		id: "price_usage",
 		internal_product_id: "prod_internal",
@@ -51,6 +55,7 @@ const usagePrice = (): Price =>
 			feature_id: "messages",
 			usage_tiers: [{ to: Infinite, amount: 1 }],
 			interval: BillingInterval.Month,
+			...(stripeProductId && { stripe_product_id: stripeProductId }),
 		},
 		proration_config: null,
 	}) as Price;
@@ -62,6 +67,7 @@ const stripeItem = ({
 	billingScheme = "per_unit",
 	interval = "month",
 	intervalCount = null,
+	usageType = "licensed",
 }: {
 	stripeProductId?: string;
 	unitAmountDecimal?: string | null;
@@ -69,6 +75,7 @@ const stripeItem = ({
 	billingScheme?: "per_unit" | "tiered" | null;
 	interval?: StripeItemSnapshot["recurring_interval"];
 	intervalCount?: number | null;
+	usageType?: StripeItemSnapshot["recurring_usage_type"];
 } = {}): StripeItemSnapshot => ({
 	id: "si_base",
 	stripe_price_id: "price_external",
@@ -82,14 +89,23 @@ const stripeItem = ({
 	tiers: null,
 	recurring_interval: interval,
 	recurring_interval_count: intervalCount,
-	recurring_usage_type: "licensed",
+	recurring_usage_type: usageType,
 	metadata: {},
 });
 
-const product = ({ id, price }: { id: string; price: Price }): FullProduct =>
+const product = ({
+	id,
+	price,
+	baseVariantId = null,
+}: {
+	id: string;
+	price: Price;
+	baseVariantId?: string | null;
+}): FullProduct =>
 	({
 		id,
 		internal_id: `${id}_internal`,
+		base_variant_id: baseVariantId,
 		prices: [price],
 	}) as FullProduct;
 
@@ -97,12 +113,14 @@ const candidate = ({
 	id,
 	price,
 	stripeProductId = "prod_shared",
+	baseVariantId = null,
 }: {
 	id: string;
 	price: Price;
 	stripeProductId?: string;
+	baseVariantId?: string | null;
 }): ProductLevelMatchCandidate => ({
-	product: product({ id, price }),
+	product: product({ id, price, baseVariantId }),
 	matched_on: {
 		type: "stripe_product_id",
 		stripe_product_id: stripeProductId,
@@ -142,7 +160,11 @@ describe("stripeItemMatchesBasePrice", () => {
 
 	test("does not match different product, amount, interval, or interval count", () => {
 		const mismatches = [
-			{ item: stripeItem(), price: fixedPrice(), stripeProductId: "prod_other" },
+			{
+				item: stripeItem(),
+				price: fixedPrice(),
+				stripeProductId: "prod_other",
+			},
 			{
 				item: stripeItem({ unitAmountDecimal: "3600" }),
 				price: fixedPrice(),
@@ -228,7 +250,21 @@ describe("findProductLevelMatchForStripeItem", () => {
 
 		expect(match?.product).toBe(onlyCandidate.product);
 		expect(match?.matched_on).toBe(onlyCandidate.matched_on);
-		expect(match?.basePrice).toBeNull();
+		expect(match?.priceMatch).toBeNull();
+	});
+
+	test("single candidate with a claim-less metered item stays unmatched instead of becoming a custom base", () => {
+		const onlyCandidate = candidate({
+			id: "base",
+			price: fixedPrice({ amount: 20 }),
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ usageType: "metered", unitAmountDecimal: null }),
+			candidates: [onlyCandidate],
+		});
+
+		expect(match).toBeNull();
 	});
 
 	test("selects the unique candidate whose base price matches the Stripe item", () => {
@@ -249,7 +285,32 @@ describe("findProductLevelMatchForStripeItem", () => {
 
 		expect(match?.product).toBe(variant.product);
 		expect(match?.matched_on).toBe(variant.matched_on);
-		expect(match?.basePrice).toBe(variantBasePrice);
+		expect(match?.priceMatch?.price).toBe(variantBasePrice);
+		expect(match?.priceMatch?.matched_on.type).toBe("stripe_base_price_shape");
+	});
+
+	test("resolves a metered item to the unique candidate with a keyed usage price", () => {
+		const keyedUsagePrice = usagePrice({ stripeProductId: "prod_shared" });
+		const withKeyedPrice: ProductLevelMatchCandidate = {
+			product: product({ id: "keyed", price: keyedUsagePrice }),
+			matched_on: {
+				type: "stripe_product_id",
+				stripe_product_id: "prod_shared",
+			},
+		};
+		const withoutKeyedPrice = candidate({
+			id: "unkeyed",
+			price: fixedPrice({ amount: 20 }),
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ usageType: "metered", unitAmountDecimal: null }),
+			candidates: [withoutKeyedPrice, withKeyedPrice],
+		});
+
+		expect(match?.product).toBe(withKeyedPrice.product);
+		expect(match?.priceMatch?.price).toBe(keyedUsagePrice);
+		expect(match?.priceMatch?.matched_on.type).toBe("stripe_product_id");
 	});
 
 	test("does not guess when multiple candidates match the same base price shape", () => {
@@ -270,13 +331,68 @@ describe("findProductLevelMatchForStripeItem", () => {
 		).toBeNull();
 	});
 
-	test("returns null when no candidate base price matches", () => {
+	test("falls back to the first base plan when no candidate claims the item", () => {
+		const base = candidate({ id: "base", price: fixedPrice({ amount: 20 }) });
+		const other = candidate({ id: "other", price: fixedPrice({ amount: 40 }) });
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem(),
+			candidates: [base, other],
+		});
+
+		expect(match?.product).toBe(base.product);
+		expect(match?.priceMatch).toBeNull();
+	});
+
+	test("base-plan fallback prefers the base plan over its variants", () => {
+		const variantA = candidate({
+			id: "variant_a",
+			price: fixedPrice({ amount: 20 }),
+			baseVariantId: "base",
+		});
+		const base = candidate({ id: "base", price: fixedPrice({ amount: 40 }) });
+		const variantB = candidate({
+			id: "variant_b",
+			price: fixedPrice({ amount: 80 }),
+			baseVariantId: "base",
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem(),
+			candidates: [variantA, base, variantB],
+		});
+
+		expect(match?.product).toBe(base.product);
+		expect(match?.priceMatch).toBeNull();
+	});
+
+	test("base-plan fallback stays null for metered items and variant-only candidates", () => {
+		const variants = [
+			candidate({
+				id: "variant_a",
+				price: fixedPrice({ amount: 20 }),
+				baseVariantId: "base",
+			}),
+			candidate({
+				id: "variant_b",
+				price: fixedPrice({ amount: 40 }),
+				baseVariantId: "base",
+			}),
+		];
+
 		expect(
 			findProductLevelMatchForStripeItem({
 				item: stripeItem(),
+				candidates: variants,
+			}),
+		).toBeNull();
+
+		expect(
+			findProductLevelMatchForStripeItem({
+				item: stripeItem({ usageType: "metered" }),
 				candidates: [
 					candidate({ id: "base", price: fixedPrice({ amount: 20 }) }),
-					candidate({ id: "variant", price: fixedPrice({ amount: 40 }) }),
+					candidate({ id: "other", price: fixedPrice({ amount: 40 }) }),
 				],
 			}),
 		).toBeNull();

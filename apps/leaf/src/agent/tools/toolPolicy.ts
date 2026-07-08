@@ -1,12 +1,20 @@
 export const normalizeToolName = (toolName: string) =>
-	toolName.replace(/^autumn_/, "");
+	(toolName.split("__").pop() ?? toolName)
+		.replace(/^autumn_/, "")
+		.replace(/^_+/, "");
 
 const labels: Record<string, string> = {
 	attach: "Attach plan",
-	updateSubscription: "Update subscription",
-	createSchedule: "Create schedule",
 	createBalance: "Create balance",
+	createEntity: "Create entity",
 	createPlan: "Create plan",
+	createSchedule: "Create schedule",
+	getOrCreateCustomer: "Create customer",
+	updateAgentRules: "Update agent rules",
+	updateCatalog: "Update catalog",
+	updateCustomer: "Update customer",
+	updatePlan: "Update plan",
+	updateSubscription: "Update subscription",
 };
 
 // Pure utility tools the agent calls constantly — not worth a progress line.
@@ -18,12 +26,16 @@ const silentTools = new Set([
 export const isSilentTool = (toolName: string) =>
 	silentTools.has(normalizeToolName(toolName));
 
-export const toolLabel = (toolName: string) =>
-	labels[toolName.replace(/^autumn_/, "")] ??
-	toolName
-		.replace(/^autumn_/, "")
-		.replace(/([a-z])([A-Z])/g, "$1 $2")
-		.replace(/^./, (char) => char.toUpperCase());
+export const toolLabel = (toolName: string) => {
+	const name = normalizeToolName(toolName);
+	return (
+		labels[name] ??
+		name
+			.replace(/([a-z])([A-Z])/g, "$1 $2")
+			.replace(/[_-]+/g, " ")
+			.replace(/^./, (char) => char.toUpperCase())
+	);
+};
 
 // Present-progressive phrasing for live status lines ("Looking up the
 // customer…"). Falls back to the noun label for anything unmapped.
@@ -50,6 +62,14 @@ const gerunds: Record<string, string> = {
 	updateCustomer: "Updating the customer",
 	searchRequestLogs: "Searching the logs",
 	queryRequestLogs: "Querying the logs",
+	previewUpdateCatalog: "Previewing the catalog change",
+	updateCatalog: "Applying the catalog change",
+	createEntity: "Creating the entity",
+	updateAgentRules: "Updating your agent rules",
+	updatePlan: "Updating the plan",
+	hasCustomers: "Checking plan usage",
+	listBalances: "Checking balances",
+	connection_search: "Finding the right tool",
 };
 
 export const toolGerund = (toolName: string) =>

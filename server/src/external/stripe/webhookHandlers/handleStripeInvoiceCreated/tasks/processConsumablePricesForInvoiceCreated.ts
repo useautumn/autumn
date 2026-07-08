@@ -13,6 +13,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
@@ -94,6 +95,9 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		customerId: eventContext.fullCustomer.id,
 		customerConfig: eventContext.fullCustomer.config,
 	});
+	if (disableOverageBilling && lineItems.length > 0) {
+		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
+	}
 	if (lineItems.length > 0 && !disableOverageBilling) {
 		await createStripeInvoiceItems({
 			ctx,

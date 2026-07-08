@@ -288,8 +288,8 @@ export const executePostgresDeductionV2 = async ({
 
 			fireTrackWebhooks({
 				ctx,
-				oldFullCus: oldFullCustomer,
-				newFullCus: newFullCustomer,
+				oldFullSubject,
+				newFullSubject: fullSubject,
 				feature: deduction.feature,
 				entityId,
 				featuresFromMutationLogs,

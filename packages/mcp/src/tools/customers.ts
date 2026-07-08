@@ -53,6 +53,7 @@ const domain = {
 			id: "updateCustomer",
 			description:
 				"Update an existing Autumn customer. For invoice_mode billing, set missing email with customer_id and email before previewing billing so linked Stripe customer records are updated.",
+			destructive: true,
 		}),
 		operation({
 			id: "getCustomer",

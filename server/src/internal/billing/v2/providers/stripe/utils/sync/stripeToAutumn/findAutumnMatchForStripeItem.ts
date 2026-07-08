@@ -1,8 +1,5 @@
-import type { FullProduct, Price } from "@autumn/shared";
-import type {
-	ItemDiff,
-	ItemMatch,
-} from "@/internal/billing/v2/actions/sync/detect/types";
+import type { FullProduct, Organization, Price } from "@autumn/shared";
+import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
 import {
 	findProductLevelMatchForStripeItem,
 	type ProductLevelMatchCandidate,
@@ -44,22 +41,27 @@ export const collectStripeProductIdPriceCandidates = ({
 
 /**
  * Match a single StripeItemSnapshot against the supplied Autumn products.
+ * First hit wins, in order:
  *
  * Priority is global across the whole catalog: an exact `stripe_price_id`
  * match on ANY price beats every `stripe_product_id` match, which beats the
  * product-level base-shape fallback.
  *
- * Pure: no I/O, no sibling-aware decisions.
+ * Pure and sibling-blind — shared-price misattribution across plans is fixed
+ * afterwards by rematchFeaturesWithinAnchoredPlans and
+ * preferBaseAnchoredProductForProductIdMatches. `org` enables prepaid shape
+ * matching at tier 3.
  */
 export const findAutumnMatchForStripeItem = ({
 	item,
 	fullProducts,
+	org,
 }: {
 	item: StripeItemSnapshot;
 	fullProducts: FullProduct[];
+	org?: Organization;
 }): ItemDiff => {
 	const stripePriceIds = new Set([item.stripe_price_id]);
-	const stripeProductIds = new Set([item.stripe_product_id]);
 
 	for (const product of fullProducts) {
 		for (const price of product.prices) {
@@ -103,6 +105,7 @@ export const findAutumnMatchForStripeItem = ({
 		};
 	}
 
+	const stripeProductIds = new Set([item.stripe_product_id]);
 	const productCandidates: ProductLevelMatchCandidate[] = [];
 	for (const product of fullProducts) {
 		const matched_on = findStripeMatchForAutumnProduct({
@@ -117,34 +120,28 @@ export const findAutumnMatchForStripeItem = ({
 	const productMatch = findProductLevelMatchForStripeItem({
 		item,
 		candidates: productCandidates,
+		org,
 	});
-	if (productMatch) {
-		if (productMatch.basePrice) {
-			return {
-				stripe: item,
-				match: {
-					kind: "autumn_price",
-					matched_on: {
-						type: "stripe_base_price_shape",
-						stripe_product_id: productMatch.matched_on.stripe_product_id,
-						stripe_price_id: item.stripe_price_id,
-					},
-					price: productMatch.basePrice,
-					product: productMatch.product,
-				},
-			};
-		}
+	if (!productMatch) return { stripe: item, match: { kind: "none" } };
 
+	if (productMatch.priceMatch) {
 		return {
 			stripe: item,
 			match: {
-				kind: "autumn_product",
-				matched_on: productMatch.matched_on,
+				kind: "autumn_price",
+				matched_on: productMatch.priceMatch.matched_on,
+				price: productMatch.priceMatch.price,
 				product: productMatch.product,
 			},
 		};
 	}
 
-	const noMatch: ItemMatch = { kind: "none" };
-	return { stripe: item, match: noMatch };
+	return {
+		stripe: item,
+		match: {
+			kind: "autumn_product",
+			matched_on: productMatch.matched_on,
+			product: productMatch.product,
+		},
+	};
 };

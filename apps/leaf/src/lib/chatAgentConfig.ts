@@ -20,11 +20,11 @@ export const leafChatAgentDefaults = {
  */
 export const claudeManagedMemoryEnabled = false;
 
-/** "mastra" = the Mastra leaf agent loop; "claude-managed" = the Claude Managed Agents engine. */
-export type AgentHarnessName = "claude-managed" | "mastra";
+/** "mastra" = the Mastra leaf agent loop; "claude-managed" = the Claude Managed Agents engine; "eve" = the Eve HTTP bridge. */
+export type AgentHarnessName = "claude-managed" | "eve" | "mastra";
 
-export const DEFAULT_SLACK_AGENT_HARNESS: AgentHarnessName = "claude-managed";
-export const DEFAULT_WEB_AGENT_HARNESS: AgentHarnessName = "claude-managed";
+export const DEFAULT_SLACK_AGENT_HARNESS: AgentHarnessName = "eve";
+export const DEFAULT_WEB_AGENT_HARNESS: AgentHarnessName = "eve";
 export const DEFAULT_AGENT_HARNESS = DEFAULT_SLACK_AGENT_HARNESS;
 
 /**
@@ -36,5 +36,7 @@ export const DEFAULT_EVAL_DRIVER: AgentHarnessName = "claude-managed";
 /** End-to-end per-message timeout; the in-process Agent SDK loop spawns a subprocess, so more headroom. */
 export const messageTimeoutMs: Record<AgentHarnessName, number> = {
 	"claude-managed": 120_000,
+	// Multi-tool billing turns (preview + enrich + write gate) routinely pass 60s.
+	eve: 180_000,
 	mastra: 60_000,
 };

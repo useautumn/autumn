@@ -1,6 +1,7 @@
 import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { onAwsEcs } from "@/external/aws/ecs/onAwsEcs.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
@@ -46,6 +47,31 @@ const createOrgRedisConnection = ({
 	return instance;
 };
 
+/**
+ * Orgs on a dedicated private-VPC Redis need a different connection string
+ * on vs off AWS ECS — `publicConnectionString` is the mirror reachable from
+ * trigger.dev/local dev. Falls back to the private string (with a warning)
+ * for orgs that predate the public URL field.
+ */
+const resolveOrgConnectionString = ({
+	redisConfig,
+	orgId,
+}: {
+	redisConfig: OrgRedisConfig;
+	orgId: string;
+}): string => {
+	if (onAwsEcs()) return decryptData(redisConfig.connectionString);
+
+	if (redisConfig.publicConnectionString) {
+		return decryptData(redisConfig.publicConnectionString);
+	}
+
+	logger.warn(
+		`[OrgRedis] org=${orgId}: no publicConnectionString set, falling back to private connectionString off-AWS`,
+	);
+	return decryptData(redisConfig.connectionString);
+};
+
 export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	if (!org.redis_config) return resolveRedisV2();
 
@@ -58,7 +84,10 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 
 	let connectionString: string;
 	try {
-		connectionString = decryptData(org.redis_config.connectionString);
+		connectionString = resolveOrgConnectionString({
+			redisConfig: org.redis_config,
+			orgId: org.id,
+		});
 	} catch (error) {
 		logger.error(
 			`[OrgRedis] Failed to decrypt redis_config for org ${org.id}, falling back to shared Redis V2`,

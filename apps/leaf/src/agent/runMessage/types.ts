@@ -1,6 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv, ChatApproval, ChatProvider } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
+import type { EveSessionRef } from "../../harness/eve/types.js";
 import type { ActiveRun } from "../../internal/runs/runRegistry.js";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { AgentOutput, ChatContextMessage } from "../../types.js";
@@ -28,6 +29,7 @@ export type ThreadRef = {
 export type MessageContext = {
 	agentTools: AgentToolContext;
 	claudeManagedSession?: ClaudeManagedSessionRef;
+	eveSession?: EveSessionRef;
 	/** Epoch ms after which the engine should interrupt the run instead of letting the outer timeout abandon it. */
 	deadlineAt?: number;
 	env: AppEnv;
@@ -41,6 +43,8 @@ export type MessageContext = {
 	onAgentReady?: () => Promise<void> | void;
 	/** Fires when the agent starts an inference or emits thinking — drives the live status. */
 	onThinking?: () => void;
+	/** Streams process narration into dashboard work history. */
+	onReasoning?: (input: { id: string; text: string }) => void;
 	/** Posts a drained intermediate turn's text while follow-ups keep the run alive. */
 	onTurnComplete?: (text: string) => Promise<void> | void;
 	org: { id: string; slug?: string };
@@ -56,6 +60,12 @@ export type MessageContext = {
 /** The request payload (billing's params analog). */
 export type MessageParams = {
 	attachments?: MessageAttachment[];
+	/** Structured, non-persisted context for this turn only (e.g. a submitted
+	 * `CatalogDecisionCard` choice). Only the eve harness currently forwards it. */
+	clientContext?: Record<string, unknown>;
+	/** A clicked answer chip for a pending ask_question — answered via eve's
+	 * structured inputResponses, since wrapped message text never matches. */
+	questionResponse?: { optionId: string; requestId: string };
 	recentMessages?: ChatContextMessage[];
 	text: string;
 };

@@ -13,7 +13,22 @@ export type ApprovalRunResult =
 	// `retryable` means the write never ran to completion (a session crash /
 	// interruption), so the approval stays pending and the user can re-apply.
 	| { error: true; message: string; retryable?: boolean }
-	| { result: unknown; text: string; toolName?: string };
+	| {
+			/** The resumed turn parked on another gated write — surfaces that mimic
+			 * chat (Slack) post this row's card; the dashboard picks it up by poll. */
+			chainedApprovalId?: string;
+			/** The resumed turn parked on an ask_question — rich surfaces render
+			 * the options as buttons. */
+			question?: {
+				options: { id?: string; label?: string }[];
+				prompt: string;
+				requestId: string;
+				sessionId: string;
+			};
+			result: unknown;
+			text: string;
+			toolName?: string;
+	  };
 
 export type ApprovalAuthorization =
 	| { allowed: true; approverToken?: string }

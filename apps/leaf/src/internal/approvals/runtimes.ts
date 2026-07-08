@@ -1,5 +1,6 @@
 import type { ChatApproval } from "@autumn/shared";
 import { resumeClaudeManagedApproval } from "../../harness/claudeManaged/approval.js";
+import { resumeEveApproval } from "../../harness/eve/approval.js";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { ApprovalRunResult } from "./types.js";
 
@@ -17,4 +18,5 @@ export const approvalRuntimes: Partial<
 	Record<AgentHarnessName, ApprovalRuntime>
 > = {
 	"claude-managed": resumeClaudeManagedApproval,
+	eve: resumeEveApproval,
 };

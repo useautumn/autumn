@@ -12,6 +12,7 @@ import {
 	type BaseWebhookEventContext,
 	buildBillingContextForArrearInvoice,
 } from "./buildBillingContextFromWebhook";
+import { partitionSkippedOverageLineItems } from "./filterSkippedOverageLineItems";
 import { logWebhookArrearLineItems } from "./logs/logWebhookArrearLineItems";
 
 /**
@@ -90,12 +91,24 @@ export const eventContextToArrearLineItems = async ({
 		});
 	}
 
+	// Per-feature skip_overage_billing spend limits exclude items from billing
+	const { billableLineItems, skippedLineItems } =
+		partitionSkippedOverageLineItems({
+			fullCustomer: billingContext.fullCustomer,
+			lineItems,
+		});
+
 	// Log the arrear line items and customer entitlement updates
 	logWebhookArrearLineItems({
 		ctx,
-		lineItems,
+		lineItems: billableLineItems,
+		skippedLineItems,
 		updateCustomerEntitlements,
 	});
 
-	return { lineItems, updateCustomerEntitlements, billingContext };
+	return {
+		lineItems: billableLineItems,
+		updateCustomerEntitlements,
+		billingContext,
+	};
 };

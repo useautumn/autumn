@@ -173,6 +173,7 @@ const resetCustomerEntitlementInDb = async ({
 				nextResetAt = await getStripeSubscriptionAnchor({
 					db: ctx.db,
 					cusEnt,
+					curResetAt: cusEnt.next_reset_at,
 					nextResetAt,
 				});
 			} catch (error) {

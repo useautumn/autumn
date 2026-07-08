@@ -1,6 +1,6 @@
 # Catalog update flow
 
-Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same flow with `plans.preview_update` and `plans.update`.
+Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same catalog flow with a one-plan `plans` array.
 
 ## Loop
 
@@ -11,7 +11,7 @@ Use this when changing an existing Autumn catalog through MCP/API or when mappin
 5. Revise params or config based on the decisions, then preview again if anything changed.
 6. Run `catalog.update` with the exact previewed params, following the global write approval rules.
 
-For `plans.preview_update`, include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope. `catalog.preview_update` accepts the same per-plan detail flags inside each plan in `plans[]`.
+For single-plan updates, pass that plan inside `catalog.preview_update.plans[]`. Include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope.
 
 ## Preview summary checklist
 

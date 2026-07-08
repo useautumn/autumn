@@ -118,6 +118,7 @@ export const runRedisTrackV3 = async ({
 			deductionOptions: {
 				overageBehaviour: overageBehavior,
 				triggerAutoTopUp: true,
+				eventProperties: body.properties,
 			},
 		}),
 	);

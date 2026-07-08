@@ -1,4 +1,5 @@
 import {
+	cp,
 	type Entity,
 	EntityNotFoundError,
 	ErrCode,
@@ -60,18 +61,40 @@ const resolvePlanEntity = ({
 	return entity;
 };
 
+const findLinkedAddOnCustomerProduct = ({
+	fullCustomer,
+	fullProduct,
+	stripeSubscriptionId,
+	internalEntityId,
+}: {
+	fullCustomer: FullCustomer;
+	fullProduct: SyncProductContext["fullProduct"];
+	stripeSubscriptionId: string;
+	internalEntityId?: string;
+}): FullCusProduct | undefined =>
+	fullCustomer.customer_products.find((customerProduct) => {
+		if (customerProduct.product?.id !== fullProduct.id) return false;
+		if ((customerProduct.internal_entity_id ?? undefined) !== internalEntityId)
+			return false;
+		return cp(customerProduct)
+			.hasActiveStatus()
+			.onStripeSubscription({ stripeSubscriptionId }).valid;
+	});
+
 const buildProductContext = async ({
 	ctx,
 	fullCustomer,
 	plan,
 	shouldFindCurrentCustomerProduct,
 	accessStartsAt,
+	stripeSubscriptionId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	plan: SyncPlanInstance;
 	shouldFindCurrentCustomerProduct: boolean;
 	accessStartsAt?: number;
+	stripeSubscriptionId?: string;
 }): Promise<SyncProductContext> => {
 	const {
 		fullProduct,
@@ -90,15 +113,29 @@ const buildProductContext = async ({
 
 	let currentCustomerProduct: FullCusProduct | undefined;
 	if (shouldFindCurrentCustomerProduct) {
-		const transition = setupAttachTransitionContext({
-			fullCustomer,
-			attachProduct: fullProduct,
-			// Scope the "previous product to expire" lookup to the plan's entity
-			// so an entity-scoped sync replaces the existing product on that
-			// same entity rather than missing it (which would duplicate).
-			internalEntityId: entity?.internal_id,
-		});
-		currentCustomerProduct = transition.currentCustomerProduct;
+		if (fullProduct.is_add_on === true) {
+			// Add-ons have no group transition; a re-sync replaces the existing
+			// same-product instance linked to this Stripe subscription so
+			// quantity changes and webhook re-deliveries converge.
+			currentCustomerProduct = stripeSubscriptionId
+				? findLinkedAddOnCustomerProduct({
+						fullCustomer,
+						fullProduct,
+						stripeSubscriptionId,
+						internalEntityId: entity?.internal_id,
+					})
+				: undefined;
+		} else {
+			const transition = setupAttachTransitionContext({
+				fullCustomer,
+				attachProduct: fullProduct,
+				// Scope the "previous product to expire" lookup to the plan's entity
+				// so an entity-scoped sync replaces the existing product on that
+				// same entity rather than missing it (which would duplicate).
+				internalEntityId: entity?.internal_id,
+			});
+			currentCustomerProduct = transition.currentCustomerProduct;
+		}
 	}
 
 	return {
@@ -176,20 +213,20 @@ export const setupSyncContext = async ({
 					})
 				: null;
 
-			const isImmediatePhase = phase.starts_at === "now";
-
 			const productContextsPerPlan = await Promise.all(
 				phase.plans.map((plan) =>
 					buildProductContext({
 						ctx,
 						fullCustomer,
 						plan,
-						shouldFindCurrentCustomerProduct:
-							plan.expire_previous === true &&
-							(isImmediatePhase || plan.enable_plan_immediately === true),
+						// Future phases also expire the current same-group product on
+						// expire_previous — computeSyncFuturePhases relies on it being
+						// set, not just the immediate/enable-now cases.
+						shouldFindCurrentCustomerProduct: plan.expire_previous === true,
 						accessStartsAt: plan.enable_plan_immediately
 							? currentEpochMs
 							: undefined,
+						stripeSubscriptionId: params.stripe_subscription_id,
 					}),
 				),
 			);

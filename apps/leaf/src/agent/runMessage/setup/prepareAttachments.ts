@@ -13,6 +13,36 @@ const SUPPORTED_MIME_TYPES = new Set([
 	"image/webp",
 ]);
 
+// Code/text uploads (Slack snippets arrive as text/*) are inlined into the
+// message body instead of riding as model file parts.
+const INLINE_TEXT_MIME_TYPES = new Set([
+	"application/javascript",
+	"application/json",
+	"application/sql",
+	"application/toml",
+	"application/typescript",
+	"application/x-sh",
+	"application/x-yaml",
+	"application/xml",
+]);
+const MAX_INLINE_TEXT_BYTES = 48 * 1024;
+
+const isInlineTextAttachment = (attachment: Attachment) =>
+	Boolean(
+		attachment.mimeType &&
+			(attachment.mimeType.startsWith("text/") ||
+				INLINE_TEXT_MIME_TYPES.has(attachment.mimeType)),
+	);
+
+const inlineTextBlock = ({ data, label }: { data: Buffer; label: string }) => {
+	const truncated = data.byteLength > MAX_INLINE_TEXT_BYTES;
+	const text = data
+		.subarray(0, MAX_INLINE_TEXT_BYTES)
+		.toString("utf8")
+		.replace(/```/g, "ʼʼʼ");
+	return `Attached file: ${label}${truncated ? " (truncated)" : ""}\n\`\`\`\n${text}\n\`\`\``;
+};
+
 type AttachmentFetchFallback = ({
 	attachment,
 }: {
@@ -60,9 +90,12 @@ export const prepareAttachmentMessage = async ({
 		type: "file";
 	}> = [];
 
+	const inlineBlocks: string[] = [];
 	for (const attachment of attachments.slice(0, MAX_ATTACHMENTS)) {
 		const label = getAttachmentLabel(attachment);
-		if (!isSupportedAttachment(attachment)) {
+		if (
+			!(isSupportedAttachment(attachment) || isInlineTextAttachment(attachment))
+		) {
 			notes.push(`Skipped ${label}: unsupported file type.`);
 			continue;
 		}
@@ -79,6 +112,10 @@ export const prepareAttachmentMessage = async ({
 			}
 			if (data.byteLength > MAX_ATTACHMENT_BYTES) {
 				notes.push(`Skipped ${label}: downloaded file is too large.`);
+				continue;
+			}
+			if (isInlineTextAttachment(attachment)) {
+				inlineBlocks.push(inlineTextBlock({ data, label }));
 				continue;
 			}
 			parts.push({
@@ -109,6 +146,7 @@ export const prepareAttachmentMessage = async ({
 
 	const userText = [
 		text.trim() || "Please answer using the attached Slack file(s).",
+		...inlineBlocks,
 		notes.length ? `Attachment processing notes:\n${notes.join("\n")}` : null,
 	]
 		.filter((line): line is string => Boolean(line))
