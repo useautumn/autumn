@@ -1505,6 +1505,13 @@ BillingUpdateCancelAction = Literal[
 r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
+BillingUpdateRefundLastPayment = Literal[
+    "prorated",
+    "full",
+]
+r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
+
 class BillingUpdateRecalculateBalancesTypedDict(TypedDict):
     r"""Controls whether balances should be recalculated during the subscription update."""
 
@@ -1583,6 +1590,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""Reset the billing cycle anchor immediately with 'now'"""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+    refund_last_payment: NotRequired[BillingUpdateRefundLastPayment]
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
     recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
     r"""Controls whether balances should be recalculated during the subscription update."""
     carry_over_usages: NotRequired[BillingUpdateCarryOverUsagesTypedDict]
@@ -1635,6 +1644,9 @@ class UpdateSubscriptionParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
+    refund_last_payment: Optional[BillingUpdateRefundLastPayment] = None
+    r"""Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment."""
+
     recalculate_balances: Optional[BillingUpdateRecalculateBalances] = None
     r"""Controls whether balances should be recalculated during the subscription update."""
 
@@ -1658,6 +1670,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "cancel_action",
                 "billing_cycle_anchor",
                 "no_billing_changes",
+                "refund_last_payment",
                 "recalculate_balances",
                 "carry_over_usages",
             ]

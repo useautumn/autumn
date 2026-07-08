@@ -18437,6 +18437,15 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                refund_last_payment:
+                  enum:
+                    - prorated
+                    - full
+                  type: string
+                  title: RefundLastPayment
+                  description: Controls how the last payment is refunded on immediate
+                    cancellation. 'prorated' refunds the unused portion, 'full'
+                    refunds the entire last payment.
                 recalculate_balances:
                   type: object
                   properties:
@@ -19309,6 +19318,15 @@ paths:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
                     billing changes in Stripe.
+                refund_last_payment:
+                  enum:
+                    - prorated
+                    - full
+                  type: string
+                  title: RefundLastPayment
+                  description: Controls how the last payment is refunded on immediate
+                    cancellation. 'prorated' refunds the unused portion, 'full'
+                    refunds the entire last payment.
                 recalculate_balances:
                   type: object
                   properties:
