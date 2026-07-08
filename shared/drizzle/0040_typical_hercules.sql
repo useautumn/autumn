@@ -1,7 +1,5 @@
 CREATE TABLE "customer_licenses" (
 	"id" text PRIMARY KEY NOT NULL,
-	"org_id" text NOT NULL,
-	"env" text NOT NULL,
 	"internal_customer_id" text NOT NULL,
 	"parent_customer_product_id" text NOT NULL,
 	"license_internal_product_id" text NOT NULL,
@@ -66,7 +64,7 @@ ALTER TABLE "plan_license" ADD CONSTRAINT "plan_license_parent_product_fkey" FOR
 ALTER TABLE "plan_license" ADD CONSTRAINT "plan_license_parent_customer_product_fkey" FOREIGN KEY ("parent_customer_product_id") REFERENCES "public"."customer_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "plan_license" ADD CONSTRAINT "plan_license_license_product_fkey" FOREIGN KEY ("license_internal_product_id") REFERENCES "public"."products"("internal_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX CONCURRENTLY "unique_customer_license" ON "customer_licenses" USING btree ("parent_customer_product_id","license_internal_product_id");--> statement-breakpoint
-CREATE INDEX CONCURRENTLY "idx_customer_licenses_customer" ON "customer_licenses" USING btree ("org_id","env","internal_customer_id");--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_licenses_customer" ON "customer_licenses" USING btree ("internal_customer_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_items_entitlement" ON "license_items" USING btree ("entitlement_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_license_items_price" ON "license_items" USING btree ("price_id");--> statement-breakpoint
 CREATE UNIQUE INDEX CONCURRENTLY "unique_license_pool_grant" ON "license_pool_grant" USING btree ("internal_customer_id","parent_customer_product_id","license_internal_product_id","internal_feature_id");--> statement-breakpoint
