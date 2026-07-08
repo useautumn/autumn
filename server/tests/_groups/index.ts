@@ -6,6 +6,7 @@ import { coreBalances } from "./core/coreBalances";
 import { coreBilling } from "./core/coreBilling";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreMigrations } from "./core/coreMigrations";
+import { coreMultiUpdate } from "./core/coreMultiUpdate";
 import { coreStripe } from "./core/coreStripe";
 import { coreUpdateSubscription } from "./core/coreUpdateSubscription";
 import { advanced } from "./domains/advanced";
@@ -35,6 +36,7 @@ const allGroups: TestGroup[] = [
 	coreBalances,
 	coreLegacy,
 	coreMigrations,
+	coreMultiUpdate,
 	coreStripe,
 	coreUpdateSubscription,
 	balances,
