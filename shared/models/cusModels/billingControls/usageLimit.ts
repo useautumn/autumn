@@ -15,6 +15,44 @@ export const USAGE_LIMIT_INTERVALS = [
 	ResetInterval.Year,
 ] as const;
 
+export const USAGE_LIMIT_FILTER_MAX_KEYS = 4;
+export const USAGE_LIMIT_FILTER_MAX_KEY_LENGTH = 64;
+export const USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH = 128;
+
+// Scalars only: values are canonicalized to strings so "29384" and 29384 are
+// the same condition (counters are keyed by these canonical values).
+const UsageLimitFilterValueSchema = z
+	.union([
+		z.string().min(1).max(USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH),
+		z.number(),
+		z.boolean(),
+	])
+	.transform(String);
+
+export const UsageLimitFilterSchema = z.object({
+	properties: z
+		.record(
+			z.string().min(1).max(USAGE_LIMIT_FILTER_MAX_KEY_LENGTH),
+			UsageLimitFilterValueSchema,
+		)
+		.meta({
+			description:
+				"Event property equality conditions. A usage event counts toward this cap only when every listed property matches (AND).",
+		})
+		.check((ctx) => {
+			const keyCount = Object.keys(ctx.value).length;
+			if (keyCount < 1 || keyCount > USAGE_LIMIT_FILTER_MAX_KEYS) {
+				ctx.issues.push({
+					code: "custom",
+					message: `filter.properties must have between 1 and ${USAGE_LIMIT_FILTER_MAX_KEYS} keys`,
+					input: ctx.value,
+				});
+			}
+		}),
+});
+
+export type UsageLimitFilter = z.infer<typeof UsageLimitFilterSchema>;
+
 export const DbUsageLimitSchema = z.object({
 	feature_id: z.string().meta({
 		description: "The feature this usage limit applies to.",
@@ -29,9 +67,49 @@ export const DbUsageLimitSchema = z.object({
 		description:
 			"Interval for the cap, aligned to the customer's billing cycle.",
 	}),
+	filter: UsageLimitFilterSchema.optional().meta({
+		description:
+			"When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.",
+	}),
 });
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
+
+/**
+ * Canonical identity of a filter: sorted `key=value` pairs. Counters and
+ * dedup checks key off this, so config edits can never orphan a live counter.
+ */
+export const usageLimitFilterKey = (
+	filter: UsageLimitFilter | null | undefined,
+): string => {
+	if (!filter?.properties) return "";
+	return Object.entries(filter.properties)
+		.map(([key, value]) => [key, String(value)] as const)
+		.sort(([left], [right]) => left.localeCompare(right))
+		.map(([key, value]) => `${key}=${value}`)
+		.join("&");
+};
+
+/**
+ * Whether an event's properties satisfy a limit's filter: every condition
+ * must match (AND), scalar values compare string-normalized. No filter
+ * matches everything; a filter never matches an event without properties.
+ */
+export const usageLimitFilterMatchesProperties = ({
+	filterProperties,
+	eventProperties,
+}: {
+	filterProperties: Record<string, string> | null | undefined;
+	eventProperties: Record<string, unknown> | null | undefined;
+}): boolean => {
+	if (!filterProperties) return true;
+	if (!eventProperties) return false;
+	return Object.entries(filterProperties).every(([key, value]) => {
+		const eventValue = eventProperties[key];
+		if (eventValue == null || typeof eventValue === "object") return false;
+		return String(eventValue) === String(value);
+	});
+};
 
 const USAGE_LIMIT_INTERVAL_DAYS: Record<
 	(typeof USAGE_LIMIT_INTERVALS)[number],
