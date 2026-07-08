@@ -1,7 +1,6 @@
 import { CouponDurationType } from "@autumn/shared";
 import {
 	FormLabel,
-	Input,
 	InputGroup,
 	InputGroupAddon,
 	InputGroupText,
@@ -104,19 +103,21 @@ export function DiscountRewardConfig({
 						<FormLabel>Duration</FormLabel>
 						<div className="flex items-center gap-2">
 							{showDurationValue && (
-								<Input
-									type="number"
-									placeholder="3"
-									className="w-20"
-									value={
-										config.duration_value === 0 ? "" : config.duration_value
-									}
-									onChange={(e) => {
-										const value =
-											e.target.value === "" ? 0 : Number(e.target.value);
-										setConfig("duration_value", value);
-									}}
-								/>
+								<InputGroup className="input-base p-2 w-20">
+									<input
+										type="number"
+										placeholder="3"
+										value={
+											config.duration_value === 0 ? "" : config.duration_value
+										}
+										onChange={(e) => {
+											const value =
+												e.target.value === "" ? 0 : Number(e.target.value);
+											setConfig("duration_value", value);
+										}}
+										className="w-full bg-transparent outline-none"
+									/>
+								</InputGroup>
 							)}
 							<Select
 								value={config.duration_type}

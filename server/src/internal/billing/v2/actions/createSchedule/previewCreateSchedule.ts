@@ -8,7 +8,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
+import {
+	handleCreateScheduleBillingPlanErrors,
+	handleCreateScheduleErrors,
+} from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 
 type PreviewCreateScheduleResult = {
@@ -48,6 +51,8 @@ export const previewCreateScheduleWithContext = async ({
 	});
 
 	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
+
+	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	return {
 		billingContext,

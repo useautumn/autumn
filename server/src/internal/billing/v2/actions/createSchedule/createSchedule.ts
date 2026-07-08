@@ -13,7 +13,10 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { hashJson } from "@/utils/hash/hashJson";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
+import {
+	handleCreateScheduleBillingPlanErrors,
+	handleCreateScheduleErrors,
+} from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
 
@@ -78,6 +81,8 @@ export const createSchedule = async ({
 		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
+
+	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
