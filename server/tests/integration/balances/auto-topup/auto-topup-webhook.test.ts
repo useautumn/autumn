@@ -491,7 +491,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends fai
 	expect(failedResult).not.toBeNull();
 	const data = failedResult!.payload.data;
 	expect(data.reason).toBe("purchase_limit_reached");
-	expect(data.retryable).toBe(false);
+	expect(data.retryable).toBe(true);
 	expect(data.quantity).toBe(100);
 	expect(data.threshold).toBe(50);
 	expect(data.balance).toBe(40);
