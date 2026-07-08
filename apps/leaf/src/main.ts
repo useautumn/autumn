@@ -7,6 +7,7 @@ import type { Message } from "chat";
 import { type Context, Hono } from "hono";
 import { bot, chatAdapterNames } from "./bot.js";
 import { getClaudeManagedSession } from "./harness/claudeManaged/session/ensureSession.js";
+import { getEveSession } from "./harness/eve/repo.js";
 import { decideWebApproval } from "./internal/approvals/surfaces/web/decide.js";
 import { listWebApprovals } from "./internal/approvals/surfaces/web/list.js";
 import { WEB_CHAT_PROVIDER } from "./internal/installations/actions/ensureWebChatAuth.js";
@@ -16,10 +17,13 @@ import { logger } from "./lib/logger.js";
 import { createMcpRouter } from "./mcp/mcpRouter.js";
 import { slackRoutes } from "./providers/slack/routes.js";
 import { resolveDashboardEnv } from "./providers/web/dashboardEnv.js";
+import { buildEveWebHistory } from "./providers/web/hydrateEveThread.js";
 import { buildWebHistory } from "./providers/web/hydrateWebThread.js";
 import { streamWebChat } from "./providers/web/streamWebChat.js";
 import {
 	buildWebChatThreadId,
+	deleteWebThreads,
+	listWebThreads,
 	webThreadRef,
 } from "./providers/web/webThread.js";
 
@@ -88,7 +92,10 @@ app.route("/slack", slackRoutes);
 app.post("/agent/chat", async (c) => {
 	// claude-managed owns its stream (native data-step / data-approval parts);
 	// mastra stays on the chat-sdk web adapter's text-only path below.
-	if (env.WEB_AGENT_HARNESS === "claude-managed") {
+	if (
+		env.WEB_AGENT_HARNESS === "claude-managed" ||
+		env.WEB_AGENT_HARNESS === "eve"
+	) {
 		const auth = await authDashboard(c.req.header("cookie"));
 		if (!auth) return c.json({ error: "Not authenticated" }, 401);
 		return await streamWebChat({
@@ -127,6 +134,30 @@ app.post("/agent/chat", async (c) => {
 	});
 });
 
+app.get("/agent/chat/threads", async (c) => {
+	const auth = await authDashboard(c.req.header("cookie"));
+	if (!auth) return c.json({ error: "Not authenticated" }, 401);
+	const threads = await listWebThreads({
+		db,
+		env: resolveDashboardEnv(c.req.header("app_env")),
+		orgId: auth.orgId,
+		userId: auth.userId,
+	});
+	return c.json({ threads });
+});
+
+app.delete("/agent/chat/threads", async (c) => {
+	const auth = await authDashboard(c.req.header("cookie"));
+	if (!auth) return c.json({ error: "Not authenticated" }, 401);
+	await deleteWebThreads({
+		db,
+		env: resolveDashboardEnv(c.req.header("app_env")),
+		orgId: auth.orgId,
+		userId: auth.userId,
+	});
+	return c.json({ ok: true });
+});
+
 app.get("/agent/chat/:threadId/messages", async (c) => {
 	const auth = await authDashboard(c.req.header("cookie"));
 	if (!auth) return c.json({ error: "Not authenticated" }, 401);
@@ -141,15 +172,49 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 		userId: auth.userId,
 	});
 
-	// The CMA session is the transcript — replay it (text + tool steps) merged
-	// with historical approval cards. Falls back to chat-sdk text history for
-	// mastra/legacy threads with no CMA session.
+	// Durable harness sessions are the transcript — replay them (text + tool
+	// steps) merged with historical approval cards. Falls back to chat-sdk text
+	// history for mastra/legacy threads with no durable session.
 	const cmaEnv = resolveDashboardEnv(c.req.header("app_env"));
+	const thread = webThreadRef({ chatThreadId, orgId: auth.orgId });
+	const readEveMessages = async () => {
+		const eveSession = await getEveSession({
+			db,
+			env: cmaEnv,
+			orgId: auth.orgId,
+			thread,
+		});
+		if (!eveSession) return undefined;
+		return buildEveWebHistory({
+			auth: {
+				appEnv: cmaEnv,
+				channelId: thread.channelId,
+				orgId: auth.orgId,
+				provider: WEB_CHAT_PROVIDER,
+				providerUserId: auth.userId,
+				threadId: thread.threadId,
+				workspaceId: auth.orgId,
+			},
+			channelId: chatThreadId,
+			db,
+			env: cmaEnv,
+			orgId: auth.orgId,
+			provider: WEB_CHAT_PROVIDER as ChatProvider,
+			session: eveSession,
+			workspaceId: auth.orgId,
+		});
+	};
+
+	if (env.WEB_AGENT_HARNESS === "eve") {
+		const messages = await readEveMessages();
+		if (messages) return c.json({ messages });
+	}
+
 	const session = await getClaudeManagedSession({
 		db,
 		env: cmaEnv,
 		orgId: auth.orgId,
-		thread: webThreadRef({ chatThreadId, orgId: auth.orgId }),
+		thread,
 	});
 	if (session) {
 		const messages = await buildWebHistory({
@@ -164,10 +229,13 @@ app.get("/agent/chat/:threadId/messages", async (c) => {
 		return c.json({ messages });
 	}
 
+	const eveMessages = await readEveMessages();
+	if (eveMessages) return c.json({ messages: eveMessages });
+
 	await bot.initialize();
-	const thread = bot.thread(chatThreadId);
+	const chatThread = bot.thread(chatThreadId);
 	const messages = [];
-	for await (const message of thread.messages) {
+	for await (const message of chatThread.messages) {
 		if (message.text.trim()) messages.push(messageToUiMessage(message));
 	}
 	return c.json({ messages: messages.reverse() });

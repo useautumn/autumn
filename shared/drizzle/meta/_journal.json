@@ -288,6 +288,20 @@
       "when": 1783416274113,
       "tag": "0040_abnormal_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783529369844,
+      "tag": "0041_sweet_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1783533774922,
+      "tag": "0042_shocking_sharon_carter",
+      "breakpoints": true
     }
   ]
 }

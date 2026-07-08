@@ -45,20 +45,22 @@ local function get_available_from_usage_windows(params)
   local allowed = nil
 
   for feature_id, feature_windows in pairs(context.usage_windows or {}) do
-    local headroom = feature_windows.headroom
-    if headroom <= USAGE_WINDOW_EPSILON then
-      headroom = 0
-    end
+    for _, entry in pairs(feature_windows.entries or {}) do
+      local headroom = entry.headroom
+      if headroom <= USAGE_WINDOW_EPSILON then
+        headroom = 0
+      end
 
-    local units = nil
-    if feature_windows.dimension_type ~= 'balance' then
-      units = headroom
-    elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
-      units = headroom / credit_cost
-    end
+      local units = nil
+      if entry.dimension_type ~= 'balance' then
+        units = headroom
+      elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
+        units = headroom / credit_cost
+      end
 
-    if units ~= nil and (allowed == nil or units < allowed) then
-      allowed = units
+      if units ~= nil and (allowed == nil or units < allowed) then
+        allowed = units
+      end
     end
   end
 
@@ -80,19 +82,21 @@ local function consume_usage_window_headroom(params)
   end
 
   for feature_id, feature_windows in pairs(context.usage_windows or {}) do
-    local consumed = nil
-    if feature_windows.dimension_type ~= 'balance' then
-      consumed = units
-    elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
-      consumed = units * credit_cost
-    end
-
-    if consumed ~= nil and consumed > 0 then
-      feature_windows.headroom = feature_windows.headroom - consumed
-      if feature_windows.headroom < 0 then
-        feature_windows.headroom = 0
+    for _, entry in pairs(feature_windows.entries or {}) do
+      local consumed = nil
+      if entry.dimension_type ~= 'balance' then
+        consumed = units
+      elseif not is_nil(ent_feature_id) and feature_id == ent_feature_id then
+        consumed = units * credit_cost
       end
-      feature_windows.consumed = feature_windows.consumed + consumed
+
+      if consumed ~= nil and consumed > 0 then
+        entry.headroom = entry.headroom - consumed
+        if entry.headroom < 0 then
+          entry.headroom = 0
+        end
+        entry.consumed = entry.consumed + consumed
+      end
     end
   end
 end
@@ -106,6 +110,7 @@ local function append_usage_window_mutation(params)
     usage_window_id = params.usage_window_id or cjson.null,
     feature_id = params.feature_id,
     internal_entity_id = params.internal_entity_id or cjson.null,
+    filter_key = params.filter_key or cjson.null,
     window_start_at = params.window_start_at,
     usage_delta = params.usage_delta or 0,
   })
@@ -124,8 +129,12 @@ local function update_in_memory_usage_window(params)
   if feature_windows == nil then
     return
   end
+  local entry = feature_windows.entries[limit.key]
+  if entry == nil then
+    return
+  end
 
-  if feature_windows.consumed > USAGE_WINDOW_EPSILON then
+  if entry.consumed > USAGE_WINDOW_EPSILON then
     local existing = find_usage_window(feature_windows.windows, limit)
     if is_nil(existing) then
       -- The TS-minted candidate id is used ONLY at creation; under concurrency
@@ -136,6 +145,7 @@ local function update_in_memory_usage_window(params)
         internal_entity_id = limit.internal_entity_id,
         feature_id = limit.feature_id,
         internal_feature_id = limit.internal_feature_id,
+        filter_key = limit.filter_key,
         usage = 0,
       }
       table.insert(feature_windows.windows, existing)
@@ -151,7 +161,7 @@ local function update_in_memory_usage_window(params)
     existing.window_end_at = limit.window_end_at
     existing.anchor_customer_entitlement_id =
       limit.anchor_customer_entitlement_id
-    existing.usage = safe_number(existing.usage) + feature_windows.consumed
+    existing.usage = safe_number(existing.usage) + entry.consumed
     existing.updated_at = now
     feature_windows.dirty = true
 
@@ -160,8 +170,9 @@ local function update_in_memory_usage_window(params)
       usage_window_id = existing.id,
       feature_id = limit.feature_id,
       internal_entity_id = limit.internal_entity_id,
+      filter_key = limit.filter_key,
       window_start_at = limit.window_start_at,
-      usage_delta = feature_windows.consumed,
+      usage_delta = entry.consumed,
     })
   end
 end
@@ -210,38 +221,41 @@ local function decrement_usage_windows_for_unwind(params)
   end
 
   for feature_id, feature_windows in pairs(context.usage_windows) do
-    local amount = 0
-    if feature_windows.dimension_type == 'balance' then
-      amount = credits_by_feature_id[feature_id] or 0
-    else
-      amount = total_units
-    end
+    for _, entry in pairs(feature_windows.entries or {}) do
+      local amount = 0
+      if entry.dimension_type == 'balance' then
+        amount = credits_by_feature_id[feature_id] or 0
+      else
+        amount = total_units
+      end
 
-    if amount > 0 then
-      local existing = find_usage_window(
-        feature_windows.windows,
-        feature_windows.limit
-      )
-      if not is_nil(existing) then
-        local current = safe_number(existing.usage)
-        local next_usage = current - amount
-        if next_usage < 0 then
-          next_usage = 0
-        end
+      if amount > 0 then
+        local existing = find_usage_window(
+          feature_windows.windows,
+          entry.limit
+        )
+        if not is_nil(existing) then
+          local current = safe_number(existing.usage)
+          local next_usage = current - amount
+          if next_usage < 0 then
+            next_usage = 0
+          end
 
-        if next_usage ~= current then
-          existing.usage = next_usage
-          existing.updated_at = now
-          feature_windows.dirty = true
+          if next_usage ~= current then
+            existing.usage = next_usage
+            existing.updated_at = now
+            feature_windows.dirty = true
 
-          append_usage_window_mutation({
-            context = context,
-            usage_window_id = existing.id,
-            feature_id = feature_windows.limit.feature_id,
-            internal_entity_id = feature_windows.limit.internal_entity_id,
-            window_start_at = feature_windows.limit.window_start_at,
-            usage_delta = next_usage - current,
-          })
+            append_usage_window_mutation({
+              context = context,
+              usage_window_id = existing.id,
+              feature_id = entry.limit.feature_id,
+              internal_entity_id = entry.limit.internal_entity_id,
+              filter_key = entry.limit.filter_key,
+              window_start_at = entry.limit.window_start_at,
+              usage_delta = next_usage - current,
+            })
+          end
         end
       end
     end

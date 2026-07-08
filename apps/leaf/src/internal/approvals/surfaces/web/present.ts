@@ -1,5 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatProvider } from "@autumn/shared";
+import { normalizeToolName } from "../../../../agent/tools/toolPolicy.js";
 import type { AgentHarnessName } from "../../../../lib/chatAgentConfig.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
@@ -12,6 +13,11 @@ const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
 		? (args.request as Record<string, unknown>)
 		: args;
+
+const publicToolArgs = (args: Record<string, unknown>) =>
+	Object.fromEntries(
+		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
+	);
 
 /**
  * Record an approval for a suspended web turn. The dashboard fetches it via
@@ -55,9 +61,12 @@ export const presentWebApproval = async ({
 		return undefined;
 	}
 
-	if (!approval.preview) {
+	if (
+		!approval.preview ||
+		normalizeToolName(approval.toolName) === "updatePlan"
+	) {
 		try {
-			const request = getRequest(approval.toolArgs);
+			const request = getRequest(publicToolArgs(approval.toolArgs));
 			if (request) {
 				approval.preview = await fetchApprovalPreview({
 					env: approval.env,
@@ -103,7 +112,9 @@ export const presentWebApproval = async ({
 
 	return {
 		approvalId,
-		params: getRequest(approval.toolArgs) ?? approval.toolArgs,
+		params:
+			getRequest(publicToolArgs(approval.toolArgs)) ??
+			publicToolArgs(approval.toolArgs),
 		preview: approval.preview,
 		toolName: approval.toolName,
 	};

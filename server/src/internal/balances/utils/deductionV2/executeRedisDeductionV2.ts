@@ -395,6 +395,7 @@ export const executeRedisDeductionV2 = async ({
 			feature: deduction.feature,
 			entityId,
 			featuresFromMutationLogs,
+			eventProperties: options.eventProperties,
 		});
 
 		if (options.triggerAutoTopUp) {

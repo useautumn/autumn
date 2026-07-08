@@ -3,11 +3,14 @@ import {
 	type Entitlement,
 	type FixedPriceConfig,
 	isConsumablePrice,
+	isPrepaidPrice,
 	type Organization,
 	type Price,
+	priceToStripeTiersMode,
 	TierBehavior,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { priceToStripePrepaidV2Tiers } from "@utils/productUtils/priceUtils/convertPrice/priceToStripePrepaidV2Tiers";
 import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/convertPrice/priceToStripeRecurringParams";
 import { priceToInArrearTiers } from "@/external/stripe/createStripePrice/createStripeInArrear";
 import {
@@ -115,6 +118,55 @@ export const autumnConsumablePriceToStripePriceShape = ({
 			billing_scheme: "tiered",
 			recurring: recurringMetered,
 			tiers_mode: "graduated",
+			tiers: autumnTiersToShape({ tiers }),
+		},
+	});
+};
+
+/**
+ * Total (allowance-inclusive) shape of a prepaid price — what Autumn's V2
+ * prepaid Stripe price looks like, so Stripe-native licensed prices (e.g.
+ * imported catalogs) can be recognized as prepaid by shape.
+ */
+export const autumnPrepaidPriceToStripePriceShape = ({
+	price,
+	entitlement,
+	stripeProductId,
+	currency,
+	org,
+}: {
+	price: Price;
+	entitlement: Entitlement;
+	stripeProductId: string;
+	currency: string;
+	org: Organization;
+}): StripePriceShape | null => {
+	if (!isPrepaidPrice(price)) return null;
+
+	const recurring = priceToStripeRecurringParams({ price });
+	if (!recurring) return null;
+
+	const tiers = priceToStripePrepaidV2Tiers({ price, entitlement, org });
+
+	if (tiers.length === 1) {
+		return inlinePriceToShape({
+			price: {
+				product: stripeProductId,
+				currency,
+				billing_scheme: "per_unit",
+				recurring,
+				unit_amount_decimal: tiers[0]?.unit_amount_decimal,
+			},
+		});
+	}
+
+	return inlinePriceToShape({
+		price: {
+			product: stripeProductId,
+			currency,
+			billing_scheme: "tiered",
+			recurring,
+			tiers_mode: priceToStripeTiersMode({ price }),
 			tiers: autumnTiersToShape({ tiers }),
 		},
 	});

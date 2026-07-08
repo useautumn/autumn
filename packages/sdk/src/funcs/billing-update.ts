@@ -63,6 +63,7 @@ import { Result } from "../types/fp.js";
  * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
  * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
  * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+ * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
  * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
  *

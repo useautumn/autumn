@@ -44,6 +44,14 @@ type StripeItemSnapshotLike = {
 	stripe_product_id: string;
 	currency: string | null;
 	billing_scheme: "per_unit" | "tiered" | null;
+	tiers_mode?: "graduated" | "volume" | null;
+	tiers?:
+		| {
+				up_to: number | null;
+				unit_amount: number | null;
+				flat_amount: number | null;
+		  }[]
+		| null;
 	recurring_interval: Stripe.Price.Recurring.Interval | null;
 	recurring_interval_count: number | null;
 	unit_amount_decimal: string | null;
@@ -163,7 +171,9 @@ export const stripeItemSnapshotToShape = ({
 }): StripePriceShape | null => {
 	if (!item.currency) return null;
 	if (!item.recurring_interval) return null;
-	if (!item.unit_amount_decimal) return null;
+
+	const isTiered = item.billing_scheme === "tiered" && item.tiers?.length;
+	if (!isTiered && !item.unit_amount_decimal) return null;
 
 	return inlinePriceToShape({
 		price: {
@@ -174,7 +184,20 @@ export const stripeItemSnapshotToShape = ({
 				interval: item.recurring_interval,
 				interval_count: item.recurring_interval_count ?? 1,
 			},
-			unit_amount_decimal: item.unit_amount_decimal,
+			...(isTiered
+				? {
+						tiers_mode: item.tiers_mode ?? undefined,
+						tiers: item.tiers?.map((tier) => ({
+							upTo: stripeTierUpTo(tier.up_to),
+							unitAmountDecimal: stripeTierAmountDecimal({
+								amount: tier.unit_amount,
+							}),
+							flatAmountDecimal: stripeTierAmountDecimal({
+								amount: tier.flat_amount,
+							}),
+						})),
+					}
+				: { unit_amount_decimal: item.unit_amount_decimal }),
 		},
 	});
 };

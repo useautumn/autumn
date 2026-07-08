@@ -8,6 +8,8 @@ import type {
 /** Behavior options for deduction */
 export type DeductionOptions = {
 	overageBehaviour?: "cap" | "reject" | "allow";
+	/** The triggering event's properties; filtered usage limits only apply when these match. */
+	eventProperties?: Record<string, unknown> | null;
 	alterGrantedBalance?: boolean;
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 

@@ -58,7 +58,9 @@ export const getInstallationOAuthAccessToken = async ({
 			workspaceId: installation.workspace_id,
 		});
 		if (!access.allowed) {
-			throw new Error("Slack admin workspace is not authorized for OAuth token access");
+			throw new Error(
+				"Slack admin workspace is not authorized for OAuth token access",
+			);
 		}
 	}
 
@@ -94,7 +96,7 @@ export const getInstallationOAuthAccessToken = async ({
 
 	if (!credential) {
 		throw new Error(
-			`Missing ${env} Autumn OAuth credentials for Slack install`,
+			`Missing ${env} Autumn OAuth credentials for ${installation.provider} install`,
 		);
 	}
 
@@ -119,7 +121,7 @@ export const getInstallationOAuthAccessToken = async ({
 
 	if (!response.ok) {
 		throw new Error(
-			`Could not refresh ${env} Autumn OAuth token for Slack install`,
+			`Could not refresh ${env} Autumn OAuth token for ${installation.provider} install`,
 		);
 	}
 

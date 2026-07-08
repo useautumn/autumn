@@ -1,3 +1,4 @@
+import { buildBillingPreviewDisplay, formatCount } from "@autumn/render";
 import type { AppEnv } from "@autumn/shared";
 import {
 	Actions,
@@ -13,6 +14,7 @@ import {
 	Modal,
 } from "chat";
 import { normalizeToolName, toolLabel } from "../agent/tools/toolPolicy.js";
+import { parsePreviewPayload, previewElements } from "./previewContent.js";
 
 export type ApprovalCardStatus =
 	| "approved"
@@ -181,6 +183,22 @@ const actionPhrases = ({
 				failed: `Couldn't schedule ${target}`,
 				pending: `Schedule ${target}`,
 				running: `Scheduling ${target}`,
+			};
+		}
+		case "updateCustomer": {
+			return {
+				done: `Updated ${customerLabel}`,
+				failed: `Couldn't update ${customerLabel}`,
+				pending: `Update ${customerLabel}`,
+				running: `Updating ${customerLabel}`,
+			};
+		}
+		case "getOrCreateCustomer": {
+			return {
+				done: `Created customer ${customerLabel}`,
+				failed: `Couldn't create customer ${customerLabel}`,
+				pending: `Create customer ${customerLabel}`,
+				running: `Creating customer ${customerLabel}`,
 			};
 		}
 		case "createBalance": {
@@ -548,6 +566,220 @@ const outcomeFromResult = ({
 	return { lines, links };
 };
 
+const HIDDEN_REQUEST_KEYS = new Set([
+	"customer_id",
+	"entity_id",
+	"intent",
+	"plan_id",
+]);
+const MAX_REQUEST_FIELDS = 6;
+const REQUEST_FIELD_VALUE_MAX = 80;
+
+const humanizeKey = (key: string) =>
+	key.replace(/_/g, " ").replace(/^./, (char) => char.toUpperCase());
+
+const compactValue = (value: unknown): string | null => {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") {
+		if (!value.trim()) return null;
+		return value.length > REQUEST_FIELD_VALUE_MAX
+			? `${value.slice(0, REQUEST_FIELD_VALUE_MAX)}…`
+			: value;
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		return String(value);
+	}
+	const json = JSON.stringify(value);
+	if (!json || json === "{}" || json === "[]") return null;
+	return json.length > REQUEST_FIELD_VALUE_MAX
+		? `${json.slice(0, REQUEST_FIELD_VALUE_MAX)}…`
+		: json;
+};
+
+// Bare CRUD writes (update customer, create entity…) have no billing preview —
+// show what's being written as label/value fields so the card is never empty.
+const requestSummaryFields = (
+	toolArgs?: Record<string, unknown>,
+): FieldElement[] => {
+	const request = getRequest(toolArgs) ?? {};
+	const fields: FieldElement[] = [];
+	for (const [key, value] of Object.entries(request)) {
+		if (HIDDEN_REQUEST_KEYS.has(key) || key.startsWith("_")) continue;
+		const rendered = compactValue(value);
+		if (rendered === null) continue;
+		fields.push(Field({ label: humanizeKey(key), value: rendered }));
+		if (fields.length >= MAX_REQUEST_FIELDS) break;
+	}
+	return fields;
+};
+
+const BILLING_ACTION_TOOLS = new Set([
+	"attach",
+	"createSchedule",
+	"updateSubscription",
+]);
+
+// The shared card body (change summary, receipt table, customize diff, phases,
+// params line) used by pending, running, and resolved cards so in-place edits
+// never collapse what the reviewer approved against.
+const approvalPreviewBlocks = ({
+	preview,
+	toolArgs,
+	toolName,
+}: {
+	preview?: unknown;
+	toolArgs?: Record<string, unknown>;
+	toolName: string;
+}): CardChild[] => {
+	const structured = previewElements(preview);
+	const blocks: CardChild[] = [];
+	const pushMoney = () => {
+		if (structured) {
+			blocks.push(...structured);
+			return;
+		}
+		const fields = moneyFields({ preview, toolArgs });
+		if (fields.length) blocks.push(Fields(fields));
+	};
+
+	if (!BILLING_ACTION_TOOLS.has(normalizeToolName(toolName))) {
+		pushMoney();
+		blocks.push(...itemChangeBlocks(toolArgs));
+		// Nothing structured to show — fall back to the write's own fields.
+		if (blocks.length === 0) {
+			const fields = requestSummaryFields(toolArgs);
+			if (fields.length) blocks.push(Fields(fields));
+		}
+		const mutedLine = contextLine([
+			structured ? null : nextCycleNote(preview),
+			...modifierPhrases(toolArgs),
+		]);
+		if (mutedLine) blocks.push(CardText(mutedLine, { style: "muted" }));
+		return blocks;
+	}
+
+	const request = getRequest(toolArgs);
+	const display = buildBillingPreviewDisplay({
+		params: request ?? null,
+		preview: parsePreviewPayload(preview),
+	});
+	// Dashboard-style layout: change summary → custom plan shape → line items
+	// as prose rows → a bold Due-now line → muted params. No tables — Slack's
+	// render is too cramped for money facts.
+	if (display.intentLabel) {
+		blocks.push(CardText(display.intentLabel));
+	}
+	if (display.changes.summaryText) {
+		blocks.push(CardText(display.changes.summaryText));
+	}
+	const planId =
+		display.changes.incoming[0]?.planId ?? getString(request?.plan_id);
+	if (display.customize?.priceText && planId) {
+		blocks.push(
+			CardText(
+				`${bold(planId)} — ${display.customize.priceText}${
+					display.customize.freeTrialText
+						? ` · ${display.customize.freeTrialText}`
+						: ""
+				}  \`custom\``,
+			),
+		);
+	}
+	const customizeLines = [
+		...(display.customize?.replacedItems.map(
+			(item) => `• ${item} (replaces plan items)`,
+		) ?? []),
+		...(display.customize?.addedItems.map((item) => `＋ ${item}`) ?? []),
+		...(display.customize?.removedItems.map((item) => `− ${item}`) ?? []),
+		...(display.customize?.updatedItems.map((item) => `~ ${item}`) ?? []),
+	];
+	if (customizeLines.length) {
+		blocks.push(CardText([bold("Plan changes"), ...customizeLines].join("\n")));
+	}
+	// Prepaid quantities are silent money decisions — an omitted quantity
+	// defaults to 0 server-side, so the approver must see it either way.
+	const prepaidLines = display.prepaid.map((entry) =>
+		entry.quantity !== null
+			? `${entry.featureId} — ${formatCount(entry.quantity)} prepaid`
+			: `⚠️ ${entry.featureId} — prepaid quantity not set (defaults to 0${
+					entry.includedDefault
+						? `; plan includes ${formatCount(entry.includedDefault)}`
+						: ""
+				})`,
+	);
+	if (prepaidLines.length) {
+		blocks.push(CardText([bold("Quantities"), ...prepaidLines].join("\n")));
+	}
+	// A single line item that just restates the due-now total is noise.
+	const listableItems =
+		display.lineItems.length === 1 &&
+		display.lineItems[0].amount === display.dueNow?.amount
+			? []
+			: display.lineItems.slice(0, 8);
+	// A $0 due-now with no line items isn't a money fact — mute it.
+	const zeroNoCharge =
+		display.dueNow?.amount === 0 &&
+		listableItems.length === 0 &&
+		!display.refund;
+	const moneyLines = zeroNoCharge
+		? []
+		: [
+				...listableItems.map((item) => `• ${item.name}  ${item.amountText}`),
+				...(display.dueNow
+					? [
+							`${bold(display.isCredit ? "Credit due now" : "Due now")}  ${bold(
+								display.isCredit
+									? formatMoney({
+											amount: Math.abs(display.dueNow.amount),
+											currency: display.currency,
+										})
+									: display.dueNow.text,
+							)}`,
+						]
+					: []),
+				...(display.refund
+					? [`${bold("Refund")}  ${bold(display.refund.text)}`]
+					: []),
+			];
+	if (moneyLines.length) {
+		blocks.push(CardText(moneyLines.join("\n")));
+	} else if (zeroNoCharge) {
+		blocks.push(CardText("No charge now", { style: "muted" }));
+	} else {
+		pushMoney();
+	}
+	if (display.phases.length) {
+		blocks.push(
+			CardText(
+				[
+					bold("Phases"),
+					...display.phases.map(
+						(phase, index) =>
+							`${index + 1}. ${phase.timingText} — ${phase.plansText}`,
+					),
+				].join("\n"),
+			),
+		);
+	}
+	const badgeLine = display.badges
+		.map((badge) => `${badge.active ? "✓" : "✗"} ${badge.label}`)
+		.join("  ");
+	const startsAt = getNumber(request?.starts_at);
+	const mutedLine = contextLine([
+		display.nextCycle
+			? `Next cycle${
+					display.nextCycle.startsAtText
+						? ` · ${display.nextCycle.startsAtText}`
+						: ""
+				} — ${display.nextCycle.text}`
+			: null,
+		startsAt !== null ? `Starts: ${formatDay(startsAt)}` : null,
+	]);
+	if (mutedLine) blocks.push(CardText(mutedLine, { style: "muted" }));
+	if (badgeLine) blocks.push(CardText(badgeLine, { style: "muted" }));
+	return blocks;
+};
+
 const SUMMARY_MAX_LENGTH = 1500;
 
 // Agent prose arrives as markdown; mrkdwn sections have no list syntax.
@@ -578,18 +810,12 @@ const settledStatusCard = ({
 	toolName: string;
 }) => {
 	const phrases = actionPhrases({ env, toolArgs, toolName });
-	const fields = moneyFields({ preview, toolArgs });
-	const mutedLine = contextLine([
-		nextCycleNote(preview),
-		...modifierPhrases(toolArgs),
-	]);
 	return Card({
 		title: toolLabel(toolName),
 		subtitle: envLine(env) || undefined,
 		children: [
 			CardText(`${phrases.pending}?`),
-			...(fields.length ? [Fields(fields)] : []),
-			...(mutedLine ? [CardText(mutedLine, { style: "muted" })] : []),
+			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
 			CardText(statusLabel),
 		],
 	});
@@ -614,12 +840,9 @@ export const approvalCard = ({
 	toolName: string;
 }) => {
 	const phrases = actionPhrases({ env, toolArgs, toolName });
-	const fields = moneyFields({ preview, toolArgs });
-	const mutedNotes = [nextCycleNote(preview), ...modifierPhrases(toolArgs)];
 	const requester = mention(requesterId);
 	const live = env === "live";
 	const summaryText = summary?.trim() ? formatSummary(summary) : null;
-	const mutedLine = contextLine(mutedNotes);
 
 	return Card({
 		title: toolLabel(toolName),
@@ -631,9 +854,7 @@ export const approvalCard = ({
 		children: [
 			// The agent's narrative replaces the canned sentence when present.
 			CardText(summaryText ?? `${phrases.pending}?`),
-			...(fields.length ? [Fields(fields)] : []),
-			...itemChangeBlocks(toolArgs),
-			...(mutedLine ? [CardText(mutedLine, { style: "muted" })] : []),
+			...approvalPreviewBlocks({ preview, toolArgs, toolName }),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -721,11 +942,6 @@ export const approvalStatusCard = ({
 	// The "…" on the running sentence already signals in-progress; the ▸ line
 	// only appears once the action reports concrete progress.
 	if (status === "running") {
-		const fields = moneyFields({ preview, toolArgs });
-		const mutedLine = contextLine([
-			nextCycleNote(preview),
-			...modifierPhrases(toolArgs),
-		]);
 		return Card({
 			title: toolLabel(toolName),
 			subtitle:
@@ -733,9 +949,7 @@ export const approvalStatusCard = ({
 				undefined,
 			children: [
 				CardText(`${phrases.running}…`),
-				...(fields.length ? [Fields(fields)] : []),
-				...itemChangeBlocks(toolArgs),
-				...(mutedLine ? [CardText(mutedLine, { style: "muted" })] : []),
+				...approvalPreviewBlocks({ preview, toolArgs, toolName }),
 				...(statusLine
 					? [CardText(`▸ ${statusLine}`, { style: "muted" })]
 					: []),
@@ -784,18 +998,9 @@ export const approvalStatusCard = ({
 
 	// Resolved cards keep the pending body (sentence, money facts, changes) so the
 	// edit-in-place doesn't collapse; only the buttons become the outcome row.
-	const fields = moneyFields({ preview, toolArgs });
-	const mutedLine = contextLine([
-		nextCycleNote(preview),
-		...modifierPhrases(toolArgs),
-	]);
 	const resolvedSubtitle =
 		contextLine([where, actor ? `approved by ${actor}` : null]) || undefined;
-	const resolvedBody = [
-		...(fields.length ? [Fields(fields)] : []),
-		...itemChangeBlocks(toolArgs),
-		...(mutedLine ? [CardText(mutedLine, { style: "muted" })] : []),
-	];
+	const resolvedBody = approvalPreviewBlocks({ preview, toolArgs, toolName });
 
 	if (status === "failed") {
 		const lines = outcome.lines.length ? outcome.lines : ["The action failed."];

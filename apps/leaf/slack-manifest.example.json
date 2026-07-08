@@ -3,6 +3,14 @@
 		"name": "Autumn Chat Local"
 	},
 	"features": {
+		"app_home": {
+			"home_tab_enabled": false,
+			"messages_tab_enabled": true,
+			"messages_tab_read_only_enabled": false
+		},
+		"assistant_view": {
+			"assistant_description": "Autumn's billing agent: attach plans, update subscriptions, schedule changes, and investigate billing — with previews and approvals in-thread."
+		},
 		"bot_user": {
 			"display_name": "Autumn",
 			"always_online": false

@@ -1,9 +1,4 @@
-import type {
-	ApiPlanItemV1,
-	ApiPlanV1,
-	Feature,
-	PlanPreviewDiff,
-} from "@autumn/shared";
+import type { ApiPlanItemV1, ApiPlanV1, Feature } from "@autumn/shared";
 import { composeMatchKey } from "@autumn/shared";
 import { Card, CardContent, CardHeader } from "@autumn/ui";
 import { type ReactNode, useState } from "react";
@@ -12,9 +7,27 @@ import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 import { PlanItemSheet } from "./PlanItemSheet";
 
-const itemPrimaryText = (item: ApiPlanItemV1) =>
-	item.display?.primary_text ??
-	(item.unlimited ? "Unlimited" : `${item.included} ${item.feature_id}`);
+/** Item/price changes to overlay on the card as status dots. `added_items`
+ * are new-or-changed item snapshots; `removed_items` render struck-through. */
+export type PlanPreviewDiff = {
+	added_items?: ApiPlanItemV1[];
+	removed_items?: ApiPlanItemV1[];
+	price?: ApiPlanV1["price"];
+};
+
+const isBareAmount = (value: string) =>
+	/^-?[\d,]+(?:\.\d+)?$/.test(value.trim());
+
+const featureDisplayName = (feature: Feature | undefined, featureId: string) =>
+	feature?.display?.plural ?? feature?.name ?? featureId;
+
+const itemPrimaryText = (item: ApiPlanItemV1, feature: Feature | undefined) => {
+	const primaryText =
+		item.display?.primary_text ??
+		(item.unlimited ? "Unlimited" : `${item.included}`);
+	if (!isBareAmount(primaryText)) return primaryText;
+	return `${primaryText.trim()} ${featureDisplayName(feature, item.feature_id)}`;
+};
 
 /** One plan item row: feature icon + truncated primary text with the secondary
  * on its own line, and a trailing green/red status dot when it changed. */
@@ -60,7 +73,7 @@ const PlanItemRow = ({
 								: "text-foreground",
 						)}
 					>
-						{itemPrimaryText(item)}
+						{itemPrimaryText(item, feature)}
 					</span>
 					{item.display?.secondary_text && (
 						<span

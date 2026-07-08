@@ -5,6 +5,7 @@ export enum WebhookEventType {
 	BalancesUsageAlertTriggered = "balances.usage_alert_triggered",
 	BalancesLimitReached = "balances.limit_reached",
 
+	BillingAutoTopupFailed = "billing.auto_topup_failed",
 	BillingAutoTopupSucceeded = "billing.auto_topup_succeeded",
 	BillingUpdated = "billing.updated",
 

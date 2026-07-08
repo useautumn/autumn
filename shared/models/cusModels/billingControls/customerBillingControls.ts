@@ -20,6 +20,7 @@ import {
 	type DbUsageLimit,
 	DbUsageLimitSchema,
 	pickStricterUsageLimit,
+	usageLimitFilterKey,
 } from "./usageLimit.js";
 
 export const BILLING_CONTROL_KEYS = [
@@ -54,6 +55,22 @@ export const billingControlsFromColumns = (
 			source[key] == null ? [] : [[key, source[key]]],
 		),
 	) as CustomerBillingControls;
+};
+
+/** Canonical form for change detection: skip_overage_billing false ≡ unset. */
+export const normalizeBillingControlsForCompare = (
+	billingControls: CustomerBillingControls | null | undefined,
+): CustomerBillingControls | undefined => {
+	if (!billingControls?.spend_limits) return billingControls ?? undefined;
+
+	return {
+		...billingControls,
+		spend_limits: billingControls.spend_limits.map((spendLimit) => {
+			if (spendLimit.skip_overage_billing === true) return spendLimit;
+			const { skip_overage_billing: _dropped, ...rest } = spendLimit;
+			return rest;
+		}),
+	};
 };
 
 export const mergeBillingControls = (
@@ -205,22 +222,24 @@ export const CustomerBillingControlsParamsSchema =
 			spendLimitFeatureIds.add(spendLimit.feature_id);
 		}
 
-		const usageLimitFeatureIds = new Set<string>();
+		const usageLimitIdentities = new Set<string>();
 
 		for (const [index, usageLimit] of (
 			billingControls.usage_limits ?? []
 		).entries()) {
-			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+			const identity = `${usageLimit.feature_id}|${usageLimitFilterKey(usageLimit.filter)}`;
+			if (usageLimitIdentities.has(identity)) {
 				ctx.issues.push({
 					code: "custom",
-					message: "Only one usage limit entry is allowed per feature_id",
+					message:
+						"Only one usage limit entry is allowed per feature_id and filter",
 					input: usageLimit.feature_id,
 					path: ["usage_limits", index, "feature_id"],
 				});
 				return;
 			}
 
-			usageLimitFeatureIds.add(usageLimit.feature_id);
+			usageLimitIdentities.add(identity);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();
@@ -275,3 +294,12 @@ export {
 	pickStricterSpendLimit,
 	pickStricterUsageLimit,
 };
+export {
+	USAGE_LIMIT_FILTER_MAX_KEY_LENGTH,
+	USAGE_LIMIT_FILTER_MAX_KEYS,
+	USAGE_LIMIT_FILTER_MAX_VALUE_LENGTH,
+	type UsageLimitFilter,
+	UsageLimitFilterSchema,
+	usageLimitFilterKey,
+	usageLimitFilterMatchesProperties,
+} from "./usageLimit.js";

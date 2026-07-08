@@ -1,4 +1,5 @@
 import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
+import { usageLimitFilterMatchesProperties } from "@models/cusModels/billingControls/usageLimit";
 import type { Feature } from "@models/featureModels/featureModels";
 import { Decimal } from "decimal.js";
 
@@ -7,16 +8,19 @@ import { Decimal } from "decimal.js";
  * units (credits when the evaluated feature is a credit system). Considers
  * both the cap on the evaluated feature itself and -- when checking a
  * credit-system member -- the metered cap on the original feature, converted
- * via its credit cost. Null when no armed cap applies.
+ * via its credit cost. Filtered caps only apply when the check's `properties`
+ * match. Null when no armed cap applies.
  */
 export const apiSubjectToUsageLimitHeadroom = ({
 	apiSubject,
 	feature,
 	originalFeature,
+	properties,
 }: {
 	apiSubject: ApiSubjectV0;
 	feature: Feature;
 	originalFeature?: Feature;
+	properties?: Record<string, unknown> | null;
 }): number | null => {
 	// Entity subjects see inherited customer entries via
 	// mergeCustomerBillingControlsForCheck; entity's own entry wins per feature.
@@ -29,11 +33,18 @@ export const apiSubjectToUsageLimitHeadroom = ({
 
 	const headrooms: Decimal[] = [];
 
-	const capOnEvaluated = usageLimits.find(
-		(usageLimit) =>
-			usageLimit.feature_id === feature.id && usageLimit.enabled !== false,
-	);
-	if (capOnEvaluated) {
+	const applicableCaps = (featureId: string) =>
+		usageLimits.filter(
+			(usageLimit) =>
+				usageLimit.feature_id === featureId &&
+				usageLimit.enabled !== false &&
+				usageLimitFilterMatchesProperties({
+					filterProperties: usageLimit.filter?.properties ?? null,
+					eventProperties: properties,
+				}),
+		);
+
+	for (const capOnEvaluated of applicableCaps(feature.id)) {
 		headrooms.push(
 			Decimal.max(
 				0,
@@ -43,21 +54,18 @@ export const apiSubjectToUsageLimitHeadroom = ({
 	}
 
 	if (originalFeature && originalFeature.id !== feature.id) {
-		const capOnOriginal = usageLimits.find(
-			(usageLimit) =>
-				usageLimit.feature_id === originalFeature.id &&
-				usageLimit.enabled !== false,
-		);
 		const schemaItem = feature.config?.schema?.find(
 			(item: { metered_feature_id: string }) =>
 				item.metered_feature_id === originalFeature.id,
 		);
-		if (capOnOriginal && schemaItem) {
-			const headroomUnits = Decimal.max(
-				0,
-				new Decimal(capOnOriginal.limit).sub(capOnOriginal.usage ?? 0),
-			);
-			headrooms.push(headroomUnits.mul(schemaItem.credit_amount ?? 1));
+		if (schemaItem) {
+			for (const capOnOriginal of applicableCaps(originalFeature.id)) {
+				const headroomUnits = Decimal.max(
+					0,
+					new Decimal(capOnOriginal.limit).sub(capOnOriginal.usage ?? 0),
+				);
+				headrooms.push(headroomUnits.mul(schemaItem.credit_amount ?? 1));
+			}
 		}
 	}
 

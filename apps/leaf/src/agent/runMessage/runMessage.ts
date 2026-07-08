@@ -1,6 +1,8 @@
 import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
+import { findEveSessionForThread } from "../../harness/eve/repo.js";
+import type { EveSessionRef } from "../../harness/eve/types.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
@@ -36,12 +38,14 @@ export const runMessage = async ({
 	agentRunId,
 	attachmentFetchFallback,
 	attachments,
+	clientContext,
 	installation,
 	logger = rootLogger,
 	onAction,
 	onActionKeyed,
 	onAgentReady,
 	onApprovalsSuperseded,
+	onReasoning,
 	onThinking,
 	onTurnComplete,
 	providerUserId,
@@ -121,6 +125,13 @@ export const runMessage = async ({
 						userId: autumnUserId,
 					});
 				}
+				if (engine.name === "eve") {
+					return findEveSessionForThread({
+						db,
+						orgId: org.id,
+						thread: effectiveThread,
+					});
+				}
 				return Promise.resolve(undefined);
 			})();
 
@@ -134,6 +145,7 @@ export const runMessage = async ({
 					mimeType: part.mediaType,
 					name: part.filename,
 				})),
+				clientContext,
 				recentMessages,
 				text: prepared.userText,
 			};
@@ -174,7 +186,7 @@ export const runMessage = async ({
 			});
 
 			const agentTools =
-				engine.name === "claude-managed"
+				engine.name === "claude-managed" || engine.name === "eve"
 					? { destructiveTools: new Set<string>() }
 					: await setupAgentToolContext({ env, logger, token });
 
@@ -185,6 +197,10 @@ export const runMessage = async ({
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
 						: undefined,
+				eveSession:
+					engine.name === "eve"
+						? (existingHarnessSession as EveSessionRef | undefined)
+						: undefined,
 				deadlineAt,
 				env,
 				id: agentRunId ?? crypto.randomUUID(),
@@ -193,6 +209,7 @@ export const runMessage = async ({
 				onActionKeyed,
 				onAgentReady,
 				onApprovalsSuperseded,
+				onReasoning,
 				onThinking,
 				org,
 				onTurnComplete,
