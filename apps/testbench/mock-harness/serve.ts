@@ -9,12 +9,37 @@ import { buildMockSnapshot } from "./mockSnapshot";
 const DIST = join(import.meta.dir, "..", "dist");
 const PORT = Number.parseInt(process.env.PORT || "5915", 10);
 
-const server = Bun.serve({
+// ERRORS=1 mirrors the real server's errors feed: a persistent server-side
+// buffer that grows over time, replayed on subscribeErrors, chunks relayed
+// only to subscribed sockets (same semantics as dashboard/server.ts + hub.ts).
+const errorsEnabled = process.env.ERRORS === "1";
+let errorsBuffer = "";
+let errorSeq = 0;
+type WsData = {
+	interval?: ReturnType<typeof setInterval>;
+	subErrors?: boolean;
+};
+const sockets = new Set<Bun.ServerWebSocket<WsData>>();
+if (errorsEnabled) {
+	setInterval(() => {
+		errorSeq++;
+		const chunk = `\n\x1b[31m✗ server/tests/mock/file${errorSeq}.test.ts\x1b[0m\n    \x1b[31m✗\x1b[0m mock failure #${errorSeq}\n        expected ${errorSeq} to be ${errorSeq + 1}\n`;
+		errorsBuffer += chunk;
+		const payload = JSON.stringify({ type: "errorsOutput", chunk });
+		for (const socket of sockets) {
+			if (socket.data?.subErrors) {
+				socket.send(payload);
+			}
+		}
+	}, 1500);
+}
+
+const server = Bun.serve<WsData>({
 	port: PORT,
 	async fetch(req, srv) {
 		const url = new URL(req.url);
 		if (url.pathname === "/ws") {
-			return srv.upgrade(req)
+			return srv.upgrade(req, { data: {} })
 				? undefined
 				: new Response("upgrade failed", { status: 400 });
 		}
@@ -27,6 +52,7 @@ const server = Bun.serve({
 	},
 	websocket: {
 		open(ws) {
+			sockets.add(ws);
 			// PROGRESSIVE=1 mimics a live run: warm phase first, files complete over time.
 			const progressive = process.env.PROGRESSIVE === "1";
 			let tick = 0;
@@ -47,14 +73,29 @@ const server = Bun.serve({
 				tick++;
 			};
 			send();
-			const interval = setInterval(send, 500);
-			ws.data = interval as unknown as undefined;
+			ws.data.interval = setInterval(send, 500);
 		},
 		close(ws) {
-			clearInterval(ws.data as unknown as ReturnType<typeof setInterval>);
+			sockets.delete(ws);
+			clearInterval(ws.data.interval);
 		},
-		message() {
-			// snapshots are pushed on a timer; client messages need no reply
+		message(ws, raw) {
+			// Mirror the real server's subscribeErrors contract (replay-then-stream).
+			if (!errorsEnabled) {
+				return;
+			}
+			let msg: { type?: string };
+			try {
+				msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
+			} catch {
+				return;
+			}
+			if (msg.type === "subscribeErrors") {
+				ws.data.subErrors = true;
+				ws.send(JSON.stringify({ type: "errorsBuffer", output: errorsBuffer }));
+			} else if (msg.type === "unsubscribe") {
+				ws.data.subErrors = undefined;
+			}
 		},
 	},
 });
