@@ -51,7 +51,6 @@ import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.j
 import {
 	customerLicenses,
 	licenseEntitlements,
-	licensePoolGrants,
 	licensePrices,
 	planLicenses,
 } from "../models/licenseModels/licenseTable.js";
@@ -163,7 +162,6 @@ export {
 	customerLicenses,
 	licenseEntitlements,
 	licensePrices,
-	licensePoolGrants,
 	// OAuth Provider
 	jwks,
 	member,

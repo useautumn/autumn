@@ -1,7 +1,6 @@
 import {
 	customerLicenses,
 	customerProducts,
-	licensePoolGrants,
 	planLicenses,
 } from "@autumn/shared";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -66,18 +65,11 @@ const touchesLicenses = async ({
 		.where(eq(customerLicenses.internal_customer_id, internalCustomerId))
 		.limit(1);
 
-	const grantMarkers = db
-		.select(one)
-		.from(licensePoolGrants)
-		.where(eq(licensePoolGrants.internal_customer_id, internalCustomerId))
-		.limit(1);
-
 	const rows = await unionAll(
 		parentWithCatalogLinks,
 		customerScopedLinks,
 		activeAssignments,
 		balances,
-		grantMarkers,
 	).limit(1);
 
 	return rows.length > 0;

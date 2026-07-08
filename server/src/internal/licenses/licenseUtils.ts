@@ -147,19 +147,6 @@ export const findLicenseCarrier = ({
 			isLicenseAssignableStatus({ status: customerProduct.status }),
 	);
 
-/** Capacity = max(included, assigned): reparented or self-healed assignments
- * keep the pool sized to what is actually in use. */
-export const licenseCapacityOf = ({
-	balance,
-	included,
-}: {
-	balance: { granted: number; remaining: number } | undefined | null;
-	included: number;
-}) => {
-	const assigned = balance ? balance.granted - balance.remaining : 0;
-	return Math.max(included, assigned);
-};
-
 export const computeLicenseInventory = ({
 	included,
 	assigned,
