@@ -179,12 +179,9 @@ export const ProductItemSchema = z.object({
 	price_id: z.string().nullish().meta({
 		internal: true,
 	}),
-	price_interval: z
-		.enum(ProductItemInterval)
-		.nullish()
-		.meta({
-			internal: true,
-		}),
+	price_interval: z.enum(ProductItemInterval).nullish().meta({
+		internal: true,
+	}),
 	price_interval_count: z.number().nullish().meta({
 		internal: true,
 	}),
