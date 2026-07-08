@@ -55,5 +55,42 @@ warm timings from `[tw-warmup] +Ns`, provider stage lines from `[modal] ✓ (+Xs
 - **Memory snapshots:** not supported on Sandboxes V2 (SDK + docs). The
   freestyle-style "restore a running server" path is unavailable on Modal today.
 
-*(AFTER numbers for the warm cache + boot CPU experiments are appended below as
-they are measured.)*
+## AFTER — measured on this branch
+
+### Warm cache (published images, freestyle-style)
+
+| Scenario | Warm phase | Evidence |
+|---|---|---|
+| exact hit (`tw-warm:<sha12>` published) | **~1s** (one `images.fromName`) | run 4/6: "warm cache HIT … skipping the entire warm build", 5 workers READY in 20–21s from fan-out start |
+| stale hit (`:latest`, new commit) | **~1s** + ~6s per-worker fast-forward checkout (parallel, inside the fork slice) | run 3/5: "stale warm hit … workers fast-forward at boot", READY in 22–23s; detached refresh converged + re-published mid-run |
+| miss (no images at all) | ~104s full build, then published | run 2 |
+| `refresh-warm --provider=modalv2` (converge CI-style) | 84s total (fast-forward create 7.3s + warmup 66s + snapshot/publish 9.3s) | tw-refresh1 |
+
+### Boot CPU sizing (5 workers, exact-hit, in-sandbox `[tw-boot]` timestamps)
+
+| CPU | boot.ts→server spawn | server load→health | in-sandbox total |
+|---|---|---|---|
+| 2 vCPU | ~5.1s | ~6.5s | ~11.7s |
+| 8 vCPU | ~3.2s | ~6.5s | ~9.8s |
+
+~2s saved at 4× cost — the server module-load doesn't parallelize. Default stays
+2 vCPU; `TW_MODAL_WORKER_CPU/_MEM_MIB` remain the knobs.
+
+### Warm-refresh install skip
+
+`bun install --frozen-lockfile` costs ~65s even when NOTHING changed (relink
+scan). warmup.sh now stamps the lockfile sha (`$TW_PREFIX/bun-lock.sha256`) and
+skips the install when it matches — measured below.
+
+### Expected 200-wide timeline (invocation → tests executing)
+
+| Stage | Cached/typical | Notes |
+|---|---|---|
+| resolve + preflight + key-pool probe | ~5-10s | |
+| warm lookup | ~1s | published-image hit (exact or stale) |
+| ingress + Connect webhooks | ~15s | |
+| Stripe sub-accounts ×200 | ~15-20s | conc 20 across 11 pool keys |
+| fork ×200 (V2, no pacing) | ~1s each, parallel | prior 100-wide: all-created ~41s incl. boots |
+| boot ×200 (parallel) | ~12-20s each | stale adds ~6s ff |
+| **invocation → tests executing** | **~60-90s** | was ~3-4 min (warm rebuild every run) |
+
