@@ -55,18 +55,24 @@ const stripeRequest = async ({ key, method, path, accountId, body }) => {
 				rateLimitIncidents.count++;
 			}
 			if (attempt >= MAX_RETRIES) {
-				throw new Error(`stripe ${method} ${path}: ${response.status} after ${MAX_RETRIES} retries`);
+				throw new Error(
+					`stripe ${method} ${path}: ${response.status} after ${MAX_RETRIES} retries`,
+				);
 			}
 			const retryAfter = Number(response.headers.get("retry-after"));
-			const backoffMs = Number.isFinite(retryAfter) && retryAfter > 0
-				? retryAfter * 1000
-				: Math.min(15_000, 500 * 2 ** attempt) + Math.floor(Math.random() * 250);
+			const backoffMs =
+				Number.isFinite(retryAfter) && retryAfter > 0
+					? retryAfter * 1000
+					: Math.min(15_000, 500 * 2 ** attempt) +
+						Math.floor(Math.random() * 250);
 			await sleep(backoffMs);
 			continue;
 		}
 		const json = await response.json();
 		if (!response.ok) {
-			const err = new Error(json?.error?.message ?? `stripe ${method} ${path}: ${response.status}`);
+			const err = new Error(
+				json?.error?.message ?? `stripe ${method} ${path}: ${response.status}`,
+			);
 			err.stripeCode = json?.error?.code;
 			err.status = response.status;
 			throw err;
@@ -79,16 +85,19 @@ const stripeRequest = async ({ key, method, path, accountId, body }) => {
 const boundedAll = async (items, concurrency, fn) => {
 	const errors = [];
 	let cursor = 0;
-	const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-		while (cursor < items.length) {
-			const item = items[cursor++];
-			try {
-				await fn(item);
-			} catch (error) {
-				errors.push(error);
+	const workers = Array.from(
+		{ length: Math.min(concurrency, items.length) },
+		async () => {
+			while (cursor < items.length) {
+				const item = items[cursor++];
+				try {
+					await fn(item);
+				} catch (error) {
+					errors.push(error);
+				}
 			}
-		}
-	});
+		},
+	);
 	await Promise.all(workers);
 	return errors;
 };
@@ -135,7 +144,12 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		accountId,
 		listPath: "/v1/test_helpers/test_clocks",
 		act: (clock) =>
-			stripeRequest({ key, method: "DELETE", path: `/v1/test_helpers/test_clocks/${clock.id}`, accountId }),
+			stripeRequest({
+				key,
+				method: "DELETE",
+				path: `/v1/test_helpers/test_clocks/${clock.id}`,
+				accountId,
+			}),
 	});
 
 	// Deleting a customer cancels its subscriptions.
@@ -144,16 +158,27 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		accountId,
 		listPath: "/v1/customers",
 		act: (customer) =>
-			stripeRequest({ key, method: "DELETE", path: `/v1/customers/${customer.id}`, accountId }),
+			stripeRequest({
+				key,
+				method: "DELETE",
+				path: `/v1/customers/${customer.id}`,
+				accountId,
+			}),
 	});
 
 	counts.subscriptions = await drainResource({
 		key,
 		accountId,
 		listPath: "/v1/subscriptions?status=all",
-		filter: (sub) => sub.status !== "canceled" && sub.status !== "incomplete_expired",
+		filter: (sub) =>
+			sub.status !== "canceled" && sub.status !== "incomplete_expired",
 		act: (sub) =>
-			stripeRequest({ key, method: "DELETE", path: `/v1/subscriptions/${sub.id}`, accountId }),
+			stripeRequest({
+				key,
+				method: "DELETE",
+				path: `/v1/subscriptions/${sub.id}`,
+				accountId,
+			}),
 	});
 
 	counts.prices = await drainResource({
@@ -161,7 +186,13 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		accountId,
 		listPath: "/v1/prices?active=true",
 		act: (price) =>
-			stripeRequest({ key, method: "POST", path: `/v1/prices/${price.id}`, accountId, body: { active: "false" } }),
+			stripeRequest({
+				key,
+				method: "POST",
+				path: `/v1/prices/${price.id}`,
+				accountId,
+				body: { active: "false" },
+			}),
 	});
 
 	// Hard-delete products where possible; ones with price history can only be deactivated.
@@ -171,9 +202,20 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		listPath: "/v1/products?active=true",
 		act: async (product) => {
 			try {
-				await stripeRequest({ key, method: "DELETE", path: `/v1/products/${product.id}`, accountId });
+				await stripeRequest({
+					key,
+					method: "DELETE",
+					path: `/v1/products/${product.id}`,
+					accountId,
+				});
 			} catch {
-				await stripeRequest({ key, method: "POST", path: `/v1/products/${product.id}`, accountId, body: { active: "false" } });
+				await stripeRequest({
+					key,
+					method: "POST",
+					path: `/v1/products/${product.id}`,
+					accountId,
+					body: { active: "false" },
+				});
 			}
 		},
 	});
@@ -183,7 +225,12 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		accountId,
 		listPath: "/v1/coupons",
 		act: (coupon) =>
-			stripeRequest({ key, method: "DELETE", path: `/v1/coupons/${coupon.id}`, accountId }),
+			stripeRequest({
+				key,
+				method: "DELETE",
+				path: `/v1/coupons/${coupon.id}`,
+				accountId,
+			}),
 	});
 
 	counts.meters = await drainResource({
@@ -191,7 +238,12 @@ export const nukeAccountContents = async ({ accountId, key }) => {
 		accountId,
 		listPath: "/v1/billing/meters?status=active",
 		act: (meter) =>
-			stripeRequest({ key, method: "POST", path: `/v1/billing/meters/${meter.id}/deactivate`, accountId }),
+			stripeRequest({
+				key,
+				method: "POST",
+				path: `/v1/billing/meters/${meter.id}/deactivate`,
+				accountId,
+			}),
 	});
 
 	return { counts, ms: Date.now() - startedAt };
@@ -203,7 +255,12 @@ export const setPoolState = async ({ accountId, key, state, extra }) => {
 	for (const [name, value] of Object.entries(extra ?? {})) {
 		body[`metadata[${name}]`] = value;
 	}
-	await stripeRequest({ key, method: "POST", path: `/v1/accounts/${accountId}`, body });
+	await stripeRequest({
+		key,
+		method: "POST",
+		path: `/v1/accounts/${accountId}`,
+		body,
+	});
 };
 
 /** Nuke one target end-to-end: contents, then mark clean. */
@@ -218,17 +275,87 @@ export const nukeTarget = async ({ accountId, key }) => {
 	return result;
 };
 
+/**
+ * Reclaim pool accounts left dirty by crashed runs: dirty + claimed longer ago
+ * than `staleAfterMs`. Newest-first scan, capped, per key.
+ */
+const findStaleDirtyTargets = async ({ keys, staleAfterMs, knownIds }) => {
+	const cutoff = Date.now() - staleAfterMs;
+	const stale = [];
+	const MAX_SCAN = 1000;
+	await Promise.all(
+		keys.map(async (key, keyIndex) => {
+			let after = "";
+			let scanned = 0;
+			while (scanned < MAX_SCAN) {
+				const page = await stripeRequest({
+					key,
+					method: "GET",
+					path: `/v1/accounts?limit=${PAGE_LIMIT}${after ? `&starting_after=${after}` : ""}`,
+				});
+				for (const account of page.data ?? []) {
+					scanned++;
+					const metadata = account.metadata ?? {};
+					const claimedAt = Number(metadata.autumn_tw_claimed_at);
+					if (
+						metadata.autumn_tw_pool === "1" &&
+						metadata.autumn_tw_pool_state === "dirty" &&
+						!knownIds.has(account.id) &&
+						Number.isFinite(claimedAt) &&
+						claimedAt < cutoff
+					) {
+						stale.push({ accountId: account.id, keyIndex });
+					}
+				}
+				if (!page.has_more || (page.data ?? []).length === 0) {
+					break;
+				}
+				after = page.data[page.data.length - 1].id;
+			}
+		}),
+	);
+	return stale;
+};
+
 const main = async () => {
 	const targets = JSON.parse(process.env.NUKE_TARGETS ?? "[]");
 	const keys = JSON.parse(process.env.NUKE_KEYS ?? "[]");
 	const perKeyConcurrency = Number(process.env.NUKE_ACCOUNT_CONCURRENCY) || 4;
-	if (targets.length === 0 || keys.length === 0) {
-		console.log("[nuke] nothing to do (NUKE_TARGETS / NUKE_KEYS empty)");
+	const staleAfterMs =
+		Number(process.env.NUKE_STALE_AFTER_MS) || 60 * 60 * 1000;
+	if (keys.length === 0) {
+		console.log("[nuke] nothing to do (NUKE_KEYS empty)");
+		return;
+	}
+
+	if (process.env.NUKE_STALE_SWEEP === "1") {
+		const knownIds = new Set(targets.map((target) => target.accountId));
+		try {
+			const stale = await findStaleDirtyTargets({
+				keys,
+				staleAfterMs,
+				knownIds,
+			});
+			if (stale.length > 0) {
+				console.log(
+					`[nuke] reclaiming ${stale.length} stale-dirty pool account(s)`,
+				);
+				targets.push(...stale);
+			}
+		} catch (error) {
+			console.error(`[nuke] stale sweep failed (continuing): ${error.message}`);
+		}
+	}
+
+	if (targets.length === 0) {
+		console.log("[nuke] nothing to do (no targets)");
 		return;
 	}
 
 	const startedAt = Date.now();
-	console.log(`[nuke] ${targets.length} account(s) across ${keys.length} key(s)`);
+	console.log(
+		`[nuke] ${targets.length} account(s) across ${keys.length} key(s)`,
+	);
 
 	// Group per key so each platform bucket gets its own bounded lane.
 	const byKey = new Map();
@@ -242,10 +369,19 @@ const main = async () => {
 	await Promise.all(
 		[...byKey.entries()].map(async ([keyIndex, keyTargets]) => {
 			const key = keys[keyIndex] ?? keys[0];
-			const errors = await boundedAll(keyTargets, perKeyConcurrency, async (target) => {
-				const { counts, ms } = await nukeTarget({ accountId: target.accountId, key });
-				console.log(`[nuke] ${target.accountId} clean in ${ms}ms ${JSON.stringify(counts)}`);
-			});
+			const errors = await boundedAll(
+				keyTargets,
+				perKeyConcurrency,
+				async (target) => {
+					const { counts, ms } = await nukeTarget({
+						accountId: target.accountId,
+						key,
+					});
+					console.log(
+						`[nuke] ${target.accountId} clean in ${ms}ms ${JSON.stringify(counts)}`,
+					);
+				},
+			);
 			failed += errors.length;
 			for (const error of errors) {
 				console.error(`[nuke] key ${keyIndex}: ${error.message}`);

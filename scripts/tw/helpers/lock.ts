@@ -127,7 +127,9 @@ export const withGlobalLock = async <T>({
 			);
 		}
 		if (Date.now() > deadline) {
-			throw new Error(`lock ${name}: could not acquire within ${acquireTimeoutMs}ms`);
+			throw new Error(
+				`lock ${name}: could not acquire within ${acquireTimeoutMs}ms`,
+			);
 		}
 		await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
 	}

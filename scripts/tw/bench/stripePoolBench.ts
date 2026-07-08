@@ -8,12 +8,6 @@
 
 import { appendFileSync } from "node:fs";
 import pLimit from "p-limit";
-// @ts-expect-error plain-JS module shared with the sandbox nuke script
-import {
-	nukeTarget,
-	rateLimitIncidents,
-	setPoolState,
-} from "../image/nuke-accounts.mjs";
 import { createSandboxSubAccount } from "../helpers/stripe.js";
 import {
 	decodeSubAccount,
@@ -22,6 +16,12 @@ import {
 	stripeKeyByIndex,
 	stripeKeyForWorker,
 } from "../helpers/stripeKeyPool.js";
+// Plain-JS module shared with the sandbox nuke script.
+import {
+	nukeTarget,
+	rateLimitIncidents,
+	setPoolState,
+} from "../image/nuke-accounts.mjs";
 
 const N = Number(process.argv[2]) || 50;
 const TEARDOWN_CONCURRENCY = 16;
@@ -36,9 +36,12 @@ const progress = (line: string): void => {
 
 type Timed = { totalMs: number; perItemMs: number[] };
 
-const stats = (ms: number[]): { avg: number; p50: number; p95: number; max: number } => {
+const stats = (
+	ms: number[],
+): { avg: number; p50: number; p95: number; max: number } => {
 	const sorted = [...ms].sort((a, b) => a - b);
-	const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0;
+	const at = (q: number) =>
+		sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0;
 	return {
 		avg: Math.round(ms.reduce((a, b) => a + b, 0) / (ms.length || 1)),
 		p50: at(0.5),
@@ -78,7 +81,10 @@ const seedAccount = async (encoded: string): Promise<void> => {
 		{ email: "bench@useautumn.com", name: "pool-bench" },
 		scoped,
 	);
-	const product = await stripe.products.create({ name: "pool-bench-product" }, scoped);
+	const product = await stripe.products.create(
+		{ name: "pool-bench-product" },
+		scoped,
+	);
 	await stripe.prices.create(
 		{
 			product: product.id,
@@ -125,7 +131,9 @@ const main = async (): Promise<void> => {
 		encoded[idx] = encodeSubAccount(accountId, keyIndex);
 	});
 	console.warn = origWarn;
-	progress(`create done: total ${createTimed.totalMs}ms, 429 retries: ${warns}`);
+	progress(
+		`create done: total ${createTimed.totalMs}ms, 429 retries: ${warns}`,
+	);
 
 	// ---- Seed: make the accounts genuinely dirty ------------------------------
 	progress("seeding accounts (customer+product+price+coupon each)…");
@@ -135,20 +143,26 @@ const main = async (): Promise<void> => {
 	// ---- Phase B1: CLAIM cost (list clean + mark dirty) -----------------------
 	// Mark clean first so the claim path has something to find.
 	progress("marking accounts clean (pool metadata)…");
-	const markCleanTimed = await timedAll(encoded, TEARDOWN_CONCURRENCY, async (item) => {
-		const { accountId, keyIndex } = decodeSubAccount(item);
-		await setPoolState({
-			accountId,
-			key: stripeKeyByIndex(keyIndex),
-			state: "clean",
-			extra: { autumn_tw_pool: "1" },
-		});
-	});
+	const markCleanTimed = await timedAll(
+		encoded,
+		TEARDOWN_CONCURRENCY,
+		async (item) => {
+			const { accountId, keyIndex } = decodeSubAccount(item);
+			await setPoolState({
+				accountId,
+				key: stripeKeyByIndex(keyIndex),
+				state: "clean",
+				extra: { autumn_tw_pool: "1" },
+			});
+		},
+	);
 	progress(`mark-clean done: total ${markCleanTimed.totalMs}ms`);
 
 	progress("phase B1: claim (list pool + mark dirty)…");
 	const listStart = Date.now();
-	const usedKeyIndices = [...new Set(indices.map((i) => stripeKeyForWorker(i).keyIndex))];
+	const usedKeyIndices = [
+		...new Set(indices.map((i) => stripeKeyForWorker(i).keyIndex)),
+	];
 	const found: string[] = [];
 	await Promise.all(
 		usedKeyIndices.map(async (keyIndex) => {
@@ -168,25 +182,36 @@ const main = async (): Promise<void> => {
 	const listMs = Date.now() - listStart;
 	progress(`claim list done: found ${found.length}/${N} clean in ${listMs}ms`);
 
-	const markDirtyTimed = await timedAll(encoded, TEARDOWN_CONCURRENCY, async (item) => {
-		const { accountId, keyIndex } = decodeSubAccount(item);
-		await setPoolState({
-			accountId,
-			key: stripeKeyByIndex(keyIndex),
-			state: "dirty",
-			extra: { autumn_tw_run: runId },
-		});
-	});
+	const markDirtyTimed = await timedAll(
+		encoded,
+		TEARDOWN_CONCURRENCY,
+		async (item) => {
+			const { accountId, keyIndex } = decodeSubAccount(item);
+			await setPoolState({
+				accountId,
+				key: stripeKeyByIndex(keyIndex),
+				state: "dirty",
+				extra: { autumn_tw_run: runId },
+			});
+		},
+	);
 	progress(`mark-dirty done: total ${markDirtyTimed.totalMs}ms`);
 
 	// ---- Phase B2: NUKE (what the async sandbox pays) -------------------------
 	progress("phase B2: nuking account contents…");
-	const nukeCounts: Record<string, number>[] = [];
-	const nukeTimed = await timedAll(encoded, TEARDOWN_CONCURRENCY, async (item) => {
-		const { accountId, keyIndex } = decodeSubAccount(item);
-		const { counts } = await nukeTarget({ accountId, key: stripeKeyByIndex(keyIndex) });
-		nukeCounts.push(counts);
-	});
+	const nukeCounts: unknown[] = [];
+	const nukeTimed = await timedAll(
+		encoded,
+		TEARDOWN_CONCURRENCY,
+		async (item) => {
+			const { accountId, keyIndex } = decodeSubAccount(item);
+			const { counts } = await nukeTarget({
+				accountId,
+				key: stripeKeyByIndex(keyIndex),
+			});
+			nukeCounts.push(counts);
+		},
+	);
 	progress(
 		`nuke done: total ${nukeTimed.totalMs}ms, 429s so far: ${rateLimitIncidents.count}`,
 	);
@@ -206,20 +231,37 @@ const main = async (): Promise<void> => {
 
 	// ---- Phase A2: DELETE (the current teardown block) ------------------------
 	progress("phase A2: deleting accounts (current teardown path)…");
-	const deleteTimed = await timedAll(encoded, TEARDOWN_CONCURRENCY, async (item) => {
-		const { accountId, keyIndex } = decodeSubAccount(item);
-		await stripeClientForKey(stripeKeyByIndex(keyIndex)).accounts.del(accountId);
-	});
+	const deleteTimed = await timedAll(
+		encoded,
+		TEARDOWN_CONCURRENCY,
+		async (item) => {
+			const { accountId, keyIndex } = decodeSubAccount(item);
+			await stripeClientForKey(stripeKeyByIndex(keyIndex)).accounts.del(
+				accountId,
+			);
+		},
+	);
 	progress(`delete done: total ${deleteTimed.totalMs}ms`);
 
 	const results = {
 		n: N,
 		keyPoolUsed: usedKeyIndices.length,
-		create: { totalMs: createTimed.totalMs, ...stats(createTimed.perItemMs), rateLimit429Retries: warns },
+		create: {
+			totalMs: createTimed.totalMs,
+			...stats(createTimed.perItemMs),
+			rateLimit429Retries: warns,
+		},
 		seed: { totalMs: seedTimed.totalMs, ...stats(seedTimed.perItemMs) },
 		claimListMs: listMs,
-		markDirty: { totalMs: markDirtyTimed.totalMs, ...stats(markDirtyTimed.perItemMs) },
-		nuke: { totalMs: nukeTimed.totalMs, ...stats(nukeTimed.perItemMs), rateLimit429s: rateLimitIncidents.count },
+		markDirty: {
+			totalMs: markDirtyTimed.totalMs,
+			...stats(markDirtyTimed.perItemMs),
+		},
+		nuke: {
+			totalMs: nukeTimed.totalMs,
+			...stats(nukeTimed.perItemMs),
+			rateLimit429s: rateLimitIncidents.count,
+		},
 		nukeCountsSample: nukeCounts.slice(0, 3),
 		delete: { totalMs: deleteTimed.totalMs, ...stats(deleteTimed.perItemMs) },
 	};

@@ -26,7 +26,12 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
-import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import {
+	readdirSync,
+	readFileSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
@@ -70,6 +75,7 @@ import {
 	formatWall,
 } from "../helpers/cost.ts";
 import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
+import { withGlobalLock } from "../helpers/lock.ts";
 import {
 	disableQuietMode,
 	enableQuietMode,
@@ -78,6 +84,7 @@ import {
 	sink,
 	sinkLine,
 } from "../helpers/logSink.ts";
+import { spawnDetachedNukeSandbox } from "../helpers/modal.ts";
 import {
 	getOwner,
 	newRunId,
@@ -110,6 +117,8 @@ import {
 	validateStripeKeyPool,
 } from "../helpers/stripe.ts";
 import {
+	allPoolKeys,
+	decodeSubAccount,
 	encodeSubAccount,
 	keyIndexFromWebhookTag,
 	stripeKeyByIndex,
@@ -117,6 +126,7 @@ import {
 	stripeKeyPoolSize,
 	webhookKeyTag,
 } from "../helpers/stripeKeyPool.ts";
+import { claimPoolAccounts } from "../helpers/stripePool.ts";
 import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
@@ -970,6 +980,7 @@ const provisionWorker = async ({
 	ingressToken,
 	fanoutStart,
 	signal,
+	pooledAccount,
 }: {
 	idx: number;
 	owner: string;
@@ -980,6 +991,8 @@ const provisionWorker = async ({
 	ownerEmail: string;
 	ingressUrl: string;
 	ingressToken: string;
+	/** Pre-claimed pool account (encoded `acct_*::keyIndex`) — skips creation. */
+	pooledAccount?: string;
 	/** Epoch ms when the fan-out phase began, for per-worker provisioning timings. */
 	fanoutStart: number;
 	signal: AbortSignal;
@@ -991,18 +1004,24 @@ const provisionWorker = async ({
 	// rate-limit bucket — sharding workers across keys multiplies the ceiling.
 	const { key: stripeSecretKey, keyIndex } = stripeKeyForWorker(idx);
 
-	// 1. Orchestrator-create + RECORD the sub-account before the worker exists, so
-	//    a fork/boot failure can never orphan an untracked Stripe account (§9a). The
-	//    key index is stored with the id so teardown deletes it under the right key.
-	const accountId = await createSandboxSubAccount({
-		orgName: `${TEST_ORG_CONFIG.name} (${name})`,
-		ownerEmail,
-		owner,
-		runId,
-		orgId,
-		secretKey: stripeSecretKey,
-	});
-	await registry.addSubAccount(runId, encodeSubAccount(accountId, keyIndex));
+	// 1. Bind a pre-claimed pool account (already recorded + marked dirty at
+	//    claim time), or orchestrator-create + RECORD a fresh sub-account before
+	//    the worker exists so a fork/boot failure can never orphan an untracked
+	//    Stripe account (§9a).
+	let accountId: string;
+	if (pooledAccount) {
+		accountId = decodeSubAccount(pooledAccount).accountId;
+	} else {
+		accountId = await createSandboxSubAccount({
+			orgName: `${TEST_ORG_CONFIG.name} (${name})`,
+			ownerEmail,
+			owner,
+			runId,
+			orgId,
+			secretKey: stripeSecretKey,
+		});
+		await registry.addSubAccount(runId, encodeSubAccount(accountId, keyIndex));
+	}
 	bumpStripeDone();
 	const stripeMs = Date.now() - fanoutStart;
 
@@ -1065,6 +1084,67 @@ const provisionWorker = async ({
 // ============================================================================
 
 /**
+ * Persistent Stripe sub-account pool: claim clean accounts at fan-out, async-
+ * nuke at teardown (see STRIPE_POOL_BENCH.md). Modal-only — the detached nuke
+ * sandbox is a Modal registry image; other providers keep the create/delete
+ * path. `TW_DISABLE_STRIPE_POOL=1` is the escape hatch.
+ */
+const stripePoolEnabled = (): boolean =>
+	providerName().startsWith("modal") &&
+	process.env.TW_DISABLE_STRIPE_POOL !== "1";
+
+const NUKE_MAIN_GUARD = "if (import.meta.main)";
+
+/**
+ * Fire-and-forget the teardown nuke sandbox: it cleans each used account's
+ * contents and flips its pool state back to clean (plus reclaims stale-dirty
+ * accounts from crashed runs). Returns false if the spawn failed so the caller
+ * can fall back to synchronous account deletion.
+ */
+const spawnNukeSandbox = async (
+	runId: string,
+	encodedAccounts: string[],
+): Promise<boolean> => {
+	try {
+		const scriptPath = join(
+			PROJECT_ROOT,
+			"scripts",
+			"tw",
+			"image",
+			"nuke-accounts.mjs",
+		);
+		const source = readFileSync(scriptPath, "utf8");
+		if (!source.includes(NUKE_MAIN_GUARD)) {
+			throw new Error(`main guard not found in ${scriptPath}`);
+		}
+		// `bun -e` runs the script with import.meta.main=false — force main().
+		const script = source.replace(NUKE_MAIN_GUARD, "if (true)");
+		const targets = encodedAccounts.map((encoded) => {
+			const { accountId, keyIndex } = decodeSubAccount(encoded);
+			return { accountId, keyIndex };
+		});
+		const sandboxId = await spawnDetachedNukeSandbox({
+			name: `tw-nuke-${runId}`,
+			script,
+			env: {
+				NUKE_TARGETS: JSON.stringify(targets),
+				NUKE_KEYS: JSON.stringify(allPoolKeys()),
+				NUKE_STALE_SWEEP: "1",
+			},
+		});
+		log(
+			`teardown: nuke sandbox ${sandboxId} spawned for ${encodedAccounts.length} account(s) — not waiting`,
+		);
+		return true;
+	} catch (error) {
+		warn(
+			`teardown: nuke sandbox spawn failed (${(error as Error).message}) — falling back to sync deletes`,
+		);
+		return false;
+	}
+};
+
+/**
  * Delete the run's single dedicated Svix shard app (plan §7/§9a teardown step 3).
  * Reuses the server's `deleteSvixApp` (the `svix` package isn't resolvable from
  * the scripts workspace — it's nested under `server/node_modules` — so we go
@@ -1107,21 +1187,30 @@ const teardown = async ({
 		`teardown: ${entry.subAccounts.length} sub-account(s), ${entry.webhooks.length} webhook(s), ${entry.sandboxes.length} sandbox(es)`,
 	);
 
-	// Delete sub-accounts CONCURRENTLY (bounded) — a 62-worker run has 62 accounts
-	// and serial Stripe deletes are the teardown long-pole. Stripe tolerates this
-	// fan-out; the limit just avoids hammering the API.
+	// Pool mode: hand the used accounts to a detached nuke sandbox (contents
+	// cleaned + marked clean asynchronously) so the terminal returns immediately.
+	// Fallback (spawn failure / non-modal): delete sub-accounts CONCURRENTLY
+	// (bounded) — serial Stripe deletes are the teardown long-pole.
 	setTeardownAccounts(0, entry.subAccounts.length);
-	const accountLimit = pLimit(TEARDOWN_STRIPE_CONCURRENCY);
-	await Promise.all(
-		entry.subAccounts.map((accountId) =>
-			accountLimit(async () => {
-				await timeBoxed(`delete sub-account ${accountId}`, () =>
-					deleteSubAccount(accountId),
-				);
-				bumpAccountDone();
-			}),
-		),
-	);
+	const nukeSpawned =
+		stripePoolEnabled() &&
+		entry.subAccounts.length > 0 &&
+		(await spawnNukeSandbox(runId, entry.subAccounts));
+	if (nukeSpawned) {
+		setTeardownAccounts(entry.subAccounts.length, entry.subAccounts.length);
+	} else {
+		const accountLimit = pLimit(TEARDOWN_STRIPE_CONCURRENCY);
+		await Promise.all(
+			entry.subAccounts.map((accountId) =>
+				accountLimit(async () => {
+					await timeBoxed(`delete sub-account ${accountId}`, () =>
+						deleteSubAccount(accountId),
+					);
+					bumpAccountDone();
+				}),
+			),
+		);
+	}
 
 	// Delete recorded webhooks (the shared platform Connect webhook). Unlike a
 	// sub-account's account-scoped webhook, the platform Connect webhook is NOT
@@ -1403,6 +1492,37 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			log(`svix app ${svixAppId} created and recorded`);
 		}
 
+		// Claim pooled Stripe sub-accounts (reuse clean, create the shortfall) under
+		// the cross-machine git-ref lock — Stripe metadata read-modify-write is racy
+		// when teammates fan out concurrently. Held for the claim only (seconds).
+		let pooledAccounts: string[] = [];
+		if (stripePoolEnabled()) {
+			const claimStart = Date.now();
+			const claim = await withGlobalLock({
+				name: "stripe-pool",
+				meta: { owner, startedAt: Date.now(), runId },
+				log: (line) => log(line),
+				fn: () =>
+					claimPoolAccounts({
+						count: effectiveWorkers,
+						owner,
+						runId,
+						ownerEmail,
+						orgId: TEST_ORG_CONFIG.id,
+						orgNameForIdx: (idx) =>
+							`${TEST_ORG_CONFIG.name} (${sandboxName(owner, runId, idx)})`,
+					}),
+			});
+			pooledAccounts = claim.byWorker;
+			// Record BEFORE fan-out so a crash can never orphan an untracked account.
+			for (const encoded of pooledAccounts) {
+				await registry.addSubAccount(runId, encoded);
+			}
+			milestone(
+				`stripe pool: ${claim.reused} reused + ${claim.created} created in ${Date.now() - claimStart}ms`,
+			);
+		}
+
 		milestone(
 			`fan-out: provisioning ${effectiveWorkers} worker(s) from the warm snapshot`,
 		);
@@ -1432,11 +1552,11 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					ingressToken: ingress.token,
 					fanoutStart,
 					signal,
+					pooledAccount: pooledAccounts[idx],
 				}).catch((error: unknown) => {
 					// Surface the provision failure (red dot + reason, `N failed` counter)
 					// instead of the worker silently never appearing.
-					const reason =
-						error instanceof Error ? error.message : String(error);
+					const reason = error instanceof Error ? error.message : String(error);
 					setWorkerStatus(workerName, "failed", reason.slice(0, 300));
 					bumpWorkerFailed();
 					throw error;
