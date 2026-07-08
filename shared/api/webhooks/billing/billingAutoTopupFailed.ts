@@ -1,5 +1,4 @@
 import { z } from "zod/v4";
-import { BillingAutoTopupSucceededInvoiceSchema } from "./billingAutoTopupSucceeded.js";
 
 export const BillingAutoTopupFailureReasonSchema = z
 	.enum([
@@ -47,13 +46,6 @@ export const BILLING_AUTO_TOPUP_FAILED_EXAMPLE = {
 	threshold: 20,
 	balance: 15,
 	invoice_mode: false,
-	invoice: {
-		stripe_id: "in_1A2B3C4D5E6F7G8H",
-		status: "void",
-		total: 1000,
-		currency: "usd",
-		hosted_invoice_url: "https://invoice.stripe.com/i/acct_123/test_456",
-	},
 	error: {
 		code: "card_declined",
 		message: "Your card was declined.",
@@ -90,10 +82,6 @@ export const BillingAutoTopupFailedSchema = z
 		invoice_mode: z.boolean().nullish().meta({
 			description:
 				"Whether the auto top-up was configured to create a send_invoice invoice instead of auto-charging.",
-		}),
-		invoice: BillingAutoTopupSucceededInvoiceSchema.nullish().meta({
-			description:
-				"The invoice associated with the failed top-up attempt, when one was created.",
 		}),
 		error: BillingAutoTopupFailedErrorSchema.nullish().meta({
 			description:

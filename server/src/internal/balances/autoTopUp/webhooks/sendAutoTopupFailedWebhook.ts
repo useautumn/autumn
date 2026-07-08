@@ -2,8 +2,6 @@ import {
 	type AutoTopup,
 	type BillingAutoTopupFailedError,
 	type BillingAutoTopupFailureReason,
-	type BillingAutoTopupSucceededInvoice,
-	type BillingResult,
 	ErrCode,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -11,7 +9,6 @@ import {
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { redis } from "@/external/redis/initRedis.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -71,25 +68,6 @@ const releaseSuppressionKey = async ({
 			`[sendAutoTopupFailedWebhook] Failed to release suppression key ${suppressionKey}: ${error}`,
 		);
 	}
-};
-
-const getInvoicePayload = ({
-	billingResult,
-	stripeInvoice,
-}: {
-	billingResult?: BillingResult;
-	stripeInvoice?: Stripe.Invoice;
-}): BillingAutoTopupSucceededInvoice | null => {
-	const invoice = stripeInvoice ?? billingResult?.stripe.stripeInvoice;
-	if (!invoice) return null;
-
-	return {
-		stripe_id: invoice.id,
-		status: invoice.status,
-		total: invoice.total,
-		currency: invoice.currency,
-		hosted_invoice_url: invoice.hosted_invoice_url,
-	};
 };
 
 const getErrorPayload = ({
@@ -169,8 +147,6 @@ export const sendAutoTopupFailedWebhook = async ({
 	autoTopupContext,
 	fullCustomer,
 	autoTopupConfig,
-	billingResult,
-	stripeInvoice,
 	suppressionKey,
 	suppressionTtlMs,
 }: {
@@ -184,8 +160,6 @@ export const sendAutoTopupFailedWebhook = async ({
 	autoTopupContext?: AutoTopupContext;
 	fullCustomer?: FullCustomer;
 	autoTopupConfig?: AutoTopup;
-	billingResult?: BillingResult;
-	stripeInvoice?: Stripe.Invoice;
 	suppressionKey?: string;
 	suppressionTtlMs?: number;
 }) => {
@@ -199,7 +173,6 @@ export const sendAutoTopupFailedWebhook = async ({
 
 		const customer = autoTopupContext?.fullCustomer ?? fullCustomer;
 		const config = autoTopupContext?.autoTopupConfig ?? autoTopupConfig;
-		const invoice = getInvoicePayload({ billingResult, stripeInvoice });
 		const errorPayload = getErrorPayload({ error, message });
 		let balance: number | null = null;
 		try {
@@ -229,7 +202,6 @@ export const sendAutoTopupFailedWebhook = async ({
 				invoice_mode: autoTopupContext
 					? Boolean(autoTopupContext.invoiceMode)
 					: null,
-				invoice,
 				error: errorPayload,
 			},
 			tags: customer

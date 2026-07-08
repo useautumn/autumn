@@ -122,11 +122,8 @@ export const autoTopup = async ({
 		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
 
 		if (!isInvoiceMode && !isCustomPm && invoiceStatus !== "paid") {
-			let voidedInvoice:
-				| Awaited<ReturnType<typeof voidStripeInvoiceIfOpen>>
-				| undefined;
 			try {
-				voidedInvoice = await voidStripeInvoiceIfOpen({
+				await voidStripeInvoiceIfOpen({
 					ctx,
 					stripeInvoice: billingResult.stripe?.stripeInvoice,
 					source: "autoTopup",
@@ -137,8 +134,6 @@ export const autoTopup = async ({
 					retryable: false,
 					message: `Auto top-up invoice status was ${invoiceStatus ?? "missing"}, expected paid`,
 					autoTopupContext,
-					billingResult,
-					stripeInvoice: voidedInvoice,
 				});
 			}
 			return;

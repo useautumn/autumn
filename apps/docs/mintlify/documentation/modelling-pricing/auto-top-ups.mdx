@@ -176,6 +176,6 @@ Auto top-ups use burst suppression to prevent duplicate purchases when multiple 
 
 Subscribe to the [`billing.auto_topup_succeeded`](/api-reference/webhooks/billingAutoTopupSucceeded) webhook to be notified when a top-up grants credits. The payload includes the granted quantity, the new balance, and the underlying invoice — useful for sending receipts, updating internal ledgers, or reconciling balance after a recharge.
 
-Subscribe to [`billing.auto_topup_failed`](/api-reference/webhooks/billingAutoTopupFailed) to monitor auto top-ups that are blocked, declined, or fail before granting balance. The payload includes a machine-readable `reason`, a `retryable` flag, and any available invoice or provider error details.
+Subscribe to [`billing.auto_topup_failed`](/api-reference/webhooks/billingAutoTopupFailed) to monitor auto top-ups that are blocked, declined, or fail before granting balance. The payload includes a machine-readable `reason`, a `retryable` flag, and any available provider error details.
 
 Limit-blocked failure webhooks are suppressed per blocking window to avoid duplicate notifications while the same limit remains active.

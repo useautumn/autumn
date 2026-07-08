@@ -28981,12 +28981,6 @@ webhooks:
                       threshold: 20
                       balance: 15
                       invoice_mode: false
-                      invoice:
-                        stripe_id: in_1A2B3C4D5E6F7G8H
-                        status: void
-                        total: 1000
-                        currency: usd
-                        hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
                       error:
                         code: card_declined
                         message: Your card was declined.
@@ -29044,40 +29038,6 @@ webhooks:
                       anyOf:
                         - type: boolean
                         - type: "null"
-                    invoice:
-                      description: The invoice associated with the failed top-up attempt, when one was
-                        created.
-                      anyOf:
-                        - type: object
-                          properties:
-                            stripe_id:
-                              description: The Stripe invoice ID. Use this as a stable dedupe key.
-                              type: string
-                            status:
-                              description: The status of the invoice. "paid" for auto-charged top-ups; "open"
-                                for invoice-mode top-ups where credits were
-                                granted but the invoice has not yet been paid.
-                              anyOf:
-                                - type: string
-                                - type: "null"
-                            total:
-                              description: The total amount of the invoice in the smallest currency unit (e.g.
-                                cents for USD), matching Stripe's invoice.total.
-                              type: number
-                            currency:
-                              description: The ISO currency code for the invoice.
-                              type: string
-                            hosted_invoice_url:
-                              description: URL to the hosted invoice page, if available.
-                              anyOf:
-                                - type: string
-                                - type: "null"
-                          required:
-                            - stripe_id
-                            - total
-                            - currency
-                          additionalProperties: false
-                        - type: "null"
                     error:
                       description: Sanitized provider or Autumn error metadata, when the failure came
                         from an exception or declined charge.
@@ -29125,12 +29085,6 @@ webhooks:
                 threshold: 20
                 balance: 15
                 invoice_mode: false
-                invoice:
-                  stripe_id: in_1A2B3C4D5E6F7G8H
-                  status: void
-                  total: 1000
-                  currency: usd
-                  hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
                 error:
                   code: card_declined
                   message: Your card was declined.

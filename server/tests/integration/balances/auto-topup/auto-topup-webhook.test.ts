@@ -409,10 +409,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: failed charge sends f
 	expect(data.threshold).toBe(20);
 	expect(data.balance).toBe(15);
 	expect(data.invoice_mode).toBe(false);
-	expect(data.invoice?.stripe_id).toStartWith("in_");
-	expect(data.invoice?.status).toBe("void");
-	expect(data.invoice?.total).toBe(1000);
-	expect(data.invoice?.currency).toBe("usd");
+	expect((data as Record<string, unknown>).invoice).toBeUndefined();
 
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
@@ -495,7 +492,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: limit block sends fai
 	expect(data.quantity).toBe(100);
 	expect(data.threshold).toBe(50);
 	expect(data.balance).toBe(40);
-	expect(data.invoice).toBeNull();
+	expect((data as Record<string, unknown>).invoice).toBeUndefined();
 
 	const failureCountAfterFirstBlock = await countAutoTopupFailedWebhooks({
 		customerId,
