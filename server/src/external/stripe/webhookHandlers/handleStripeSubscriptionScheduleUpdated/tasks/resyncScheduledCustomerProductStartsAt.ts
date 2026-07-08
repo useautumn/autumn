@@ -58,7 +58,7 @@ export const resyncScheduledCustomerProductStartsAt = async ({
 			);
 		}
 
-		await db
+		const updatedPhaseRows = await db
 			.update(schedulePhases)
 			.set({ starts_at: newStartMs })
 			.where(
@@ -70,6 +70,12 @@ export const resyncScheduledCustomerProductStartsAt = async ({
 						matchedProducts.map((customerProduct) => customerProduct.id),
 					),
 				),
-			);
+			)
+			.returning({ id: schedulePhases.id });
+
+		// 0 rows is normal for attach-origin schedules (no Autumn phase rows)
+		logger.info(
+			`[handleStripeSubscriptionScheduleUpdated] moved ${updatedPhaseRows.length} autumn phase row(s) ${oldStartMs} -> ${newStartMs} (schedule ${schedule.id})`,
+		);
 	}
 };

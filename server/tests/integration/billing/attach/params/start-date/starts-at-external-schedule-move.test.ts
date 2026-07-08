@@ -225,24 +225,26 @@ test.concurrent(`${chalk.yellowBright("starts_at: moving one phase of a multi-ph
 	expect(resyncedProduct.starts_at).toBe(editedPhase1StartSec * 1000);
 	expect(resyncedProduct.status).toBe(CusProductStatus.Scheduled);
 
-	// External edit #3: move ONLY phase 2 — nothing in Autumn is anchored to it,
-	// so the product must stay exactly where it is
+	// External edit #3: move phase 1 AND phase 2 in one update. The product must
+	// follow phase 1's new start — if moves were applied indiscriminately, it
+	// would land on phase 2's start instead. Deterministic: the phase-1 move is
+	// the pollable proof this webhook was fully processed.
+	const finalPhase1StartSec = editedPhase1StartSec + Math.floor(ms.days(2) / 1000);
 	const editedPhase2StartSec = phase2StartSec + Math.floor(ms.days(5) / 1000);
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
 		phases: [
-			{ items: phaseItems, start_date: editedPhase1StartSec, end_date: editedPhase2StartSec },
+			{ items: phaseItems, start_date: finalPhase1StartSec, end_date: editedPhase2StartSec },
 			{ items: phaseItems, start_date: editedPhase2StartSec, end_date: phase3StartSec },
 			{ items: phaseItems, start_date: phase3StartSec },
 		],
 	});
 
-	// Give the webhook time to arrive, then assert nothing moved
-	await new Promise((resolve) => setTimeout(resolve, 8000));
-	const untouchedProduct = await getCustomerProduct({
-		ctx,
-		customerId,
-		productId: pro.id,
+	const finalProduct = await pollUntil({
+		fetch: () => getCustomerProduct({ ctx, customerId, productId: pro.id }),
+		until: (cp) => cp.starts_at !== editedPhase1StartSec * 1000,
+		label: "phase-1 second move processed via subscription_schedule.updated webhook",
 	});
-	expect(untouchedProduct.starts_at).toBe(editedPhase1StartSec * 1000);
-	expect(untouchedProduct.status).toBe(CusProductStatus.Scheduled);
+	expect(finalProduct.starts_at).toBe(finalPhase1StartSec * 1000);
+	expect(finalProduct.starts_at).not.toBe(editedPhase2StartSec * 1000);
+	expect(finalProduct.status).toBe(CusProductStatus.Scheduled);
 });
