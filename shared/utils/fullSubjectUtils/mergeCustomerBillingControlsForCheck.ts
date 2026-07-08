@@ -256,6 +256,7 @@ export const mergePlanBillingControlsForCheck = ({
 			customerControls: [],
 			planCustomerProducts,
 			controlKey: "usage_limits",
+			identityOf: usageLimitIdentity,
 		}),
 		fullSubject,
 		features,
