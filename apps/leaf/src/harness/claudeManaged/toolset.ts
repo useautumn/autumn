@@ -41,6 +41,26 @@ const buildAgentToolset = () =>
 				})),
 			};
 
+type PermissionPolicyLike = { type?: string } | null | undefined;
+const DEFAULT_MCP_PERMISSION_POLICY = "always_allow";
+
+export type McpToolsetLike = {
+	configs?: Array<{
+		enabled?: boolean | null;
+		name: string;
+		permission_policy?: PermissionPolicyLike;
+	}>;
+	default_config?: {
+		enabled?: boolean | null;
+		permission_policy?: PermissionPolicyLike;
+	} | null;
+	mcp_server_name: string;
+	type: "mcp_toolset";
+};
+
+const policyType = (policy: PermissionPolicyLike, fallback: string) =>
+	policy?.type || fallback;
+
 export const buildDesiredTools = ({
 	destructiveTools,
 }: {
@@ -55,17 +75,22 @@ export const buildDesiredTools = ({
 		default_config: { permission_policy: { type: "always_allow" as const } },
 		mcp_server_name: claudeManagedConfig.autumnMcpServerName,
 		type: "mcp_toolset" as const,
-	};
+	} satisfies McpToolsetLike;
 	return toolset ? [toolset, mcpToolset] : [mcpToolset];
 };
+
+export type ClaudeManagedToolset = ReturnType<typeof buildDesiredTools>[number];
 
 export const desiredBuiltinSignature = () =>
 	[...claudeManagedBuiltinTools].sort().join(",");
 
-export const builtinSignatureFromToolset = (toolset: {
+export type BuiltinToolsetLike = {
 	configs?: { enabled: boolean; name: string }[];
 	default_config?: { enabled: boolean } | null;
-}) => {
+	type: string;
+};
+
+export const builtinSignatureFromToolset = (toolset: BuiltinToolsetLike) => {
 	const enabled = new Set<string>(
 		toolset.default_config?.enabled === false ? [] : ALL_BUILTIN_TOOLS,
 	);
@@ -77,4 +102,26 @@ export const builtinSignatureFromToolset = (toolset: {
 		}
 	}
 	return [...enabled].sort().join(",");
+};
+
+export const mcpSignatureFromToolset = (toolset?: McpToolsetLike | null) => {
+	if (!toolset) return "";
+	const defaultEnabled = toolset.default_config?.enabled ?? true;
+	const defaultPolicy = policyType(
+		toolset.default_config?.permission_policy,
+		DEFAULT_MCP_PERMISSION_POLICY,
+	);
+	const configs = (toolset.configs ?? [])
+		.map((config) => ({
+			enabled: config.enabled ?? defaultEnabled,
+			name: config.name,
+			permission: policyType(config.permission_policy, defaultPolicy),
+		}))
+		.sort((a, b) => a.name.localeCompare(b.name));
+
+	return JSON.stringify({
+		configs,
+		default: { enabled: defaultEnabled, permission: defaultPolicy },
+		server: toolset.mcp_server_name,
+	});
 };

@@ -10,7 +10,7 @@ const STOP_KEYWORDS = new Set([
 	"stop please",
 ]);
 
-const MAX_PENDING_TURNS = 5;
+const MAX_QUEUED_FOLLOW_UPS = 5;
 
 export const isStopMessage = (text: string) =>
 	STOP_KEYWORDS.has(
@@ -41,29 +41,29 @@ export const dispatchThreadMessage = async ({
 	text: string;
 }) => {
 	const active = getRun(runKey);
-	if (active && !(active.closed || active.stop)) {
-		if (isStopMessage(text)) {
-			logger.info("Stop keyword received for active run", {
-				event: "leaf.run_stop_keyword",
-				data: { run_key: runKey },
-			});
-			await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
-			await active.requestStop({ byUserId: providerUserId, reason: "user" });
-			return;
-		}
+	if (active && !active.stop && isStopMessage(text)) {
+		logger.info("Stop keyword received for active run", {
+			event: "leaf.run_stop_keyword",
+			data: { run_key: runKey },
+		});
+		await active.logAction?.(`Stopping — requested by <@${providerUserId}>…`);
+		await active.requestStop({ byUserId: providerUserId, reason: "user" });
+		return;
+	}
 
+	if (active && !(active.followUps.closed || active.stop)) {
 		const injectable =
 			active.kind === "message" &&
 			active.ownerProviderUserId === providerUserId &&
 			!hasAttachments &&
-			active.pendingTurns < MAX_PENDING_TURNS;
+			active.followUps.size < MAX_QUEUED_FOLLOW_UPS;
 
 		if (injectable) {
 			try {
-				await active.injectFollowUp({ text });
+				active.followUps.push(text);
 				logger.info("Injected follow-up into active run", {
 					event: "leaf.run_follow_up_injected",
-					data: { pending_turns: active.pendingTurns, run_key: runKey },
+					data: { pending_follow_ups: active.followUps.size, run_key: runKey },
 				});
 				await onFollowUpInjected?.();
 				return;

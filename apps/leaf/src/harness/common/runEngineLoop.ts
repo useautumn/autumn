@@ -9,7 +9,7 @@ import { containsInternalToolCall, redactAgentOutput } from "./output.js";
 import type { SessionTurnOutcome } from "./types.js";
 
 /** Drives one engine turn through the shared pump gate, deadline watchdog, and
- * output assembly. Engines supply only the harness-specific `runTurn` + `interrupt`. */
+ * output assembly. */
 export const runEngineLoop = async ({
 	braintrust,
 	ctx,
@@ -17,6 +17,7 @@ export const runEngineLoop = async ({
 	newSession,
 	params,
 	runTurn,
+	sendFollowUp,
 	sessionId,
 }: {
 	braintrust?: {
@@ -32,9 +33,12 @@ export const runEngineLoop = async ({
 	/** Run a single turn to completion, wiring the shared pump + cancel. */
 	runTurn: (input: {
 		isCancelled: () => boolean;
+		onTurnStarted: () => void;
 		onTurnEnd: (turn: SessionTurnOutcome) => Promise<"continue" | "stop">;
 		span?: Span;
 	}) => Promise<SessionTurnOutcome>;
+	/** Deliver queued follow-up text to the session as the next user message. */
+	sendFollowUp: (input: { text: string }) => Promise<void>;
 	sessionId: string;
 }): Promise<AgentOutput> => {
 	const {
@@ -73,26 +77,65 @@ export const runEngineLoop = async ({
 		);
 	};
 
-	// Pump gate: keep consuming while injected follow-ups are pending, posting
-	// each drained turn's text as its own reply.
-	const onTurnEnd = async (turn: SessionTurnOutcome) => {
-		if (!isCancelled() && run && run.pendingTurns > 0) {
-			run.pendingTurns -= 1;
-			const rawTurnText = turn.textParts.join("\n\n");
-			assertPostableText(rawTurnText);
-			const turnText = redactAgentOutput({
-				logger,
-				text: rawTurnText,
-			});
-			if (turnText.trim()) await onTurnComplete?.(turnText);
-			return "continue" as const;
+	let turnInterruptible = false;
+	let followUpInterrupt: Promise<void> | undefined;
+	const requestFollowUpInterrupt = () => {
+		if (
+			!run ||
+			!turnInterruptible ||
+			followUpInterrupt !== undefined ||
+			isCancelled() ||
+			run.followUps.size === 0
+		) {
+			return;
 		}
-		if (run) run.closed = true;
-		return "stop" as const;
+		turnInterruptible = false;
+		followUpInterrupt = Promise.resolve(interrupt()).catch((error) => {
+			logger.warn("Could not interrupt session for follow-up", {
+				event: "leaf.run_follow_up_interrupt_failed",
+				context: { env, org_id: org.id },
+				data: { session_id: sessionId },
+				error,
+			});
+		});
+	};
+	if (run) run.followUps.onPush = requestFollowUpInterrupt;
+
+	const onTurnStarted = () => {
+		turnInterruptible = true;
+		requestFollowUpInterrupt();
+	};
+
+	const onTurnEnd = async (turn: SessionTurnOutcome) => {
+		turnInterruptible = false;
+		const interruptBeforeFlush = followUpInterrupt;
+		followUpInterrupt = undefined;
+		if (!run || isCancelled() || run.followUps.size === 0) {
+			run?.followUps.close();
+			return "stop" as const;
+		}
+		const rawTurnText = turn.textParts.join("\n\n");
+		assertPostableText(rawTurnText);
+		const turnText = redactAgentOutput({
+			logger,
+			text: rawTurnText,
+		});
+		if (turnText.trim()) await onTurnComplete?.(turnText);
+		// A racing follow-up interrupt must land before the queued user message, or it could cancel that message.
+		await interruptBeforeFlush;
+		// Drain after the post succeeds so a failed turn keeps the queue; restore on a failed send.
+		const singleTurnBatch = run.followUps.drain();
+		try {
+			await sendFollowUp({ text: singleTurnBatch.join("\n\n") });
+		} catch (error) {
+			run.followUps.restore(singleTurnBatch);
+			throw error;
+		}
+		return "continue" as const;
 	};
 
 	const drive = ({ span }: { span?: Span }) =>
-		runTurn({ isCancelled, onTurnEnd, span });
+		runTurn({ isCancelled, onTurnEnd, onTurnStarted, span });
 
 	const deadlineDelayMs = deadlineAt ? deadlineAt - Date.now() : 0;
 	const deadlineWatchdog =
@@ -128,6 +171,12 @@ export const runEngineLoop = async ({
 			: await drive({});
 	} finally {
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
+		// Close on every exit (incl. suspension) so late injects start a new run.
+		turnInterruptible = false;
+		if (run) {
+			run.followUps.close();
+			run.followUps.onPush = undefined;
+		}
 	}
 
 	const rawFinalText = outcome.textParts.join("\n\n");

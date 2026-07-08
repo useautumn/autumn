@@ -28,10 +28,10 @@ describe("runRegistry", () => {
 
 		closeRun({ key: "k1", run });
 		expect(getRun("k1")).toBeUndefined();
-		expect(run.closed).toBe(true);
+		expect(run.followUps.closed).toBe(true);
 	});
 
-	test("injection is rejected once a run is closed", async () => {
+	test("injection is rejected once a run is closed", () => {
 		const run = registerRun({
 			key: "k1b",
 			kind: "message",
@@ -40,9 +40,38 @@ describe("runRegistry", () => {
 		run.resolveSessionId("sesn_1");
 		closeRun({ key: "k1b", run });
 
-		expect(run.injectFollowUp({ text: "late" })).rejects.toThrow(
-			"Run is closing",
-		);
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
+	});
+
+	test("queues follow-ups locally and drains them in order", () => {
+		const run = registerRun({
+			key: "k1c",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.followUps.push("one");
+		run.followUps.push("two");
+
+		expect(run.followUps.size).toBe(2);
+		expect(run.followUps.drain()).toEqual(["one", "two"]);
+		expect(run.followUps.size).toBe(0);
+		expect(run.followUps.drain()).toEqual([]);
+		closeRun({ key: "k1c", run });
+	});
+
+	test("a stop request closes the queue", async () => {
+		const run = registerRun({
+			key: "k1d",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async () => {},
+		});
+		run.resolveSessionId("sesn_1");
+
+		await run.requestStop({ byUserId: "U1", reason: "user" });
+
+		expect(() => run.followUps.push("late")).toThrow("Run is closing");
+		closeRun({ key: "k1d", run });
 	});
 
 	test("close ignores entries replaced by a newer run", () => {

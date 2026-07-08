@@ -30,8 +30,11 @@ const { createFirecrawlTools } = await import(
 const { isCmaVaultStale } = await import(
 	"../../../src/harness/claudeManaged/vaults/ensureAutumnVault.js"
 );
-const { buildAgentSystem } = await import(
+const { buildAgentSystem, syncClaudeManagedSessionAgentConfig } = await import(
 	"../../../src/harness/claudeManaged/ensureLeafResources.js"
+);
+const { buildDesiredTools } = await import(
+	"../../../src/harness/claudeManaged/toolset.js"
 );
 const { containsInternalToolCall } = await import(
 	"../../../src/harness/common/output.js"
@@ -336,6 +339,99 @@ describe("Claude Managed vault sync", () => {
 		expect(system).toContain("Preview before every write.");
 		// The slack surface points at the billing knowledge.
 		expect(system).toContain("autumn-billing");
+	});
+
+	test("refreshes stale session MCP permissions", async () => {
+		const mcpServers = [
+			{
+				name: "autumn" as const,
+				type: "url" as const,
+				url: "https://j.dev.useautumn.com/mcp",
+			},
+		];
+		const tools = buildDesiredTools({ destructiveTools: ["attach"] });
+		const staleTools = tools.map((tool) =>
+			tool.type === "mcp_toolset"
+				? {
+						...tool,
+						default_config: {
+							enabled: false,
+							permission_policy: { type: "always_allow" as const },
+						},
+					}
+				: tool,
+		);
+		const updates: unknown[] = [];
+		const client = {
+			beta: {
+				sessions: {
+					retrieve: async () => ({
+						agent: { mcp_servers: mcpServers, tools: staleTools },
+					}),
+					update: async (_sessionId: string, params: unknown) => {
+						updates.push(params);
+						return {};
+					},
+				},
+			},
+		} as never;
+
+		await syncClaudeManagedSessionAgentConfig({
+			client,
+			env: AppEnv.Sandbox,
+			logger: { info: () => {} } as never,
+			orgId: "org_1",
+			resources: {
+				agentId: "agent_1",
+				environmentId: "env_1",
+				mcpServers,
+				tools,
+			},
+			sessionId: "session_1",
+		});
+
+		expect(updates).toEqual([{ agent: { tools } }]);
+	});
+
+	test("skips the session retrieve when resources are unchanged", async () => {
+		const mcpServers = [
+			{
+				name: "autumn" as const,
+				type: "url" as const,
+				url: "https://j.dev.useautumn.com/mcp",
+			},
+		];
+		const tools = buildDesiredTools({ destructiveTools: ["attach"] });
+		let retrieves = 0;
+		const client = {
+			beta: {
+				sessions: {
+					retrieve: async () => {
+						retrieves += 1;
+						return { agent: { mcp_servers: mcpServers, tools } };
+					},
+					update: async () => ({}),
+				},
+			},
+		} as never;
+		const args = {
+			client,
+			env: AppEnv.Sandbox,
+			logger: { info: () => {} } as never,
+			orgId: "org_1",
+			resources: {
+				agentId: "agent_2",
+				environmentId: "env_2",
+				mcpServers,
+				tools,
+			},
+			sessionId: "session_unchanged",
+		};
+
+		await syncClaudeManagedSessionAgentConfig(args);
+		await syncClaudeManagedSessionAgentConfig(args);
+
+		expect(retrieves).toBe(1);
 	});
 
 	test("treats the vault as stale when local OAuth credentials are newer", () => {

@@ -1,6 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { all } from "better-all";
-import { ensureLeafResources } from "../../../harness/claudeManaged/ensureLeafResources.js";
+import {
+	ensureLeafResources,
+	syncClaudeManagedSessionAgentConfig,
+} from "../../../harness/claudeManaged/ensureLeafResources.js";
 import { ensureMemoryStore } from "../../../harness/claudeManaged/memory/ensureMemoryStore.js";
 import { cmaRepo } from "../../../harness/claudeManaged/repos/claudeManagedRepo.js";
 import {
@@ -55,6 +58,16 @@ export const claudeManagedEngine: AgentEngine = {
 		} = ctx;
 
 		const perf = createPhaseTimer(logger);
+		const surface = thread.provider === "web" ? "dashboard" : "slack";
+		const resourcesPromise = perf.time("ensure_resources", () =>
+			ensureLeafResources({
+				client,
+				env,
+				logger,
+				surface,
+				token,
+			}),
+		);
 		const existingSession =
 			claudeManagedSession ??
 			(await perf.time("lookup_session", () =>
@@ -66,6 +79,7 @@ export const claudeManagedEngine: AgentEngine = {
 					userId: autumnUserId,
 				}),
 			));
+		const resources = await resourcesPromise;
 
 		let sessionRef = existingSession;
 		let orgContext: Awaited<ReturnType<typeof autumnOrgContextService.load>>;
@@ -73,20 +87,8 @@ export const claudeManagedEngine: AgentEngine = {
 			const {
 				memoryStoreId,
 				orgContext: loadedOrgContext,
-				resources: { agentId, environmentId },
 				vaultId,
 			} = await all({
-				async resources() {
-					return perf.time("ensure_resources", () =>
-						ensureLeafResources({
-							client,
-							env,
-							logger,
-							surface: thread.provider === "web" ? "dashboard" : "slack",
-							token,
-						}),
-					);
-				},
 				async vaultId() {
 					return perf.time("ensure_vault", () =>
 						ensureAutumnVault({
@@ -113,11 +115,11 @@ export const claudeManagedEngine: AgentEngine = {
 			orgContext = loadedOrgContext;
 			sessionRef = await perf.time("session_create", () =>
 				createClaudeManagedSession({
-					agentId,
+					agentId: resources.agentId,
 					client,
 					db,
 					env,
-					environmentId,
+					environmentId: resources.environmentId,
 					memoryStoreId,
 					orgId: org.id,
 					thread,
@@ -136,6 +138,15 @@ export const claudeManagedEngine: AgentEngine = {
 		ctx.run?.resolveSessionId(activeSessionId);
 
 		if (!newSession) {
+			await syncClaudeManagedSessionAgentConfig({
+				client,
+				env,
+				logger,
+				orgId: org.id,
+				resources,
+				sessionId: activeSessionId,
+			});
+
 			// Re-sync the vault: it's seeded only at session creation, but leaf
 			// rotates the shared OAuth refresh token each turn, so a stale vault 401s.
 			await ensureAutumnVault({
@@ -208,7 +219,15 @@ export const claudeManagedEngine: AgentEngine = {
 					.then(() => undefined),
 			newSession,
 			params,
-			runTurn: ({ onTurnEnd, span }) =>
+			sendFollowUp: ({ text }) =>
+				client.beta.sessions.events
+					.send(activeSessionId, {
+						events: [
+							{ content: [{ text, type: "text" }], type: "user.message" },
+						],
+					})
+					.then(() => undefined),
+			runTurn: ({ onTurnEnd, onTurnStarted, span }) =>
 				runClaudeManagedTurn({
 					client,
 					content,
@@ -217,6 +236,7 @@ export const claudeManagedEngine: AgentEngine = {
 					onAction,
 					onActionKeyed,
 					onThinking,
+					onTurnStarted,
 					onTurnEnd,
 					orgId: org.id,
 					sessionId: activeSessionId,

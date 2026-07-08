@@ -8,6 +8,10 @@ export type {
 	SuspendedToolCall,
 } from "../../common/types.js";
 
+// The SDK has no idle `agent.*` event, so any one means active work.
+const isActiveAgentWork = (type: string) =>
+	type.startsWith("agent.") || type === "span.model_request_start";
+
 // Streams one CMA turn to completion after `kickoff`, preserving text, tool
 // results, usage, and pending destructive tool confirmations.
 export const driveSessionTurn = async ({
@@ -21,6 +25,7 @@ export const driveSessionTurn = async ({
 	onSessionRetry,
 	onThinking,
 	onToolError,
+	onTurnStarted,
 	onTurnEnd,
 	perfLabel,
 	sessionId,
@@ -54,6 +59,8 @@ export const driveSessionTurn = async ({
 		name: string;
 		output: unknown;
 	}) => Promise<void> | void;
+	/** Fires once for each turn after the session emits active agent work. */
+	onTurnStarted?: () => void;
 	/** Multi-turn pump: on "continue", the drained turn is emitted and the stream keeps being consumed. */
 	onTurnEnd?: (
 		turn: SessionTurnOutcome,
@@ -99,6 +106,12 @@ export const driveSessionTurn = async ({
 	let sandboxReadCount = 0;
 	let inferenceMs = 0;
 	let inferenceStart = 0;
+	let turnStarted = false;
+	const markTurnStarted = () => {
+		if (turnStarted) return;
+		turnStarted = true;
+		onTurnStarted?.();
+	};
 
 	const stream = await client.beta.sessions.events.stream(sessionId);
 	mark("stream_open");
@@ -118,6 +131,9 @@ export const driveSessionTurn = async ({
 			lastEventAt = now;
 		}
 		mark("first_event");
+		if (isActiveAgentWork(event.type)) {
+			markTurnStarted();
+		}
 		if (
 			event.type === "agent.message" &&
 			event.content.some((b) => b.type === "text" && b.text)
@@ -241,6 +257,7 @@ export const driveSessionTurn = async ({
 				if (decision === "continue") {
 					outcome.textParts = [];
 					outcome.toolResults = [];
+					turnStarted = false;
 					continue;
 				}
 			}

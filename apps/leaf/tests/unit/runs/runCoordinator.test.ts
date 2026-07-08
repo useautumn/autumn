@@ -48,18 +48,41 @@ describe("dispatchThreadMessage", () => {
 		closeRun({ key: "co1", run });
 	});
 
-	test("injects follow-ups into the active run with an interrupt first", async () => {
-		const sent: string[] = [];
+	test("routes stop keywords even after the follow-up queue closes", async () => {
+		const interrupts: string[] = [];
+		const run = registerRun({
+			key: "co1b",
+			kind: "message",
+			ownerProviderUserId: "U1",
+			sendInterrupt: async (sessionId) => {
+				interrupts.push(sessionId);
+			},
+		});
+		run.resolveSessionId("sesn_1");
+		run.followUps.close();
+		let newRuns = 0;
+
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			providerUserId: "U1",
+			runKey: "co1b",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "stop",
+		});
+
+		expect(run.stop).toEqual({ byUserId: "U1", reason: "user" });
+		expect(interrupts).toEqual(["sesn_1"]);
+		expect(newRuns).toBe(0);
+		closeRun({ key: "co1b", run });
+	});
+
+	test("queues follow-ups on the active run", async () => {
 		const run = registerRun({
 			key: "co2",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				sent.push("interrupt");
-			},
-			sendUserMessage: async ({ text }) => {
-				sent.push(`message:${text}`);
-			},
 		});
 		run.resolveSessionId("sesn_1");
 		let acked = 0;
@@ -78,11 +101,41 @@ describe("dispatchThreadMessage", () => {
 			text: "also, what's the MRR?",
 		});
 
-		expect(sent).toEqual(["interrupt", "message:also, what's the MRR?"]);
-		expect(run.pendingTurns).toBe(1);
+		expect(run.followUps.size).toBe(1);
+		expect(run.followUps.drain()).toEqual(["also, what's the MRR?"]);
 		expect(acked).toBe(1);
 		expect(newRuns).toBe(0);
 		closeRun({ key: "co2", run });
+	});
+
+	test("queues a new run for follow-ups after the follow-up queue closes", async () => {
+		const run = registerRun({
+			key: "co2b",
+			kind: "message",
+			ownerProviderUserId: "U1",
+		});
+		run.resolveSessionId("sesn_1");
+		run.followUps.close();
+		let acked = 0;
+		let newRuns = 0;
+
+		await dispatchThreadMessage({
+			hasAttachments: false,
+			onFollowUpInjected: () => {
+				acked += 1;
+			},
+			providerUserId: "U1",
+			runKey: "co2b",
+			runNewMessage: async () => {
+				newRuns += 1;
+			},
+			text: "also, what's the MRR?",
+		});
+
+		expect(run.followUps.size).toBe(0);
+		expect(acked).toBe(0);
+		expect(newRuns).toBe(1);
+		closeRun({ key: "co2b", run });
 	});
 
 	test("serializes new runs per thread when nothing is active", async () => {
@@ -117,11 +170,12 @@ describe("dispatchThreadMessage", () => {
 			key: "co4",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				throw new Error("session busy");
-			},
 		});
 		run.resolveSessionId("sesn_1");
+		// The pump closed the run between the coordinator's check and the push.
+		run.followUps.push = () => {
+			throw new Error("Run is closing");
+		};
 		let newRuns = 0;
 
 		await dispatchThreadMessage({
@@ -135,7 +189,7 @@ describe("dispatchThreadMessage", () => {
 		});
 
 		expect(newRuns).toBe(1);
-		expect(run.pendingTurns).toBe(0);
+		expect(run.followUps.size).toBe(0);
 		closeRun({ key: "co4", run });
 	});
 
@@ -163,17 +217,10 @@ describe("dispatchThreadMessage", () => {
 	});
 
 	test("does not inject a different sender's message into the owner's run", async () => {
-		const sent: string[] = [];
 		const run = registerRun({
 			key: "co6",
 			kind: "message",
 			ownerProviderUserId: "U1",
-			sendInterrupt: async () => {
-				sent.push("interrupt");
-			},
-			sendUserMessage: async ({ text }) => {
-				sent.push(`message:${text}`);
-			},
 		});
 		run.resolveSessionId("sesn_1");
 		let newRuns = 0;
@@ -190,8 +237,7 @@ describe("dispatchThreadMessage", () => {
 			text: "attach the enterprise plan to cus_1",
 		});
 
-		expect(sent).toEqual([]);
-		expect(run.pendingTurns).toBe(0);
+		expect(run.followUps.size).toBe(0);
 		expect(newRuns).toBe(1);
 		closeRun({ key: "co6", run });
 	});
