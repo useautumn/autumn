@@ -50,16 +50,14 @@ export const buildIngressImage = (
 	modal: ModalClient,
 	app: App,
 ): Promise<Image> =>
+	// oven/bun:1 (same proven base as the nuke sandbox — pulls + builds reliably in
+	// Modal's builder, where debian:bookworm-slim's apt/bun bootstrap does not). Bun
+	// is already present; we only add git for cloneRepo.
 	modal.images
-		.fromRegistry("debian:bookworm-slim")
+		.fromRegistry("oven/bun:1")
 		.dockerfileCommands([
 			"RUN apt-get update && apt-get install -y --no-install-recommends " +
-				"ca-certificates curl bash git && rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
-		])
-		.dockerfileCommands([
-			`RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" && ` +
-				"ln -sf /root/.bun/bin/bun /usr/local/bin/bun && " +
-				"ln -sf /root/.bun/bin/bun /usr/local/bin/node && bun --version",
+				"git ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
 		])
 		.build(app);
 
