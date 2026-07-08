@@ -105,14 +105,26 @@ describe("skip_overage_billing resolution — undefined is always billed", () =>
 		expect(resolve(fullCustomer)).toBe(false);
 	});
 
-	test("customer cap-only entry does NOT shadow plan skip true → skipped", () => {
+	test("customer cap-only entry takes over wholesale (undefined = billed) → billed", () => {
 		const fullCustomer = buildFullCustomer({
 			customer: [{ feature_id: FEATURE, enabled: true, overage_limit: 500 }],
 			plan: [
 				{ feature_id: FEATURE, enabled: true, skip_overage_billing: true },
 			],
 		});
-		expect(resolve(fullCustomer)).toBe(true);
+		expect(resolve(fullCustomer)).toBe(false);
+	});
+
+	test("disabled customer entry shadows plan skip true → billed", () => {
+		const fullCustomer = buildFullCustomer({
+			customer: [
+				{ feature_id: FEATURE, enabled: false, skip_overage_billing: true },
+			],
+			plan: [
+				{ feature_id: FEATURE, enabled: true, skip_overage_billing: true },
+			],
+		});
+		expect(resolve(fullCustomer)).toBe(false);
 	});
 
 	test("entity skip false overrides customer skip true → billed", () => {

@@ -1,6 +1,7 @@
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import type { CorePlanUpdatePreview } from "@api/products/previewUpdatePlan/components/corePlanUpdatePreview.js";
 import type { PlanUpdatePreviewItemChange } from "@api/products/previewUpdatePlan/components/planUpdatePreviewChanges.js";
+import { normalizeBillingControlsForCompare } from "@models/cusModels/billingControls/customerBillingControls.js";
 import {
 	composeMatchKey,
 	diffPlanV1,
@@ -43,6 +44,7 @@ const valuesEqual = (left: unknown, right: unknown): boolean => {
 		if (leftKeys.length !== rightKeys.length) return false;
 		return leftKeys.every(
 			(key) =>
+				// biome-ignore lint/suspicious/noPrototypeBuiltins: Object.hasOwn needs lib ES2022; shared targets ES2020.
 				Object.prototype.hasOwnProperty.call(rightRecord, key) &&
 				valuesEqual(leftRecord[key], rightRecord[key]),
 		);
@@ -61,10 +63,7 @@ export const planUpdatePreviewHasDiff = ({
 	"customize" | "previous_attributes" | "price_change" | "item_changes"
 >): boolean =>
 	Boolean(
-		customize ||
-			previous_attributes ||
-			price_change ||
-			item_changes.length > 0,
+		customize || previous_attributes || price_change || item_changes.length > 0,
 	);
 
 export const diffPlanV1PreviousAttributes = ({
@@ -76,8 +75,17 @@ export const diffPlanV1PreviousAttributes = ({
 }): CorePlanUpdatePreview["previous_attributes"] => {
 	const previous: Record<string, unknown> = {};
 
+	// skip_overage_billing false ≡ unset — don't report it as a change.
+	const comparable = (
+		plan: ApiPlanV1,
+		key: (typeof previousAttributeKeys)[number],
+	) =>
+		key === "billing_controls"
+			? normalizeBillingControlsForCompare(plan.billing_controls)
+			: plan[key];
+
 	for (const key of previousAttributeKeys) {
-		if (!valuesEqual(from[key], to[key])) {
+		if (!valuesEqual(comparable(from, key), comparable(to, key))) {
 			// Use null (not undefined) for added fields so the key survives JSON
 			// serialization and clients can still tell the field changed.
 			previous[key] = from[key] === undefined ? null : from[key];
