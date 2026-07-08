@@ -1,11 +1,7 @@
-import {
-	type AutumnBillingPlan,
-	CusProductStatus,
-	type FullCusProduct,
-	type FullCustomer,
-} from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import type { DbLicenseAssignment } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import type { LicenseCancelAction, LicenseUpdatePlan } from "../types.js";
+import { computeLicenseCancelPlan } from "./cancel/computeLicenseCancelPlan.js";
 
 export const computeLicenseUpdatePlan = ({
 	fullCustomer,
@@ -18,31 +14,17 @@ export const computeLicenseUpdatePlan = ({
 	entityId?: string;
 	cancelAction: LicenseCancelAction;
 }): LicenseUpdatePlan => {
-	if (assignment.ended_at) return { action: "noop" };
+	const intent = assignment.ended_at ? "none" : cancelAction;
 
-	const endedAt = Date.now();
-	const billingPlan: AutumnBillingPlan = {
-		customerId: fullCustomer.id ?? fullCustomer.internal_id,
-		insertCustomerProducts: [],
-		updateCustomerProducts: [
-			{
-				customerProduct: assignment as unknown as FullCusProduct,
-				updates: { status: CusProductStatus.Expired, ended_at: endedAt },
-			},
-		],
-		licenseOps: assignment.license_parent_customer_product_id
-			? [
-					{
-						op: "release",
-						internalCustomerId: assignment.internal_customer_id,
-						parentCustomerProductId:
-							assignment.license_parent_customer_product_id,
-						licenseInternalProductId: assignment.internal_product_id,
-						granted: 0,
-						entityId,
-					},
-				]
-			: [],
-	};
-	return { action: cancelAction, endedAt, billingPlan };
+	switch (intent) {
+		case "none":
+			return { action: "noop" };
+		case "cancel_immediately":
+			return computeLicenseCancelPlan({
+				fullCustomer,
+				assignment,
+				entityId,
+				cancelAction,
+			});
+	}
 };

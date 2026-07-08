@@ -8,7 +8,6 @@ import {
 import { customerLicenseRepo } from "../../repos/customerLicenseRepo.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
-import { endProvisionedCustomerProducts } from "../assignments/utils/endProvisionedCustomerProducts.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { resolveLicenseDefinitionsForParents } from "./resolveLicenseDefinitions.js";
 import type { CustomerLicenseState } from "./types.js";
@@ -112,9 +111,8 @@ const transitionStrandedAssignments = async ({
 	}
 
 	if (endedAssignmentIds.size > 0) {
-		await endProvisionedCustomerProducts({
-			ctx,
-			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+		await licenseAssignmentRepo.expireAssignmentsByIds({
+			db: ctx.db,
 			assignmentIds: [...endedAssignmentIds],
 			endedAt,
 		});

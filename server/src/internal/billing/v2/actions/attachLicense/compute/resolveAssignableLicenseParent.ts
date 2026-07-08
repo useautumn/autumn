@@ -11,32 +11,21 @@ import { resolveLicenseDefinitionsForParents } from "@/internal/licenses/actions
 import { isLicenseAssignableParentCustomerProduct } from "@/internal/licenses/licenseUtils.js";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 
-export const resolveAssignableLicenseParent = async ({
-	ctx,
-	fullCustomer,
+/** Exactly one parent must offer the license: zero is unoffered, more than
+ * one is ambiguous without (or even with) a parent_plan_id filter. */
+const selectLicenseParent = ({
+	assignableParents,
+	definitionsByParentId,
 	licenseProduct,
 	planId,
 	parentPlanId,
 }: {
-	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
+	assignableParents: FullCusProduct[];
+	definitionsByParentId: Map<string, DbPlanLicense[]>;
 	licenseProduct: FullProduct;
 	planId: string;
 	parentPlanId?: string;
-}): Promise<{
-	parent: FullCusProduct;
-	licenseDefinition: DbPlanLicense;
-	available: number;
-}> => {
-	const assignableParents = fullCustomer.customer_products.filter(
-		(customerProduct) =>
-			isLicenseAssignableParentCustomerProduct({ customerProduct }),
-	);
-	const definitionsByParentId = await resolveLicenseDefinitionsForParents({
-		ctx,
-		parents: assignableParents,
-	});
-
+}): { parent: FullCusProduct; licenseDefinition: DbPlanLicense } => {
 	const candidates = assignableParents
 		.map((parent) => ({
 			parent,
@@ -73,8 +62,42 @@ export const resolveAssignableLicenseParent = async ({
 			statusCode: 400,
 		});
 	}
+	return candidates[0];
+};
 
-	const { parent, licenseDefinition } = candidates[0];
+export const resolveAssignableLicenseParent = async ({
+	ctx,
+	fullCustomer,
+	licenseProduct,
+	planId,
+	parentPlanId,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	licenseProduct: FullProduct;
+	planId: string;
+	parentPlanId?: string;
+}): Promise<{
+	parent: FullCusProduct;
+	licenseDefinition: DbPlanLicense;
+	available: number;
+}> => {
+	const assignableParents = fullCustomer.customer_products.filter(
+		(customerProduct) =>
+			isLicenseAssignableParentCustomerProduct({ customerProduct }),
+	);
+	const definitionsByParentId = await resolveLicenseDefinitionsForParents({
+		ctx,
+		parents: assignableParents,
+	});
+
+	const { parent, licenseDefinition } = selectLicenseParent({
+		assignableParents,
+		definitionsByParentId,
+		licenseProduct,
+		planId,
+		parentPlanId,
+	});
 	const balance = await customerLicenseRepo.getByParentAndLicense({
 		db: ctx.db,
 		parentCustomerProductId: parent.id,
