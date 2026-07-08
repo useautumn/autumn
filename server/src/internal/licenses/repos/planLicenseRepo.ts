@@ -8,6 +8,7 @@ import {
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const licenseProducts = alias(products, "license_products");
 
@@ -15,7 +16,7 @@ const upsert = async ({
 	db,
 	orgId,
 	env,
-	id,
+	id = generateId("plan_lic"),
 	parentInternalProductId,
 	parentCustomerProductId = null,
 	licenseInternalProductId,
@@ -26,7 +27,7 @@ const upsert = async ({
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
-	id: string;
+	id?: string;
 	parentInternalProductId: string;
 	parentCustomerProductId?: string | null;
 	licenseInternalProductId: string;

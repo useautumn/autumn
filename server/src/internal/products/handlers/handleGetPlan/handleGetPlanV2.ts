@@ -4,7 +4,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { loadApiPlanLicenses } from "@/internal/licenses/actions/loadApiPlanLicenses.js";
+import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 

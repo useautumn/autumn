@@ -9,7 +9,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { loadApiPlanLicenses } from "@/internal/licenses/actions/loadApiPlanLicenses.js";
+import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 

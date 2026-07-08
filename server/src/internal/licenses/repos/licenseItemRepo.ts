@@ -11,17 +11,17 @@ import { and, eq, inArray, notExists } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
-type LicenseItemRows = {
+export type LicenseItemRows = {
 	entitlements: (DbEntitlement & { plan_license_id: string })[];
 	prices: (DbPrice & { plan_license_id: string })[];
 };
 
-export type LicenseItemPair = {
+type LicenseItemPair = {
 	entitlementId?: string;
 	priceId?: string;
 };
 
-/** A link's content rows: the mix of live base rows and is_custom overrides. */
+/** A link's item rows: the mix of live base rows and is_custom overrides. */
 const listByPlanLicenseIds = async ({
 	db,
 	planLicenseIds,
@@ -163,7 +163,101 @@ const replaceItems = async ({
 	});
 };
 
-/** Version copies share rows — item refs are copied, content is not cloned. */
+const listRefsByEntitlementIds = async ({
+	db,
+	entitlementIds,
+}: {
+	db: DrizzleCli;
+	entitlementIds: string[];
+}) => {
+	if (entitlementIds.length === 0) return [];
+	return await db
+		.select()
+		.from(licenseItems)
+		.where(inArray(licenseItems.entitlement_id, entitlementIds));
+};
+
+const listRefsByPriceIds = async ({
+	db,
+	priceIds,
+}: {
+	db: DrizzleCli;
+	priceIds: string[];
+}) => {
+	if (priceIds.length === 0) return [];
+	return await db
+		.select()
+		.from(licenseItems)
+		.where(inArray(licenseItems.price_id, priceIds));
+};
+
+const setEntitlementRef = async ({
+	db,
+	licenseItemId,
+	entitlementId,
+}: {
+	db: DrizzleCli;
+	licenseItemId: string;
+	entitlementId: string;
+}) => {
+	await db
+		.update(licenseItems)
+		.set({ entitlement_id: entitlementId })
+		.where(eq(licenseItems.id, licenseItemId));
+};
+
+const setPriceRef = async ({
+	db,
+	licenseItemId,
+	priceId,
+}: {
+	db: DrizzleCli;
+	licenseItemId: string;
+	priceId: string;
+}) => {
+	await db
+		.update(licenseItems)
+		.set({ price_id: priceId })
+		.where(eq(licenseItems.id, licenseItemId));
+};
+
+const listReferencedEntitlementIds = async ({
+	db,
+	entitlementIds,
+}: {
+	db: DrizzleCli;
+	entitlementIds: string[];
+}): Promise<Set<string>> => {
+	if (entitlementIds.length === 0) return new Set();
+	const rows = await db
+		.select({ entitlement_id: licenseItems.entitlement_id })
+		.from(licenseItems)
+		.where(inArray(licenseItems.entitlement_id, entitlementIds));
+	return new Set(
+		rows
+			.map((row) => row.entitlement_id)
+			.filter((id): id is string => id !== null),
+	);
+};
+
+const listReferencedPriceIds = async ({
+	db,
+	priceIds,
+}: {
+	db: DrizzleCli;
+	priceIds: string[];
+}): Promise<Set<string>> => {
+	if (priceIds.length === 0) return new Set();
+	const rows = await db
+		.select({ price_id: licenseItems.price_id })
+		.from(licenseItems)
+		.where(inArray(licenseItems.price_id, priceIds));
+	return new Set(
+		rows.map((row) => row.price_id).filter((id): id is string => id !== null),
+	);
+};
+
+/** Version copies share rows — item refs are copied, underlying rows are not cloned. */
 const cloneItems = async ({
 	db,
 	fromPlanLicenseId,
@@ -194,4 +288,10 @@ export const licenseItemRepo = {
 	listByPlanLicenseIds,
 	replaceItems,
 	cloneItems,
+	listRefsByEntitlementIds,
+	listRefsByPriceIds,
+	setEntitlementRef,
+	setPriceRef,
+	listReferencedEntitlementIds,
+	listReferencedPriceIds,
 } as const;

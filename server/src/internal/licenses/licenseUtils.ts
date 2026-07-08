@@ -1,11 +1,66 @@
 import {
 	CusProductStatus,
+	type Entity,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	RecaseError,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { nullish } from "@/utils/genUtils.js";
+
+export const getFullLicenseProduct = async ({
+	ctx,
+	idOrInternalId,
+}: {
+	ctx: AutumnContext;
+	idOrInternalId: string;
+}) =>
+	await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+
+export async function resolveCustomerAndEntity(args: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId: string;
+}): Promise<{ fullCustomer: FullCustomer; entity: Entity }>;
+export async function resolveCustomerAndEntity(args: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+}): Promise<{ fullCustomer: FullCustomer; entity: Entity | undefined }>;
+export async function resolveCustomerAndEntity({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+}): Promise<{ fullCustomer: FullCustomer; entity: Entity | undefined }> {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		withEntities: true,
+	});
+	const entity = entityId
+		? fullCustomer.entities?.find((item) => item.id === entityId)
+		: undefined;
+	if (entityId && !entity) {
+		throw new RecaseError({
+			message: `Entity ${entityId} not found for customer ${customerId}.`,
+			code: ErrCode.EntityNotFound,
+			statusCode: 404,
+		});
+	}
+	return { fullCustomer, entity };
+}
 
 export const validateLicenseBillingMode = ({
 	prepaidOnly,
@@ -33,6 +88,13 @@ export const licensePoolParentStatuses = [
 	CusProductStatus.Active,
 	CusProductStatus.Trialing,
 	CusProductStatus.PastDue,
+];
+
+/** Statuses under which an existing assignment still counts as active. */
+export const licenseActiveAssignmentStatuses = [
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Trialing,
 ];
 
 const licenseAssignableStatuses = [

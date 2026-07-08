@@ -1,8 +1,9 @@
 import type { ApiPlanLicenseV1, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { licenseItemRepo, planLicenseRepo } from "../repos/index.js";
-import { deriveCustomizeFromItems } from "./licenseCustomize.js";
+import { getFullLicenseProduct } from "../../licenseUtils.js";
+import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
+import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
+import { deriveCustomizeFromItems } from "../customize/licenseCustomize.js";
 
 /**
  * Plan-response license data, fully derived: response handlers fetch through
@@ -25,14 +26,14 @@ export const loadApiPlanLicenses = async ({
 	});
 	if (links.length === 0) return result;
 
-	// 2. Customized content: content rows grouped per link
-	const content = await licenseItemRepo.listByPlanLicenseIds({
+	// 2. Item rows grouped per link (customized links have them)
+	const itemRows = await licenseItemRepo.listByPlanLicenseIds({
 		db: ctx.db,
 		planLicenseIds: links.map(({ planLicense }) => planLicense.id),
 	});
 	const customizedLinkIds = new Set([
-		...content.entitlements.map((row) => row.plan_license_id),
-		...content.prices.map((row) => row.plan_license_id),
+		...itemRows.entitlements.map((row) => row.plan_license_id),
+		...itemRows.prices.map((row) => row.plan_license_id),
 	]);
 
 	// 3. License products, fetched once per distinct customized license
@@ -43,12 +44,7 @@ export const loadApiPlanLicenses = async ({
 		if (licenseProducts.has(internalId)) continue;
 		licenseProducts.set(
 			internalId,
-			await ProductService.getFull({
-				db: ctx.db,
-				idOrInternalId: internalId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-			}),
+			await getFullLicenseProduct({ ctx, idOrInternalId: internalId }),
 		);
 	}
 
@@ -61,11 +57,11 @@ export const loadApiPlanLicenses = async ({
 			? deriveCustomizeFromItems({
 					ctx,
 					licenseProduct,
-					content: {
-						entitlements: content.entitlements.filter(
+					itemRows: {
+						entitlements: itemRows.entitlements.filter(
 							(row) => row.plan_license_id === planLicense.id,
 						),
-						prices: content.prices.filter(
+						prices: itemRows.prices.filter(
 							(row) => row.plan_license_id === planLicense.id,
 						),
 					},

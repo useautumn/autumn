@@ -123,9 +123,6 @@ export const getPlanResponse = async ({
 		fullProduct: product,
 	});
 
-	const licenses =
-		planLicenses && planLicenses.length > 0 ? planLicenses : undefined;
-
 	// 9. Build Plan response
 	const plan = {
 		id: product.id,
@@ -139,7 +136,7 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
-		licenses,
+		licenses: planLicenses?.length ? planLicenses : undefined,
 		free_trial: freeTrial,
 
 		created_at: product.created_at,

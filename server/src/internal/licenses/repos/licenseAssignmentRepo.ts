@@ -1,7 +1,7 @@
 import {
 	CusProductStatus,
 	customerProducts,
-	customers,
+	type DbCustomerProduct,
 	entities,
 	products,
 } from "@autumn/shared";
@@ -16,23 +16,18 @@ import {
 	notInArray,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { licenseActiveAssignmentStatuses } from "../licenseUtils.js";
 
-export type DbLicenseAssignment = typeof customerProducts.$inferSelect;
-
-const activeStatuses = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Trialing,
-];
+export type DbLicenseAssignment = DbCustomerProduct;
 
 const assignmentConditions = () => [
 	isNotNull(customerProducts.license_parent_customer_product_id),
 	isNotNull(customerProducts.internal_entity_id),
 ];
 
-const activeAssignmentConditions = () => [
+export const activeAssignmentConditions = () => [
 	...assignmentConditions(),
-	inArray(customerProducts.status, activeStatuses),
+	inArray(customerProducts.status, licenseActiveAssignmentStatuses),
 ];
 
 const findActiveAssignment = async ({
@@ -131,7 +126,7 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 					: []),
 				...assignmentConditions(),
 				...(activeOnly
-					? [inArray(customerProducts.status, activeStatuses)]
+					? [inArray(customerProducts.status, licenseActiveAssignmentStatuses)]
 					: []),
 				...(entityId ? [eq(entities.id, entityId)] : []),
 				...(licenseInternalProductId
@@ -271,17 +266,6 @@ const findLatestActiveCustomerLevelCustomerProduct = async ({
 		orderBy: (table, { desc }) => [desc(table.created_at)],
 	});
 
-const getCustomerByInternalId = async ({
-	db,
-	internalCustomerId,
-}: {
-	db: DrizzleCli;
-	internalCustomerId: string;
-}) =>
-	await db.query.customers.findFirst({
-		where: eq(customers.internal_id, internalCustomerId),
-	});
-
 const getEntityByInternalId = async ({
 	db,
 	internalEntityId,
@@ -291,17 +275,6 @@ const getEntityByInternalId = async ({
 }) =>
 	await db.query.entities.findFirst({
 		where: eq(entities.internal_id, internalEntityId),
-	});
-
-const getProductByInternalId = async ({
-	db,
-	internalProductId,
-}: {
-	db: DrizzleCli;
-	internalProductId: string;
-}) =>
-	await db.query.products.findFirst({
-		where: eq(products.internal_id, internalProductId),
 	});
 
 export const licenseAssignmentRepo = {
@@ -315,7 +288,5 @@ export const licenseAssignmentRepo = {
 	expireAssignmentsByIds,
 	maxActiveCountByCatalogLink,
 	findLatestActiveCustomerLevelCustomerProduct,
-	getCustomerByInternalId,
 	getEntityByInternalId,
-	getProductByInternalId,
 } as const;
