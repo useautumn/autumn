@@ -14,8 +14,6 @@ const licenseProducts = alias(products, "license_products");
 
 const upsert = async ({
 	db,
-	orgId,
-	env,
 	id = generateId("plan_lic"),
 	parentInternalProductId,
 	parentCustomerProductId = null,
@@ -25,8 +23,6 @@ const upsert = async ({
 	metadata,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	id?: string;
 	parentInternalProductId: string;
 	parentCustomerProductId?: string | null;
@@ -39,8 +35,6 @@ const upsert = async ({
 		.insert(planLicenses)
 		.values({
 			id,
-			org_id: orgId,
-			env,
 			parent_internal_product_id: parentInternalProductId,
 			parent_customer_product_id: parentCustomerProductId,
 			license_internal_product_id: licenseInternalProductId,
@@ -151,14 +145,23 @@ const listCatalogByOrgEnv = async ({
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
-}) =>
-	await db.query.planLicenses.findMany({
-		where: and(
-			eq(planLicenses.org_id, orgId),
-			eq(planLicenses.env, env),
-			isNull(planLicenses.parent_customer_product_id),
-		),
-	});
+}) => {
+	const rows = await db
+		.select({ row: planLicenses })
+		.from(planLicenses)
+		.innerJoin(
+			products,
+			eq(products.internal_id, planLicenses.parent_internal_product_id),
+		)
+		.where(
+			and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				isNull(planLicenses.parent_customer_product_id),
+			),
+		);
+	return rows.map(({ row }) => row);
+};
 
 const listByLicenseInternalProductId = async ({
 	db,

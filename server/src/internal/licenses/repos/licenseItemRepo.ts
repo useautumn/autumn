@@ -4,7 +4,8 @@ import {
 	type DbEntitlement,
 	type DbPrice,
 	entitlements,
-	licenseItems,
+	licenseEntitlements,
+	licensePrices,
 	prices,
 } from "@autumn/shared";
 import { and, eq, inArray, notExists } from "drizzle-orm";
@@ -30,38 +31,37 @@ const listByPlanLicenseIds = async ({
 	planLicenseIds: string[];
 }): Promise<LicenseItemRows> => {
 	if (planLicenseIds.length === 0) return { entitlements: [], prices: [] };
-	const rows = await db
-		.select({
-			plan_license_id: licenseItems.plan_license_id,
-			entitlement: entitlements,
-			price: prices,
-		})
-		.from(licenseItems)
-		.leftJoin(entitlements, eq(entitlements.id, licenseItems.entitlement_id))
-		.leftJoin(prices, eq(prices.id, licenseItems.price_id))
-		.where(inArray(licenseItems.plan_license_id, planLicenseIds));
-
-	const entitlementRows: LicenseItemRows["entitlements"] = [];
-	const priceRows: LicenseItemRows["prices"] = [];
-	const seenEntitlements = new Set<string>();
-	const seenPrices = new Set<string>();
-	for (const { plan_license_id, entitlement, price } of rows) {
-		if (entitlement) {
-			const key = `${plan_license_id}:${entitlement.id}`;
-			if (!seenEntitlements.has(key)) {
-				seenEntitlements.add(key);
-				entitlementRows.push({ ...entitlement, plan_license_id });
-			}
-		}
-		if (price) {
-			const key = `${plan_license_id}:${price.id}`;
-			if (!seenPrices.has(key)) {
-				seenPrices.add(key);
-				priceRows.push({ ...price, plan_license_id });
-			}
-		}
-	}
-	return { entitlements: entitlementRows, prices: priceRows };
+	const [entitlementRows, priceRows] = await Promise.all([
+		db
+			.select({
+				row: entitlements,
+				plan_license_id: licenseEntitlements.plan_license_id,
+			})
+			.from(licenseEntitlements)
+			.innerJoin(
+				entitlements,
+				eq(entitlements.id, licenseEntitlements.entitlement_id),
+			)
+			.where(inArray(licenseEntitlements.plan_license_id, planLicenseIds)),
+		db
+			.select({
+				row: prices,
+				plan_license_id: licensePrices.plan_license_id,
+			})
+			.from(licensePrices)
+			.innerJoin(prices, eq(prices.id, licensePrices.price_id))
+			.where(inArray(licensePrices.plan_license_id, planLicenseIds)),
+	]);
+	return {
+		entitlements: entitlementRows.map(({ row, plan_license_id }) => ({
+			...row,
+			plan_license_id,
+		})),
+		prices: priceRows.map(({ row, plan_license_id }) => ({
+			...row,
+			plan_license_id,
+		})),
+	};
 };
 
 const sweepUnreferencedCustomRows = async ({
@@ -82,9 +82,9 @@ const sweepUnreferencedCustomRows = async ({
 					eq(prices.is_custom, true),
 					notExists(
 						db
-							.select({ id: licenseItems.id })
-							.from(licenseItems)
-							.where(eq(licenseItems.price_id, prices.id)),
+							.select({ id: licensePrices.id })
+							.from(licensePrices)
+							.where(eq(licensePrices.price_id, prices.id)),
 					),
 					notExists(
 						db
@@ -104,9 +104,9 @@ const sweepUnreferencedCustomRows = async ({
 					eq(entitlements.is_custom, true),
 					notExists(
 						db
-							.select({ id: licenseItems.id })
-							.from(licenseItems)
-							.where(eq(licenseItems.entitlement_id, entitlements.id)),
+							.select({ id: licenseEntitlements.id })
+							.from(licenseEntitlements)
+							.where(eq(licenseEntitlements.entitlement_id, entitlements.id)),
 					),
 					notExists(
 						db
@@ -140,17 +140,42 @@ const replaceItems = async ({
 	});
 
 	await db
-		.delete(licenseItems)
-		.where(eq(licenseItems.plan_license_id, planLicenseId));
+		.delete(licenseEntitlements)
+		.where(eq(licenseEntitlements.plan_license_id, planLicenseId));
+	await db
+		.delete(licensePrices)
+		.where(eq(licensePrices.plan_license_id, planLicenseId));
 
-	const validItems = items.filter((item) => item.entitlementId || item.priceId);
-	if (validItems.length > 0) {
-		await db.insert(licenseItems).values(
-			validItems.map((item) => ({
-				id: generateId("lic_item"),
+	const entitlementIds = [
+		...new Set(
+			items
+				.map((item) => item.entitlementId)
+				.filter((id): id is string => Boolean(id)),
+		),
+	];
+	const priceIds = [
+		...new Set(
+			items
+				.map((item) => item.priceId)
+				.filter((id): id is string => Boolean(id)),
+		),
+	];
+	if (entitlementIds.length > 0) {
+		await db.insert(licenseEntitlements).values(
+			entitlementIds.map((entitlementId) => ({
+				id: generateId("lic_ent"),
 				plan_license_id: planLicenseId,
-				entitlement_id: item.entitlementId ?? null,
-				price_id: item.priceId ?? null,
+				entitlement_id: entitlementId,
+				created_at: now,
+			})),
+		);
+	}
+	if (priceIds.length > 0) {
+		await db.insert(licensePrices).values(
+			priceIds.map((priceId) => ({
+				id: generateId("lic_pr"),
+				plan_license_id: planLicenseId,
+				price_id: priceId,
 				created_at: now,
 			})),
 		);
@@ -173,8 +198,8 @@ const listRefsByEntitlementIds = async ({
 	if (entitlementIds.length === 0) return [];
 	return await db
 		.select()
-		.from(licenseItems)
-		.where(inArray(licenseItems.entitlement_id, entitlementIds));
+		.from(licenseEntitlements)
+		.where(inArray(licenseEntitlements.entitlement_id, entitlementIds));
 };
 
 const listRefsByPriceIds = async ({
@@ -187,38 +212,38 @@ const listRefsByPriceIds = async ({
 	if (priceIds.length === 0) return [];
 	return await db
 		.select()
-		.from(licenseItems)
-		.where(inArray(licenseItems.price_id, priceIds));
+		.from(licensePrices)
+		.where(inArray(licensePrices.price_id, priceIds));
 };
 
 const setEntitlementRef = async ({
 	db,
-	licenseItemId,
+	refId,
 	entitlementId,
 }: {
 	db: DrizzleCli;
-	licenseItemId: string;
+	refId: string;
 	entitlementId: string;
 }) => {
 	await db
-		.update(licenseItems)
+		.update(licenseEntitlements)
 		.set({ entitlement_id: entitlementId })
-		.where(eq(licenseItems.id, licenseItemId));
+		.where(eq(licenseEntitlements.id, refId));
 };
 
 const setPriceRef = async ({
 	db,
-	licenseItemId,
+	refId,
 	priceId,
 }: {
 	db: DrizzleCli;
-	licenseItemId: string;
+	refId: string;
 	priceId: string;
 }) => {
 	await db
-		.update(licenseItems)
+		.update(licensePrices)
 		.set({ price_id: priceId })
-		.where(eq(licenseItems.id, licenseItemId));
+		.where(eq(licensePrices.id, refId));
 };
 
 const listReferencedEntitlementIds = async ({
@@ -230,14 +255,10 @@ const listReferencedEntitlementIds = async ({
 }): Promise<Set<string>> => {
 	if (entitlementIds.length === 0) return new Set();
 	const rows = await db
-		.select({ entitlement_id: licenseItems.entitlement_id })
-		.from(licenseItems)
-		.where(inArray(licenseItems.entitlement_id, entitlementIds));
-	return new Set(
-		rows
-			.map((row) => row.entitlement_id)
-			.filter((id): id is string => id !== null),
-	);
+		.select({ entitlement_id: licenseEntitlements.entitlement_id })
+		.from(licenseEntitlements)
+		.where(inArray(licenseEntitlements.entitlement_id, entitlementIds));
+	return new Set(rows.map((row) => row.entitlement_id));
 };
 
 const listReferencedPriceIds = async ({
@@ -249,12 +270,10 @@ const listReferencedPriceIds = async ({
 }): Promise<Set<string>> => {
 	if (priceIds.length === 0) return new Set();
 	const rows = await db
-		.select({ price_id: licenseItems.price_id })
-		.from(licenseItems)
-		.where(inArray(licenseItems.price_id, priceIds));
-	return new Set(
-		rows.map((row) => row.price_id).filter((id): id is string => id !== null),
-	);
+		.select({ price_id: licensePrices.price_id })
+		.from(licensePrices)
+		.where(inArray(licensePrices.price_id, priceIds));
+	return new Set(rows.map((row) => row.price_id));
 };
 
 /** Version copies share rows — item refs are copied, underlying rows are not cloned. */
@@ -267,21 +286,31 @@ const cloneItems = async ({
 	fromPlanLicenseId: string;
 	toPlanLicenseId: string;
 }) => {
-	const existing = await db
-		.select()
-		.from(licenseItems)
-		.where(eq(licenseItems.plan_license_id, fromPlanLicenseId));
-	if (existing.length === 0) return;
+	const existing = await listByPlanLicenseIds({
+		db,
+		planLicenseIds: [fromPlanLicenseId],
+	});
 	const now = Date.now();
-	await db.insert(licenseItems).values(
-		existing.map((row) => ({
-			id: generateId("lic_item"),
-			plan_license_id: toPlanLicenseId,
-			entitlement_id: row.entitlement_id,
-			price_id: row.price_id,
-			created_at: now,
-		})),
-	);
+	if (existing.entitlements.length > 0) {
+		await db.insert(licenseEntitlements).values(
+			existing.entitlements.map((row) => ({
+				id: generateId("lic_ent"),
+				plan_license_id: toPlanLicenseId,
+				entitlement_id: row.id,
+				created_at: now,
+			})),
+		);
+	}
+	if (existing.prices.length > 0) {
+		await db.insert(licensePrices).values(
+			existing.prices.map((row) => ({
+				id: generateId("lic_pr"),
+				plan_license_id: toPlanLicenseId,
+				price_id: row.id,
+				created_at: now,
+			})),
+		);
+	}
 };
 
 export const licenseItemRepo = {

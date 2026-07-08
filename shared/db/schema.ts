@@ -50,8 +50,9 @@ import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
 import {
 	customerLicenses,
-	licenseItems,
+	licenseEntitlements,
 	licensePoolGrants,
+	licensePrices,
 	planLicenses,
 } from "../models/licenseModels/licenseTable.js";
 // Migration Relations
@@ -160,7 +161,8 @@ export {
 	invoiceTemplates,
 	invoices,
 	customerLicenses,
-	licenseItems,
+	licenseEntitlements,
+	licensePrices,
 	licensePoolGrants,
 	// OAuth Provider
 	jwks,
