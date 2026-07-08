@@ -79,6 +79,9 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/billing/attach",
+		// Preserve not-yet-synced tracked usage: a blind delete here can race
+		// the queued balance sync and drop consumable overage before cycle end.
+		flushBalances: true,
 	}),
 
 	route({
@@ -90,6 +93,7 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/billing.attach",
+		flushBalances: true,
 	}),
 
 	route({
