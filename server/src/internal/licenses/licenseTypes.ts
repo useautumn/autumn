@@ -1,18 +1,5 @@
-import type {
-	DbPlanLicense,
-	FullCusProduct,
-	FullProduct,
-} from "@autumn/shared";
+import type { DbPlanLicense } from "@autumn/shared";
 import type { DbLicenseAssignment } from "./repos/licenseAssignmentRepo.js";
-
-/** One-shot snapshot of a customer's license graph, shared across the
- * reconcile pipeline: valid parents, their resolved definitions, memoized
- * license product fetches. */
-export type LicenseTopology = {
-	validParents: FullCusProduct[];
-	definitionsByParentId: Map<string, DbPlanLicense[]>;
-	getLicenseProduct: (licenseInternalProductId: string) => Promise<FullProduct>;
-};
 
 export type LicenseDefinition = Pick<
 	DbPlanLicense,

@@ -1,7 +1,6 @@
 import type { FullCusProduct, FullCustomer, FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import type { LicenseTopology } from "../../licenseTypes.js";
 import {
 	getFullLicenseProduct,
 	isLicenseParentCustomerProduct,
@@ -12,21 +11,31 @@ import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { endProvisionedCustomerProducts } from "../assignments/utils/endProvisionedCustomerProducts.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { resolveLicenseDefinitionsForParents } from "./resolveLicenseDefinitions.js";
+import type { CustomerLicenseState } from "./types.js";
 
-const loadLicenseTopology = async ({
+const loadCustomerLicenseState = async ({
 	ctx,
 	fullCustomer,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-}): Promise<LicenseTopology> => {
-	const validParents = fullCustomer.customer_products.filter(
-		(customerProduct) => isLicenseParentCustomerProduct({ customerProduct }),
+}): Promise<CustomerLicenseState> => {
+	const parents = fullCustomer.customer_products.filter((customerProduct) =>
+		isLicenseParentCustomerProduct({ customerProduct }),
 	);
-	const definitionsByParentId = await resolveLicenseDefinitionsForParents({
-		ctx,
-		parents: validParents,
-	});
+	const [definitionsByParentId, assignments, balances] = await Promise.all([
+		resolveLicenseDefinitionsForParents({ ctx, parents }),
+		licenseAssignmentRepo.listAssignmentsWithEntityAndProductByCustomer({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+		}),
+		customerLicenseRepo.listByParentCustomerProductIds({
+			db: ctx.db,
+			parentCustomerProductIds: fullCustomer.customer_products.map(
+				(customerProduct) => customerProduct.id,
+			),
+		}),
+	]);
 	const licenseProductCache = new Map<string, Promise<FullProduct>>();
 	const getLicenseProduct = (licenseInternalProductId: string) => {
 		const cached = licenseProductCache.get(licenseInternalProductId);
@@ -38,29 +47,39 @@ const loadLicenseTopology = async ({
 		licenseProductCache.set(licenseInternalProductId, product);
 		return product;
 	};
-	return { validParents, definitionsByParentId, getLicenseProduct };
+	return {
+		parents,
+		definitionsByParentId,
+		assignments,
+		balances,
+		getLicenseProduct,
+	};
 };
 
+/** Ends or re-parents active assignments whose parent is no longer valid,
+ * patching state.assignments to mirror the writes. */
 const transitionStrandedAssignments = async ({
 	ctx,
 	fullCustomer,
-	topology,
+	state,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	topology: LicenseTopology;
+	state: CustomerLicenseState;
 }) => {
-	const { validParents, definitionsByParentId } = topology;
-	const strandedAssignments =
-		await licenseAssignmentRepo.listActiveStrandedByCustomer({
-			db: ctx.db,
-			internalCustomerId: fullCustomer.internal_id,
-			validParentCustomerProductIds: validParents.map((parent) => parent.id),
-		});
+	const { parents, definitionsByParentId } = state;
+	const validParentIds = new Set(parents.map((parent) => parent.id));
+	const strandedAssignments = state.assignments.filter(
+		({ assignment }) =>
+			!(
+				assignment.license_parent_customer_product_id &&
+				validParentIds.has(assignment.license_parent_customer_product_id)
+			),
+	);
 	if (strandedAssignments.length === 0) return;
 
 	const successorParentByLicenseId = new Map<string, FullCusProduct>();
-	for (const parent of validParents) {
+	for (const parent of parents) {
 		for (const definition of definitionsByParentId.get(parent.id) ?? []) {
 			if (definition.included <= 0) continue;
 			if (
@@ -76,8 +95,8 @@ const transitionStrandedAssignments = async ({
 
 	const endedAt = Date.now();
 	const reparentedAssignmentIdsByParentId = new Map<string, string[]>();
-	const endedAssignmentIds: string[] = [];
-	for (const assignment of strandedAssignments) {
+	const endedAssignmentIds = new Set<string>();
+	for (const { assignment } of strandedAssignments) {
 		const successor = successorParentByLicenseId.get(
 			assignment.internal_product_id,
 		);
@@ -86,18 +105,22 @@ const transitionStrandedAssignments = async ({
 				reparentedAssignmentIdsByParentId.get(successor.id) ?? [];
 			assignmentIds.push(assignment.id);
 			reparentedAssignmentIdsByParentId.set(successor.id, assignmentIds);
+			assignment.license_parent_customer_product_id = successor.id;
 			continue;
 		}
-		endedAssignmentIds.push(assignment.id);
+		endedAssignmentIds.add(assignment.id);
 	}
 
-	if (endedAssignmentIds.length > 0) {
+	if (endedAssignmentIds.size > 0) {
 		await endProvisionedCustomerProducts({
 			ctx,
 			customerId: fullCustomer.id ?? fullCustomer.internal_id,
-			assignmentIds: endedAssignmentIds,
+			assignmentIds: [...endedAssignmentIds],
 			endedAt,
 		});
+		state.assignments = state.assignments.filter(
+			({ assignment }) => !endedAssignmentIds.has(assignment.id),
+		);
 	}
 	for (const [
 		parentCustomerProductId,
@@ -112,19 +135,27 @@ const transitionStrandedAssignments = async ({
 };
 
 /** Converge customer_licenses rows: granted from resolved definitions,
- * remaining self-healed to granted - live assignments, rows for dead parents gone. */
+ * remaining self-healed to granted - live assignments, rows for dead parents
+ * gone. Rebuilds state.balances from the written rows. */
 const reconcileAssignmentBalances = async ({
 	ctx,
 	fullCustomer,
-	topology,
+	state,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
-	topology: LicenseTopology;
+	state: CustomerLicenseState;
 }) => {
-	const { validParents, definitionsByParentId } = topology;
+	const { parents, definitionsByParentId } = state;
 
-	for (const parent of validParents) {
+	const assignedByKey = new Map<string, number>();
+	for (const { assignment } of state.assignments) {
+		const key = `${assignment.license_parent_customer_product_id}:${assignment.internal_product_id}`;
+		assignedByKey.set(key, (assignedByKey.get(key) ?? 0) + 1);
+	}
+
+	const convergedBalances: CustomerLicenseState["balances"] = [];
+	for (const parent of parents) {
 		for (const definition of definitionsByParentId.get(parent.id) ?? []) {
 			if (definition.included <= 0) continue;
 			const balance = await customerLicenseRepo.upsertGranted({
@@ -135,11 +166,9 @@ const reconcileAssignmentBalances = async ({
 				granted: definition.included,
 			});
 			const assigned =
-				await licenseAssignmentRepo.countActiveByParentAndLicense({
-					db: ctx.db,
-					parentCustomerProductId: parent.id,
-					licenseInternalProductId: definition.license_internal_product_id,
-				});
+				assignedByKey.get(
+					`${parent.id}:${definition.license_internal_product_id}`,
+				) ?? 0;
 			const remaining = definition.included - assigned;
 			if (balance.remaining !== remaining) {
 				await customerLicenseRepo.setRemaining({
@@ -148,21 +177,23 @@ const reconcileAssignmentBalances = async ({
 					remaining,
 				});
 			}
+			convergedBalances.push({ ...balance, remaining });
 		}
 	}
+	state.balances = convergedBalances;
 
 	await customerLicenseRepo.deleteByParentIdsExcept({
 		db: ctx.db,
 		internalCustomerId: fullCustomer.internal_id,
-		keepParentCustomerProductIds: validParents.map((parent) => parent.id),
+		keepParentCustomerProductIds: parents.map((parent) => parent.id),
 	});
 };
 
 /**
- * Whole-customer license recompute: re-parents or ends stranded assignments,
- * converges assignment balances. Idempotent;
- * call after any parent mutation commits. Returns the topology it converged
- * against, or null when the customer touches no licenses.
+ * Whole-customer license convergence: loads the customer's license state,
+ * transitions stranded assignments, converges balances. Idempotent; the
+ * returned state mirrors the database after the writes, or null when the
+ * customer touches no licenses.
  *
  * Pass internalCustomerId (or a FRESH fullCustomer) so no-license customers
  * are gated out before the full-customer read.
@@ -177,7 +208,7 @@ export const reconcileLicenseStateForCustomer = async ({
 	customerId: string;
 	internalCustomerId?: string;
 	fullCustomer?: FullCustomer;
-}): Promise<LicenseTopology | null> => {
+}): Promise<CustomerLicenseState | null> => {
 	const gateInternalId = fullCustomer?.internal_id ?? internalCustomerId;
 	if (
 		gateInternalId &&
@@ -202,26 +233,19 @@ export const reconcileLicenseStateForCustomer = async ({
 		return null;
 	}
 
-	const topology = await loadLicenseTopology({ ctx, fullCustomer: customer });
+	const state = await loadCustomerLicenseState({ ctx, fullCustomer: customer });
 
-	await transitionStrandedAssignments({
-		ctx,
-		fullCustomer: customer,
-		topology,
-	});
-	await reconcileAssignmentBalances({
-		ctx,
-		fullCustomer: customer,
-		topology,
-	});
+	await transitionStrandedAssignments({ ctx, fullCustomer: customer, state });
+	await reconcileAssignmentBalances({ ctx, fullCustomer: customer, state });
+
 	logLicenseAction({
 		ctx,
 		action: "reconcile",
 		details: {
 			customer: customerId,
-			parents: topology.validParents.length,
-			definitions: [...topology.definitionsByParentId.values()].flat().length,
+			parents: state.parents.length,
+			definitions: [...state.definitionsByParentId.values()].flat().length,
 		},
 	});
-	return topology;
+	return state;
 };
