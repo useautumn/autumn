@@ -11,6 +11,7 @@ import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /**
@@ -88,6 +89,9 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
 	});
+	if (disableOverageBilling && lineItems.length > 0) {
+		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
+	}
 	if (lineItems.length > 0 && !disableOverageBilling) {
 		// 2. Create, finalize, and pay a single invoice with all line items
 		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });

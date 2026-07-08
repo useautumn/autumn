@@ -1790,6 +1790,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -1824,6 +1825,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -1863,6 +1865,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -1963,6 +1966,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -1997,6 +2001,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2036,6 +2041,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -2136,6 +2142,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2170,6 +2177,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2210,6 +2218,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),
@@ -2310,6 +2319,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2344,6 +2354,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2384,6 +2395,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),

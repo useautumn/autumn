@@ -75,13 +75,13 @@ describe("Autumn operation tools", () => {
 			"attach",
 			"updateSubscription",
 			"createSchedule",
+			"updateCustomer",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(true);
 		}
 
 		for (const name of [
 			"listCustomers",
-			"updateCustomer",
 			"getCustomer",
 			"listFeatures",
 			"listPlans",

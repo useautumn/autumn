@@ -29,11 +29,16 @@ function toProductItem({
 
 export function ItemChangeRow({
 	change,
+	features: featureOverride,
 }: {
 	change: PlanUpdatePreviewItemChange;
+	features?: Feature[];
 }) {
-	const { features = [] } = useFeaturesQuery();
-	const productItem = toProductItem({ item: change.item, features });
+	const { features: orgFeatures = [] } = useFeaturesQuery();
+	const productItem = toProductItem({
+		item: change.item,
+		features: featureOverride ?? orgFeatures,
+	});
 
 	if (!productItem) return null;
 

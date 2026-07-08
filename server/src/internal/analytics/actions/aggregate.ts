@@ -393,6 +393,52 @@ const formatGroupableResults = ({
 	return { meta, rows: data.length, data };
 };
 
+/**
+ * Decides whether the groupable pipe must bypass events_property_mv.
+ *
+ * The property rollup's insert-time value-shape gate drops high-entropy values
+ * (UUIDs, long hex, opaque strings), so a key whose values are all gate-dropped
+ * has zero rows in the rollup even though the raw events exist — querying it
+ * silently returns an empty result. Probe the rollup for the key and force the
+ * ungated events_hourly_mv path when it is absent. Probe failures fall back to
+ * the rollup (current behavior) rather than failing the whole query.
+ */
+const shouldSkipPropertyRollup = async ({
+	pipes,
+	orgId,
+	env,
+	groupColumn,
+	propertyKey,
+	hasPropertyFilters,
+}: {
+	pipes: ReturnType<typeof getTinybirdPipes>;
+	orgId: string;
+	env: string;
+	groupColumn: string;
+	propertyKey: string;
+	hasPropertyFilters: boolean;
+}): Promise<boolean> => {
+	// The pipe only reads the rollup for unfiltered property group-bys
+	if (groupColumn !== "property" || hasPropertyFilters || !propertyKey) {
+		return false;
+	}
+
+	try {
+		const probe = await pipes.propertyKeyExists({
+			org_id: orgId,
+			env,
+			property_key: propertyKey,
+		});
+		return probe.data.length === 0;
+	} catch (error) {
+		console.warn(
+			`[aggregate] property_key_exists probe failed for key "${propertyKey}", using property rollup`,
+			error,
+		);
+		return false;
+	}
+};
+
 /** Aggregates events into time-bucketed timeseries data */
 export const aggregate = async ({
 	ctx,
@@ -445,6 +491,16 @@ export const aggregate = async ({
 			validatePropertyPathForJSON({ propertyKey });
 		}
 
+		const filterParams = buildFilterParams({ filter_by: params.filter_by });
+		const skipPropertyRollup = await shouldSkipPropertyRollup({
+			pipes,
+			orgId: org.id,
+			env,
+			groupColumn,
+			propertyKey,
+			hasPropertyFilters: Object.keys(filterParams).length > 0,
+		});
+
 		const pipeParams = {
 			org_id: org.id,
 			env,
@@ -457,8 +513,9 @@ export const aggregate = async ({
 			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
-			...buildFilterParams({ filter_by: params.filter_by }),
+			...filterParams,
 			max_groups: params.max_groups,
+			skip_property_rollup: skipPropertyRollup ? ("1" as const) : undefined,
 		};
 
 		const result = await pipes.aggregateGroupable(pipeParams);

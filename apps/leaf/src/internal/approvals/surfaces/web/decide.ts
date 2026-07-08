@@ -1,10 +1,12 @@
+import { denyEveApproval } from "../../../../harness/eve/approval.js";
 import { db } from "../../../../lib/db.js";
+import { logger } from "../../../../lib/logger.js";
 import { resolveApproval } from "../../actions/resolveApproval.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 
 export type WebApprovalDecision =
 	| { status: "approved"; text: string }
-	| { status: "rejected" }
+	| { status: "rejected"; text?: string }
 	| { error: string };
 
 /**
@@ -32,8 +34,34 @@ export const decideWebApproval = async ({
 	}
 
 	if (action === "reject") {
+		// Eve parks the whole turn on the approval — deny it in the session too,
+		// or it keeps waiting, holds the user's next message behind the stale
+		// approval, and the discarded write can still run later.
+		let text: string | undefined;
+		if (approval.harness === "eve") {
+			// The local cancel below must run even if the remote deny throws, or
+			// the approval stays pending and the dashboard keeps showing it.
+			try {
+				const denied = await denyEveApproval({ approval, providerUserId });
+				if ("error" in denied && denied.error) {
+					logger.warn("Could not deny Eve approval on reject", {
+						event: "leaf.eve_reject_deny_failed",
+						approval_id: approvalId,
+						data: { message: denied.message },
+					});
+				} else if ("text" in denied) {
+					text = denied.text;
+				}
+			} catch (error) {
+				logger.warn("Could not deny Eve approval on reject", {
+					event: "leaf.eve_reject_deny_failed",
+					approval_id: approvalId,
+					error,
+				});
+			}
+		}
 		await chatApprovalRepo.cancel({ approvalId, db, providerUserId });
-		return { status: "rejected" };
+		return { status: "rejected", text };
 	}
 
 	const result = await resolveApproval({ approval, providerUserId });

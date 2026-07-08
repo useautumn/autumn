@@ -3,6 +3,7 @@ import {
 	type CustomizePlanV1,
 	type FullProduct,
 	isFixedPrice,
+	isPrepaidPrice,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
@@ -221,8 +222,13 @@ const rollupOnePlan = ({
 	}
 
 	const baseStripeItem = lookupBaseStripeItem({ base: decision.base, diffs });
+	// Prepaid item quantities are pack counts (feature_quantities), never
+	// plan-instance counts — they must not drive the plan quantity.
+	const quantityFeature = features.find(
+		(d) => d.match.kind === "autumn_price" && !isPrepaidPrice(d.match.price),
+	);
 	const quantity =
-		baseStripeItem?.quantity ?? features[0]?.stripe.quantity ?? 1;
+		baseStripeItem?.quantity ?? quantityFeature?.stripe.quantity ?? 1;
 
 	if (baseStripeItem && quantity > 1 && !isAddOn({ product })) {
 		warnings.push({ type: "base_plan_quantity_gt_one", quantity });

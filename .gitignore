@@ -163,6 +163,11 @@ apps/leaf/contracts/
 # Leaf harness (Claude Code) per-thread workspaces and config dirs.
 apps/leaf/.harness/
 
+# Leaf Eve generated runtime/build artifacts.
+apps/leaf/.eve/
+apps/leaf/.output/
+apps/leaf/.workflow-data/
+
 # Built sandbox runner bundle (produced by sandbox/buildRunner.ts).
 apps/leaf/src/harness/claudeCode/runner/runner.mjs
 

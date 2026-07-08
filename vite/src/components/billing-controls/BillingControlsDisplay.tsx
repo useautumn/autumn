@@ -20,6 +20,7 @@ import { motion } from "motion/react";
 import { createContext, Fragment, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
+import { skipOverageBillingLabel } from "./overageBillingOptions";
 
 const ROW_SWAP_TRANSITION = {
 	duration: 0.2,
@@ -269,6 +270,10 @@ export const SpendLimitRow = ({
 				entries={[
 					{ label: "Type", value: isPercent ? "Usage %" : "Absolute" },
 					{ label: "Overage limit", value: overageLimitValue },
+					{
+						label: "Overage billing",
+						value: skipOverageBillingLabel(spendLimit.skip_overage_billing),
+					},
 				]}
 			/>
 		</RowButton>

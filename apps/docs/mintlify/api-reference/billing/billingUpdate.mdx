@@ -567,6 +567,10 @@ const response = await autumn.billing.update({
   If true, the subscription is updated internally without applying billing changes in Stripe.
 </DynamicParamField>
 
+<DynamicParamField body="refund_last_payment" type="'prorated' | 'full'">
+  Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+</DynamicParamField>
+
 <DynamicParamField body="recalculate_balances" type="object">
   Controls whether balances should be recalculated during the subscription update.
   <Expandable title="properties">

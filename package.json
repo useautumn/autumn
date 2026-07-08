@@ -26,6 +26,7 @@
 			"packages/ksuid",
 			"packages/stripe-sync",
 			"packages/gateway",
+			"packages/render",
 			"packages/ui"
 		],
 		"catalog": {

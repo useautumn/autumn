@@ -3,7 +3,7 @@ import {
 	type ChatOAuthCredential,
 	chatOAuthCredentials,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { ChatDb } from "../../../lib/db.js";
 
 export type ChatOAuthCredentialInsert =
@@ -22,14 +22,18 @@ export const getChatOAuthCredentialByInstallationEnv = async ({
 	orgId?: string;
 	// Web chat credentials are per-user; always pass userId there. Slack omits it
 	// (one installation-scoped credential per install).
-	userId?: string;
+	userId?: string | null;
 }) =>
 	db.query.chatOAuthCredentials.findFirst({
 		where: and(
 			eq(chatOAuthCredentials.chat_installation_id, chatInstallationId),
 			eq(chatOAuthCredentials.env, env),
 			orgId ? eq(chatOAuthCredentials.org_id, orgId) : undefined,
-			userId ? eq(chatOAuthCredentials.user_id, userId) : undefined,
+			userId === null
+				? isNull(chatOAuthCredentials.user_id)
+				: userId
+					? eq(chatOAuthCredentials.user_id, userId)
+					: undefined,
 		),
 	});
 

@@ -341,6 +341,7 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	refund_last_payment: z.union([z.string(), z.undefined()]).optional(),
 	recalculate_balances: z
 		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
 		.optional(),
@@ -614,6 +615,8 @@ export const billingUpdateRedirectModeSchema = closedEnumSchema;
 
 export const billingUpdateCancelActionSchema = closedEnumSchema;
 
+export const billingUpdateRefundLastPaymentSchema = closedEnumSchema;
+
 export const updateSubscriptionParamsSchema = z.object({
 	customerId: z.string(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -641,6 +644,9 @@ export const updateSubscriptionParamsSchema = z.object({
 		.optional(),
 	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	refundLastPayment: z
+		.union([billingUpdateRefundLastPaymentSchema, z.undefined()])
+		.optional(),
 	recalculateBalances: z
 		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
 		.optional(),

@@ -57,6 +57,22 @@ export const billingControlsFromColumns = (
 	) as CustomerBillingControls;
 };
 
+/** Canonical form for change detection: skip_overage_billing false ≡ unset. */
+export const normalizeBillingControlsForCompare = (
+	billingControls: CustomerBillingControls | null | undefined,
+): CustomerBillingControls | undefined => {
+	if (!billingControls?.spend_limits) return billingControls ?? undefined;
+
+	return {
+		...billingControls,
+		spend_limits: billingControls.spend_limits.map((spendLimit) => {
+			if (spendLimit.skip_overage_billing === true) return spendLimit;
+			const { skip_overage_billing: _dropped, ...rest } = spendLimit;
+			return rest;
+		}),
+	};
+};
+
 export const mergeBillingControls = (
 	current: CustomerBillingControls | null | undefined,
 	patch: CustomerBillingControls | null | undefined,

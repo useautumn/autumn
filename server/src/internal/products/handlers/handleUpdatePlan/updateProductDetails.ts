@@ -5,6 +5,7 @@ import {
 	type FreeTrial,
 	type FullProduct,
 	isFreeProductV2,
+	normalizeBillingControlsForCompare,
 	type Organization,
 	type Product,
 	type ProductItem,
@@ -60,8 +61,10 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 
 	if (
 		notNullish(prod2.billing_controls) &&
-		JSON.stringify(billingControlsFromColumns(prod1)) !==
-			JSON.stringify(prod2.billing_controls)
+		JSON.stringify(
+			normalizeBillingControlsForCompare(billingControlsFromColumns(prod1)),
+		) !==
+			JSON.stringify(normalizeBillingControlsForCompare(prod2.billing_controls))
 	) {
 		return false;
 	}
@@ -291,5 +294,8 @@ export const handleUpdateProductDetails = async ({
 	curProduct.is_default = newProduct.is_default ?? curProduct.is_default;
 	curProduct.archived = newProduct.archived ?? curProduct.archived;
 	curProduct.config = mergedConfig ?? curProduct.config;
-	Object.assign(curProduct, pickBillingControlColumns(newProduct.billing_controls));
+	Object.assign(
+		curProduct,
+		pickBillingControlColumns(newProduct.billing_controls),
+	);
 };

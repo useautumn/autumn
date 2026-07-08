@@ -1,5 +1,5 @@
 {
-  "id": "f3b7e10a-c61a-4cc1-9057-8172e1f9e4cc",
+  "id": "105c4eac-42c5-430f-8694-c48fb7cde8f5",
   "prevId": "3b3d75ed-832c-4cbc-9201-b5933872501e",
   "version": "7",
   "dialect": "postgresql",
@@ -4169,6 +4169,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "braintrust_parent": {
           "name": "braintrust_parent",
           "type": "text",
@@ -4183,7 +4189,23 @@
           "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_harness_sessions_session_id": {
+          "name": "idx_harness_sessions_session_id",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "harness_sessions_org_id_env_thread_key_pk": {
@@ -8565,12 +8587,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "filter_key": {
-          "name": "filter_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "anchor_customer_entitlement_id": {
           "name": "anchor_customer_entitlement_id",
           "type": "text",
@@ -8654,16 +8670,10 @@
               "asc": true,
               "isExpression": true,
               "nulls": "last"
-            },
-            {
-              "expression": "COALESCE(\"filter_key\", '')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
             }
           ],
           "isUnique": true,
-          "concurrently": true,
+          "concurrently": false,
           "method": "btree",
           "with": {}
         }

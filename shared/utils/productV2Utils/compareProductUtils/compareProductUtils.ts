@@ -3,6 +3,7 @@
 import {
 	BILLING_CONTROL_KEYS,
 	billingControlsFromColumns,
+	normalizeBillingControlsForCompare,
 } from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { FullProduct } from "../../../models/productModels/productModels.js";
@@ -130,13 +131,15 @@ const sortControls = (items: Array<{ feature_id?: string }>) =>
 
 const normalizeBillingControls = (
 	billingControls?: ProductV2["billing_controls"],
-) =>
-	JSON.stringify(
+) => {
+	const canonical = normalizeBillingControlsForCompare(billingControls);
+	return JSON.stringify(
 		BILLING_CONTROL_KEYS.flatMap((key) => {
-			const items = billingControls?.[key];
+			const items = canonical?.[key];
 			return items?.length ? [[key, sortControls(items)]] : [];
 		}),
 	);
+};
 
 export const compareBillingControls = ({
 	newBillingControls,

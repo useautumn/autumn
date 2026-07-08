@@ -5,6 +5,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
 import { ProductService } from "@/internal/products/ProductService";
+import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
 import { rollupMatchedPlans } from "./rollupMatchedPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
@@ -45,6 +46,13 @@ export const detectSubscriptionMatch = async ({
 		nowSec,
 	});
 
+	// Disabled: the per-tiered-price Stripe fetch makes bulk detection slow.
+	// Cost: tiered prices can't shape-match (payloads omit price.tiers).
+	// await enrichSnapshotTiers({
+	// 	stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+	// 	phaseSnapshots,
+	// });
+
 	const fullProducts =
 		preloadedFullProducts ??
 		(await ProductService.listFull({
@@ -54,9 +62,12 @@ export const detectSubscriptionMatch = async ({
 		}));
 
 	const phaseMatches: PhaseMatch[] = phaseSnapshots.map((snapshot) => {
-		const itemDiffs = snapshot.items.map((item) =>
-			findAutumnMatchForStripeItem({ item, fullProducts }),
-		);
+		const itemDiffs = rematchFeaturesWithinAnchoredPlans({
+			itemDiffs: snapshot.items.map((item) =>
+				findAutumnMatchForStripeItem({ item, fullProducts, org: ctx.org }),
+			),
+			org: ctx.org,
+		});
 		const plans = rollupMatchedPlans({ itemDiffs });
 		return {
 			start_date: snapshot.start_date,

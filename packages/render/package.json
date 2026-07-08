@@ -1,0 +1,22 @@
+{
+	"name": "@autumn/render",
+	"version": "0.0.1",
+	"private": true,
+	"author": "Autumn",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"ts": "tsc --noEmit",
+		"test": "bun test tests/unit"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.13",
+		"typescript": "~5.8.3"
+	}
+}

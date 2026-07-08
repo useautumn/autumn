@@ -46,6 +46,11 @@ export type StripeConnectConfig = {
 export type OrgRedisConfig = {
 	/** AES-256-CBC encrypted full Redis connection string via encryptData() */
 	connectionString: string;
+	/**
+	 * AES-256-CBC encrypted public/reachable-from-outside-the-VPC connection
+	 * string, used off-AWS (local dev, trigger.dev) in place of `connectionString`.
+	 */
+	publicConnectionString?: string;
 	/** Plain domain/host only, used for pool URL-change detection */
 	url: string;
 	/** Percentage of customers routed to the dedicated Redis (0-100) */

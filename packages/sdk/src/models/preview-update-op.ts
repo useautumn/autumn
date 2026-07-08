@@ -981,6 +981,20 @@ export type PreviewUpdateCancelAction = ClosedEnum<
 >;
 
 /**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export const PreviewUpdateRefundLastPayment = {
+  Prorated: "prorated",
+  Full: "full",
+} as const;
+/**
+ * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+ */
+export type PreviewUpdateRefundLastPayment = ClosedEnum<
+  typeof PreviewUpdateRefundLastPayment
+>;
+
+/**
  * Controls whether balances should be recalculated during the subscription update.
  */
 export type PreviewUpdateRecalculateBalances = {
@@ -1061,6 +1075,10 @@ export type PreviewUpdateParams = {
    * If true, the subscription is updated internally without applying billing changes in Stripe.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
+   */
+  refundLastPayment?: PreviewUpdateRefundLastPayment | undefined;
   /**
    * Controls whether balances should be recalculated during the subscription update.
    */
@@ -2611,6 +2629,11 @@ export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateCancelAction);
 
 /** @internal */
+export const PreviewUpdateRefundLastPayment$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateRefundLastPayment
+> = z.enum(PreviewUpdateRefundLastPayment);
+
+/** @internal */
 export type PreviewUpdateRecalculateBalances$Outbound = {
   enabled: boolean;
 };
@@ -2683,6 +2706,7 @@ export type PreviewUpdateParams$Outbound = {
   cancel_action?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   no_billing_changes?: boolean | undefined;
+  refund_last_payment?: string | undefined;
   recalculate_balances?: PreviewUpdateRecalculateBalances$Outbound | undefined;
   carry_over_usages?: PreviewUpdateCarryOverUsages$Outbound | undefined;
 };
@@ -2718,6 +2742,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     noBillingChanges: z.optional(z.boolean()),
+    refundLastPayment: z.optional(
+      PreviewUpdateRefundLastPayment$outboundSchema,
+    ),
     recalculateBalances: z.optional(
       z.lazy(() => PreviewUpdateRecalculateBalances$outboundSchema),
     ),
@@ -2738,6 +2765,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       cancelAction: "cancel_action",
       billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",
+      refundLastPayment: "refund_last_payment",
       recalculateBalances: "recalculate_balances",
       carryOverUsages: "carry_over_usages",
     });
