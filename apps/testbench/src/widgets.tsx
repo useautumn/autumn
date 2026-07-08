@@ -91,8 +91,7 @@ export function WorkerDots({
 						w.status === "ready" && "bg-green-500",
 						w.status === "booting" && "animate-pulse bg-sandbox",
 						w.status === "provisioning" && "bg-muted-foreground/25",
-						(w.status === "dead" || w.status === "failed") &&
-							"bg-destructive",
+						(w.status === "dead" || w.status === "failed") && "bg-destructive",
 					)}
 					key={w.name}
 					title={`${w.name} · ${w.status}${w.reason ? ` — ${w.reason}` : ""}`}
@@ -202,6 +201,7 @@ export function FileStatusBadge({ status }: { status: string }) {
 
 const WORKER_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	ready: { tone: "green", label: "ready" },
+	running: { tone: "blue", label: "running" },
 	booting: { tone: "blue", label: "booting" },
 	provisioning: { tone: "muted", label: "provisioning" },
 	dead: { tone: "red", label: "dead" },
