@@ -1,80 +1,88 @@
 import {
-	type AppEnv,
-	CusProductStatus,
 	customerLicenses,
 	customerProducts,
 	licensePoolGrants,
 	planLicenses,
 } from "@autumn/shared";
-import { sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { licensePoolParentStatuses } from "../licenseUtils.js";
-
-const activeAssignmentStatuses = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Trialing,
-];
-
-const sqlStatusList = (statuses: CusProductStatus[]) =>
-	sql.join(
-		statuses.map((status) => sql`${status}`),
-		sql`, `,
-	);
+import { activeAssignmentConditions } from "./licenseAssignmentRepo.js";
 
 /** Single-roundtrip union gate: does this customer touch licenses at all? */
 const touchesLicenses = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 }): Promise<boolean> => {
-	const [row] = await db.execute<{ touches: boolean }>(sql`
-		SELECT
-			EXISTS (
-				SELECT 1
-				FROM ${planLicenses}
-				INNER JOIN ${customerProducts}
-					ON ${customerProducts.internal_product_id} = ${planLicenses.parent_internal_product_id}
-				WHERE ${customerProducts.internal_customer_id} = ${internalCustomerId}
-					AND ${customerProducts.internal_entity_id} IS NULL
-					AND ${customerProducts.status} IN (${sqlStatusList(licensePoolParentStatuses)})
-			)
-			OR EXISTS (
-				SELECT 1
-				FROM ${planLicenses}
-				INNER JOIN ${customerProducts}
-					ON ${customerProducts.id} = ${planLicenses.parent_customer_product_id}
-				WHERE ${customerProducts.internal_customer_id} = ${internalCustomerId}
-			)
-			OR EXISTS (
-				SELECT 1
-				FROM ${customerProducts}
-				WHERE ${customerProducts.internal_customer_id} = ${internalCustomerId}
-					AND ${customerProducts.license_parent_customer_product_id} IS NOT NULL
-					AND ${customerProducts.internal_entity_id} IS NOT NULL
-					AND ${customerProducts.status} IN (${sqlStatusList(activeAssignmentStatuses)})
-			)
-			OR EXISTS (
-				SELECT 1
-				FROM ${customerLicenses}
-				WHERE ${customerLicenses.org_id} = ${orgId}
-					AND ${customerLicenses.env} = ${env}
-					AND ${customerLicenses.internal_customer_id} = ${internalCustomerId}
-			)
-			OR EXISTS (
-				SELECT 1
-				FROM ${licensePoolGrants}
-				WHERE ${licensePoolGrants.internal_customer_id} = ${internalCustomerId}
-			)
-			AS touches
-	`);
-	return row?.touches === true;
+	const one = { one: sql<number>`1` };
+
+	const parentWithCatalogLinks = db
+		.select(one)
+		.from(planLicenses)
+		.innerJoin(
+			customerProducts,
+			eq(
+				customerProducts.internal_product_id,
+				planLicenses.parent_internal_product_id,
+			),
+		)
+		.where(
+			and(
+				eq(customerProducts.internal_customer_id, internalCustomerId),
+				isNull(customerProducts.internal_entity_id),
+				inArray(customerProducts.status, licensePoolParentStatuses),
+			),
+		)
+		.limit(1);
+
+	const customerScopedLinks = db
+		.select(one)
+		.from(planLicenses)
+		.innerJoin(
+			customerProducts,
+			eq(customerProducts.id, planLicenses.parent_customer_product_id),
+		)
+		.where(eq(customerProducts.internal_customer_id, internalCustomerId))
+		.limit(1);
+
+	const activeAssignments = db
+		.select(one)
+		.from(customerProducts)
+		.where(
+			and(
+				eq(customerProducts.internal_customer_id, internalCustomerId),
+				...activeAssignmentConditions(),
+			),
+		)
+		.limit(1);
+
+	const balances = db
+		.select(one)
+		.from(customerLicenses)
+		.where(
+			eq(customerLicenses.internal_customer_id, internalCustomerId),
+		)
+		.limit(1);
+
+	const grantMarkers = db
+		.select(one)
+		.from(licensePoolGrants)
+		.where(eq(licensePoolGrants.internal_customer_id, internalCustomerId))
+		.limit(1);
+
+	const rows = await unionAll(
+		parentWithCatalogLinks,
+		customerScopedLinks,
+		activeAssignments,
+		balances,
+		grantMarkers,
+	).limit(1);
+
+	return rows.length > 0;
 };
 
 export const licenseGateRepo = {

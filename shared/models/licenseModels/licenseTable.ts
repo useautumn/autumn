@@ -83,8 +83,6 @@ export const customerLicenses = pgTable(
 	"customer_licenses",
 	{
 		id: text().primaryKey().notNull(),
-		org_id: text("org_id").notNull(),
-		env: text().notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
 		parent_customer_product_id: text("parent_customer_product_id").notNull(),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
@@ -113,7 +111,7 @@ export const customerLicenses = pgTable(
 			.on(table.parent_customer_product_id, table.license_internal_product_id)
 			.concurrently(),
 		index("idx_customer_licenses_customer")
-			.on(table.org_id, table.env, table.internal_customer_id)
+			.on(table.internal_customer_id)
 			.concurrently(),
 	],
 );

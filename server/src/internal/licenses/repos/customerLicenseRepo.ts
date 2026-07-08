@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	customerLicenses,
 	type DbCustomerLicense,
 } from "@autumn/shared";
@@ -45,16 +44,12 @@ const listByParentCustomerProductIds = async ({
 /** Idempotent ensure + granted sync for a (parent, license) balance row. */
 const upsertGranted = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 	parentCustomerProductId,
 	licenseInternalProductId,
 	granted,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 	parentCustomerProductId: string;
 	licenseInternalProductId: string;
@@ -64,8 +59,6 @@ const upsertGranted = async ({
 		.insert(customerLicenses)
 		.values({
 			id: generateId("cus_lic"),
-			org_id: orgId,
-			env,
 			internal_customer_id: internalCustomerId,
 			parent_customer_product_id: parentCustomerProductId,
 			license_internal_product_id: licenseInternalProductId,
@@ -165,14 +158,10 @@ const setRemaining = async ({
 
 const deleteByParentIdsExcept = async ({
 	db,
-	orgId,
-	env,
 	internalCustomerId,
 	keepParentCustomerProductIds,
 }: {
 	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
 	internalCustomerId: string;
 	keepParentCustomerProductIds: string[];
 }) => {
@@ -180,8 +169,6 @@ const deleteByParentIdsExcept = async ({
 		.delete(customerLicenses)
 		.where(
 			and(
-				eq(customerLicenses.org_id, orgId),
-				eq(customerLicenses.env, env),
 				eq(customerLicenses.internal_customer_id, internalCustomerId),
 				...(keepParentCustomerProductIds.length > 0
 					? [
