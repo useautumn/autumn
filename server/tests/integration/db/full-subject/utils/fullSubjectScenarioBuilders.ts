@@ -195,7 +195,6 @@ const buildEntitlement = ({
 	expiry_duration: null,
 	expiry_length: null,
 	internal_reward_id: null,
-	pooled: false,
 	rollover: null,
 });
 

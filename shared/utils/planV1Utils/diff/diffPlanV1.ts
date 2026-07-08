@@ -48,8 +48,6 @@ export const toCreatePlanItemParams = (
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
-	if (item.pooled !== undefined && item.pooled !== null)
-		out.pooled = item.pooled;
 	if (item.included !== undefined && item.included !== null)
 		out.included = item.included;
 	if (item.unlimited !== undefined && item.unlimited !== null)
