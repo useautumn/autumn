@@ -17,9 +17,8 @@
 --   usage_window_updates: array of objects with:
 --     - internal_customer_id: string
 --     - feature_id: string
---     - usage_windows: jsonb array of DbUsageWindow rows (the COMPLETE set for
---       that customer+feature; Redis is authoritative and prunes closed
---       windows, so rows are full-replaced per customer+feature)
+--     - usage_windows: jsonb array of DbUsageWindow rows to upsert; empty arrays
+--       mean no Redis rows to flush, not a delete/prune signal
 --
 -- Returns JSONB with:
 --   updates: object mapping customer_entitlement_id -> { balance, adjustment, entities }

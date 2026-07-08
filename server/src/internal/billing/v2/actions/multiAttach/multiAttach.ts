@@ -11,7 +11,10 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { computeMultiAttachPlan } from "./compute/computeMultiAttachPlan";
-import { handleMultiAttachErrors } from "./errors/handleMultiAttachErrors";
+import {
+	handleMultiAttachBillingPlanErrors,
+	handleMultiAttachErrors,
+} from "./errors/handleMultiAttachErrors";
 import { logMultiAttachContext } from "./logs/logMultiAttachContext";
 import { setupMultiAttachBillingContext } from "./setup/setupMultiAttachBillingContext";
 
@@ -69,6 +72,8 @@ export async function multiAttach({
 		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
+
+	handleMultiAttachBillingPlanErrors({ ctx, billingContext, billingPlan });
 
 	if (preview) {
 		return {
