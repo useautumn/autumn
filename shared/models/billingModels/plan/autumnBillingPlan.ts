@@ -72,6 +72,16 @@ export const PatchCustomerProductSchema = z.object({
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
+export const LicenseOpSchema = z.object({
+	op: z.enum(["take", "release"]),
+	internalCustomerId: z.string(),
+	parentCustomerProductId: z.string(),
+	licenseInternalProductId: z.string(),
+	granted: z.number(),
+	entityId: z.string().optional(),
+});
+export type LicenseOp = z.infer<typeof LicenseOpSchema>;
+
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
@@ -104,6 +114,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 	customLicenses: z.array(CustomLicenseChangeSchema).optional(),
+	licenseOps: z.array(LicenseOpSchema).optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

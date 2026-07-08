@@ -1,8 +1,8 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
-import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
-import type { LicenseUpdateContext } from "./types.js";
+import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import type { LicenseUpdateContext } from "../types.js";
 
 export const setupLicenseUpdateContext = async ({
 	ctx,

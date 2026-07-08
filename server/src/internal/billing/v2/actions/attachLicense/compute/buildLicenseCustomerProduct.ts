@@ -5,12 +5,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import type { LicenseDefinition } from "../../../licenseTypes.js";
-import { resolveEffectiveLicenseProduct } from "../../customize/resolveEffectiveLicenseProduct.js";
+import { resolveEffectiveLicenseProduct } from "@/internal/licenses/actions/customize/resolveEffectiveLicenseProduct.js";
+import type { LicenseDefinition } from "@/internal/licenses/licenseTypes.js";
 
-export const provisionLicenseCustomerProduct = async ({
+export const buildLicenseCustomerProduct = async ({
 	ctx,
 	fullCustomer,
 	licenseProduct,
@@ -61,12 +59,6 @@ export const provisionLicenseCustomerProduct = async ({
 			}),
 		),
 	};
-
-	await CusProductService.insert({ db: ctx.db, data: customerProduct });
-	await CusEntService.insert({
-		ctx,
-		data: customerProduct.customer_entitlements,
-	});
 
 	return customerProduct;
 };

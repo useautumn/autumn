@@ -1,10 +1,9 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { serializeLicenseAssignment } from "../../../licenseResponseUtils.js";
-import { logLicenseAction } from "../../logs/logLicenseAction.js";
-import { afterLicenseMutation } from "../../reconcile/afterLicenseMutation.js";
-import { computeLicenseAssignmentPlan } from "./computeLicenseAssignmentPlan.js";
-import { executeLicenseAssignment } from "./executeLicenseAssignment.js";
-import { setupLicenseAssignmentContext } from "./setupLicenseAssignmentContext.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { logLicenseAction } from "@/internal/licenses/actions/logs/logLicenseAction.js";
+import { serializeLicenseAssignment } from "@/internal/licenses/licenseResponseUtils.js";
+import { computeLicenseAssignmentPlan } from "./compute/computeLicenseAssignmentPlan.js";
+import { setupLicenseAssignmentContext } from "./setup/setupLicenseAssignmentContext.js";
 
 export const attachLicense = async ({
 	ctx,
@@ -12,12 +11,14 @@ export const attachLicense = async ({
 	entityId,
 	planId,
 	parentPlanId,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
 	planId: string;
 	parentPlanId?: string;
+	preview?: boolean;
 }) => {
 	// 1. Setup
 	const context = await setupLicenseAssignmentContext({
@@ -34,7 +35,7 @@ export const attachLicense = async ({
 	const plan = await computeLicenseAssignmentPlan({ ctx, context });
 	logLicenseAction({
 		ctx,
-		action: "attach",
+		action: preview ? "preview_attach" : "attach",
 		details: plan.existing
 			? { customer: customerId, entity: entityId, existing: plan.existing.id }
 			: {
@@ -46,27 +47,31 @@ export const attachLicense = async ({
 	});
 
 	if (plan.existing) {
-		return serializeLicenseAssignment({
+		const assignment = serializeLicenseAssignment({
 			assignment: plan.existing,
 			entityId: context.entity.id ?? context.entity.internal_id,
 			licenseProductId: context.licenseProduct.id,
 		});
+		return preview
+			? { customer_id: customerId, intent: "none" as const, assignment }
+			: assignment;
+	}
+	if (preview) {
+		return {
+			customer_id: customerId,
+			intent: "assign" as const,
+			parent_plan_id: plan.parent.product.id,
+			license_plan_id: planId,
+			available: plan.available,
+		};
 	}
 
-	// 3. Execute
-	const assignment = await executeLicenseAssignment({ ctx, context, plan });
-
-	// 4. Converge: repairs stranded assignments and balances; assignment
-	// itself never bills
-	await afterLicenseMutation({
-		ctx,
-		customerId: context.fullCustomer.id ?? undefined,
-		internalCustomerId: context.fullCustomer.internal_id,
-		entityId,
-	});
+	// 3. Execute: capacity take + provision insert + license lifecycle
+	// (converge + cache) all run inside the shared billing plan executor
+	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
 	return serializeLicenseAssignment({
-		assignment,
+		assignment: plan.provisioned,
 		entityId: context.entity.id ?? context.entity.internal_id,
 		licenseProductId: context.licenseProduct.id,
 	});

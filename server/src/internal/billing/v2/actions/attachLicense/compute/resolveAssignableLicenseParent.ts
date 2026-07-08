@@ -7,9 +7,9 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { isLicenseAssignableParentCustomerProduct } from "../../../licenseUtils.js";
-import { customerLicenseRepo } from "../../../repos/customerLicenseRepo.js";
-import { resolveLicenseDefinitionsForParents } from "../../reconcile/resolveLicenseDefinitions.js";
+import { resolveLicenseDefinitionsForParents } from "@/internal/licenses/actions/reconcile/resolveLicenseDefinitions.js";
+import { isLicenseAssignableParentCustomerProduct } from "@/internal/licenses/licenseUtils.js";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 
 export const resolveAssignableLicenseParent = async ({
 	ctx,

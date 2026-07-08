@@ -1,6 +1,5 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
 
@@ -28,6 +27,11 @@ export const endProvisionedCustomerProducts = async ({
 		if (!customerProduct) continue;
 
 		if ((customerProduct.subscription_ids?.length ?? 0) > 0) {
+			// Lazy import: keeps the reconcile graph free of the billing actions
+			// index, which statically cycles back into the plan executor.
+			const { billingActions } = await import(
+				"@/internal/billing/v2/actions/index.js"
+			);
 			await billingActions.updateSubscription({
 				ctx,
 				params: {

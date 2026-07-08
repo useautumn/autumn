@@ -1,4 +1,5 @@
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
+import { attachLicense } from "@/internal/billing/v2/actions/attachLicense/attachLicense";
 import { createSchedule } from "@/internal/billing/v2/actions/createSchedule/createSchedule";
 import { previewCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/previewCreateSchedule";
 import { flash } from "@/internal/billing/v2/actions/dfu/flash";
@@ -15,17 +16,20 @@ import { sync } from "@/internal/billing/v2/actions/sync/sync";
 import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
 import { syncV2 } from "@/internal/billing/v2/actions/sync/syncV2";
+import { updateLicense } from "@/internal/billing/v2/actions/updateLicense/updateLicense";
 import { updateSubscription } from "@/internal/billing/v2/actions/updateSubscription/updateSubscription";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 
 export const billingActions = {
 	attach: attach,
+	attachLicense: attachLicense,
 	createSchedule: createSchedule,
 	previewCreateSchedule: previewCreateSchedule,
 	multiAttach: multiAttach,
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,
 	updateSubscription: updateSubscription,
+	updateLicense: updateLicense,
 	migrate: migrate,
 	restore: restore,
 	previewRestore: previewRestore,

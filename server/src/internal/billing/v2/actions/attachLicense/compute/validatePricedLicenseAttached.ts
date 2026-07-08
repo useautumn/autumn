@@ -6,8 +6,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
-import { resolveEffectiveLicenseProduct } from "../../customize/resolveEffectiveLicenseProduct.js";
+import { resolveEffectiveLicenseProduct } from "@/internal/licenses/actions/customize/resolveEffectiveLicenseProduct.js";
+import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
 /** Assignment never bills: a priced license must already be attached at the
  * customer level (normal billing.attach) before it can be assigned. */

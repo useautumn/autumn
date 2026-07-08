@@ -1,8 +1,8 @@
 import { EntityNotFoundError, ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
-import { getFullLicenseProduct } from "../../../licenseUtils.js";
-import type { LicenseAssignmentContext } from "./types.js";
+import { getFullLicenseProduct } from "@/internal/licenses/licenseUtils.js";
+import type { LicenseAssignmentContext } from "../types.js";
 
 /** Composed setup for assignment actions: license product (archived-checked),
  * customer context, and the target entity — billing's setup-context shape. */
