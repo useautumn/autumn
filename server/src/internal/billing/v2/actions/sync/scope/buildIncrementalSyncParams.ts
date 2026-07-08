@@ -1,8 +1,10 @@
-import { isCustomerProductAddOn } from "@autumn/shared";
-import type {
-	FullCusProduct,
-	SyncParamsV1,
-	SyncPlanInstance,
+import {
+	type FullCusProduct,
+	isCustomerProductAddOn,
+	isPrepaidPrice,
+	priceToEnt,
+	type SyncParamsV1,
+	type SyncPlanInstance,
 } from "@autumn/shared";
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
 import {
@@ -18,7 +20,13 @@ export type IncrementalSyncSkipReason =
 	| "no_changed_targets";
 
 export type IncrementalSyncParamsResult =
-	| { shouldSync: true; params: SyncParamsV1 }
+	| {
+			shouldSync: true;
+			/** Null when the only change is removals (nothing to re-attach). */
+			params: SyncParamsV1 | null;
+			/** Linked add-on cusProducts whose Stripe items were removed. */
+			removedCustomerProducts: FullCusProduct[];
+	  }
 	| { shouldSync: false; reason: IncrementalSyncSkipReason };
 
 const currentPhase = ({ match }: { match: SubscriptionMatch }) =>
@@ -44,7 +52,8 @@ const matchedPlansByProductId = ({
 	return { ok: true, plansByProductId };
 };
 
-const linkedAddOnQuantity = ({
+/** Active linked cusProducts for this add-on plan — one row per purchased instance. */
+const linkedAddOnInstances = ({
 	linkedCustomerProducts,
 	syncPlan,
 }: {
@@ -57,7 +66,59 @@ const linkedAddOnQuantity = ({
 		return syncPlan.entity_id
 			? linkedProduct.internal_entity_id === syncPlan.entity_id
 			: !linkedProduct.internal_entity_id;
-	}).length;
+	});
+
+/** Current API-side prepaid totals (packs × billing_units + allowance). */
+const linkedPrepaidFeatureTotals = ({
+	linkedProduct,
+	matchedPlan,
+}: {
+	linkedProduct: FullCusProduct;
+	matchedPlan: MatchedPlan;
+}): Map<string, number> => {
+	const totals = new Map<string, number>();
+	for (const price of matchedPlan.product.prices) {
+		if (!isPrepaidPrice(price)) continue;
+		const entitlement = priceToEnt({
+			price,
+			entitlements: matchedPlan.product.entitlements,
+		});
+		if (!entitlement) continue;
+
+		const option = linkedProduct.options?.find(
+			(o) => o.feature_id === entitlement.feature.id,
+		);
+		const packs = option?.quantity ?? 0;
+		const billingUnits = price.config.billing_units ?? 1;
+		const allowance = entitlement.allowance ?? 0;
+		totals.set(entitlement.feature.id, packs * billingUnits + allowance);
+	}
+	return totals;
+};
+
+const prepaidQuantitiesDrifted = ({
+	linkedProduct,
+	matchedPlan,
+	syncPlan,
+}: {
+	linkedProduct: FullCusProduct;
+	matchedPlan: MatchedPlan;
+	syncPlan: SyncPlanInstance;
+}): boolean => {
+	const currentTotals = linkedPrepaidFeatureTotals({
+		linkedProduct,
+		matchedPlan,
+	});
+	if (currentTotals.size === 0) return false;
+
+	for (const [featureId, currentTotal] of currentTotals) {
+		const desired = syncPlan.feature_quantities?.find(
+			(fq) => fq.feature_id === featureId,
+		);
+		if ((desired?.quantity ?? 0) !== currentTotal) return true;
+	}
+	return false;
+};
 
 export const buildIncrementalSyncParams = ({
 	match,
@@ -118,21 +179,39 @@ export const buildIncrementalSyncParams = ({
 			};
 		}
 
+		// Add-ons: syncPlan.quantity is the plan-INSTANCE count (rollup derives it
+		// from the base item's Stripe quantity, never from prepaid items —
+		// prepaid pack counts live in syncPlan.feature_quantities instead).
 		if (matchedPlan.product.is_add_on === true) {
-			const linkedQuantity = linkedAddOnQuantity({
+			const linkedInstances = linkedAddOnInstances({
 				linkedCustomerProducts,
 				syncPlan,
 			});
 			const desiredQuantity = syncPlan.quantity ?? 1;
-			if (linkedQuantity < desiredQuantity) {
+			if (linkedInstances.length < desiredQuantity) {
+				// Fewer instances linked than Stripe shows — attach only the missing
+				// ones; expire_previous: false so existing instances survive.
 				changedPlans.push({
 					...syncPlan,
-					quantity: desiredQuantity - linkedQuantity,
+					quantity: desiredQuantity - linkedInstances.length,
+					expire_previous: false,
 				});
+				continue;
+			}
+
+			// Same instance count but prepaid packs drifted — push the syncPlan
+			// unmodified (expire_previous: true) so syncV2 expire+replaces with usage carry.
+			const driftedInstance = linkedInstances.find((linkedProduct) =>
+				prepaidQuantitiesDrifted({ linkedProduct, matchedPlan, syncPlan }),
+			);
+			if (driftedInstance) {
+				changedPlans.push({ ...syncPlan });
 			}
 			continue;
 		}
 
+		// Main plans re-sync only when the linked target's product id changed
+		// (upgrade/downgrade); prepaid drift is not checked for them here.
 		const target = matchedPlanToTargetGroupLink({ matchedPlan, syncPlan });
 		if (!target) {
 			return {
@@ -147,7 +226,18 @@ export const buildIncrementalSyncParams = ({
 		}
 	}
 
-	if (changedPlans.length === 0) {
+	// Linked add-ons whose Stripe items disappeared from the sub get expired.
+	// Removal of MAIN linked products may get the same handling in the future.
+	const matchedPlanIds = new Set(
+		phaseMatch.plans.map((matchedPlan) => matchedPlan.product.id),
+	);
+	const removedCustomerProducts = linkedCustomerProducts.filter(
+		(linkedProduct) =>
+			isCustomerProductAddOn(linkedProduct) &&
+			!matchedPlanIds.has(linkedProduct.product.id),
+	);
+
+	if (changedPlans.length === 0 && removedCustomerProducts.length === 0) {
 		return {
 			shouldSync: false,
 			reason: "no_changed_targets",
@@ -156,9 +246,10 @@ export const buildIncrementalSyncParams = ({
 
 	return {
 		shouldSync: true,
-		params: {
-			...params,
-			phases: [{ ...phase, plans: changedPlans }],
-		},
+		params:
+			changedPlans.length > 0
+				? { ...params, phases: [{ ...phase, plans: changedPlans }] }
+				: null,
+		removedCustomerProducts,
 	};
 };
