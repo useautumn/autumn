@@ -50,7 +50,11 @@ import {
 	WORKER_TIMEOUT_MS,
 } from "../constants.ts";
 import { narrate, sink } from "./logSink.ts";
-import { type BaseImageDeps, buildBaseImage } from "./modalImage.ts";
+import {
+	type BaseImageDeps,
+	buildBaseImage,
+	buildIngressImage,
+} from "./modalImage.ts";
 import type {
 	CreateSandboxOptions,
 	DetachedCommand,
@@ -178,6 +182,20 @@ const getBaseImage = (deps: BaseImageDeps): Promise<Image> => {
 		}
 	})();
 	return baseImagePromise;
+};
+
+let ingressImagePromise: Promise<Image> | undefined;
+const getIngressImage = (): Promise<Image> => {
+	ingressImagePromise ??= (async () => {
+		const app = await getApp();
+		const done = stage("building ingress image (debian + bun; cached after)", 15_000);
+		try {
+			return await buildIngressImage(modal, app);
+		} finally {
+			done();
+		}
+	})();
+	return ingressImagePromise;
 };
 
 /** Warm snapshot images keyed by warm sandbox name (forkWorker restores these). */
@@ -666,11 +684,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			if (!opts.source) {
 				throw new Error("modal: createIngressSandbox requires a git source");
 			}
-			const image = await getBaseImage({
-				gitUrl: cloneUrl(opts.source),
-				gitRef: opts.source.revision,
-				lockHash: lockHash(),
-			});
+			// Ingress runs only a built-ins-only http server — a tiny debian+bun
+			// image, NOT the full services base (which is slow and can fail on its
+			// own, taking the whole run down before fan-out).
+			const image = await getIngressImage();
 			const sandbox = await createFromImage(
 				image,
 				{
