@@ -253,6 +253,20 @@ describe("findProductLevelMatchForStripeItem", () => {
 		expect(match?.priceMatch).toBeNull();
 	});
 
+	test("single candidate with a claim-less metered item stays unmatched instead of becoming a custom base", () => {
+		const onlyCandidate = candidate({
+			id: "base",
+			price: fixedPrice({ amount: 20 }),
+		});
+
+		const match = findProductLevelMatchForStripeItem({
+			item: stripeItem({ usageType: "metered", unitAmountDecimal: null }),
+			candidates: [onlyCandidate],
+		});
+
+		expect(match).toBeNull();
+	});
+
 	test("selects the unique candidate whose base price matches the Stripe item", () => {
 		const variantBasePrice = fixedPrice({ id: "price_variant", amount: 35 });
 		const base = candidate({

@@ -153,6 +153,8 @@ const processSyncMapping = async ({
 
 	// 3.5 Skip if this subscription is already linked to an active instance of
 	// this product — avoids double-attaching when auto-sync got there first.
+	// expire_previous: true means the caller intends to expire-and-replace it
+	// (the V0 repair flow), so only the no-op dedup case skips here.
 	const alreadyLinked = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts: fullCustomer.customer_products,
 		stripeSubscriptionId: mapping.stripe_subscription_id,
@@ -161,7 +163,7 @@ const processSyncMapping = async ({
 			customerProduct.product_id === finalProduct.id &&
 			ACTIVE_STATUSES.includes(customerProduct.status),
 	);
-	if (alreadyLinked) return;
+	if (alreadyLinked && !mapping.expire_previous) return;
 
 	// 4. Find transition context (current cusProduct to expire)
 	const { currentCustomerProduct } = setupAttachTransitionContext({

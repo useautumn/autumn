@@ -228,14 +228,23 @@ export const buildIncrementalSyncParams = ({
 
 	// Linked add-ons whose Stripe items disappeared from the sub get expired.
 	// Removal of MAIN linked products may get the same handling in the future.
+	// An unmatched item_diff means detection failed to classify something
+	// still on the subscription (e.g. the tiered-prepaid enrichment gap) —
+	// that's a detection miss, not proof of removal, so skip expiring
+	// anything this phase to avoid dropping a live entitlement.
+	const hasUnmatchedItems = phaseMatch.item_diffs.some(
+		(diff) => diff.match.kind === "none",
+	);
 	const matchedPlanIds = new Set(
 		phaseMatch.plans.map((matchedPlan) => matchedPlan.product.id),
 	);
-	const removedCustomerProducts = linkedCustomerProducts.filter(
-		(linkedProduct) =>
-			isCustomerProductAddOn(linkedProduct) &&
-			!matchedPlanIds.has(linkedProduct.product.id),
-	);
+	const removedCustomerProducts = hasUnmatchedItems
+		? []
+		: linkedCustomerProducts.filter(
+				(linkedProduct) =>
+					isCustomerProductAddOn(linkedProduct) &&
+					!matchedPlanIds.has(linkedProduct.product.id),
+			);
 
 	if (changedPlans.length === 0 && removedCustomerProducts.length === 0) {
 		return {

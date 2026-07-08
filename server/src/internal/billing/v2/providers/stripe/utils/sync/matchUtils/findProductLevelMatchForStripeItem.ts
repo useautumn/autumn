@@ -201,7 +201,15 @@ export const findProductLevelMatchForStripeItem = ({
 		priceMatch: resolvePriceMatch({ item, candidate, org }),
 	}));
 
-	if (resolved.length === 1) return resolved[0] ?? null;
+	// A claim-less single candidate is only a plausible custom base under the
+	// same gate multi-candidate fallback uses — a metered item must not
+	// silently become a custom base with its price stripped.
+	if (resolved.length === 1) {
+		const only = resolved[0];
+		if (!only) return null;
+		if (only.priceMatch) return only;
+		return basePlanFallback({ item, resolved });
+	}
 
 	// Ambiguous candidates resolve only via price claims, strongest kind
 	// first — a unique claim of that kind wins, a tie is unresolvable.
