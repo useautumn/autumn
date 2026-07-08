@@ -40,7 +40,12 @@ export const resyncScheduledCustomerProductStartsAt = async ({
 				Math.abs((customerProduct.starts_at ?? 0) - oldStartMs) <
 				STRIPE_SECOND_PRECISION_MS,
 		);
-		if (matchedProducts.length === 0) continue;
+		if (matchedProducts.length === 0) {
+			logger.warn(
+				`[handleStripeSubscriptionScheduleUpdated] no scheduled customerProduct anchored to moved phase start ${oldStartMs} on schedule ${schedule.id} — skipping`,
+			);
+			continue;
+		}
 
 		for (const customerProduct of matchedProducts) {
 			await CusProductService.update({
