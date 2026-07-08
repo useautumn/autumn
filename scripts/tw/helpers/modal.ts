@@ -595,7 +595,7 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 		// Fast-forward: build the new warm ON TOP of the newest published warm
 		// image (fetch + checkout delta) instead of a fresh clone on the base
 		// image — warmup.sh then only pays the install/migrate/seed delta.
-		if (!STALE_WARM_DISABLED) {
+		{
 			const latest = await lookupPublishedWarmImage("latest");
 			if (latest) {
 				const ffDone = stage(
