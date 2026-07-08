@@ -16,7 +16,8 @@
 # AUTUMN_DB_DIRECT=1 + a localhost DATABASE_URL (no secrets in the µVM).
 set -euo pipefail
 
-log() { echo "[tw-warmup] $*"; }
+# SECONDS-since-start prefix so the run log doubles as a stage profile.
+log() { echo "[tw-warmup] +${SECONDS}s $*"; }
 die() { echo "[tw-warmup] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
