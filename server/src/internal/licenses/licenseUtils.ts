@@ -1,13 +1,14 @@
 import {
-	CusProductStatus,
-	type Entity,
+	type CusProductStatus,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
+	LICENSE_ACTIVE_ASSIGNMENT_STATUSES,
+	LICENSE_ASSIGNABLE_STATUSES,
+	LICENSE_POOL_PARENT_STATUSES,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { nullish } from "@/utils/genUtils.js";
 
@@ -24,43 +25,6 @@ export const getFullLicenseProduct = async ({
 		orgId: ctx.org.id,
 		env: ctx.env,
 	});
-
-export async function resolveCustomerAndEntity(args: {
-	ctx: AutumnContext;
-	customerId: string;
-	entityId: string;
-}): Promise<{ fullCustomer: FullCustomer; entity: Entity }>;
-export async function resolveCustomerAndEntity(args: {
-	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
-}): Promise<{ fullCustomer: FullCustomer; entity: Entity | undefined }>;
-export async function resolveCustomerAndEntity({
-	ctx,
-	customerId,
-	entityId,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
-}): Promise<{ fullCustomer: FullCustomer; entity: Entity | undefined }> {
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		withEntities: true,
-	});
-	const entity = entityId
-		? fullCustomer.entities?.find((item) => item.id === entityId)
-		: undefined;
-	if (entityId && !entity) {
-		throw new RecaseError({
-			message: `Entity ${entityId} not found for customer ${customerId}.`,
-			code: ErrCode.EntityNotFound,
-			statusCode: 404,
-		});
-	}
-	return { fullCustomer, entity };
-}
 
 export const validateLicenseBillingMode = ({
 	prepaidOnly,
@@ -84,23 +48,12 @@ type LicenseParentCandidate = Pick<
 
 // PastDue retains pools/assignments/grants (dunning must not revoke assignments);
 // new assignments still require an assignable status.
-export const licensePoolParentStatuses = [
-	CusProductStatus.Active,
-	CusProductStatus.Trialing,
-	CusProductStatus.PastDue,
-];
+export const licensePoolParentStatuses = LICENSE_POOL_PARENT_STATUSES;
 
-/** Statuses under which an existing assignment still counts as active. */
-export const licenseActiveAssignmentStatuses = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Trialing,
-];
+export const licenseActiveAssignmentStatuses =
+	LICENSE_ACTIVE_ASSIGNMENT_STATUSES;
 
-const licenseAssignableStatuses = [
-	CusProductStatus.Active,
-	CusProductStatus.Trialing,
-];
+const licenseAssignableStatuses = LICENSE_ASSIGNABLE_STATUSES;
 
 const isLicensePoolParentStatus = ({ status }: { status: string | null }) =>
 	licensePoolParentStatuses.includes(status as CusProductStatus);
