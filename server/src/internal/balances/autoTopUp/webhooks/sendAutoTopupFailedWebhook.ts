@@ -121,12 +121,7 @@ const getErrorPayload = ({
 		decline_code: err?.decline_code ?? err?.raw?.decline_code ?? null,
 	};
 
-	if (
-		!payload.code &&
-		!payload.message &&
-		!payload.type &&
-		!payload.decline_code
-	) {
+	if (!payload.code && !payload.type && !payload.decline_code) {
 		return undefined;
 	}
 
