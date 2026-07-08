@@ -271,7 +271,8 @@ export const classifyAutoTopupError = ({
 		return {
 			reason: "lock_contention",
 			retryable: true,
-			message: err.message,
+			message:
+				"Another billing operation is already in progress for this customer.",
 		};
 	}
 
@@ -283,7 +284,7 @@ export const classifyAutoTopupError = ({
 		return {
 			reason: "charge_failed",
 			retryable: false,
-			message: err.message,
+			message: "The auto top-up payment could not be completed.",
 		};
 	}
 
@@ -291,7 +292,7 @@ export const classifyAutoTopupError = ({
 		return {
 			reason: "invalid_amount",
 			retryable: false,
-			message: err.message,
+			message: "The calculated auto top-up amount was invalid.",
 		};
 	}
 

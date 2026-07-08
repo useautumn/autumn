@@ -59,6 +59,8 @@ export const triggerAutoTopUpsOnEnabled = async ({
 				retryable: true,
 				message: `Redis unavailable, skipping auto top-up enqueue for customer ${customerId} and feature ${feature.id}`,
 				autoTopupConfig: autoTopup,
+				suppressionKey: `auto_topup_failed_webhook:${ctx.org.id}:${ctx.env}:${customerId}:${feature.id}:redis_unavailable:${Math.floor(Date.now() / 3_600_000)}`,
+				suppressionTtlMs: 3_600_000,
 			});
 		}
 

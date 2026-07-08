@@ -183,7 +183,7 @@ export const setupAutoTopupContext = async ({
 			ok: false,
 			failure: {
 				reason: reason ?? "execution_error",
-				retryable: true,
+				retryable: reason !== "purchase_limit_reached",
 				message,
 				fullCustomer,
 				autoTopupConfig: normalizedAutoTopupConfig,
