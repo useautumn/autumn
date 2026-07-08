@@ -74,10 +74,7 @@ export const handleStripeWebhookEvent = async (
 			}
 
 			case "subscription_schedule.updated": {
-				await handleStripeSubscriptionScheduleUpdated({
-					ctx,
-					schedule: event.data.object,
-				});
+				await handleStripeSubscriptionScheduleUpdated({ ctx, event });
 				break;
 			}
 
