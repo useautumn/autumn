@@ -11,6 +11,11 @@ import {
 } from "@autumn/shared";
 import { useRef } from "react";
 import { z } from "zod/v4";
+import {
+	type OverageBillingOption,
+	optionToSkipOverageBilling,
+	skipOverageBillingToOption,
+} from "@/components/billing-controls/overageBillingOptions";
 import { useAppForm } from "@/hooks/form/form";
 
 export type ControlItem =
@@ -32,6 +37,7 @@ export type PlanBillingControlFormValues = {
 	invoice_mode: boolean;
 	limit_type: SpendLimitType;
 	overage_limit: number | null;
+	overage_billing: OverageBillingOption;
 	usage_limit: number | null;
 	usage_interval: ResetInterval;
 	alert_name: string;
@@ -160,6 +166,7 @@ export function buildControlItem(
 			enabled: values.enabled,
 			limit_type: values.limit_type,
 			overage_limit: values.overage_limit ?? undefined,
+			skip_overage_billing: optionToSkipOverageBilling(values.overage_billing),
 		} satisfies DbSpendLimit;
 	}
 
@@ -228,6 +235,9 @@ function toDefaultValues(
 		invoice_mode: autoTopup?.invoice_mode ?? false,
 		limit_type: spendLimit?.limit_type ?? "absolute",
 		overage_limit: spendLimit?.overage_limit ?? null,
+		overage_billing: skipOverageBillingToOption(
+			spendLimit?.skip_overage_billing,
+		),
 		usage_limit: usageLimit?.limit ?? null,
 		usage_interval: usageLimit?.interval ?? ResetInterval.Month,
 		alert_name: usageAlert?.name ?? "",
