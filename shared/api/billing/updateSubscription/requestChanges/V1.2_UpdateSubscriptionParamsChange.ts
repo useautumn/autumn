@@ -35,6 +35,8 @@ export const V1_2_UpdateSubscriptionParamsChange = defineVersionChange({
 			items: input.items,
 			freeTrial: input.free_trial,
 			billingControls: input.billing_controls,
+			addLicenses: input.add_licenses,
+			removeLicenses: input.remove_licenses,
 		});
 
 		const newPlanId = input.product_id ?? undefined;

@@ -19,6 +19,7 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
+import { CustomLicenseChangeSchema } from "../../licenseModels/licenseModels";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
@@ -28,7 +29,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 	balanceChange: z.number().optional(),
 
 	// For arrear billing:
-		updates: z
+	updates: z
 		.object({
 			next_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
@@ -102,6 +103,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
+	customLicenses: z.array(CustomLicenseChangeSchema).optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

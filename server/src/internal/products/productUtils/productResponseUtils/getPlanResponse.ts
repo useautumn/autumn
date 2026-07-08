@@ -1,8 +1,11 @@
 import {
 	type ApiFreeTrialV2,
 	ApiFreeTrialV2Schema,
+	type ApiPlanLicenseV1,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
+	billingControlsFromColumns,
+	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -12,11 +15,10 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
-	billingControlsFromColumns,
-	diffPlanV1,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { buildCustomerEligibility } from "./buildCustomerEligibility.js";
@@ -50,6 +52,7 @@ export const getPlanResponse = async ({
 	currency = "usd",
 	baseFullProduct,
 	resolveBaseFullProduct = true,
+	planLicenses,
 }: {
 	ctx?: AutumnContext;
 	product: FullProduct;
@@ -59,6 +62,7 @@ export const getPlanResponse = async ({
 	currency?: string;
 	baseFullProduct?: FullProduct;
 	resolveBaseFullProduct?: boolean;
+	planLicenses?: ApiPlanLicenseV1[];
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
@@ -132,6 +136,7 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
+		licenses: planLicenses?.length ? planLicenses : undefined,
 		free_trial: freeTrial,
 
 		created_at: product.created_at,

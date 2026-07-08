@@ -1,17 +1,23 @@
 import type { BasePriceParams } from "@api/products/components/basePrice/basePrice.js";
-import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
-import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	type ApiPlanV1,
 	type CreatePlanItemParamsV1,
-	CustomizePlanV1Schema,
+	CustomizePlanV1BaseSchema,
 	type PlanItemFilter,
+	refineCustomizePlanV1Schema,
 } from "@autumn/shared";
+import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
 
-export const DiffedCustomizePlanV1Schema = CustomizePlanV1Schema.omit({
-	items: true,
-});
+export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		add_licenses: true,
+		remove_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
 
 export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
 
@@ -36,7 +42,9 @@ const toBasePriceParams = (
 		: {}),
 });
 
-const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
+export const toCreatePlanItemParams = (
+	item: ApiPlanItem,
+): CreatePlanItemParamsV1 => {
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
@@ -94,10 +102,12 @@ export const composeMatchKey = (item: MatchKeyItem): string => {
 /** Match key for a remove_items filter, in the same format as composeMatchKey
  * (buildRemoveFilter already flattens the matched item's fields onto it). */
 export const planItemFilterMatchKey = (filter: PlanItemFilter): string =>
-	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount({
-		interval: filter.interval,
-		intervalCount: filter.interval_count,
-	})}`;
+	`${filter.feature_id}|${filter.billing_method ?? ""}|${filter.interval ?? ""}|${normalizeIntervalCount(
+		{
+			interval: filter.interval,
+			intervalCount: filter.interval_count,
+		},
+	)}`;
 
 const normalizeIntervalCount = ({
 	interval,
@@ -213,8 +223,7 @@ const rolloversEqual = (
 
 	return (
 		a.expiry_duration_type === b.expiry_duration_type &&
-		(a.expiry_duration_length ?? null) ===
-			(b.expiry_duration_length ?? null) &&
+		(a.expiry_duration_length ?? null) === (b.expiry_duration_length ?? null) &&
 		(a.max ?? null) === (b.max ?? null) &&
 		(a.max_percentage ?? null) === (b.max_percentage ?? null)
 	);
@@ -235,10 +244,7 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	);
 };
 
-const removeFiltersEqual = (
-	a: PlanItemFilter,
-	b: PlanItemFilter,
-): boolean =>
+const removeFiltersEqual = (a: PlanItemFilter, b: PlanItemFilter): boolean =>
 	a.feature_id === b.feature_id &&
 	(a.billing_method ?? null) === (b.billing_method ?? null) &&
 	(a.interval ?? null) === (b.interval ?? null) &&

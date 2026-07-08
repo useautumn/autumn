@@ -1,11 +1,29 @@
 import { MultiPlanInstanceSchema } from "@api/billing/common/multi/multiPlanInstance";
 import { z } from "zod/v4";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../common/customizePlan/customizePlanV1";
+
+const SyncCustomizePlanSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		add_licenses: true,
+		remove_licenses: true,
+	}).strict(),
+	{ includeLicenses: false },
+);
 
 /**
  * Per-plan sync intent. Extends the shared `MultiPlanInstance` with
  * sync-specific overrides.
  */
-export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.extend({
+export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.omit({
+	customize: true,
+}).extend({
+	customize: SyncCustomizePlanSchema.optional().meta({
+		description:
+			"Override the plan's price, items, or free trial. Wins over anything detection inferred for the same plan.",
+	}),
 	quantity: z.number().int().min(1).optional().meta({
 		description:
 			"Number of customer product instances to create from this plan entry. Defaults to 1. Used to express add-ons with quantity > 1.",

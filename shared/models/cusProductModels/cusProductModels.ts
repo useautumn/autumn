@@ -71,6 +71,7 @@ export const CusProductSchema = z.object({
 	api_semver: z.enum(ApiVersion).nullable(),
 
 	is_custom: z.boolean().default(false),
+	license_parent_customer_product_id: z.string().nullish(),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 

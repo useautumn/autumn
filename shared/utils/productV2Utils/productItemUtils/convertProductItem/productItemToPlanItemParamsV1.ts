@@ -86,8 +86,7 @@ export const productItemToPlanItemParamsV1 = ({
 			: undefined,
 		proration: proration
 			? {
-					on_increase:
-						proration.on_increase ?? OnIncrease.ProrateImmediately,
+					on_increase: proration.on_increase ?? OnIncrease.ProrateImmediately,
 					on_decrease: proration.on_decrease ?? OnDecrease.Prorate,
 				}
 			: undefined,

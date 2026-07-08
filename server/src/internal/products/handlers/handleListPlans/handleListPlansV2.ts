@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 
@@ -60,6 +61,11 @@ export const handleListPlansV2 = createRoute({
 		const endedAt = Date.now();
 		ctx.logger.debug(`[handleListPlans] query took ${endedAt - startedAt}ms`);
 
+		const planLicensesByParent = await loadApiPlanLicenses({
+			ctx,
+			internalProductIds: products.map((product) => product.internal_id),
+		});
+
 		const plansList = await Promise.all(
 			products.map((product) =>
 				getPlanResponse({
@@ -70,6 +76,7 @@ export const handleListPlansV2 = createRoute({
 					currency: org.default_currency || undefined,
 					baseFullProduct: findBaseFullProduct({ product, products }),
 					resolveBaseFullProduct: false,
+					planLicenses: planLicensesByParent.get(product.internal_id),
 				}),
 			),
 		);
