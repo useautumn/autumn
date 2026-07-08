@@ -89,13 +89,32 @@ log "HEAD at $(git rev-parse --short HEAD)"
 # ---------------------------------------------------------------------------
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)
 # ---------------------------------------------------------------------------
-log "bun install --frozen-lockfile"
-# Self-repair: a failing lifecycle script (native-dep rebuild on a delta
-# install) must not abort the warm-up — deps land, optional builds are skipped.
-if ! bun install --frozen-lockfile; then
-  log "install failed — retrying with --ignore-scripts"
-  bun install --frozen-lockfile --ignore-scripts \
-    || die "bun install FAILED even with --ignore-scripts"
+# Even a no-op frozen install costs ~65s (relink scan of ~350k files), so skip
+# it entirely when the lockfile hash matches the stamp from the last install.
+LOCK_FILE=""
+for candidate in bun.lock bun.lockb package-lock.json; do
+  [ -f "$candidate" ] && LOCK_FILE="$candidate" && break
+done
+LOCK_STAMP="$TW_PREFIX/bun-lock.sha256"
+LOCK_HASH=""
+if [ -n "$LOCK_FILE" ] && command -v sha256sum >/dev/null 2>&1; then
+  LOCK_HASH="$(sha256sum "$LOCK_FILE" | cut -d' ' -f1)"
+fi
+if [ -n "$LOCK_HASH" ] && [ -f "$LOCK_STAMP" ] \
+  && [ "$(cat "$LOCK_STAMP")" = "$LOCK_HASH" ]; then
+  log "lockfile unchanged ($LOCK_FILE) — skipping bun install"
+else
+  log "bun install --frozen-lockfile"
+  # Self-repair: a failing lifecycle script (native-dep rebuild on a delta
+  # install) must not abort the warm-up — deps land, optional builds are skipped.
+  if ! bun install --frozen-lockfile; then
+    log "install failed — retrying with --ignore-scripts"
+    bun install --frozen-lockfile --ignore-scripts \
+      || die "bun install FAILED even with --ignore-scripts"
+  fi
+  if [ -n "$LOCK_HASH" ]; then
+    echo "$LOCK_HASH" > "$LOCK_STAMP"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
