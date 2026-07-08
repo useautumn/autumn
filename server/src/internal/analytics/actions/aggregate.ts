@@ -25,6 +25,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
+import { getCountAndSum } from "./getCountAndSum.js";
 
 /** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
 const buildFilterParams = ({
@@ -394,50 +395,27 @@ const formatGroupableResults = ({
 };
 
 /**
- * Decides whether the groupable pipe must bypass events_property_mv.
+ * Ducttape fallback for the property-rollup cardinality gate.
  *
- * The property rollup's insert-time value-shape gate drops high-entropy values
- * (UUIDs, long hex, opaque strings), so a key whose values are all gate-dropped
- * has zero rows in the rollup even though the raw events exist — querying it
- * silently returns an empty result. Probe the rollup for the key and force the
- * ungated events_hourly_mv path when it is absent. Probe failures fall back to
- * the rollup (current behavior) rather than failing the whole query.
+ * Unfiltered property group-bys read events_property_mv, whose insert-time gate
+ * drops high-entropy values (UUIDs, long hex, opaque strings) to keep the rollup
+ * bounded. A group-by over such a key therefore returns an EMPTY grouped result
+ * even though the events exist — the gate can't tell a genuinely explosive key
+ * (per-request trace ids) from a low-cardinality-but-UUID-shaped one (a customer
+ * with 21 project ids).
+ *
+ * When the grouped result is empty BUT the authoritative totals (getCountAndSum,
+ * read from the ungated rollups) show real events, we know the gate ate the
+ * values, so we retry the same query against the ungated events_hourly_mv. When
+ * the totals are also empty, the customer simply has no events — no retry.
+ *
+ * This does NOT cover the partial case (a key with a mix of gate-surviving and
+ * gate-dropped values), which needs cardinality-aware routing (topKWeighted).
  */
-const shouldSkipPropertyRollup = async ({
-	pipes,
-	orgId,
-	env,
-	groupColumn,
-	propertyKey,
-	hasPropertyFilters,
-}: {
-	pipes: ReturnType<typeof getTinybirdPipes>;
-	orgId: string;
-	env: string;
-	groupColumn: string;
-	propertyKey: string;
-	hasPropertyFilters: boolean;
-}): Promise<boolean> => {
-	// The pipe only reads the rollup for unfiltered property group-bys
-	if (groupColumn !== "property" || hasPropertyFilters || !propertyKey) {
-		return false;
-	}
-
-	try {
-		const probe = await pipes.propertyKeyExists({
-			org_id: orgId,
-			env,
-			property_key: propertyKey,
-		});
-		return probe.data.length === 0;
-	} catch (error) {
-		console.warn(
-			`[aggregate] property_key_exists probe failed for key "${propertyKey}", using property rollup`,
-			error,
-		);
-		return false;
-	}
-};
+const totalsHaveEvents = (
+	totals: Record<string, { count: number; sum: number }>,
+): boolean =>
+	Object.values(totals).some((t) => t.count > 0 && t.sum > 0);
 
 /** Aggregates events into time-bucketed timeseries data */
 export const aggregate = async ({
@@ -492,14 +470,6 @@ export const aggregate = async ({
 		}
 
 		const filterParams = buildFilterParams({ filter_by: params.filter_by });
-		const skipPropertyRollup = await shouldSkipPropertyRollup({
-			pipes,
-			orgId: org.id,
-			env,
-			groupColumn,
-			propertyKey,
-			hasPropertyFilters: Object.keys(filterParams).length > 0,
-		});
 
 		const pipeParams = {
 			org_id: org.id,
@@ -515,10 +485,28 @@ export const aggregate = async ({
 			property_key: propertyKey,
 			...filterParams,
 			max_groups: params.max_groups,
-			skip_property_rollup: skipPropertyRollup ? ("1" as const) : undefined,
 		};
 
-		const result = await pipes.aggregateGroupable(pipeParams);
+		let result = await pipes.aggregateGroupable(pipeParams);
+
+		// The gated property rollup only serves unfiltered property group-bys. If it
+		// returns nothing, check whether real events exist (ungated totals); if so,
+		// the value-shape gate dropped the group values — retry against the ungated
+		// events_hourly_mv. See totalsHaveEvents for the full rationale.
+		const usedGatedRollup =
+			groupColumn === "property" &&
+			Object.keys(filterParams).length === 0 &&
+			result.data.length === 0;
+
+		if (usedGatedRollup) {
+			const totals = await getCountAndSum({ ctx, params });
+			if (totalsHaveEvents(totals)) {
+				result = await pipes.aggregateGroupable({
+					...pipeParams,
+					skip_property_rollup: "1",
+				});
+			}
+		}
 
 		// For external API (enforceGroupLimit), truncated is always false
 		// For internal API, return the actual truncation status from the pipe
