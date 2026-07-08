@@ -7,14 +7,15 @@
  * values — so the key has zero rows in the rollup and the query silently returns
  * nothing, while totals (served from an ungated pipe) look correct.
  *
- * Red-failure mode (current behavior):
+ * Red-failure mode (pre-fix):
  *  - list is [] even though the tracked events exist and totals report them.
  *
- * Green-success criteria (after fix — requires the property_key_exists probe pipe
- * and the skip_property_rollup param to be deployed to Tinybird):
- *  - The server probes events_property_mv for the key, finds it absent, and routes
- *    to the ungated events_hourly_mv — the list contains per-period grouped_values
- *    keyed by the UUID project ids with the tracked sums.
+ * Green-success criteria (after fix — requires the skip_property_rollup param
+ * deployed to Tinybird):
+ *  - The grouped query comes back empty, but getCountAndSum (ungated totals) shows
+ *    real events, so the server retries with skip_property_rollup=1 against the
+ *    ungated events_hourly_mv — the list contains per-period grouped_values keyed
+ *    by the UUID project ids with the tracked sums.
  */
 
 import { expect, test } from "bun:test";
