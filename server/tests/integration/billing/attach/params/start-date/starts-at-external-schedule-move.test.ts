@@ -10,7 +10,13 @@
  */
 
 import { expect, test } from "bun:test";
-import { type AttachParamsV1Input, CusProductStatus, ms } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	type AttachParamsV1Input,
+	CusProductStatus,
+	ms,
+} from "@autumn/shared";
+import { expectProductScheduled } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
@@ -81,6 +87,10 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		scheduleId,
 	)) as Stripe.SubscriptionSchedule;
 
+	// Warm the customer cache so a missed webhook invalidation would surface
+	// as a stale API read below
+	await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
 	// External edit (dashboard-style): move the phase start 8h earlier
 	const editedStartSec = Math.floor((requestedStart - ms.hours(8)) / 1000);
 	await ctx.stripeCli.subscriptionSchedules.update(scheduleId, {
@@ -102,6 +112,16 @@ test.concurrent(`${chalk.yellowBright("starts_at: external schedule move resyncs
 		label: `starts_at resync to ${editedStartSec * 1000} via subscription_schedule.updated webhook`,
 	});
 	expect(resyncedProduct.status).toBe(CusProductStatus.Scheduled);
+
+	// The webhook must also evict the warmed cache: the API (cached read path)
+	// has to serve the NEW start, not the pre-edit snapshot
+	const cachedCustomer =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectProductScheduled({
+		customer: cachedCustomer,
+		productId: pro.id,
+		startsAt: editedStartSec * 1000,
+	});
 
 	// Phase starts at the EDITED (earlier) time; the real
 	// customer.subscription.created webhook must activate the scheduled product
