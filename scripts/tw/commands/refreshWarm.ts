@@ -21,10 +21,11 @@ import {
 	TRACK_SQS_QUEUE_URL,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
-import type { GitSource } from "../helpers/provider.ts";
+import type { GitSource, ProviderName } from "../helpers/provider.ts";
 import {
 	createWarmSandbox,
 	deleteSandbox,
+	getSandboxByName,
 	runStreaming,
 	setProvider,
 	snapshotAndStop,
@@ -166,6 +167,77 @@ const waitForReadySnapshot = async (
 	}
 };
 
+// ---- modal path --------------------------------------------------------------
+/**
+ * Modal refresh: exact-published-image check via the provider's own lookup
+ * (TW_MODAL_NO_STALE keeps stale `:latest` hits from masquerading as fresh),
+ * then the normal warm flow — snapshotAndStop publishes `tw-warm:<sha12>`.
+ */
+const refreshModalWarm = async ({
+	provider,
+	sha,
+	warmName,
+	totalStartedAt,
+}: {
+	provider: ProviderName;
+	sha: string;
+	warmName: string;
+	totalStartedAt: number;
+}): Promise<number> => {
+	// Must be set BEFORE setProvider dynamically imports modal.ts (module-load read).
+	process.env.TW_MODAL_NO_STALE = "1";
+	await setProvider(provider);
+
+	const existing = await timed("check for an exact published warm image", () =>
+		getSandboxByName(warmName),
+	);
+	if (existing) {
+		log(chalk.green(`already fresh — ${warmName} is published; nothing to do`));
+		printTimingSummary(totalStartedAt);
+		return 0;
+	}
+
+	const warm = await timed("create warm sandbox (fast-forward or cold)", () =>
+		createWarmSandbox({
+			name: warmName,
+			tags: { kind: "bun-tw-warm", sha: sha.slice(0, 12) },
+			env: buildWarmEnv(),
+			source: resolveGitSource(sha),
+		}),
+	);
+	try {
+		const warmup = await timed(
+			"warmup.sh (checkout → install → migrate → seed)",
+			() =>
+				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha], (text) =>
+					process.stdout.write(text),
+				),
+		);
+		if (warmup.exitCode !== 0) {
+			throw new Error(`refresh-warm: warmup.sh exited ${warmup.exitCode}`);
+		}
+		await timed("snapshot + publish warm image", () => snapshotAndStop(warm));
+	} catch (error) {
+		log(chalk.red(`build failed — deleting sandbox ${warmName}`));
+		await deleteSandbox(warm).catch(() => {
+			/* best-effort */
+		});
+		throw error;
+	}
+
+	const published = await timed("verify the published warm image", () =>
+		getSandboxByName(warmName),
+	);
+	if (!published) {
+		throw new Error(
+			`refresh-warm: ${warmName} not resolvable after publish — check the run log`,
+		);
+	}
+	log(chalk.green(`warm image ${warmName} published`));
+	printTimingSummary(totalStartedAt);
+	return 0;
+};
+
 // ---- command ---------------------------------------------------------------
 /** Returns the process exit code (0 = snapshot READY for the resolved sha). */
 export const refreshWarm = async (args: string[]): Promise<number> => {
@@ -173,12 +245,24 @@ export const refreshWarm = async (args: string[]): Promise<number> => {
 	const ref =
 		args.find((arg) => arg.startsWith("--ref="))?.slice("--ref=".length) ||
 		DEFAULT_REF;
+	const provider = (args
+		.find((arg) => arg.startsWith("--provider="))
+		?.slice("--provider=".length) ?? "modalv2") as ProviderName;
 
 	const sha = await timed(`resolve ref ${ref}`, () =>
 		Promise.resolve(resolveSha(ref)),
 	);
 	const warmName = `${WARM_SANDBOX_PREFIX}-${sha.slice(0, 12)}`;
 	log(`target snapshot ${warmName} (ref=${ref} @ ${sha.slice(0, 7)})`);
+
+	if (provider === "modal" || provider === "modalv2") {
+		return refreshModalWarm({ provider, sha, warmName, totalStartedAt });
+	}
+	if (provider !== "freestyle") {
+		throw new Error(
+			`refresh-warm: unsupported provider "${provider}" (use modalv2, modal, or freestyle)`,
+		);
+	}
 
 	const existing = await timed("check for an exact READY snapshot", () =>
 		findReadySnapshot(warmName),

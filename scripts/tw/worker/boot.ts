@@ -56,8 +56,12 @@ const SERVER_HEALTH_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
 const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
+const bootStartedAt = Date.now();
+// ms-since-boot prefix so worker logs double as a boot-phase profile.
 const log = (message: string): void => {
-	console.log(chalk.cyan(`[tw-boot] ${message}`));
+	console.log(
+		chalk.cyan(`[tw-boot] +${Date.now() - bootStartedAt}ms ${message}`),
+	);
 };
 
 const sleep = (ms: number): Promise<void> =>
