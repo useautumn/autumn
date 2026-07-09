@@ -1,11 +1,13 @@
 import {
 	computeGrantedBalanceInput,
 	customerEntitlementToBillingCycleEnd,
+	EntInterval,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	getRolloverFields,
+	isPayPerUsePrice,
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
@@ -414,6 +416,18 @@ function SetBalanceFields({
 	const balance = useStore(form.store, (s) => s.values.balance);
 	const gpb = useStore(form.store, (s) => s.values.grantedAndPurchasedBalance);
 
+	// Mirror the backend guard (updateExpiresAt): expires_at is only valid on
+	// one-off balances (loose grants / one-off top-ups). Recurring balances
+	// reset each cycle — expiry belongs at the plan level (trial / ends_at) —
+	// and usage-based (pay-per-use) meters shouldn't expire.
+	const interval = selectedCusEnt.entitlement.interval;
+	const isRecurringBalance =
+		notNullish(interval) && interval !== EntInterval.Lifetime;
+	const isUsageBasedBalance = cusPrice
+		? isPayPerUsePrice({ price: cusPrice.price })
+		: false;
+	const expiresAtDisabled = isRecurringBalance || isUsageBasedBalance;
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-end gap-2 w-full">
@@ -475,6 +489,28 @@ function SetBalanceFields({
 						/>
 					)}
 				</form.Field>
+			</div>
+
+			<div className="flex flex-col shrink-0 w-full">
+				<div className="text-form-label block mb-1">Expires At</div>
+				<form.Field name="expiresAt">
+					{(field) => (
+						<DateInputUnix
+							disabled={expiresAtDisabled}
+							unixDate={field.state.value}
+							setUnixDate={(v) => field.handleChange(v)}
+							withTime
+							use24Hour
+						/>
+					)}
+				</form.Field>
+				{expiresAtDisabled && (
+					<div className="text-subtle text-xs mt-1">
+						{isUsageBasedBalance
+							? "Usage-based balances can't be set to expire."
+							: "Only one-off balances can be set to expire."}
+					</div>
+				)}
 			</div>
 
 			<BalanceEditPreviews
@@ -607,6 +643,7 @@ function SubmitButton({
 							customer_entitlement_id: selectedCusEnt.id,
 							entity_id: entityId ?? undefined,
 							next_reset_at: values.nextResetAt ?? undefined,
+							expires_at: values.expiresAt ?? undefined,
 						}),
 					);
 				} else {
@@ -675,6 +712,7 @@ function hasBalanceChanges({
 	return (
 		meta.balance?.isDirty ||
 		meta.nextResetAt?.isDirty ||
+		meta.expiresAt?.isDirty ||
 		meta.grantedAndPurchasedBalance?.isDirty ||
 		false
 	);
