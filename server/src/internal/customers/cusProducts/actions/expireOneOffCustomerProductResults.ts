@@ -5,10 +5,8 @@ import {
 } from "@autumn/shared";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import type { RepoContext } from "@/db/repoContext.js";
-import { withLock } from "@/external/redis/redisUtils.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 import { batchUpdateCustomerProducts } from "../repos/batchUpdateCustomerProducts.js";
@@ -73,19 +71,10 @@ export const expireOneOffCustomerProductResults = async ({
 			internalCustomerId,
 		] of group.internalCustomerIdByCustomerId) {
 			const licenseCtx = repoContext as unknown as AutumnContext;
-			await withLock({
-				lockKey: buildBillingLockKey({
-					orgId: licenseCtx.org.id,
-					env: licenseCtx.env,
-					customerId,
-				}),
-				ttlMs: 120000,
-				fn: () =>
-					afterLicenseMutation({
-						ctx: licenseCtx,
-						customerId,
-						internalCustomerId,
-					}),
+			await afterLicenseMutation({
+				ctx: licenseCtx,
+				customerId,
+				internalCustomerId,
 			});
 			await deleteCachedFullCustomer({ ctx: licenseCtx, customerId, source });
 		}

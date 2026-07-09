@@ -5,12 +5,10 @@ import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { reconcileLicenseStateForCustomer } from "./reconcileLicenseState.js";
 
 /**
- * Single exit ramp for every license mutation. CONTRACT: the caller holds
- * the customer billing lock (route lock config or withLock with
- * buildBillingLockKey at the entry point) — this function never acquires. It converges assignment
- * balances, then drops the
- * customer cache. Catalog-wide events (link edits, version bumps) stay
- * lazy-converged — each customer converges on their next mutation.
+ * Single exit ramp for every license mutation: converges assignment balances,
+ * then drops the customer cache. Never acquires a lock itself — route endpoints
+ * hold the customer billing lock; other callers rely on atomic seat takes/releases
+ * plus this self-healing recompute, which corrects any transient over-count.
  */
 export const afterLicenseMutation = async ({
 	ctx,
