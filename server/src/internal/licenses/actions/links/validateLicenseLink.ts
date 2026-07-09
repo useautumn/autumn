@@ -8,9 +8,9 @@ import {
 import { validateLicenseBillingMode } from "../../licenseUtils.js";
 
 /**
- * The license bills on a carrier alongside the parent's subscription, so their
- * billing intervals must line up. Free products (no recurring price) always
- * pass.
+ * A priced license is attached at the customer level alongside the parent's
+ * subscription, so their billing intervals must line up. Free products (no
+ * recurring price) always pass.
  */
 const validateMatchingBillingIntervals = ({
 	parentProduct,

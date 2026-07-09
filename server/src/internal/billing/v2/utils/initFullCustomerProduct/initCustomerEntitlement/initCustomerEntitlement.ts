@@ -1,7 +1,7 @@
 import {
 	type CustomerEntitlement,
-	entitlementAndPriceHaveSeparateInterval,
 	type EntitlementWithFeature,
+	entitlementAndPriceHaveSeparateInterval,
 	entToPrice,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
@@ -66,7 +66,9 @@ export const initCustomerEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: fullCustomer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
-		internal_entity_id: null,
+		internal_entity_id: initOptions?.licenseParentCustomerProductId
+			? (initOptions.internalEntityId ?? null)
+			: null,
 
 		feature_id: entitlement.feature.id,
 		customer_id: fullCustomer.id,

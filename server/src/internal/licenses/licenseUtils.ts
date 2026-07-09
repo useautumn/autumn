@@ -82,24 +82,6 @@ export const isLicenseAssignableParentCustomerProduct = ({
 	nullish(customerProduct.license_parent_customer_product_id) &&
 	isLicenseAssignableStatus({ status: customerProduct.status });
 
-export const findLicenseCarrier = ({
-	fullCustomer,
-	parentCustomerProductId,
-	licenseInternalProductId,
-}: {
-	fullCustomer: FullCustomer;
-	parentCustomerProductId: string;
-	licenseInternalProductId: string;
-}): FullCusProduct | undefined =>
-	fullCustomer.customer_products.find(
-		(customerProduct) =>
-			customerProduct.license_parent_customer_product_id ===
-				parentCustomerProductId &&
-			customerProduct.internal_product_id === licenseInternalProductId &&
-			nullish(customerProduct.internal_entity_id) &&
-			isLicenseAssignableStatus({ status: customerProduct.status }),
-	);
-
 export const computeLicenseInventory = ({
 	included,
 	assigned,

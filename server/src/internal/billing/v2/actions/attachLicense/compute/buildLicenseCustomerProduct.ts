@@ -29,9 +29,9 @@ export const buildLicenseCustomerProduct = async ({
 		planLicenseId: licenseDefinition.id,
 	});
 
-	// Prices are emptied BEFORE init so assignment entitlements never derive
-	// usage_allowed from them — overage must fall through to the carrier.
-	const base = initFullCustomerProduct({
+	// Prices are emptied BEFORE init: assignments never bill, and entitlements
+	// must not derive usage_allowed from prices the assignment doesn't carry.
+	return initFullCustomerProduct({
 		ctx,
 		initContext: {
 			fullCustomer,
@@ -44,21 +44,7 @@ export const buildLicenseCustomerProduct = async ({
 		initOptions: {
 			internalEntityId,
 			status: CusProductStatus.Active,
+			licenseParentCustomerProductId,
 		},
 	});
-
-	// The builder leaves cusEnt entity ids null; assignment balances are
-	// entity-scoped, so stamp them to match the assignment's entity.
-	const customerProduct = {
-		...base,
-		license_parent_customer_product_id: licenseParentCustomerProductId,
-		customer_entitlements: base.customer_entitlements.map(
-			(customerEntitlement) => ({
-				...customerEntitlement,
-				internal_entity_id: internalEntityId,
-			}),
-		),
-	};
-
-	return customerProduct;
 };
