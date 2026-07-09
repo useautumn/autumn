@@ -15,8 +15,9 @@
  *   Validation:
  *     - a non-future expires_at (<= now) is rejected, since it would instantly
  *       filter the balance out of the customer's active entitlements.
- *     - expires_at is only allowed on one-off balances; setting it on a
- *       recurring (resetting) balance is rejected.
+ *     - expires_at is allowed on free grants (recurring or one-off) and one-off
+ *       prepaid top-ups; it is rejected only on paid recurring balances, whose
+ *       lifetime follows the billing cycle.
  *   Side effects:
  *     - customer_entitlements.expires_at updated for the targeted row; the
  *       change is visible via check.balance.breakdown[n].expires_at on both the
@@ -214,13 +215,13 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// UPDATE-EXPIRES-AT-4: expires_at is rejected on a recurring balance
-// Only one-off balances (loose grants / one-off top-ups) may expire;
-// a resetting monthly balance's expiry belongs at the plan level.
+// UPDATE-EXPIRES-AT-4: expires_at IS allowed on a FREE recurring balance
+// e.g. "100 credits/month for 6 months" — the reset cron keeps refilling
+// the grant each cycle until the expiry date filters it out.
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("update-expires-at-4: expires_at rejected on recurring balance")}`,
+	`${chalk.yellowBright("update-expires-at-4: expires_at allowed on free recurring balance")}`,
 	async () => {
 		const customerId = "update-expires-at-4";
 		const monthlyProd = products.base({
@@ -237,23 +238,107 @@ test.concurrent(
 			actions: [s.attach({ productId: monthlyProd.id })],
 		});
 
+		const expiresAt = Date.now() + ms.days(180);
+		await autumnV2.balances.update({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			expires_at: expiresAt,
+		});
+
+		const check = await autumnV2.check<CheckResponseV2>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+		// Expiry is set, and the balance still recurs (untouched) until then.
+		expect(check.balance?.breakdown?.[0].expires_at).toBeCloseTo(expiresAt, -3);
+		expect(check.balance?.breakdown?.[0].current_balance).toBe(100);
+		expect(check.balance?.breakdown?.[0].reset?.interval).toBe(
+			ResetInterval.Month,
+		);
+
+		// DB sync (skip_cache) agrees.
+		const checkFromDb = await autumnV2.check<CheckResponseV2>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			skip_cache: true,
+		});
+		expect(checkFromDb.balance?.breakdown?.[0].expires_at).toBeCloseTo(
+			expiresAt,
+			-3,
+		);
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// UPDATE-EXPIRES-AT-6: expires_at is rejected on a PAID recurring balance
+// A prepaid (purchased) recurring balance's lifetime follows the billing
+// cycle, so it cannot be given an ad-hoc expiry.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("update-expires-at-6: expires_at rejected on paid recurring balance")}`,
+	async () => {
+		const customerId = "update-expires-at-6";
+		const freeProd = products.base({
+			id: "free-base",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const prepaidProd = products.base({
+			id: "prepaid-addon",
+			items: [
+				items.prepaidMessages({ includedUsage: 0, price: 1, billingUnits: 1 }),
+			],
+			isAddOn: true,
+		});
+
+		const { autumnV2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [freeProd, prepaidProd] }),
+			],
+			actions: [
+				s.attach({ productId: freeProd.id }),
+				s.attach({
+					productId: prepaidProd.id,
+					options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
+				}),
+			],
+		});
+
+		// Wait for Stripe webhooks.
+		await new Promise((resolve) => setTimeout(resolve, 3000));
+
+		const initialCheck = await autumnV2.check<CheckResponseV2>({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+		});
+		// The paid (prepaid) breakdown is the one carrying purchased balance.
+		const prepaidBreakdown = initialCheck.balance?.breakdown?.find(
+			(b) => (b.purchased_balance ?? 0) > 0,
+		);
+		expect(prepaidBreakdown).toBeTruthy();
+		const prepaidCusEntId = prepaidBreakdown?.id ?? "";
+
 		await expectAutumnError({
 			func: async () => {
 				await autumnV2.balances.update({
 					customer_id: customerId,
 					feature_id: TestFeature.Messages,
+					balance_id: prepaidCusEntId,
 					expires_at: Date.now() + ms.days(30),
 				});
 			},
 		});
 
-		// Balance still present and unexpired.
 		const check = await autumnV2.check<CheckResponseV2>({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 		});
-		expect(check.balance?.breakdown?.[0].expires_at ?? null).toBeNull();
-		expect(check.balance?.current_balance).toBe(100);
+		const prepaidAfter = check.balance?.breakdown?.find(
+			(b) => b.id === prepaidCusEntId,
+		);
+		expect(prepaidAfter?.expires_at ?? null).toBeNull();
 	},
 );
 

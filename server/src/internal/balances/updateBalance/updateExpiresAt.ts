@@ -3,6 +3,7 @@ import {
 	EntInterval,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	isPaidCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
 	RecaseError,
@@ -56,15 +57,16 @@ export const updateExpiresAt = async ({
 
 	const targetCusEnt = sorted[0];
 
-	// expires_at only makes sense on one-off balances (loose grants and one-off
-	// prepaid top-ups). Recurring balances reset each cycle — expiry belongs at
-	// the plan level (trial / ends_at) — and usage-based/arrear balances are
-	// recurring, so this guard covers them too. A null interval is treated as
-	// one-off (loose).
+	// Only paid recurring balances are off-limits: their lifetime follows the
+	// billing cycle, so expiry belongs at the plan level (trial / ends_at).
+	// Free grants (recurring OR one-off) and one-off prepaid top-ups are fine —
+	// e.g. "100 credits/month for 6 months" is a free recurring grant that the
+	// reset cron keeps refilling until it expires. A null interval is one-off.
 	const interval = targetCusEnt.entitlement.interval;
-	if (notNullish(interval) && interval !== EntInterval.Lifetime) {
+	const isRecurring = notNullish(interval) && interval !== EntInterval.Lifetime;
+	if (isRecurring && isPaidCustomerEntitlement(targetCusEnt)) {
 		throw new RecaseError({
-			message: `expires_at can only be set on one-off balances, not recurring balances (feature ${targetCusEnt.entitlement.feature.id})`,
+			message: `expires_at cannot be set on a paid recurring balance (feature ${targetCusEnt.entitlement.feature.id}); its lifetime follows the billing cycle`,
 			statusCode: 400,
 		});
 	}
