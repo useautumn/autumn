@@ -25,9 +25,8 @@ const stripeDiscountsToInvoiceParams = ({
 	stripeDiscounts: StripeDiscountWithCoupon[];
 }): Stripe.InvoiceCreateParams["discounts"] => {
 	return stripeDiscounts
-		.filter(
-			(discount): discount is StripeDiscountWithCoupon & { id: string } =>
-				Boolean(discount.id),
+		.filter((discount): discount is StripeDiscountWithCoupon & { id: string } =>
+			Boolean(discount.id),
 		)
 		.map((discount) => ({ discount: discount.id }));
 };
@@ -108,6 +107,9 @@ export const createInvoiceForBilling = async ({
 		metadata: invoiceMetadata,
 		discounts: invoiceDiscounts,
 		automaticTax: wantsAutoTax,
+		defaultTaxRates: billingContext.taxRateId
+			? [billingContext.taxRateId]
+			: undefined,
 	});
 
 	const invoiceWithLines = await addStripeInvoiceLines({
