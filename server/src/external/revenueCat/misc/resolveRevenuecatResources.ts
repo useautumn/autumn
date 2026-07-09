@@ -422,7 +422,7 @@ const resolveRevenueCatCustomer = async ({
 		customerId: idIsValid ? appUserId : null,
 		withEntities: true,
 		customerData: {
-			email: idIsValid ? customerEmail : (appUserId || customerEmail),
+			email: idIsValid ? customerEmail : (customerEmail || appUserId),
 			fingerprint: customerFingerprint,
 			processors: {
 				revenuecat: {
