@@ -25,7 +25,7 @@ export const computeLicenseAssignmentPlan = async ({
 	});
 	if (existing) return { existing };
 
-	const { parent, licenseDefinition, available } =
+	const { parent, licenseDefinition, effectiveProduct, available } =
 		await resolveAssignableLicenseParent({
 			ctx,
 			fullCustomer,
@@ -33,10 +33,8 @@ export const computeLicenseAssignmentPlan = async ({
 			planId: context.planId,
 			parentPlanId: context.parentPlanId,
 		});
-	await validatePricedLicenseAttached({
-		ctx,
-		licenseProduct,
-		licenseDefinition,
+	validatePricedLicenseAttached({
+		effectiveProduct,
 		customerLevelProduct: context.customerLevelProduct,
 	});
 

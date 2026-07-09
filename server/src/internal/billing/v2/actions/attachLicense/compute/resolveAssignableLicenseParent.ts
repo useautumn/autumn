@@ -7,6 +7,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { resolveEffectiveLicenseProduct } from "@/internal/licenses/actions/customize/resolveEffectiveLicenseProduct.js";
 import { resolveLicenseDefinitionsForParents } from "@/internal/licenses/actions/reconcile/resolveLicenseDefinitions.js";
 import { isLicenseAssignableParentCustomerProduct } from "@/internal/licenses/licenseUtils.js";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
@@ -80,6 +81,7 @@ export const resolveAssignableLicenseParent = async ({
 }): Promise<{
 	parent: FullCusProduct;
 	licenseDefinition: DbPlanLicense;
+	effectiveProduct: FullProduct;
 	available: number;
 }> => {
 	const assignableParents = fullCustomer.customer_products.filter(
@@ -110,5 +112,11 @@ export const resolveAssignableLicenseParent = async ({
 		? balance.remaining + (licenseDefinition.included - balance.granted)
 		: licenseDefinition.included;
 
-	return { parent, licenseDefinition, available };
+	const effectiveProduct = await resolveEffectiveLicenseProduct({
+		ctx,
+		licenseProduct,
+		planLicenseId: licenseDefinition.id,
+	});
+
+	return { parent, licenseDefinition, effectiveProduct, available };
 };
