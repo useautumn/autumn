@@ -162,15 +162,13 @@ export const findTargetCustomerProduct = async ({
 			id: params.customer_product_id,
 			inStatuses: RELEVANT_STATUSES,
 		});
-		if (
-			fallback &&
-			fallback.internal_customer_id === fullCustomer.internal_id
-		) {
-			if (
+		const belongsToCustomer =
+			fallback?.internal_customer_id === fullCustomer.internal_id;
+		if (fallback && belongsToCustomer) {
+			const isLicenseAssignment =
 				fallback.license_parent_customer_product_id != null &&
-				fallback.internal_entity_id != null &&
-				!params.cancel_action
-			) {
+				fallback.internal_entity_id != null;
+			if (isLicenseAssignment && !params.cancel_action) {
 				throw new RecaseError({
 					message:
 						"Use the license assignment APIs to manage license products.",

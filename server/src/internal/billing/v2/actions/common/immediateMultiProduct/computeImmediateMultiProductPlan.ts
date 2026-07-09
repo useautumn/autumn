@@ -68,6 +68,15 @@ export const computeImmediateMultiProductPlan = ({
 			})
 		: { entitlements: [], customerEntitlements: [] };
 
+	const customLicenses = billingContext.productContexts.flatMap(
+		(productContext, index) =>
+			buildCustomLicenseChanges({
+				parentCustomerProduct: insertCustomerProducts[index],
+				previousParentCustomerProduct: productContext.currentCustomerProduct,
+				licensePatch: productContext.licensePatch,
+			}),
+	);
+
 	const billingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
@@ -80,14 +89,7 @@ export const computeImmediateMultiProductPlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: billingContext.trialContext?.customFreeTrial,
-		customLicenses: billingContext.productContexts.flatMap(
-			(productContext, index) =>
-				buildCustomLicenseChanges({
-					parentCustomerProduct: insertCustomerProducts[index],
-					previousParentCustomerProduct: productContext.currentCustomerProduct,
-					licensePatch: productContext.licensePatch,
-				}),
-		),
+		customLicenses,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,

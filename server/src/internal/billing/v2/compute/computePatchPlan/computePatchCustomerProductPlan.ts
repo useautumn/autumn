@@ -58,16 +58,18 @@ export const computePatchCustomerProductPlan = ({
 			? patchContext.originalCustomerProduct
 			: undefined;
 
+	const customLicenses = buildCustomLicenseChanges({
+		parentCustomerProduct: finalCustomerProduct,
+		previousParentCustomerProduct,
+		licensePatch: patchContext.licensePatch,
+	});
+
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
 		customPrices: patchContext.customPrices,
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
-		customLicenses: buildCustomLicenseChanges({
-			parentCustomerProduct: finalCustomerProduct,
-			previousParentCustomerProduct,
-			licensePatch: patchContext.licensePatch,
-		}),
+		customLicenses,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({

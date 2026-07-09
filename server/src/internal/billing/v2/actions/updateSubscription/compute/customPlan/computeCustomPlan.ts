@@ -83,6 +83,12 @@ export const computeCustomPlan = async ({
 		customerProduct,
 	});
 
+	const customLicenses = buildCustomLicenseChanges({
+		parentCustomerProduct: newFullCustomerProduct,
+		previousParentCustomerProduct: customerProduct,
+		licensePatch: params.customize,
+	});
+
 	return {
 		customerId: fullCustomer?.id ?? "",
 		insertCustomerProducts: [newFullCustomerProduct],
@@ -107,11 +113,7 @@ export const computeCustomPlan = async ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
-		customLicenses: buildCustomLicenseChanges({
-			parentCustomerProduct: newFullCustomerProduct,
-			previousParentCustomerProduct: customerProduct,
-			licensePatch: params.customize,
-		}),
+		customLicenses,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	} satisfies AutumnBillingPlan;

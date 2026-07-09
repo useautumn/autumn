@@ -1,4 +1,7 @@
-import type { FullCusProduct, SyncPlanInstance } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	SyncPlanInstance,
+} from "@autumn/shared";
 import type { MatchedPlan } from "../detect/types";
 
 export type TargetGroupLink = {
@@ -19,8 +22,11 @@ const targetGroupKey = ({
  * group most catalogs use) -- it is NOT ambiguous on its own. Ambiguity only
  * exists when two non-add-on products collide on the same entity+group key.
  */
-const normalizeProductGroup = ({ group }: { group?: string | null }): string =>
-	group ?? "";
+const normalizeProductGroup = ({
+	group,
+}: {
+	group?: string | null;
+}): string => group ?? "";
 
 export const matchedPlanToTargetGroupLink = ({
 	matchedPlan,
@@ -42,7 +48,9 @@ export const linkedCustomerProductsToTargetGroupMap = ({
 	linkedCustomerProducts,
 }: {
 	linkedCustomerProducts: FullCusProduct[];
-}): { ok: true; targets: Map<string, FullCusProduct> } | { ok: false } => {
+}):
+	| { ok: true; targets: Map<string, FullCusProduct> }
+	| { ok: false } => {
 	const targets = new Map<string, FullCusProduct>();
 
 	for (const linkedProduct of linkedCustomerProducts) {
