@@ -26,10 +26,6 @@ export const handleUpdateBalance = createRoute({
 			});
 		}
 
-		// A non-future expiry immediately filters the balance out of the
-		// customer's active entitlements (see fullCustomerToCustomerEntitlements'
-		// `expires_at > now` guard) — and once filtered it can no longer be
-		// targeted to undo. Reject it, mirroring create's next_reset_at rule.
 		if (notNullish(params.expires_at) && params.expires_at <= Date.now()) {
 			throw new RecaseError({
 				message: "expires_at must be in the future",
