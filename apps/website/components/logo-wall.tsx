@@ -7,6 +7,7 @@ import { getGsap } from "@/lib/lazyGsap";
 const LOGOS = [
 	{ id: 1, name: "Mintlify", src: "/images/logos/mintlify_logo.svg.svg", className: "scale-90 md:scale-70" },
 	{ id: 3, name: "Firecrawl", src: "/images/logos/Firecrawl.svg.svg", className: "scale-95 md:scale-75 -translate-y-0.5" },
+	{ id: 6, name: "Interaction", src: "/images/logos/Interaction.svg", className: "scale-90 md:scale-70" },
 	{ id: 4, name: "Mastra", src: "/images/logos/Mastra.svg.svg", className: "scale-105 md:scale-95" },
 	{ id: 2, name: "Browser Use", src: "/images/logos/Browser use.svg", className: "scale-85 md:scale-65" },
 	{ id: 5, name: "T3.chat", src: "/images/logos/T3_svg.svg", className: "scale-65 md:scale-55" },
@@ -77,7 +78,7 @@ export default function LogoWall() {
 					</span>
 				</div>
 
-				<div className="flex-1 flex flex-wrap justify-center md:grid md:grid-cols-5 px-4 py-4 md:py-0">
+				<div className="flex-1 flex flex-wrap justify-center md:grid md:grid-cols-6 px-4 py-4 md:py-0">
 					{LOGOS.map((logo) => (
 						<div
 							key={logo.id}
