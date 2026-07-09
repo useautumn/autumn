@@ -49,6 +49,7 @@ export function useBalanceEditForm({
 			balance: balance ?? null,
 			grantedAndPurchasedBalance: grantedAndPurchasedBalance ?? null,
 			nextResetAt: selectedCusEnt.next_reset_at ?? null,
+			expiresAt: selectedCusEnt.expires_at ?? null,
 			addValue: null,
 			updateGrantedBalance: true,
 		} as BalanceEditForm,

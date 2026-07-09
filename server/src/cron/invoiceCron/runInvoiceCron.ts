@@ -26,6 +26,7 @@ const getOrgAndCustomerFromMetadata = async ({
 			db,
 			orgId,
 			env,
+			allowNotFound: true,
 		});
 
 		return {

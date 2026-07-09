@@ -1,6 +1,10 @@
 import type { WebhookUnCancellation } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
-import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
+import {
+	getRevenueCatCustomerEmail,
+	getRevenueCatCustomerFingerprint,
+	getRevenueCatOverrideCustomerId,
+} from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
@@ -26,6 +30,8 @@ export const handleUncancellation = async ({
 		customerId: app_user_id ?? original_app_user_id,
 		originalAppUserId: original_app_user_id,
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
+		customerEmail: getRevenueCatCustomerEmail(event),
+		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
 	const cusProduct = cusProducts.find(
