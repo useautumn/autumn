@@ -32,6 +32,19 @@ export const previewMultiAttachAttachDiscountSchema = z.object({
 	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewMultiAttachFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
 export const previewMultiAttachOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -251,6 +264,20 @@ export const previewMultiAttachSpendLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const previewMultiAttachPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewMultiAttachFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const previewMultiAttachUsageLimitOutboundSchema = z.object({
@@ -258,6 +285,9 @@ export const previewMultiAttachUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	filter: z
+		.union([previewMultiAttachFilterOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachUsageAlertOutboundSchema = z.object({
@@ -426,6 +456,7 @@ export const previewMultiAttachSpendLimitSchema = z.object({
 		.union([previewMultiAttachLimitTypeSchema, z.undefined()])
 		.optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachEntityDataIntervalSchema = closedEnumSchema;
@@ -435,6 +466,7 @@ export const previewMultiAttachUsageLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: previewMultiAttachEntityDataIntervalSchema,
+	filter: z.union([previewMultiAttachFilterSchema, z.undefined()]).optional(),
 });
 
 export const previewMultiAttachThresholdTypeSchema = closedEnumSchema;

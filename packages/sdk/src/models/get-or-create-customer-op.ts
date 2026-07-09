@@ -5,6 +5,7 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { ClosedEnum } from "../types/enums.js";
+import { smartUnion } from "../types/smart-union.js";
 import {
   CustomerExpand,
   CustomerExpand$outboundSchema,
@@ -106,6 +107,10 @@ export type GetOrCreateCustomerSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -124,6 +129,15 @@ export type GetOrCreateCustomerUsageLimitInterval = ClosedEnum<
   typeof GetOrCreateCustomerUsageLimitInterval
 >;
 
+export type GetOrCreateCustomerProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type GetOrCreateCustomerFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type GetOrCreateCustomerUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -141,6 +155,10 @@ export type GetOrCreateCustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetOrCreateCustomerUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: GetOrCreateCustomerFilter | undefined;
 };
 
 /**
@@ -376,6 +394,7 @@ export type GetOrCreateCustomerSpendLimit$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -388,12 +407,14 @@ export const GetOrCreateCustomerSpendLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(GetOrCreateCustomerLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -415,11 +436,55 @@ export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
   );
 
 /** @internal */
+export type GetOrCreateCustomerProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const GetOrCreateCustomerProperties$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerProperties$Outbound,
+  GetOrCreateCustomerProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function getOrCreateCustomerPropertiesToJSON(
+  getOrCreateCustomerProperties: GetOrCreateCustomerProperties,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerProperties$outboundSchema.parse(
+      getOrCreateCustomerProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const GetOrCreateCustomerFilter$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerFilter$Outbound,
+  GetOrCreateCustomerFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function getOrCreateCustomerFilterToJSON(
+  getOrCreateCustomerFilter: GetOrCreateCustomerFilter,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerFilter$outboundSchema.parse(getOrCreateCustomerFilter),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: GetOrCreateCustomerFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -432,6 +497,7 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => GetOrCreateCustomerFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -803,6 +803,10 @@ export type CreateScheduleSpendLimit2 = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -821,6 +825,13 @@ export type CreateScheduleUsageLimitInterval2 = ClosedEnum<
   typeof CreateScheduleUsageLimitInterval2
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CreateScheduleFilter2 = {
+  properties: { [k: string]: any };
+};
+
 export type CreateScheduleUsageLimit2 = {
   /**
    * The feature this usage limit applies to.
@@ -838,6 +849,10 @@ export type CreateScheduleUsageLimit2 = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CreateScheduleUsageLimitInterval2;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CreateScheduleFilter2 | undefined;
 };
 
 /**
@@ -2061,6 +2076,7 @@ export type CreateScheduleSpendLimit2$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -2073,12 +2089,14 @@ export const CreateScheduleSpendLimit2$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(CreateScheduleLimitType2$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -2097,11 +2115,33 @@ export const CreateScheduleUsageLimitInterval2$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateScheduleUsageLimitInterval2);
 
 /** @internal */
+export type CreateScheduleFilter2$Outbound = {
+  properties: { [k: string]: any };
+};
+
+/** @internal */
+export const CreateScheduleFilter2$outboundSchema: z.ZodMiniType<
+  CreateScheduleFilter2$Outbound,
+  CreateScheduleFilter2
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function createScheduleFilter2ToJSON(
+  createScheduleFilter2: CreateScheduleFilter2,
+): string {
+  return JSON.stringify(
+    CreateScheduleFilter2$outboundSchema.parse(createScheduleFilter2),
+  );
+}
+
+/** @internal */
 export type CreateScheduleUsageLimit2$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: CreateScheduleFilter2$Outbound | undefined;
 };
 
 /** @internal */
@@ -2114,6 +2154,7 @@ export const CreateScheduleUsageLimit2$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: CreateScheduleUsageLimitInterval2$outboundSchema,
+    filter: z.optional(z.lazy(() => CreateScheduleFilter2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

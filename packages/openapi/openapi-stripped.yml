@@ -134,6 +134,10 @@ components:
                     minimum: 0
                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                       120) when limit_type is usage_percentage."
+                  skip_overage_billing:
+                    type: boolean
+                    description: When true, overage for this feature is not posted to Stripe. Usage
+                      tracking and balance resets still behave normally.
               description: List of overage spend limits per feature (caps overage spend).
             usage_limits:
               type: array
@@ -159,6 +163,26 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  filter:
+                    type: object
+                    properties:
+                      properties:
+                        type: object
+                        propertyNames:
+                          type: string
+                          minLength: 1
+                          maxLength: 64
+                        additionalProperties:
+                          anyOf:
+                            - type: string
+                              minLength: 1
+                              maxLength: 128
+                            - type: number
+                            - type: boolean
+                    required:
+                      - properties
+                    description: When set, only usage from events whose properties match counts
+                      toward this cap. Omit to count all usage of the feature.
                 required:
                   - feature_id
                   - limit
@@ -416,6 +440,10 @@ components:
                     minimum: 0
                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                       120) when limit_type is usage_percentage."
+                  skip_overage_billing:
+                    type: boolean
+                    description: When true, overage for this feature is not posted to Stripe. Usage
+                      tracking and balance resets still behave normally.
               description: List of overage spend limits per feature (caps overage spend).
             usage_limits:
               type: array
@@ -441,6 +469,20 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  filter:
+                    type: object
+                    properties:
+                      properties:
+                        type: object
+                        propertyNames:
+                          type: string
+                          minLength: 1
+                          maxLength: 64
+                        additionalProperties: {}
+                    required:
+                      - properties
+                    description: When set, only usage from events whose properties match counts
+                      toward this cap. Omit to count all usage of the feature.
                   usage:
                     type: number
                     minimum: 0
@@ -1838,6 +1880,10 @@ components:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of overage spend limits per feature (caps overage spend).
                     usage_limits:
                       type: array
@@ -1863,6 +1909,21 @@ components:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties: {}
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -2018,6 +2079,10 @@ components:
                     minimum: 0
                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                       120) when limit_type is usage_percentage."
+                  skip_overage_billing:
+                    type: boolean
+                    description: When true, overage for this feature is not posted to Stripe. Usage
+                      tracking and balance resets still behave normally.
               description: List of overage spend limits per feature (caps overage spend).
             usage_limits:
               type: array
@@ -2043,6 +2108,20 @@ components:
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
+                  filter:
+                    type: object
+                    properties:
+                      properties:
+                        type: object
+                        propertyNames:
+                          type: string
+                          minLength: 1
+                          maxLength: 64
+                        additionalProperties: {}
+                    required:
+                      - properties
+                    description: When set, only usage from events whose properties match counts
+                      toward this cap. Omit to count all usage of the feature.
                 required:
                   - feature_id
                   - limit
@@ -2629,6 +2708,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of overage spend limits per feature (caps overage spend).
                     usage_limits:
                       type: array
@@ -2654,6 +2737,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -2976,6 +3080,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -3001,6 +3110,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                             usage:
                               type: number
                               minimum: 0
@@ -3942,6 +4066,11 @@ paths:
                                     minimum: 0
                                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                       120) when limit_type is usage_percentage."
+                                  skip_overage_billing:
+                                    type: boolean
+                                    description: When true, overage for this feature is not posted to Stripe. Usage
+                                      tracking and balance resets still behave
+                                      normally.
                               description: List of overage spend limits per feature (caps overage spend).
                             usage_limits:
                               type: array
@@ -3967,6 +4096,21 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  filter:
+                                    type: object
+                                    properties:
+                                      properties:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties: {}
+                                    required:
+                                      - properties
+                                    description: When set, only usage from events whose properties match counts
+                                      toward this cap. Omit to count all usage
+                                      of the feature.
                                   usage:
                                     type: number
                                     minimum: 0
@@ -4650,6 +4794,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of overage spend limits per feature (caps overage spend).
                     usage_limits:
                       type: array
@@ -4675,6 +4823,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -4934,6 +5103,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -4959,6 +5133,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                             usage:
                               type: number
                               minimum: 0
@@ -5835,6 +6024,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of overage spend limits per feature (caps overage spend).
                     usage_limits:
                       type: array
@@ -5860,6 +6053,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -6698,6 +6912,11 @@ paths:
                                       description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                         120) when limit_type is
                                         usage_percentage."
+                                    skip_overage_billing:
+                                      type: boolean
+                                      description: When true, overage for this feature is not posted to Stripe. Usage
+                                        tracking and balance resets still behave
+                                        normally.
                                 description: List of overage spend limits per feature (caps overage spend).
                               usage_limits:
                                 type: array
@@ -6723,6 +6942,21 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    filter:
+                                      type: object
+                                      properties:
+                                        properties:
+                                          type: object
+                                          propertyNames:
+                                            type: string
+                                            minLength: 1
+                                            maxLength: 64
+                                          additionalProperties: {}
+                                      required:
+                                        - properties
+                                      description: When set, only usage from events whose properties match counts
+                                        toward this cap. Omit to count all usage
+                                        of the feature.
                                   required:
                                     - feature_id
                                     - limit
@@ -6880,6 +7114,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -6905,6 +7144,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                           required:
                             - feature_id
                             - limit
@@ -7836,6 +8090,11 @@ paths:
                                       description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                         120) when limit_type is
                                         usage_percentage."
+                                    skip_overage_billing:
+                                      type: boolean
+                                      description: When true, overage for this feature is not posted to Stripe. Usage
+                                        tracking and balance resets still behave
+                                        normally.
                                 description: List of overage spend limits per feature (caps overage spend).
                               usage_limits:
                                 type: array
@@ -7861,6 +8120,21 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    filter:
+                                      type: object
+                                      properties:
+                                        properties:
+                                          type: object
+                                          propertyNames:
+                                            type: string
+                                            minLength: 1
+                                            maxLength: 64
+                                          additionalProperties: {}
+                                      required:
+                                        - properties
+                                      description: When set, only usage from events whose properties match counts
+                                        toward this cap. Omit to count all usage
+                                        of the feature.
                                   required:
                                     - feature_id
                                     - limit
@@ -8018,6 +8292,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -8043,6 +8322,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                           required:
                             - feature_id
                             - limit
@@ -8988,6 +9282,11 @@ paths:
                                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                               120) when limit_type is
                                               usage_percentage."
+                                          skip_overage_billing:
+                                            type: boolean
+                                            description: When true, overage for this feature is not posted to Stripe. Usage
+                                              tracking and balance resets still
+                                              behave normally.
                                       description: List of overage spend limits per feature (caps overage spend).
                                     usage_limits:
                                       type: array
@@ -9013,6 +9312,21 @@ paths:
                                               - year
                                             type: string
                                             description: Interval for the cap, aligned to the customer's billing cycle.
+                                          filter:
+                                            type: object
+                                            properties:
+                                              properties:
+                                                type: object
+                                                propertyNames:
+                                                  type: string
+                                                  minLength: 1
+                                                  maxLength: 64
+                                                additionalProperties: {}
+                                            required:
+                                              - properties
+                                            description: When set, only usage from events whose properties match counts
+                                              toward this cap. Omit to count all
+                                              usage of the feature.
                                         required:
                                           - feature_id
                                           - limit
@@ -9171,6 +9485,11 @@ paths:
                                     minimum: 0
                                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                       120) when limit_type is usage_percentage."
+                                  skip_overage_billing:
+                                    type: boolean
+                                    description: When true, overage for this feature is not posted to Stripe. Usage
+                                      tracking and balance resets still behave
+                                      normally.
                               description: List of overage spend limits per feature (caps overage spend).
                             usage_limits:
                               type: array
@@ -9196,6 +9515,21 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  filter:
+                                    type: object
+                                    properties:
+                                      properties:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties: {}
+                                    required:
+                                      - properties
+                                    description: When set, only usage from events whose properties match counts
+                                      toward this cap. Omit to count all usage
+                                      of the feature.
                                 required:
                                   - feature_id
                                   - limit
@@ -9723,6 +10057,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of overage spend limits per feature (caps overage spend).
                     usage_limits:
                       type: array
@@ -9748,6 +10086,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -10236,6 +10595,11 @@ paths:
                                       description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                         120) when limit_type is
                                         usage_percentage."
+                                    skip_overage_billing:
+                                      type: boolean
+                                      description: When true, overage for this feature is not posted to Stripe. Usage
+                                        tracking and balance resets still behave
+                                        normally.
                                 description: List of overage spend limits per feature (caps overage spend).
                               usage_limits:
                                 type: array
@@ -10261,6 +10625,27 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    filter:
+                                      type: object
+                                      properties:
+                                        properties:
+                                          type: object
+                                          propertyNames:
+                                            type: string
+                                            minLength: 1
+                                            maxLength: 64
+                                          additionalProperties:
+                                            anyOf:
+                                              - type: string
+                                                minLength: 1
+                                                maxLength: 128
+                                              - type: number
+                                              - type: boolean
+                                      required:
+                                        - properties
+                                      description: When set, only usage from events whose properties match counts
+                                        toward this cap. Omit to count all usage
+                                        of the feature.
                                   required:
                                     - feature_id
                                     - limit
@@ -11089,6 +11474,11 @@ paths:
                                       description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                         120) when limit_type is
                                         usage_percentage."
+                                    skip_overage_billing:
+                                      type: boolean
+                                      description: When true, overage for this feature is not posted to Stripe. Usage
+                                        tracking and balance resets still behave
+                                        normally.
                                 description: List of overage spend limits per feature (caps overage spend).
                               usage_limits:
                                 type: array
@@ -11114,6 +11504,21 @@ paths:
                                         - year
                                       type: string
                                       description: Interval for the cap, aligned to the customer's billing cycle.
+                                    filter:
+                                      type: object
+                                      properties:
+                                        properties:
+                                          type: object
+                                          propertyNames:
+                                            type: string
+                                            minLength: 1
+                                            maxLength: 64
+                                          additionalProperties: {}
+                                      required:
+                                        - properties
+                                      description: When set, only usage from events whose properties match counts
+                                        toward this cap. Omit to count all usage
+                                        of the feature.
                                   required:
                                     - feature_id
                                     - limit
@@ -11271,6 +11676,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -11296,6 +11706,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                           required:
                             - feature_id
                             - limit
@@ -12986,6 +13411,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of overage spend limits per feature (caps overage spend).
                         usage_limits:
                           type: array
@@ -13011,6 +13441,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -14006,6 +14457,11 @@ paths:
                                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                                 120) when limit_type is
                                                 usage_percentage."
+                                            skip_overage_billing:
+                                              type: boolean
+                                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                                tracking and balance resets
+                                                still behave normally.
                                         description: List of overage spend limits per feature (caps overage spend).
                                       usage_limits:
                                         type: array
@@ -14031,6 +14487,18 @@ paths:
                                                 - year
                                               type: string
                                               description: Interval for the cap, aligned to the customer's billing cycle.
+                                            filter:
+                                              type: object
+                                              properties:
+                                                properties:
+                                                  type: object
+                                                  propertyNames: {}
+                                                  additionalProperties: {}
+                                              required:
+                                                - properties
+                                              description: When set, only usage from events whose properties match counts
+                                                toward this cap. Omit to count
+                                                all usage of the feature.
                                           required:
                                             - feature_id
                                             - limit
@@ -14648,6 +15116,11 @@ paths:
                                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                               120) when limit_type is
                                               usage_percentage."
+                                          skip_overage_billing:
+                                            type: boolean
+                                            description: When true, overage for this feature is not posted to Stripe. Usage
+                                              tracking and balance resets still
+                                              behave normally.
                                       description: List of overage spend limits per feature (caps overage spend).
                                     usage_limits:
                                       type: array
@@ -14673,6 +15146,18 @@ paths:
                                               - year
                                             type: string
                                             description: Interval for the cap, aligned to the customer's billing cycle.
+                                          filter:
+                                            type: object
+                                            properties:
+                                              properties:
+                                                type: object
+                                                propertyNames: {}
+                                                additionalProperties: {}
+                                            required:
+                                              - properties
+                                            description: When set, only usage from events whose properties match counts
+                                              toward this cap. Omit to count all
+                                              usage of the feature.
                                         required:
                                           - feature_id
                                           - limit
@@ -15312,6 +15797,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of spend limits per feature. Each entry caps overage
                             (overage_limit) and/or per-interval usage
                             (usage_limit).
@@ -15339,6 +15829,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -16073,6 +16584,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of overage spend limits per feature (caps overage spend).
                         usage_limits:
                           type: array
@@ -16098,6 +16614,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -17177,6 +17714,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of spend limits per feature. Each entry caps overage
                             (overage_limit) and/or per-interval usage
                             (usage_limit).
@@ -17204,6 +17746,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -18262,6 +18825,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of overage spend limits per feature (caps overage spend).
                         usage_limits:
                           type: array
@@ -18287,6 +18855,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -19143,6 +19732,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of overage spend limits per feature (caps overage spend).
                         usage_limits:
                           type: array
@@ -19168,6 +19762,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -19770,6 +20385,651 @@ paths:
       x-speakeasy-name-override: previewUpdate
       parameters:
         - *a5
+  /v1/billing.multi_update:
+    post:
+      operationId: multiUpdate
+      description: >-
+        Updates multiple plans on a customer in a single request. Currently
+        supports cancel actions (immediately, end of cycle, or uncancel) across
+        one or more subscriptions.
+
+
+        Use this endpoint to cancel or uncancel several plans atomically in one
+        call — for example canceling a main plan together with its add-ons, or
+        plans across multiple entities.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to update plans for.
+                entity_id:
+                  type: string
+                  description: The ID of the entity to update plans for. Individual updates can
+                    override this with their own entity_id.
+                updates:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: The ID of the plan to update. Optional if subscription_id is
+                          provided.
+                      subscription_id:
+                        type: string
+                        description: A unique ID to identify the subscription to update. Useful when a
+                          customer has multiple products with the same plan.
+                      entity_id:
+                        type: string
+                        description: The ID of the entity this update targets. Overrides the top-level
+                          entity_id for this update.
+                      cancel_action:
+                        enum:
+                          - cancel_immediately
+                          - cancel_end_of_cycle
+                          - uncancel
+                        type: string
+                        title: CancelAction
+                        description: Action to perform for cancellation. 'cancel_immediately' cancels
+                          now with prorated refund, 'cancel_end_of_cycle'
+                          cancels at period end, 'uncancel' reverses a pending
+                          cancellation.
+                      proration_behavior:
+                        enum:
+                          - prorate_immediately
+                          - none
+                        type: string
+                        description: How to handle proration for this update. 'prorate_immediately'
+                          charges/credits prorated amounts now, 'none' skips
+                          creating any charges.
+                    required:
+                      - cancel_action
+                  description: The list of plan updates to apply to the customer.
+              required:
+                - customer_id
+                - updates
+              title: MultiUpdateParams
+              examples:
+                - &a43
+                  customer_id: cus_123
+                  updates:
+                    - plan_id: pro_plan
+                      cancel_action: cancel_end_of_cycle
+                    - plan_id: addon_seats
+                      cancel_action: cancel_end_of_cycle
+            example: *a43
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if the plan was attached to an entity.
+                  invoice:
+                    type: object
+                    properties:
+                      status:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The status of the invoice (e.g., 'paid', 'open', 'draft').
+                      stripe_id:
+                        type: string
+                        description: The Stripe invoice ID.
+                      total:
+                        type: number
+                        description: The total amount of the invoice in cents.
+                      currency:
+                        type: string
+                        description: The three-letter ISO currency code (e.g., 'usd').
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: URL to the hosted invoice page where the customer can view and pay
+                          the invoice.
+                    required:
+                      - status
+                      - stripe_id
+                      - total
+                      - currency
+                      - hosted_invoice_url
+                    description: Invoice details if an invoice was created. Only present when a
+                      charge was made.
+                  payment_url:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: URL to redirect the customer to complete payment. Null if no
+                      payment action is required.
+                  required_action:
+                    type: object
+                    properties:
+                      code:
+                        enum:
+                          - 3ds_required
+                          - payment_method_required
+                          - payment_failed
+                          - payment_processing
+                        type: string
+                        description: The type of action required to complete the payment.
+                      reason:
+                        type: string
+                        description: A human-readable explanation of why this action is required.
+                    required:
+                      - code
+                      - reason
+                    description: Details about any action required to complete the payment. Present
+                      when the payment could not be processed automatically.
+                required:
+                  - customer_id
+                  - payment_url
+                examples:
+                  - &a44
+                    customer_id: cus_123
+                    invoice:
+                      status: paid
+                      stripe_id: in_1234
+                      total: -20
+                      currency: usd
+                      hosted_invoice_url: https://invoice.stripe.com/...
+                    payment_url: null
+              example: *a44
+      x-speakeasy-name-override: multiUpdate
+      parameters:
+        - *a5
+  /v1/billing.preview_multi_update:
+    post:
+      operationId: previewMultiUpdate
+      description: >-
+        Previews the billing changes of a multi-plan update without making any
+        changes. Returns one core preview per affected subscription.
+
+
+        Use this endpoint to show customers the credits and next-cycle changes
+        of canceling multiple plans before confirming.
+      tags:
+        - billing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer to update plans for.
+                entity_id:
+                  type: string
+                  description: The ID of the entity to update plans for. Individual updates can
+                    override this with their own entity_id.
+                updates:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        description: The ID of the plan to update. Optional if subscription_id is
+                          provided.
+                      subscription_id:
+                        type: string
+                        description: A unique ID to identify the subscription to update. Useful when a
+                          customer has multiple products with the same plan.
+                      entity_id:
+                        type: string
+                        description: The ID of the entity this update targets. Overrides the top-level
+                          entity_id for this update.
+                      cancel_action:
+                        enum:
+                          - cancel_immediately
+                          - cancel_end_of_cycle
+                          - uncancel
+                        type: string
+                        title: CancelAction
+                        description: Action to perform for cancellation. 'cancel_immediately' cancels
+                          now with prorated refund, 'cancel_end_of_cycle'
+                          cancels at period end, 'uncancel' reverses a pending
+                          cancellation.
+                      proration_behavior:
+                        enum:
+                          - prorate_immediately
+                          - none
+                        type: string
+                        description: How to handle proration for this update. 'prorate_immediately'
+                          charges/credits prorated amounts now, 'none' skips
+                          creating any charges.
+                    required:
+                      - cancel_action
+                  description: The list of plan updates to apply to the customer.
+              required:
+                - customer_id
+                - updates
+              title: PreviewMultiUpdateParams
+              examples:
+                - &a45
+                  customer_id: cus_123
+                  updates:
+                    - plan_id: pro_plan
+                      cancel_action: cancel_immediately
+                    - plan_id: addon_seats
+                      cancel_action: cancel_immediately
+            example: *a45
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer the preview applies to.
+                  currency:
+                    type: string
+                    description: The three-letter ISO currency code (e.g., 'usd').
+                  total:
+                    type: number
+                    description: The combined amount due today across all subscriptions (sum of
+                      subscriptions[].total).
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        customer_id:
+                          type: string
+                          description: The ID of the customer.
+                        line_items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              display_name:
+                                type: string
+                                description: The name of the line item to display to the customer if you're
+                                  building a UI. It will either be the plan name
+                                  or the feature name.
+                              description:
+                                type: string
+                                description: A detailed description of the line item.
+                              subtotal:
+                                type: number
+                                description: The amount in cents before discounts and tax for this line item.
+                              total:
+                                type: number
+                                description: The final amount in cents after discounts and tax for this line
+                                  item.
+                              discounts:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    amount_off:
+                                      type: number
+                                    percent_off:
+                                      type: number
+                                    reward_id:
+                                      type: string
+                                    reward_name:
+                                      type: string
+                                  required:
+                                    - amount_off
+                                default: []
+                                description: List of discounts applied to this line item.
+                              plan_id:
+                                type: string
+                                description: The ID of the plan that this line item belongs to.
+                              feature_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: The ID of the feature that this line item belongs to.
+                              period:
+                                type: object
+                                properties:
+                                  start:
+                                    type: number
+                                    description: The start of the period in milliseconds since the Unix epoch.
+                                  end:
+                                    type: number
+                                    description: The end of the period in milliseconds since the Unix epoch.
+                                required:
+                                  - start
+                                  - end
+                                description: The period of time that this line item is being charged for.
+                              quantity:
+                                type: number
+                                description: The quantity of the line item.
+                            required:
+                              - display_name
+                              - description
+                              - subtotal
+                              - total
+                              - plan_id
+                              - feature_id
+                              - quantity
+                          description: List of line items for the current billing period.
+                        subtotal:
+                          type: number
+                          description: The total amount in cents before discounts and tax for the current
+                            billing period.
+                        total:
+                          type: number
+                          description: The final amount in cents after discounts and tax for the current
+                            billing period.
+                        currency:
+                          type: string
+                          description: The three-letter ISO currency code (e.g., 'usd').
+                        next_cycle:
+                          type: object
+                          properties:
+                            starts_at:
+                              type: number
+                              description: Unix timestamp (milliseconds) when the next billing cycle starts.
+                            subtotal:
+                              type: number
+                              description: The total amount in cents before discounts and tax for the next
+                                cycle.
+                            total:
+                              type: number
+                              description: The final amount in cents after discounts and tax for the next
+                                cycle.
+                            line_items:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  display_name:
+                                    type: string
+                                    description: The name of the line item to display to the customer if you're
+                                      building a UI. It will either be the plan
+                                      name or the feature name.
+                                  description:
+                                    type: string
+                                    description: A detailed description of the line item.
+                                  subtotal:
+                                    type: number
+                                    description: The amount in cents before discounts and tax for this line item.
+                                  total:
+                                    type: number
+                                    description: The final amount in cents after discounts and tax for this line
+                                      item.
+                                  discounts:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        amount_off:
+                                          type: number
+                                        percent_off:
+                                          type: number
+                                        reward_id:
+                                          type: string
+                                        reward_name:
+                                          type: string
+                                      required:
+                                        - amount_off
+                                    default: []
+                                    description: List of discounts applied to this line item.
+                                  plan_id:
+                                    type: string
+                                    description: The ID of the plan that this line item belongs to.
+                                  feature_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: The ID of the feature that this line item belongs to.
+                                  period:
+                                    type: object
+                                    properties:
+                                      start:
+                                        type: number
+                                        description: The start of the period in milliseconds since the Unix epoch.
+                                      end:
+                                        type: number
+                                        description: The end of the period in milliseconds since the Unix epoch.
+                                    required:
+                                      - start
+                                      - end
+                                    description: The period of time that this line item is being charged for.
+                                  quantity:
+                                    type: number
+                                    description: The quantity of the line item.
+                                required:
+                                  - display_name
+                                  - description
+                                  - subtotal
+                                  - total
+                                  - plan_id
+                                  - feature_id
+                                  - quantity
+                              description: List of line items for the next billing cycle.
+                            usage_line_items:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  display_name:
+                                    type: string
+                                    description: The name of the line item to display to the customer if you're
+                                      building a UI. It will either be the plan
+                                      name or the feature name.
+                                  plan_id:
+                                    type: string
+                                    description: The ID of the plan that this line item belongs to.
+                                  feature_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: The ID of the feature that this line item belongs to.
+                                  period:
+                                    type: object
+                                    properties:
+                                      start:
+                                        type: number
+                                        description: The start of the period in milliseconds since the Unix epoch.
+                                      end:
+                                        type: number
+                                        description: The end of the period in milliseconds since the Unix epoch.
+                                    required:
+                                      - start
+                                      - end
+                                    description: The period of time that this line item is being charged for.
+                                required:
+                                  - display_name
+                                  - plan_id
+                                  - feature_id
+                              description: List of line items for usage-based features in the next cycle.
+                          required:
+                            - starts_at
+                            - subtotal
+                            - total
+                            - line_items
+                            - usage_line_items
+                          description: Preview of the next billing cycle, if applicable. This shows what
+                            the customer will be charged in subsequent cycles.
+                        expand:
+                          type: array
+                          items:
+                            type: string
+                          description: Expand the response with additional data.
+                        incoming:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              plan_id:
+                                type: string
+                                description: The ID of the plan affected by this preview change.
+                              plan:
+                                $ref: "#/components/schemas/Plan"
+                                description: The full plan object if it was expanded in the response.
+                              feature_quantities:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: The ID of the adjustable feature included in this change.
+                                    quantity:
+                                      type: number
+                                      description: The quantity that will apply for this feature in the change.
+                                  required:
+                                    - feature_id
+                                    - quantity
+                                description: The feature quantity selections associated with this plan change.
+                              effective_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this change takes effect, in milliseconds since the Unix
+                                  epoch, or null if it applies immediately.
+                              canceled_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this plan was canceled, in milliseconds since the Unix epoch,
+                                  or null if it is not canceled.
+                              expires_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this plan expires, in milliseconds since the Unix epoch, or
+                                  null if it does not expire.
+                            required:
+                              - plan_id
+                              - feature_quantities
+                              - effective_at
+                              - canceled_at
+                              - expires_at
+                          description: Products or subscription changes being added or updated.
+                        outgoing:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              plan_id:
+                                type: string
+                                description: The ID of the plan affected by this preview change.
+                              plan:
+                                $ref: "#/components/schemas/Plan"
+                                description: The full plan object if it was expanded in the response.
+                              feature_quantities:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: The ID of the adjustable feature included in this change.
+                                    quantity:
+                                      type: number
+                                      description: The quantity that will apply for this feature in the change.
+                                  required:
+                                    - feature_id
+                                    - quantity
+                                description: The feature quantity selections associated with this plan change.
+                              effective_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this change takes effect, in milliseconds since the Unix
+                                  epoch, or null if it applies immediately.
+                              canceled_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this plan was canceled, in milliseconds since the Unix epoch,
+                                  or null if it is not canceled.
+                              expires_at:
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                                description: When this plan expires, in milliseconds since the Unix epoch, or
+                                  null if it does not expire.
+                            required:
+                              - plan_id
+                              - feature_quantities
+                              - effective_at
+                              - canceled_at
+                              - expires_at
+                          description: Products or subscription changes being removed or ended.
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: The IDs of the plans updated on this subscription.
+                      required:
+                        - customer_id
+                        - line_items
+                        - subtotal
+                        - total
+                        - currency
+                        - incoming
+                        - outgoing
+                        - plan_ids
+                    description: One preview per affected Stripe subscription. Updates to plans
+                      without a subscription (free plans) produce no entry.
+                required:
+                  - customer_id
+                  - currency
+                  - total
+                  - subscriptions
+                title: MultiUpdatePreviewResponse
+                examples:
+                  - &a46
+                    customer_id: cus_123
+                    currency: usd
+                    total: -40
+                    subscriptions:
+                      - customerId: charles
+                        lineItems:
+                          - display_name: Pro seed
+                            description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                            subtotal: 20
+                            total: 20
+                            discounts: []
+                        subtotal: -20
+                        total: -20
+                        currency: usd
+                        plan_ids:
+                          - pro_plan
+                      - customerId: charles
+                        lineItems:
+                          - display_name: Pro seed
+                            description: Pro seed - Base Price (from 18 Feb 2026 to 18 Mar 2026)
+                            subtotal: 20
+                            total: 20
+                            discounts: []
+                        subtotal: -20
+                        total: -20
+                        currency: usd
+                        plan_ids:
+                          - addon_seats
+              example: *a46
+      x-speakeasy-name-override: previewMultiUpdate
+      parameters:
+        - *a5
   /v1/billing.open_customer_portal:
     post:
       operationId: openCustomerPortal
@@ -19799,10 +21059,10 @@ paths:
                 - customer_id
               title: OpenCustomerPortalParams
               examples:
-                - &a43
+                - &a47
                   customer_id: cus_123
                   return_url: https://useautumn.com
-            example: *a43
+            example: *a47
       responses:
         "200":
           description: OK
@@ -19821,10 +21081,10 @@ paths:
                   - customer_id
                   - url
                 examples:
-                  - &a44
+                  - &a48
                     customer_id: cus_123
                     url: https://billing.stripe.com/session/...
-              example: *a44
+              example: *a48
       x-speakeasy-name-override: openCustomerPortal
       parameters:
         - *a5
@@ -20396,6 +21656,11 @@ paths:
                                 minimum: 0
                                 description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                   120) when limit_type is usage_percentage."
+                              skip_overage_billing:
+                                type: boolean
+                                description: When true, overage for this feature is not posted to Stripe. Usage
+                                  tracking and balance resets still behave
+                                  normally.
                           description: List of overage spend limits per feature (caps overage spend).
                         usage_limits:
                           type: array
@@ -20421,6 +21686,27 @@ paths:
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
+                              filter:
+                                type: object
+                                properties:
+                                  properties:
+                                    type: object
+                                    propertyNames:
+                                      type: string
+                                      minLength: 1
+                                      maxLength: 64
+                                    additionalProperties:
+                                      anyOf:
+                                        - type: string
+                                          minLength: 1
+                                          maxLength: 128
+                                        - type: number
+                                        - type: boolean
+                                required:
+                                  - properties
+                                description: When set, only usage from events whose properties match counts
+                                  toward this cap. Omit to count all usage of
+                                  the feature.
                             required:
                               - feature_id
                               - limit
@@ -20615,10 +21901,10 @@ paths:
                 - customer_id
               title: SetupPaymentParams
               examples:
-                - &a45
+                - &a49
                   customer_id: cus_123
                   success_url: https://example.com/account/billing
-            example: *a45
+            example: *a49
       responses:
         "200":
           description: OK
@@ -20642,10 +21928,10 @@ paths:
                   - url
                 title: SetupPaymentResponse
                 examples:
-                  - &a46
+                  - &a50
                     customer_id: cus_123
                     url: https://checkout.stripe.com/...
-              example: *a46
+              example: *a50
       x-speakeasy-name-override: setupPayment
       parameters:
         - *a5
@@ -20839,7 +22125,7 @@ paths:
                 - billables
               title: DfuFlashParams
               examples:
-                - &a47
+                - &a51
                   customer_id: cus_123
                   processors:
                     - type: stripe
@@ -20854,7 +22140,7 @@ paths:
                         balances:
                           - feature_id: messages
                             usage: 10
-            example: *a47
+            example: *a51
       responses:
         "200":
           description: OK
@@ -20923,7 +22209,7 @@ paths:
                   - customer
                 title: DfuFlashResult
                 examples:
-                  - &a48
+                  - &a52
                     customer_id: cus_123
                     flashed:
                       - plan_id: pro
@@ -20987,7 +22273,7 @@ paths:
                       config:
                         disable_pooled_balance: false
                         disable_overage_billing: false
-              example: *a48
+              example: *a52
       x-speakeasy-name-override: import
       parameters:
         - *a5
@@ -21090,13 +22376,13 @@ paths:
                 - feature_id
               title: CreateBalanceParams
               examples:
-                - &a49
+                - &a53
                   customer_id: cus_123
                   feature_id: api_calls
                   included: 1000
                   reset:
                     interval: month
-            example: *a49
+            example: *a53
       responses:
         "200":
           description: OK
@@ -21179,11 +22465,11 @@ paths:
                 - feature_id
               title: UpdateBalanceParams
               examples:
-                - &a50
+                - &a54
                   customer_id: cus_123
                   feature_id: api_calls
                   remaining: 5
-            example: *a50
+            example: *a54
       responses:
         "200":
           description: OK
@@ -21250,10 +22536,10 @@ paths:
                 - customer_id
               title: DeleteBalanceParams
               examples:
-                - &a51
+                - &a55
                   customer_id: cus_123
                   feature_id: api_calls
-            example: *a51
+            example: *a55
       responses:
         "200":
           description: OK
@@ -21307,7 +22593,7 @@ paths:
                 - action
               title: FinalizeBalanceParams
               examples:
-                - &a52
+                - &a56
                   lock_id: lock_abc123
                   action: confirm
                 - lock_id: lock_abc123
@@ -21315,7 +22601,7 @@ paths:
                   override_value: 3
                 - lock_id: lock_abc123
                   action: release
-            example: *a52
+            example: *a56
       responses:
         "200":
           description: OK
@@ -21414,14 +22700,14 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a53
+                - &a57
                   customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a53
+            example: *a57
       responses:
         "200":
           description: OK
@@ -21994,6 +23280,11 @@ paths:
                                         description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                           120) when limit_type is
                                           usage_percentage."
+                                      skip_overage_billing:
+                                        type: boolean
+                                        description: When true, overage for this feature is not posted to Stripe. Usage
+                                          tracking and balance resets still
+                                          behave normally.
                                   description: List of overage spend limits per feature (caps overage spend).
                                 usage_limits:
                                   type: array
@@ -22019,6 +23310,21 @@ paths:
                                           - year
                                         type: string
                                         description: Interval for the cap, aligned to the customer's billing cycle.
+                                      filter:
+                                        type: object
+                                        properties:
+                                          properties:
+                                            type: object
+                                            propertyNames:
+                                              type: string
+                                              minLength: 1
+                                              maxLength: 64
+                                            additionalProperties: {}
+                                        required:
+                                          - properties
+                                        description: When set, only usage from events whose properties match counts
+                                          toward this cap. Omit to count all
+                                          usage of the feature.
                                     required:
                                       - feature_id
                                       - limit
@@ -22151,7 +23457,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a54
+                  - &a58
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -22178,7 +23484,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a54
+              example: *a58
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so access was allowed fail-open.
@@ -22751,6 +24057,11 @@ paths:
                                         description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                           120) when limit_type is
                                           usage_percentage."
+                                      skip_overage_billing:
+                                        type: boolean
+                                        description: When true, overage for this feature is not posted to Stripe. Usage
+                                          tracking and balance resets still
+                                          behave normally.
                                   description: List of overage spend limits per feature (caps overage spend).
                                 usage_limits:
                                   type: array
@@ -22776,6 +24087,21 @@ paths:
                                           - year
                                         type: string
                                         description: Interval for the cap, aligned to the customer's billing cycle.
+                                      filter:
+                                        type: object
+                                        properties:
+                                          properties:
+                                            type: object
+                                            propertyNames:
+                                              type: string
+                                              minLength: 1
+                                              maxLength: 64
+                                            additionalProperties: {}
+                                        required:
+                                          - properties
+                                        description: When set, only usage from events whose properties match counts
+                                          toward this cap. Omit to count all
+                                          usage of the feature.
                                     required:
                                       - feature_id
                                       - limit
@@ -22908,7 +24234,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a55
+                  - &a59
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -22935,7 +24261,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a55
+              example: *a59
       x-speakeasy-name-override: check
       parameters:
         - *a5
@@ -23015,11 +24341,11 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a56
+                - &a60
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a56
+            example: *a60
       responses:
         "200":
           description: OK
@@ -23131,7 +24457,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a57
+                  - &a61
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -23164,7 +24490,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a57
+              example: *a61
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the event was accepted for replay and will be tracked
@@ -23277,7 +24603,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a58
+                  - &a62
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -23310,7 +24636,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 1
-              example: *a58
+              example: *a62
       x-speakeasy-name-override: track
       parameters:
         - *a5
@@ -23412,13 +24738,13 @@ paths:
                 - output_tokens
               title: TrackTokensParams
               examples:
-                - &a59
+                - &a63
                   customer_id: cus_123
                   feature_id: ai_credits
                   model_id: anthropic/claude-sonnet-4-20250514
                   input_tokens: 1000
                   output_tokens: 500
-            example: *a59
+            example: *a63
       responses:
         "200":
           description: OK
@@ -23530,7 +24856,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a60
+                  - &a64
                     customer_id: cus_123
                     value: 0.006
                     balance:
@@ -23563,7 +24889,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a60
+              example: *a64
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the token usage event was accepted for replay and will
@@ -23676,7 +25002,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a61
+                  - &a65
                     customer_id: cus_123
                     value: 0.006
                     balance:
@@ -23709,7 +25035,7 @@ paths:
                           interval: month
                           resets_at: 1781288736881
                         value: 0.006
-              example: *a61
+              example: *a65
       x-speakeasy-name-override: trackTokens
       parameters:
         - *a5
@@ -23796,14 +25122,14 @@ paths:
                   - customer_id
               title: BatchTrackParams
               examples:
-                - &a62
+                - &a66
                   - customer_id: cus_123
                     feature_id: messages
                     value: 1
                   - customer_id: cus_123
                     event_name: message.sent
                     value: 1
-            example: *a62
+            example: *a66
       responses:
         "202":
           description: "Batch accepted. All items passed synchronous validation. Enqueue
@@ -23821,9 +25147,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a63
+                  - &a67
                     success: true
-              example: *a63
+              example: *a67
       x-speakeasy-name-override: batchTrack
       parameters:
         - *a5
@@ -23881,7 +25207,7 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a64
+                - &a68
                   start_cursor: ""
                   customer_id: cus_123
                   limit: 50
@@ -23890,7 +25216,7 @@ paths:
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a64
+            example: *a68
       responses:
         "200":
           description: OK
@@ -24015,7 +25341,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a65
+                  - &a69
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -24039,7 +25365,7 @@ paths:
                         properties: {}
                         deductions: null
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
-              example: *a65
+              example: *a69
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -24133,7 +25459,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a66
+                - &a70
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -24144,7 +25470,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a66
+            example: *a70
       responses:
         "200":
           description: OK
@@ -24206,7 +25532,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a67
+                  - &a71
                     list:
                       - period: 1762905600000
                         values:
@@ -24253,7 +25579,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a67
+              example: *a71
       x-speakeasy-name-override: aggregate
       parameters:
         - *a5
@@ -24312,6 +25638,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of spend limits per feature. Each entry caps overage
                         (overage_limit) and/or per-interval usage (usage_limit).
                     usage_limits:
@@ -24338,6 +25668,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -24413,12 +25764,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a68
+                - &a72
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a68
+            example: *a72
       responses:
         "200":
           description: OK
@@ -24755,6 +26106,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -24782,6 +26138,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                             usage:
                               type: number
                               minimum: 0
@@ -24901,7 +26272,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a69
+                  - &a73
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -24946,7 +26317,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a69
+              example: *a73
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -24978,11 +26349,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a70
+                - &a74
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a70
+            example: *a74
       responses:
         "200":
           description: OK
@@ -25319,6 +26690,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -25346,6 +26722,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                             usage:
                               type: number
                               minimum: 0
@@ -25465,7 +26856,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a71
+                  - &a75
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -25510,7 +26901,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a71
+              example: *a75
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -25589,12 +26980,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a72
+                - &a76
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a72
+            example: *a76
       responses:
         "200":
           description: OK
@@ -25937,6 +27328,11 @@ paths:
                                     minimum: 0
                                     description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                       120) when limit_type is usage_percentage."
+                                  skip_overage_billing:
+                                    type: boolean
+                                    description: When true, overage for this feature is not posted to Stripe. Usage
+                                      tracking and balance resets still behave
+                                      normally.
                               description: List of spend limits per feature. Each entry caps overage
                                 (overage_limit) and/or per-interval usage
                                 (usage_limit).
@@ -25964,6 +27360,21 @@ paths:
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
+                                  filter:
+                                    type: object
+                                    properties:
+                                      properties:
+                                        type: object
+                                        propertyNames:
+                                          type: string
+                                          minLength: 1
+                                          maxLength: 64
+                                        additionalProperties: {}
+                                    required:
+                                      - properties
+                                    description: When set, only usage from events whose properties match counts
+                                      toward this cap. Omit to count all usage
+                                      of the feature.
                                   usage:
                                     type: number
                                     minimum: 0
@@ -26094,7 +27505,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a73
+                  - &a77
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -26141,7 +27552,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a73
+              example: *a77
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -26197,6 +27608,10 @@ paths:
                             minimum: 0
                             description: "Overage cap for the feature: absolute units, or a percent (e.g.
                               120) when limit_type is usage_percentage."
+                          skip_overage_billing:
+                            type: boolean
+                            description: When true, overage for this feature is not posted to Stripe. Usage
+                              tracking and balance resets still behave normally.
                       description: List of spend limits per feature. Each entry caps overage
                         (overage_limit) and/or per-interval usage (usage_limit).
                     usage_limits:
@@ -26223,6 +27638,27 @@ paths:
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
+                          filter:
+                            type: object
+                            properties:
+                              properties:
+                                type: object
+                                propertyNames:
+                                  type: string
+                                  minLength: 1
+                                  maxLength: 64
+                                additionalProperties:
+                                  anyOf:
+                                    - type: string
+                                      minLength: 1
+                                      maxLength: 128
+                                    - type: number
+                                    - type: boolean
+                            required:
+                              - properties
+                            description: When set, only usage from events whose properties match counts
+                              toward this cap. Omit to count all usage of the
+                              feature.
                         required:
                           - feature_id
                           - limit
@@ -26286,7 +27722,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a74
+                - &a78
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -26295,7 +27731,7 @@ paths:
                         enabled: true
                         limit_type: usage_percentage
                         overage_limit: 120
-            example: *a74
+            example: *a78
       responses:
         "200":
           description: OK
@@ -26632,6 +28068,11 @@ paths:
                               minimum: 0
                               description: "Overage cap for the feature: absolute units, or a percent (e.g.
                                 120) when limit_type is usage_percentage."
+                            skip_overage_billing:
+                              type: boolean
+                              description: When true, overage for this feature is not posted to Stripe. Usage
+                                tracking and balance resets still behave
+                                normally.
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -26659,6 +28100,21 @@ paths:
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
+                            filter:
+                              type: object
+                              properties:
+                                properties:
+                                  type: object
+                                  propertyNames:
+                                    type: string
+                                    minLength: 1
+                                    maxLength: 64
+                                  additionalProperties: {}
+                              required:
+                                - properties
+                              description: When set, only usage from events whose properties match counts
+                                toward this cap. Omit to count all usage of the
+                                feature.
                             usage:
                               type: number
                               minimum: 0
@@ -26778,7 +28234,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a75
+                  - &a79
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -26823,7 +28279,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a75
+              example: *a79
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -26855,10 +28311,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a76
+                - &a80
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a76
+            example: *a80
       responses:
         "200":
           description: OK
@@ -26872,9 +28328,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a77
+                  - &a81
                     success: true
-              example: *a77
+              example: *a81
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -26902,10 +28358,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a78
+                - &a82
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a78
+            example: *a82
       responses:
         "200":
           description: OK
@@ -26928,11 +28384,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a79
+                  - &a83
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a79
+              example: *a83
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -26960,10 +28416,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a80
+                - &a84
                   code: REF123
                   customer_id: cus_456
-            example: *a80
+            example: *a84
       responses:
         "200":
           description: OK
@@ -26986,11 +28442,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a81
+                  - &a85
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a81
+              example: *a85
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -27008,8 +28464,8 @@ paths:
               type: object
               title: RewardsListParams
               examples:
-                - &a82 {}
-            example: *a82
+                - &a86 {}
+            example: *a86
       responses:
         "200":
           description: OK
@@ -27223,10 +28679,10 @@ paths:
                   - coupons
                   - feature_grants
                 examples:
-                  - &a83
+                  - &a87
                     coupons: []
                     feature_grants: []
-              example: *a83
+              example: *a87
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -27254,10 +28710,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a84
+                - &a88
                   code: REWARD10
                   customer_id: cus_456
-            example: *a84
+            example: *a88
       responses:
         "200":
           description: OK
@@ -27288,12 +28744,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a85
+                  - &a89
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a85
+              example: *a89
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -27332,12 +28788,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a86
+                - &a90
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a86
+            example: *a90
       responses:
         "200":
           description: OK
@@ -27352,9 +28808,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a87
+                  - &a91
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a87
+              example: *a91
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -27394,13 +28850,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a88
+                - &a92
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a88
+            example: *a92
       responses:
         "200":
           description: OK
@@ -27466,7 +28922,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a89
+                  - &a93
                     results:
                       - plan_id: pro
                         status: synced
@@ -27477,7 +28933,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a89
+              example: *a93
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -27511,10 +28967,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a90
+                - &a94
                   organization_slug: acme
                   env: test
-            example: *a90
+            example: *a94
       responses:
         "200":
           description: OK
@@ -27577,7 +29033,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a91
+                  - &a95
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -27588,7 +29044,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a91
+              example: *a95
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -27620,9 +29076,9 @@ paths:
                 - customer_id
               title: MintKeyParams
               examples:
-                - &a92
+                - &a96
                   customer_id: cus_123
-            example: *a92
+            example: *a96
       responses:
         "200":
           description: OK
@@ -27651,12 +29107,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a93
+                  - &a97
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a93
+              example: *a97
       x-speakeasy-name-override: mint
       parameters:
         - *a5
@@ -27680,8 +29136,8 @@ paths:
               description: No body. The refresh token is supplied as the Bearer credential;
                 the response is a freshly rotated access + refresh pair.
               examples:
-                - &a94 {}
-            example: *a94
+                - &a98 {}
+            example: *a98
       responses:
         "200":
           description: OK
@@ -27710,12 +29166,12 @@ paths:
                   - access_token
                   - expires_at
                 examples:
-                  - &a95
+                  - &a99
                     access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
                     expires_at: 1781113864000
                     refresh_expires_at: 1781196664000
-              example: *a95
+              example: *a99
       x-speakeasy-name-override: refresh
       parameters:
         - *a5
@@ -27742,9 +29198,9 @@ paths:
                 - customer_id
               title: RevokeKeyParams
               examples:
-                - &a96
+                - &a100
                   customer_id: cus_123
-            example: *a96
+            example: *a100
       responses:
         "200":
           description: OK
@@ -27758,9 +29214,9 @@ paths:
                 required:
                   - revoked
                 examples:
-                  - &a97
+                  - &a101
                     revoked: true
-              example: *a97
+              example: *a101
       x-speakeasy-name-override: revoke
       parameters:
         - *a5

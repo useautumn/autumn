@@ -1,56 +1,31 @@
-import type { FullProduct, Organization, Price } from "@autumn/shared";
+import type { FullProduct, Organization } from "@autumn/shared";
 import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
 import {
 	findProductLevelMatchForStripeItem,
 	type ProductLevelMatchCandidate,
 } from "../matchUtils/findProductLevelMatchForStripeItem";
-import { findStripeMatchForAutumnPrice } from "../matchUtils/findStripeMatchForAutumnPrice";
 import { findStripeMatchForAutumnProduct } from "../matchUtils/findStripeMatchForAutumnProduct";
+import { getStripePriceIdsForAutumnPrice } from "../matchUtils/getStripePriceIdsForAutumnPrice";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
-
-export type PriceMatchCandidate = {
-	price: Price;
-	product: FullProduct;
-};
-
-/** All prices keyed to the item's Stripe product — callers disambiguate. */
-export const collectStripeProductIdPriceCandidates = ({
-	item,
-	fullProducts,
-}: {
-	item: StripeItemSnapshot;
-	fullProducts: FullProduct[];
-}): PriceMatchCandidate[] => {
-	const stripeProductIds = new Set([item.stripe_product_id]);
-	const candidates: PriceMatchCandidate[] = [];
-	for (const product of fullProducts) {
-		for (const price of product.prices) {
-			const matched_on = findStripeMatchForAutumnPrice({
-				price,
-				product,
-				stripePriceIds: new Set<string>(),
-				stripeProductIds,
-			});
-			if (matched_on?.type === "stripe_product_id") {
-				candidates.push({ price, product });
-			}
-		}
-	}
-	return candidates;
-};
 
 /**
  * Match a single StripeItemSnapshot against the supplied Autumn products.
  * First hit wins, in order:
  *
- * Priority is global across the whole catalog: an exact `stripe_price_id`
- * match on ANY price beats every `stripe_product_id` match, which beats the
- * product-level base-shape fallback.
+ *   1. stripe_price_id — an Autumn price stores this exact Stripe price id.
+ *   2. Product-level — the item's Stripe product is linked to Autumn
+ *      product(s), via the product mapping or a price's
+ *      config.stripe_product_id. Within candidates the item resolves by
+ *      keying/shape: non-fixed price keyed to the product (stripe_product_id,
+ *      id-only — covers Autumn's custom price variants), base price
+ *      (stripe_base_price_shape), prepaid price (stripe_prepaid_price_shape),
+ *      or the product itself (autumn_product = unrecognized price on a known
+ *      plan, single candidate only).
+ *   3. kind: "none" — unresolved.
  *
  * Pure and sibling-blind — shared-price misattribution across plans is fixed
- * afterwards by rematchFeaturesWithinAnchoredPlans and
- * preferBaseAnchoredProductForProductIdMatches. `org` enables prepaid shape
- * matching at tier 3.
+ * afterwards by rematchFeaturesWithinAnchoredPlans. `org` enables prepaid
+ * shape matching at tier 2.
  */
 export const findAutumnMatchForStripeItem = ({
 	item,
@@ -61,48 +36,26 @@ export const findAutumnMatchForStripeItem = ({
 	fullProducts: FullProduct[];
 	org?: Organization;
 }): ItemDiff => {
-	const stripePriceIds = new Set([item.stripe_price_id]);
-
 	for (const product of fullProducts) {
 		for (const price of product.prices) {
-			const matched_on = findStripeMatchForAutumnPrice({
-				price,
-				product,
-				stripePriceIds,
-				stripeProductIds: new Set<string>(),
-			});
-			if (matched_on) {
+			const matchedPriceId = getStripePriceIdsForAutumnPrice({ price }).find(
+				(id) => id === item.stripe_price_id,
+			);
+			if (matchedPriceId) {
 				return {
 					stripe: item,
 					match: {
 						kind: "autumn_price",
-						matched_on,
+						matched_on: {
+							type: "stripe_price_id",
+							stripe_price_id: matchedPriceId,
+						},
 						price,
 						product,
 					},
 				};
 			}
 		}
-	}
-
-	const priceCandidates = collectStripeProductIdPriceCandidates({
-		item,
-		fullProducts,
-	});
-	if (priceCandidates.length > 0) {
-		const [chosen] = priceCandidates;
-		return {
-			stripe: item,
-			match: {
-				kind: "autumn_price",
-				matched_on: {
-					type: "stripe_product_id",
-					stripe_product_id: item.stripe_product_id,
-				},
-				price: chosen.price,
-				product: chosen.product,
-			},
-		};
 	}
 
 	const stripeProductIds = new Set([item.stripe_product_id]);
