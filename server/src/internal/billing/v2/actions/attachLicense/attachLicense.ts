@@ -1,50 +1,26 @@
+import type { LicenseAttachParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { logLicenseAction } from "@/internal/licenses/actions/logs/logLicenseAction.js";
 import { serializeLicenseAssignment } from "@/internal/licenses/licenseResponseUtils.js";
 import { computeLicenseAssignmentPlan } from "./compute/computeLicenseAssignmentPlan.js";
+import { logLicenseAssignmentPlan } from "./logs/logLicenseAssignmentPlan.js";
 import { setupLicenseAssignmentContext } from "./setup/setupLicenseAssignmentContext.js";
 
 export const attachLicense = async ({
 	ctx,
-	customerId,
-	entityId,
-	planId,
-	parentPlanId,
+	params,
 	preview = false,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	entityId: string;
-	planId: string;
-	parentPlanId?: string;
+	params: LicenseAttachParams;
 	preview?: boolean;
 }) => {
 	// 1. Setup
-	const context = await setupLicenseAssignmentContext({
-		ctx,
-		params: {
-			customer_id: customerId,
-			entity_id: entityId,
-			plan_id: planId,
-			parent_plan_id: parentPlanId,
-		},
-	});
+	const context = await setupLicenseAssignmentContext({ ctx, params });
 
 	// 2. Compute
 	const plan = await computeLicenseAssignmentPlan({ ctx, context });
-	logLicenseAction({
-		ctx,
-		action: preview ? "preview_attach" : "attach",
-		details: plan.existing
-			? { customer: customerId, entity: entityId, existing: plan.existing.id }
-			: {
-					customer: customerId,
-					entity: entityId,
-					parent: plan.parent.product.id,
-					available: plan.available,
-				},
-	});
+	logLicenseAssignmentPlan({ ctx, context, plan, preview });
 
 	if (plan.existing) {
 		const assignment = serializeLicenseAssignment({
@@ -53,15 +29,15 @@ export const attachLicense = async ({
 			licenseProductId: context.licenseProduct.id,
 		});
 		return preview
-			? { customer_id: customerId, intent: "none" as const, assignment }
+			? { customer_id: params.customer_id, intent: "none" as const, assignment }
 			: assignment;
 	}
 	if (preview) {
 		return {
-			customer_id: customerId,
+			customer_id: params.customer_id,
 			intent: "assign" as const,
 			parent_plan_id: plan.parent.product.id,
-			license_plan_id: planId,
+			license_plan_id: params.plan_id,
 			available: plan.available,
 		};
 	}

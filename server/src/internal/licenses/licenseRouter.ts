@@ -36,10 +36,7 @@ const handleAttachLicense = createRoute({
 		const body = c.req.valid("json");
 		const assignment = await billingActions.attachLicense({
 			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-			planId: body.plan_id,
-			parentPlanId: body.parent_plan_id,
+			params: body,
 		});
 
 		return c.json({ assignment });
@@ -71,9 +68,7 @@ const handleUpdateLicense = createRoute({
 		const body = c.req.valid("json");
 		const assignment = await billingActions.updateLicense({
 			ctx,
-			customerId: body.customer_id,
-			assignmentId: body.assignment_id,
-			cancelAction: body.cancel_action,
+			params: body,
 		});
 
 		return c.json({ assignment });
@@ -88,10 +83,7 @@ const handlePreviewAttachLicense = createRoute({
 		const body = c.req.valid("json");
 		const previewResult = await billingActions.attachLicense({
 			ctx,
-			customerId: body.customer_id,
-			entityId: body.entity_id,
-			planId: body.plan_id,
-			parentPlanId: body.parent_plan_id,
+			params: body,
 			preview: true,
 		});
 
@@ -107,9 +99,7 @@ const handlePreviewUpdateLicense = createRoute({
 		const body = c.req.valid("json");
 		const previewResult = await billingActions.updateLicense({
 			ctx,
-			customerId: body.customer_id,
-			assignmentId: body.assignment_id,
-			cancelAction: body.cancel_action,
+			params: body,
 			preview: true,
 		});
 

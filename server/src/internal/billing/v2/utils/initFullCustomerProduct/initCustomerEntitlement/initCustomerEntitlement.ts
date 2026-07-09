@@ -69,9 +69,7 @@ export const initCustomerEntitlement = ({
 		id: generateId("cus_ent"),
 		internal_customer_id: fullCustomer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
-		internal_entity_id: initOptions?.licenseParentCustomerProductId
-			? (initOptions.internalEntityId ?? null)
-			: null,
+		internal_entity_id: null,
 
 		feature_id: entitlement.feature.id,
 		customer_id: fullCustomer.id,

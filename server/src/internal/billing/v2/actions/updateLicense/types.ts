@@ -6,6 +6,7 @@ export type LicenseCancelAction = "cancel_immediately";
 export type LicenseUpdateContext = {
 	fullCustomer: FullCustomer;
 	assignment: DbLicenseAssignment;
+	entityExternalId?: string;
 };
 
 export type LicenseUpdatePlan =

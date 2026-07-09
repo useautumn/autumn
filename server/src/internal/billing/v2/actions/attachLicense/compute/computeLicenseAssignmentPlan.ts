@@ -35,9 +35,9 @@ export const computeLicenseAssignmentPlan = async ({
 		});
 	await validatePricedLicenseAttached({
 		ctx,
-		fullCustomer,
 		licenseProduct,
 		licenseDefinition,
+		customerLevelProduct: context.customerLevelProduct,
 	});
 
 	const provisioned: FullCusProduct = await buildLicenseCustomerProduct({

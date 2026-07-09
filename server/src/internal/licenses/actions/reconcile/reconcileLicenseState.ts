@@ -120,16 +120,16 @@ const transitionStrandedAssignments = async ({
 			({ assignment }) => !endedAssignmentIds.has(assignment.id),
 		);
 	}
-	for (const [
-		parentCustomerProductId,
-		assignmentIds,
-	] of reparentedAssignmentIdsByParentId) {
-		await licenseAssignmentRepo.reparentAssignmentsByIds({
-			db: ctx.db,
-			assignmentIds,
-			parentCustomerProductId,
-		});
-	}
+	await Promise.all(
+		[...reparentedAssignmentIdsByParentId].map(
+			([parentCustomerProductId, assignmentIds]) =>
+				licenseAssignmentRepo.reparentAssignmentsByIds({
+					db: ctx.db,
+					assignmentIds,
+					parentCustomerProductId,
+				}),
+		),
+	);
 };
 
 /** Converge customer_licenses rows: granted from resolved definitions,
@@ -152,10 +152,14 @@ const reconcileAssignmentBalances = async ({
 		assignedByKey.set(key, (assignedByKey.get(key) ?? 0) + 1);
 	}
 
-	const convergedBalances: CustomerLicenseState["balances"] = [];
-	for (const parent of parents) {
-		for (const definition of definitionsByParentId.get(parent.id) ?? []) {
-			if (definition.included <= 0) continue;
+	const offered = parents.flatMap((parent) =>
+		(definitionsByParentId.get(parent.id) ?? [])
+			.filter((definition) => definition.included > 0)
+			.map((definition) => ({ parent, definition })),
+	);
+	// Each pool's upsert -> setRemaining is independent of the others.
+	state.balances = await Promise.all(
+		offered.map(async ({ parent, definition }) => {
 			const balance = await customerLicenseRepo.upsertGranted({
 				db: ctx.db,
 				internalCustomerId: fullCustomer.internal_id,
@@ -175,10 +179,9 @@ const reconcileAssignmentBalances = async ({
 					remaining,
 				});
 			}
-			convergedBalances.push({ ...balance, remaining });
-		}
-	}
-	state.balances = convergedBalances;
+			return { ...balance, remaining };
+		}),
+	);
 
 	await customerLicenseRepo.deleteByParentIdsExcept({
 		db: ctx.db,

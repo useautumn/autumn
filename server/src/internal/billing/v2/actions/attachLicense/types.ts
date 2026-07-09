@@ -6,12 +6,14 @@ import type {
 	FullCustomer,
 	FullProduct,
 } from "@autumn/shared";
+import type { DbCustomerProduct } from "@autumn/shared";
 import type { DbLicenseAssignment } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
 export type LicenseAssignmentContext = {
 	fullCustomer: FullCustomer;
 	entity: Entity;
 	licenseProduct: FullProduct;
+	customerLevelProduct?: DbCustomerProduct;
 	planId: string;
 	parentPlanId?: string;
 };

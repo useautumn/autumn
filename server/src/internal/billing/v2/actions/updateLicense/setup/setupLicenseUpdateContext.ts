@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, type UpdateLicenseParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
@@ -6,32 +6,42 @@ import type { LicenseUpdateContext } from "../types.js";
 
 export const setupLicenseUpdateContext = async ({
 	ctx,
-	customerId,
-	assignmentId,
+	params,
 }: {
 	ctx: AutumnContext;
-	customerId: string;
-	assignmentId: string;
+	params: UpdateLicenseParams;
 }): Promise<LicenseUpdateContext> => {
-	const fullCustomer = await setupFullCustomerContext({
-		ctx,
-		params: { customer_id: customerId },
-	});
-
-	const assignment = await licenseAssignmentRepo.getAssignmentById({
-		db: ctx.db,
-		assignmentId,
-	});
+	const [fullCustomer, assignment] = await Promise.all([
+		setupFullCustomerContext({
+			ctx,
+			params: { customer_id: params.customer_id },
+		}),
+		licenseAssignmentRepo.getAssignmentById({
+			db: ctx.db,
+			assignmentId: params.assignment_id,
+		}),
+	]);
 	if (
 		!assignment ||
 		assignment.internal_customer_id !== fullCustomer.internal_id
 	) {
 		throw new RecaseError({
-			message: `License assignment ${assignmentId} not found.`,
+			message: `License assignment ${params.assignment_id} not found.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 404,
 		});
 	}
 
-	return { fullCustomer, assignment };
+	const entity = assignment.internal_entity_id
+		? await licenseAssignmentRepo.getEntityByInternalId({
+				db: ctx.db,
+				internalEntityId: assignment.internal_entity_id,
+			})
+		: undefined;
+
+	return {
+		fullCustomer,
+		assignment,
+		entityExternalId: entity?.id ?? undefined,
+	};
 };
