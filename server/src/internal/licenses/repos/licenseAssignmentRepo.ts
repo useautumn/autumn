@@ -16,7 +16,10 @@ import {
 	notInArray,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { licenseActiveAssignmentStatuses } from "../licenseUtils.js";
+import {
+	licenseActiveAssignmentStatuses,
+	licenseParentStatuses,
+} from "../licenseUtils.js";
 
 export type DbLicenseAssignment = DbCustomerProduct;
 
@@ -246,7 +249,9 @@ const maxActiveCountByCatalogLink = async ({
 	return row?.value ?? 0;
 };
 
-const findLatestActiveCustomerLevelCustomerProduct = async ({
+/** Whether the customer holds this license plan at the customer level (any
+ * billing-active status) — the priced-assignment gate's existence check. */
+const findCustomerLevelLicenseProduct = async ({
 	db,
 	internalCustomerId,
 	internalProductId,
@@ -260,10 +265,9 @@ const findLatestActiveCustomerLevelCustomerProduct = async ({
 			eq(customerProducts.internal_customer_id, internalCustomerId),
 			eq(customerProducts.internal_product_id, internalProductId),
 			isNull(customerProducts.internal_entity_id),
-			eq(customerProducts.status, CusProductStatus.Active),
+			inArray(customerProducts.status, licenseParentStatuses),
 			isNull(customerProducts.license_parent_customer_product_id),
 		),
-		orderBy: (table, { desc }) => [desc(table.created_at)],
 	});
 
 const getEntityByInternalId = async ({
@@ -287,6 +291,6 @@ export const licenseAssignmentRepo = {
 	reparentAssignmentsByIds,
 	expireAssignmentsByIds,
 	maxActiveCountByCatalogLink,
-	findLatestActiveCustomerLevelCustomerProduct,
+	findCustomerLevelLicenseProduct,
 	getEntityByInternalId,
 } as const;

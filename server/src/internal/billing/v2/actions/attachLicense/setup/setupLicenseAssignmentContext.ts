@@ -40,7 +40,7 @@ export const setupLicenseAssignmentContext = async ({
 	}
 
 	const customerLevelProduct =
-		await licenseAssignmentRepo.findLatestActiveCustomerLevelCustomerProduct({
+		await licenseAssignmentRepo.findCustomerLevelLicenseProduct({
 			db: ctx.db,
 			internalCustomerId: fullCustomer.internal_id,
 			internalProductId: licenseProduct.internal_id,
