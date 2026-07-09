@@ -6,19 +6,19 @@ import type {
 	DbSpendLimit,
 	DbUsageLimit,
 } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
-import { usageLimitFilterKey } from "../../models/cusModels/billingControls/usageLimit.js";
 import { getCurrentUsageWindowUsage } from "../usageWindowUtils/getCurrentUsageWindowUsage.js";
 import { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 import { resolveBillingControl } from "./planBillingControlUtils.js";
 
 /** Usage limits are identified per (feature, filter); other controls per feature. */
-const usageLimitIdentity = (entry: DbUsageLimit): string =>
+export const usageLimitIdentity = (entry: DbUsageLimit): string =>
 	`${entry.feature_id}|${usageLimitFilterKey(entry.filter)}`;
 
-const mergeControlsByFeature = <
+export const mergeControlsByFeature = <
 	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
 >({
@@ -90,15 +90,17 @@ const mergeControlsByFeature = <
  * decorated upstream. Fill in just the missing ones from the live
  * usage-window counters, so a plan-only cap can gate `check`.
  */
-const decorateInheritedPlanUsageLimits = ({
+export const decorateInheritedPlanUsageLimits = <
+	TUsageLimit extends DbUsageLimit,
+>({
 	usageLimits,
 	fullSubject,
 	features,
 }: {
-	usageLimits: DbUsageLimit[];
+	usageLimits: TUsageLimit[];
 	fullSubject?: FullSubject;
 	features?: Feature[];
-}): DbUsageLimit[] => {
+}): TUsageLimit[] => {
 	const undecorated = usageLimits.filter(
 		(usageLimit) => !("usage" in usageLimit),
 	);
