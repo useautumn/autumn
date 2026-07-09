@@ -54,10 +54,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	preview?: boolean;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<UpdateSubscriptionBillingContext> => {
-	const fullCustomer = await setupFullCustomerContext({
-		ctx,
-		params,
-	});
+	const fullCustomer =
+		contextOverride.projectedFullCustomer ??
+		(await setupFullCustomerContext({
+			ctx,
+			params,
+		}));
 
 	const {
 		customerProduct,
