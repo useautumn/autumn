@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { CopyProductDialog } from "../../products/components/CopyProductDialog";
 import { DeletePlanDialog } from "./DeletePlanDialog";
+import { LinkLicenseMenuItem } from "./plan-licenses/LinkLicenseMenuItem";
 
 export const PlanToolbar = () => {
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -52,6 +53,7 @@ export const PlanToolbar = () => {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
+					<LinkLicenseMenuItem />
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {
@@ -61,9 +63,9 @@ export const PlanToolbar = () => {
 							setCopyOpen(true);
 						}}
 					>
-						<div className="flex items-center justify-between w-full gap-2">
-							Copy
+						<div className="flex items-center gap-2">
 							<Copy size={12} className="text-tertiary-foreground" />
+							Copy
 						</div>
 					</DropdownMenuItem>
 					<DropdownMenuItem
@@ -75,9 +77,9 @@ export const PlanToolbar = () => {
 							setDeleteOpen(true);
 						}}
 					>
-						<div className="flex items-center justify-between w-full gap-2">
-							Delete Plan
+						<div className="flex items-center gap-2">
 							<Trash2 size={12} className="text-tertiary-foreground" />
+							Delete Plan
 						</div>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

@@ -1,4 +1,8 @@
-import { type FrontendProduct, sortPlanItems } from "@autumn/shared";
+import {
+	type CustomizePlanLicense,
+	type FrontendProduct,
+	sortPlanItems,
+} from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
@@ -9,6 +13,16 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
+import {
+	collectLicensePatchAdds,
+	LicenseCustomizeCollectorProvider,
+	useHasCollectedLicenseChanges,
+	useLicenseCollectorStore,
+} from "@/views/products/plan/components/plan-licenses/LicenseCustomizeCollector";
+import { LicensePlanCards } from "@/views/products/plan/components/plan-licenses/LicensePlanCards";
+import { LinkLicenseButton } from "@/views/products/plan/components/plan-licenses/LinkLicenseButton";
+import { PendingLicenseLinksProvider } from "@/views/products/plan/components/plan-licenses/PendingLicenseLinksContext";
+import { SheetPanelHost } from "@/views/products/plan/components/SheetPanelHost";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
 import { InlineEditorProvider } from "./InlineEditorContext";
@@ -16,9 +30,15 @@ import { useHasPlanChanges, useProduct, useSheet } from "./PlanEditorContext";
 
 interface InlinePlanEditorProps {
 	product: FrontendProduct;
-	onSave: (product: FrontendProduct) => void;
+	onSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	onCancel: () => void;
 	isOpen: boolean;
+	/** Render the plan's license cards and collect edits into onSave's
+	 * `addLicenses` — only for flows whose payload supports a license patch. */
+	enableLicenseEditing?: boolean;
 }
 
 export function InlinePlanEditor({
@@ -26,6 +46,7 @@ export function InlinePlanEditor({
 	onSave,
 	onCancel,
 	isOpen,
+	enableLicenseEditing = false,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -47,7 +68,15 @@ export function InlinePlanEditor({
 		<AnimatePresence>
 			{isOpen && (
 				<InlineEditorProvider initialProduct={product}>
-					<InlinePlanEditorContent onSave={onSave} onCancel={onCancel} />
+					<LicenseCustomizeCollectorProvider>
+						<PendingLicenseLinksProvider>
+							<InlinePlanEditorContent
+								onSave={onSave}
+								onCancel={onCancel}
+								enableLicenseEditing={enableLicenseEditing}
+							/>
+						</PendingLicenseLinksProvider>
+					</LicenseCustomizeCollectorProvider>
 				</InlineEditorProvider>
 			)}
 		</AnimatePresence>,
@@ -58,13 +87,34 @@ export function InlinePlanEditor({
 function InlinePlanEditorContent({
 	onSave,
 	onCancel,
+	enableLicenseEditing,
 }: {
-	onSave: (product: FrontendProduct) => void;
+	onSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	onCancel: () => void;
+	enableLicenseEditing: boolean;
 }) {
 	const { product } = useProduct();
 	const { sheetType } = useSheet();
 	const hasPlanChanges = useHasPlanChanges();
+	const collectorStore = useLicenseCollectorStore();
+	const hasLicenseChanges = useHasCollectedLicenseChanges();
+	const hasChanges = hasPlanChanges || hasLicenseChanges;
+
+	const handleSave = () => {
+		// Only the edited cards go into add_licenses; untouched licenses keep
+		// inheriting the plan catalog.
+		const addLicenses =
+			hasLicenseChanges && collectorStore
+				? collectLicensePatchAdds(collectorStore)
+				: undefined;
+		onSave(
+			{ ...product, items: sortPlanItems({ items: product.items }) },
+			addLicenses,
+		);
+	};
 
 	return (
 		<motion.div
@@ -88,22 +138,20 @@ function InlinePlanEditorContent({
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
 							<CustomerPlanInfoBox />
 							<PlanCard />
+							{enableLicenseEditing && (
+								<>
+									<LicensePlanCards />
+									<LinkLicenseButton />
+								</>
+							)}
 						</div>
 						{!sheetType && (
 							<PlanEditorBar>
 								<Button variant="secondary" onClick={onCancel}>
 									Return to Customer
 								</Button>
-								{hasPlanChanges && (
-									<ShortcutButton
-										metaShortcut="s"
-										onClick={() =>
-											onSave({
-												...product,
-												items: sortPlanItems({ items: product.items }),
-											})
-										}
-									>
+								{hasChanges && (
+									<ShortcutButton metaShortcut="s" onClick={handleSave}>
 										Save Changes
 									</ShortcutButton>
 								)}
@@ -115,6 +163,7 @@ function InlinePlanEditorContent({
 				<SheetOverlay inline />
 
 				<ProductSheets />
+				<SheetPanelHost />
 			</div>
 		</motion.div>
 	);

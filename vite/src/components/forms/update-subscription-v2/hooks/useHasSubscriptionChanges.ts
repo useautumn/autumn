@@ -35,6 +35,7 @@ export function useHasSubscriptionChanges({
 		if (formValues.billingBehavior !== initialBillingBehavior) return true;
 		if (formValues.resetBillingCycle) return true;
 		if (formValues.noBillingChanges) return true;
+		if (formValues.addLicenses !== null) return true;
 
 		if (formValues.discounts?.length > 0) return true;
 
@@ -100,6 +101,7 @@ export function useHasSubscriptionChanges({
 		formValues.trialCardRequired,
 		formValues.version,
 		formValues.items,
+		formValues.addLicenses,
 		formValues.prepaidOptions,
 		initialPrepaidOptions,
 		prepaidItems,

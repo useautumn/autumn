@@ -1,5 +1,6 @@
 import {
 	type BillingBehavior,
+	type CustomizePlanLicense,
 	FreeTrialDuration,
 	type PlanTiming,
 	type ProductItem,
@@ -18,6 +19,7 @@ export const AttachFormSchema = z.object({
 	productId: z.string(),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
 	items: z.custom<ProductItem[]>().nullable(),
+	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),
 	version: z.number().positive().optional(),
 	trialLength: z.number().positive().nullable(),

@@ -6,6 +6,7 @@ import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import {
+	useIsLicenseEditor,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -34,6 +35,7 @@ export const PlanFeatureRow = ({
 }: PlanFeatureRowProps) => {
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
+	const isLicenseEditor = useIsLicenseEditor();
 	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
@@ -169,6 +171,7 @@ export const PlanFeatureRow = ({
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<PlanItemLabel
+					compact={isLicenseEditor}
 					item={item}
 					wrapIcons={(icons) => (
 						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>

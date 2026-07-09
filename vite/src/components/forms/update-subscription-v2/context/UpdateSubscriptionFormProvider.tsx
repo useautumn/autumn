@@ -1,4 +1,5 @@
 import type {
+	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
@@ -77,7 +78,10 @@ interface UpdateSubscriptionFormContextValue {
 	// Plan editor state
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (product: FrontendProduct) => void;
+	handlePlanEditorSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	handlePlanEditorCancel: () => void;
 
 	// Mutation
@@ -320,7 +324,10 @@ export function UpdateSubscriptionFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen]);
 
 	const handlePlanEditorSave = useCallback(
-		(draftProduct: FrontendProduct) => {
+		(
+			draftProduct: FrontendProduct,
+			editedAddLicenses?: CustomizePlanLicense[],
+		) => {
 			if (!productWithFormItems) {
 				setShowPlanEditor(false);
 				onPlanEditorClose?.();
@@ -353,6 +360,10 @@ export function UpdateSubscriptionFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
+
+			if (editedAddLicenses) {
+				form.setFieldValue("addLicenses", editedAddLicenses);
+			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();

@@ -93,21 +93,20 @@ function CreateProductSheet({
 		}
 	}, [open, reset, setProduct, isAddOn, isFirstPlan]);
 
+	const headerTitle = isAddOn ? "Create Add-on Plan" : "Create Plan";
+
+	const headerDescription = isAddOn
+		? "Create a new add-on plan that can be purchased alongside base plans"
+		: "Create a new free or paid plan for your application";
+
+	const submitLabel = isAddOn ? "Create add-on plan" : "Create plan";
+
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			{/* <SheetTrigger asChild>
-				<Button variant="add" className="w-full">
-					Plan
-				</Button>
-			</SheetTrigger> */}
 			<SheetContent className="flex flex-col overflow-hidden bg-background">
 				<SheetHeader
-					title={isAddOn ? "Create Add-on Plan" : "Create Plan"}
-					description={
-						isAddOn
-							? "Create a new add-on plan that can be purchased alongside base plans"
-							: "Create a new free or paid plan for your application"
-					}
+					title={headerTitle}
+					description={headerDescription}
 					noSeparator={true}
 				/>
 
@@ -142,7 +141,7 @@ function CreateProductSheet({
 						metaShortcut="enter"
 						isLoading={loading}
 					>
-						{isAddOn ? "Create add-on plan" : "Create plan"}
+						{submitLabel}
 					</ShortcutButton>
 				</SheetFooter>
 			</SheetContent>

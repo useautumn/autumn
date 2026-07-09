@@ -217,20 +217,26 @@ function PriceText({
 	item,
 	currency,
 	text,
+	compact = false,
 }: {
 	item: ProductItem;
 	currency: string;
 	text: string;
+	compact?: boolean;
 }) {
 	const priceStr = priceString(item, currency);
 	const priceIndex = priceStr ? text.indexOf(priceStr) : -1;
+	const secondaryClass = compact
+		? "text-xs text-subtle"
+		: "text-body-secondary";
+	const amountClass = compact ? "text-xs font-medium" : "text-body";
 
 	if (!priceStr || priceIndex === -1) {
-		return <span className="text-body-secondary"> {text}</span>;
+		return <span className={secondaryClass}> {text}</span>;
 	}
 
 	return (
-		<span className="text-body-secondary">
+		<span className={secondaryClass}>
 			{" "}
 			{text.slice(0, priceIndex)}
 			{isTieredPrice(item) ? (
@@ -240,7 +246,7 @@ function PriceText({
 					priceStr={priceStr}
 				/>
 			) : (
-				<span className="text-body">{priceStr}</span>
+				<span className={amountClass}>{priceStr}</span>
 			)}
 			{text.slice(priceIndex + priceStr.length)}
 		</span>
@@ -253,6 +259,7 @@ interface PlanItemLabelProps {
 	wrapIcons?: (icons: ReactNode) => ReactNode;
 	/** Text shown when the feature has no name yet. */
 	unnamedText?: string;
+	compact?: boolean;
 }
 
 /** Feature icon cluster + label text + rollover indicator. Shared by the plan
@@ -261,6 +268,7 @@ export function PlanItemLabel({
 	item,
 	wrapIcons,
 	unnamedText = "Name your feature",
+	compact = false,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
@@ -284,12 +292,23 @@ export function PlanItemLabel({
 	return (
 		<>
 			{wrapIcons ? wrapIcons(icons) : icons}
-			<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body-secondary">
-				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
+			<p
+				className={cn(
+					"whitespace-nowrap truncate flex-1 min-w-0",
+					compact ? "text-xs text-subtle" : "text-body-secondary",
+				)}
+			>
+				<span
+					className={cn(
+						compact ? "text-xs font-medium" : "text-body",
+						!hasFeatureName && "text-subtle!",
+					)}
+				>
 					{displayText}
 				</span>
 				{display.secondary_text && (
 					<PriceText
+						compact={compact}
 						currency={currency}
 						item={item}
 						text={display.secondary_text}

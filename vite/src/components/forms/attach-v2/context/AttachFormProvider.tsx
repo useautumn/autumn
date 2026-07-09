@@ -1,5 +1,6 @@
 import type {
 	CusProduct,
+	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
@@ -81,7 +82,10 @@ interface AttachFormContextValue {
 
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (product: FrontendProduct) => void;
+	handlePlanEditorSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	handlePlanEditorCancel: () => void;
 
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
@@ -173,6 +177,7 @@ export function AttachFormProvider({
 		productId,
 		prepaidOptions,
 		items,
+		addLicenses,
 		version,
 		trialLength,
 		trialDuration,
@@ -308,6 +313,7 @@ export function AttachFormProvider({
 		if (previousVersionRef.current === version) return;
 		previousVersionRef.current = version;
 		form.setFieldValue("items", null);
+		form.setFieldValue("addLicenses", null);
 	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
@@ -326,6 +332,7 @@ export function AttachFormProvider({
 
 		if (isProductChange) {
 			form.setFieldValue("items", null);
+			form.setFieldValue("addLicenses", null);
 			form.setFieldValue("version", undefined);
 			form.setFieldValue("trialEnabled", false);
 			form.setFieldValue("trialLength", null);
@@ -369,7 +376,8 @@ export function AttachFormProvider({
 
 	const originalItems = effectiveProduct?.items as ProductItem[] | undefined;
 
-	const hasCustomizations = items !== null && items.length > 0;
+	const hasCustomizations =
+		(items !== null && items.length > 0) || addLicenses !== null;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!effectiveProduct) return undefined;
@@ -405,6 +413,7 @@ export function AttachFormProvider({
 		product: effectiveProduct,
 		prepaidOptions,
 		items,
+		addLicenses,
 		grantFree,
 		version,
 		trialLength,
@@ -474,7 +483,10 @@ export function AttachFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen, grantFree]);
 
 	const handlePlanEditorSave = useCallback(
-		(draftProduct: FrontendProduct) => {
+		(
+			draftProduct: FrontendProduct,
+			editedAddLicenses?: CustomizePlanLicense[],
+		) => {
 			if (!productWithFormItems) {
 				setShowPlanEditor(false);
 				onPlanEditorClose?.();
@@ -505,6 +517,10 @@ export function AttachFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
+
+			if (editedAddLicenses) {
+				form.setFieldValue("addLicenses", editedAddLicenses);
+			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
