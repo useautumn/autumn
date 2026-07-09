@@ -29,13 +29,11 @@ export const buildLicenseCustomerProduct = async ({
 		planLicenseId: licenseDefinition.id,
 	});
 
-	// Prices are emptied BEFORE init: assignments never bill, and entitlements
-	// must not derive usage_allowed from prices the assignment doesn't carry.
 	return initFullCustomerProduct({
 		ctx,
 		initContext: {
 			fullCustomer,
-			fullProduct: { ...effectiveProduct, prices: [] },
+			fullProduct: effectiveProduct,
 			featureQuantities: [],
 			resetCycleAnchor: Date.now(),
 			freeTrial: null,

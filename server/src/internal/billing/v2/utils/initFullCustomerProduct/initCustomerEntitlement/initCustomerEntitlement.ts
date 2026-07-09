@@ -38,6 +38,7 @@ export const initCustomerEntitlement = ({
 	// Usage allowed:
 	const usageAllowed = initCustomerEntitlementUsageAllowed({
 		initContext,
+		initOptions,
 		entitlement,
 	});
 
@@ -53,10 +54,12 @@ export const initCustomerEntitlement = ({
 	});
 
 	const { fullCustomer } = initContext;
-	const relatedPrice = entToPrice({
-		ent: entitlement,
-		prices: initContext.fullProduct?.prices ?? [],
-	});
+	const relatedPrice = initOptions?.licenseParentCustomerProductId
+		? undefined
+		: entToPrice({
+				ent: entitlement,
+				prices: initContext.fullProduct?.prices ?? [],
+			});
 	const separateInterval = entitlementAndPriceHaveSeparateInterval({
 		entitlement,
 		price: relatedPrice,

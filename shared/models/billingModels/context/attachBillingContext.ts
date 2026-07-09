@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullProduct } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullProduct,
+	CustomizePlanV1,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import type { BillingContext } from "./billingContext";
 
@@ -34,6 +38,9 @@ export interface AttachBillingContext extends BillingContext {
 
 	// User-provided subscription ID for targeting
 	externalId?: string;
+
+	// Customize plan from params, resolved at setup (drives license changes)
+	customize?: CustomizePlanV1;
 }
 
 // export interface AttachBillingContextOverride {
