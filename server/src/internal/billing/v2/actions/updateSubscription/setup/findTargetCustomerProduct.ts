@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	findPriceByFeatureId,
+	fullCustomerToPlanProducts,
 	isCusProductOnEntity,
 	isCustomerProductAddOn,
 	isCustomerProductMain,
@@ -142,10 +143,12 @@ export const findTargetCustomerProduct = async ({
 }): Promise<FullCusProduct> => {
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	const candidates = fullCustomer.customer_products.filter((cp) => {
-		if (!RELEVANT_STATUSES.includes(cp.status)) return false;
-		return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
-	});
+	const candidates = fullCustomerToPlanProducts({ fullCustomer }).filter(
+		(cp) => {
+			if (!RELEVANT_STATUSES.includes(cp.status)) return false;
+			return isCusProductOnEntity({ cusProduct: cp, internalEntityId });
+		},
+	);
 
 	const target = resolveTargetCustomerProduct({ params, candidates });
 
@@ -163,6 +166,18 @@ export const findTargetCustomerProduct = async ({
 			fallback &&
 			fallback.internal_customer_id === fullCustomer.internal_id
 		) {
+			if (
+				fallback.license_parent_customer_product_id != null &&
+				fallback.internal_entity_id != null &&
+				!params.cancel_action
+			) {
+				throw new RecaseError({
+					message:
+						"Use the license assignment APIs to manage license products.",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
 			return fallback;
 		}
 	}

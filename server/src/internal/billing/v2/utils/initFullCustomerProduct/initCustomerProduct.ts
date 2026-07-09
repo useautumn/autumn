@@ -131,6 +131,7 @@ export const initCustomerProduct = ({
 		quantity: 1,
 
 		is_custom: isCustom ?? false,
+		license_parent_customer_product_id: null,
 
 		api_semver: apiSemver ?? null,
 

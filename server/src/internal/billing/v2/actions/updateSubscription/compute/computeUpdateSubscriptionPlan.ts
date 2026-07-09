@@ -14,6 +14,7 @@ import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/up
 import { computeManualTopUpPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/manualTopUp/computeManualTopUpPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { computeFieldUpdates } from "./computeFieldUpdates";
 
@@ -68,6 +69,11 @@ export const computeUpdateSubscriptionPlan = async ({
 
 			break;
 	}
+
+	plan.customLicenses ??= buildCustomLicenseChanges({
+		parentCustomerProduct: billingContext.customerProduct,
+		licensePatch: params.customize,
+	});
 
 	const fieldUpdates = computeFieldUpdates({ params });
 	if (Object.keys(fieldUpdates).length > 0) {

@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
@@ -30,12 +31,11 @@ export const computePatchCustomerProductPlan = ({
 		finalCustomerProduct,
 		customerProductUpdates,
 		oneOffPrepaidCarryOverCustomerEntitlements,
-	} =
-		initPatchCustomerProduct({
-			ctx,
-			billingContext: updateSubscriptionContext,
-			patchContext,
-		});
+	} = initPatchCustomerProduct({
+		ctx,
+		billingContext: updateSubscriptionContext,
+		patchContext,
+	});
 
 	const isUpdatingScheduledProduct =
 		patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
@@ -53,12 +53,21 @@ export const computePatchCustomerProductPlan = ({
 				includeArrearLineItems:
 					updateSubscriptionContext.chargeExistingOverages === true,
 			});
+	const previousParentCustomerProduct =
+		patchContext.mode === "new"
+			? patchContext.originalCustomerProduct
+			: undefined;
 
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
 		customPrices: patchContext.customPrices,
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
+		customLicenses: buildCustomLicenseChanges({
+			parentCustomerProduct: finalCustomerProduct,
+			previousParentCustomerProduct,
+			licensePatch: patchContext.licensePatch,
+		}),
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
@@ -124,14 +133,14 @@ const computeAnchorResetEntitlementUpdates = ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
 }): AutumnBillingPlan["updateCustomerEntitlements"] => {
-	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now") return [];
+	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now")
+		return [];
 
 	return finalCustomerProduct.customer_entitlements
 		.filter((customerEntitlement) => {
 			const { entitlement } = customerEntitlement;
 			return (
-				!isBooleanEntitlement({ entitlement }) &&
-				entitlement.allowance !== null
+				!isBooleanEntitlement({ entitlement }) && entitlement.allowance !== null
 			);
 		})
 		.map((customerEntitlement) => ({

@@ -21,6 +21,7 @@ import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/han
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customize/validateCustomLicenseChanges";
 import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
@@ -105,4 +106,8 @@ export const handleAttachV2Errors = async ({
 	handleRevertTrialErrors({ billingContext });
 
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
+	await validateCustomLicenseChanges({
+		ctx,
+		customLicenses: autumnBillingPlan.customLicenses,
+	});
 };

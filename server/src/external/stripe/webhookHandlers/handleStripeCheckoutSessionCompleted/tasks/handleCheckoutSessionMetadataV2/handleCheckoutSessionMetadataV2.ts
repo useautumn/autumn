@@ -15,6 +15,7 @@ import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeA
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customize/validateCustomLicenseChanges";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
@@ -99,6 +100,13 @@ const executeCheckoutSessionMetadataV2 = async ({
 		ctx,
 		plan: updatedDeferredData.billingPlan.autumn,
 		billingContext: updatedDeferredData.billingContext,
+	});
+
+	// Capacity may have shifted since the attach-time validation; re-check the
+	// replayed license changes before any DB mutation.
+	await validateCustomLicenseChanges({
+		ctx,
+		customLicenses: updatedDeferredData.billingPlan.autumn.customLicenses,
 	});
 
 	// Execute autumn billing plan (includes customer products, upsertSubscription, upsertInvoice)

@@ -37,6 +37,32 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
+const LICENSE_CUSTOMIZE_KEYS = [
+	"add_licenses",
+	"remove_licenses",
+] as const satisfies (keyof NonNullable<
+	UpdateSubscriptionV1Params["customize"]
+>)[];
+
+const hasOnlyLicenseCustomize = ({
+	params,
+}: {
+	params: UpdateSubscriptionV1Params;
+}) => {
+	const customize = params.customize;
+	const hasLicenseKeys =
+		customize !== undefined &&
+		(customize.add_licenses !== undefined ||
+			customize.remove_licenses !== undefined);
+	if (!hasLicenseKeys) return false;
+
+	return Object.keys(customize).every((key) =>
+		LICENSE_CUSTOMIZE_KEYS.includes(
+			key as (typeof LICENSE_CUSTOMIZE_KEYS)[number],
+		),
+	);
+};
+
 /**
  * Fetch the context for updating a subscription
  * @param ctx - The context
@@ -84,11 +110,13 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
-	const billingRelatedFields = Object.keys(params).filter((key) =>
-		FIELDS_WITH_BILLING_CHANGES.includes(
+	const licenseOnlyCustomize = hasOnlyLicenseCustomize({ params });
+	const billingRelatedFields = Object.keys(params).filter((key) => {
+		if (key === "customize" && licenseOnlyCustomize) return false;
+		return FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
-		),
-	);
+		);
+	});
 
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||

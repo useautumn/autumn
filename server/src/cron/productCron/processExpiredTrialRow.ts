@@ -7,13 +7,16 @@ import {
 } from "@autumn/shared";
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
 import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 
 export const processExpiredTrialRow = async ({
 	ctx,
@@ -88,6 +91,21 @@ export const processExpiredTrialRow = async ({
 		updates: {
 			status: CusProductStatus.Expired,
 		},
+	});
+
+	await withLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+		}),
+		ttlMs: 120000,
+		fn: async () =>
+			afterLicenseMutation({
+				ctx,
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				internalCustomerId: fullCustomer.internal_id,
+			}),
 	});
 
 	await deleteCachedFullCustomer({

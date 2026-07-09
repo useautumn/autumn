@@ -5,10 +5,13 @@ import {
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -80,6 +83,21 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fromCustomerProduct: customerProduct,
 			fullCustomer,
 		});
+
+	await withLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+		}),
+		ttlMs: 120000,
+		fn: async () =>
+			afterLicenseMutation({
+				ctx,
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				internalCustomerId: fullCustomer.internal_id,
+			}),
+	});
 
 	return { updates, activatedCustomerProduct, insertedCustomerProduct };
 };

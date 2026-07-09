@@ -1,6 +1,8 @@
 import {
 	BillingVersion,
+	type FullProduct,
 	type InvoiceMode,
+	isFreeProduct,
 	isOneOffProduct,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
@@ -30,16 +32,22 @@ const setupImmediateMultiProductCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
 	invoiceMode,
+	fullProducts,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	redirectMode?: MultiAttachParamsV0["redirect_mode"];
 	invoiceMode?: InvoiceMode;
+	fullProducts: FullProduct[];
 }) => {
 	if (redirectMode === "never") {
 		return null;
 	}
 
 	if (invoiceMode) {
+		return null;
+	}
+
+	if (fullProducts.every(isFreeProduct)) {
 		return null;
 	}
 
@@ -162,6 +170,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 				currentCustomerProduct,
 				scheduledCustomerProduct,
 				externalId: plan.subscription_id,
+				licensePatch: plan.customize,
 			};
 		}),
 	);
@@ -277,6 +286,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 			paymentMethod,
 			redirectMode: params.redirect_mode,
 			invoiceMode,
+			fullProducts,
 		}),
 		billingVersion: BillingVersion.V2,
 		actionSource: "multiAttach",

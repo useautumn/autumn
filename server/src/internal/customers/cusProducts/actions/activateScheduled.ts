@@ -5,11 +5,14 @@ import {
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 
 /**
  * Activates a scheduled customer product.
@@ -67,6 +70,22 @@ export const activateScheduledCustomerProduct = async ({
 		ctx,
 		cusProductId: customerProduct.id,
 		updates,
+	});
+
+	// Activation bypasses billing execute, so the license lifecycle must run here.
+	await withLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+		}),
+		ttlMs: 120000,
+		fn: async () =>
+			afterLicenseMutation({
+				ctx,
+				customerId: fullCustomer.id || fullCustomer.internal_id,
+				internalCustomerId: fullCustomer.internal_id,
+			}),
 	});
 
 	// 2. Send webhook

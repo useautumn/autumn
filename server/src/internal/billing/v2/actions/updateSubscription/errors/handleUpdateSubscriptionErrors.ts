@@ -8,6 +8,7 @@ import { handleCancelEndOfCycleErrors } from "@/internal/billing/v2/actions/upda
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
+import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customize/validateCustomLicenseChanges";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
 import { handleManualTopUpErrors } from "./handleManualTopUpErrors";
@@ -86,4 +87,9 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 12. Stripe billing plan errors (validate Stripe resources)
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
+
+	await validateCustomLicenseChanges({
+		ctx,
+		customLicenses: autumnBillingPlan.customLicenses,
+	});
 };

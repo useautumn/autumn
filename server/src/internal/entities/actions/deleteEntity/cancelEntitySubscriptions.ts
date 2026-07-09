@@ -7,6 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { endLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/endLicenseAssignmentsForEntity.js";
 
 export const cancelSubsForEntity = async ({
 	ctx,
@@ -18,6 +19,13 @@ export const cancelSubsForEntity = async ({
 	entity: Entity;
 }) => {
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
+
+	// Provisioned license products are free (skipped by the paid-recurring loop
+	// below) and the entity FK is SET NULL, so end them before the entity row goes.
+	await endLicenseAssignmentsForEntity({
+		ctx,
+		internalEntityId: entity.internal_id,
+	});
 
 	for (const customerProduct of fullCustomer.customer_products) {
 		if (customerProduct.internal_entity_id !== entity.internal_id) continue;
