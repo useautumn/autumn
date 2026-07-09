@@ -438,6 +438,10 @@ export type UpdatePlanSpendLimitRequest = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -456,6 +460,15 @@ export type UpdatePlanUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdatePlanUsageLimitIntervalRequestBody
 >;
 
+export type UpdatePlanProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdatePlanFilterRequest = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UpdatePlanUsageLimitRequest = {
   /**
    * The feature this usage limit applies to.
@@ -473,6 +486,10 @@ export type UpdatePlanUsageLimitRequest = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanUsageLimitIntervalRequestBody;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdatePlanFilterRequest | undefined;
 };
 
 /**
@@ -1027,6 +1044,10 @@ export type VariantSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -1045,6 +1066,15 @@ export type VariantUsageLimitInterval = ClosedEnum<
   typeof VariantUsageLimitInterval
 >;
 
+export type VariantProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type VariantFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type VariantUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -1062,6 +1092,10 @@ export type VariantUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: VariantUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: VariantFilter | undefined;
 };
 
 /**
@@ -2135,6 +2169,10 @@ export type UpdatePlanVariantDetailsSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -2153,6 +2191,13 @@ export type UpdatePlanVariantDetailsUsageLimitInterval = OpenEnum<
   typeof UpdatePlanVariantDetailsUsageLimitInterval
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdatePlanVariantDetailsFilter = {
+  properties: { [k: string]: any };
+};
+
 export type UpdatePlanVariantDetailsUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -2170,6 +2215,10 @@ export type UpdatePlanVariantDetailsUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanVariantDetailsUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdatePlanVariantDetailsFilter | undefined;
 };
 
 /**
@@ -2390,6 +2439,10 @@ export type UpdatePlanSpendLimitResponse = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -2408,6 +2461,13 @@ export type UpdatePlanUsageLimitIntervalResponse = OpenEnum<
   typeof UpdatePlanUsageLimitIntervalResponse
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdatePlanFilterResponse = {
+  properties: { [k: string]: any };
+};
+
 export type UpdatePlanUsageLimitResponse = {
   /**
    * The feature this usage limit applies to.
@@ -2425,6 +2485,10 @@ export type UpdatePlanUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdatePlanUsageLimitIntervalResponse;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdatePlanFilterResponse | undefined;
 };
 
 /**
@@ -3135,6 +3199,7 @@ export type UpdatePlanSpendLimitRequest$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -3147,12 +3212,14 @@ export const UpdatePlanSpendLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(UpdatePlanLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -3174,11 +3241,53 @@ export const UpdatePlanUsageLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
+export type UpdatePlanProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const UpdatePlanProperties$outboundSchema: z.ZodMiniType<
+  UpdatePlanProperties$Outbound,
+  UpdatePlanProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updatePlanPropertiesToJSON(
+  updatePlanProperties: UpdatePlanProperties,
+): string {
+  return JSON.stringify(
+    UpdatePlanProperties$outboundSchema.parse(updatePlanProperties),
+  );
+}
+
+/** @internal */
+export type UpdatePlanFilterRequest$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdatePlanFilterRequest$outboundSchema: z.ZodMiniType<
+  UpdatePlanFilterRequest$Outbound,
+  UpdatePlanFilterRequest
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function updatePlanFilterRequestToJSON(
+  updatePlanFilterRequest: UpdatePlanFilterRequest,
+): string {
+  return JSON.stringify(
+    UpdatePlanFilterRequest$outboundSchema.parse(updatePlanFilterRequest),
+  );
+}
+
+/** @internal */
 export type UpdatePlanUsageLimitRequest$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: UpdatePlanFilterRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -3191,6 +3300,7 @@ export const UpdatePlanUsageLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdatePlanUsageLimitIntervalRequestBody$outboundSchema,
+    filter: z.optional(z.lazy(() => UpdatePlanFilterRequest$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3859,6 +3969,7 @@ export type VariantSpendLimit$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -3871,12 +3982,14 @@ export const VariantSpendLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(VariantLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -3895,11 +4008,49 @@ export const VariantUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(VariantUsageLimitInterval);
 
 /** @internal */
+export type VariantProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const VariantProperties$outboundSchema: z.ZodMiniType<
+  VariantProperties$Outbound,
+  VariantProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function variantPropertiesToJSON(
+  variantProperties: VariantProperties,
+): string {
+  return JSON.stringify(
+    VariantProperties$outboundSchema.parse(variantProperties),
+  );
+}
+
+/** @internal */
+export type VariantFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const VariantFilter$outboundSchema: z.ZodMiniType<
+  VariantFilter$Outbound,
+  VariantFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function variantFilterToJSON(variantFilter: VariantFilter): string {
+  return JSON.stringify(VariantFilter$outboundSchema.parse(variantFilter));
+}
+
+/** @internal */
 export type VariantUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: VariantFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -3912,6 +4063,7 @@ export const VariantUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: VariantUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => VariantFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5164,12 +5316,14 @@ export const UpdatePlanVariantDetailsSpendLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(UpdatePlanVariantDetailsLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -5191,6 +5345,24 @@ export const UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema:
     .inboundSchema(UpdatePlanVariantDetailsUsageLimitInterval);
 
 /** @internal */
+export const UpdatePlanVariantDetailsFilter$inboundSchema: z.ZodMiniType<
+  UpdatePlanVariantDetailsFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function updatePlanVariantDetailsFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanVariantDetailsFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanVariantDetailsFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanVariantDetailsFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
   UpdatePlanVariantDetailsUsageLimit,
   unknown
@@ -5200,6 +5372,9 @@ export const UpdatePlanVariantDetailsUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanVariantDetailsUsageLimitInterval$inboundSchema,
+    filter: types.optional(
+      z.lazy(() => UpdatePlanVariantDetailsFilter$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5505,12 +5680,14 @@ export const UpdatePlanSpendLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(UpdatePlanLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -5532,6 +5709,24 @@ export const UpdatePlanUsageLimitIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdatePlanFilterResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanFilterResponse,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function updatePlanFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanUsageLimitResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanUsageLimitResponse,
   unknown
@@ -5541,6 +5736,9 @@ export const UpdatePlanUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdatePlanUsageLimitIntervalResponse$inboundSchema,
+    filter: types.optional(
+      z.lazy(() => UpdatePlanFilterResponse$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

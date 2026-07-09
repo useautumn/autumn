@@ -137,7 +137,7 @@ export type ImportBillingBehavior = ClosedEnum<typeof ImportBillingBehavior>;
 /**
  * Disambiguates which entitlement line to target when the feature has multiple.
  */
-export type Filter = {
+export type ImportFilter = {
   /**
    * Reset interval selecting which entitlement line to target when a feature has several ('lifetime' or null = the non-resetting one-off line).
    */
@@ -156,7 +156,7 @@ export type ImportBalance = {
   /**
    * Disambiguates which entitlement line to target when the feature has multiple.
    */
-  filter?: Filter | undefined;
+  filter?: ImportFilter | undefined;
   /**
    * Units already consumed; remaining balance is derived from the plan allowance minus this.
    */
@@ -424,33 +424,35 @@ export const ImportBillingBehavior$outboundSchema: z.ZodMiniEnum<
 > = z.enum(ImportBillingBehavior);
 
 /** @internal */
-export type Filter$Outbound = {
+export type ImportFilter$Outbound = {
   interval?: string | null | undefined;
   billing_behavior?: string | undefined;
 };
 
 /** @internal */
-export const Filter$outboundSchema: z.ZodMiniType<Filter$Outbound, Filter> = z
-  .pipe(
-    z.object({
-      interval: z.optional(z.nullable(ImportInterval$outboundSchema)),
-      billingBehavior: z.optional(ImportBillingBehavior$outboundSchema),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        billingBehavior: "billing_behavior",
-      });
-    }),
-  );
+export const ImportFilter$outboundSchema: z.ZodMiniType<
+  ImportFilter$Outbound,
+  ImportFilter
+> = z.pipe(
+  z.object({
+    interval: z.optional(z.nullable(ImportInterval$outboundSchema)),
+    billingBehavior: z.optional(ImportBillingBehavior$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      billingBehavior: "billing_behavior",
+    });
+  }),
+);
 
-export function filterToJSON(filter: Filter): string {
-  return JSON.stringify(Filter$outboundSchema.parse(filter));
+export function importFilterToJSON(importFilter: ImportFilter): string {
+  return JSON.stringify(ImportFilter$outboundSchema.parse(importFilter));
 }
 
 /** @internal */
 export type ImportBalance$Outbound = {
   feature_id: string;
-  filter?: Filter$Outbound | undefined;
+  filter?: ImportFilter$Outbound | undefined;
   usage?: number | undefined;
   balance?: number | undefined;
   next_reset_at?: number | undefined;
@@ -463,7 +465,7 @@ export const ImportBalance$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
-    filter: z.optional(z.lazy(() => Filter$outboundSchema)),
+    filter: z.optional(z.lazy(() => ImportFilter$outboundSchema)),
     usage: z.optional(z.number()),
     balance: z.optional(z.number()),
     nextResetAt: z.optional(z.number()),

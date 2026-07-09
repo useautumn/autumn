@@ -84,10 +84,13 @@ export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
 	billingPlan,
+	customerProductFilter,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	/** Scope the preview to a subset of products (e.g. one subscription's). */
+	customerProductFilter?: (customerProduct: FullCusProduct) => boolean;
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
 
@@ -95,7 +98,9 @@ export const billingPlanToNextCyclePreview = ({
 		billingContext,
 		autumnBillingPlan: billingPlan.autumn,
 	});
-	const allCustomerProducts = finalFullCustomer.customer_products;
+	const allCustomerProducts = customerProductFilter
+		? finalFullCustomer.customer_products.filter(customerProductFilter)
+		: finalFullCustomer.customer_products;
 
 	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>

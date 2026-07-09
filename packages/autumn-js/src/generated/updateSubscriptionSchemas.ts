@@ -27,6 +27,19 @@ export const billingUpdateAddItemTierSchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const billingUpdatePropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
 export const billingUpdateOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -233,6 +246,20 @@ export const billingUpdateSpendLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const billingUpdatePropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const billingUpdateFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const billingUpdateUsageLimitOutboundSchema = z.object({
@@ -240,6 +267,9 @@ export const billingUpdateUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	filter: z
+		.union([billingUpdateFilterOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateUsageAlertOutboundSchema = z.object({
@@ -547,6 +577,7 @@ export const billingUpdateSpendLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limitType: z.union([billingUpdateLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const billingUpdateUsageLimitIntervalSchema = closedEnumSchema;
@@ -556,6 +587,7 @@ export const billingUpdateUsageLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: billingUpdateUsageLimitIntervalSchema,
+	filter: z.union([billingUpdateFilterSchema, z.undefined()]).optional(),
 });
 
 export const billingUpdateThresholdTypeSchema = closedEnumSchema;

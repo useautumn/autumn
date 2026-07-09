@@ -14,7 +14,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -645,6 +645,8 @@ class ListEntitiesSpendLimitTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class ListEntitiesSpendLimit(BaseModel):
@@ -660,9 +662,20 @@ class ListEntitiesSpendLimit(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -689,6 +702,18 @@ ListEntitiesInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class ListEntitiesFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class ListEntitiesFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class ListEntitiesUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -698,6 +723,8 @@ class ListEntitiesUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[ListEntitiesFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
@@ -715,12 +742,17 @@ class ListEntitiesUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[Optional[ListEntitiesFilter], pydantic.Field(alias="filter")] = (
+        None
+    )
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "usage"])
+        optional_fields = set(["enabled", "filter", "usage"])
         serialized = handler(self)
         m = {}
 
@@ -1066,3 +1098,9 @@ class ListEntitiesResponse(BaseModel):
                 m[k] = val
 
         return m
+
+
+try:
+    ListEntitiesUsageLimit.model_rebuild()
+except NameError:
+    pass

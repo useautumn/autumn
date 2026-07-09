@@ -27,6 +27,19 @@ export const setupPaymentAddItemTierSchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const setupPaymentPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
 export const setupPaymentOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -229,6 +242,20 @@ export const setupPaymentSpendLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const setupPaymentPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const setupPaymentFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const setupPaymentUsageLimitOutboundSchema = z.object({
@@ -236,6 +263,7 @@ export const setupPaymentUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	filter: z.union([setupPaymentFilterOutboundSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentUsageAlertOutboundSchema = z.object({
@@ -546,6 +574,7 @@ export const setupPaymentSpendLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limitType: z.union([setupPaymentLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const setupPaymentUsageLimitIntervalSchema = closedEnumSchema;
@@ -555,6 +584,7 @@ export const setupPaymentUsageLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: setupPaymentUsageLimitIntervalSchema,
+	filter: z.union([setupPaymentFilterSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentThresholdTypeSchema = closedEnumSchema;

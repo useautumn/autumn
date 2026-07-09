@@ -8,6 +8,7 @@ export const billingV2: TestGroup = {
 		"billing/attach",
 		"billing/update-subscription",
 		"billing/multi-attach",
+		"billing/multi-update",
 		"billing/setup-payment",
 	],
 };
