@@ -393,6 +393,9 @@ const runAndReply = async ({
 		});
 
 		if (output.finishReason === "stopped") {
+			// Stop before posting, or a pending tick re-renders the status after
+			// Slack's post-triggered clear and it sticks forever.
+			ticker.stop();
 			await finishLoading(target, loading, "Stopped.");
 			const stoppedBy = run.stop?.byUserId;
 			const notice =
@@ -507,6 +510,10 @@ const runAndReply = async ({
 		) {
 			decisionPlan = output.catalogDecision.plan as CatalogPlanPreview;
 		}
+
+		// Every branch below posts a terminal message/card — stop the status loop
+		// first so no pending tick re-renders after the post clears it.
+		ticker.stop();
 
 		if (decisionPlan) {
 			await finishLoading(target, loading, "Decision needed.");

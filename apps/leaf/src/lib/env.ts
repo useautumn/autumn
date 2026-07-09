@@ -28,9 +28,12 @@ const envSchema = z
 		CLIENT_URL: z.string().min(1).default("http://localhost:3000"),
 		DATABASE_URL: z.string().min(1),
 		ENCRYPTION_PASSWORD: z.string().min(1),
-		// Binary file parts break at eve's workflow-world queue boundary (bytes
-		// deserialize as objects → provider rejects); flip on once fixed upstream.
-		EVE_ATTACHMENTS_ENABLED: z.coerce.boolean().default(false),
+		// Kill switch for eve file ingestion (falls back to an honest "can't view
+		// files" note) in case the upstream queue byte-corruption bug resurfaces.
+		EVE_ATTACHMENTS_ENABLED: z
+			.enum(["true", "false", "1", "0"])
+			.default("true")
+			.transform((value) => value === "true" || value === "1"),
 		EVE_INTERNAL_AUTH_TOKEN: optionalString,
 		EVE_SERVER_URL: z.string().url().default("http://127.0.0.1:3999"),
 		FIRECRAWL_API_KEY: z.string().min(1),
