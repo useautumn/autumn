@@ -508,6 +508,10 @@ export type CheckSpendLimit2 = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -526,6 +530,13 @@ export type CheckUsageLimitInterval2 = OpenEnum<
   typeof CheckUsageLimitInterval2
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CheckFilter2 = {
+  properties: { [k: string]: any };
+};
+
 export type CheckUsageLimit2 = {
   /**
    * The feature this usage limit applies to.
@@ -543,6 +554,10 @@ export type CheckUsageLimit2 = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CheckUsageLimitInterval2;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CheckFilter2 | undefined;
 };
 
 /**
@@ -639,7 +654,7 @@ export const ProductScenario2 = {
  */
 export type ProductScenario2 = OpenEnum<typeof ProductScenario2>;
 
-export type Properties2 = {
+export type CheckProperties2 = {
   /**
    * True if the product has no base price or usage prices
    */
@@ -719,7 +734,7 @@ export type CheckProduct2 = {
    * Scenario for when this product is used in attach flows
    */
   scenario?: ProductScenario2 | undefined;
-  properties?: Properties2 | undefined;
+  properties?: CheckProperties2 | undefined;
 };
 
 /**
@@ -1228,6 +1243,10 @@ export type CheckSpendLimit1 = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -1246,6 +1265,13 @@ export type CheckUsageLimitInterval1 = OpenEnum<
   typeof CheckUsageLimitInterval1
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CheckFilter1 = {
+  properties: { [k: string]: any };
+};
+
 export type CheckUsageLimit1 = {
   /**
    * The feature this usage limit applies to.
@@ -1263,6 +1289,10 @@ export type CheckUsageLimit1 = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CheckUsageLimitInterval1;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CheckFilter1 | undefined;
 };
 
 /**
@@ -1359,7 +1389,7 @@ export const ProductScenario1 = {
  */
 export type ProductScenario1 = OpenEnum<typeof ProductScenario1>;
 
-export type Properties1 = {
+export type CheckProperties1 = {
   /**
    * True if the product has no base price or usage prices
    */
@@ -1439,7 +1469,7 @@ export type CheckProduct1 = {
    * Scenario for when this product is used in attach flows
    */
   scenario?: ProductScenario1 | undefined;
-  properties?: Properties1 | undefined;
+  properties?: CheckProperties1 | undefined;
 };
 
 /**
@@ -2082,12 +2112,14 @@ export const CheckSpendLimit2$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(CheckLimitType2$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -2109,6 +2141,22 @@ export const CheckUsageLimitInterval2$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckUsageLimitInterval2);
 
 /** @internal */
+export const CheckFilter2$inboundSchema: z.ZodMiniType<CheckFilter2, unknown> =
+  z.object({
+    properties: z.record(z.string(), z.any()),
+  });
+
+export function checkFilter2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckFilter2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckFilter2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFilter2' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckUsageLimit2$inboundSchema: z.ZodMiniType<
   CheckUsageLimit2,
   unknown
@@ -2118,6 +2166,7 @@ export const CheckUsageLimit2$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CheckUsageLimitInterval2$inboundSchema,
+    filter: types.optional(z.lazy(() => CheckFilter2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2248,32 +2297,34 @@ export const ProductScenario2$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ProductScenario2);
 
 /** @internal */
-export const Properties2$inboundSchema: z.ZodMiniType<Properties2, unknown> = z
-  .pipe(
-    z.object({
-      is_free: types.boolean(),
-      is_one_off: types.boolean(),
-      interval_group: z.optional(z.nullable(types.string())),
-      has_trial: z.optional(z.nullable(types.boolean())),
-      updateable: z.optional(z.nullable(types.boolean())),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "is_free": "isFree",
-        "is_one_off": "isOneOff",
-        "interval_group": "intervalGroup",
-        "has_trial": "hasTrial",
-      });
-    }),
-  );
+export const CheckProperties2$inboundSchema: z.ZodMiniType<
+  CheckProperties2,
+  unknown
+> = z.pipe(
+  z.object({
+    is_free: types.boolean(),
+    is_one_off: types.boolean(),
+    interval_group: z.optional(z.nullable(types.string())),
+    has_trial: z.optional(z.nullable(types.boolean())),
+    updateable: z.optional(z.nullable(types.boolean())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "is_free": "isFree",
+      "is_one_off": "isOneOff",
+      "interval_group": "intervalGroup",
+      "has_trial": "hasTrial",
+    });
+  }),
+);
 
-export function properties2FromJSON(
+export function checkProperties2FromJSON(
   jsonString: string,
-): SafeParseResult<Properties2, SDKValidationError> {
+): SafeParseResult<CheckProperties2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Properties2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Properties2' from JSON`,
+    (x) => CheckProperties2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProperties2' from JSON`,
   );
 }
 
@@ -2299,7 +2350,7 @@ export const CheckProduct2$inboundSchema: z.ZodMiniType<
       z.lazy(() => CheckBillingControls2$inboundSchema),
     ),
     scenario: types.optional(ProductScenario2$inboundSchema),
-    properties: types.optional(z.lazy(() => Properties2$inboundSchema)),
+    properties: types.optional(z.lazy(() => CheckProperties2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2885,12 +2936,14 @@ export const CheckSpendLimit1$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(CheckLimitType1$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -2912,6 +2965,22 @@ export const CheckUsageLimitInterval1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckUsageLimitInterval1);
 
 /** @internal */
+export const CheckFilter1$inboundSchema: z.ZodMiniType<CheckFilter1, unknown> =
+  z.object({
+    properties: z.record(z.string(), z.any()),
+  });
+
+export function checkFilter1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckFilter1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckFilter1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFilter1' from JSON`,
+  );
+}
+
+/** @internal */
 export const CheckUsageLimit1$inboundSchema: z.ZodMiniType<
   CheckUsageLimit1,
   unknown
@@ -2921,6 +2990,7 @@ export const CheckUsageLimit1$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CheckUsageLimitInterval1$inboundSchema,
+    filter: types.optional(z.lazy(() => CheckFilter1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3051,32 +3121,34 @@ export const ProductScenario1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ProductScenario1);
 
 /** @internal */
-export const Properties1$inboundSchema: z.ZodMiniType<Properties1, unknown> = z
-  .pipe(
-    z.object({
-      is_free: types.boolean(),
-      is_one_off: types.boolean(),
-      interval_group: z.optional(z.nullable(types.string())),
-      has_trial: z.optional(z.nullable(types.boolean())),
-      updateable: z.optional(z.nullable(types.boolean())),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "is_free": "isFree",
-        "is_one_off": "isOneOff",
-        "interval_group": "intervalGroup",
-        "has_trial": "hasTrial",
-      });
-    }),
-  );
+export const CheckProperties1$inboundSchema: z.ZodMiniType<
+  CheckProperties1,
+  unknown
+> = z.pipe(
+  z.object({
+    is_free: types.boolean(),
+    is_one_off: types.boolean(),
+    interval_group: z.optional(z.nullable(types.string())),
+    has_trial: z.optional(z.nullable(types.boolean())),
+    updateable: z.optional(z.nullable(types.boolean())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "is_free": "isFree",
+      "is_one_off": "isOneOff",
+      "interval_group": "intervalGroup",
+      "has_trial": "hasTrial",
+    });
+  }),
+);
 
-export function properties1FromJSON(
+export function checkProperties1FromJSON(
   jsonString: string,
-): SafeParseResult<Properties1, SDKValidationError> {
+): SafeParseResult<CheckProperties1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Properties1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Properties1' from JSON`,
+    (x) => CheckProperties1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProperties1' from JSON`,
   );
 }
 
@@ -3102,7 +3174,7 @@ export const CheckProduct1$inboundSchema: z.ZodMiniType<
       z.lazy(() => CheckBillingControls1$inboundSchema),
     ),
     scenario: types.optional(ProductScenario1$inboundSchema),
-    properties: types.optional(z.lazy(() => Properties1$inboundSchema)),
+    properties: types.optional(z.lazy(() => CheckProperties1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

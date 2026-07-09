@@ -2,8 +2,8 @@ import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { CancelActionSchema } from "../common/cancelAction";
 
-/** Per-update entry in the multi-update request */
-export const MultiUpdateItemV0Schema = z.object({
+/** Per-update entry in the multi-update request (external fields only) */
+export const ExtMultiUpdateItemV0Schema = z.object({
 	plan_id: z.string().optional().meta({
 		description:
 			"The ID of the plan to update. Optional if subscription_id is provided.",
@@ -11,9 +11,6 @@ export const MultiUpdateItemV0Schema = z.object({
 	subscription_id: z.string().optional().meta({
 		description:
 			"A unique ID to identify the subscription to update. Useful when a customer has multiple products with the same plan.",
-	}),
-	customer_product_id: z.string().optional().meta({
-		internal: true,
 	}),
 	entity_id: z.string().optional().meta({
 		description:
@@ -29,7 +26,13 @@ export const MultiUpdateItemV0Schema = z.object({
 	}),
 });
 
-export const MultiUpdateParamsV0Schema = z.object({
+export const MultiUpdateItemV0Schema = ExtMultiUpdateItemV0Schema.extend({
+	customer_product_id: z.string().optional().meta({
+		internal: true,
+	}),
+});
+
+const multiUpdateParamsBase = {
 	customer_id: z.string().meta({
 		description: "The ID of the customer to update plans for.",
 	}),
@@ -37,12 +40,26 @@ export const MultiUpdateParamsV0Schema = z.object({
 		description:
 			"The ID of the entity to update plans for. Individual updates can override this with their own entity_id.",
 	}),
+};
+
+const updatesMeta = {
+	description: "The list of plan updates to apply to the customer.",
+};
+
+export const ExtMultiUpdateParamsV0Schema = z.object({
+	...multiUpdateParamsBase,
+	updates: z
+		.array(ExtMultiUpdateItemV0Schema)
+		.min(1, "At least one update must be provided")
+		.meta(updatesMeta),
+});
+
+export const MultiUpdateParamsV0Schema = z.object({
+	...multiUpdateParamsBase,
 	updates: z
 		.array(MultiUpdateItemV0Schema)
 		.min(1, "At least one update must be provided")
-		.meta({
-			description: "The list of plan updates to apply to the customer.",
-		}),
+		.meta(updatesMeta),
 });
 
 export type MultiUpdateItemV0 = z.infer<typeof MultiUpdateItemV0Schema>;

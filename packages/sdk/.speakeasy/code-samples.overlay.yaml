@@ -348,6 +348,38 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.multiUpdate({
+                customerId: "cus_123",
+                updates: [
+                  {
+                    planId: "pro_plan",
+                    cancelAction: "cancel_end_of_cycle",
+                  },
+                  {
+                    planId: "addon_seats",
+                    cancelAction: "cancel_end_of_cycle",
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.open_customer_portal"]["post"]
     update:
       x-codeSamples:
@@ -422,6 +454,38 @@ actions:
                         quantity: 5,
                       },
                     ],
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/billing.preview_multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.previewMultiUpdate({
+                customerId: "cus_123",
+                updates: [
+                  {
+                    planId: "pro_plan",
+                    cancelAction: "cancel_immediately",
+                  },
+                  {
+                    planId: "addon_seats",
+                    cancelAction: "cancel_immediately",
                   },
                 ],
               });

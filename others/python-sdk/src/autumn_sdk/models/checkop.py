@@ -1011,6 +1011,8 @@ class CheckSpendLimit2TypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class CheckSpendLimit2(BaseModel):
@@ -1026,9 +1028,20 @@ class CheckSpendLimit2(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1055,6 +1068,18 @@ CheckUsageLimitInterval2 = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class CheckFilter2TypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CheckFilter2(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class CheckUsageLimit2TypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -1064,6 +1089,8 @@ class CheckUsageLimit2TypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CheckFilter2TypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class CheckUsageLimit2(BaseModel):
@@ -1079,9 +1106,12 @@ class CheckUsageLimit2(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[Optional[CheckFilter2], pydantic.Field(alias="filter")] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -1261,7 +1291,7 @@ ProductScenario2 = Union[
 r"""Scenario for when this product is used in attach flows"""
 
 
-class Properties2TypedDict(TypedDict):
+class CheckProperties2TypedDict(TypedDict):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
     is_one_off: bool
@@ -1274,7 +1304,7 @@ class Properties2TypedDict(TypedDict):
     r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
 
 
-class Properties2(BaseModel):
+class CheckProperties2(BaseModel):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
 
@@ -1345,7 +1375,7 @@ class CheckProduct2TypedDict(TypedDict):
     r"""Plan-level billing controls used as customer defaults"""
     scenario: NotRequired[ProductScenario2]
     r"""Scenario for when this product is used in attach flows"""
-    properties: NotRequired[Properties2TypedDict]
+    properties: NotRequired[CheckProperties2TypedDict]
 
 
 class CheckProduct2(BaseModel):
@@ -1391,7 +1421,7 @@ class CheckProduct2(BaseModel):
     scenario: Optional[ProductScenario2] = None
     r"""Scenario for when this product is used in attach flows"""
 
-    properties: Optional[Properties2] = None
+    properties: Optional[CheckProperties2] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2384,6 +2414,8 @@ class CheckSpendLimit1TypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class CheckSpendLimit1(BaseModel):
@@ -2399,9 +2431,20 @@ class CheckSpendLimit1(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -2428,6 +2471,18 @@ CheckUsageLimitInterval1 = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class CheckFilter1TypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CheckFilter1(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class CheckUsageLimit1TypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -2437,6 +2492,8 @@ class CheckUsageLimit1TypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CheckFilter1TypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class CheckUsageLimit1(BaseModel):
@@ -2452,9 +2509,12 @@ class CheckUsageLimit1(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[Optional[CheckFilter1], pydantic.Field(alias="filter")] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2634,7 +2694,7 @@ ProductScenario1 = Union[
 r"""Scenario for when this product is used in attach flows"""
 
 
-class Properties1TypedDict(TypedDict):
+class CheckProperties1TypedDict(TypedDict):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
     is_one_off: bool
@@ -2647,7 +2707,7 @@ class Properties1TypedDict(TypedDict):
     r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
 
 
-class Properties1(BaseModel):
+class CheckProperties1(BaseModel):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
 
@@ -2718,7 +2778,7 @@ class CheckProduct1TypedDict(TypedDict):
     r"""Plan-level billing controls used as customer defaults"""
     scenario: NotRequired[ProductScenario1]
     r"""Scenario for when this product is used in attach flows"""
-    properties: NotRequired[Properties1TypedDict]
+    properties: NotRequired[CheckProperties1TypedDict]
 
 
 class CheckProduct1(BaseModel):
@@ -2764,7 +2824,7 @@ class CheckProduct1(BaseModel):
     scenario: Optional[ProductScenario1] = None
     r"""Scenario for when this product is used in attach flows"""
 
-    properties: Optional[Properties1] = None
+    properties: Optional[CheckProperties1] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -2918,5 +2978,13 @@ CheckResponse = TypeAliasType(
 
 try:
     CheckLock.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckUsageLimit2.model_rebuild()
+except NameError:
+    pass
+try:
+    CheckUsageLimit1.model_rebuild()
 except NameError:
     pass

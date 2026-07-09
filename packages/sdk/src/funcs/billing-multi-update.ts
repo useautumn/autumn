@@ -27,37 +27,35 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+ * Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
  *
- * Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+ * Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
  *
  * @example
  * ```typescript
- * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783589620893,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784799220893,"plans":[{"planId":"pro_plan"}]}] });
+ * // Cancel a plan and an add-on at end of cycle
+ * const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
  * ```
  *
- * @param customerId - The ID of the customer to create the schedule for.
- * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
- * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
- * @param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
- * @param successUrl - URL to redirect to after successful checkout. (optional)
- * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
- * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
- * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
- * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
- * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
- * @param phases - Ordered phase definitions for the schedule.
+ * @example
+ * ```typescript
+ * // Uncancel one plan and cancel another immediately
+ * const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+ * ```
  *
- * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+ * @param customerId - The ID of the customer to update plans for.
+ * @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+ * @param updates - The list of plan updates to apply to the customer.
+ *
+ * @returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
  */
-export function billingCreateSchedule(
+export function billingMultiUpdate(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request: models.MultiUpdateParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CreateScheduleResponse,
+    models.MultiUpdateResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -77,12 +75,12 @@ export function billingCreateSchedule(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request: models.MultiUpdateParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CreateScheduleResponse,
+      models.MultiUpdateResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -97,7 +95,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CreateScheduleParams$outboundSchema, value),
+    (value) => z.parse(models.MultiUpdateParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -106,7 +104,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.create_schedule")();
+  const path = pathToFunc("/v1/billing.multi_update")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -125,7 +123,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "createSchedule",
+    operationID: "multiUpdate",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -165,7 +163,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CreateScheduleResponse,
+    models.MultiUpdateResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -175,7 +173,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.CreateScheduleResponse$inboundSchema),
+    M.json(200, models.MultiUpdateResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

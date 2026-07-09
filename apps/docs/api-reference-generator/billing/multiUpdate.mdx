@@ -1,0 +1,31 @@
+---
+title: "Multi Update"
+openapi: "openapi POST /v1/billing.multi_update"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+    The multi update endpoint applies updates to multiple plans in a single,
+    atomic request. It currently supports cancel actions. For updating a single
+    plan (like changing quantities or customizing items), use
+    [update](/api-reference/billing/billingUpdate) instead.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Cancel a plan and its add-on
+const response = await autumn.billing.multiUpdate({
+    customerId: "cus_123",
+    updates: [
+        { planId: "pro_plan", cancelAction: "cancel_end_of_cycle" },
+        { planId: "addon_seats", cancelAction: "cancel_end_of_cycle" },
+    ],
+});
+```
+
+</CodeGroup>

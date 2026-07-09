@@ -27,6 +27,19 @@ export const previewUpdateAddItemTierSchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewUpdatePropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewUpdateFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
+});
+
 export const previewUpdateOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
@@ -318,6 +331,20 @@ export const previewUpdateSpendLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const previewUpdatePropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const previewUpdateFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const previewUpdateUsageLimitOutboundSchema = z.object({
@@ -325,6 +352,9 @@ export const previewUpdateUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	filter: z
+		.union([previewUpdateFilterOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewUpdateUsageAlertOutboundSchema = z.object({
@@ -637,6 +667,7 @@ export const previewUpdateSpendLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limitType: z.union([previewUpdateLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const previewUpdateUsageLimitIntervalSchema = closedEnumSchema;
@@ -646,6 +677,7 @@ export const previewUpdateUsageLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: previewUpdateUsageLimitIntervalSchema,
+	filter: z.union([previewUpdateFilterSchema, z.undefined()]).optional(),
 });
 
 export const previewUpdateThresholdTypeSchema = closedEnumSchema;

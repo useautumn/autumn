@@ -194,7 +194,7 @@ ImportBillingBehavior = Literal[
 r"""Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several."""
 
 
-class FilterTypedDict(TypedDict):
+class ImportFilterTypedDict(TypedDict):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
     interval: NotRequired[Nullable[ImportInterval]]
@@ -203,7 +203,7 @@ class FilterTypedDict(TypedDict):
     r"""Selects the included vs prepaid vs usage-based (pay-per-use) entitlement line when a feature has several."""
 
 
-class Filter(BaseModel):
+class ImportFilter(BaseModel):
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
     interval: OptionalNullable[ImportInterval] = UNSET
@@ -241,7 +241,7 @@ class Filter(BaseModel):
 class ImportBalanceTypedDict(TypedDict):
     feature_id: str
     r"""The feature whose balance is being set."""
-    filter_: NotRequired[FilterTypedDict]
+    filter_: NotRequired[ImportFilterTypedDict]
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
     usage: NotRequired[float]
     r"""Units already consumed; remaining balance is derived from the plan allowance minus this."""
@@ -255,7 +255,7 @@ class ImportBalance(BaseModel):
     feature_id: str
     r"""The feature whose balance is being set."""
 
-    filter_: Annotated[Optional[Filter], pydantic.Field(alias="filter")] = None
+    filter_: Annotated[Optional[ImportFilter], pydantic.Field(alias="filter")] = None
     r"""Disambiguates which entitlement line to target when the feature has multiple."""
 
     usage: Optional[float] = None

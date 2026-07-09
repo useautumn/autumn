@@ -110,6 +110,10 @@ export type UpdateCustomerSpendLimitRequest = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -128,6 +132,15 @@ export type UpdateCustomerUsageLimitIntervalRequestBody = ClosedEnum<
   typeof UpdateCustomerUsageLimitIntervalRequestBody
 >;
 
+export type UpdateCustomerProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateCustomerFilterRequest = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UpdateCustomerUsageLimitRequest = {
   /**
    * The feature this usage limit applies to.
@@ -145,6 +158,10 @@ export type UpdateCustomerUsageLimitRequest = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateCustomerUsageLimitIntervalRequestBody;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateCustomerFilterRequest | undefined;
 };
 
 /**
@@ -424,6 +441,10 @@ export type UpdateCustomerSpendLimitResponse = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -442,6 +463,13 @@ export type UpdateCustomerUsageLimitIntervalResponse = OpenEnum<
   typeof UpdateCustomerUsageLimitIntervalResponse
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateCustomerFilterResponse = {
+  properties: { [k: string]: any };
+};
+
 export type UpdateCustomerUsageLimitResponse = {
   /**
    * The feature this usage limit applies to.
@@ -459,6 +487,10 @@ export type UpdateCustomerUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateCustomerUsageLimitIntervalResponse;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateCustomerFilterResponse | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -1021,6 +1053,7 @@ export type UpdateCustomerSpendLimitRequest$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1033,12 +1066,14 @@ export const UpdateCustomerSpendLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(UpdateCustomerLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -1060,11 +1095,55 @@ export const UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema:
   );
 
 /** @internal */
+export type UpdateCustomerProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const UpdateCustomerProperties$outboundSchema: z.ZodMiniType<
+  UpdateCustomerProperties$Outbound,
+  UpdateCustomerProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateCustomerPropertiesToJSON(
+  updateCustomerProperties: UpdateCustomerProperties,
+): string {
+  return JSON.stringify(
+    UpdateCustomerProperties$outboundSchema.parse(updateCustomerProperties),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerFilterRequest$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateCustomerFilterRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerFilterRequest$Outbound,
+  UpdateCustomerFilterRequest
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function updateCustomerFilterRequestToJSON(
+  updateCustomerFilterRequest: UpdateCustomerFilterRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerFilterRequest$outboundSchema.parse(
+      updateCustomerFilterRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerUsageLimitRequest$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: UpdateCustomerFilterRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -1077,6 +1156,9 @@ export const UpdateCustomerUsageLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateCustomerUsageLimitIntervalRequestBody$outboundSchema,
+    filter: z.optional(
+      z.lazy(() => UpdateCustomerFilterRequest$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1462,12 +1544,14 @@ export const UpdateCustomerSpendLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(UpdateCustomerLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -1488,6 +1572,24 @@ export const UpdateCustomerUsageLimitIntervalResponse$inboundSchema:
     .inboundSchema(UpdateCustomerUsageLimitIntervalResponse);
 
 /** @internal */
+export const UpdateCustomerFilterResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerFilterResponse,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function updateCustomerFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerUsageLimitResponse,
   unknown
@@ -1497,6 +1599,9 @@ export const UpdateCustomerUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateCustomerUsageLimitIntervalResponse$inboundSchema,
+    filter: types.optional(
+      z.lazy(() => UpdateCustomerFilterResponse$inboundSchema),
+    ),
     usage: types.optional(types.number()),
   }),
   z.transform((v) => {

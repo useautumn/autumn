@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783530724692,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784740324692,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783589620893,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784799220893,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -492,6 +492,42 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
+* [multiUpdate](docs/sdks/billing/README.md#multiupdate) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+@example
+```typescript
+// Cancel a plan and an add-on at end of cycle
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
+```
+
+@example
+```typescript
+// Uncancel one plan and cancel another immediately
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
+* [previewMultiUpdate](docs/sdks/billing/README.md#previewmultiupdate) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+@example
+```typescript
+// Preview canceling two plans immediately
+const response = await client.billing.previewMultiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_immediately"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
 * [import](docs/sdks/billing/README.md#import) - Import
@@ -855,7 +891,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783530724692,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784740324692,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783589620893,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784799220893,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -907,6 +943,27 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
+- [`billingMultiUpdate`](docs/sdks/billing/README.md#multiupdate) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+@example
+```typescript
+// Cancel a plan and an add-on at end of cycle
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
+```
+
+@example
+```typescript
+// Uncancel one plan and cancel another immediately
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
 - [`billingOpenCustomerPortal`](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 - [`billingPreviewAttach`](docs/sdks/billing/README.md#previewattach) - Previews the billing changes that would occur when attaching a plan, without actually making any changes.
 
@@ -970,6 +1027,21 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
+- [`billingPreviewMultiUpdate`](docs/sdks/billing/README.md#previewmultiupdate) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+@example
+```typescript
+// Preview canceling two plans immediately
+const response = await client.billing.previewMultiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_immediately"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 - [`billingPreviewUpdate`](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
