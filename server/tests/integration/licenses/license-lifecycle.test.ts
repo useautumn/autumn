@@ -19,6 +19,7 @@ import type { CheckResponseV3, LicenseBalanceResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -174,5 +175,81 @@ test.concurrent(
 			skip_cache: true,
 		});
 		expect(afterUpgrade.allowed).toBe(true);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("licenses-lifecycle: trial expiry ends assignments on a license parent")}`,
+	async () => {
+		const parent = products.proWithTrial({
+			id: "lifecycle-trial-parent",
+			items: [items.dashboard()],
+			trialDays: 7,
+		});
+		const license = makeLicenseProduct("lifecycle-trial-license");
+
+		const { customerId, entities, testClockId, ctx, autumnV2_1, autumnV2_2 } =
+			await initScenario({
+				customerId: "license-lifecycle-trial",
+				setup: [
+					s.customer({ paymentMethod: "success", testClock: true }),
+					s.entities({ count: 1, featureId: TestFeature.Users }),
+					s.products({ list: [parent, license] }),
+				],
+				actions: [],
+			});
+
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 1,
+		});
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: parent.id,
+		});
+		await autumnV2_2.post("/licenses.attach", {
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			plan_id: license.id,
+		});
+
+		const beforeExpiry = await autumnV2_1.check<CheckResponseV3>({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+		});
+		expect(beforeExpiry.allowed).toBe(true);
+
+		// Advance past the trial: the product cron expires the parent, which
+		// rides the shared plan and converges its stranded license assignments.
+		if (!testClockId) throw new Error("testClock not enabled");
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+			numberOfDays: 9,
+			waitForSeconds: 30,
+		});
+
+		const assignmentsAfter = (await autumnV2_2.post(
+			"/licenses.list_assignments",
+			{
+				customer_id: customerId,
+				entity_id: entities[0].id,
+				plan_id: license.id,
+			},
+		)) as { list: Array<{ ended_at: number | null }> };
+		const openAssignments = assignmentsAfter.list.filter(
+			(assignment) => assignment.ended_at === null,
+		);
+		expect(openAssignments).toHaveLength(0);
+
+		const afterExpiry = await autumnV2_1.check<CheckResponseV3>({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+			skip_cache: true,
+		});
+		expect(afterExpiry.allowed).toBe(false);
 	},
 );
