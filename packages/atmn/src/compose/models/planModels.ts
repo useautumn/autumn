@@ -44,6 +44,7 @@ type SpendLimit = {
 	enabled?: boolean;
 	limit_type?: "absolute" | "usage_percentage";
 	overage_limit?: number;
+	skip_overage_billing?: boolean;
 };
 
 type UsageLimit = {
