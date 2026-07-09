@@ -1,6 +1,10 @@
 import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
-import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
+import {
+	getRevenueCatCustomerEmail,
+	getRevenueCatCustomerFingerprint,
+	getRevenueCatOverrideCustomerId,
+} from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { refundRevenueCatInvoice } from "@/external/revenueCat/utils/refundRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
@@ -35,6 +39,8 @@ export const handleCancellation = async ({
 		customerId: app_user_id ?? original_app_user_id,
 		originalAppUserId: original_app_user_id,
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
+		customerEmail: getRevenueCatCustomerEmail(event),
+		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

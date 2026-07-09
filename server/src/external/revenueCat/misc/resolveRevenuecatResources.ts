@@ -91,6 +91,71 @@ const accumulateRevenueCatAliases = ({
 	});
 };
 
+/**
+ * Update customer email and fingerprint from RevenueCat subscriber attributes.
+ * Updates if provided values differ from current values.
+ * Fire-and-forget: must never block or throw the webhook.
+ */
+const updateRevenueCatCustomerDetails = ({
+	ctx,
+	customer,
+	customerEmail,
+	customerFingerprint,
+}: {
+	ctx: RevenueCatWebhookContext;
+	customer: FullCustomer;
+	customerEmail?: string;
+	customerFingerprint?: string;
+}) => {
+	const resolvedCustomerId = customer.id ?? customer.internal_id;
+	const updates: { email?: string; fingerprint?: string } = {};
+
+	// Update email if provided and different
+	if (customerEmail && customer.email !== customerEmail) {
+		updates.email = customerEmail;
+	}
+
+	// Update fingerprint if provided and different
+	if (customerFingerprint && customer.fingerprint !== customerFingerprint) {
+		updates.fingerprint = customerFingerprint;
+	}
+
+	if (Object.keys(updates).length === 0) return;
+
+	void (async () => {
+		try {
+			await CusService.update({
+				ctx,
+				idOrInternalId: customer.internal_id,
+				update: updates,
+			});
+			ctx.logger
+				.child({
+					context: {
+						extras: {
+							rc_customer_details_updated: true,
+							resolved_customer_id: resolvedCustomerId,
+							updated_fields: Object.keys(updates),
+						},
+					},
+				})
+				.info("Updated RevenueCat customer details");
+		} catch (error) {
+			ctx.logger
+				.child({
+					context: {
+						extras: {
+							rc_customer_details_update_failed: true,
+							resolved_customer_id: resolvedCustomerId,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					},
+				})
+				.error("Failed to update RevenueCat customer details");
+		}
+	})();
+};
+
 const writeRevenueCatIdentity = async ({
 	ctx,
 	customer,
@@ -142,12 +207,16 @@ const resolveRevenueCatCustomer = async ({
 	appUserId,
 	originalAppUserId,
 	overrideCustomerId,
+	customerEmail,
+	customerFingerprint,
 	autoCreateCustomer,
 }: {
 	ctx: RevenueCatWebhookContext;
 	appUserId: string;
 	originalAppUserId?: string;
 	overrideCustomerId?: string;
+	customerEmail?: string;
+	customerFingerprint?: string;
 	autoCreateCustomer: boolean;
 }): Promise<FullCustomer> => {
 	const hasOriginal = Boolean(
@@ -173,6 +242,8 @@ const resolveRevenueCatCustomer = async ({
 				withEntities: true,
 				customerData: {
 					processors: { revenuecat: { id: appUserId, aliases: [] } },
+					email: customerEmail,
+					fingerprint: customerFingerprint,
 				},
 			}));
 
@@ -198,6 +269,12 @@ const resolveRevenueCatCustomer = async ({
 			customer: overrideCustomer,
 			appUserId,
 			originalAppUserId,
+		});
+		updateRevenueCatCustomerDetails({
+			ctx,
+			customer: overrideCustomer,
+			customerEmail,
+			customerFingerprint,
 		});
 		return overrideCustomer;
 	}
@@ -296,6 +373,12 @@ const resolveRevenueCatCustomer = async ({
 			appUserId,
 			originalAppUserId,
 		});
+		updateRevenueCatCustomerDetails({
+			ctx,
+			customer: processorMatch,
+			customerEmail,
+			customerFingerprint,
+		});
 		return processorMatch;
 	}
 
@@ -318,6 +401,12 @@ const resolveRevenueCatCustomer = async ({
 			appUserId,
 			originalAppUserId,
 		});
+		updateRevenueCatCustomerDetails({
+			ctx,
+			customer: customerIdMatch,
+			customerEmail,
+			customerFingerprint,
+		});
 		return customerIdMatch;
 	}
 
@@ -333,7 +422,8 @@ const resolveRevenueCatCustomer = async ({
 		customerId: idIsValid ? appUserId : null,
 		withEntities: true,
 		customerData: {
-			email: idIsValid ? undefined : appUserId,
+			email: idIsValid ? customerEmail : (appUserId || customerEmail),
+			fingerprint: customerFingerprint,
 			processors: {
 				revenuecat: {
 					id: appUserId,
@@ -371,6 +461,8 @@ export const resolveRevenuecatResources = async ({
 	customerId,
 	originalAppUserId,
 	overrideCustomerId,
+	customerEmail,
+	customerFingerprint,
 	autoCreateCustomer = false,
 }: {
 	ctx: RevenueCatWebhookContext;
@@ -378,6 +470,8 @@ export const resolveRevenuecatResources = async ({
 	customerId: string;
 	originalAppUserId?: string;
 	overrideCustomerId?: string;
+	customerEmail?: string;
+	customerFingerprint?: string;
 	autoCreateCustomer?: boolean;
 }): Promise<{
 	ctx: RevenueCatWebhookContext;
@@ -419,6 +513,8 @@ export const resolveRevenuecatResources = async ({
 			appUserId: customerId,
 			originalAppUserId,
 			overrideCustomerId,
+			customerEmail,
+			customerFingerprint,
 			autoCreateCustomer,
 		}),
 	]);
