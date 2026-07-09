@@ -546,6 +546,20 @@ export type MultiAttachThresholdType = ClosedEnum<
   typeof MultiAttachThresholdType
 >;
 
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const MultiAttachUsageAlertSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type MultiAttachUsageAlertSource = ClosedEnum<
+  typeof MultiAttachUsageAlertSource
+>;
+
 export type MultiAttachUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -567,7 +581,25 @@ export type MultiAttachUsageAlert = {
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: MultiAttachUsageAlertSource | undefined;
 };
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const MultiAttachOverageAllowedSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type MultiAttachOverageAllowedSource = ClosedEnum<
+  typeof MultiAttachOverageAllowedSource
+>;
 
 export type MultiAttachOverageAllowed = {
   /**
@@ -578,6 +610,10 @@ export type MultiAttachOverageAllowed = {
    * Whether overage is allowed for this feature.
    */
   enabled?: boolean | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: MultiAttachOverageAllowedSource | undefined;
 };
 
 /**
@@ -1395,12 +1431,18 @@ export const MultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachThresholdType);
 
 /** @internal */
+export const MultiAttachUsageAlertSource$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachUsageAlertSource
+> = z.enum(MultiAttachUsageAlertSource);
+
+/** @internal */
 export type MultiAttachUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
   name?: string | undefined;
+  source?: string | undefined;
 };
 
 /** @internal */
@@ -1414,6 +1456,7 @@ export const MultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
     threshold: z.number(),
     thresholdType: MultiAttachThresholdType$outboundSchema,
     name: z.optional(z.string()),
+    source: z.optional(MultiAttachUsageAlertSource$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1432,9 +1475,15 @@ export function multiAttachUsageAlertToJSON(
 }
 
 /** @internal */
+export const MultiAttachOverageAllowedSource$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachOverageAllowedSource
+> = z.enum(MultiAttachOverageAllowedSource);
+
+/** @internal */
 export type MultiAttachOverageAllowed$Outbound = {
   feature_id: string;
   enabled: boolean;
+  source?: string | undefined;
 };
 
 /** @internal */
@@ -1445,6 +1494,7 @@ export const MultiAttachOverageAllowed$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), false),
+    source: z.optional(MultiAttachOverageAllowedSource$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

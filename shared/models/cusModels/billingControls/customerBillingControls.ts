@@ -159,8 +159,10 @@ export const ExpandedPurchaseLimitSchema = z.object({
  * strict — see `CustomerBillingControlsParamsSchema`.
  */
 export const AutoTopupResponseSchema = AutoTopupSchema.extend({
+	// Expanded first: its required count/next_reset_at would otherwise be
+	// silently stripped by the laxer static member on re-parse.
 	purchase_limit: z
-		.union([AutoTopupPurchaseLimitSchema, ExpandedPurchaseLimitSchema])
+		.union([ExpandedPurchaseLimitSchema, AutoTopupPurchaseLimitSchema])
 		.optional()
 		.meta({
 			description:

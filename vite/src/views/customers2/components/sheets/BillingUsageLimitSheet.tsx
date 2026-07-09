@@ -18,6 +18,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Switch,
 } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -52,16 +53,19 @@ const INTERVAL_OPTIONS: Record<string, string> = {
 /** Build the usage_limits entry for an interval-based hard cap. */
 export const buildUsageLimitItem = ({
 	featureId,
+	enabled,
 	limit,
 	interval,
 	filter,
 }: {
 	featureId: string;
+	enabled: boolean;
 	limit: number;
 	interval: string;
 	filter?: DbUsageLimit["filter"];
 }): DbUsageLimit => ({
 	feature_id: featureId,
+	enabled,
 	limit,
 	interval: interval as ResetInterval,
 	...(filter && { filter }),
@@ -147,6 +151,7 @@ export function BillingUsageLimitSheet() {
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [featureId, setFeatureId] = useState(existingItem?.feature_id ?? "");
+	const [enabled, setEnabled] = useState(existingItem?.enabled ?? true);
 	const [usageLimit, setUsageLimit] = useState(
 		existingItem?.limit?.toString() ?? "",
 	);
@@ -209,6 +214,7 @@ export function BillingUsageLimitSheet() {
 
 		const item = buildUsageLimitItem({
 			featureId,
+			enabled,
 			limit: parsedLimit,
 			interval: selectedInterval,
 			filter,
@@ -295,6 +301,11 @@ export function BillingUsageLimitSheet() {
 
 				<SheetSection withSeparator>
 					<div className="flex flex-col gap-3">
+						<div className="flex items-center justify-between">
+							<FormLabel className="mb-0">Enabled</FormLabel>
+							<Switch checked={enabled} onCheckedChange={setEnabled} />
+						</div>
+
 						<div>
 							<FormLabel>Limit</FormLabel>
 							<Input

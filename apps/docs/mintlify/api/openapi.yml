@@ -345,28 +345,6 @@ components:
                       - type: object
                         properties:
                           interval:
-                            enum:
-                              - hour
-                              - day
-                              - week
-                              - month
-                            type: string
-                            description: The time interval for the purchase limit window.
-                          interval_count:
-                            type: number
-                            minimum: 1
-                            default: 1
-                            description: Number of intervals in the purchase limit window.
-                          limit:
-                            type: number
-                            minimum: 1
-                            description: Maximum number of auto top-ups allowed within the interval.
-                        required:
-                          - interval
-                          - limit
-                      - type: object
-                        properties:
-                          interval:
                             anyOf:
                               - enum:
                                   - hour
@@ -404,6 +382,28 @@ components:
                           - limit
                           - count
                           - next_reset_at
+                      - type: object
+                        properties:
+                          interval:
+                            enum:
+                              - hour
+                              - day
+                              - week
+                              - month
+                            type: string
+                            description: The time interval for the purchase limit window.
+                          interval_count:
+                            type: number
+                            minimum: 1
+                            default: 1
+                            description: Number of intervals in the purchase limit window.
+                          limit:
+                            type: number
+                            minimum: 1
+                            description: Maximum number of auto top-ups allowed within the interval.
+                        required:
+                          - interval
+                          - limit
                     description: Optional rate limit to cap how often auto top-ups occur. Expand
                       billing_controls.auto_topups.purchase_limit for a count of
                       top ups and the next_reset_at.
@@ -411,6 +411,13 @@ components:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
                       auto-charging.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
                   - threshold
@@ -444,6 +451,13 @@ components:
                     type: boolean
                     description: When true, overage for this feature is not posted to Stripe. Usage
                       tracking and balance resets still behave normally.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
               description: List of overage spend limits per feature (caps overage spend).
             usage_limits:
               type: array
@@ -488,6 +502,13 @@ components:
                     minimum: 0
                     description: Current usage already consumed in the active interval.
                       Response-only; not stored on billing controls.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
                   - limit
@@ -524,6 +545,13 @@ components:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
                       same feature.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - threshold
                   - threshold_type
@@ -540,6 +568,13 @@ components:
                     type: boolean
                     default: false
                     description: Whether overage is allowed for this feature.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
               description: List of overage allowed controls per feature. When enabled, usage
@@ -3009,28 +3044,6 @@ paths:
                                 - type: object
                                   properties:
                                     interval:
-                                      enum:
-                                        - hour
-                                        - day
-                                        - week
-                                        - month
-                                      type: string
-                                      description: The time interval for the purchase limit window.
-                                    interval_count:
-                                      type: number
-                                      minimum: 1
-                                      default: 1
-                                      description: Number of intervals in the purchase limit window.
-                                    limit:
-                                      type: number
-                                      minimum: 1
-                                      description: Maximum number of auto top-ups allowed within the interval.
-                                  required:
-                                    - interval
-                                    - limit
-                                - type: object
-                                  properties:
-                                    interval:
                                       anyOf:
                                         - enum:
                                             - hour
@@ -3068,6 +3081,28 @@ paths:
                                     - limit
                                     - count
                                     - next_reset_at
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
                               description: Optional rate limit to cap how often auto top-ups occur. Expand
                                 billing_controls.auto_topups.purchase_limit for
                                 a count of top ups and the next_reset_at.
@@ -3075,6 +3110,13 @@ paths:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
                                 auto-charging.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - threshold
@@ -3110,6 +3152,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -3155,6 +3204,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -3192,6 +3248,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -3208,6 +3271,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -4012,28 +4082,6 @@ paths:
                                       - type: object
                                         properties:
                                           interval:
-                                            enum:
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                            type: string
-                                            description: The time interval for the purchase limit window.
-                                          interval_count:
-                                            type: number
-                                            minimum: 1
-                                            default: 1
-                                            description: Number of intervals in the purchase limit window.
-                                          limit:
-                                            type: number
-                                            minimum: 1
-                                            description: Maximum number of auto top-ups allowed within the interval.
-                                        required:
-                                          - interval
-                                          - limit
-                                      - type: object
-                                        properties:
-                                          interval:
                                             anyOf:
                                               - enum:
                                                   - hour
@@ -4072,6 +4120,28 @@ paths:
                                           - limit
                                           - count
                                           - next_reset_at
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            enum:
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                            type: string
+                                            description: The time interval for the purchase limit window.
+                                          interval_count:
+                                            type: number
+                                            minimum: 1
+                                            default: 1
+                                            description: Number of intervals in the purchase limit window.
+                                          limit:
+                                            type: number
+                                            minimum: 1
+                                            description: Maximum number of auto top-ups allowed within the interval.
+                                        required:
+                                          - interval
+                                          - limit
                                     description: Optional rate limit to cap how often auto top-ups occur. Expand
                                       billing_controls.auto_topups.purchase_limit
                                       for a count of top ups and the
@@ -4080,6 +4150,14 @@ paths:
                                     type: boolean
                                     description: When true, auto top-up creates a send_invoice invoice instead of
                                       auto-charging.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - threshold
@@ -4115,6 +4193,14 @@ paths:
                                     description: When true, overage for this feature is not posted to Stripe. Usage
                                       tracking and balance resets still behave
                                       normally.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                               description: List of overage spend limits per feature (caps overage spend).
                             usage_limits:
                               type: array
@@ -4161,6 +4247,14 @@ paths:
                                     description: Current usage already consumed in the active interval.
                                       Response-only; not stored on billing
                                       controls.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - limit
@@ -4198,6 +4292,14 @@ paths:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
                                       same feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - threshold
                                   - threshold_type
@@ -4214,6 +4316,14 @@ paths:
                                     type: boolean
                                     default: false
                                     description: Whether overage is allowed for this feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                               description: List of overage allowed controls per feature. When enabled, usage
@@ -5070,28 +5180,6 @@ paths:
                                 - type: object
                                   properties:
                                     interval:
-                                      enum:
-                                        - hour
-                                        - day
-                                        - week
-                                        - month
-                                      type: string
-                                      description: The time interval for the purchase limit window.
-                                    interval_count:
-                                      type: number
-                                      minimum: 1
-                                      default: 1
-                                      description: Number of intervals in the purchase limit window.
-                                    limit:
-                                      type: number
-                                      minimum: 1
-                                      description: Maximum number of auto top-ups allowed within the interval.
-                                  required:
-                                    - interval
-                                    - limit
-                                - type: object
-                                  properties:
-                                    interval:
                                       anyOf:
                                         - enum:
                                             - hour
@@ -5129,6 +5217,28 @@ paths:
                                     - limit
                                     - count
                                     - next_reset_at
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
                               description: Optional rate limit to cap how often auto top-ups occur. Expand
                                 billing_controls.auto_topups.purchase_limit for
                                 a count of top ups and the next_reset_at.
@@ -5136,6 +5246,13 @@ paths:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
                                 auto-charging.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - threshold
@@ -5171,6 +5288,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -5216,6 +5340,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -5253,6 +5384,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -5269,6 +5407,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -16332,6 +16477,13 @@ paths:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
                                   same feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
                               - threshold
                               - threshold_type
@@ -16348,6 +16500,13 @@ paths:
                                 type: boolean
                                 default: false
                                 description: Whether overage is allowed for this feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
                               - feature_id
                           description: List of overage allowed controls per feature. When enabled, usage
@@ -18323,6 +18482,13 @@ paths:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
                                   same feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
                               - threshold
                               - threshold_type
@@ -18339,6 +18505,13 @@ paths:
                                 type: boolean
                                 default: false
                                 description: Whether overage is allowed for this feature.
+                              source:
+                                enum:
+                                  - customer
+                                  - plan
+                                type: string
+                                description: "Response-only: whether the entry is a customer-level override or
+                                  inherited from an attached plan's defaults."
                             required:
                               - feature_id
                           description: List of overage allowed controls per feature. When enabled, usage
@@ -22729,6 +22902,7 @@ paths:
                       description: Display name for the customer.
                     email:
                       type: string
+                      format: email
                       description: Email address for the customer.
                     fingerprint:
                       type: string
@@ -26831,6 +27005,13 @@ paths:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
                               same feature.
+                          source:
+                            enum:
+                              - customer
+                              - plan
+                            type: string
+                            description: "Response-only: whether the entry is a customer-level override or
+                              inherited from an attached plan's defaults."
                         required:
                           - threshold
                           - threshold_type
@@ -26847,6 +27028,13 @@ paths:
                             type: boolean
                             default: false
                             description: Whether overage is allowed for this feature.
+                          source:
+                            enum:
+                              - customer
+                              - plan
+                            type: string
+                            description: "Response-only: whether the entry is a customer-level override or
+                              inherited from an attached plan's defaults."
                         required:
                           - feature_id
                       description: List of overage allowed controls per feature. When enabled, usage
@@ -27215,6 +27403,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -27262,6 +27457,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -27300,6 +27502,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -27316,6 +27525,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -27826,6 +28042,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -27873,6 +28096,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -27911,6 +28141,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -27927,6 +28164,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -28483,6 +28727,14 @@ paths:
                                     description: When true, overage for this feature is not posted to Stripe. Usage
                                       tracking and balance resets still behave
                                       normally.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                               description: List of spend limits per feature. Each entry caps overage
                                 (overage_limit) and/or per-interval usage
                                 (usage_limit).
@@ -28531,6 +28783,14 @@ paths:
                                     description: Current usage already consumed in the active interval.
                                       Response-only; not stored on billing
                                       controls.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - limit
@@ -28569,6 +28829,14 @@ paths:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
                                       same feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - threshold
                                   - threshold_type
@@ -28585,6 +28853,14 @@ paths:
                                     type: boolean
                                     default: false
                                     description: Whether overage is allowed for this feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                               description: List of overage allowed controls per feature. When enabled, usage
@@ -28866,6 +29142,13 @@ paths:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
                               same feature.
+                          source:
+                            enum:
+                              - customer
+                              - plan
+                            type: string
+                            description: "Response-only: whether the entry is a customer-level override or
+                              inherited from an attached plan's defaults."
                         required:
                           - threshold
                           - threshold_type
@@ -28882,6 +29165,13 @@ paths:
                             type: boolean
                             default: false
                             description: Whether overage is allowed for this feature.
+                          source:
+                            enum:
+                              - customer
+                              - plan
+                            type: string
+                            description: "Response-only: whether the entry is a customer-level override or
+                              inherited from an attached plan's defaults."
                         required:
                           - feature_id
                       description: List of overage allowed controls per feature. When enabled, usage
@@ -29242,6 +29532,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -29289,6 +29586,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -29327,6 +29631,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -29343,6 +29654,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage

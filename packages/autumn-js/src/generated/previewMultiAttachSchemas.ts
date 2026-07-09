@@ -45,11 +45,6 @@ export const previewMultiAttachFilterSchema = z.object({
 	),
 });
 
-export const previewMultiAttachOverageAllowedSchema = z.object({
-	featureId: z.string(),
-	enabled: z.union([z.boolean(), z.undefined()]).optional(),
-});
-
 export const previewMultiAttachDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -296,11 +291,13 @@ export const previewMultiAttachUsageAlertOutboundSchema = z.object({
 	threshold: z.number(),
 	threshold_type: z.string(),
 	name: z.union([z.string(), z.undefined()]).optional(),
+	source: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachOverageAllowedOutboundSchema = z.object({
 	feature_id: z.string(),
 	enabled: z.boolean(),
+	source: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewMultiAttachBillingControlsOutboundSchema = z.object({
@@ -471,12 +468,27 @@ export const previewMultiAttachUsageLimitSchema = z.object({
 
 export const previewMultiAttachThresholdTypeSchema = closedEnumSchema;
 
+export const previewMultiAttachUsageAlertSourceSchema = closedEnumSchema;
+
 export const previewMultiAttachUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: previewMultiAttachThresholdTypeSchema,
 	name: z.union([z.string(), z.undefined()]).optional(),
+	source: z
+		.union([previewMultiAttachUsageAlertSourceSchema, z.undefined()])
+		.optional(),
+});
+
+export const previewMultiAttachOverageAllowedSourceSchema = closedEnumSchema;
+
+export const previewMultiAttachOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	source: z
+		.union([previewMultiAttachOverageAllowedSourceSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachBillingControlsSchema = z.object({

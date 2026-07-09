@@ -45,11 +45,6 @@ export const multiAttachFilterSchema = z.object({
 	),
 });
 
-export const multiAttachOverageAllowedSchema = z.object({
-	featureId: z.string(),
-	enabled: z.union([z.boolean(), z.undefined()]).optional(),
-});
-
 export const multiAttachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -199,11 +194,13 @@ export const multiAttachUsageAlertOutboundSchema = z.object({
 	threshold: z.number(),
 	threshold_type: z.string(),
 	name: z.union([z.string(), z.undefined()]).optional(),
+	source: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const multiAttachOverageAllowedOutboundSchema = z.object({
 	feature_id: z.string(),
 	enabled: z.boolean(),
+	source: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const multiAttachBillingControlsOutboundSchema = z.object({
@@ -356,12 +353,27 @@ export const multiAttachUsageLimitSchema = z.object({
 
 export const multiAttachThresholdTypeSchema = closedEnumSchema;
 
+export const multiAttachUsageAlertSourceSchema = closedEnumSchema;
+
 export const multiAttachUsageAlertSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	threshold: z.number(),
 	thresholdType: multiAttachThresholdTypeSchema,
 	name: z.union([z.string(), z.undefined()]).optional(),
+	source: z
+		.union([multiAttachUsageAlertSourceSchema, z.undefined()])
+		.optional(),
+});
+
+export const multiAttachOverageAllowedSourceSchema = closedEnumSchema;
+
+export const multiAttachOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	source: z
+		.union([multiAttachOverageAllowedSourceSchema, z.undefined()])
+		.optional(),
 });
 
 export const multiAttachBillingControlsSchema = z.object({

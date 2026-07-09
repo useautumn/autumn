@@ -26,4 +26,5 @@ export {
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
 } from "./mergeCustomerBillingControlsForCheck.js";
+export { mergePlanBillingControlsForResponse } from "./mergePlanBillingControlsForResponse.js";
 export { normalizedToFullSubject } from "./normalizedToFullSubject.js";
