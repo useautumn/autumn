@@ -89,9 +89,6 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/balances/update",
-		// balances.update mutates balances cache-first (Postgres lags until the
-		// async flush), so flush cached balances to Postgres before invalidating
-		// — otherwise the rebuilt-from-Postgres view loses the just-written value.
 		flushBalances: true,
 	}),
 
