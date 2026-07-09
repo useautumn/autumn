@@ -1,50 +1,61 @@
 import {
 	type CustomizePlanV1,
+	type Feature,
 	formatAmount,
 	formatInterval,
 	isPriceItem,
+	planItemV0ToProductItem,
+	planItemV1ToV0,
 	type ProductItem,
 	type ProductV2,
+	type SharedContext,
 } from "@autumn/shared";
 
 /**
  * Apply a `customize` block to a `ProductV2`, returning the effective
- * product. Items override the full set when present; a base price override
- * (`customize.price`) replaces the existing fixed price item or is
- * appended.
+ * product. `customize.items` are V1 plan items (feature items only) — they
+ * must be converted back to `ProductItem` shape, else the editor reads
+ * `included_usage`/`price` off the wrong shape and renders NaN.
  */
 export const applyCustomizeToProduct = ({
 	product,
 	customize,
+	features,
 }: {
 	product: ProductV2;
 	customize: CustomizePlanV1 | undefined;
+	features: Feature[];
 }): ProductV2 => {
 	if (!customize) return product;
 
-	let items: ProductItem[] = customize.items ?? product.items ?? [];
+	const ctx = { features } as unknown as SharedContext;
+	const productItems = product.items ?? [];
 
-	if (customize.price !== undefined) {
-		if (customize.price === null) {
-			items = items.filter((item) => !isPriceItem(item));
-		} else {
-			const newPriceItem: ProductItem = {
+	const featureItems: ProductItem[] = customize.items
+		? customize.items.map((item) =>
+				planItemV0ToProductItem({
+					ctx,
+					planItem: planItemV1ToV0({ ctx, item }),
+				}),
+			)
+		: productItems.filter((item) => !isPriceItem(item));
+
+	let priceItems: ProductItem[];
+	if (customize.price === undefined) {
+		priceItems = productItems.filter((item) => isPriceItem(item));
+	} else if (customize.price === null) {
+		priceItems = [];
+	} else {
+		priceItems = [
+			{
 				price: customize.price.amount,
 				interval: customize.price.interval,
 				interval_count: customize.price.interval_count ?? 1,
-			} as ProductItem;
-			const existingIndex = items.findIndex((item) => isPriceItem(item));
-			if (existingIndex >= 0) {
-				items = items.map((item, i) =>
-					i === existingIndex ? newPriceItem : item,
-				);
-			} else {
-				items = [newPriceItem, ...items];
-			}
-		}
+			} as ProductItem,
+		];
 	}
 
-	return { ...product, items };
+	return { ...product, items: [...priceItems, ...featureItems] };
 };
 
 /**
