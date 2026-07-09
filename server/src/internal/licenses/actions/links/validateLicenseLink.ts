@@ -41,22 +41,6 @@ const validateMatchingBillingIntervals = ({
 	});
 };
 
-const rejectPooledItems = ({
-	customizeItems,
-}: {
-	customizeItems?: CreatePlanItemParamsV1[];
-}) => {
-	const hasPooled = (customizeItems ?? []).some((item) => item.pooled === true);
-	if (!hasPooled) return;
-
-	throw new RecaseError({
-		message:
-			"Pooled license features are not yet available. Remove pooled from the license items.",
-		code: ErrCode.InvalidRequest,
-		statusCode: 400,
-	});
-};
-
 /**
  * Every rule a parent→license link must satisfy. licenseProduct is the
  * effective product; parent-dependent checks run only when parentProduct is
@@ -96,5 +80,4 @@ export const validateLicenseLink = ({
 		}
 		validateMatchingBillingIntervals({ parentProduct, licenseProduct });
 	}
-	rejectPooledItems({ customizeItems });
 };

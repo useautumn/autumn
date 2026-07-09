@@ -118,11 +118,6 @@ export const CreatePlanItemParamsV1Schema = z
 					"Rollover config for unused units. If set, unused included units carry over.",
 			}),
 
-		pooled: z.boolean().optional().meta({
-			internal: true,
-			description:
-				"Pooled license features are not yet available; must be omitted or false.",
-		}),
 		entity_feature_id: z.string().optional().meta({
 			internal: true,
 		}),
