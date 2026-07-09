@@ -9,36 +9,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "../links/validateLicenseLink.js";
-import {
-	computeLicenseCustomize,
-	type LicenseCustomizeComputation,
-} from "./computeLicenseCustomize.js";
+import { computeLicenseCustomize } from "./computeLicenseCustomize.js";
+import type {
+	ResolvedLicenseAdd,
+	ResolvedLicensePatch,
+	ResolvedLicenseRemove,
+} from "./types.js";
 
-export type ResolvedLicenseAdd = {
-	entry: CustomizePlanLicense;
-	licenseProduct: FullProduct;
-	included: number;
-	prepaidOnly: boolean;
-	metadata: Record<string, unknown>;
-	/** Set when the entry customizes items; null otherwise. */
-	computation: LicenseCustomizeComputation | null;
-	/** True when the entry passed customize: null to clear items to stock. */
-	clearItems: boolean;
-	catalogLink?: DbPlanLicense;
-	existingOverride?: DbPlanLicense;
-};
-
-export type ResolvedLicenseRemove = {
-	licensePlanId: string;
-	licenseProduct: FullProduct;
-	catalogLink?: DbPlanLicense;
-	existingOverride?: DbPlanLicense;
-};
-
-export type ResolvedLicensePatch = {
-	adds: ResolvedLicenseAdd[];
-	removes: ResolvedLicenseRemove[];
-};
+type LinkMap = Map<string, DbPlanLicense>;
 
 const validateLicensePatchIds = ({
 	adds,
@@ -76,6 +54,31 @@ const validateLicensePatchIds = ({
 			});
 		}
 	}
+};
+
+/** Fetches the license product and its catalog/override links for one entry. */
+const resolveLicenseLinks = async ({
+	ctx,
+	licensePlanId,
+	catalogByLicenseInternalId,
+	overrideByLicenseInternalId,
+}: {
+	ctx: AutumnContext;
+	licensePlanId: string;
+	catalogByLicenseInternalId: LinkMap;
+	overrideByLicenseInternalId: LinkMap;
+}) => {
+	const licenseProduct = await getFullLicenseProduct({
+		ctx,
+		idOrInternalId: licensePlanId,
+	});
+	return {
+		licenseProduct,
+		catalogLink: catalogByLicenseInternalId.get(licenseProduct.internal_id),
+		existingOverride: overrideByLicenseInternalId.get(
+			licenseProduct.internal_id,
+		),
+	};
 };
 
 /**
@@ -117,25 +120,22 @@ export const resolveLicensePatch = async ({
 				})
 			: Promise.resolve([]),
 	]);
-	const catalogByLicenseInternalId = new Map(
+	const catalogByLicenseInternalId: LinkMap = new Map(
 		catalogLinks.map((link) => [link.license_internal_product_id, link]),
 	);
-	const overrideByLicenseInternalId = new Map(
+	const overrideByLicenseInternalId: LinkMap = new Map(
 		existingOverrides.map((link) => [link.license_internal_product_id, link]),
 	);
 
-	const fetchLicenseProduct = (licensePlanId: string) =>
-		getFullLicenseProduct({ ctx, idOrInternalId: licensePlanId });
-
 	const resolvedAdds = await Promise.all(
 		adds.map(async (entry): Promise<ResolvedLicenseAdd> => {
-			const licenseProduct = await fetchLicenseProduct(entry.license_plan_id);
-			const catalogLink = catalogByLicenseInternalId.get(
-				licenseProduct.internal_id,
-			);
-			const existingOverride = overrideByLicenseInternalId.get(
-				licenseProduct.internal_id,
-			);
+			const { licenseProduct, catalogLink, existingOverride } =
+				await resolveLicenseLinks({
+					ctx,
+					licensePlanId: entry.license_plan_id,
+					catalogByLicenseInternalId,
+					overrideByLicenseInternalId,
+				});
 			const prepaidOnly =
 				entry.prepaid_only ?? catalogLink?.prepaid_only ?? true;
 
@@ -178,13 +178,13 @@ export const resolveLicensePatch = async ({
 
 	const resolvedRemoves = await Promise.all(
 		removes.map(async (licensePlanId): Promise<ResolvedLicenseRemove> => {
-			const licenseProduct = await fetchLicenseProduct(licensePlanId);
-			const catalogLink = catalogByLicenseInternalId.get(
-				licenseProduct.internal_id,
-			);
-			const existingOverride = overrideByLicenseInternalId.get(
-				licenseProduct.internal_id,
-			);
+			const { licenseProduct, catalogLink, existingOverride } =
+				await resolveLicenseLinks({
+					ctx,
+					licensePlanId,
+					catalogByLicenseInternalId,
+					overrideByLicenseInternalId,
+				});
 			if (!(catalogLink || existingOverride)) {
 				throw new RecaseError({
 					message: `License ${licensePlanId} is not linked to this plan and cannot be removed.`,

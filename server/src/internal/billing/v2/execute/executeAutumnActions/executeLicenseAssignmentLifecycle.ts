@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getDeleteCustomerProducts,
@@ -6,9 +6,50 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 import { licenseGateRepo } from "@/internal/licenses/repos/licenseGateRepo.js";
-
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { nullish } from "@/utils/genUtils.js";
+
+const planHasExplicitLicenseOps = (plan: AutumnBillingPlan) =>
+	(plan.customLicenses?.length ?? 0) > 0 || (plan.licenseOps?.length ?? 0) > 0;
+
+const customerLevelProducts = (plan: AutumnBillingPlan): FullCusProduct[] =>
+	[
+		...(plan.insertCustomerProducts ?? []),
+		...getUpdateCustomerProducts({ autumnBillingPlan: plan }).map(
+			({ customerProduct }) => customerProduct,
+		),
+		...getDeleteCustomerProducts({ autumnBillingPlan: plan }),
+	].filter((customerProduct) => nullish(customerProduct.internal_entity_id));
+
+/** True when any customer-level product is linked to a license, by catalog
+ * link or by existing customer state. At most two indexed lookups. */
+const customerProductsTouchLicenses = async ({
+	ctx,
+	customerProducts,
+}: {
+	ctx: AutumnContext;
+	customerProducts: FullCusProduct[];
+}) => {
+	if (customerProducts.length === 0) return false;
+
+	const parentInternalProductIds = [
+		...new Set(
+			customerProducts.map(
+				(customerProduct) => customerProduct.internal_product_id,
+			),
+		),
+	];
+	const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
+		db: ctx.db,
+		parentInternalProductIds,
+	});
+	if (links.length > 0) return true;
+
+	return licenseGateRepo.touchesLicenses({
+		db: ctx.db,
+		internalCustomerId: customerProducts[0].internal_customer_id,
+	});
+};
 
 /**
  * Cheap plan-level gate in front of the whole-customer license recompute, so
@@ -21,10 +62,7 @@ export const executeLicenseAssignmentLifecycle = async ({
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	if (
-		(autumnBillingPlan.customLicenses?.length ?? 0) > 0 ||
-		(autumnBillingPlan.licenseOps?.length ?? 0) > 0
-	) {
+	if (planHasExplicitLicenseOps(autumnBillingPlan)) {
 		await afterLicenseMutation({
 			ctx,
 			customerId: autumnBillingPlan.customerId,
@@ -33,32 +71,10 @@ export const executeLicenseAssignmentLifecycle = async ({
 		return;
 	}
 
-	const planCustomerProducts = [
-		...(autumnBillingPlan.insertCustomerProducts ?? []),
-		...getUpdateCustomerProducts({ autumnBillingPlan }).map(
-			({ customerProduct }) => customerProduct,
-		),
-		...getDeleteCustomerProducts({ autumnBillingPlan }),
-	].filter((customerProduct) => nullish(customerProduct.internal_entity_id));
-	if (planCustomerProducts.length === 0) return;
-
-	const parentInternalProductIds = [
-		...new Set(
-			planCustomerProducts.map(
-				(customerProduct) => customerProduct.internal_product_id,
-			),
-		),
-	];
-	const links = await planLicenseRepo.listCatalogByParentInternalProductIds({
-		db: ctx.db,
-		parentInternalProductIds,
+	const touchesLicenses = await customerProductsTouchLicenses({
+		ctx,
+		customerProducts: customerLevelProducts(autumnBillingPlan),
 	});
-	const touchesLicenses =
-		links.length > 0 ||
-		(await licenseGateRepo.touchesLicenses({
-			db: ctx.db,
-			internalCustomerId: planCustomerProducts[0].internal_customer_id,
-		}));
 	if (!touchesLicenses) return;
 
 	await afterLicenseMutation({
