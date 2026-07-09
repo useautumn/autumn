@@ -817,12 +817,9 @@ function TestRunnerApp({
 					const firstAttemptFailures = result.tests.filter(
 						(t) => t.status === "failed",
 					);
-					const hasUnnamedFailure = firstAttemptFailures.some((test) =>
-						test.name.includes("(unnamed)"),
-					);
-					const failedTestNames = hasUnnamedFailure
-						? []
-						: firstAttemptFailures.map((test) => test.name);
+					// Whole-file retry (no --test-name-pattern): files are stateful sequences,
+					// so a filtered retry of a later test lacks earlier tests' state and can't pass.
+					const failedTestNames: string[] = [];
 
 					// Mark this specific file as actively retrying
 					const retryingResult: TestFileResult = {

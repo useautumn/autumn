@@ -12,6 +12,12 @@ export const CreateCustomerInternalOptionsSchema = z.object({
 	}),
 });
 
+// Canonical customer email validation — reuse anywhere an email is accepted.
+export const CustomerEmailSchema = z.email({
+	pattern: z.regexes.unicodeEmail,
+	message: "not a valid email address",
+});
+
 // Base schema without top-level .meta() to avoid side effects during imports
 // Individual field descriptions are kept as they don't cause registry conflicts
 export const CustomerDataSchema = z
@@ -19,15 +25,9 @@ export const CustomerDataSchema = z
 		name: z.string().nullish().meta({
 			description: "Customer's name",
 		}),
-		email: z
-			.email({
-				pattern: z.regexes.unicodeEmail,
-				message: "not a valid email address",
-			})
-			.nullish()
-			.meta({
-				description: "Customer's email address",
-			}),
+		email: CustomerEmailSchema.nullish().meta({
+			description: "Customer's email address",
+		}),
 
 		fingerprint: z.string().nullish().meta({
 			description:

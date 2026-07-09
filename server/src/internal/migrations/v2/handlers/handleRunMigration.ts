@@ -6,7 +6,12 @@ import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migratio
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
-import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
+import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
+import {
+	executeRunMigration,
+	type RunMigrationPayload,
+	runMigrationTask,
+} from "@/trigger/migrations/runMigrationTask.js";
 
 const MAX_CONCURRENCY = 5;
 const SUPERUSER_MAX_CONCURRENCY = 100;
@@ -91,6 +96,8 @@ export const handleRunMigration = createRoute({
 		}
 
 		const isDev = process.env.NODE_ENV === "development";
+		const runInline = shouldRunMigrationInline();
+		let inlinePayload: RunMigrationPayload | undefined;
 		const { migrationRunId, triggerRunId } = await withMigrationRunClaim({
 			ctx,
 			migration,
@@ -102,21 +109,26 @@ export const handleRunMigration = createRoute({
 				if (lazyRun && !dryRun) {
 					await prepare({ ctx, migration, dryRun: false });
 				}
-				const handle = await runMigrationTask.trigger(
-					{
-						orgId: ctx.org.id,
-						env: ctx.env,
-						migrationId: id,
-						migrationRunId,
-						dryRun,
-						lazyRun,
-						controls: {
-							limit,
-							only,
-							concurrency,
-							retryItemStatuses,
-						},
+				const payload: RunMigrationPayload = {
+					orgId: ctx.org.id,
+					env: ctx.env,
+					migrationId: id,
+					migrationRunId,
+					dryRun,
+					lazyRun,
+					controls: {
+						limit,
+						only,
+						concurrency,
+						retryItemStatuses,
 					},
+				};
+				if (runInline) {
+					inlinePayload = payload;
+					return {};
+				}
+				const handle = await runMigrationTask.trigger(
+					payload,
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,
 						migrationId: id,
@@ -126,6 +138,27 @@ export const handleRunMigration = createRoute({
 				return { triggerRunId: handle.id };
 			},
 		});
+
+		if (inlinePayload) {
+			const payload = inlinePayload;
+			ctx.logger.warn(
+				"run-migration: trigger.dev not configured — running migration inline",
+				{ data: { migrationRunId } },
+			);
+			const inlineCtx = { ...ctx, insideTriggerTask: true };
+			void executeRunMigration({
+				ctx: inlineCtx,
+				logger: ctx.logger,
+				payload,
+			}).catch((error) => {
+				ctx.logger.error("run-migration: inline execution failed", {
+					data: {
+						migrationRunId,
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+			});
+		}
 
 		let publicAccessToken: string | undefined;
 		if (triggerRunId) {

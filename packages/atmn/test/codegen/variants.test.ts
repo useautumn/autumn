@@ -244,4 +244,36 @@ describe("variant config generation", () => {
 		expect(code).toContain("billingControls: billingControls({");
 		expect(code).toContain("usage_limits:");
 	});
+
+	test("buildConfigFile emits spend limits with skip_overage_billing", () => {
+		const plans = transformApiPlans([
+			baseApiPlan({
+				id: "pro",
+				name: "Pro",
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							skip_overage_billing: true,
+						},
+					],
+				},
+			}),
+		]);
+
+		const code = buildConfigFile([], plans);
+
+		expect(plans[0]?.billingControls).toEqual({
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					skip_overage_billing: true,
+				},
+			],
+		});
+		expect(code).toContain("spend_limits:");
+		expect(code).toContain("skip_overage_billing: true");
+	});
 });

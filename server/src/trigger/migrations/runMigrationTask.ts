@@ -1,7 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withMigrationRunTracking } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
@@ -40,6 +42,94 @@ export const runMigrationTaskQueue = {
 	concurrencyLimit: 1,
 };
 
+/** Shared workload for the trigger.dev task and the local inline fallback. */
+export const executeRunMigration = async ({
+	ctx,
+	logger,
+	payload,
+}: {
+	ctx: AutumnContext;
+	logger: Logger;
+	payload: RunMigrationPayload;
+}) => {
+	const { orgId, env, migrationId, migrationRunId, dryRun, lazyRun, controls } =
+		payload;
+
+	// Trigger.dev tasks start with cold Redis connections — wait for
+	// readiness before touching the migration so cache invalidations
+	// (deleteCachedFullCustomer, invalidateSharedBalanceFields,
+	// invalidateCachedFullSubject) actually fire instead of being
+	// short-circuited by the `not_ready` availability gate.
+	await warmupRegionalRedis().catch((error) => {
+		logger.warn("run-migration: redis warmup failed (continuing)", {
+			data: {
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	});
+
+	logger.info("run-migration: starting", {
+		data: {
+			migrationId,
+			migrationRunId,
+			dryRun,
+			only: controls?.only,
+			onlyCount: controls?.only?.length,
+			limit: controls?.limit,
+			concurrency: controls?.concurrency,
+			retryItemStatuses: controls?.retryItemStatuses,
+		},
+	});
+
+	try {
+		await withMigrationRunTracking({
+			ctx,
+			migrationRunId,
+			run: async () => {
+				const migration = await migrationRepo.find({ ctx, id: migrationId });
+
+				const effectiveControls = {
+					...(controls ?? {}),
+					concurrency: controls?.concurrency ?? DEFAULT_CONCURRENCY,
+				};
+
+				logger.info("run-migration: resolved controls", {
+					data: {
+						migrationRunId,
+						noBillingChanges: migration.no_billing_changes === true,
+						concurrency: effectiveControls.concurrency,
+						concurrencyExplicit: controls?.concurrency !== undefined,
+					},
+				});
+
+				await runMigration({
+					ctx,
+					migration,
+					dryRun,
+					migrationRunId,
+					controls: effectiveControls,
+				});
+			},
+		});
+	} finally {
+		if (lazyRun && !dryRun) {
+			await clearOrgCache({
+				db: ctx.db,
+				orgId,
+				env,
+				logger,
+			});
+		}
+	}
+
+	logger.info("run-migration: done", {
+		data: {
+			migrationId,
+			dryRun,
+		},
+	});
+};
+
 export const runMigrationTask = task({
 	id: "run-migration",
 	queue: runMigrationTaskQueue,
@@ -47,94 +137,14 @@ export const runMigrationTask = task({
 	// Trigger.dev has no true "disable" — set very high to effectively remove the timeout.
 	maxDuration: 86400,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const {
-			orgId,
-			env,
-			migrationId,
-			migrationRunId,
-			dryRun,
-			lazyRun,
-			controls,
-		} = PayloadSchema.parse(rawPayload);
+		const payload = PayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
-			orgId,
-			env,
+			orgId: payload.orgId,
+			env: payload.env,
 			triggerCtx,
 		});
 
-		// Trigger.dev tasks start with cold Redis connections — wait for
-		// readiness before touching the migration so cache invalidations
-		// (deleteCachedFullCustomer, invalidateSharedBalanceFields,
-		// invalidateCachedFullSubject) actually fire instead of being
-		// short-circuited by the `not_ready` availability gate.
-		await warmupRegionalRedis().catch((error) => {
-			logger.warn("run-migration: redis warmup failed (continuing)", {
-				data: {
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-		});
-
-		logger.info("run-migration: starting", {
-			data: {
-				migrationId,
-				migrationRunId,
-				dryRun,
-				only: controls?.only,
-				onlyCount: controls?.only?.length,
-				limit: controls?.limit,
-				concurrency: controls?.concurrency,
-				retryItemStatuses: controls?.retryItemStatuses,
-			},
-		});
-
-		try {
-			await withMigrationRunTracking({
-				ctx,
-				migrationRunId,
-				run: async () => {
-					const migration = await migrationRepo.find({ ctx, id: migrationId });
-
-					const effectiveControls = {
-						...(controls ?? {}),
-						concurrency: controls?.concurrency ?? DEFAULT_CONCURRENCY,
-					};
-
-					logger.info("run-migration: resolved controls", {
-						data: {
-							migrationRunId,
-							noBillingChanges: migration.no_billing_changes === true,
-							concurrency: effectiveControls.concurrency,
-							concurrencyExplicit: controls?.concurrency !== undefined,
-						},
-					});
-
-					await runMigration({
-						ctx,
-						migration,
-						dryRun,
-						migrationRunId,
-						controls: effectiveControls,
-					});
-				},
-			});
-		} finally {
-			if (lazyRun && !dryRun) {
-				await clearOrgCache({
-					db: ctx.db,
-					orgId,
-					env,
-					logger,
-				});
-			}
-		}
-
-		logger.info("run-migration: done", {
-			data: {
-				migrationId,
-				dryRun,
-			},
-		});
+		await executeRunMigration({ ctx, logger, payload });
 	},
 });
