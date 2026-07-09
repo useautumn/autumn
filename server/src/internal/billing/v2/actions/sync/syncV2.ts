@@ -1,4 +1,8 @@
-import type { SyncParamsV1 } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	FullCustomer,
+	SyncParamsV1,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
@@ -22,6 +26,11 @@ export type SyncV2Result = {
 	expired_cus_product_ids: string[];
 	schedule_id: string | null;
 	scheduled_phases: SyncV2PersistedPhase[];
+	/** @internal - Used by handler to emit webhooks, not returned to API consumers */
+	_internal?: {
+		autumnBillingPlan: AutumnBillingPlan;
+		fullCustomer: FullCustomer;
+	};
 };
 
 /**
@@ -88,5 +97,9 @@ export const syncV2 = async ({
 			.map((u) => u.customerProduct.id),
 		schedule_id: scheduleId,
 		scheduled_phases: scheduledPhases,
+		_internal: {
+			autumnBillingPlan,
+			fullCustomer: syncContext.fullCustomer,
+		},
 	};
 };
