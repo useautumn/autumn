@@ -11,17 +11,13 @@ import {
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import { Decimal } from "decimal.js";
-import {
-	getStripeExpandedInvoice,
-	payForInvoice,
-} from "@/external/stripe/stripeInvoiceUtils.js";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { customerHasUsableTaxLocationForStripeTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
-import { invoiceActions } from "@/internal/invoices/actions/index.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
@@ -254,17 +250,6 @@ export const handleOneOffFunction = async ({
 			}
 			throw error;
 		}
-
-		// DB row was inserted while the invoice was still draft; sync the
-		// paid status here instead of relying on webhook delivery.
-		await invoiceActions.updateFromStripe({
-			ctx,
-			customerId: customer.id ?? "",
-			stripeInvoice: await getStripeExpandedInvoice({
-				stripeCli,
-				stripeInvoiceId: stripeInvoice.id!,
-			}),
-		});
 	}
 
 	logger.info("6. Creating full customer product");
