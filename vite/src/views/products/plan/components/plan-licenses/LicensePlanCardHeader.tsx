@@ -17,7 +17,6 @@ import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { checkItemIsValid, getFeature } from "@/utils/product/entitlementUtils";
@@ -39,7 +38,6 @@ export function LicensePlanCardHeader({
 	const navigate = useNavigate();
 	const { product } = useProduct();
 	const { sheetType, setSheet } = useSheet();
-	const { features } = useFeaturesQuery();
 	const item = useCurrentItem();
 
 	const included =

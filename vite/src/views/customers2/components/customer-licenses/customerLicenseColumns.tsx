@@ -63,7 +63,12 @@ export const createCustomerLicenseColumns = ({
 		cell: ({ row }: { row: Row<LicenseAssignmentRow> }) => (
 			<div className="flex justify-end">
 				<TableDropdownMenuCell>
-					<DropdownMenuItem onClick={() => onUnassign(row.original)}>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							onUnassign(row.original);
+						}}
+					>
 						Unassign
 					</DropdownMenuItem>
 				</TableDropdownMenuCell>

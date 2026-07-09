@@ -4,6 +4,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { pushPage } from "@/utils/genUtils";
@@ -194,6 +195,8 @@ export function ProductListTable() {
 	const hasRecurringBasePlans = recurringBasePlans.length > 0;
 	const hasRecurringAddOns = recurringAddOnPlans.length > 0;
 	const hasOneTimePlans = oneTimePlans.length > 0;
+	const { licenseProducts } = useLicenseProductsQuery();
+	const hasLicensePlans = licenseProducts.length > 0;
 
 	// For archived view, always show table structure even if empty
 	// For non-archived view, show EmptyState when no plans exist
@@ -201,7 +204,8 @@ export function ProductListTable() {
 		queryStates.showArchivedProducts ||
 		hasRecurringBasePlans ||
 		hasRecurringAddOns ||
-		hasOneTimePlans;
+		hasOneTimePlans ||
+		hasLicensePlans;
 
 	return (
 		<div className="flex flex-col gap-8">

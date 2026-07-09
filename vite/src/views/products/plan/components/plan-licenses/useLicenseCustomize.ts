@@ -5,7 +5,6 @@ import {
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import {
 	buildCustomizePlanLicense,
@@ -23,13 +22,14 @@ export const useLicenseCustomize = ({
 	planLicense,
 	license,
 	items,
+	features,
 }: {
 	parentPlanId: string;
 	planLicense: PlanLicense;
 	license: ProductV2;
 	items: ProductItem[];
+	features: Feature[];
 }) => {
-	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
 	const { linkLicense } = usePlanLicensesQuery(parentPlanId);
 

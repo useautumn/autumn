@@ -22,7 +22,6 @@ export const useCustomerLicenseActions = ({
 
 	// The assign/unassign mutations are shared across rows, so track which pool
 	// is acting to scope pending state to that row alone.
-	const [pendingPoolId, setPendingPoolId] = useState<string | null>(null);
 
 	const runForPool = async ({
 		poolId,
@@ -33,11 +32,9 @@ export const useCustomerLicenseActions = ({
 		action: () => Promise<unknown>;
 		errorMessage: string;
 	}) => {
-		setPendingPoolId(poolId);
 		try {
 			return await runWithErrorToast({ action, fallbackMessage: errorMessage });
 		} finally {
-			setPendingPoolId(null);
 		}
 	};
 
@@ -78,7 +75,6 @@ export const useCustomerLicenseActions = ({
 		isLoading,
 		attachLicense,
 		cancelLicenseAssignment,
-		pendingPoolId,
 		isAssigning: assign.isPending,
 		isUnassigning: unassign.isPending,
 	};

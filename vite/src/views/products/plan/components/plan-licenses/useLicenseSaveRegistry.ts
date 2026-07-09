@@ -46,7 +46,7 @@ export const saveAllLicenses = async (): Promise<boolean> => {
 	const results = await Promise.all(
 		Object.values(entries)
 			.filter((entry) => entry.dirty)
-			.map((entry) => entry.save()),
+			.map((entry) => entry.save().catch(() => false)),
 	);
 	return results.every(Boolean);
 };

@@ -1,10 +1,13 @@
 import { AppEnv, type Event } from "@autumn/shared";
-import { IconButton, LoadingShimmerText } from "@autumn/ui";
+import {
+	IconButton,
+	LoadingShimmerText,
+	useColumnVisibility,
+} from "@autumn/ui";
 import { ArrowSquareOutIcon, ChartBarIcon } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { useColumnVisibility } from "@autumn/ui";
 import { useEnv } from "@/utils/envUtils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";

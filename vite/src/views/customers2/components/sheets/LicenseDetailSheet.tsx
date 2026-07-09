@@ -20,7 +20,7 @@ const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 export function LicenseDetailSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const { pools, cancelLicenseAssignment, isUnassigning } =
+	const { pools, isLoading, cancelLicenseAssignment, isUnassigning } =
 		useCustomerLicenseBalances();
 	const { licenseProducts } = useLicenseProductsQuery();
 
@@ -41,7 +41,11 @@ export function LicenseDetailSheet() {
 			<div className="flex flex-col h-full">
 				<SheetHeader
 					title="License Details"
-					description="Loading license information..."
+					description={
+						isLoading
+							? "Loading license information..."
+							: "This license assignment no longer exists."
+					}
 				/>
 			</div>
 		);

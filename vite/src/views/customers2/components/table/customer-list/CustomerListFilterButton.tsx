@@ -1,14 +1,14 @@
-import { IconButton } from "@autumn/ui";
-import { FunnelSimpleIcon } from "@phosphor-icons/react";
-import { X } from "lucide-react";
-import { useState } from "react";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
+	IconButton,
 } from "@autumn/ui";
+import { FunnelSimpleIcon } from "@phosphor-icons/react";
+import { X } from "lucide-react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";

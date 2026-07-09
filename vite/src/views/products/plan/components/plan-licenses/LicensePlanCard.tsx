@@ -18,7 +18,7 @@ export function LicensePlanCard({
 	isPendingLink?: boolean;
 	isLast?: boolean;
 }) {
-	const { features } = useFeaturesQuery();
+	const { features, isLoading: isFeaturesLoading } = useFeaturesQuery();
 	const items = planLicenseItems({ planLicense, license, features });
 
 	const { seededProduct, save, buildCustomize } = useLicenseCustomize({
@@ -26,7 +26,12 @@ export function LicensePlanCard({
 		planLicense,
 		license,
 		items,
+		features,
 	});
+
+	// The editor seeds once from initialProduct; mounting before features load
+	// would bake an empty item set into the draft.
+	if (isFeaturesLoading) return null;
 
 	return (
 		<LicenseEditorProvider initialProduct={seededProduct}>
