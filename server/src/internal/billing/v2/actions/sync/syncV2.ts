@@ -1,11 +1,8 @@
-import type {
-	AutumnBillingPlan,
-	FullCustomer,
-	SyncParamsV1,
-} from "@autumn/shared";
+import type { SyncParamsV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { persistCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { computeSyncPlan } from "./compute/computeSyncPlan";
 import { handleSyncErrors } from "./errors/handleSyncErrors";
 import { logSyncContext } from "./logs/logSyncContext";
@@ -26,11 +23,6 @@ export type SyncV2Result = {
 	expired_cus_product_ids: string[];
 	schedule_id: string | null;
 	scheduled_phases: SyncV2PersistedPhase[];
-	/** @internal - Used by handler to emit webhooks, not returned to API consumers */
-	_internal?: {
-		autumnBillingPlan: AutumnBillingPlan;
-		fullCustomer: FullCustomer;
-	};
 };
 
 /**
@@ -44,13 +36,19 @@ export type SyncV2Result = {
  *   5. persist — write any scheduled phase rows (reuses createSchedule's
  *                `persistCreateSchedule` so the schedule + schedule_phases
  *                tables are written identically across actions)
+ *
+ * Webhook emission is opt-in via `webhook` so Stripe auto-sync callers
+ * (which already emit billing.updated from the originating action) don't
+ * double-send.
  */
 export const syncV2 = async ({
 	ctx,
 	params,
+	webhook,
 }: {
 	ctx: AutumnContext;
 	params: SyncParamsV1;
+	webhook?: { tags?: string[] };
 }): Promise<SyncV2Result> => {
 	// 1. Setup
 	const syncContext = await setupSyncContext({ ctx, params });
@@ -81,6 +79,15 @@ export const syncV2 = async ({
 		scheduledPhases = persisted.insertedPhases;
 	}
 
+	if (webhook) {
+		void sendBillingUpdatedWebhook({
+			ctx,
+			autumnBillingPlan,
+			originalFullCustomer: syncContext.fullCustomer,
+			tags: webhook.tags,
+		});
+	}
+
 	return {
 		customer_id: syncContext.customer_id,
 		stripe_subscription_id: syncContext.stripeSubscription?.id ?? null,
@@ -97,9 +104,5 @@ export const syncV2 = async ({
 			.map((u) => u.customerProduct.id),
 		schedule_id: scheduleId,
 		scheduled_phases: scheduledPhases,
-		_internal: {
-			autumnBillingPlan,
-			fullCustomer: syncContext.fullCustomer,
-		},
 	};
 };

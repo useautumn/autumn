@@ -12,6 +12,7 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import type {
 	BillingChangeResponse,
 	CustomerPlanChange,
+	SyncParamsV1,
 } from "@autumn/shared";
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId.js";
 import {
@@ -61,12 +62,12 @@ afterAll(async () => {
 // SYNC EMITS WEBHOOK
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'reconciled' tag")}`, async () => {
+test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'resync' tag")}`, async () => {
 	const customerId = "billing-updated-sync";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ id: "pro", items: [messagesItem] });
 
-	const { autumnV2_2 } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
@@ -78,45 +79,42 @@ test(`${chalk.yellowBright("billing.updated: manual sync emits webhook with 'rec
 		],
 	});
 
-	// Get the subscription ID that was created
 	const subscriptionId = await getSubscriptionId({
 		ctx,
 		customerId,
 		productId: pro.id,
 	});
 
-	// Manual sync operation (simulates admin reconciliation)
-	await autumnV2_2.post("/v1/billing.sync_v2", {
+	// expire_previous so re-sync produces real plan_changes (activated + expired)
+	await autumnV1.post("/billing.sync_v2", {
 		customer_id: customerId,
-		plans: [
+		stripe_subscription_id: subscriptionId,
+		phases: [
 			{
-				plan_id: pro.id,
-				stripe_subscription_id: subscriptionId,
+				starts_at: "now",
+				plans: [{ plan_id: pro.id, expire_previous: true }],
 			},
 		],
-	});
+	} satisfies SyncParamsV1);
 
-	// Wait for the billing.updated webhook
 	const result = await waitForWebhook<BillingUpdatedPayload>({
 		token: playToken,
 		predicate: (payload) =>
 			payload.type === "billing.updated" &&
 			payload.data?.customer_id === customerId &&
-			(payload.data?.tags ?? []).includes("reconciled"),
+			(payload.data?.tags ?? []).includes("resync"),
 		timeoutMs: 15000,
 	});
 
 	expect(result).not.toBeNull();
 	const { data } = result!.payload;
-	
-	// Verify the webhook has the reconciled tag
-	expect(data.tags).toContain("reconciled");
-	
-	// Verify there's an activated change for the synced plan
-	const activated = findChange(data.plan_changes, {
-		action: "activated",
+
+	expect(data.tags).toContain("resync");
+
+	const updated = findChange(data.plan_changes, {
+		action: "updated",
 		planId: pro.id,
 	});
-	expect(activated).toBeDefined();
-	expect(activated?.subscription?.plan_id).toBe(pro.id);
+	expect(updated).toBeDefined();
+	expect(updated?.subscription?.plan_id).toBe(pro.id);
 });
