@@ -9,7 +9,9 @@ import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
-const MAX_CONCURRENCY = 5;
+const DEFAULT_CONCURRENCY = 5;
+// Admin (superuser) runs may exceed the default cap — enforced in handleRunMigration.
+const MAX_CONCURRENCY = 100;
 
 const ControlsSchema = z
 	.object({
@@ -96,7 +98,7 @@ export const runMigrationTask = task({
 
 					const effectiveControls = {
 						...(controls ?? {}),
-						concurrency: controls?.concurrency ?? MAX_CONCURRENCY,
+						concurrency: controls?.concurrency ?? DEFAULT_CONCURRENCY,
 					};
 
 					logger.info("run-migration: resolved controls", {

@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { ErrCode, makeScopeChecker, RecaseError, Scopes } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -9,13 +9,19 @@ import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 
 const MAX_CONCURRENCY = 5;
+const SUPERUSER_MAX_CONCURRENCY = 100;
 
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
-	concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
+	concurrency: z
+		.number()
+		.int()
+		.min(1)
+		.max(SUPERUSER_MAX_CONCURRENCY)
+		.optional(),
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
@@ -53,6 +59,18 @@ export const handleRunMigration = createRoute({
 			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
+
+		const { isSuperuser } = makeScopeChecker(ctx.scopes);
+		const maxConcurrency = isSuperuser
+			? SUPERUSER_MAX_CONCURRENCY
+			: MAX_CONCURRENCY;
+		if (concurrency !== undefined && concurrency > maxConcurrency) {
+			throw new RecaseError({
+				message: `Migration concurrency cannot exceed ${maxConcurrency}`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 
 		const migration = await migrationRepo.find({ ctx, id });
 
