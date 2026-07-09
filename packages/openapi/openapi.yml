@@ -14468,7 +14468,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783604863288,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784814463288,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783612913858,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784822513858,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -16580,13 +16580,6 @@ paths:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
                                   same feature.
-                              source:
-                                enum:
-                                  - customer
-                                  - plan
-                                type: string
-                                description: "Response-only: whether the entry is a customer-level override or
-                                  inherited from an attached plan's defaults."
                             required:
                               - threshold
                               - threshold_type
@@ -16603,13 +16596,6 @@ paths:
                                 type: boolean
                                 default: false
                                 description: Whether overage is allowed for this feature.
-                              source:
-                                enum:
-                                  - customer
-                                  - plan
-                                type: string
-                                description: "Response-only: whether the entry is a customer-level override or
-                                  inherited from an attached plan's defaults."
                             required:
                               - feature_id
                           description: List of overage allowed controls per feature. When enabled, usage
@@ -18632,13 +18618,6 @@ paths:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
                                   same feature.
-                              source:
-                                enum:
-                                  - customer
-                                  - plan
-                                type: string
-                                description: "Response-only: whether the entry is a customer-level override or
-                                  inherited from an attached plan's defaults."
                             required:
                               - threshold
                               - threshold_type
@@ -18655,13 +18634,6 @@ paths:
                                 type: boolean
                                 default: false
                                 description: Whether overage is allowed for this feature.
-                              source:
-                                enum:
-                                  - customer
-                                  - plan
-                                type: string
-                                description: "Response-only: whether the entry is a customer-level override or
-                                  inherited from an attached plan's defaults."
                             required:
                               - feature_id
                           description: List of overage allowed controls per feature. When enabled, usage
@@ -26916,13 +26888,6 @@ paths:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
                               same feature.
-                          source:
-                            enum:
-                              - customer
-                              - plan
-                            type: string
-                            description: "Response-only: whether the entry is a customer-level override or
-                              inherited from an attached plan's defaults."
                         required:
                           - threshold
                           - threshold_type
@@ -26939,13 +26904,6 @@ paths:
                             type: boolean
                             default: false
                             description: Whether overage is allowed for this feature.
-                          source:
-                            enum:
-                              - customer
-                              - plan
-                            type: string
-                            description: "Response-only: whether the entry is a customer-level override or
-                              inherited from an attached plan's defaults."
                         required:
                           - feature_id
                       description: List of overage allowed controls per feature. When enabled, usage
@@ -29069,13 +29027,6 @@ paths:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
                               same feature.
-                          source:
-                            enum:
-                              - customer
-                              - plan
-                            type: string
-                            description: "Response-only: whether the entry is a customer-level override or
-                              inherited from an attached plan's defaults."
                         required:
                           - threshold
                           - threshold_type
@@ -29092,13 +29043,6 @@ paths:
                             type: boolean
                             default: false
                             description: Whether overage is allowed for this feature.
-                          source:
-                            enum:
-                              - customer
-                              - plan
-                            type: string
-                            description: "Response-only: whether the entry is a customer-level override or
-                              inherited from an attached plan's defaults."
                         required:
                           - feature_id
                       description: List of overage allowed controls per feature. When enabled, usage

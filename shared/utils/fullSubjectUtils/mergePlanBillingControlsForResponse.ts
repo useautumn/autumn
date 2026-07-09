@@ -8,6 +8,7 @@ import type { ApiUsageLimit } from "../../api/billingControls/usageLimit.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
+import { buildNormalizeSpendLimitForCompare } from "./buildNormalizeSpendLimitForCompare.js";
 import {
 	decorateInheritedPlanUsageLimits,
 	mergeControlsByFeature,
@@ -105,6 +106,9 @@ export const mergePlanBillingControlsForResponse = ({
 			customerControls: [],
 			planCustomerProducts,
 			controlKey: "spend_limits",
+			normalizeForCompare: fullSubject
+				? buildNormalizeSpendLimitForCompare({ fullSubject })
+				: undefined,
 		}),
 	);
 

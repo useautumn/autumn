@@ -196,13 +196,6 @@ CreateEntityThresholdTypeRequestBody = Literal[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
-CreateEntityUsageAlertSourceRequest = Literal[
-    "customer",
-    "plan",
-]
-r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
-
-
 class CreateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -214,8 +207,6 @@ class CreateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-    source: NotRequired[CreateEntityUsageAlertSourceRequest]
-    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntityUsageAlertRequestBody(BaseModel):
@@ -234,12 +225,9 @@ class CreateEntityUsageAlertRequestBody(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
-    source: Optional[CreateEntityUsageAlertSourceRequest] = None
-    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name", "source"])
+        optional_fields = set(["feature_id", "enabled", "name"])
         serialized = handler(self)
         m = {}
 
@@ -254,20 +242,11 @@ class CreateEntityUsageAlertRequestBody(BaseModel):
         return m
 
 
-CreateEntityOverageAllowedSourceRequest = Literal[
-    "customer",
-    "plan",
-]
-r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
-
-
 class CreateEntityOverageAllowedRequestTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
-    source: NotRequired[CreateEntityOverageAllowedSourceRequest]
-    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntityOverageAllowedRequest(BaseModel):
@@ -277,12 +256,9 @@ class CreateEntityOverageAllowedRequest(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
-    source: Optional[CreateEntityOverageAllowedSourceRequest] = None
-    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "source"])
+        optional_fields = set(["enabled"])
         serialized = handler(self)
         m = {}
 
@@ -1061,7 +1037,7 @@ CreateEntityThresholdTypeResponse = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
-CreateEntityUsageAlertSourceResponse = Union[
+CreateEntityUsageAlertSource = Union[
     Literal[
         "customer",
         "plan",
@@ -1082,7 +1058,7 @@ class CreateEntityUsageAlertResponseTypedDict(TypedDict):
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
-    source: NotRequired[CreateEntityUsageAlertSourceResponse]
+    source: NotRequired[CreateEntityUsageAlertSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -1102,7 +1078,7 @@ class CreateEntityUsageAlertResponse(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
-    source: Optional[CreateEntityUsageAlertSourceResponse] = None
+    source: Optional[CreateEntityUsageAlertSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
@@ -1122,7 +1098,7 @@ class CreateEntityUsageAlertResponse(BaseModel):
         return m
 
 
-CreateEntityOverageAllowedSourceResponse = Union[
+CreateEntityOverageAllowedSource = Union[
     Literal[
         "customer",
         "plan",
@@ -1137,7 +1113,7 @@ class CreateEntityOverageAllowedResponseTypedDict(TypedDict):
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
-    source: NotRequired[CreateEntityOverageAllowedSourceResponse]
+    source: NotRequired[CreateEntityOverageAllowedSource]
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
@@ -1148,7 +1124,7 @@ class CreateEntityOverageAllowedResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
-    source: Optional[CreateEntityOverageAllowedSourceResponse] = None
+    source: Optional[CreateEntityOverageAllowedSource] = None
     r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")

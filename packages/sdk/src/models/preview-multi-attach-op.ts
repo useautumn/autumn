@@ -555,20 +555,6 @@ export type PreviewMultiAttachThresholdType = ClosedEnum<
   typeof PreviewMultiAttachThresholdType
 >;
 
-/**
- * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
- */
-export const PreviewMultiAttachUsageAlertSource = {
-  Customer: "customer",
-  Plan: "plan",
-} as const;
-/**
- * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
- */
-export type PreviewMultiAttachUsageAlertSource = ClosedEnum<
-  typeof PreviewMultiAttachUsageAlertSource
->;
-
 export type PreviewMultiAttachUsageAlert = {
   /**
    * The feature ID this alert applies to.
@@ -590,25 +576,7 @@ export type PreviewMultiAttachUsageAlert = {
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
-  /**
-   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
-   */
-  source?: PreviewMultiAttachUsageAlertSource | undefined;
 };
-
-/**
- * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
- */
-export const PreviewMultiAttachOverageAllowedSource = {
-  Customer: "customer",
-  Plan: "plan",
-} as const;
-/**
- * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
- */
-export type PreviewMultiAttachOverageAllowedSource = ClosedEnum<
-  typeof PreviewMultiAttachOverageAllowedSource
->;
 
 export type PreviewMultiAttachOverageAllowed = {
   /**
@@ -619,10 +587,6 @@ export type PreviewMultiAttachOverageAllowed = {
    * Whether overage is allowed for this feature.
    */
   enabled?: boolean | undefined;
-  /**
-   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
-   */
-  source?: PreviewMultiAttachOverageAllowedSource | undefined;
 };
 
 /**
@@ -1772,18 +1736,12 @@ export const PreviewMultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachThresholdType);
 
 /** @internal */
-export const PreviewMultiAttachUsageAlertSource$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewMultiAttachUsageAlertSource
-> = z.enum(PreviewMultiAttachUsageAlertSource);
-
-/** @internal */
 export type PreviewMultiAttachUsageAlert$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
   threshold: number;
   threshold_type: string;
   name?: string | undefined;
-  source?: string | undefined;
 };
 
 /** @internal */
@@ -1797,7 +1755,6 @@ export const PreviewMultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
     threshold: z.number(),
     thresholdType: PreviewMultiAttachThresholdType$outboundSchema,
     name: z.optional(z.string()),
-    source: z.optional(PreviewMultiAttachUsageAlertSource$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1818,16 +1775,9 @@ export function previewMultiAttachUsageAlertToJSON(
 }
 
 /** @internal */
-export const PreviewMultiAttachOverageAllowedSource$outboundSchema:
-  z.ZodMiniEnum<typeof PreviewMultiAttachOverageAllowedSource> = z.enum(
-    PreviewMultiAttachOverageAllowedSource,
-  );
-
-/** @internal */
 export type PreviewMultiAttachOverageAllowed$Outbound = {
   feature_id: string;
   enabled: boolean;
-  source?: string | undefined;
 };
 
 /** @internal */
@@ -1838,7 +1788,6 @@ export const PreviewMultiAttachOverageAllowed$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.string(),
     enabled: z._default(z.boolean(), false),
-    source: z.optional(PreviewMultiAttachOverageAllowedSource$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
