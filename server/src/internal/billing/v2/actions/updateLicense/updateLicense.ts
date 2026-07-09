@@ -20,9 +20,7 @@ export const updateLicense = async ({
 
 	// 2. Compute: already-ended assignments only converge, never re-execute
 	const plan = computeLicenseUpdatePlan({
-		fullCustomer: context.fullCustomer,
-		assignment: context.assignment,
-		entityId: context.entityExternalId,
+		context,
 		cancelAction: params.cancel_action,
 	});
 	logLicenseUpdatePlan({ ctx, context, plan, preview });

@@ -2,23 +2,22 @@ import {
 	type AutumnBillingPlan,
 	CusProductStatus,
 	type FullCusProduct,
-	type FullCustomer,
 	type LicenseOp,
 } from "@autumn/shared";
-import type { DbLicenseAssignment } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
-import type { LicenseCancelAction, LicenseUpdatePlan } from "../../types.js";
+import type {
+	LicenseCancelAction,
+	LicenseUpdateContext,
+	LicenseUpdatePlan,
+} from "../../types.js";
 
 export const computeLicenseCancelPlan = ({
-	fullCustomer,
-	assignment,
-	entityId,
+	context,
 	cancelAction,
 }: {
-	fullCustomer: FullCustomer;
-	assignment: DbLicenseAssignment;
-	entityId?: string;
+	context: LicenseUpdateContext;
 	cancelAction: LicenseCancelAction;
 }): LicenseUpdatePlan => {
+	const { fullCustomer, assignment, entityExternalId } = context;
 	const endedAt = Date.now();
 	const endAssignment = {
 		customerProduct: assignment as unknown as FullCusProduct,
@@ -33,7 +32,7 @@ export const computeLicenseCancelPlan = ({
 						assignment.license_parent_customer_product_id,
 					licenseInternalProductId: assignment.internal_product_id,
 					granted: 0,
-					entityId,
+					entityId: entityExternalId,
 				},
 			]
 		: [];
