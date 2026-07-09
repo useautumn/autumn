@@ -91,6 +91,10 @@ const upsertFullCustomer = async ({
 		allowNotFound: true,
 	});
 	if (existing) {
+		// dry_run must not persist anything; return existing state so previews
+		// compute from actual persisted data (not hypothetical proposed updates).
+		if (params.dry_run) return existing;
+
 		const update: Parameters<typeof CusService.update>[0]["update"] = {};
 
 		// Self-migration: seed the RC app_user_id so Phase 1 webhooks resolve this
@@ -102,8 +106,7 @@ const upsertFullCustomer = async ({
 			};
 		}
 
-		// dry_run must not persist anything, including identity updates.
-		const customerData = params.dry_run ? undefined : params.customer_data;
+		const customerData = params.customer_data;
 		if (customerData?.name !== undefined && customerData.name !== existing.name)
 			update.name = customerData.name;
 		if (

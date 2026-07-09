@@ -105,6 +105,7 @@ test.concurrent(
 					testClock: false,
 					name: "Dry Run Name",
 					email: "dry-run@example.com",
+					data: { fingerprint: "old-dry-run-fingerprint" },
 				}),
 				s.products({ list: [free] }),
 			],
@@ -115,7 +116,11 @@ test.concurrent(
 			...freePlanPayload({
 				customerId,
 				planId: free.id,
-				customerData: { name: "Should Not Persist", email: "nope@example.com" },
+				customerData: {
+					name: "Should Not Persist",
+					email: "nope@example.com",
+					fingerprint: "new-dry-run-fingerprint",
+				},
 			}),
 			dry_run: true,
 		});
@@ -124,6 +129,7 @@ test.concurrent(
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.name).toBe("Dry Run Name");
 		expect(customer.email).toBe("dry-run@example.com");
+		expect(customer.fingerprint).toBe("old-dry-run-fingerprint");
 	},
 );
 
@@ -157,5 +163,53 @@ test.concurrent(
 
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expect(customer.email).toBe("valid-cusdata@example.com");
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("billing.import: dry_run does not persist processor identity updates")}`,
+	async () => {
+		const customerId = "dfu-flash-processor-dry-run";
+		const free = products.base({
+			id: "dfu-processor-dry-run-free",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, autumnV2_3 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({
+					testClock: false,
+					name: "Processor Test",
+					email: "processor-test@example.com",
+				}),
+				s.products({ list: [free] }),
+			],
+			actions: [],
+		});
+
+		// First, verify customer has no RevenueCat processor
+		const customerBefore = await autumnV2_3.customers.get<ApiCustomerV5>(
+			customerId,
+		);
+		expect(customerBefore.processors?.revenuecat?.id).toBeUndefined();
+
+		// Try to add RevenueCat processor in dry_run mode
+		const flashRes = await callFlash(autumnV2_2 as FlashClient, {
+			...freePlanPayload({
+				customerId,
+				planId: free.id,
+				customerData: {},
+			}),
+			processors: [{ type: "revenuecat", id: "rc-test-user-id" }],
+			dry_run: true,
+		});
+		expect(flashRes.errorCode).toBeNull();
+
+		// Verify processor was NOT persisted
+		const customerAfter = await autumnV2_3.customers.get<ApiCustomerV5>(
+			customerId,
+		);
+		expect(customerAfter.processors?.revenuecat?.id).toBeUndefined();
 	},
 );
