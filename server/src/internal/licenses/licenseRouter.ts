@@ -1,5 +1,9 @@
 import {
 	LicenseAttachParamsSchema,
+	LicenseListAssignmentsParamsSchema,
+	LicenseListParamsSchema,
+	LinkLicenseParamsSchema,
+	ListLicenseLinksParamsSchema,
 	Scopes,
 	UpdateLicenseParamsSchema,
 } from "@autumn/shared";
@@ -8,6 +12,10 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
+import { listLicenseAssignments } from "./actions/assignments/list/listLicenseAssignments.js";
+import { listLicenses } from "./actions/assignments/list/listLicenses.js";
+import { linkLicense } from "./actions/links/linkLicense.js";
+import { listLicenseLinks } from "./actions/links/listLicenseLinks.js";
 
 export const licenseRpcRouter = new Hono<HonoEnv>();
 
@@ -107,6 +115,75 @@ const handlePreviewUpdateLicense = createRoute({
 	},
 });
 
+const handleListLicenseAssignments = createRoute({
+	scopes: [Scopes.Billing.Read],
+	body: LicenseListAssignmentsParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const assignments = await listLicenseAssignments({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			planId: body.plan_id,
+			active: body.active,
+		});
+
+		return c.json({ list: assignments });
+	},
+});
+
+const handleListLicenses = createRoute({
+	scopes: [Scopes.Billing.Read],
+	body: LicenseListParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const balances = await listLicenses({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+		});
+
+		return c.json({ list: balances });
+	},
+});
+
+const handleLinkLicense = createRoute({
+	scopes: [Scopes.Plans.Write],
+	body: LinkLicenseParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const planLicense = await linkLicense({
+			ctx,
+			parentPlanId: body.parent_plan_id,
+			licensePlanId: body.license_plan_id,
+			included: body.included,
+			prepaidOnly: body.prepaid_only,
+			customize: body.customize,
+			metadata: body.metadata,
+		});
+
+		return c.json({ plan_license: planLicense });
+	},
+});
+
+const handleListLicenseLinks = createRoute({
+	scopes: [Scopes.Plans.Read],
+	body: ListLicenseLinksParamsSchema,
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const body = c.req.valid("json");
+		const planLicenses = await listLicenseLinks({
+			ctx,
+			parentPlanId: body.parent_plan_id,
+		});
+
+		return c.json({ list: planLicenses });
+	},
+});
+
 licenseRpcRouter.post("/licenses.attach", ...handleAttachLicense);
 licenseRpcRouter.post("/licenses.update", ...handleUpdateLicense);
 licenseRpcRouter.post(
@@ -117,3 +194,10 @@ licenseRpcRouter.post(
 	"/licenses.preview_update",
 	...handlePreviewUpdateLicense,
 );
+licenseRpcRouter.post(
+	"/licenses.list_assignments",
+	...handleListLicenseAssignments,
+);
+licenseRpcRouter.post("/licenses.list", ...handleListLicenses);
+licenseRpcRouter.post("/licenses.link", ...handleLinkLicense);
+licenseRpcRouter.post("/licenses.list_links", ...handleListLicenseLinks);

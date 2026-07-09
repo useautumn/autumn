@@ -150,8 +150,9 @@ const buildFilters = ({
 
 	const kindFilter =
 		kind === undefined ? sql`` : sql`AND ${typeRankSql} = ${KIND_RANK[kind]}`;
+	const licenseSeatFilter = sql`AND (cp.license_parent_customer_product_id IS NULL OR cp.internal_entity_id IS NULL)`;
 
-	return sql`${statusFilter} ${entityFilter} ${kindFilter}`;
+	return sql`${statusFilter} ${entityFilter} ${kindFilter} ${licenseSeatFilter}`;
 };
 
 export const getCustomerProductsPageQuery = ({
@@ -249,6 +250,7 @@ export const customerProductsSeedCte = ({
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			WHERE TRUE ${statusFilter}
+				AND (cp.license_parent_customer_product_id IS NULL OR cp.internal_entity_id IS NULL)
 		),
 		products_seed AS MATERIALIZED (
 			SELECT
