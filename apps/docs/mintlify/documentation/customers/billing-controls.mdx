@@ -216,6 +216,12 @@ Once usage reaches the cap inside the active window, `check` returns `allowed: f
 
 Usage limits cap *total usage* of a feature within a period: a sub-limit within an existing balance. They sit on top of the plan's allowance and apply even when there's balance remaining and even when the feature has no overage pricing.
 
+<Warning>
+`set_usage` sets a feature's balance but never touches usage-window counters. A capped feature stays capped: after `set_usage`, a customer whose window is exhausted still gets `allowed: false` until the window resets. To count usage against a window (including limits with conditions, which match on event properties), record usage normally with `track`.
+</Warning>
+
+The consumed counter belongs to the window, not to the limit's configuration — editing the limit never resets what's already been counted. To unblock a capped customer mid-window: **disable** the limit (`enabled: false`) to stop it gating while keeping its configuration, **raise** the limit (headroom becomes the new limit minus usage already counted), or **delete** it.
+
 > **Example** <br />
 > A customer's plan includes **300 credits per month**, but you want to stop any single day from burning through them. Set a usage limit of **50 on `credits` with a `day` interval**. The customer still gets their 300 monthly credits, but can never spend more than 50 in a day.
 
