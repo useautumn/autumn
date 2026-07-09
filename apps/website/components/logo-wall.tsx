@@ -7,7 +7,7 @@ import { getGsap } from "@/lib/lazyGsap";
 const LOGOS = [
 	{ id: 1, name: "Mintlify", src: "/images/logos/mintlify_logo.svg.svg", className: "h-5 md:h-7 scale-90 md:scale-70" },
 	{ id: 3, name: "Firecrawl", src: "/images/logos/Firecrawl.svg.svg", className: "h-5 md:h-7 scale-95 md:scale-75 -translate-y-0.5" },
-	{ id: 6, name: "poke.com", src: "/images/logos/poke.com.svg", className: "h-[10px] md:h-[13px]" },
+	{ id: 6, name: "poke.com", src: "/images/logos/poke.com.svg", className: "h-5 md:h-7 scale-[0.9] md:scale-[0.7]" },
 	{ id: 4, name: "Mastra", src: "/images/logos/Mastra.svg.svg", className: "h-5 md:h-7 scale-105 md:scale-95" },
 	{ id: 2, name: "Browser Use", src: "/images/logos/Browser use.svg", className: "h-5 md:h-7 scale-85 md:scale-65" },
 	{ id: 5, name: "T3.chat", src: "/images/logos/T3_svg.svg", className: "h-5 md:h-7 scale-65 md:scale-55" },
