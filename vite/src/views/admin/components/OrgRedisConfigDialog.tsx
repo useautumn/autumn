@@ -31,6 +31,7 @@ type AdminOrgRedisConfigResponse = {
 	redis_config: {
 		host: string;
 		hasPublicUrl: boolean;
+		publicHost: string | null;
 		migrationPercent: number;
 		previousMigrationPercent: number;
 		migrationChangedAt: number;
@@ -65,6 +66,7 @@ export function OrgRedisConfigDialog({
 
 	const [saving, setSaving] = useState(false);
 	const [updatingMigration, setUpdatingMigration] = useState(false);
+	const [savingPublicUrl, setSavingPublicUrl] = useState(false);
 	const [removing, setRemoving] = useState(false);
 
 	const { data, isLoading, isError, refetch } =
@@ -142,6 +144,23 @@ export function OrgRedisConfigDialog({
 		}
 	};
 
+	const handleUpdatePublicUrl = async () => {
+		if (!orgId || !publicConnectionString.trim()) return;
+		setSavingPublicUrl(true);
+		try {
+			await axiosInstance.patch(`/admin/orgs/${orgId}/redis/public-url`, {
+				publicConnectionString: publicConnectionString.trim(),
+			});
+			setPublicConnectionString("");
+			toast.success("Public URL updated");
+			await refreshAfterMutation();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to update public URL"));
+		} finally {
+			setSavingPublicUrl(false);
+		}
+	};
+
 	const handleUpdateMigration = async () => {
 		if (!orgId) return;
 		const parsed = migrationPercentSchema.safeParse(migrationInput);
@@ -210,6 +229,32 @@ export function OrgRedisConfigDialog({
 									? "Configured — used off-AWS (local dev, trigger.dev)."
 									: "Not set — off-AWS callers fall back to the private URL, which may not be reachable."}
 							</span>
+							{cfg.publicHost && (
+								<Input
+									value={cfg.publicHost}
+									readOnly
+									className="font-mono text-xs"
+								/>
+							)}
+							<div className="flex items-center gap-2">
+								<Input
+									value={publicConnectionString}
+									onChange={(e) => setPublicConnectionString(e.target.value)}
+									placeholder="rediss://default:password@public-host:6379"
+									className="font-mono text-xs"
+								/>
+								<Button
+									variant="secondary"
+									disabled={savingPublicUrl || !publicConnectionString.trim()}
+									onClick={handleUpdatePublicUrl}
+								>
+									{savingPublicUrl
+										? "Saving…"
+										: cfg.hasPublicUrl
+											? "Update"
+											: "Set"}
+								</Button>
+							</div>
 						</div>
 
 						<div className="flex flex-col gap-1">
