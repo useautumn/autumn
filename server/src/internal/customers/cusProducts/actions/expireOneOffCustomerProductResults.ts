@@ -80,24 +80,15 @@ export const expireOneOffCustomerProductResults = async ({
 					customerId,
 				}),
 				ttlMs: 120000,
-				fn: async () =>
+				fn: () =>
 					afterLicenseMutation({
 						ctx: licenseCtx,
 						customerId,
 						internalCustomerId,
 					}),
 			});
+			await deleteCachedFullCustomer({ ctx: licenseCtx, customerId, source });
 		}
-
-		await Promise.all(
-			[...group.internalCustomerIdByCustomerId.keys()].map((customerId) =>
-				deleteCachedFullCustomer({
-					ctx: repoContext as unknown as AutumnContext,
-					customerId,
-					source,
-				}),
-			),
-		);
 	}
 
 	return new Set(results.map((result) => result.customer_product.id)).size;
