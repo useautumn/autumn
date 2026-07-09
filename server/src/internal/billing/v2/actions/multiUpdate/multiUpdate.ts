@@ -97,12 +97,16 @@ export async function multiUpdate({
 		};
 	}
 
-	// Cancels never require checkout; reject any path that would need payment
-	if (primaryBillingContext.checkoutMode !== null) {
+	// Cancels never require checkout; reject any item whose setup decided
+	// payment collection is needed rather than executing without it
+	const checkoutItem = itemResults.find(
+		(itemResult) => itemResult.billingContext.checkoutMode !== null,
+	);
+	if (checkoutItem) {
 		throw new RecaseError({
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			message: "Multi update does not support updates that require checkout",
+			message: `Multi update does not support updates that require checkout (plan: ${checkoutItem.billingContext.customerProduct.product.id})`,
 		});
 	}
 
