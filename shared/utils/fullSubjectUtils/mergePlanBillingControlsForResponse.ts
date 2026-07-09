@@ -32,10 +32,10 @@ const tagUntaggedAsPlan = <T extends { source?: BillingControlSource }>(
  *  otherwise the most recent plan carrying alerts for the feature owns it. */
 const mergePlanUsageAlerts = ({
 	customerAlerts,
-	planCustomerProducts,
+	planProducts,
 }: {
 	customerAlerts: ApiUsageAlert[];
-	planCustomerProducts: FullCusProduct[];
+	planProducts: FullCusProduct[];
 }): ApiUsageAlert[] => {
 	const customerFeatureIds = new Set(
 		customerAlerts.map((alert) => alert.feature_id ?? ""),
@@ -43,9 +43,7 @@ const mergePlanUsageAlerts = ({
 	const featureOwnerProductId = new Map<string, string>();
 	const planAlerts: ApiUsageAlert[] = [];
 
-	for (const planProduct of getPlanBillingControlProducts({
-		customerProducts: planCustomerProducts,
-	})) {
+	for (const planProduct of planProducts) {
 		for (const alert of planProduct.product?.usage_alerts ?? []) {
 			const featureKey = alert.feature_id ?? "";
 			if (customerFeatureIds.has(featureKey)) continue;
@@ -83,6 +81,12 @@ export const mergePlanBillingControlsForResponse = ({
 	const preserveEmpty = <T>(merged: T[], original: T[] | undefined) =>
 		merged.length === 0 ? original : merged;
 
+	// Filter/sort the plan products once; the per-identity resolvers re-run
+	// cheaply over this small active set instead of the full product history.
+	const planProducts = getPlanBillingControlProducts({
+		customerProducts: planCustomerProducts,
+	});
+
 	const usageLimits = tagUntaggedAsPlan(
 		decorateInheritedPlanUsageLimits({
 			usageLimits: mergeControlsByFeature<ApiUsageLimit, "usage_limits">({
@@ -91,7 +95,7 @@ export const mergePlanBillingControlsForResponse = ({
 					"customer",
 				),
 				customerControls: [],
-				planCustomerProducts,
+				planCustomerProducts: planProducts,
 				controlKey: "usage_limits",
 				identityOf: usageLimitIdentity,
 			}),
@@ -104,7 +108,7 @@ export const mergePlanBillingControlsForResponse = ({
 		mergeControlsByFeature<ApiSpendLimit, "spend_limits">({
 			entityControls: tagSource(billingControls.spend_limits ?? [], "customer"),
 			customerControls: [],
-			planCustomerProducts,
+			planCustomerProducts: planProducts,
 			controlKey: "spend_limits",
 			normalizeForCompare: fullSubject
 				? buildNormalizeSpendLimitForCompare({ fullSubject })
@@ -119,7 +123,7 @@ export const mergePlanBillingControlsForResponse = ({
 				"customer",
 			),
 			customerControls: [],
-			planCustomerProducts,
+			planCustomerProducts: planProducts,
 			controlKey: "overage_allowed",
 		}),
 	);
@@ -128,14 +132,14 @@ export const mergePlanBillingControlsForResponse = ({
 		mergeControlsByFeature<ApiAutoTopup, "auto_topups">({
 			entityControls: tagSource(billingControls.auto_topups ?? [], "customer"),
 			customerControls: [],
-			planCustomerProducts,
+			planCustomerProducts: planProducts,
 			controlKey: "auto_topups",
 		}),
 	);
 
 	const usageAlerts = mergePlanUsageAlerts({
 		customerAlerts: tagSource(billingControls.usage_alerts ?? [], "customer"),
-		planCustomerProducts,
+		planProducts,
 	});
 
 	return {
