@@ -45,5 +45,44 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run unit tests
-        run: bun test --isolate tests/unit
+        run: |
+          set +e
+          ATTEMPT=1
+          MAX_ATTEMPTS=2
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
+            
+            # Run the test and capture output
+            OUTPUT=$(bun test --isolate tests/unit 2>&1)
+            EXIT_CODE=$?
+            
+            # Print the output
+            echo "$OUTPUT"
+            
+            # Check if the test passed
+            if [ $EXIT_CODE -eq 0 ]; then
+              echo "Tests passed!"
+              exit 0
+            fi
+            
+            # Check if the failure was due to a segfault
+            if echo "$OUTPUT" | grep -iq "segmentation fault\|Segmentation fault\|bun:.*SIGSEGV\|core dumped"; then
+              if [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                echo "Detected bun segfault. Retrying..."
+                ATTEMPT=$((ATTEMPT + 1))
+                sleep 2
+                continue
+              else
+                echo "Detected bun segfault on final attempt. Failing."
+                exit $EXIT_CODE
+              fi
+            else
+              # Non-segfault failure, exit immediately
+              echo "Test failure (not a segfault). Exit code: $EXIT_CODE"
+              exit $EXIT_CODE
+            fi
+          done
+          
+          exit 1
         working-directory: server
