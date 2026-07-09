@@ -120,10 +120,15 @@ export const initStripeResourcesForBillingPlan = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
+	const currency = billingContextToCurrency({ org, billingContext });
+	const orgDefault = orgToCurrency({ org }).toLowerCase();
+
 	if (billingContext.dryRunStripe) {
 		applyPreviewStripeResourcesToBillingPlan({
 			autumnBillingPlan,
 			billingContext,
+			currency,
+			orgDefault,
 		});
 		return;
 	}
@@ -133,9 +138,6 @@ export const initStripeResourcesForBillingPlan = async ({
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
-
-	const currency = billingContextToCurrency({ org, billingContext });
-	const orgDefault = orgToCurrency({ org }).toLowerCase();
 
 	const newProducts = insertCustomerProducts.flatMap((customerProduct) =>
 		cusProductToProduct({ cusProduct: customerProduct }),
