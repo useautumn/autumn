@@ -56,8 +56,12 @@ const SERVER_HEALTH_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
 const TCP_CONNECT_TIMEOUT_MS = 1_000;
 
+const bootStartedAt = Date.now();
+// ms-since-boot prefix so worker logs double as a boot-phase profile.
 const log = (message: string): void => {
-	console.log(chalk.cyan(`[tw-boot] ${message}`));
+	console.log(
+		chalk.cyan(`[tw-boot] +${Date.now() - bootStartedAt}ms ${message}`),
+	);
 };
 
 const sleep = (ms: number): Promise<void> =>
@@ -115,7 +119,7 @@ const waitForTcpPort = async (
 };
 
 /** Waits for the Autumn server health endpoint (`GET /`) to return 200. */
-const waitForServerHealth = async (
+export const waitForServerHealth = async (
 	port: number,
 	timeoutMs: number,
 ): Promise<void> => {
@@ -176,7 +180,7 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
  * `svix_config.sandbox_app_id` so the tests' `getTestSvixAppId` resolves — it
  * does NOT call `createSvixApp`.
  */
-const provisionSvixApp = async (orgId: string): Promise<void> => {
+export const provisionSvixApp = async (orgId: string): Promise<void> => {
 	const svixAppId = process.env.SVIX_APP_ID;
 	if (!svixAppId) {
 		throw new Error(
@@ -218,7 +222,7 @@ const provisionSvixApp = async (orgId: string): Promise<void> => {
  * off and the legacy seeder demands a webhook secret we never stored (§6a gotcha
  * a, §11a). Returns the long-lived subprocess so the caller keeps it alive.
  */
-const startServer = (repoRoot: string, port: number): Subprocess => {
+export const startServer = (repoRoot: string, port: number): Subprocess => {
 	const serverRoot = join(repoRoot, "server");
 	log(`starting Autumn server (bun src/index.ts) on :${port}`);
 	return spawn(["bun", "src/index.ts"], {
@@ -244,7 +248,7 @@ const startServer = (repoRoot: string, port: number): Subprocess => {
  * service env from `process.env`. NODE_ENV=development keeps the dev process
  * counts + skip-verify consistent with the server.
  */
-const startBackgroundProcs = (
+export const startBackgroundProcs = (
 	repoRoot: string,
 ): { workersProc: Subprocess; cronProc: Subprocess } => {
 	const serverRoot = join(repoRoot, "server");

@@ -1,10 +1,4 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
 /** mm:ss-style live elapsed timer, re-rendering once a second from `since` (epoch ms). */
@@ -82,11 +76,11 @@ export function WarmStepper({ stage }: { stage: number }) {
 	);
 }
 
-/** Compact per-worker status grid (booting → ready → dead) for the fan-out phase. */
+/** Compact per-worker status grid (provisioning → booting → ready → dead/failed). */
 export function WorkerDots({
 	workers,
 }: {
-	workers: { name: string; status: string }[];
+	workers: { name: string; status: string; reason?: string }[];
 }) {
 	return (
 		<div className="flex flex-wrap gap-1">
@@ -96,10 +90,11 @@ export function WorkerDots({
 						"size-2.5 rounded-[3px]",
 						w.status === "ready" && "bg-green-500",
 						w.status === "booting" && "animate-pulse bg-sandbox",
-						w.status === "dead" && "bg-destructive",
+						w.status === "provisioning" && "bg-muted-foreground/25",
+						(w.status === "dead" || w.status === "failed") && "bg-destructive",
 					)}
 					key={w.name}
-					title={`${w.name} · ${w.status}`}
+					title={`${w.name} · ${w.status}${w.reason ? ` — ${w.reason}` : ""}`}
 				/>
 			))}
 		</div>
@@ -176,7 +171,28 @@ const FILE_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	running: { tone: "blue", label: "running" },
 	retrying: { tone: "yellow", label: "retry" },
 	pending: { tone: "muted", label: "pending" },
+	skipped: { tone: "muted", label: "skipped" },
 };
+
+/** Triage order for file tables: active work first, then failures to look at. */
+const STATUS_RANK: Record<string, number> = {
+	running: 0,
+	retrying: 1,
+	failed: 2,
+	pending: 3,
+	skipped: 4,
+	passed: 5,
+};
+
+/** Stable sort: running → retrying → failed → queued → skipped → passed. */
+export const sortFilesForTriage = <T extends { status: string; name: string }>(
+	files: T[],
+): T[] =>
+	[...files].sort(
+		(a, b) =>
+			(STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9) ||
+			a.name.localeCompare(b.name),
+	);
 
 export function FileStatusBadge({ status }: { status: string }) {
 	const s = FILE_STATUS[status] ?? FILE_STATUS.pending;
@@ -185,8 +201,11 @@ export function FileStatusBadge({ status }: { status: string }) {
 
 const WORKER_STATUS: Record<string, { tone: PillTone; label: string }> = {
 	ready: { tone: "green", label: "ready" },
+	running: { tone: "blue", label: "running" },
 	booting: { tone: "blue", label: "booting" },
+	provisioning: { tone: "muted", label: "provisioning" },
 	dead: { tone: "red", label: "dead" },
+	failed: { tone: "red", label: "failed" },
 };
 
 export function WorkerStatusBadge({ status }: { status: string }) {
@@ -194,9 +213,9 @@ export function WorkerStatusBadge({ status }: { status: string }) {
 	return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
-const SPEED_CONFIG = {
-	rate: { label: "files/sec", color: "var(--chart-1)" },
-};
+// Literal colors — theme chart vars proved unreliable in this standalone app.
+const LINE_COLOR = "#27a7ff";
+const GRID_COLOR = "#80808030";
 
 /** Live files-completed-per-second chart, binning completion timestamps into 2s buckets. */
 export function SpeedChart({ completions }: { completions: number[] }) {
@@ -219,28 +238,54 @@ export function SpeedChart({ completions }: { completions: number[] }) {
 	for (let b = 0; b <= maxB; b++) {
 		data.push({ t: b * 2, rate: (buckets.get(b) ?? 0) / 2 });
 	}
+	const maxRate = Math.max(0.5, ...data.map((d) => d.rate));
+	// Fixed viewBox + preserveAspectRatio=none: renders at any CSS size with no
+	// runtime measurement (the failure mode of ResponsiveContainer-style charts).
+	const points = data
+		.map((d, index) => {
+			const x = data.length === 1 ? 0 : (index / (data.length - 1)) * 100;
+			const y = 100 - (d.rate / maxRate) * 92;
+			return `${x.toFixed(2)},${y.toFixed(2)}`;
+		})
+		.join(" ");
 	return (
-		<ChartContainer className="h-48 w-full" config={SPEED_CONFIG}>
-			<LineChart data={data} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
-				<CartesianGrid stroke="var(--chart-grid-stroke)" vertical={false} />
-				<XAxis
-					axisLine={false}
-					dataKey="t"
-					fontSize={11}
-					tickFormatter={(v) => `${v}s`}
-					tickLine={false}
-				/>
-				<YAxis axisLine={false} fontSize={11} tickLine={false} width={28} />
-				<ChartTooltip content={<ChartTooltipContent />} />
-				<Line
-					dataKey="rate"
-					dot={false}
-					isAnimationActive={false}
-					stroke="var(--color-rate)"
-					strokeWidth={2}
-					type="monotone"
-				/>
-			</LineChart>
-		</ChartContainer>
+		<div className="flex h-48 w-full items-stretch gap-1 text-muted-foreground">
+			<div className="flex shrink-0 flex-col justify-between pb-4 text-right font-mono text-[10px] tabular-nums">
+				<span>{maxRate.toFixed(1)}/s</span>
+				<span>0</span>
+			</div>
+			<div className="flex min-w-0 flex-1 flex-col border-border border-l pl-1.5">
+				<svg
+					aria-label="files completed per second"
+					className="min-h-0 w-full flex-1"
+					preserveAspectRatio="none"
+					role="img"
+					viewBox="0 0 100 100"
+				>
+					{[25, 50, 75, 100].map((y) => (
+						<line
+							key={y}
+							stroke={GRID_COLOR}
+							vectorEffect="non-scaling-stroke"
+							x1="0"
+							x2="100"
+							y1={y}
+							y2={y}
+						/>
+					))}
+					<polyline
+						fill="none"
+						points={points}
+						stroke={LINE_COLOR}
+						strokeWidth="1.5"
+						vectorEffect="non-scaling-stroke"
+					/>
+				</svg>
+				<div className="flex h-4 items-end justify-between font-mono text-[10px] tabular-nums">
+					<span>0s</span>
+					<span>{maxB * 2}s</span>
+				</div>
+			</div>
+		</div>
 	);
 }

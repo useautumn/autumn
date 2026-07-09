@@ -8,9 +8,13 @@ export type SwarmSocket = {
 	snapshot: Snapshot | null;
 	/** The active subscription's accumulated raw output (buffer + streamed chunks). */
 	output: string;
+	/** The independent errors-feed accumulator (subscribeErrors). */
+	errorsOutput: string;
 	sub: Sub;
 	subscribeFile: (file: string) => void;
 	subscribeWorker: (worker: string) => void;
+	subscribeErrors: () => void;
+	skipFile: (file: string) => void;
 };
 
 /**
@@ -23,6 +27,7 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 	const [connected, setConnected] = useState(false);
 	const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
 	const [output, setOutput] = useState("");
+	const [errorsOutput, setErrorsOutput] = useState("");
 	const [sub, setSub] = useState<Sub>(null);
 
 	const wsRef = useRef<WebSocket | null>(null);
@@ -59,6 +64,16 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 		(worker: string) => applySub({ kind: "worker", key: worker }),
 		[applySub],
 	);
+	const errorsSubbedRef = useRef(false);
+	const subscribeErrors = useCallback(() => {
+		errorsSubbedRef.current = true;
+		setErrorsOutput("");
+		send({ type: "subscribeErrors" });
+	}, [send]);
+	const skipFile = useCallback(
+		(file: string) => send({ type: "skipFile", file }),
+		[send],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reconnect loop is keyed on wsUrl only
 	useEffect(() => {
@@ -82,6 +97,10 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 				} else if (current?.kind === "worker") {
 					send({ type: "subscribeWorker", worker: current.key });
 				}
+				if (errorsSubbedRef.current) {
+					setErrorsOutput("");
+					send({ type: "subscribeErrors" });
+				}
 			};
 
 			ws.onmessage = (event) => {
@@ -100,6 +119,10 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 				}
 				if (msg.type === "snapshot" && msg.data) {
 					setSnapshot(msg.data);
+				} else if (msg.type === "errorsBuffer") {
+					setErrorsOutput(msg.output ?? "");
+				} else if (msg.type === "errorsOutput") {
+					setErrorsOutput((prev) => prev + (msg.chunk ?? ""));
 				} else if (msg.type === "fileBuffer" || msg.type === "workerBuffer") {
 					setOutput(msg.output ?? "");
 				} else if (msg.type === "fileOutput") {
@@ -141,5 +164,15 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 		};
 	}, [wsUrl]);
 
-	return { connected, snapshot, output, sub, subscribeFile, subscribeWorker };
+	return {
+		connected,
+		snapshot,
+		output,
+		errorsOutput,
+		sub,
+		subscribeFile,
+		subscribeWorker,
+		subscribeErrors,
+		skipFile,
+	};
 };

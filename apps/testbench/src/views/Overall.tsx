@@ -1,5 +1,6 @@
 import { Activity, FileText, Zap } from "lucide-react";
 import type { ReactNode } from "react";
+import { InfoRow } from "@/components/general/info-row";
 // Light section primitives imported DIRECTLY (not via the barrel, which pulls in
 // motion/react-router/ErrorScreen) — these only depend on `cn`.
 import { TableActions } from "@/components/table/table-actions";
@@ -14,7 +15,6 @@ import {
 	TableRow,
 	Table as UiTable,
 } from "@/components/ui/table";
-import { InfoRow } from "@/components/general/info-row";
 import type { Phase, Snapshot } from "../types";
 import {
 	Elapsed,
@@ -24,6 +24,7 @@ import {
 	type PillTone,
 	ProgressBar,
 	SpeedChart,
+	sortFilesForTriage,
 	WarmStepper,
 	WorkerDots,
 } from "../widgets";
@@ -71,6 +72,40 @@ function Section({
 }
 
 function PhaseProgress({ snap }: { snap: Snapshot }) {
+	// Warm cache HIT: no pipeline ran, so the 6-step stepper would be a lie —
+	// show the single real step instead (the ingress spin-up we're waiting on).
+	if (snap.phase === "warm" && snap.warmHit) {
+		return (
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center justify-between text-sm">
+					<span className="text-muted-foreground">
+						warm snapshot found ({snap.warmHit}
+						{snap.warmHit === "stale" ? " — workers fast-forward" : ""})
+					</span>
+					<span className="text-muted-foreground text-xs">
+						elapsed <Elapsed since={snap.phaseStartedAt} />
+					</span>
+				</div>
+				<div className="flex items-center gap-1.5">
+					<span className="flex size-4 items-center justify-center rounded-full border border-green-500 bg-green-500/15 text-[9px] text-green-500">
+						✓
+					</span>
+					<span className="text-muted-foreground text-xs">warm found</span>
+					<span className="text-subtle text-xs">·</span>
+					<span className="flex size-4 animate-pulse items-center justify-center rounded-full border border-sandbox bg-sandbox/15 text-[9px] text-sandbox tabular-nums">
+						1
+					</span>
+					<span className="text-foreground text-xs">spinning up ingress</span>
+				</div>
+				<IndeterminateBar />
+				{snap.activity ? (
+					<div className="truncate rounded-md border bg-interactive-secondary px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
+						{snap.activity}
+					</div>
+				) : null}
+			</div>
+		);
+	}
 	if (snap.phase === "warm") {
 		return (
 			<div className="flex flex-col gap-3">
@@ -95,6 +130,11 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 		);
 	}
 	if (snap.phase === "fanout") {
+		const booting = snap.workers.filter((w) => w.status === "booting").length;
+		const provisioning = snap.workers.filter(
+			(w) => w.status === "provisioning",
+		).length;
+		const workersFailed = snap.fanout.workersFailed ?? 0;
 		return (
 			<div className="flex flex-col gap-2.5">
 				<div className="flex items-center justify-between text-muted-foreground text-xs">
@@ -117,6 +157,21 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 						total={snap.fanout.workersTotal}
 						value={snap.fanout.workersReady}
 					/>
+					{workersFailed > 0 ? (
+						<span className="text-red-500 text-xs">
+							· {workersFailed} failed
+						</span>
+					) : null}
+				</div>
+				<div className="flex flex-wrap items-center gap-x-2 text-muted-foreground text-xs tabular-nums">
+					<span>
+						ready {snap.fanout.workersReady}/{snap.fanout.workersTotal}
+					</span>
+					<span>· booting {booting}</span>
+					<span>· provisioning {provisioning}</span>
+					{workersFailed > 0 ? (
+						<span className="text-red-500">· failed {workersFailed}</span>
+					) : null}
 				</div>
 				{snap.workers.length > 0 ? <WorkerDots workers={snap.workers} /> : null}
 				{snap.activity ? (
@@ -174,7 +229,11 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 		return (
 			<div className="flex flex-col gap-1.5">
 				<InfoRow label="passed" value={snap.summary.passed} />
-				<InfoRow label="failed" value={snap.summary.failed} />
+				<InfoRow label="asserts failed" value={snap.summary.failed} />
+				<InfoRow
+					label="files failed"
+					value={snap.summary.filesFailed ?? snap.summary.failed}
+				/>
 				<InfoRow label="crashed" value={snap.summary.crashed} />
 				<InfoRow label="wall" mono value={fmtWall(snap.summary.wallMs)} />
 				{snap.summary.costLine ? (
@@ -189,6 +248,12 @@ function LiveStats({ snap }: { snap: Snapshot }) {
 			<InfoRow label="passed" value={snap.run.passed} />
 			<InfoRow label="failed" value={snap.run.failed} />
 			<InfoRow label="running" value={snap.run.running} />
+			{snap.runStartedAt ? (
+				<InfoRow
+					label="elapsed"
+					value={<Elapsed since={snap.runStartedAt} />}
+				/>
+			) : null}
 		</div>
 	);
 }
@@ -221,7 +286,7 @@ function FileTable({
 					</TableRow>
 				</TableHeader>
 				<TableBody className="divide-y bg-interactive-secondary">
-					{snap.files.map((f) => (
+					{sortFilesForTriage(snap.files).map((f) => (
 						<TableRow
 							className="h-12 cursor-pointer text-tertiary-foreground transition-none hover:bg-interactive-secondary-hover"
 							key={f.file}
