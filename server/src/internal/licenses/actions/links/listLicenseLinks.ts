@@ -1,8 +1,9 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { serializePlanLicense } from "../../licenseResponseUtils.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
+import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
-import { deriveLicenseCustomize } from "../customize/deriveLicenseCustomize.js";
+import { deriveCustomizeFromItems } from "../customize/deriveLicenseCustomize.js";
 
 export const listLicenseLinks = async ({
 	ctx,
@@ -21,6 +22,10 @@ export const listLicenseLinks = async ({
 		parentInternalProductIds: [parentProduct.internal_id],
 	});
 
+	const itemRowsByLinkId = await licenseItemRepo.listByPlanLicenseIds({
+		db: ctx.db,
+		planLicenseIds: rows.map(({ planLicense }) => planLicense.id),
+	});
 	return await Promise.all(
 		rows.map(async ({ planLicense, licensePlanId }) => {
 			const licenseProduct = await getFullLicenseProduct({
@@ -31,10 +36,17 @@ export const listLicenseLinks = async ({
 				planLicense,
 				parentPlanId: parentProduct.id,
 				licensePlanId,
-				customize: await deriveLicenseCustomize({
+				customize: deriveCustomizeFromItems({
 					ctx,
 					licenseProduct,
-					planLicenseId: planLicense.id,
+					itemRows: {
+						entitlements: itemRowsByLinkId.entitlements.filter(
+							(row) => row.plan_license_id === planLicense.id,
+						),
+						prices: itemRowsByLinkId.prices.filter(
+							(row) => row.plan_license_id === planLicense.id,
+						),
+					},
 				}),
 			});
 		}),

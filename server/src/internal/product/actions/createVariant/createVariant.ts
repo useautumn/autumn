@@ -1,18 +1,18 @@
 import {
+	billingControlsFromColumns,
 	type CreateFreeTrial,
 	type CreateProductV2Params,
 	type CreateVariantParamsV2,
 	ErrCode,
 	type FullProduct,
 	RecaseError,
-	billingControlsFromColumns,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct.js";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies.js";
 import { createProduct } from "../createProduct.js";
 
 const getVariantItems = ({

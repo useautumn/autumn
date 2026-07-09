@@ -1,4 +1,5 @@
 import { ErrCode, type LicenseCustomize, RecaseError } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { serializePlanLicense } from "../../licenseResponseUtils.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
@@ -40,12 +41,15 @@ export const linkLicense = async ({
 		licenseInternalProductId: licenseProduct.internal_id,
 	});
 
-	// 2. Compute the effective product and validate the link against it
-	const computation = customize?.items
+	// 2. Compute the effective product and validate the link against it.
+	// An empty items array means stock — a frozen copy of today's items would
+	// silently stop base-item edits from rolling forward.
+	const normalizedCustomize = customize?.items?.length ? customize : null;
+	const computation = normalizedCustomize?.items
 		? await computeLicenseCustomize({
 				ctx,
 				licenseProduct,
-				items: customize.items,
+				items: normalizedCustomize.items,
 			})
 		: null;
 	const effectiveProduct = computation?.effectiveProduct ?? licenseProduct;
@@ -55,7 +59,7 @@ export const linkLicense = async ({
 		licenseProduct: effectiveProduct,
 		prepaidOnly,
 		licensePlanId,
-		customizeItems: customize?.items,
+		customizeItems: normalizedCustomize?.items,
 	});
 
 	if (existingLink && included < existingLink.included) {
@@ -75,25 +79,30 @@ export const linkLicense = async ({
 		}
 	}
 
-	// 3. Execute: upsert the link, then materialize its items
-	const planLicense = await planLicenseRepo.upsert({
-		db: ctx.db,
-		parentInternalProductId: parentProduct.internal_id,
-		licenseInternalProductId: licenseProduct.internal_id,
-		included,
-		prepaidOnly,
-		metadata,
-	});
-
-	if (computation) {
-		await persistLicenseCustomize({
-			ctx,
-			planLicenseId: planLicense.id,
-			computation,
+	// 3. Execute: upsert the link and materialize its items atomically, so a
+	// failed customize step cannot leave the link with stale content
+	const planLicense = await ctx.db.transaction(async (tx) => {
+		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+		const upserted = await planLicenseRepo.upsert({
+			db: txCtx.db,
+			parentInternalProductId: parentProduct.internal_id,
+			licenseInternalProductId: licenseProduct.internal_id,
+			included,
+			prepaidOnly,
+			metadata,
 		});
-	} else if (customize === null) {
-		await clearLicenseCustomize({ ctx, planLicenseId: planLicense.id });
-	}
+
+		if (computation) {
+			await persistLicenseCustomize({
+				ctx: txCtx,
+				planLicenseId: upserted.id,
+				computation,
+			});
+		} else if (customize !== undefined && normalizedCustomize === null) {
+			await clearLicenseCustomize({ ctx: txCtx, planLicenseId: upserted.id });
+		}
+		return upserted;
+	});
 
 	return serializePlanLicense({
 		planLicense,

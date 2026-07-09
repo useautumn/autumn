@@ -142,7 +142,7 @@ export const handleVersionProductV2 = async ({
 	});
 
 	await copyPlanLicensesToNewVersion({
-		db,
+		ctx,
 		fromInternalProductId: latestProduct.internal_id,
 		toInternalProductId: newProduct.internal_id,
 	});

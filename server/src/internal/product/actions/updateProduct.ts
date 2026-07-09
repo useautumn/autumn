@@ -226,7 +226,7 @@ export const updateProduct = async ({
 	const newProductV2: ProductV2 = {
 		...curProductV2,
 		...productUpdates,
-		group: productUpdates.group || curProductV2.group || "",
+		group: productUpdates.group ?? curProductV2.group ?? "",
 		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
 		billing_controls: mergeBillingControls(

@@ -97,6 +97,17 @@ test.concurrent(
 		});
 		await waitForMigration();
 
+		const migratedCustomer = await autumnV1.customers.get<{
+			products: { id: string; version?: number }[];
+		}>(customerId);
+		// Customized license parents are deliberately skipped by migration —
+		// the customer keeps v1 with its customization intact.
+		const parentVersions = migratedCustomer.products
+			.filter((product) => product.id === parent.id)
+			.map((product) => product.version);
+		expect(parentVersions).toContain(1);
+		expect(parentVersions).not.toContain(2);
+
 		const poolsAfter = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as { list: LicenseBalanceResponse[] };

@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
@@ -150,7 +151,7 @@ const buildFilters = ({
 
 	const kindFilter =
 		kind === undefined ? sql`` : sql`AND ${typeRankSql} = ${KIND_RANK[kind]}`;
-	const licenseSeatFilter = sql`AND (cp.license_parent_customer_product_id IS NULL OR cp.internal_entity_id IS NULL)`;
+	const licenseSeatFilter = sql`AND ${sql.raw(notLicenseAssignmentSql("cp"))}`;
 
 	return sql`${statusFilter} ${entityFilter} ${kindFilter} ${licenseSeatFilter}`;
 };
@@ -250,7 +251,7 @@ export const customerProductsSeedCte = ({
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON cp.internal_product_id = prod.internal_id
 			WHERE TRUE ${statusFilter}
-				AND (cp.license_parent_customer_product_id IS NULL OR cp.internal_entity_id IS NULL)
+				AND ${sql.raw(notLicenseAssignmentSql("cp"))}
 		),
 		products_seed AS MATERIALIZED (
 			SELECT

@@ -92,6 +92,11 @@ const countActiveByParentAndLicense = async ({
 	return row?.value ?? 0;
 };
 
+/** SQL predicate: the aliased customer_products row is not a license
+ * assignment (seat rows are entity-scoped with a license parent). */
+export const notLicenseAssignmentSql = (alias: string) =>
+	`(${alias}.license_parent_customer_product_id IS NULL OR ${alias}.internal_entity_id IS NULL)`;
+
 const listAssignmentsWithEntityAndProductByCustomer = async ({
 	db,
 	internalCustomerId,

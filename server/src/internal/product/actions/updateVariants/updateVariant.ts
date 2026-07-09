@@ -1,9 +1,9 @@
 import type {
+	ApiPlanV1,
 	DiffedCustomizePlanV1,
 	FullProduct,
 	UpdateVariantParams,
 } from "@autumn/shared";
-import type { ApiPlanV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	applyDiffToVariantPlan,
@@ -11,17 +11,17 @@ import {
 	fullProductToApiPlanV1,
 	getApiPlanDiff,
 	getVariantSettingsPatch,
-	variantSettingsPatchHasValues,
 	type VariantSettingsPatch,
+	variantSettingsPatchHasValues,
 } from "../common/planTransformUtils.js";
 import {
 	validateDirectVariantControls,
 	validateDirectVariantMigrationDraftUnsupported,
 	variantCustomizeChanged,
 } from "../common/variantUpdateSource.js";
-import { updateProduct } from "../updateProduct.js";
 import { createPlanMigrationDraft } from "../updateProduct/createPlanMigrationDraft.js";
 import { updateOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
+import { updateProduct } from "../updateProduct.js";
 
 export const updateVariant = async ({
 	ctx,

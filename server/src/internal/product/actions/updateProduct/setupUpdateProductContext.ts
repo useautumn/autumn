@@ -1,6 +1,7 @@
 import {
 	type FullProduct,
 	mapToProductV2,
+	ProductNotFoundError,
 	type ProductV2,
 	type RewardProgram,
 } from "@autumn/shared";
@@ -50,6 +51,8 @@ export const setupUpdateProductContext = async ({
 			env,
 		}),
 	]);
+
+	if (!fullProduct) throw new ProductNotFoundError({ productId });
 
 	const customerUsage = await customerProductRepo.getVersioningUsageForProduct({
 		db,

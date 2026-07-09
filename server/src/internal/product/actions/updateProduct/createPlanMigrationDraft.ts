@@ -1,10 +1,10 @@
 import {
+	type ApiPlanV1,
 	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	diffPlanV1,
-	planDiffHasBillingChanges,
-	type ApiPlanV1,
 	type FullProduct,
+	planDiffHasBillingChanges,
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -120,7 +120,10 @@ export const createPlanMigrationDraft = async ({
 	const selectedVariantsBefore =
 		variantsBefore.length > 0 || selectedVariantIds.length === 0
 			? variantsBefore
-			: await getVariantMigrationSnapshots({ ctx, variantIds: selectedVariantIds });
+			: await getVariantMigrationSnapshots({
+					ctx,
+					variantIds: selectedVariantIds,
+				});
 
 	if (mode === "version") {
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({

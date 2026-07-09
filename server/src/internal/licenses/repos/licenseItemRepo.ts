@@ -290,6 +290,13 @@ const cloneItems = async ({
 		db,
 		planLicenseIds: [fromPlanLicenseId],
 	});
+	// Idempotent for version-copy retries: the target link's refs are replaced.
+	await db
+		.delete(licenseEntitlements)
+		.where(eq(licenseEntitlements.plan_license_id, toPlanLicenseId));
+	await db
+		.delete(licensePrices)
+		.where(eq(licensePrices.plan_license_id, toPlanLicenseId));
 	const now = Date.now();
 	if (existing.entitlements.length > 0) {
 		await db.insert(licenseEntitlements).values(

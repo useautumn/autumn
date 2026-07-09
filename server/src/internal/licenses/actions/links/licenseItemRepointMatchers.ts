@@ -33,11 +33,31 @@ export const findPriceFollowingEntitlementFeature = <
 			)
 		: undefined;
 
-/** The base (no-feature) price slot: a price not tied to any entitlement. */
+/** The base (no-feature) price slot: a price not tied to any entitlement.
+ * With several base prices, the previous price's config disambiguates. */
 export const findBaseSlotReplacementPrice = <
-	P extends { entitlement_id?: string | null },
+	P extends { entitlement_id?: string | null; config?: unknown },
 >({
 	replacementPrices,
+	previousPrice,
 }: {
 	replacementPrices: P[];
-}): P | undefined => replacementPrices.find((price) => !price.entitlement_id);
+	previousPrice?: { config?: unknown };
+}): P | undefined => {
+	const candidates = replacementPrices.filter((price) => !price.entitlement_id);
+	if (candidates.length <= 1 || !previousPrice) return candidates[0];
+
+	const configKey = (config: unknown) => {
+		const { interval, interval_count, amount } = (config ?? {}) as {
+			interval?: string;
+			interval_count?: number;
+			amount?: number;
+		};
+		return `${interval}:${interval_count}:${amount}`;
+	};
+	return (
+		candidates.find(
+			(price) => configKey(price.config) === configKey(previousPrice.config),
+		) ?? candidates[0]
+	);
+};

@@ -11,11 +11,14 @@ import {
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getFullLicenseProduct } from "../../licenseUtils.js";
+import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import {
 	findBaseSlotReplacementPrice,
 	findEntitlementFollowingFeature,
 	findPriceFollowingEntitlementFeature,
 } from "./licenseItemRepointMatchers.js";
+import { validateLicenseLink } from "./validateLicenseLink.js";
 
 /** Custom item rows move to the new version; base-row item refs re-point to
  * the new version's matching rows by feature, unmatched refs stay grandfathered. */
@@ -116,7 +119,10 @@ const rollForwardItems = async ({
 									?.internal_feature_id
 							: null,
 				})
-			: findBaseSlotReplacementPrice({ replacementPrices: newPrices });
+			: findBaseSlotReplacementPrice({
+					replacementPrices: newPrices,
+					previousPrice: row,
+				});
 		if (!replacement) continue;
 		await tx
 			.update(licensePrices)
@@ -134,6 +140,28 @@ export const rollForwardLicenseProductVersion = async ({
 	fromInternalProductId: string;
 	toInternalProductId: string;
 }) => {
+	const links = await planLicenseRepo.listCatalogByLicenseInternalProductIds({
+		db: ctx.db,
+		licenseInternalProductIds: [fromInternalProductId],
+	});
+	if (links.length > 0) {
+		const newLicenseProduct = await getFullLicenseProduct({
+			ctx,
+			idOrInternalId: toInternalProductId,
+		});
+		for (const link of links) {
+			validateLicenseLink({
+				parentProduct: await getFullLicenseProduct({
+					ctx,
+					idOrInternalId: link.parent_internal_product_id,
+				}),
+				licenseProduct: newLicenseProduct,
+				prepaidOnly: link.prepaid_only,
+				licensePlanId: newLicenseProduct.id,
+			});
+		}
+	}
+
 	await ctx.db.transaction(async (tx) => {
 		await tx
 			.update(planLicenses)

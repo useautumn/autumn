@@ -48,8 +48,11 @@ export const listLicenses = async ({
 			balance,
 		]),
 	);
+	const scopedAssignments = entityId
+		? assignments.filter((row) => row.entity_id === entityId)
+		: assignments;
 	const assignmentsByKey = new Map<string, typeof assignments>();
-	for (const row of assignments) {
+	for (const row of scopedAssignments) {
 		const key = `${row.assignment.license_parent_customer_product_id}:${row.assignment.internal_product_id}`;
 		const rows = assignmentsByKey.get(key) ?? [];
 		rows.push(row);

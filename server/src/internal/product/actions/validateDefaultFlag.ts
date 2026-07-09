@@ -100,8 +100,7 @@ const validateLatestVersionCanBeDefault = async ({
 	if (latestProduct.internal_id === curProduct.internal_id) return;
 
 	throw new RecaseError({
-		message:
-			"Only the latest version of a plan can be marked as auto-enable.",
+		message: "Only the latest version of a plan can be marked as auto-enable.",
 		code: ErrCode.HistoricalPlanVersionCannotBeDefault,
 		statusCode: 400,
 	});
@@ -116,7 +115,10 @@ export const validateDefaultFlag = async ({
 	body: CreateProductV2Params | UpdateProductV2Params;
 	curProduct?: FullProduct;
 }) => {
-	if (body.is_default === true && curProduct?.base_internal_product_id != null) {
+	if (
+		body.is_default === true &&
+		curProduct?.base_internal_product_id != null
+	) {
 		throw new RecaseError({
 			message: "Variants cannot be the default plan.",
 			code: ErrCode.VariantCannotBeDefault,

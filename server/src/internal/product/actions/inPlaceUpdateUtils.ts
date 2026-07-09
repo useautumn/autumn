@@ -78,12 +78,11 @@ const retireOrDeleteRows = async ({
 	});
 	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
 	const entitlementsReferencedByRetainedPrices = new Set(
-		priceRows
-			.flatMap((price) =>
-				referencedPrices.has(price.id) && price.entitlement_id
-					? [price.entitlement_id]
-					: [],
-			),
+		priceRows.flatMap((price) =>
+			referencedPrices.has(price.id) && price.entitlement_id
+				? [price.entitlement_id]
+				: [],
+		),
 	);
 
 	for (const priceId of priceIds) {
