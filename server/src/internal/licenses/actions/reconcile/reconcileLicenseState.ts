@@ -10,6 +10,7 @@ import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseGateRepo } from "../../repos/licenseGateRepo.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { resolveLicenseDefinitionsForParents } from "./resolveLicenseDefinitions.js";
+import { offeredPools, poolKey } from "./stateHelpers.js";
 import type { CustomerLicenseState } from "./types.js";
 
 const loadCustomerLicenseState = async ({
@@ -57,77 +58,85 @@ const loadCustomerLicenseState = async ({
 
 /** Ends or re-parents active assignments whose parent is no longer valid,
  * patching state.assignments to mirror the writes. */
+/** First live parent offering each license — the reparent target for a
+ * stranded assignment of that license. */
+const buildSuccessorParentByLicense = (state: CustomerLicenseState) => {
+	const byLicense = new Map<string, FullCusProduct>();
+	for (const { parent, definition } of offeredPools(state)) {
+		if (!byLicense.has(definition.license_internal_product_id)) {
+			byLicense.set(definition.license_internal_product_id, parent);
+		}
+	}
+	return byLicense;
+};
+
+/** Splits stranded assignments into reparent groups (successor found) and
+ * ended ids (none); patches each reparented assignment's parent in place. */
+const partitionStrandedAssignments = ({
+	stranded,
+	successorParentByLicense,
+}: {
+	stranded: CustomerLicenseState["assignments"];
+	successorParentByLicense: Map<string, FullCusProduct>;
+}) => {
+	const reparentedByParentId = new Map<string, string[]>();
+	const endedIds = new Set<string>();
+	for (const { assignment } of stranded) {
+		const successor = successorParentByLicense.get(
+			assignment.internal_product_id,
+		);
+		if (!successor) {
+			endedIds.add(assignment.id);
+			continue;
+		}
+		reparentedByParentId.set(successor.id, [
+			...(reparentedByParentId.get(successor.id) ?? []),
+			assignment.id,
+		]);
+		assignment.license_parent_customer_product_id = successor.id;
+	}
+	return { reparentedByParentId, endedIds };
+};
+
 const transitionStrandedAssignments = async ({
 	ctx,
-	fullCustomer,
 	state,
 }: {
 	ctx: AutumnContext;
-	fullCustomer: FullCustomer;
 	state: CustomerLicenseState;
 }) => {
-	const { parents, definitionsByParentId } = state;
-	const validParentIds = new Set(parents.map((parent) => parent.id));
-	const strandedAssignments = state.assignments.filter(
+	const validParentIds = new Set(state.parents.map((parent) => parent.id));
+	const stranded = state.assignments.filter(
 		({ assignment }) =>
 			!(
 				assignment.license_parent_customer_product_id &&
 				validParentIds.has(assignment.license_parent_customer_product_id)
 			),
 	);
-	if (strandedAssignments.length === 0) return;
+	if (stranded.length === 0) return;
 
-	const successorParentByLicenseId = new Map<string, FullCusProduct>();
-	for (const parent of parents) {
-		for (const definition of definitionsByParentId.get(parent.id) ?? []) {
-			if (definition.included <= 0) continue;
-			if (
-				!successorParentByLicenseId.has(definition.license_internal_product_id)
-			) {
-				successorParentByLicenseId.set(
-					definition.license_internal_product_id,
-					parent,
-				);
-			}
-		}
-	}
+	const { reparentedByParentId, endedIds } = partitionStrandedAssignments({
+		stranded,
+		successorParentByLicense: buildSuccessorParentByLicense(state),
+	});
 
-	const endedAt = Date.now();
-	const reparentedAssignmentIdsByParentId = new Map<string, string[]>();
-	const endedAssignmentIds = new Set<string>();
-	for (const { assignment } of strandedAssignments) {
-		const successor = successorParentByLicenseId.get(
-			assignment.internal_product_id,
-		);
-		if (successor) {
-			const assignmentIds =
-				reparentedAssignmentIdsByParentId.get(successor.id) ?? [];
-			assignmentIds.push(assignment.id);
-			reparentedAssignmentIdsByParentId.set(successor.id, assignmentIds);
-			assignment.license_parent_customer_product_id = successor.id;
-			continue;
-		}
-		endedAssignmentIds.add(assignment.id);
-	}
-
-	if (endedAssignmentIds.size > 0) {
+	if (endedIds.size > 0) {
 		await licenseAssignmentRepo.expireAssignmentsByIds({
 			db: ctx.db,
-			assignmentIds: [...endedAssignmentIds],
-			endedAt,
+			assignmentIds: [...endedIds],
+			endedAt: Date.now(),
 		});
 		state.assignments = state.assignments.filter(
-			({ assignment }) => !endedAssignmentIds.has(assignment.id),
+			({ assignment }) => !endedIds.has(assignment.id),
 		);
 	}
 	await Promise.all(
-		[...reparentedAssignmentIdsByParentId].map(
-			([parentCustomerProductId, assignmentIds]) =>
-				licenseAssignmentRepo.reparentAssignmentsByIds({
-					db: ctx.db,
-					assignmentIds,
-					parentCustomerProductId,
-				}),
+		[...reparentedByParentId].map(([parentCustomerProductId, assignmentIds]) =>
+			licenseAssignmentRepo.reparentAssignmentsByIds({
+				db: ctx.db,
+				assignmentIds,
+				parentCustomerProductId,
+			}),
 		),
 	);
 };
@@ -135,6 +144,20 @@ const transitionStrandedAssignments = async ({
 /** Converge customer_licenses rows: granted from resolved definitions,
  * remaining self-healed to granted - live assignments, rows for dead parents
  * gone. Rebuilds state.balances from the written rows. */
+const countActiveByPool = (
+	assignments: CustomerLicenseState["assignments"],
+) => {
+	const byPool = new Map<string, number>();
+	for (const { assignment } of assignments) {
+		const key = poolKey(
+			assignment.license_parent_customer_product_id,
+			assignment.internal_product_id,
+		);
+		byPool.set(key, (byPool.get(key) ?? 0) + 1);
+	}
+	return byPool;
+};
+
 const reconcileAssignmentBalances = async ({
 	ctx,
 	fullCustomer,
@@ -144,22 +167,11 @@ const reconcileAssignmentBalances = async ({
 	fullCustomer: FullCustomer;
 	state: CustomerLicenseState;
 }) => {
-	const { parents, definitionsByParentId } = state;
+	const assignedByPool = countActiveByPool(state.assignments);
 
-	const assignedByKey = new Map<string, number>();
-	for (const { assignment } of state.assignments) {
-		const key = `${assignment.license_parent_customer_product_id}:${assignment.internal_product_id}`;
-		assignedByKey.set(key, (assignedByKey.get(key) ?? 0) + 1);
-	}
-
-	const offered = parents.flatMap((parent) =>
-		(definitionsByParentId.get(parent.id) ?? [])
-			.filter((definition) => definition.included > 0)
-			.map((definition) => ({ parent, definition })),
-	);
 	// Each pool's upsert -> setRemaining is independent of the others.
 	state.balances = await Promise.all(
-		offered.map(async ({ parent, definition }) => {
+		[...offeredPools(state)].map(async ({ parent, definition }) => {
 			const balance = await customerLicenseRepo.upsertGranted({
 				db: ctx.db,
 				internalCustomerId: fullCustomer.internal_id,
@@ -167,11 +179,11 @@ const reconcileAssignmentBalances = async ({
 				licenseInternalProductId: definition.license_internal_product_id,
 				granted: definition.included,
 			});
-			const assigned =
-				assignedByKey.get(
-					`${parent.id}:${definition.license_internal_product_id}`,
-				) ?? 0;
-			const remaining = definition.included - assigned;
+			const remaining =
+				definition.included -
+				(assignedByPool.get(
+					poolKey(parent.id, definition.license_internal_product_id),
+				) ?? 0);
 			if (balance.remaining !== remaining) {
 				await customerLicenseRepo.setRemaining({
 					db: ctx.db,
@@ -186,7 +198,7 @@ const reconcileAssignmentBalances = async ({
 	await customerLicenseRepo.deleteByParentIdsExcept({
 		db: ctx.db,
 		internalCustomerId: fullCustomer.internal_id,
-		keepParentCustomerProductIds: parents.map((parent) => parent.id),
+		keepParentCustomerProductIds: state.parents.map((parent) => parent.id),
 	});
 };
 
@@ -236,7 +248,7 @@ export const reconcileLicenseStateForCustomer = async ({
 
 	const state = await loadCustomerLicenseState({ ctx, fullCustomer: customer });
 
-	await transitionStrandedAssignments({ ctx, fullCustomer: customer, state });
+	await transitionStrandedAssignments({ ctx, state });
 	await reconcileAssignmentBalances({ ctx, fullCustomer: customer, state });
 
 	logLicenseAction({

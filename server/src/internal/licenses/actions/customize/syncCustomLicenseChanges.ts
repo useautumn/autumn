@@ -11,7 +11,10 @@ import {
 	persistLicenseCustomize,
 } from "./persistLicenseCustomize.js";
 import { resolveLicensePatch } from "./resolveLicensePatch.js";
-import type { ResolvedLicenseAdd } from "./types.js";
+import type {
+	ResolvedLicenseAdd,
+	ResolvedLicenseRemove,
+} from "./types.js";
 
 const resolvedAddHasItemRows = async ({
 	ctx,
@@ -101,64 +104,17 @@ const syncCustomLicenseChange = async ({
 
 	// 3. Execute
 	await ctx.db.transaction(async (tx) => {
-		const txDb = tx as unknown as DrizzleCli;
-		const txCtx = { ...ctx, db: txDb };
-
+		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
 		for (const add of resolved.adds) {
-			if (await addMatchesCatalog({ ctx: txCtx, add })) {
-				if (add.existingOverride) {
-					await deleteOverrideLink({
-						ctx: txCtx,
-						planLicenseId: add.existingOverride.id,
-					});
-				}
-				continue;
-			}
-
-			const overrideLink = await planLicenseRepo.upsert({
-				db: txDb,
-				parentInternalProductId: parentCustomerProduct.internal_product_id,
-				parentCustomerProductId: change.parentCustomerProductId,
-				licenseInternalProductId: add.licenseProduct.internal_id,
-				included: add.included,
-				prepaidOnly: add.prepaidOnly,
-				metadata: add.metadata,
-			});
-			if (add.computation) {
-				await persistLicenseCustomize({
-					ctx: txCtx,
-					planLicenseId: overrideLink.id,
-					computation: add.computation,
-				});
-			} else if (add.clearItems) {
-				await clearLicenseCustomize({
-					ctx: txCtx,
-					planLicenseId: overrideLink.id,
-				});
-			}
+			await applyResolvedAdd({ txCtx, add, change, parentCustomerProduct });
 		}
-
 		for (const remove of resolved.removes) {
-			if (remove.catalogLink) {
-				const tombstone = await planLicenseRepo.upsert({
-					db: txDb,
-					parentInternalProductId: parentCustomerProduct.internal_product_id,
-					parentCustomerProductId: change.parentCustomerProductId,
-					licenseInternalProductId: remove.licenseProduct.internal_id,
-					included: 0,
-					prepaidOnly: true,
-					metadata: {},
-				});
-				await clearLicenseCustomize({
-					ctx: txCtx,
-					planLicenseId: tombstone.id,
-				});
-			} else if (remove.existingOverride) {
-				await deleteOverrideLink({
-					ctx: txCtx,
-					planLicenseId: remove.existingOverride.id,
-				});
-			}
+			await applyResolvedRemove({
+				txCtx,
+				remove,
+				change,
+				parentCustomerProduct,
+			});
 		}
 	});
 
@@ -170,6 +126,81 @@ const syncCustomLicenseChange = async ({
 			parentCustomerProduct.internal_customer_id,
 		source: "license.customize",
 	});
+};
+
+/** A resolved add: link already matches the catalog (drop any override) or
+ * needs an override link with its customize materialized. */
+const applyResolvedAdd = async ({
+	txCtx,
+	add,
+	change,
+	parentCustomerProduct,
+}: {
+	txCtx: AutumnContext;
+	add: ResolvedLicenseAdd;
+	change: CustomLicenseChange;
+	parentCustomerProduct: { internal_product_id: string };
+}) => {
+	if (await addMatchesCatalog({ ctx: txCtx, add })) {
+		if (add.existingOverride) {
+			await deleteOverrideLink({
+				ctx: txCtx,
+				planLicenseId: add.existingOverride.id,
+			});
+		}
+		return;
+	}
+
+	const overrideLink = await planLicenseRepo.upsert({
+		db: txCtx.db,
+		parentInternalProductId: parentCustomerProduct.internal_product_id,
+		parentCustomerProductId: change.parentCustomerProductId,
+		licenseInternalProductId: add.licenseProduct.internal_id,
+		included: add.included,
+		prepaidOnly: add.prepaidOnly,
+		metadata: add.metadata,
+	});
+	if (add.computation) {
+		await persistLicenseCustomize({
+			ctx: txCtx,
+			planLicenseId: overrideLink.id,
+			computation: add.computation,
+		});
+	} else if (add.clearItems) {
+		await clearLicenseCustomize({ ctx: txCtx, planLicenseId: overrideLink.id });
+	}
+};
+
+/** A resolved remove: tombstone an inherited catalog link (included 0) or
+ * delete an existing override. */
+const applyResolvedRemove = async ({
+	txCtx,
+	remove,
+	change,
+	parentCustomerProduct,
+}: {
+	txCtx: AutumnContext;
+	remove: ResolvedLicenseRemove;
+	change: CustomLicenseChange;
+	parentCustomerProduct: { internal_product_id: string };
+}) => {
+	if (remove.catalogLink) {
+		const tombstone = await planLicenseRepo.upsert({
+			db: txCtx.db,
+			parentInternalProductId: parentCustomerProduct.internal_product_id,
+			parentCustomerProductId: change.parentCustomerProductId,
+			licenseInternalProductId: remove.licenseProduct.internal_id,
+			included: 0,
+			prepaidOnly: true,
+			metadata: {},
+		});
+		await clearLicenseCustomize({ ctx: txCtx, planLicenseId: tombstone.id });
+	} else if (remove.existingOverride) {
+		await deleteOverrideLink({
+			ctx: txCtx,
+			planLicenseId: remove.existingOverride.id,
+		});
+	}
 };
 
 export const syncCustomLicenseChanges = async ({
