@@ -24,6 +24,7 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 			case "invoice.created":
 			case "invoice.finalized":
 			case "subscription_schedule.canceled":
+			case "subscription_schedule.updated":
 				return stripeEvent.data.object.customer;
 
 			case "customer.updated":

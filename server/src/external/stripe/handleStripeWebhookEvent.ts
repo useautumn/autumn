@@ -18,6 +18,7 @@ import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeS
 import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
 import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestClockReady.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
+import { handleStripeSubscriptionScheduleUpdated } from "./webhookHandlers/handleStripeSubscriptionScheduleUpdated/handleStripeSubscriptionScheduleUpdated.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -69,6 +70,11 @@ export const handleStripeWebhookEvent = async (
 
 			case "invoice.finalized": {
 				await handleStripeInvoiceFinalized({ ctx, event });
+				break;
+			}
+
+			case "subscription_schedule.updated": {
+				await handleStripeSubscriptionScheduleUpdated({ ctx, event });
 				break;
 			}
 
