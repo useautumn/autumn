@@ -9,6 +9,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { getFullLicenseProduct } from "@/internal/licenses/licenseUtils.js";
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import type { LicenseAssignmentContext } from "../types.js";
+import { resolveLicenseAssignment } from "./resolveLicenseAssignment.js";
 
 /** Composed setup for assignment actions: license product (archived-checked)
  * and customer context in parallel, then the customer-level product that gates
@@ -45,6 +46,15 @@ export const setupLicenseAssignmentContext = async ({
 			internalProductId: licenseProduct.internal_id,
 		});
 
+	const resolution = await resolveLicenseAssignment({
+		ctx,
+		fullCustomer,
+		entity: fullCustomer.entity,
+		licenseProduct,
+		planId: params.plan_id,
+		parentPlanId: params.parent_plan_id,
+	});
+
 	return {
 		fullCustomer,
 		entity: fullCustomer.entity,
@@ -52,5 +62,6 @@ export const setupLicenseAssignmentContext = async ({
 		customerLevelProduct,
 		planId: params.plan_id,
 		parentPlanId: params.parent_plan_id,
+		resolution,
 	};
 };

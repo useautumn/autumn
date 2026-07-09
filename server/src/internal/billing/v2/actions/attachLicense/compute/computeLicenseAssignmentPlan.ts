@@ -1,51 +1,30 @@
-import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import type {
 	LicenseAssignmentContext,
 	LicenseAssignmentPlan,
 } from "../types.js";
-import { buildLicenseCustomerProduct } from "./buildLicenseCustomerProduct.js";
-import { resolveAssignableLicenseParent } from "./resolveAssignableLicenseParent.js";
 import { validatePricedLicenseAttached } from "./validatePricedLicenseAttached.js";
 
-export const computeLicenseAssignmentPlan = async ({
-	ctx,
+export const computeLicenseAssignmentPlan = ({
 	context,
 }: {
-	ctx: AutumnContext;
 	context: LicenseAssignmentContext;
-}): Promise<LicenseAssignmentPlan> => {
-	const { fullCustomer, entity, licenseProduct } = context;
-	const existing = await licenseAssignmentRepo.findActiveAssignment({
-		db: ctx.db,
-		internalCustomerId: fullCustomer.internal_id,
-		internalEntityId: entity.internal_id,
-		licenseInternalProductId: licenseProduct.internal_id,
-	});
-	if (existing) return { existing };
+}): LicenseAssignmentPlan => {
+	const { fullCustomer, entity, licenseProduct, resolution } = context;
+	if (resolution.existing) return { existing: resolution.existing };
 
-	const { parent, licenseDefinition, effectiveProduct, available } =
-		await resolveAssignableLicenseParent({
-			ctx,
-			fullCustomer,
-			licenseProduct,
-			planId: context.planId,
-			parentPlanId: context.parentPlanId,
-		});
+	const {
+		parent,
+		licenseDefinition,
+		effectiveProduct,
+		available,
+		provisioned,
+	} = resolution;
 	validatePricedLicenseAttached({
 		effectiveProduct,
 		customerLevelProduct: context.customerLevelProduct,
 	});
 
-	const provisioned: FullCusProduct = await buildLicenseCustomerProduct({
-		ctx,
-		fullCustomer,
-		licenseProduct,
-		licenseDefinition,
-		internalEntityId: entity.internal_id,
-		licenseParentCustomerProductId: parent.id,
-	});
 	const billingPlan: AutumnBillingPlan = {
 		customerId: fullCustomer.id ?? fullCustomer.internal_id,
 		insertCustomerProducts: [provisioned],

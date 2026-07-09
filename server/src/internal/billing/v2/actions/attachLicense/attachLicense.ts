@@ -19,7 +19,7 @@ export const attachLicense = async ({
 	const context = await setupLicenseAssignmentContext({ ctx, params });
 
 	// 2. Compute
-	const plan = await computeLicenseAssignmentPlan({ ctx, context });
+	const plan = computeLicenseAssignmentPlan({ context });
 	logLicenseAssignmentPlan({ ctx, context, plan, preview });
 
 	if (plan.existing) {
