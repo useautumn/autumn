@@ -592,6 +592,36 @@ curl -X POST "https://api.useautumn.com/v1/entities/update" \
 Auto top-ups are customer-level only because they create invoices and charge a payment method, which is tied to the customer account — not individual entities.
 </Info>
 
+## Plan-Level Defaults
+
+Every billing control can also be defined on a **plan** (in the dashboard under plan settings → billing controls, or via the `billingControls` field when creating or updating a plan). Plan-level controls act as defaults for every customer on that plan — set a daily usage limit once on your free tier instead of on each customer.
+
+Resolution when a customer is on one or more plans:
+
+- A **customer-level entry shadows the plan's entry** for the same feature (for usage limits, the same feature *and* conditions). Setting a control on the customer is how you override the plan default — and a disabled customer entry still shadows the plan's, it doesn't resurface it.
+- With **multiple attached plans** defining the same control, the most restrictive wins (auto top-ups: the most recently attached plan's config).
+
+### Reading effective controls
+
+From API version `2.3.0`, [fetching a customer](/api-reference/customers/getCustomer) returns the **effective** controls: plan defaults are merged into `billing_controls`, and every entry carries a `source` field so you can tell overrides from inherited defaults. Inherited usage limits include the live window `usage`, so you can render "X of 200 used today" without extra calls.
+
+```json
+"billing_controls": {
+  "usage_limits": [
+    {
+      "feature_id": "emails",
+      "enabled": true,
+      "limit": 200,
+      "interval": "day",
+      "usage": 37,
+      "source": "plan"
+    }
+  ]
+}
+```
+
+On earlier API versions, `billing_controls` contains only customer-level entries. Entity responses always show the entity's own controls.
+
 ## Related Webhooks
 
 Billing controls tie into three webhook events that fire automatically based on usage:
