@@ -329,7 +329,7 @@ export const setupAttachBillingContext = async ({
 		taxRateId: params.tax_rate_id,
 
 		externalId: params.subscription_id,
-		customize: params.customize ?? undefined,
+		licensePatch: params.customize ?? undefined,
 
 		skipBillingChanges,
 		dryRunStripe: preview,

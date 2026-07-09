@@ -104,7 +104,7 @@ export const computeAttachPlan = ({
 		customLicenses: buildCustomLicenseChanges({
 			parentCustomerProduct: newCustomerProduct,
 			previousParentCustomerProduct: currentCustomerProduct,
-			licensePatch: attachBillingContext.customize,
+			licensePatch: attachBillingContext.licensePatch,
 		}),
 		lineItems,
 		insertCustomerEntitlements: [
