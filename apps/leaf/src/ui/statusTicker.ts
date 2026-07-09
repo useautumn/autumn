@@ -109,6 +109,11 @@ export const createStatusTicker = (target: ReplyTarget): StatusTicker => {
 				clearInterval(timer);
 				timer = null;
 			}
+			// Explicitly clear the status: without this, a snippet rendered just
+			// before stop() outlives the run as a stuck "thinking" line.
+			if (lastRendered) {
+				target.startTyping("").catch(() => {});
+			}
 		},
 	};
 };
