@@ -45,6 +45,7 @@ export const coreAttach: TestGroup = {
 		"billing/attach/multi-currency-credit-e2e.test.ts",
 		"billing/attach/multi-currency-setup-payment-e2e.test.ts",
 		"billing/attach/multi-currency-trial-e2e.test.ts",
+		"billing/attach/multi-currency-checkout-e2e.test.ts",
 		"org-config/multi-currency-flag-off.test.ts",
 	],
 };
