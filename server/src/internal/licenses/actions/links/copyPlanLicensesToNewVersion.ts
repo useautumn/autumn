@@ -1,4 +1,5 @@
 import type { FullProduct } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
@@ -66,19 +67,22 @@ export const copyPlanLicensesToNewVersion = async ({
 		});
 	if (planLicenseRows.length === 0) return;
 
-	for (const row of planLicenseRows) {
-		const newLink = await planLicenseRepo.upsert({
-			db: ctx.db,
-			parentInternalProductId: toInternalProductId,
-			licenseInternalProductId: row.license_internal_product_id,
-			included: row.included,
-			prepaidOnly: row.prepaid_only,
-			metadata: row.metadata ?? {},
-		});
-		await licenseItemRepo.cloneItems({
-			db: ctx.db,
-			fromPlanLicenseId: row.id,
-			toPlanLicenseId: newLink.id,
-		});
-	}
+	await ctx.db.transaction(async (tx) => {
+		const txDb = tx as unknown as DrizzleCli;
+		for (const row of planLicenseRows) {
+			const newLink = await planLicenseRepo.upsert({
+				db: txDb,
+				parentInternalProductId: toInternalProductId,
+				licenseInternalProductId: row.license_internal_product_id,
+				included: row.included,
+				prepaidOnly: row.prepaid_only,
+				metadata: row.metadata ?? {},
+			});
+			await licenseItemRepo.cloneItems({
+				db: txDb,
+				fromPlanLicenseId: row.id,
+				toPlanLicenseId: newLink.id,
+			});
+		}
+	});
 };

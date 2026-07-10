@@ -47,6 +47,8 @@ const rollForwardItems = async ({
 		.where(eq(prices.internal_product_id, fromInternalProductId));
 	if (itemEntitlements.length === 0 && itemPrices.length === 0) return;
 
+	// Custom rows belong to a single version, so they move wholesale to the new
+	// one; base rows are shared and get re-pointed by feature below.
 	const customEntitlementIds = itemEntitlements
 		.filter(({ row }) => row.is_custom)
 		.map(({ row }) => row.id);
