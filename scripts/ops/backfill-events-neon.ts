@@ -101,6 +101,13 @@ const fail = (message: string): never => {
 	process.exit(1);
 };
 
+// psql needs an explicit root-cert source for sslmode=verify-full URLs; Node's pg uses
+// the system CA store natively, so only the psql-facing URL gets the parameter.
+const withSystemRootCert = (url: string): string =>
+	url.includes("sslrootcert=")
+		? url
+		: `${url}${url.includes("?") ? "&" : "?"}sslrootcert=system`;
+
 const currentMonth = (): string => new Date().toISOString().slice(0, 7);
 
 const parseArgs = (argv: string[]): CliArgs => {
@@ -201,7 +208,7 @@ const acquireRunLock = async (neonUrl: string): Promise<Client> => {
 
 const ensureStagingTable = async (neonUrl: string): Promise<void> => {
 	const result =
-		await $`psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${STAGING_DDL}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${STAGING_DDL}`
 			.quiet()
 			.nothrow();
 	if (result.exitCode !== 0) {
@@ -222,7 +229,7 @@ const stageChunk = async (
 	const exportSql = duckDbExportSql(s3Prefix, orgId, year, monthNumber);
 	// Truncate first so rows left by a previously crashed run aren't double-staged.
 	const result =
-		await $`duckdb -c ${exportSql} | psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
+		await $`duckdb -c ${exportSql} | psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
 			.quiet()
 			.nothrow();
 	const stderr = result.stderr.toString();
@@ -251,7 +258,7 @@ const stageChunk = async (
 
 const mergeChunk = async (neonUrl: string): Promise<number> => {
 	const result =
-		await $`psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
 			.quiet()
 			.nothrow();
 	if (result.exitCode !== 0) {
