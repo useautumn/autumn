@@ -86,6 +86,12 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		url: "/balances/create",
 	}),
 
+	route({
+		method: "POST",
+		url: "/balances/update",
+		flushBalances: true,
+	}),
+
 	// RPC ROUTES
 	route({
 		method: "POST",
@@ -122,6 +128,12 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/balances.create",
+	}),
+
+	route({
+		method: "POST",
+		url: "/balances.update",
+		flushBalances: true,
 	}),
 
 	route({

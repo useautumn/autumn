@@ -1,10 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { fetchApprovalPreview } from "../../../src/internal/approvals/utils/fetchApprovalPreview.js";
+import {
+	fetchApprovalPreview,
+	shouldRefreshApprovalPreview,
+} from "../../../src/internal/approvals/utils/fetchApprovalPreview.js";
 
 const silentLogger = { warn: () => {} };
 
 describe("fetchApprovalPreview", () => {
+	test("refreshes catalog previews for the exact post-decision write", () => {
+		expect(
+			shouldRefreshApprovalPreview({
+				preview: { plan_changes: [] },
+				toolName: "autumn__updateCatalog",
+			}),
+		).toBe(true);
+		expect(
+			shouldRefreshApprovalPreview({
+				preview: { total: 100 },
+				toolName: "updateSubscription",
+			}),
+		).toBe(false);
+	});
+
 	test("maps write tools to their preview tool", async () => {
 		const calls: Array<{ args: unknown; toolName: string }> = [];
 		const preview = await fetchApprovalPreview({

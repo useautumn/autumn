@@ -2089,6 +2089,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
             </DynamicResponseField>
 
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -2123,6 +2127,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Current usage already consumed in the active interval. Response-only; not stored on billing controls.
             </DynamicResponseField>
 
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -2149,6 +2157,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Optional user-defined label to distinguish multiple alerts on the same feature.
             </DynamicResponseField>
 
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -2161,6 +2173,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="enabled" type="boolean">
               Whether overage is allowed for this feature.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
             </DynamicResponseField>
 
           </Expandable>

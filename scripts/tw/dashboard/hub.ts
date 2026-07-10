@@ -16,14 +16,20 @@
 /** Cap per-stream buffers so a long run can't grow memory unbounded. */
 const MAX_BUFFER_CHARS = 256_000;
 
-export type WorkerStatus = "booting" | "ready" | "dead";
+export type WorkerStatus =
+	| "provisioning"
+	| "booting"
+	| "ready"
+	| "dead"
+	| "failed";
 
 export type HubEvent =
 	| { type: "fileOutput"; file: string; chunk: string }
 	| { type: "workerOutput"; worker: string; chunk: string }
 	| { type: "fileWorker"; file: string; worker: string }
-	| { type: "workerStatus"; worker: string; status: WorkerStatus }
-	| { type: "completion"; file: string; at: number };
+	| { type: "workerStatus"; worker: string; status: WorkerStatus; reason?: string }
+	| { type: "completion"; file: string; at: number }
+	| { type: "errorsOutput"; chunk: string };
 
 type Listener = (event: HubEvent) => void;
 
@@ -38,8 +44,20 @@ const fileWorker = new Map<string, string>();
 const workerFiles = new Map<string, string[]>();
 /** Worker boot status. */
 const workerStatus = new Map<string, WorkerStatus>();
+/** Why a worker is dead/failed (provision or boot error), when known. */
+const workerReason = new Map<string, string>();
 /** Epoch-ms timestamps of file completions (for the speed graph). */
 const completions: number[] = [];
+/** Dispatch time per file (latest attempt) — durations for the timings view. */
+const fileStarts = new Map<string, number>();
+/** Epoch-ms the RUN stage started (first file dispatched). */
+let runStartedAt: number | null = null;
+/** Wall duration of each file's LAST completed attempt. */
+const fileDurations = new Map<string, number>();
+/** Rolling failure feed: every failed file's failure detail, appended live. */
+let errorsBuffer = "";
+/** Files the dashboard asked to skip (honored while still pending). */
+const skipRequests = new Set<string>();
 
 let enabled = false;
 
@@ -78,6 +96,8 @@ export const setFileWorker = (file: string, worker: string): void => {
 		return;
 	}
 	fileWorker.set(file, worker);
+	runStartedAt ??= Date.now();
+	fileStarts.set(file, Date.now());
 	const files = workerFiles.get(worker) ?? [];
 	if (!files.includes(file)) {
 		files.push(file);
@@ -102,12 +122,30 @@ export const appendWorkerOutput = (worker: string, chunk: string): void => {
 	emit({ type: "workerOutput", worker, chunk });
 };
 
-export const setWorkerStatus = (worker: string, status: WorkerStatus): void => {
+export const setWorkerStatus = (
+	worker: string,
+	status: WorkerStatus,
+	reason?: string,
+): void => {
 	if (!enabled) {
 		return;
 	}
 	workerStatus.set(worker, status);
-	emit({ type: "workerStatus", worker, status });
+	if (reason) {
+		workerReason.set(worker, reason);
+	}
+	emit({ type: "workerStatus", worker, status, reason });
+};
+
+/** Pre-register the full expected roster (as "provisioning") so the grid shows every slot from the start. */
+export const registerExpectedWorkers = (names: string[]): void => {
+	if (!enabled) {
+		return;
+	}
+	for (const name of names) {
+		workerStatus.set(name, "provisioning");
+		emit({ type: "workerStatus", worker: name, status: "provisioning" });
+	}
 };
 
 export const recordCompletion = (file: string): void => {
@@ -116,8 +154,30 @@ export const recordCompletion = (file: string): void => {
 	}
 	const at = Date.now();
 	completions.push(at);
+	const startedAt = fileStarts.get(file);
+	if (startedAt) {
+		fileDurations.set(file, at - startedAt);
+	}
 	emit({ type: "completion", file, at });
 };
+
+/** Append one failed file's failure detail to the live errors feed. */
+export const appendErrorsOutput = (chunk: string): void => {
+	if (!enabled) {
+		return;
+	}
+	errorsBuffer =
+		errorsBuffer.length + chunk.length > MAX_BUFFER_CHARS * 4
+			? errorsBuffer.slice(chunk.length) + chunk
+			: errorsBuffer + chunk;
+	emit({ type: "errorsOutput", chunk });
+};
+
+export const requestSkip = (file: string): void => {
+	skipRequests.add(file);
+};
+export const isSkipRequested = (file: string): boolean =>
+	skipRequests.has(file);
 
 // ---- readers (used by the WebSocket server) -------------------------------
 
@@ -128,20 +188,27 @@ export const getWorkerOutput = (worker: string): string =>
 export const getWorkerOf = (file: string): string | undefined =>
 	fileWorker.get(file);
 export const getCompletions = (): number[] => completions;
+export const getErrorsOutput = (): string => errorsBuffer;
+export const getDurationMs = (file: string): number | undefined =>
+	fileDurations.get(file);
+export const getRunStartedAt = (): number | null => runStartedAt;
 
 /** Worker list with status + the files each ran (for the per-worker view). */
+// Registration order first, so the dot grid keeps the deterministic idx order.
 export const getWorkers = (): {
 	name: string;
 	status: WorkerStatus;
 	files: string[];
+	reason?: string;
 }[] =>
-	Array.from(workerFiles.keys())
-		.concat(Array.from(workerStatus.keys()))
+	Array.from(workerStatus.keys())
+		.concat(Array.from(workerFiles.keys()))
 		.filter((name, i, arr) => arr.indexOf(name) === i)
 		.map((name) => ({
 			name,
 			status: workerStatus.get(name) ?? "booting",
 			files: workerFiles.get(name) ?? [],
+			reason: workerReason.get(name),
 		}));
 
 /** Reset between runs (the module is a process-singleton). */
@@ -151,5 +218,11 @@ export const resetHub = (): void => {
 	fileWorker.clear();
 	workerFiles.clear();
 	workerStatus.clear();
+	workerReason.clear();
 	completions.length = 0;
+	fileStarts.clear();
+	runStartedAt = null;
+	fileDurations.clear();
+	errorsBuffer = "";
+	skipRequests.clear();
 };

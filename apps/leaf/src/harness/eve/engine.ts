@@ -19,6 +19,7 @@ import {
 } from "./catalogDecision.js";
 import {
 	type EveMessageContent,
+	EveStreamDisconnectedError,
 	EveStreamIdleTimeoutError,
 	postEveInputResponse,
 	postEveMessage,
@@ -252,6 +253,7 @@ export const eveEngine: AgentEngine = {
 			// closes with nothing. Reconnect through that window instead of
 			// returning an empty turn; give up only after sustained silence.
 			let idleRetries = 0;
+			let disconnectRetries = 0;
 			while (idleRetries < 20) {
 				let sawEvent = false;
 				try {
@@ -465,6 +467,20 @@ export const eveEngine: AgentEngine = {
 						}
 					}
 				} catch (error) {
+					if (error instanceof EveStreamDisconnectedError) {
+						disconnectRetries += 1;
+						logger.warn("Eve stream disconnected; reconnecting", {
+							event: "leaf.eve_stream_disconnected",
+							data: {
+								attempt: disconnectRetries,
+								error: error instanceof Error ? error.message : String(error),
+								session_id: session.sessionId,
+								stream_index: session.state.streamIndex,
+							},
+						});
+						if (disconnectRetries >= 5) throw error;
+						continue;
+					}
 					if (!(error instanceof EveStreamIdleTimeoutError)) throw error;
 					// Silence this long means the cursor drifted past eve's replay
 					// buffer or the turn died without a terminal event — heal the

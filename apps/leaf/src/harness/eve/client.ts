@@ -1,4 +1,5 @@
 import { env } from "../../lib/env.js";
+import { isRetryableEveStreamError } from "./streamErrors.js";
 import type { EveAuthContext, EveSessionRef } from "./types.js";
 
 export type EveEvent = {
@@ -142,6 +143,13 @@ export class EveStreamIdleTimeoutError extends Error {
 	}
 }
 
+export class EveStreamDisconnectedError extends Error {
+	constructor(error: unknown) {
+		super(error instanceof Error ? error.message : String(error));
+		this.name = "EveStreamDisconnectedError";
+	}
+}
+
 export async function* streamEveEvents({
 	auth,
 	idleTimeoutMs = STREAM_IDLE_TIMEOUT_MS,
@@ -194,6 +202,9 @@ export async function* streamEveEvents({
 		}
 	} catch (error) {
 		if (timedOut) throw new EveStreamIdleTimeoutError(session.sessionId);
+		if (isRetryableEveStreamError(error)) {
+			throw new EveStreamDisconnectedError(error);
+		}
 		throw error;
 	} finally {
 		clearTimeout(idleTimer);

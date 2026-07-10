@@ -42,128 +42,149 @@ import chalk from "chalk";
  * - Scheduled downgrade with no overage charged at cycle end
  * - After cycle: pro removed, free active
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 1: pro with consumable, usage under limit, to free")}`, async () => {
-	const customerId = "sched-switch-cons-under-limit";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 1a: pro with consumable, usage under limit, to free (mid-cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-cons-under-limit-a";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 50 }), // Under included
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 50 }), // Under included
+			],
+		});
 
-	// Verify Stripe subscription after initial attach
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after initial attach
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Verify balance before downgrade (100 included - 50 used = 50)
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer: customerBefore,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 50,
-	});
+		// Verify balance before downgrade (100 included - 50 used = 50)
+		const customerBefore =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expectCustomerFeatureCorrect({
+			customer: customerBefore,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 50,
+		});
 
-	// Downgrade to free
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: free.id,
-		redirect_mode: "if_required",
-	});
+		// Downgrade to free
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: free.id,
+			redirect_mode: "if_required",
+		});
 
-	const customerMidCycle =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customerMidCycle =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// Verify states
-	await expectProductCanceling({
-		customer: customerMidCycle,
-		productId: pro.id,
-	});
-	await expectProductScheduled({
-		customer: customerMidCycle,
-		productId: free.id,
-	});
+		// Verify states
+		await expectProductCanceling({
+			customer: customerMidCycle,
+			productId: pro.id,
+		});
+		await expectProductScheduled({
+			customer: customerMidCycle,
+			productId: free.id,
+		});
 
-	// Verify Stripe subscription after scheduling downgrade
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after scheduling downgrade
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
-	// Now advance cycle and verify
-	const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({ featureId: TestFeature.Messages, value: 50 }),
-			s.billing.attach({ productId: free.id }), // Schedule downgrade
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 1b: pro with consumable, usage under limit, to free (after cycle)")}`,
+	async () => {
+		const customerId = "sched-switch-cons-under-limit-b";
 
-	const customerAfterCycle =
-		await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	// After cycle: free active, pro removed
-	await expectCustomerProducts({
-		customer: customerAfterCycle,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	// Features at free tier (50 included)
-	expectCustomerFeatureCorrect({
-		customer: customerAfterCycle,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
+		const { autumnV1: autumnV1After, ctx: ctxAfter } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({ featureId: TestFeature.Messages, value: 50 }),
+				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Only pro invoice ($20), no overage since usage was under included
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfterCycle,
-		count: 2,
-		latestTotal: 0,
-		latestInvoiceProductIds: [pro.id],
-	});
+		const customerAfterCycle =
+			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
 
-	// After downgrading to free, there should be no Stripe subscription
-	await expectNoStripeSubscription({
-		db: ctxAfter.db,
-		customerId,
-		org: ctxAfter.org,
-		env: ctxAfter.env,
-	});
-});
+		// After cycle: free active, pro removed
+		await expectCustomerProducts({
+			customer: customerAfterCycle,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
+
+		// Features at free tier (50 included)
+		expectCustomerFeatureCorrect({
+			customer: customerAfterCycle,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
+
+		// Only pro invoice ($20), no overage since usage was under included
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterCycle,
+			count: 2,
+			latestTotal: 0,
+			latestInvoiceProductIds: [pro.id],
+		});
+
+		// After downgrading to free, there should be no Stripe subscription
+		await expectNoStripeSubscription({
+			db: ctxAfter.db,
+			customerId,
+			org: ctxAfter.org,
+			env: ctxAfter.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Pro with consumable, into overage, to free
@@ -180,83 +201,86 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 1: pro with c
  * - Overage charged at cycle end when downgrade completes ($5.00)
  * - After cycle: free active, overage billed to pro invoice
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 2: pro with consumable, into overage, to free")}`, async () => {
-	const customerId = "sched-switch-cons-overage";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 2: pro with consumable, into overage, to free")}`,
+	async () => {
+		const customerId = "sched-switch-cons-overage";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
-	const pro = products.pro({
-		id: "pro",
-		items: [consumableItem],
-	});
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const pro = products.pro({
+			id: "pro",
+			items: [consumableItem],
+		});
 
-	const freeMessages = items.monthlyMessages({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeMessages],
-	});
+		const freeMessages = items.monthlyMessages({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeMessages],
+		});
 
-	const usageAmount = 150; // 50 overage
+		const usageAmount = 150; // 50 overage
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id }),
-			s.track({
-				featureId: TestFeature.Messages,
-				value: usageAmount,
-				timeout: 2000,
-			}),
-			s.billing.attach({ productId: free.id }), // Schedule downgrade
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: usageAmount,
+					timeout: 2000,
+				}),
+				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Calculate expected overage: 50 units * $0.10 = $5.00
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: pro.items,
-		usage: [{ featureId: TestFeature.Messages, value: usageAmount }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
-	expect(expectedOverage).toBe(5);
+		// Calculate expected overage: 50 units * $0.10 = $5.00
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: pro.items,
+			usage: [{ featureId: TestFeature.Messages, value: usageAmount }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
+		expect(expectedOverage).toBe(5);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After cycle: free active, pro removed
-	await expectCustomerProducts({
-		customer,
-		active: [free.id],
-		notPresent: [pro.id],
-	});
+		// After cycle: free active, pro removed
+		await expectCustomerProducts({
+			customer,
+			active: [free.id],
+			notPresent: [pro.id],
+		});
 
-	// Features at free tier (50 included)
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
+		// Features at free tier (50 included)
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
 
-	// Pro invoice ($20) + overage ($5) = $25
-	// Note: The overage is typically added to the final invoice
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: expectedOverage,
-		latestInvoiceProductIds: [pro.id],
-	});
+		// Pro invoice ($20) + overage ($5) = $25
+		// Note: The overage is typically added to the final invoice
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: expectedOverage,
+			latestInvoiceProductIds: [pro.id],
+		});
 
-	// After downgrading to free, there should be no Stripe subscription
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// After downgrading to free, there should be no Stripe subscription
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 3: Premium with consumable overage, downgrade to pro
@@ -273,86 +297,89 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 2: pro with c
  * - Overage billed to Premium ($10)
  * - Pro active with balance reset
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 3: premium with consumable overage, downgrade to pro")}`, async () => {
-	const customerId = "sched-switch-premium-cons-to-pro";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 3: premium with consumable overage, downgrade to pro")}`,
+	async () => {
+		const customerId = "sched-switch-premium-cons-to-pro";
 
-	const consumableItem = items.consumableMessages({ includedUsage: 100 });
+		const consumableItem = items.consumableMessages({ includedUsage: 100 });
 
-	const premium = products.premium({
-		id: "premium",
-		items: [consumableItem],
-	});
+		const premium = products.premium({
+			id: "premium",
+			items: [consumableItem],
+		});
 
-	const proConsumable = items.consumableMessages({ includedUsage: 50 });
-	const pro = products.pro({
-		id: "pro",
-		items: [proConsumable],
-	});
+		const proConsumable = items.consumableMessages({ includedUsage: 50 });
+		const pro = products.pro({
+			id: "pro",
+			items: [proConsumable],
+		});
 
-	const usageAmount = 200; // 100 overage
+		const usageAmount = 200; // 100 overage
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro] }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, timeout: 5000 }),
-			s.track({
-				featureId: TestFeature.Messages,
-				value: usageAmount,
-				timeout: 2000,
-			}),
-			s.billing.attach({ productId: pro.id }), // Schedule downgrade
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, timeout: 5000 }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: usageAmount,
+					timeout: 2000,
+				}),
+				s.billing.attach({ productId: pro.id }), // Schedule downgrade
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Verify Stripe subscription after all operations
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after all operations
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Calculate expected overage: 100 units * $0.10 = $10.00
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: premium.items,
-		usage: [{ featureId: TestFeature.Messages, value: usageAmount }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
-	expect(expectedOverage).toBe(10);
+		// Calculate expected overage: 100 units * $0.10 = $10.00
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: premium.items,
+			usage: [{ featureId: TestFeature.Messages, value: usageAmount }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
+		expect(expectedOverage).toBe(10);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After cycle: pro active, premium removed
-	await expectCustomerProducts({
-		customer,
-		active: [pro.id],
-		notPresent: [premium.id],
-	});
+		// After cycle: pro active, premium removed
+		await expectCustomerProducts({
+			customer,
+			active: [pro.id],
+			notPresent: [premium.id],
+		});
 
-	// Features at pro tier (50 included), balance reset
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 0,
-	});
+		// Features at pro tier (50 included), balance reset
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			balance: 50,
+			usage: 0,
+		});
 
-	// Invoices:
-	// 1. Premium ($50) + overage at cycle end ($10) = $60
-	// 2. Pro renewal ($20)
-	// Note: The exact invoice structure depends on implementation
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
-		latestInvoiceProductIds: [pro.id, premium.id],
-	});
-});
+		// Invoices:
+		// 1. Premium ($50) + overage at cycle end ($10) = $60
+		// 2. Pro renewal ($20)
+		// Note: The exact invoice structure depends on implementation
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: 20 + expectedOverage, // Pro renewal + premium overage
+			latestInvoiceProductIds: [pro.id, premium.id],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Premium with consumable credits, downgrade to pro
@@ -369,96 +396,99 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 3: premium wi
  * - Overage charged on premium ($10) at cycle end
  * - Pro active with usage reset to 0 and balance at 100 (pro's included)
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 4: premium with consumable credits, downgrade to pro")}`, async () => {
-	const customerId = "sched-switch-premium-credits-to-pro";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 4: premium with consumable credits, downgrade to pro")}`,
+	async () => {
+		const customerId = "sched-switch-premium-credits-to-pro";
 
-	const premiumConsumableCredits = items.consumable({
-		featureId: TestFeature.Credits,
-		includedUsage: 200,
-		price: 0.1,
-		billingUnits: 1,
-	});
+		const premiumConsumableCredits = items.consumable({
+			featureId: TestFeature.Credits,
+			includedUsage: 200,
+			price: 0.1,
+			billingUnits: 1,
+		});
 
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumConsumableCredits],
-	});
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumConsumableCredits],
+		});
 
-	const proConsumableCredits = items.consumable({
-		featureId: TestFeature.Credits,
-		includedUsage: 100,
-		price: 0.1,
-		billingUnits: 1,
-	});
+		const proConsumableCredits = items.consumable({
+			featureId: TestFeature.Credits,
+			includedUsage: 100,
+			price: 0.1,
+			billingUnits: 1,
+		});
 
-	const pro = products.pro({
-		id: "pro",
-		items: [proConsumableCredits],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [proConsumableCredits],
+		});
 
-	const usageAmount = 300; // 100 overage (300 - 200 included)
+		const usageAmount = 300; // 100 overage (300 - 200 included)
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro] }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, timeout: 5000 }),
-			s.track({
-				featureId: TestFeature.Credits,
-				value: usageAmount,
-				timeout: 2000,
-			}),
-			s.billing.attach({ productId: pro.id }), // Schedule downgrade
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, pro] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, timeout: 5000 }),
+				s.track({
+					featureId: TestFeature.Credits,
+					value: usageAmount,
+					timeout: 2000,
+				}),
+				s.billing.attach({ productId: pro.id }), // Schedule downgrade
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Verify Stripe subscription after all operations
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
+		// Verify Stripe subscription after all operations
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
 
-	// Calculate expected overage: 100 units * $0.10 = $10.00
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: premium.items,
-		usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
-	expect(expectedOverage).toBe(10);
+		// Calculate expected overage: 100 units * $0.10 = $10.00
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: premium.items,
+			usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
+		expect(expectedOverage).toBe(10);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After cycle: pro active, premium removed
-	await expectCustomerProducts({
-		customer,
-		active: [pro.id],
-		notPresent: [premium.id],
-	});
+		// After cycle: pro active, premium removed
+		await expectCustomerProducts({
+			customer,
+			active: [pro.id],
+			notPresent: [premium.id],
+		});
 
-	// Features at pro tier (100 included), usage reset to 0
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Credits,
-		balance: 100,
-		usage: 0,
-	});
+		// Features at pro tier (100 included), usage reset to 0
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Credits,
+			balance: 100,
+			usage: 0,
+		});
 
-	// Invoices:
-	// 1. Premium ($50) initial
-	// 2. Pro renewal ($20) + premium overage ($10) = $30
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: 20 + expectedOverage,
-		latestInvoiceProductIds: [pro.id, premium.id],
-	});
-});
+		// Invoices:
+		// 1. Premium ($50) initial
+		// 2. Pro renewal ($20) + premium overage ($10) = $30
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: 20 + expectedOverage,
+			latestInvoiceProductIds: [pro.id, premium.id],
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 5: Premium with consumable credits, downgrade to free
@@ -476,87 +506,90 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 4: premium wi
  * - Free active with usage reset to 0 and balance at 50 (free's included)
  * - No Stripe subscription after downgrade to free
  */
-test.concurrent(`${chalk.yellowBright("scheduled-switch-consumable 5: premium with consumable credits, downgrade to free")}`, async () => {
-	const customerId = "sched-switch-premium-credits-to-free";
+test.concurrent(
+	`${chalk.yellowBright("scheduled-switch-consumable 5: premium with consumable credits, downgrade to free")}`,
+	async () => {
+		const customerId = "sched-switch-premium-credits-to-free";
 
-	const premiumConsumableCredits = items.consumable({
-		featureId: TestFeature.Credits,
-		includedUsage: 200,
-		price: 0.1,
-		billingUnits: 1,
-	});
+		const premiumConsumableCredits = items.consumable({
+			featureId: TestFeature.Credits,
+			includedUsage: 200,
+			price: 0.1,
+			billingUnits: 1,
+		});
 
-	const premium = products.premium({
-		id: "premium",
-		items: [premiumConsumableCredits],
-	});
+		const premium = products.premium({
+			id: "premium",
+			items: [premiumConsumableCredits],
+		});
 
-	const freeCredits = items.monthlyCredits({ includedUsage: 50 });
-	const free = products.base({
-		id: "free",
-		items: [freeCredits],
-	});
+		const freeCredits = items.monthlyCredits({ includedUsage: 50 });
+		const free = products.base({
+			id: "free",
+			items: [freeCredits],
+		});
 
-	const usageAmount = 350; // 150 overage (350 - 200 included)
+		const usageAmount = 350; // 150 overage (350 - 200 included)
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, free] }),
-		],
-		actions: [
-			s.billing.attach({ productId: premium.id, timeout: 5000 }),
-			s.track({
-				featureId: TestFeature.Credits,
-				value: usageAmount,
-				timeout: 2000,
-			}),
-			s.billing.attach({ productId: free.id }), // Schedule downgrade
-			s.advanceToNextInvoice({ withPause: true }),
-		],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [premium, free] }),
+			],
+			actions: [
+				s.billing.attach({ productId: premium.id, timeout: 5000 }),
+				s.track({
+					featureId: TestFeature.Credits,
+					value: usageAmount,
+					timeout: 2000,
+				}),
+				s.billing.attach({ productId: free.id }), // Schedule downgrade
+				s.advanceToNextInvoice({ withPause: true }),
+			],
+		});
 
-	// Calculate expected overage: 150 units * $0.10 = $15.00
-	const expectedOverage = calculateExpectedInvoiceAmount({
-		items: premium.items,
-		usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
-		options: { includeFixed: false, onlyArrear: true },
-	});
-	expect(expectedOverage).toBe(15);
+		// Calculate expected overage: 150 units * $0.10 = $15.00
+		const expectedOverage = calculateExpectedInvoiceAmount({
+			items: premium.items,
+			usage: [{ featureId: TestFeature.Credits, value: usageAmount }],
+			options: { includeFixed: false, onlyArrear: true },
+		});
+		expect(expectedOverage).toBe(15);
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-	// After cycle: free active, premium removed
-	await expectCustomerProducts({
-		customer,
-		active: [free.id],
-		notPresent: [premium.id],
-	});
+		// After cycle: free active, premium removed
+		await expectCustomerProducts({
+			customer,
+			active: [free.id],
+			notPresent: [premium.id],
+		});
 
-	// Features at free tier (50 included), usage reset to 0
-	expectCustomerFeatureCorrect({
-		customer,
-		featureId: TestFeature.Credits,
-		balance: 50,
-		usage: 0,
-	});
+		// Features at free tier (50 included), usage reset to 0
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Credits,
+			balance: 50,
+			usage: 0,
+		});
 
-	// Invoices:
-	// 1. Premium ($50) initial
-	// 2. Premium overage ($15) at cycle end
-	await expectCustomerInvoiceCorrect({
-		customer,
-		count: 2,
-		latestTotal: expectedOverage,
-		latestInvoiceProductIds: [premium.id],
-	});
+		// Invoices:
+		// 1. Premium ($50) initial
+		// 2. Premium overage ($15) at cycle end
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: expectedOverage,
+			latestInvoiceProductIds: [premium.id],
+		});
 
-	// After downgrading to free, there should be no Stripe subscription
-	await expectNoStripeSubscription({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// After downgrading to free, there should be no Stripe subscription
+		await expectNoStripeSubscription({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);

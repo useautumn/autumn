@@ -1,18 +1,9 @@
 export * from "./aggregatedUtils/index.js";
+export { buildNormalizeSpendLimitForCompare } from "./buildNormalizeSpendLimitForCompare.js";
 export { fullSubjectHasUsageBasedAllocated } from "./classifyFullSubject.js";
 export { fullCustomerToFullSubject } from "./fullCustomerToFullSubject.js";
 export { fullSubjectToApiCustomerProducts } from "./fullSubjectToApiCustomerProducts.js";
 export { fullSubjectToApiUsageLimits } from "./fullSubjectToApiUsageLimits.js";
-export {
-	findPlanBillingControl,
-	findPlanBillingControlWithProduct,
-	fullCustomerToPlanProducts,
-	fullSubjectToPlanProducts,
-	DEFAULT_PLAN_CONTROL_STATUSES,
-	getPlanBillingControlProducts,
-	resolveBillingControl,
-	resolveBillingControlWithProduct,
-} from "./planBillingControlUtils.js";
 export { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 export { fullSubjectToFullCustomer } from "./fullSubjectToFullCustomer.js";
 export { fullSubjectToOverageAllowedByFeatureId } from "./fullSubjectToOverageAllowed.js";
@@ -26,4 +17,15 @@ export {
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
 } from "./mergeCustomerBillingControlsForCheck.js";
+export { mergePlanBillingControlsForResponse } from "./mergePlanBillingControlsForResponse.js";
 export { normalizedToFullSubject } from "./normalizedToFullSubject.js";
+export {
+	DEFAULT_PLAN_CONTROL_STATUSES,
+	findPlanBillingControl,
+	findPlanBillingControlWithProduct,
+	fullCustomerToPlanProducts,
+	fullSubjectToPlanProducts,
+	getPlanBillingControlProducts,
+	resolveBillingControl,
+	resolveBillingControlWithProduct,
+} from "./planBillingControlUtils.js";

@@ -465,6 +465,20 @@ export type UpdateEntityLimitTypeResponse = OpenEnum<
   typeof UpdateEntityLimitTypeResponse
 >;
 
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntitySpendLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntitySpendLimitSource = OpenEnum<
+  typeof UpdateEntitySpendLimitSource
+>;
+
 export type UpdateEntitySpendLimitResponse = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -486,6 +500,10 @@ export type UpdateEntitySpendLimitResponse = {
    * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
    */
   skipOverageBilling?: boolean | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntitySpendLimitSource | undefined;
 };
 
 /**
@@ -510,6 +528,20 @@ export type UpdateEntityIntervalResponse = OpenEnum<
 export type UpdateEntityFilterResponse = {
   properties: { [k: string]: any };
 };
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntityUsageLimitSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntityUsageLimitSource = OpenEnum<
+  typeof UpdateEntityUsageLimitSource
+>;
 
 export type UpdateEntityUsageLimitResponse = {
   /**
@@ -536,6 +568,10 @@ export type UpdateEntityUsageLimitResponse = {
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
   usage?: number | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntityUsageLimitSource | undefined;
 };
 
 /**
@@ -552,6 +588,20 @@ export const UpdateEntityThresholdTypeResponse = {
  */
 export type UpdateEntityThresholdTypeResponse = OpenEnum<
   typeof UpdateEntityThresholdTypeResponse
+>;
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntityUsageAlertSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntityUsageAlertSource = OpenEnum<
+  typeof UpdateEntityUsageAlertSource
 >;
 
 export type UpdateEntityUsageAlertResponse = {
@@ -575,7 +625,25 @@ export type UpdateEntityUsageAlertResponse = {
    * Optional user-defined label to distinguish multiple alerts on the same feature.
    */
   name?: string | undefined;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntityUsageAlertSource | undefined;
 };
+
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export const UpdateEntityOverageAllowedSource = {
+  Customer: "customer",
+  Plan: "plan",
+} as const;
+/**
+ * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+ */
+export type UpdateEntityOverageAllowedSource = OpenEnum<
+  typeof UpdateEntityOverageAllowedSource
+>;
 
 export type UpdateEntityOverageAllowedResponse = {
   /**
@@ -586,6 +654,10 @@ export type UpdateEntityOverageAllowedResponse = {
    * Whether overage is allowed for this feature.
    */
   enabled: boolean;
+  /**
+   * Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+   */
+  source?: UpdateEntityOverageAllowedSource | undefined;
 };
 
 /**
@@ -1281,6 +1353,12 @@ export const UpdateEntityLimitTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityLimitTypeResponse);
 
 /** @internal */
+export const UpdateEntitySpendLimitSource$inboundSchema: z.ZodMiniType<
+  UpdateEntitySpendLimitSource,
+  unknown
+> = openEnums.inboundSchema(UpdateEntitySpendLimitSource);
+
+/** @internal */
 export const UpdateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateEntitySpendLimitResponse,
   unknown
@@ -1291,6 +1369,7 @@ export const UpdateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
     limit_type: types.optional(UpdateEntityLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
     skip_overage_billing: types.optional(types.boolean()),
+    source: types.optional(UpdateEntitySpendLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1337,6 +1416,12 @@ export function updateEntityFilterResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateEntityUsageLimitSource$inboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitSource,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityUsageLimitSource);
+
+/** @internal */
 export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityUsageLimitResponse,
   unknown
@@ -1350,6 +1435,7 @@ export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
       z.lazy(() => UpdateEntityFilterResponse$inboundSchema),
     ),
     usage: types.optional(types.number()),
+    source: types.optional(UpdateEntityUsageLimitSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1375,6 +1461,12 @@ export const UpdateEntityThresholdTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityThresholdTypeResponse);
 
 /** @internal */
+export const UpdateEntityUsageAlertSource$inboundSchema: z.ZodMiniType<
+  UpdateEntityUsageAlertSource,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityUsageAlertSource);
+
+/** @internal */
 export const UpdateEntityUsageAlertResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityUsageAlertResponse,
   unknown
@@ -1385,6 +1477,7 @@ export const UpdateEntityUsageAlertResponse$inboundSchema: z.ZodMiniType<
     threshold: types.number(),
     threshold_type: UpdateEntityThresholdTypeResponse$inboundSchema,
     name: types.optional(types.string()),
+    source: types.optional(UpdateEntityUsageAlertSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1405,6 +1498,12 @@ export function updateEntityUsageAlertResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateEntityOverageAllowedSource$inboundSchema: z.ZodMiniType<
+  UpdateEntityOverageAllowedSource,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityOverageAllowedSource);
+
+/** @internal */
 export const UpdateEntityOverageAllowedResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityOverageAllowedResponse,
   unknown
@@ -1412,6 +1511,7 @@ export const UpdateEntityOverageAllowedResponse$inboundSchema: z.ZodMiniType<
   z.object({
     feature_id: types.string(),
     enabled: z._default(types.boolean(), false),
+    source: types.optional(UpdateEntityOverageAllowedSource$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

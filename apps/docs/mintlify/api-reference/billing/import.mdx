@@ -263,15 +263,23 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
               <Expandable title="properties">
                 <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
-                  The time interval for the purchase limit window.
+                  The time interval for the purchase limit window. Null when no purchase limit is configured.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="interval_count" type="number">
-                  Number of intervals in the purchase limit window.
+                <DynamicResponseField name="interval_count" type="number | null">
+                  Number of intervals in the purchase limit window. Null when no purchase limit is configured.
                 </DynamicResponseField>
 
-                <DynamicResponseField name="limit" type="number">
-                  Maximum number of auto top-ups allowed within the interval.
+                <DynamicResponseField name="limit" type="number | null">
+                  Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="count" type="number">
+                  Number of auto top-ups already consumed in the current window.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="next_reset_at" type="number">
+                  Unix ms timestamp when the current purchase window ends and the count resets.
                 </DynamicResponseField>
 
               </Expandable>
@@ -279,6 +287,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="invoice_mode" type="boolean">
               When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
             </DynamicResponseField>
 
           </Expandable>
@@ -305,6 +317,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="skip_overage_billing" type="boolean">
               When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
             </DynamicResponseField>
 
           </Expandable>
@@ -341,6 +357,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Current usage already consumed in the active interval. Response-only; not stored on billing controls.
             </DynamicResponseField>
 
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -367,6 +387,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Optional user-defined label to distinguish multiple alerts on the same feature.
             </DynamicResponseField>
 
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
+            </DynamicResponseField>
+
           </Expandable>
         </DynamicResponseField>
 
@@ -379,6 +403,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicResponseField name="enabled" type="boolean">
               Whether overage is allowed for this feature.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="source" type="'customer' | 'plan'">
+              Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults.
             </DynamicResponseField>
 
           </Expandable>

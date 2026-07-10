@@ -1,13 +1,12 @@
 import {
 	type ApiCustomerV5,
 	type ApiEntityV2,
-	type DbSpendLimit,
+	buildNormalizeSpendLimitForCompare,
 	DEFAULT_PLAN_CONTROL_STATUSES,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	mergeCustomerBillingControlsForCheck,
 	mergePlanBillingControlsForCheck,
-	resolveSpendLimitOverageLimit,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBaseV2 } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerBaseV2.js";
@@ -45,23 +44,10 @@ export const buildEvaluationSubject = async ({
 		fullSubject.aggregated_customer_entitlements?.find(
 			(entitlement) => entitlement.feature_id === featureId,
 		)?.allowance_total ?? 0;
-	const normalizeSpendLimitForCompare = (
-		control: DbSpendLimit,
-	): DbSpendLimit => {
-		if (control.limit_type !== "usage_percentage" || !control.feature_id) {
-			return control;
-		}
-		return {
-			...control,
-			overage_limit: resolveSpendLimitOverageLimit({
-				spendLimit: control,
-				cusEnts: cusEntsForFeature(control.feature_id),
-				entityId,
-				additionalAllowance: additionalAllowanceForFeature(control.feature_id),
-			}),
-			limit_type: "absolute",
-		};
-	};
+	const normalizeSpendLimitForCompare = buildNormalizeSpendLimitForCompare({
+		fullSubject,
+		entityId,
+	});
 
 	if (fullSubject.subjectType === "entity") {
 		const { apiCustomer } = await getApiCustomerBaseV2({

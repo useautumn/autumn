@@ -1,7 +1,6 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
-	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -10,13 +9,12 @@ import {
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 	fullSubjectToUsageWindowLimits,
 	getMaxOverage,
-	usageLimitFilterMatchesProperties,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
-	RecaseError,
+	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
@@ -133,15 +131,6 @@ export const prepareFeatureDeductionV2 = ({
 		now,
 		inStatuses: orgToInStatuses({ org }),
 	});
-	// set_usage carries no window provenance, so it would silently bypass the hard
-	// cap; reject it when the feature has ANY enforced usage window (filtered
-	// included -- set_usage has no properties to honor a filtered counter with).
-	if (notNullish(targetBalance) && allUsageWindowLimits.length > 0) {
-		throw new RecaseError({
-			message: `Cannot set usage for feature ${feature.id}: it has an active usage limit. Remove or adjust the limit, or record usage normally instead of using set_usage.`,
-			code: ErrCode.SetUsageNotAllowedWithUsageLimit,
-		});
-	}
 
 	// Filtered limits only bind events whose properties match; the script never
 	// sees non-matching limits, so their counters stay untouched.

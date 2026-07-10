@@ -1,6 +1,6 @@
 import { Terminal, useTerminal } from "@wterm/react";
 import "@wterm/react/css";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Read-only terminal surface (WTERM). Renders raw test/server output WITH its
@@ -29,9 +29,12 @@ const toCrlf = (s: string): string => s.replace(/\r?\n/g, "\r\n");
 export function TerminalOutput({ text }: { text: string }) {
 	const { ref, write } = useTerminal();
 	const written = useRef("");
+	// WTERM drops write() until its async WASM init completes — writing before
+	// onReady silently loses the initial buffer, so hold all writes until then.
+	const [ready, setReady] = useState(false);
 
 	useEffect(() => {
-		if (text === written.current) {
+		if (!ready || text === written.current) {
 			return;
 		}
 		if (text.startsWith(written.current)) {
@@ -42,7 +45,7 @@ export function TerminalOutput({ text }: { text: string }) {
 			write(toCrlf(text));
 		}
 		written.current = text;
-	}, [text, write]);
+	}, [text, write, ready]);
 
 	return (
 		<Terminal
@@ -53,6 +56,7 @@ export function TerminalOutput({ text }: { text: string }) {
 			onData={() => {
 				/* read-only */
 			}}
+			onReady={() => setReady(true)}
 			ref={ref}
 		/>
 	);

@@ -18,6 +18,7 @@ type CreateInvoiceParams = {
 	footer?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
 	automaticTax?: boolean;
+	defaultTaxRates?: string[];
 };
 
 export const createStripeInvoice = async ({
@@ -32,7 +33,10 @@ export const createStripeInvoice = async ({
 	metadata,
 	discounts,
 	automaticTax,
+	defaultTaxRates,
 }: CreateInvoiceParams): Promise<Stripe.Invoice> => {
+	// Stripe rejects default_tax_rates alongside automatic_tax; a manual rate takes precedence.
+	const hasManualTaxRates = Boolean(defaultTaxRates?.length);
 	const invoice = await stripeCli.invoices.create({
 		customer: stripeCusId,
 		auto_advance: false,
@@ -45,7 +49,10 @@ export const createStripeInvoice = async ({
 		days_until_due:
 			collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
 		...(discounts ? { discounts } : {}),
-		...(automaticTax ? { automatic_tax: { enabled: true } } : {}),
+		...(hasManualTaxRates ? { default_tax_rates: defaultTaxRates } : {}),
+		...(automaticTax && !hasManualTaxRates
+			? { automatic_tax: { enabled: true } }
+			: {}),
 	});
 
 	return invoice;

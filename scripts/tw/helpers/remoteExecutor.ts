@@ -89,7 +89,15 @@ export const buildTestArgv = (
  * which simply omits `failedTestNames`, so this only ever sees real names.
  */
 const joinTestNamePattern = (names: string[]): string =>
-	names.map((name) => escapeRegex(name)).join("|");
+	names.map((name) => toTestNameRegex(name)).join("|");
+
+// Bun matches --test-name-pattern against SPACE-joined describe>test labels,
+// but prints them " > "-joined; escaping verbatim would match 0 tests.
+const toTestNameRegex = (name: string): string =>
+	name
+		.split(" > ")
+		.map((segment) => escapeRegex(segment))
+		.join(" ");
 
 const REGEX_SPECIAL_CHARS = /[.*+?^${}()|[\]\\]/g;
 const escapeRegex = (value: string): string =>

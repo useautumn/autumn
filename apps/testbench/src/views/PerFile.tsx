@@ -1,4 +1,12 @@
+import { ListFilter, SkipForward } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -8,7 +16,16 @@ import { cn } from "@/lib/utils";
 import { TerminalOutput } from "../Terminal";
 import type { FileRow, Snapshot } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
-import { FileStatusBadge, Pill } from "../widgets";
+import { FileStatusBadge, Pill, sortFilesForTriage } from "../widgets";
+
+const ALL_STATUSES: FileRow["status"][] = [
+	"running",
+	"retrying",
+	"failed",
+	"pending",
+	"skipped",
+	"passed",
+];
 
 function FileList({
 	files,
@@ -20,17 +37,61 @@ function FileList({
 	onPick: (file: string) => void;
 }) {
 	const [q, setQ] = useState("");
-	const filtered = q
-		? files.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()))
-		: files;
+	const [statuses, setStatuses] = useState<Set<string>>(new Set());
+	const filtered = sortFilesForTriage(
+		files.filter(
+			(f) =>
+				(statuses.size === 0 || statuses.has(f.status)) &&
+				(!q || f.name.toLowerCase().includes(q.toLowerCase())),
+		),
+	);
+	const toggleStatus = (status: string) =>
+		setStatuses((prev) => {
+			const next = new Set(prev);
+			if (next.has(status)) {
+				next.delete(status);
+			} else {
+				next.add(status);
+			}
+			return next;
+		});
 	return (
 		<div className="flex h-full min-h-0 flex-col gap-2">
-			<input
-				className="input-base input-shadow-default input-state-focus h-input w-full shrink-0 rounded-lg border text-sm"
-				onChange={(e) => setQ(e.target.value)}
-				placeholder="filter files…"
-				value={q}
-			/>
+			<div className="flex shrink-0 items-center gap-2">
+				<input
+					className="input-base input-shadow-default input-state-focus h-input w-full rounded-lg border text-sm"
+					onChange={(e) => setQ(e.target.value)}
+					placeholder="filter files…"
+					value={q}
+				/>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							className={cn(
+								"h-input shrink-0",
+								statuses.size > 0 && "text-sandbox",
+							)}
+							size="icon"
+							title="filter by status"
+							variant="outline"
+						>
+							<ListFilter className="size-4" />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end">
+						{ALL_STATUSES.map((status) => (
+							<DropdownMenuCheckboxItem
+								checked={statuses.has(status)}
+								key={status}
+								onCheckedChange={() => toggleStatus(status)}
+								onSelect={(e) => e.preventDefault()}
+							>
+								<FileStatusBadge status={status} />
+							</DropdownMenuCheckboxItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
 			<div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-card">
 				{filtered.map((f) => (
 					<button
@@ -48,6 +109,11 @@ function FileList({
 						<FileStatusBadge status={f.status} />
 					</button>
 				))}
+				{filtered.length === 0 ? (
+					<div className="p-3 text-muted-foreground text-xs">
+						no files match the filter
+					</div>
+				) : null}
 			</div>
 		</div>
 	);
@@ -63,6 +129,7 @@ export function PerFile({
 	const activeFile = socket.sub?.kind === "file" ? socket.sub.key : undefined;
 	const row = snap.files.find((f) => f.file === activeFile);
 	const showOutput = socket.sub?.kind === "file";
+	const [skipRequested, setSkipRequested] = useState<Set<string>>(new Set());
 	return (
 		<ResizablePanelGroup className="h-full" orientation="horizontal">
 			<ResizablePanel defaultSize={28} minSize={18}>
@@ -83,10 +150,28 @@ export function PerFile({
 							<FileStatusBadge status={row.status} />
 							<Pill tone="green">✓ {row.passed}</Pill>
 							<Pill tone="red">✗ {row.failed}</Pill>
+							{row.durationMs ? (
+								<Pill tone="muted">{(row.durationMs / 1000).toFixed(1)}s</Pill>
+							) : null}
 							{row.worker ? (
 								<span className="text-muted-foreground text-xs">
 									on {row.worker}
 								</span>
+							) : null}
+							{row.status === "pending" ? (
+								<Button
+									className="ml-auto"
+									disabled={skipRequested.has(row.file)}
+									onClick={() => {
+										socket.skipFile(row.file);
+										setSkipRequested((prev) => new Set(prev).add(row.file));
+									}}
+									size="sm"
+									variant="outline"
+								>
+									<SkipForward className="mr-1.5 size-3.5" />
+									{skipRequested.has(row.file) ? "skip requested" : "skip"}
+								</Button>
 							) : null}
 						</div>
 					) : (

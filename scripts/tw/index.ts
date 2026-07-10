@@ -20,8 +20,10 @@ import {
 	getAllGroups,
 	getAllSuites,
 } from "../../server/tests/_groups/index.ts";
+import { doctor } from "./commands/doctor.ts";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";
+import { refreshWarm } from "./commands/refreshWarm.ts";
 import { getLastRunExitCode, run } from "./commands/run.ts";
 import {
 	DEFAULT_PER_WORKER,
@@ -32,7 +34,13 @@ import { runPreflight } from "./helpers/preflight.ts";
 import type { ProviderName } from "./helpers/provider.ts";
 import type { TwRunArgs } from "./types.ts";
 
-const RESERVED_SUBCOMMANDS = new Set(["list", "kill", "kill-all"]);
+const RESERVED_SUBCOMMANDS = new Set([
+	"list",
+	"kill",
+	"kill-all",
+	"refresh-warm",
+	"doctor",
+]);
 
 const fatal = (message: string): never => {
 	console.error(chalk.red(`[tw] ${message}`));
@@ -104,10 +112,11 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	if (
 		providerArg !== "vercel" &&
 		providerArg !== "modal" &&
-		providerArg !== "modalv2"
+		providerArg !== "modalv2" &&
+		providerArg !== "freestyle"
 	) {
 		fatal(
-			`--provider must be "vercel", "modal", or "modalv2" (got "${providerArg}")`,
+			`--provider must be "vercel", "modal", "modalv2", or "freestyle" (got "${providerArg}")`,
 		);
 	}
 	const provider = providerArg as ProviderName;
@@ -177,6 +186,8 @@ const printUsage = (): void => {
 			"  bun tw kill <runId>               tear down one run's resources",
 			"  bun tw kill --orphans             tag-sweep fallback for SIGKILL'd runs",
 			"  bun tw kill-all [--all-users]     tear down all your non-completed runs",
+			"  bun tw refresh-warm [--ref=<ref>] synchronously refresh the freestyle warm snapshot (default ref: dev)",
+			"  bun tw doctor                     health check: warm cache, stripe pool, locks, env",
 			"",
 			"Flags:",
 			`  --max=N      pool size (default ${DEFAULT_WORKERS}); auto-capped to file count`,
@@ -186,7 +197,7 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
-			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), or vercel",
+			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), vercel, or freestyle (memory-snapshot restores)",
 			"  --fanout-bench   provision + report fan-out timings, then tear down (no tests)",
 			"",
 			chalk.bold("Env:"),
@@ -229,6 +240,10 @@ const main = async (): Promise<void> => {
 			process.exit(0);
 			break;
 
+		case "doctor":
+			process.exit(await doctor());
+			break;
+
 		case "kill": {
 			const rest = argv.slice(1);
 			if (rest.includes("--orphans")) {
@@ -250,9 +265,20 @@ const main = async (): Promise<void> => {
 			process.exit(0);
 			break;
 
+		case "refresh-warm": {
+			try {
+				process.exit(await refreshWarm(argv.slice(1)));
+			} catch (error) {
+				fatal(
+					`refresh-warm failed: ${error instanceof Error ? error.message : String(error)}`,
+				);
+			}
+			break;
+		}
+
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: list | kill | kill-all, or a test target)`,
+				`unknown subcommand: ${sub} (use: list | kill | kill-all | doctor, or a test target)`,
 			);
 	}
 };
