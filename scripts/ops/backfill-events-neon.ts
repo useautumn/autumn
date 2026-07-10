@@ -4,6 +4,11 @@
 // and ambient AWS credentials.
 import { appendFile } from "node:fs/promises";
 import { $ } from "bun";
+import { Client } from "pg";
+
+// Session-scoped advisory lock: serializes runs so two invocations can't interleave
+// TRUNCATE/COPY/MERGE on the shared events_staging table.
+const ADVISORY_LOCK_KEY = 741_006_001;
 
 const DEFAULT_FROM_MONTH = "2024-04";
 const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/;
@@ -177,6 +182,23 @@ const formatDuration = (seconds: number): string => {
 	return `${Math.floor(minutes / 60)}h${minutes % 60}m`;
 };
 
+// The lock lives on this held session; it auto-releases when the process exits.
+const acquireRunLock = async (neonUrl: string): Promise<Client> => {
+	const client = new Client({ connectionString: neonUrl });
+	await client.connect();
+	const { rows } = await client.query<{ locked: boolean }>(
+		"SELECT pg_try_advisory_lock($1) AS locked",
+		[ADVISORY_LOCK_KEY],
+	);
+	if (!rows[0].locked) {
+		await client.end();
+		fail(
+			"Another backfill run holds the advisory lock — refusing to start a second.",
+		);
+	}
+	return client;
+};
+
 const ensureStagingTable = async (neonUrl: string): Promise<void> => {
 	const result =
 		await $`psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${STAGING_DDL}`
@@ -272,6 +294,7 @@ const main = async (): Promise<void> => {
 	}
 	const orgSlugs = args.org === "all" ? Object.keys(orgs) : [args.org];
 
+	const lockClient = await acquireRunLock(neonUrl);
 	await ensureStagingTable(neonUrl);
 	const doneChunks = await loadDoneChunks();
 	const months = monthsNewestFirst(args.from, args.to);
@@ -329,6 +352,7 @@ const main = async (): Promise<void> => {
 	console.log(
 		"\nVerify in Neon:\n  SELECT org_id, count(*) FROM events GROUP BY 1;",
 	);
+	await lockClient.end();
 };
 
 await main();
