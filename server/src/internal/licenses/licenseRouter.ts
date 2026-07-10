@@ -2,8 +2,6 @@ import {
 	LicenseAttachParamsSchema,
 	LicenseListAssignmentsParamsSchema,
 	LicenseListParamsSchema,
-	LinkLicenseParamsSchema,
-	ListLicenseLinksParamsSchema,
 	Scopes,
 	UpdateLicenseParamsSchema,
 } from "@autumn/shared";
@@ -14,8 +12,6 @@ import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { listLicenseAssignments } from "./actions/assignments/list/listLicenseAssignments.js";
 import { listLicenses } from "./actions/assignments/list/listLicenses.js";
-import { linkLicense } from "./actions/links/linkLicense.js";
-import { listLicenseLinks } from "./actions/links/listLicenseLinks.js";
 
 export const licenseRpcRouter = new Hono<HonoEnv>();
 
@@ -149,33 +145,6 @@ const handleListLicenses = createRoute({
 	},
 });
 
-const handleLinkLicense = createRoute({
-	scopes: [Scopes.Plans.Write],
-	body: LinkLicenseParamsSchema,
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const body = c.req.valid("json");
-		const planLicense = await linkLicense({ ctx, params: body });
-
-		return c.json({ plan_license: planLicense });
-	},
-});
-
-const handleListLicenseLinks = createRoute({
-	scopes: [Scopes.Plans.Read],
-	body: ListLicenseLinksParamsSchema,
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const body = c.req.valid("json");
-		const planLicenses = await listLicenseLinks({
-			ctx,
-			parentPlanId: body.parent_plan_id,
-		});
-
-		return c.json({ list: planLicenses });
-	},
-});
-
 licenseRpcRouter.post("/licenses.attach", ...handleAttachLicense);
 licenseRpcRouter.post("/licenses.update", ...handleUpdateLicense);
 licenseRpcRouter.post(
@@ -191,5 +160,3 @@ licenseRpcRouter.post(
 	...handleListLicenseAssignments,
 );
 licenseRpcRouter.post("/licenses.list", ...handleListLicenses);
-licenseRpcRouter.post("/licenses.link", ...handleLinkLicense);
-licenseRpcRouter.post("/licenses.list_links", ...handleListLicenseLinks);

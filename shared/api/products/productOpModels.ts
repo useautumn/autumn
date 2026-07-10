@@ -1,11 +1,16 @@
-import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
+import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels.js";
+import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../../models/genModels/genEnums.js";
+
+/** A plan-level license link declared inline on a product. The full array is
+ * the complete set of links for the plan: links absent from it are removed. */
+export const PlanLicenseParamsSchema = CustomizePlanLicenseSchema;
 
 // Use the full ProductItemSchema but mark backend fields as internal
 export const CreateProductItemParamsSchema = ProductItemSchema;
@@ -96,6 +101,13 @@ export const CreateProductV2ParamsSchema = z
 			description: descriptions.items,
 		}),
 
+		// internal: dashboard-only license catalog surface, not part of the public product API yet.
+		licenses: z.array(PlanLicenseParamsSchema).optional().meta({
+			internal: true,
+			description:
+				"Plans offered as assignable licenses under this plan. The full set replaces existing links.",
+		}),
+
 		free_trial: CreateFreeTrialSchema.nullish().default(null).meta({
 			description: descriptions.free_trial,
 		}),
@@ -168,6 +180,11 @@ export const UpdateProductV2ParamsSchema = z.object({
 	}),
 
 	items: z.array(CreateProductItemParamsSchema).optional(),
+	licenses: z.array(PlanLicenseParamsSchema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan. The full set replaces existing links.",
+	}),
 	free_trial: CreateFreeTrialSchema.nullish().meta({
 		description: descriptions.free_trial,
 	}),

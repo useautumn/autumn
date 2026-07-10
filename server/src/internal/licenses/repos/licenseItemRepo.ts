@@ -320,6 +320,72 @@ const cloneItems = async ({
 	}
 };
 
+type EntitlementRow = typeof entitlements.$inferSelect;
+type PriceRow = typeof prices.$inferSelect;
+export type ItemRef<Row> = { refId: string; row: Row };
+
+/** A product version's license item refs paired with the underlying base/custom
+ * row, keyed by ref id so version roll-forward can repoint each ref. */
+const listItemRefsByInternalProductId = async ({
+	db,
+	internalProductId,
+}: {
+	db: DrizzleCli;
+	internalProductId: string;
+}): Promise<{
+	entitlements: ItemRef<EntitlementRow>[];
+	prices: ItemRef<PriceRow>[];
+}> => {
+	const [entitlementRefs, priceRefs] = await Promise.all([
+		db
+			.select({ refId: licenseEntitlements.id, row: entitlements })
+			.from(licenseEntitlements)
+			.innerJoin(
+				entitlements,
+				eq(entitlements.id, licenseEntitlements.entitlement_id),
+			)
+			.where(eq(entitlements.internal_product_id, internalProductId)),
+		db
+			.select({ refId: licensePrices.id, row: prices })
+			.from(licensePrices)
+			.innerJoin(prices, eq(prices.id, licensePrices.price_id))
+			.where(eq(prices.internal_product_id, internalProductId)),
+	]);
+	return { entitlements: entitlementRefs, prices: priceRefs };
+};
+
+/** A version's non-custom base rows — the repoint targets when items roll
+ * forward onto a new product version. */
+const listBaseRowsByInternalProductId = async ({
+	db,
+	internalProductId,
+}: {
+	db: DrizzleCli;
+	internalProductId: string;
+}): Promise<{ entitlements: EntitlementRow[]; prices: PriceRow[] }> => {
+	const [baseEntitlements, basePrices] = await Promise.all([
+		db
+			.select()
+			.from(entitlements)
+			.where(
+				and(
+					eq(entitlements.internal_product_id, internalProductId),
+					eq(entitlements.is_custom, false),
+				),
+			),
+		db
+			.select()
+			.from(prices)
+			.where(
+				and(
+					eq(prices.internal_product_id, internalProductId),
+					eq(prices.is_custom, false),
+				),
+			),
+	]);
+	return { entitlements: baseEntitlements, prices: basePrices };
+};
+
 export const licenseItemRepo = {
 	listByPlanLicenseIds,
 	replaceItems,
@@ -330,4 +396,6 @@ export const licenseItemRepo = {
 	setPriceRef,
 	listReferencedEntitlementIds,
 	listReferencedPriceIds,
+	listItemRefsByInternalProductId,
+	listBaseRowsByInternalProductId,
 } as const;

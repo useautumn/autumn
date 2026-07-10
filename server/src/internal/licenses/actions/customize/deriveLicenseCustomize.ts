@@ -9,10 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
-import {
-	type LicenseItemRows,
-	licenseItemRepo,
-} from "../../repos/licenseItemRepo.js";
+import type { LicenseItemRows } from "../../repos/licenseItemRepo.js";
 import { effectiveProductFromItems } from "./resolveEffectiveLicenseProduct.js";
 
 const productToApiPlan = ({
@@ -50,23 +47,6 @@ export const deriveCustomizeFromItems = ({
 		to: productToApiPlan({ ctx, product: effective }),
 	});
 	return Object.keys(diff).length === 0 ? null : diff;
-};
-
-/** Derived `customize` diff for API responses: null when stock. */
-export const deriveLicenseCustomize = async ({
-	ctx,
-	licenseProduct,
-	planLicenseId,
-}: {
-	ctx: AutumnContext;
-	licenseProduct: FullProduct;
-	planLicenseId: string;
-}): Promise<DiffedCustomizePlanV1 | null> => {
-	const itemRows = await licenseItemRepo.listByPlanLicenseIds({
-		db: ctx.db,
-		planLicenseIds: [planLicenseId],
-	});
-	return deriveCustomizeFromItems({ ctx, licenseProduct, itemRows });
 };
 
 /**

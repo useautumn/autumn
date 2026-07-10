@@ -13,6 +13,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
@@ -100,8 +101,7 @@ export const updateProduct = async ({
 	skipVariantUpdates = false,
 }: UpdateProductParams) => {
 	const { db, org, env, features } = ctx;
-	const { version, upsert, disable_version, force_version, all_versions } =
-		query;
+	const { version, disable_version, force_version, all_versions } = query;
 	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
 	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
@@ -227,7 +227,7 @@ export const updateProduct = async ({
 	const newProductV2: ProductV2 = {
 		...curProductV2,
 		...productUpdates,
-		group: productUpdates.group ?? curProductV2.group ?? "",
+		group: productUpdates.group || curProductV2.group || "",
 		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
 		billing_controls: mergeBillingControls(
@@ -270,6 +270,14 @@ export const updateProduct = async ({
 		baseProduct: fullProduct,
 		org,
 		features,
+	});
+
+	// Sync the plan's catalog license links before any versioning branch, so a
+	// new version carries the updated links forward via copyPlanLicensesToNewVersion.
+	await syncPlanLicenses({
+		ctx,
+		parentProduct: fullProduct,
+		licenses: productUpdates.licenses,
 	});
 
 	const itemsExist = notNullish(productUpdates.items);

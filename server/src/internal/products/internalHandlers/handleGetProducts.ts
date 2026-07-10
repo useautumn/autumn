@@ -16,8 +16,8 @@ const GetProductsQuerySchema = z.object({
 	all_versions: z.boolean().default(false),
 });
 
-/** Variants store base_internal_product_id pointing at a specific (often older)
- * version; resolve it to the stable public base id so the UI can group them. */
+/** Resolve a variant's base_internal_product_id to the stable public base id
+ * so the UI can group a plan's variants together. */
 const productsToV2WithBaseIds = async ({
 	db,
 	orgId,

@@ -4,8 +4,6 @@ import {
 	customerProducts,
 	entitlements,
 	type FullProduct,
-	licenseEntitlements,
-	licensePrices,
 	planLicenses,
 	prices,
 } from "@autumn/shared";
@@ -13,6 +11,7 @@ import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
+import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import {
 	findBaseSlotReplacementPrice,
@@ -43,10 +42,11 @@ const repointEntitlementBaseRefs = async ({
 			replacementEntitlements: newEntitlements,
 		});
 		if (!replacement) continue;
-		await tx
-			.update(licenseEntitlements)
-			.set({ entitlement_id: replacement.id })
-			.where(eq(licenseEntitlements.id, refId));
+		await licenseItemRepo.setEntitlementRef({
+			db: tx,
+			refId,
+			entitlementId: replacement.id,
+		});
 	}
 };
 
@@ -86,10 +86,11 @@ const repointPriceBaseRefs = async ({
 					previousPrice: row,
 				});
 		if (!replacement) continue;
-		await tx
-			.update(licensePrices)
-			.set({ price_id: replacement.id })
-			.where(eq(licensePrices.id, refId));
+		await licenseItemRepo.setPriceRef({
+			db: tx,
+			refId,
+			priceId: replacement.id,
+		});
 	}
 };
 
@@ -104,19 +105,11 @@ const rollForwardItems = async ({
 	fromInternalProductId: string;
 	toInternalProductId: string;
 }) => {
-	const itemEntitlements = await tx
-		.select({ refId: licenseEntitlements.id, row: entitlements })
-		.from(licenseEntitlements)
-		.innerJoin(
-			entitlements,
-			eq(entitlements.id, licenseEntitlements.entitlement_id),
-		)
-		.where(eq(entitlements.internal_product_id, fromInternalProductId));
-	const itemPrices = await tx
-		.select({ refId: licensePrices.id, row: prices })
-		.from(licensePrices)
-		.innerJoin(prices, eq(prices.id, licensePrices.price_id))
-		.where(eq(prices.internal_product_id, fromInternalProductId));
+	const { entitlements: itemEntitlements, prices: itemPrices } =
+		await licenseItemRepo.listItemRefsByInternalProductId({
+			db: tx,
+			internalProductId: fromInternalProductId,
+		});
 	if (itemEntitlements.length === 0 && itemPrices.length === 0) return;
 
 	// Custom rows belong to a single version, so they move wholesale to the new
@@ -140,26 +133,11 @@ const rollForwardItems = async ({
 			.where(inArray(prices.id, customPriceIds));
 	}
 
-	const [newEntitlements, newPrices] = await Promise.all([
-		tx
-			.select()
-			.from(entitlements)
-			.where(
-				and(
-					eq(entitlements.internal_product_id, toInternalProductId),
-					eq(entitlements.is_custom, false),
-				),
-			),
-		tx
-			.select()
-			.from(prices)
-			.where(
-				and(
-					eq(prices.internal_product_id, toInternalProductId),
-					eq(prices.is_custom, false),
-				),
-			),
-	]);
+	const { entitlements: newEntitlements, prices: newPrices } =
+		await licenseItemRepo.listBaseRowsByInternalProductId({
+			db: tx,
+			internalProductId: toInternalProductId,
+		});
 	const newEntitlementById = new Map(
 		newEntitlements.map((row) => [row.id, row]),
 	);
