@@ -211,6 +211,52 @@ function TierBreakdownChip({
 	);
 }
 
+/** Splits `text` around the embedded price substring and renders that portion
+ * via `renderPrice`. Returns null when the price isn't present in `text`. */
+function highlightPrice({
+	item,
+	currency,
+	text,
+	renderPrice,
+}: {
+	item: ProductItem;
+	currency: string;
+	text: string;
+	renderPrice: (priceStr: string) => ReactNode;
+}): ReactNode {
+	const priceStr = priceString(item, currency);
+	const priceIndex = priceStr ? text.indexOf(priceStr) : -1;
+	if (!priceStr || priceIndex === -1) return null;
+
+	return (
+		<>
+			{text.slice(0, priceIndex)}
+			{renderPrice(priceStr)}
+			{text.slice(priceIndex + priceStr.length)}
+		</>
+	);
+}
+
+/** Embeds the tier-breakdown chip in place of the price. Null unless the item
+ * is tiered and its price string appears in `text`. */
+function tieredPriceChip(args: {
+	item: ProductItem;
+	currency: string;
+	text: string;
+}): ReactNode {
+	if (!isTieredPrice(args.item)) return null;
+	return highlightPrice({
+		...args,
+		renderPrice: (priceStr) => (
+			<TierBreakdownChip
+				currency={args.currency}
+				item={args.item}
+				priceStr={priceStr}
+			/>
+		),
+	});
+}
+
 /** Renders the price secondary text with the price amount as a chip.
  * Tiered prices also reveal the full tier breakdown on hover. */
 function PriceText({
@@ -222,27 +268,20 @@ function PriceText({
 	currency: string;
 	text: string;
 }) {
-	const priceStr = priceString(item, currency);
-	const priceIndex = priceStr ? text.indexOf(priceStr) : -1;
-
-	if (!priceStr || priceIndex === -1) {
-		return <span className="text-body-secondary"> {text}</span>;
-	}
+	const content =
+		tieredPriceChip({ item, currency, text }) ??
+		highlightPrice({
+			item,
+			currency,
+			text,
+			renderPrice: (priceStr) => <span className="text-body">{priceStr}</span>,
+		}) ??
+		text;
 
 	return (
 		<span className="text-body-secondary">
 			{" "}
-			{text.slice(0, priceIndex)}
-			{isTieredPrice(item) ? (
-				<TierBreakdownChip
-					currency={currency}
-					item={item}
-					priceStr={priceStr}
-				/>
-			) : (
-				<span className="text-body">{priceStr}</span>
-			)}
-			{text.slice(priceIndex + priceStr.length)}
+			{content}
 		</span>
 	);
 }
@@ -286,7 +325,10 @@ export function PlanItemLabel({
 			{wrapIcons ? wrapIcons(icons) : icons}
 			<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body-secondary">
 				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
-					{displayText}
+					{hasFeatureName
+						? (tieredPriceChip({ item, currency, text: displayText }) ??
+							displayText)
+						: displayText}
 				</span>
 				{display.secondary_text && (
 					<PriceText

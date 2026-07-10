@@ -333,6 +333,9 @@ function isEmptyFilter(groups: FilterGroupData[]): boolean {
 	if (rules.length !== 1) return false;
 	// A `none` rule is fully specified without any values.
 	if (rules[0].operator === "none") return false;
+	// Only the pristine plan_id placeholder collapses to the "Add Filter" card;
+	// a row switched to another field stays open while the user fills it in.
+	if (rules[0].field !== "plan_id") return false;
 	return rules[0].values.length === 0;
 }
 
