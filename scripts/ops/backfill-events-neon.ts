@@ -44,7 +44,8 @@ const STAGING_DDL = `CREATE TABLE IF NOT EXISTS events_staging (
 	internal_product_id text, customer_id text, properties jsonb, deductions jsonb
 )`;
 
-const COPY_TO_STAGING = `\\copy events_staging (${COLUMN_LIST}) FROM STDIN CSV`;
+const copyToStaging = (csvPath: string): string =>
+	`\\copy events_staging (${COLUMN_LIST}) FROM '${csvPath}' CSV`;
 
 const MERGE_SQL = `INSERT INTO events (${COLUMN_LIST}) SELECT ${COLUMN_LIST} FROM events_staging ON CONFLICT DO NOTHING`;
 
@@ -59,6 +60,7 @@ const duckDbExportSql = (
 	orgId: string,
 	year: string,
 	month: string,
+	outPath: string,
 ): string => `.output /dev/null
 INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws; INSTALL json; LOAD json;
 CREATE OR REPLACE SECRET s3_ambient (TYPE s3, PROVIDER credential_chain, REGION 'us-east-2');
@@ -78,7 +80,7 @@ COPY (
 	         ELSE COALESCE(CAST(json_extract(decode(CAST(deductions AS BLOB)), '$.list') AS VARCHAR), '[]')
 	       END AS deductions
 	FROM read_parquet('${s3Prefix}/org_id=${orgId}/year=${year}/month=${month}/**/*.parquet')
-) TO STDOUT (FORMAT CSV, HEADER false);
+) TO '${outPath}' (FORMAT CSV, HEADER false);
 `;
 
 const USAGE = `Backfill S3 parquet events into Neon (events_staging -> events, dedup on conflict).
@@ -226,6 +228,8 @@ const ensureStagingTable = async (neonUrl: string): Promise<void> => {
 };
 
 // Returns rows staged; empty=true when the parquet glob matched no files (not an error).
+// duckdb and psql run as separate commands (no pipe: Bun's Linux pipeline breaks duckdb's
+// /dev/stdout, and separate exit codes make failure detection exact).
 const stageChunk = async (
 	neonUrl: string,
 	s3Prefix: string,
@@ -233,29 +237,34 @@ const stageChunk = async (
 	month: string,
 ): Promise<{ empty: boolean; staged: number }> => {
 	const [year, monthNumber] = month.split("-") as [string, string];
-	const scriptPath = `${import.meta.dir}/.duckdb_export.sql`;
-	await Bun.write(scriptPath, duckDbExportSql(s3Prefix, orgId, year, monthNumber));
+	const scriptPath = "/tmp/backfill_export.sql";
+	const csvPath = "/tmp/backfill_chunk.csv";
+	await Bun.write(
+		scriptPath,
+		duckDbExportSql(s3Prefix, orgId, year, monthNumber, csvPath),
+	);
+	const duck = await $`duckdb < ${Bun.file(scriptPath)}`.quiet().nothrow();
+	const duckErr = duck.stderr.toString();
+	if (duck.exitCode !== 0) {
+		if (/no files found/i.test(duckErr)) {
+			return { empty: true, staged: 0 };
+		}
+		throw new Error(`duckdb export failed (${month}): ${duckErr.trim()}`);
+	}
 	// Truncate first so rows left by a previously crashed run aren't double-staged.
 	const result =
-		await $`duckdb < ${Bun.file(scriptPath)} | psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${copyToStaging(csvPath)}`
 			.quiet()
 			.nothrow();
-	const stderr = result.stderr.toString();
-	// An unmatched glob is an expected empty month — check BEFORE the exit-code throw
-	// (duckdb exits non-zero on it and the pipeline can propagate that status).
-	if (/no files found/i.test(stderr)) {
-		return { empty: true, staged: 0 };
-	}
+	await $`rm -f ${csvPath}`.quiet().nothrow();
 	if (result.exitCode !== 0) {
-		throw new Error(`staging failed (${month}): ${stderr.trim()}`);
-	}
-	// Pipeline exit code is psql's, so a mid-pipe duckdb failure only surfaces on stderr.
-	if (/error|fatal|exception/i.test(stderr)) {
-		throw new Error(`duckdb failed (${month}): ${stderr.trim()}`);
+		throw new Error(
+			`staging failed (${month}): ${result.stderr.toString().trim()}`,
+		);
 	}
 	const staged = Number(result.stdout.toString().match(/COPY (\d+)/)?.[1] ?? 0);
-	// Files existed but zero rows staged — anomalous (silent duckdb death?); refuse to
-	// mark the chunk done. Operator can append the key to .backfill_neon_done if truly empty.
+	// Files existed but zero rows staged — anomalous; refuse to mark the chunk done.
+	// Operator can append the key to .backfill_neon_done if truly empty.
 	if (staged === 0) {
 		throw new Error(
 			`0 rows staged for ${month} despite parquet files existing — investigate before marking done`,
