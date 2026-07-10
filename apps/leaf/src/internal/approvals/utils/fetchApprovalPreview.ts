@@ -4,6 +4,17 @@ import { normalizeToolName } from "../../../agent/tools/toolPolicy.js";
 import { executeAutumnMcpTool } from "../../autumnMcp/client.js";
 import { writeToPreviewTool } from "./toolRegistry.js";
 
+export const shouldRefreshApprovalPreview = ({
+	preview,
+	toolName,
+}: {
+	preview: unknown;
+	toolName: string;
+}) => {
+	const name = normalizeToolName(toolName);
+	return !preview || name === "updatePlan" || name === "updateCatalog";
+};
+
 const previewRequestForWrite = ({
 	request,
 	toolName,

@@ -1,9 +1,6 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
-import {
-	normalizeToolName,
-	toolLabel,
-} from "../../../../agent/tools/toolPolicy.js";
+import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
 import { db } from "../../../../lib/db.js";
 import { env as chatEnv } from "../../../../lib/env.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
@@ -17,7 +14,10 @@ import {
 import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
-import { fetchApprovalPreview } from "../../utils/fetchApprovalPreview.js";
+import {
+	fetchApprovalPreview,
+	shouldRefreshApprovalPreview,
+} from "../../utils/fetchApprovalPreview.js";
 
 const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
@@ -107,11 +107,13 @@ export const presentApproval = async ({
 		return false;
 	}
 
-	// Suspended without a fresh preview (it ran in an earlier turn) — fetch
-	// one so the card always carries the money facts.
+	// Catalog decisions change write args, so refresh against the exact request;
+	// other writes only backfill when their preview is absent.
 	if (
-		!approval.preview ||
-		normalizeToolName(approval.toolName) === "updatePlan"
+		shouldRefreshApprovalPreview({
+			preview: approval.preview,
+			toolName: approval.toolName,
+		})
 	) {
 		try {
 			const token = await getInstallationOAuthAccessToken({
@@ -121,13 +123,14 @@ export const presentApproval = async ({
 			});
 			const request = getRequest(publicToolArgs(approval.toolArgs));
 			if (request) {
-				approval.preview = await fetchApprovalPreview({
+				const preview = await fetchApprovalPreview({
 					env: approval.env,
 					logger,
 					request,
 					token,
 					toolName: approval.toolName,
 				});
+				if (preview) approval.preview = preview;
 			}
 		} catch (error) {
 			logger.warn("Could not backfill approval preview", {
