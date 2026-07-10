@@ -244,6 +244,7 @@ const stageChunk = async (
 		scriptPath,
 		duckDbExportSql(s3Prefix, orgId, year, monthNumber, csvPath),
 	);
+	console.log(`[${hms()}]   ${month}: exporting from S3 (duckdb)...`);
 	const duck = await $`duckdb < ${Bun.file(scriptPath)}`.quiet().nothrow();
 	const duckErr = duck.stderr.toString();
 	if (duck.exitCode !== 0) {
@@ -252,6 +253,10 @@ const stageChunk = async (
 		}
 		throw new Error(`duckdb export failed (${month}): ${duckErr.trim()}`);
 	}
+	const csvBytes = Bun.file(csvPath).size;
+	console.log(
+		`[${hms()}]   ${month}: staging ${(csvBytes / 1e6).toFixed(0)}MB CSV into Neon (psql \\copy)...`,
+	);
 	// Truncate first so rows left by a previously crashed run aren't double-staged.
 	const result =
 		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${copyToStaging(csvPath)}`
@@ -275,6 +280,7 @@ const stageChunk = async (
 };
 
 const mergeChunk = async (neonUrl: string): Promise<number> => {
+	console.log(`[${hms()}]   merging staged rows into events (dedup on conflict)...`);
 	const result =
 		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
 			.quiet()
