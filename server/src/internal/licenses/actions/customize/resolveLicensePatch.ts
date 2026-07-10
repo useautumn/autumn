@@ -81,6 +81,77 @@ const resolveLicenseLinks = async ({
 	};
 };
 
+/** Resolves one add entry: fetches its links, applies catalog-inheritance
+ * fallbacks, and materializes any item customize. */
+const resolveAddEntry = async ({
+	ctx,
+	entry,
+	catalogByLicenseInternalId,
+	overrideByLicenseInternalId,
+}: {
+	ctx: AutumnContext;
+	entry: CustomizePlanLicense;
+	catalogByLicenseInternalId: LinkMap;
+	overrideByLicenseInternalId: LinkMap;
+}): Promise<ResolvedLicenseAdd> => {
+	const { licenseProduct, catalogLink, existingOverride } =
+		await resolveLicenseLinks({
+			ctx,
+			licensePlanId: entry.license_plan_id,
+			catalogByLicenseInternalId,
+			overrideByLicenseInternalId,
+		});
+	const computation = entry.customize?.items
+		? await computeLicenseCustomize({
+				ctx,
+				licenseProduct,
+				items: entry.customize.items,
+			})
+		: null;
+
+	return {
+		entry,
+		licenseProduct,
+		included: entry.included ?? catalogLink?.included ?? 1,
+		prepaidOnly: entry.prepaid_only ?? catalogLink?.prepaid_only ?? true,
+		metadata: entry.metadata ?? catalogLink?.metadata ?? {},
+		computation,
+		clearItems: entry.customize === null,
+		catalogLink,
+		existingOverride,
+	};
+};
+
+/** Resolves one remove entry: a license must be linked (catalog or override)
+ * to be removable. */
+const resolveRemoveEntry = async ({
+	ctx,
+	licensePlanId,
+	catalogByLicenseInternalId,
+	overrideByLicenseInternalId,
+}: {
+	ctx: AutumnContext;
+	licensePlanId: string;
+	catalogByLicenseInternalId: LinkMap;
+	overrideByLicenseInternalId: LinkMap;
+}): Promise<ResolvedLicenseRemove> => {
+	const { licenseProduct, catalogLink, existingOverride } =
+		await resolveLicenseLinks({
+			ctx,
+			licensePlanId,
+			catalogByLicenseInternalId,
+			overrideByLicenseInternalId,
+		});
+	if (!(catalogLink || existingOverride)) {
+		throw new RecaseError({
+			message: `License ${licensePlanId} is not linked to this plan and cannot be removed.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	return { licensePlanId, licenseProduct, catalogLink, existingOverride };
+};
+
 /**
  * Resolves a customize license patch (add_licenses / remove_licenses) against
  * the parent's catalog links and any existing customer overrides. Shared by
@@ -128,37 +199,14 @@ export const resolveLicensePatch = async ({
 	);
 
 	const resolvedAdds = await Promise.all(
-		adds.map(async (entry): Promise<ResolvedLicenseAdd> => {
-			const { licenseProduct, catalogLink, existingOverride } =
-				await resolveLicenseLinks({
-					ctx,
-					licensePlanId: entry.license_plan_id,
-					catalogByLicenseInternalId,
-					overrideByLicenseInternalId,
-				});
-			const prepaidOnly =
-				entry.prepaid_only ?? catalogLink?.prepaid_only ?? true;
-
-			const computation = entry.customize?.items
-				? await computeLicenseCustomize({
-						ctx,
-						licenseProduct,
-						items: entry.customize.items,
-					})
-				: null;
-
-			return {
+		adds.map((entry) =>
+			resolveAddEntry({
+				ctx,
 				entry,
-				licenseProduct,
-				included: entry.included ?? catalogLink?.included ?? 1,
-				prepaidOnly,
-				metadata: entry.metadata ?? catalogLink?.metadata ?? {},
-				computation,
-				clearItems: entry.customize === null,
-				catalogLink,
-				existingOverride,
-			};
-		}),
+				catalogByLicenseInternalId,
+				overrideByLicenseInternalId,
+			}),
+		),
 	);
 
 	for (const {
@@ -176,23 +224,14 @@ export const resolveLicensePatch = async ({
 	}
 
 	const resolvedRemoves = await Promise.all(
-		removes.map(async (licensePlanId): Promise<ResolvedLicenseRemove> => {
-			const { licenseProduct, catalogLink, existingOverride } =
-				await resolveLicenseLinks({
-					ctx,
-					licensePlanId,
-					catalogByLicenseInternalId,
-					overrideByLicenseInternalId,
-				});
-			if (!(catalogLink || existingOverride)) {
-				throw new RecaseError({
-					message: `License ${licensePlanId} is not linked to this plan and cannot be removed.`,
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-			return { licensePlanId, licenseProduct, catalogLink, existingOverride };
-		}),
+		removes.map((licensePlanId) =>
+			resolveRemoveEntry({
+				ctx,
+				licensePlanId,
+				catalogByLicenseInternalId,
+				overrideByLicenseInternalId,
+			}),
+		),
 	);
 
 	return { adds: resolvedAdds, removes: resolvedRemoves };

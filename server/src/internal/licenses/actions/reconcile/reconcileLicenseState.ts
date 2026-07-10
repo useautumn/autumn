@@ -56,8 +56,6 @@ const loadCustomerLicenseState = async ({
 	};
 };
 
-/** Ends or re-parents active assignments whose parent is no longer valid,
- * patching state.assignments to mirror the writes. */
 /** First live parent offering each license — the reparent target for a
  * stranded assignment of that license. */
 const buildSuccessorParentByLicense = (state: CustomerLicenseState) => {
@@ -98,6 +96,8 @@ const partitionStrandedAssignments = ({
 	return { reparentedByParentId, endedIds };
 };
 
+/** Ends or re-parents active assignments whose parent is no longer valid,
+ * patching state.assignments to mirror the writes. */
 const transitionStrandedAssignments = async ({
 	ctx,
 	state,
@@ -141,9 +141,6 @@ const transitionStrandedAssignments = async ({
 	);
 };
 
-/** Converge customer_licenses rows: granted from resolved definitions,
- * remaining self-healed to granted - live assignments, rows for dead parents
- * gone. Rebuilds state.balances from the written rows. */
 const countActiveByPool = (
 	assignments: CustomerLicenseState["assignments"],
 ) => {
@@ -158,6 +155,9 @@ const countActiveByPool = (
 	return byPool;
 };
 
+/** Converge customer_licenses rows: granted from resolved definitions,
+ * remaining self-healed to granted - live assignments, rows for dead parents
+ * gone. Rebuilds state.balances from the written rows. */
 const reconcileAssignmentBalances = async ({
 	ctx,
 	fullCustomer,
@@ -202,6 +202,37 @@ const reconcileAssignmentBalances = async ({
 	});
 };
 
+/** Gates out no-license customers as early as possible, then resolves the
+ * FullCustomer. When an internal id is known up front we gate before the
+ * (expensive) full-customer read; otherwise we read first, then gate. Returns
+ * null when the customer touches no licenses. */
+const resolveGatedFullCustomer = async ({
+	ctx,
+	customerId,
+	internalCustomerId,
+	fullCustomer,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	internalCustomerId?: string;
+	fullCustomer?: FullCustomer;
+}): Promise<FullCustomer | null> => {
+	const knownInternalId = fullCustomer?.internal_id ?? internalCustomerId;
+	const touchesLicenses = (id: string) =>
+		licenseGateRepo.touchesLicenses({ db: ctx.db, internalCustomerId: id });
+
+	if (knownInternalId && !(await touchesLicenses(knownInternalId))) return null;
+
+	const customer =
+		fullCustomer ??
+		(await CusService.getFull({ ctx, idOrInternalId: customerId }));
+
+	if (!knownInternalId && !(await touchesLicenses(customer.internal_id))) {
+		return null;
+	}
+	return customer;
+};
+
 /**
  * Whole-customer license convergence: loads the customer's license state,
  * transitions stranded assignments, converges balances. Idempotent; the
@@ -222,29 +253,13 @@ export const reconcileLicenseStateForCustomer = async ({
 	internalCustomerId?: string;
 	fullCustomer?: FullCustomer;
 }): Promise<CustomerLicenseState | null> => {
-	const gateInternalId = fullCustomer?.internal_id ?? internalCustomerId;
-	if (
-		gateInternalId &&
-		!(await licenseGateRepo.touchesLicenses({
-			db: ctx.db,
-			internalCustomerId: gateInternalId,
-		}))
-	) {
-		return null;
-	}
-
-	const customer =
-		fullCustomer ??
-		(await CusService.getFull({ ctx, idOrInternalId: customerId }));
-	if (
-		!gateInternalId &&
-		!(await licenseGateRepo.touchesLicenses({
-			db: ctx.db,
-			internalCustomerId: customer.internal_id,
-		}))
-	) {
-		return null;
-	}
+	const customer = await resolveGatedFullCustomer({
+		ctx,
+		customerId,
+		internalCustomerId,
+		fullCustomer,
+	});
+	if (!customer) return null;
 
 	const state = await loadCustomerLicenseState({ ctx, fullCustomer: customer });
 

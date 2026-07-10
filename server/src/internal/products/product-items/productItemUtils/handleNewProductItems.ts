@@ -79,55 +79,7 @@ const updateDbPricesAndEnts = async ({
 		db,
 		deletedPriceIds: deletedPrices.map((price) => price.id!),
 	});
-
-	// Check if any custom prices use this entitlement...
-	const deletedEntIds = deletedEnts.map((ent) => ent.id!);
-	const [customPrices, licenseReferencedEntIds] = await Promise.all([
-		PriceService.getCustomInEntIds({
-			db,
-			entitlementIds: deletedEntIds,
-		}),
-		licenseItemRepo.listReferencedEntitlementIds({
-			db,
-			entitlementIds: deletedEntIds,
-		}),
-	]);
-
-	if (customPrices.length === 0 && licenseReferencedEntIds.size === 0) {
-		// Update the entitlement to be custom...
-		await EntitlementService.deleteInIds({
-			db,
-			ids: deletedEntIds,
-		});
-	} else {
-		const updateOrDelete: Promise<unknown>[] = [];
-		for (const ent of deletedEnts) {
-			const hasCustomPrice = customPrices.some(
-				(price) => price.entitlement_id === ent.id,
-			);
-
-			if (hasCustomPrice || licenseReferencedEntIds.has(ent.id!)) {
-				updateOrDelete.push(
-					EntitlementService.update({
-						db,
-						id: ent.id!,
-						updates: {
-							is_custom: true,
-						},
-					}),
-				);
-			} else {
-				updateOrDelete.push(
-					EntitlementService.deleteInIds({
-						db,
-						ids: [ent.id!],
-					}),
-				);
-			}
-		}
-
-		await Promise.all(updateOrDelete);
-	}
+	await deleteEntsKeepingReferenced({ db, deletedEnts });
 };
 
 /** A replaced base row's license item refs follow the replacement (matched
@@ -187,7 +139,7 @@ const repointLicenseItems = async ({
 					featureInternalIdOfPrice: (price) =>
 						entitlementFeatureId(price.entitlement_id),
 				})
-			: findBaseSlotReplacementPrice({ replacementPrices });
+			: findBaseSlotReplacementPrice({ replacementPrices, previousPrice });
 		if (!replacement) continue;
 		await licenseItemRepo.setPriceRef({
 			db,
@@ -223,6 +175,46 @@ const deletePricesKeepingLicenseReferenced = async ({
 	if (toDelete.length > 0) {
 		await PriceService.deleteInIds({ db, ids: toDelete });
 	}
+};
+
+/** Deleted entitlements that a custom price or a license link still points at
+ * are relabeled is_custom (kept as standalone rows) rather than deleted. */
+const deleteEntsKeepingReferenced = async ({
+	db,
+	deletedEnts,
+}: {
+	db: DrizzleCli;
+	deletedEnts: Entitlement[];
+}) => {
+	if (deletedEnts.length === 0) return;
+	const deletedEntIds = deletedEnts.map((ent) => ent.id!);
+	const [customPrices, licenseReferencedEntIds] = await Promise.all([
+		PriceService.getCustomInEntIds({ db, entitlementIds: deletedEntIds }),
+		licenseItemRepo.listReferencedEntitlementIds({
+			db,
+			entitlementIds: deletedEntIds,
+		}),
+	]);
+
+	if (customPrices.length === 0 && licenseReferencedEntIds.size === 0) {
+		await EntitlementService.deleteInIds({ db, ids: deletedEntIds });
+		return;
+	}
+
+	await Promise.all(
+		deletedEnts.map((ent) => {
+			const referenced =
+				customPrices.some((price) => price.entitlement_id === ent.id) ||
+				licenseReferencedEntIds.has(ent.id!);
+			return referenced
+				? EntitlementService.update({
+						db,
+						id: ent.id!,
+						updates: { is_custom: true },
+					})
+				: EntitlementService.deleteInIds({ db, ids: [ent.id!] });
+		}),
+	);
 };
 
 const handleCustomProductItems = ({
