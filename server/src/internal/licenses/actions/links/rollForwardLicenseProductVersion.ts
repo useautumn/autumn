@@ -3,6 +3,7 @@ import {
 	customerLicenses,
 	customerProducts,
 	entitlements,
+	type FullProduct,
 	licenseEntitlements,
 	licensePrices,
 	planLicenses,
@@ -131,6 +132,42 @@ const rollForwardItems = async ({
 	}
 };
 
+/** Every parent linking to this license must still satisfy the link rules
+ * against `newLicenseProduct`, or versioning is rejected. Pure check — no
+ * writes — so it can run before the new license version is persisted. */
+export const validateRolledForwardLicenses = async ({
+	ctx,
+	fromInternalProductId,
+	newLicenseProduct,
+}: {
+	ctx: AutumnContext;
+	fromInternalProductId: string;
+	newLicenseProduct: FullProduct;
+}) => {
+	const links = await planLicenseRepo.listCatalogByLicenseInternalProductIds({
+		db: ctx.db,
+		licenseInternalProductIds: [fromInternalProductId],
+	});
+	const parentProducts = await Promise.all(
+		links.map((link) =>
+			getFullLicenseProduct({
+				ctx,
+				idOrInternalId: link.parent_internal_product_id,
+			}),
+		),
+	);
+	links.forEach((link, index) => {
+		validateLicenseLink({
+			parentProduct: parentProducts[index],
+			licenseProduct: newLicenseProduct,
+			prepaidOnly: link.prepaid_only,
+			licensePlanId: newLicenseProduct.id,
+		});
+	});
+};
+
+/** Repoints existing catalog links + live assignments onto the new license
+ * version. Assumes validateRolledForwardLicenses already passed. */
 export const rollForwardLicenseProductVersion = async ({
 	ctx,
 	fromInternalProductId,
@@ -140,28 +177,6 @@ export const rollForwardLicenseProductVersion = async ({
 	fromInternalProductId: string;
 	toInternalProductId: string;
 }) => {
-	const links = await planLicenseRepo.listCatalogByLicenseInternalProductIds({
-		db: ctx.db,
-		licenseInternalProductIds: [fromInternalProductId],
-	});
-	if (links.length > 0) {
-		const newLicenseProduct = await getFullLicenseProduct({
-			ctx,
-			idOrInternalId: toInternalProductId,
-		});
-		for (const link of links) {
-			validateLicenseLink({
-				parentProduct: await getFullLicenseProduct({
-					ctx,
-					idOrInternalId: link.parent_internal_product_id,
-				}),
-				licenseProduct: newLicenseProduct,
-				prepaidOnly: link.prepaid_only,
-				licensePlanId: newLicenseProduct.id,
-			});
-		}
-	}
-
 	await ctx.db.transaction(async (tx) => {
 		await tx
 			.update(planLicenses)

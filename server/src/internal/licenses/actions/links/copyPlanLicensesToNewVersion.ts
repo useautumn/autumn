@@ -1,3 +1,4 @@
+import type { FullProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
@@ -5,9 +6,50 @@ import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { resolveEffectiveLicenseProduct } from "../customize/resolveEffectiveLicenseProduct.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
-/** New plan versions carry the catalog license links (and their item refs)
- * forward from the previous version. Every copied link must still satisfy the
- * link rules against the new version, or the versioning is rejected. */
+/** Every license link the new parent version will carry forward must still
+ * satisfy the link rules against `newParentProduct`, or versioning is rejected.
+ * Pure check — no writes — so it can run before the version is persisted. */
+export const validateCopiedPlanLicenses = async ({
+	ctx,
+	fromInternalProductId,
+	newParentProduct,
+}: {
+	ctx: AutumnContext;
+	fromInternalProductId: string;
+	newParentProduct: FullProduct;
+}) => {
+	const planLicenseRows =
+		await planLicenseRepo.listCatalogByParentInternalProductIds({
+			db: ctx.db,
+			parentInternalProductIds: [fromInternalProductId],
+		});
+	const licenseProducts = await Promise.all(
+		planLicenseRows.map((row) =>
+			getFullLicenseProduct({
+				ctx,
+				idOrInternalId: row.license_internal_product_id,
+			}),
+		),
+	);
+	await Promise.all(
+		planLicenseRows.map(async (row, index) => {
+			const licenseProduct = licenseProducts[index];
+			validateLicenseLink({
+				parentProduct: newParentProduct,
+				licenseProduct: await resolveEffectiveLicenseProduct({
+					ctx,
+					licenseProduct,
+					planLicenseId: row.id,
+				}),
+				prepaidOnly: row.prepaid_only,
+				licensePlanId: licenseProduct.id,
+			});
+		}),
+	);
+};
+
+/** Copies the previous version's catalog license links (and their item refs)
+ * onto the new version. Assumes validateCopiedPlanLicenses already passed. */
 export const copyPlanLicensesToNewVersion = async ({
 	ctx,
 	fromInternalProductId,
@@ -24,26 +66,7 @@ export const copyPlanLicensesToNewVersion = async ({
 		});
 	if (planLicenseRows.length === 0) return;
 
-	const newParentProduct = await getFullLicenseProduct({
-		ctx,
-		idOrInternalId: toInternalProductId,
-	});
 	for (const row of planLicenseRows) {
-		const licenseProduct = await getFullLicenseProduct({
-			ctx,
-			idOrInternalId: row.license_internal_product_id,
-		});
-		validateLicenseLink({
-			parentProduct: newParentProduct,
-			licenseProduct: await resolveEffectiveLicenseProduct({
-				ctx,
-				licenseProduct,
-				planLicenseId: row.id,
-			}),
-			prepaidOnly: row.prepaid_only,
-			licensePlanId: licenseProduct.id,
-		});
-
 		const newLink = await planLicenseRepo.upsert({
 			db: ctx.db,
 			parentInternalProductId: toInternalProductId,
