@@ -645,6 +645,8 @@ class CreatePlanSpendLimitRequestTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class CreatePlanSpendLimitRequest(BaseModel):
@@ -660,9 +662,20 @@ class CreatePlanSpendLimitRequest(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -686,6 +699,26 @@ CreatePlanUsageLimitIntervalRequestBody = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+CreatePlanPropertiesTypedDict = TypeAliasType(
+    "CreatePlanPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+CreatePlanProperties = TypeAliasType("CreatePlanProperties", Union[str, float, bool])
+
+
+class CreatePlanFilterRequestTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, CreatePlanPropertiesTypedDict]
+
+
+class CreatePlanFilterRequest(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, CreatePlanProperties]
+
+
 class CreatePlanUsageLimitRequestTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -695,6 +728,8 @@ class CreatePlanUsageLimitRequestTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CreatePlanFilterRequestTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class CreatePlanUsageLimitRequest(BaseModel):
@@ -710,9 +745,14 @@ class CreatePlanUsageLimitRequest(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[CreatePlanFilterRequest], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2325,6 +2365,8 @@ class CreatePlanVariantDetailsSpendLimitTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class CreatePlanVariantDetailsSpendLimit(BaseModel):
@@ -2340,9 +2382,20 @@ class CreatePlanVariantDetailsSpendLimit(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -2369,6 +2422,18 @@ CreatePlanVariantDetailsUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class CreatePlanVariantDetailsFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CreatePlanVariantDetailsFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class CreatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -2378,6 +2443,8 @@ class CreatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CreatePlanVariantDetailsFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class CreatePlanVariantDetailsUsageLimit(BaseModel):
@@ -2393,9 +2460,14 @@ class CreatePlanVariantDetailsUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[CreatePlanVariantDetailsFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -2805,6 +2877,8 @@ class CreatePlanSpendLimitResponseTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class CreatePlanSpendLimitResponse(BaseModel):
@@ -2820,9 +2894,20 @@ class CreatePlanSpendLimitResponse(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -2849,6 +2934,18 @@ CreatePlanUsageLimitIntervalResponse = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class CreatePlanFilterResponseTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CreatePlanFilterResponse(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class CreatePlanUsageLimitResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -2858,6 +2955,8 @@ class CreatePlanUsageLimitResponseTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CreatePlanFilterResponseTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class CreatePlanUsageLimitResponse(BaseModel):
@@ -2873,9 +2972,14 @@ class CreatePlanUsageLimitResponse(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[CreatePlanFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -3238,3 +3342,17 @@ class CreatePlanResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    CreatePlanUsageLimitRequest.model_rebuild()
+except NameError:
+    pass
+try:
+    CreatePlanVariantDetailsUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    CreatePlanUsageLimitResponse.model_rebuild()
+except NameError:
+    pass

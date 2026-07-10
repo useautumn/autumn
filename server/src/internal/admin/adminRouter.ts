@@ -10,6 +10,7 @@ import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
+	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
@@ -79,6 +80,10 @@ honoAdminRouter.patch(
 honoAdminRouter.patch(
 	"/orgs/:org_id/redis/migration",
 	...handleUpdateAdminOrgRedisMigration,
+);
+honoAdminRouter.patch(
+	"/orgs/:org_id/redis/public-url",
+	...handleUpdateAdminOrgRedisPublicUrl,
 );
 honoAdminRouter.delete(
 	"/orgs/:org_id/redis",

@@ -39,6 +39,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
         </DynamicParamField>
 
+        <DynamicParamField body="skip_overage_billing" type="boolean">
+          When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -59,6 +63,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
         <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
           Interval for the cap, aligned to the customer's billing cycle.
+        </DynamicParamField>
+
+        <DynamicParamField body="filter" type="object">
+          When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+          <Expandable title="properties">
+            <DynamicParamField body="properties.{key}" type="string" required />
+
+          </Expandable>
         </DynamicParamField>
 
       </Expandable>
@@ -208,6 +220,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
             </DynamicParamField>
 
+            <DynamicParamField body="skip_overage_billing" type="boolean">
+              When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+            </DynamicParamField>
+
           </Expandable>
         </DynamicParamField>
 
@@ -228,6 +244,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
             <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
               Interval for the cap, aligned to the customer's billing cycle.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+              <Expandable title="properties">
+                <DynamicParamField body="properties.{key}" type="string" required />
+
+              </Expandable>
             </DynamicParamField>
 
           </Expandable>
@@ -847,6 +871,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="skip_overage_billing" type="boolean">
+                          When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -867,6 +895,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                         <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                           Interval for the cap, aligned to the customer's billing cycle.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="filter" type="object">
+                          When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="properties" type="object" />
+
+                          </Expandable>
                         </DynamicResponseField>
 
                       </Expandable>
@@ -997,6 +1033,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="skip_overage_billing" type="boolean">
+                  When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                </DynamicResponseField>
+
               </Expandable>
             </DynamicResponseField>
 
@@ -1017,6 +1057,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                   Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="filter" type="object">
+                  When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="properties" type="object" />
+
+                  </Expandable>
                 </DynamicResponseField>
 
               </Expandable>
@@ -1667,6 +1715,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="skip_overage_billing" type="boolean">
+                          When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -1687,6 +1739,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                         <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                           Interval for the cap, aligned to the customer's billing cycle.
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="filter" type="object">
+                          When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="properties" type="object" />
+
+                          </Expandable>
                         </DynamicResponseField>
 
                       </Expandable>
@@ -1817,6 +1877,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="skip_overage_billing" type="boolean">
+                  When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                </DynamicResponseField>
+
               </Expandable>
             </DynamicResponseField>
 
@@ -1837,6 +1901,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                 <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
                   Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="filter" type="object">
+                  When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="properties" type="object" />
+
+                  </Expandable>
                 </DynamicResponseField>
 
               </Expandable>
@@ -2292,6 +2364,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
         </DynamicResponseField>
 
+        <DynamicResponseField name="skip_overage_billing" type="boolean">
+          When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 
@@ -2312,6 +2388,14 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
         <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
           Interval for the cap, aligned to the customer's billing cycle.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="filter" type="object">
+          When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+          <Expandable title="properties">
+            <DynamicResponseField name="properties" type="object" />
+
+          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="usage" type="number">

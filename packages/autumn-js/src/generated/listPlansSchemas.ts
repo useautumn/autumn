@@ -46,6 +46,10 @@ export const listPlansVariantDetailsTierSchema = z.object({
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const listPlansVariantDetailsFilterSchema = z.object({
+	properties: z.record(z.string(), z.any()),
+});
+
 export const listPlansVariantDetailsOverageAllowedSchema = z.object({
 	featureId: z.string(),
 	enabled: z.boolean(),
@@ -53,6 +57,10 @@ export const listPlansVariantDetailsOverageAllowedSchema = z.object({
 
 export const listPlansConfigSchema = z.object({
 	ignorePastDue: z.boolean(),
+});
+
+export const listPlansFilterSchema = z.object({
+	properties: z.record(z.string(), z.any()),
 });
 
 export const listPlansOverageAllowedSchema = z.object({
@@ -292,6 +300,7 @@ export const listPlansVariantDetailsSpendLimitSchema = z.object({
 		.union([listPlansVariantDetailsLimitTypeSchema, z.undefined()])
 		.optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const listPlansVariantDetailsUsageLimitIntervalSchema = openEnumSchema;
@@ -301,6 +310,9 @@ export const listPlansVariantDetailsUsageLimitSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansVariantDetailsUsageLimitIntervalSchema,
+	filter: z
+		.union([listPlansVariantDetailsFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const listPlansVariantDetailsThresholdTypeSchema = openEnumSchema;
@@ -385,6 +397,7 @@ export const listPlansSpendLimitSchema = z.object({
 	enabled: z.boolean(),
 	limitType: z.union([listPlansLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const listPlansUsageLimitIntervalSchema = openEnumSchema;
@@ -394,6 +407,7 @@ export const listPlansUsageLimitSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansUsageLimitIntervalSchema,
+	filter: z.union([listPlansFilterSchema, z.undefined()]).optional(),
 });
 
 export const listPlansThresholdTypeSchema = openEnumSchema;

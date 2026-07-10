@@ -13,7 +13,7 @@ from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -1091,6 +1091,8 @@ class BillingUpdateSpendLimitTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class BillingUpdateSpendLimit(BaseModel):
@@ -1106,9 +1108,20 @@ class BillingUpdateSpendLimit(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1132,6 +1145,28 @@ BillingUpdateUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+BillingUpdatePropertiesTypedDict = TypeAliasType(
+    "BillingUpdatePropertiesTypedDict", Union[str, float, bool]
+)
+
+
+BillingUpdateProperties = TypeAliasType(
+    "BillingUpdateProperties", Union[str, float, bool]
+)
+
+
+class BillingUpdateFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, BillingUpdatePropertiesTypedDict]
+
+
+class BillingUpdateFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, BillingUpdateProperties]
+
+
 class BillingUpdateUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -1141,6 +1176,8 @@ class BillingUpdateUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[BillingUpdateFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class BillingUpdateUsageLimit(BaseModel):
@@ -1156,9 +1193,14 @@ class BillingUpdateUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[BillingUpdateFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -1827,6 +1869,10 @@ class BillingUpdateResponse(BaseModel):
         return m
 
 
+try:
+    BillingUpdateUsageLimit.model_rebuild()
+except NameError:
+    pass
 try:
     UpdateSubscriptionParams.model_rebuild()
 except NameError:

@@ -753,6 +753,10 @@ export type PreviewUpdateSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -771,6 +775,15 @@ export type PreviewUpdateUsageLimitInterval = ClosedEnum<
   typeof PreviewUpdateUsageLimitInterval
 >;
 
+export type PreviewUpdateProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type PreviewUpdateFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type PreviewUpdateUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -788,6 +801,10 @@ export type PreviewUpdateUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PreviewUpdateUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: PreviewUpdateFilter | undefined;
 };
 
 /**
@@ -2294,6 +2311,7 @@ export type PreviewUpdateSpendLimit$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -2306,12 +2324,14 @@ export const PreviewUpdateSpendLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(PreviewUpdateLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -2330,11 +2350,53 @@ export const PreviewUpdateUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateUsageLimitInterval);
 
 /** @internal */
+export type PreviewUpdateProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const PreviewUpdateProperties$outboundSchema: z.ZodMiniType<
+  PreviewUpdateProperties$Outbound,
+  PreviewUpdateProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewUpdatePropertiesToJSON(
+  previewUpdateProperties: PreviewUpdateProperties,
+): string {
+  return JSON.stringify(
+    PreviewUpdateProperties$outboundSchema.parse(previewUpdateProperties),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const PreviewUpdateFilter$outboundSchema: z.ZodMiniType<
+  PreviewUpdateFilter$Outbound,
+  PreviewUpdateFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function previewUpdateFilterToJSON(
+  previewUpdateFilter: PreviewUpdateFilter,
+): string {
+  return JSON.stringify(
+    PreviewUpdateFilter$outboundSchema.parse(previewUpdateFilter),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: PreviewUpdateFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -2347,6 +2409,7 @@ export const PreviewUpdateUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PreviewUpdateUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => PreviewUpdateFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

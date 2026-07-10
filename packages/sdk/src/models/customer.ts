@@ -153,6 +153,10 @@ export type CustomerSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -171,6 +175,13 @@ export type CustomerUsageLimitInterval = OpenEnum<
   typeof CustomerUsageLimitInterval
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type CustomerFilter = {
+  properties: { [k: string]: any };
+};
+
 export type CustomerUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -188,6 +199,10 @@ export type CustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: CustomerUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: CustomerFilter | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -997,12 +1012,14 @@ export const CustomerSpendLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(CustomerLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -1024,6 +1041,24 @@ export const CustomerUsageLimitInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CustomerUsageLimitInterval);
 
 /** @internal */
+export const CustomerFilter$inboundSchema: z.ZodMiniType<
+  CustomerFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function customerFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
   CustomerUsageLimit,
   unknown
@@ -1033,6 +1068,7 @@ export const CustomerUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: CustomerUsageLimitInterval$inboundSchema,
+    filter: types.optional(z.lazy(() => CustomerFilter$inboundSchema)),
     usage: types.optional(types.number()),
   }),
   z.transform((v) => {

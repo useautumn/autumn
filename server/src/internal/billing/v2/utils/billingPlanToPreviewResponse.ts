@@ -1,4 +1,8 @@
-import type { BillingContext, BillingPlan } from "@autumn/shared";
+import type {
+	BillingContext,
+	BillingPlan,
+	FullCusProduct,
+} from "@autumn/shared";
 import { type BillingPreviewResponse, orgToCurrency } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -72,10 +76,13 @@ export const billingPlanToPreviewResponse = async ({
 	ctx,
 	billingContext,
 	billingPlan,
+	nextCycleCustomerProductFilter,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	/** Scope next_cycle to a subset of products (e.g. one subscription's). */
+	nextCycleCustomerProductFilter?: (customerProduct: FullCusProduct) => boolean;
 }): Promise<BillingPreviewResponse> => {
 	const { fullCustomer } = billingContext;
 
@@ -106,6 +113,7 @@ export const billingPlanToPreviewResponse = async ({
 			ctx,
 			billingContext,
 			billingPlan,
+			customerProductFilter: nextCycleCustomerProductFilter,
 		});
 
 	const nextCycle = await applyNextCycleTaxPreview({

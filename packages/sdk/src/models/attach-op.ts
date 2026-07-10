@@ -742,6 +742,10 @@ export type AttachSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -760,6 +764,15 @@ export type AttachUsageLimitInterval = ClosedEnum<
   typeof AttachUsageLimitInterval
 >;
 
+export type AttachProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type AttachFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type AttachUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -777,6 +790,10 @@ export type AttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: AttachUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: AttachFilter | undefined;
 };
 
 /**
@@ -1987,6 +2004,7 @@ export type AttachSpendLimit$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1999,12 +2017,14 @@ export const AttachSpendLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(AttachLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -2023,11 +2043,49 @@ export const AttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachUsageLimitInterval);
 
 /** @internal */
+export type AttachProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const AttachProperties$outboundSchema: z.ZodMiniType<
+  AttachProperties$Outbound,
+  AttachProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function attachPropertiesToJSON(
+  attachProperties: AttachProperties,
+): string {
+  return JSON.stringify(
+    AttachProperties$outboundSchema.parse(attachProperties),
+  );
+}
+
+/** @internal */
+export type AttachFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const AttachFilter$outboundSchema: z.ZodMiniType<
+  AttachFilter$Outbound,
+  AttachFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function attachFilterToJSON(attachFilter: AttachFilter): string {
+  return JSON.stringify(AttachFilter$outboundSchema.parse(attachFilter));
+}
+
+/** @internal */
 export type AttachUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: AttachFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -2040,6 +2098,7 @@ export const AttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: AttachUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => AttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

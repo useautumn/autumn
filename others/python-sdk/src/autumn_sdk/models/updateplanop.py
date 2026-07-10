@@ -647,6 +647,8 @@ class UpdatePlanSpendLimitRequestTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class UpdatePlanSpendLimitRequest(BaseModel):
@@ -662,9 +664,20 @@ class UpdatePlanSpendLimitRequest(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -688,6 +701,26 @@ UpdatePlanUsageLimitIntervalRequestBody = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+UpdatePlanPropertiesTypedDict = TypeAliasType(
+    "UpdatePlanPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanProperties = TypeAliasType("UpdatePlanProperties", Union[str, float, bool])
+
+
+class UpdatePlanFilterRequestTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdatePlanPropertiesTypedDict]
+
+
+class UpdatePlanFilterRequest(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdatePlanProperties]
+
+
 class UpdatePlanUsageLimitRequestTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -697,6 +730,8 @@ class UpdatePlanUsageLimitRequestTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanFilterRequestTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class UpdatePlanUsageLimitRequest(BaseModel):
@@ -712,9 +747,14 @@ class UpdatePlanUsageLimitRequest(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[UpdatePlanFilterRequest], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -1560,6 +1600,8 @@ class VariantSpendLimitTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class VariantSpendLimit(BaseModel):
@@ -1575,9 +1617,20 @@ class VariantSpendLimit(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1601,6 +1654,26 @@ VariantUsageLimitInterval = Literal[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+VariantPropertiesTypedDict = TypeAliasType(
+    "VariantPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+VariantProperties = TypeAliasType("VariantProperties", Union[str, float, bool])
+
+
+class VariantFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, VariantPropertiesTypedDict]
+
+
+class VariantFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, VariantProperties]
+
+
 class VariantUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -1610,6 +1683,8 @@ class VariantUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[VariantFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class VariantUsageLimit(BaseModel):
@@ -1625,9 +1700,12 @@ class VariantUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[Optional[VariantFilter], pydantic.Field(alias="filter")] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -3444,6 +3522,8 @@ class UpdatePlanVariantDetailsSpendLimitTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class UpdatePlanVariantDetailsSpendLimit(BaseModel):
@@ -3459,9 +3539,20 @@ class UpdatePlanVariantDetailsSpendLimit(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -3488,6 +3579,18 @@ UpdatePlanVariantDetailsUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class UpdatePlanVariantDetailsFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanVariantDetailsFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class UpdatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -3497,6 +3600,8 @@ class UpdatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanVariantDetailsFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class UpdatePlanVariantDetailsUsageLimit(BaseModel):
@@ -3512,9 +3617,14 @@ class UpdatePlanVariantDetailsUsageLimit(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[UpdatePlanVariantDetailsFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -3924,6 +4034,8 @@ class UpdatePlanSpendLimitResponseTypedDict(TypedDict):
     r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
 
 class UpdatePlanSpendLimitResponse(BaseModel):
@@ -3939,9 +4051,20 @@ class UpdatePlanSpendLimitResponse(BaseModel):
     overage_limit: Optional[float] = None
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
 
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "limit_type", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -3968,6 +4091,18 @@ UpdatePlanUsageLimitIntervalResponse = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class UpdatePlanFilterResponseTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanFilterResponse(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
 class UpdatePlanUsageLimitResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -3977,6 +4112,8 @@ class UpdatePlanUsageLimitResponseTypedDict(TypedDict):
     r"""Interval for the cap, aligned to the customer's billing cycle."""
     enabled: NotRequired[bool]
     r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanFilterResponseTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
 
 
 class UpdatePlanUsageLimitResponse(BaseModel):
@@ -3992,9 +4129,14 @@ class UpdatePlanUsageLimitResponse(BaseModel):
     enabled: Optional[bool] = True
     r"""Whether this usage limit is enabled."""
 
+    filter_: Annotated[
+        Optional[UpdatePlanFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "filter"])
         serialized = handler(self)
         m = {}
 
@@ -4357,3 +4499,21 @@ class UpdatePlanResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    UpdatePlanUsageLimitRequest.model_rebuild()
+except NameError:
+    pass
+try:
+    VariantUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdatePlanVariantDetailsUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdatePlanUsageLimitResponse.model_rebuild()
+except NameError:
+    pass

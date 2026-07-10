@@ -364,6 +364,10 @@ export type ListEntitiesSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -379,6 +383,13 @@ export const ListEntitiesInterval = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export type ListEntitiesInterval = OpenEnum<typeof ListEntitiesInterval>;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type ListEntitiesFilter = {
+  properties: { [k: string]: any };
+};
 
 export type ListEntitiesUsageLimit = {
   /**
@@ -397,6 +408,10 @@ export type ListEntitiesUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: ListEntitiesInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: ListEntitiesFilter | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -952,12 +967,14 @@ export const ListEntitiesSpendLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(ListEntitiesLimitType$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -979,6 +996,24 @@ export const ListEntitiesInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListEntitiesInterval);
 
 /** @internal */
+export const ListEntitiesFilter$inboundSchema: z.ZodMiniType<
+  ListEntitiesFilter,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function listEntitiesFilterFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesFilter, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesFilter$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesFilter' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
   ListEntitiesUsageLimit,
   unknown
@@ -988,6 +1023,7 @@ export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: ListEntitiesInterval$inboundSchema,
+    filter: types.optional(z.lazy(() => ListEntitiesFilter$inboundSchema)),
     usage: types.optional(types.number()),
   }),
   z.transform((v) => {
