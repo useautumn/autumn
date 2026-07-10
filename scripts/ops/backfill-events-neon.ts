@@ -237,8 +237,9 @@ const stageChunk = async (
 	month: string,
 ): Promise<{ empty: boolean; staged: number }> => {
 	const [year, monthNumber] = month.split("-") as [string, string];
-	const scriptPath = "/tmp/backfill_export.sql";
-	const csvPath = "/tmp/backfill_chunk.csv";
+	// /var/tmp is disk-backed; /tmp is a small RAM tmpfs on Amazon Linux and fills instantly.
+	const scriptPath = "/var/tmp/backfill_export.sql";
+	const csvPath = "/var/tmp/backfill_chunk.csv";
 	await Bun.write(
 		scriptPath,
 		duckDbExportSql(s3Prefix, orgId, year, monthNumber, csvPath),
