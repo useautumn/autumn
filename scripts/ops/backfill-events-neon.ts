@@ -48,7 +48,9 @@ const COPY_TO_STAGING = `\\copy events_staging (${COLUMN_LIST}) FROM STDIN CSV`;
 
 const MERGE_SQL = `INSERT INTO events (${COLUMN_LIST}) SELECT ${COLUMN_LIST} FROM events_staging ON CONFLICT DO NOTHING`;
 
-// Tinybird wraps deductions as {list:[...]} (ClickHouse top-level-array limitation) while
+// Parquet string columns are un-annotated BYTE_ARRAY -> DuckDB BLOB; decode() (NOT ::VARCHAR,
+// which emits an escaped repr) restores clean UTF-8. Dot-commands silence setup banners that
+// would otherwise pollute the CSV stream. Tinybird wraps deductions as {list:[...]} while
 // live rows store the bare TrackDeduction[] — normalize every historical shape to bare array.
 // set_usage is absent from the parquet export; emit false (NOT NULL — readers and the
 // partial index filter on set_usage = false, so NULL rows would be silently excluded).
@@ -57,18 +59,23 @@ const duckDbExportSql = (
 	orgId: string,
 	year: string,
 	month: string,
-): string => `
+): string => `.output /dev/null
 INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws; INSTALL json; LOAD json;
 CREATE OR REPLACE SECRET s3_ambient (TYPE s3, PROVIDER credential_chain, REGION 'us-east-2');
+.output
 COPY (
-	SELECT id, org_id, COALESCE(org_slug,'') AS org_slug, internal_customer_id,
-	       COALESCE(env,'live') AS env, created_at, "timestamp",
-	       event_name, idempotency_key, value, false AS set_usage,
-	       entity_id, internal_entity_id, internal_product_id, customer_id,
-	       COALESCE(properties,'{}') AS properties, CASE
-	         WHEN deductions IS NULL OR trim(deductions) IN ('', '{}', 'null') THEN '[]'
-	         WHEN trim(deductions) LIKE '[%' THEN deductions
-	         ELSE COALESCE(CAST(json_extract(deductions, '$.list') AS VARCHAR), '[]')
+	SELECT decode(CAST(id AS BLOB)) AS id, decode(CAST(org_id AS BLOB)) AS org_id,
+	       COALESCE(decode(CAST(org_slug AS BLOB)),'') AS org_slug,
+	       decode(CAST(internal_customer_id AS BLOB)) AS internal_customer_id,
+	       COALESCE(decode(CAST(env AS BLOB)),'live') AS env, created_at, "timestamp",
+	       decode(CAST(event_name AS BLOB)) AS event_name, decode(CAST(idempotency_key AS BLOB)) AS idempotency_key,
+	       value, false AS set_usage,
+	       decode(CAST(entity_id AS BLOB)) AS entity_id, decode(CAST(internal_entity_id AS BLOB)) AS internal_entity_id,
+	       decode(CAST(internal_product_id AS BLOB)) AS internal_product_id, decode(CAST(customer_id AS BLOB)) AS customer_id,
+	       COALESCE(decode(CAST(properties AS BLOB)),'{}') AS properties, CASE
+	         WHEN deductions IS NULL OR trim(decode(CAST(deductions AS BLOB))) IN ('', '{}', 'null') THEN '[]'
+	         WHEN trim(decode(CAST(deductions AS BLOB))) LIKE '[%' THEN decode(CAST(deductions AS BLOB))
+	         ELSE COALESCE(CAST(json_extract(decode(CAST(deductions AS BLOB)), '$.list') AS VARCHAR), '[]')
 	       END AS deductions
 	FROM read_parquet('${s3Prefix}/org_id=${orgId}/year=${year}/month=${month}/**/*.parquet')
 ) TO STDOUT (FORMAT CSV, HEADER false);
@@ -226,10 +233,11 @@ const stageChunk = async (
 	month: string,
 ): Promise<{ empty: boolean; staged: number }> => {
 	const [year, monthNumber] = month.split("-") as [string, string];
-	const exportSql = duckDbExportSql(s3Prefix, orgId, year, monthNumber);
+	const scriptPath = `${import.meta.dir}/.duckdb_export.sql`;
+	await Bun.write(scriptPath, duckDbExportSql(s3Prefix, orgId, year, monthNumber));
 	// Truncate first so rows left by a previously crashed run aren't double-staged.
 	const result =
-		await $`duckdb -c ${exportSql} | psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
+		await $`duckdb < ${Bun.file(scriptPath)} | psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
 			.quiet()
 			.nothrow();
 	const stderr = result.stderr.toString();
