@@ -4,8 +4,8 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { ProductService } from "../../ProductService.js";
+import { attachPlanLicenses } from "../../productUtils/productResponseUtils/attachPlanLicenses.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleGetPlanV2 = createRoute({
@@ -24,14 +24,10 @@ export const handleGetPlanV2 = createRoute({
 			version: version,
 		});
 
-		const planLicensesByParent = await loadApiPlanLicenses({
-			ctx,
-			internalProductIds: [fullProduct.internal_id],
-		});
+		await attachPlanLicenses({ ctx, products: [fullProduct] });
 		const latestPlan = await getPlanResponse({
 			ctx,
 			product: fullProduct,
-			planLicenses: planLicensesByParent.get(fullProduct.internal_id),
 			features: ctx.features,
 		});
 

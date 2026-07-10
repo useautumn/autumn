@@ -1,7 +1,5 @@
-import type { LicenseBalanceResponse } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { computeLicenseInventory } from "../../../licenseUtils.js";
-import { planLicenseRepo } from "../../../repos/planLicenseRepo.js";
 import { offeredPools, poolKey } from "../../reconcile/stateHelpers.js";
 import type { CustomerLicenseState } from "../../reconcile/types.js";
 
@@ -41,7 +39,7 @@ const serializePool = ({
 	granted: number;
 	assigned: number;
 	assignmentRows: AssignmentRow[];
-}): LicenseBalanceResponse => ({
+}): ApiCustomerLicenseV0 => ({
 	parent_plan_id: parentPlanId,
 	license_plan_id: licenseProduct.id,
 	license_plan_name: licenseProduct.name ?? "",
@@ -54,30 +52,19 @@ const serializePool = ({
 	})),
 });
 
-export const buildLicenseBalances = async ({
-	ctx,
+/** Serializes a customer's license pools to the API shape. Pure — the caller
+ * fetches the license products and passes them in. */
+export const getApiCustomerLicense = ({
 	state,
+	licenseProducts,
 	entityId,
 }: {
-	ctx: AutumnContext;
 	state: CustomerLicenseState;
+	licenseProducts: LicenseProduct[];
 	entityId?: string;
-}): Promise<LicenseBalanceResponse[]> => {
-	const { parents, definitionsByParentId, assignments, balances } = state;
+}): ApiCustomerLicenseV0[] => {
+	const { parents, definitionsByParentId, balances } = state;
 
-	const licenseInternalIds = [
-		...new Set(
-			[...definitionsByParentId.values()]
-				.flat()
-				.map((definition) => definition.license_internal_product_id),
-		),
-	];
-	if (licenseInternalIds.length === 0) return [];
-
-	const licenseProducts = await planLicenseRepo.listProductsByInternalIds({
-		db: ctx.db,
-		internalProductIds: licenseInternalIds,
-	});
 	const licenseProductByInternalId = new Map(
 		licenseProducts.map((product) => [product.internal_id, product]),
 	);
@@ -90,9 +77,12 @@ export const buildLicenseBalances = async ({
 			balance,
 		]),
 	);
-	const assignmentsByPool = groupAssignmentsByPool({ assignments, entityId });
+	const assignmentsByPool = groupAssignmentsByPool({
+		assignments: state.assignments,
+		entityId,
+	});
 
-	const pools: LicenseBalanceResponse[] = [];
+	const pools: ApiCustomerLicenseV0[] = [];
 	for (const { parent, definition } of offeredPools({
 		parents,
 		definitionsByParentId,
@@ -118,3 +108,15 @@ export const buildLicenseBalances = async ({
 	}
 	return pools;
 };
+
+/** The distinct license product internal ids a customer's state offers —
+ * the fetch set the caller resolves before serializing. */
+export const licenseProductInternalIds = (
+	state: CustomerLicenseState,
+): string[] => [
+	...new Set(
+		[...state.definitionsByParentId.values()]
+			.flat()
+			.map((definition) => definition.license_internal_product_id),
+	),
+];

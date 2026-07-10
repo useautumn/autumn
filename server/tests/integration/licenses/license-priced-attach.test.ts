@@ -36,10 +36,9 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
 
 		await expectAutumnError({
@@ -90,10 +89,9 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 1 }],
 		});
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,

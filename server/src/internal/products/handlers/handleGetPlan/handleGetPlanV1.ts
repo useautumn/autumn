@@ -9,8 +9,8 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { attachPlanLicenses } from "../../productUtils/productResponseUtils/attachPlanLicenses.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 const GetProductQuerySchema = z.object({
@@ -55,15 +55,11 @@ export const handleGetPlanV1 = createRoute({
 
 		if (schemaVersionInt === 1) return c.json(product);
 
-		const planLicensesByParent = await loadApiPlanLicenses({
-			ctx,
-			internalProductIds: [product.internal_id],
-		});
+		await attachPlanLicenses({ ctx, products: [product] });
 		const planResponse = await getPlanResponse({
 			ctx,
 			product,
 			features,
-			planLicenses: planLicensesByParent.get(product.internal_id),
 		});
 
 		const versionedResponse = applyResponseVersionChanges<ApiPlanV1>({

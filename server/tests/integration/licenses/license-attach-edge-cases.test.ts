@@ -14,7 +14,7 @@
  */
 
 import { expect, test } from "bun:test";
-import type { LicenseBalanceResponse } from "@autumn/shared";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -75,10 +75,9 @@ test.concurrent(
 		});
 
 		for (const parentId of [parentA.id, parentB.id]) {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: parentId,
-				license_plan_id: license.id,
-				included: 1,
+			await autumnV2_2.post("/plans.update", {
+				plan_id: parentId,
+				licenses: [{ license_plan_id: license.id, included: 1 }],
 			});
 			await autumnV2_2.billing.attach({
 				customer_id: customerId,
@@ -89,7 +88,7 @@ test.concurrent(
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(2);
 
 		await expectAutumnError({
@@ -136,10 +135,9 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 1 }],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -156,10 +154,9 @@ test.concurrent(
 				}),
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 3,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 3 }],
 		});
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -170,7 +167,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list[0].inventory).toMatchObject({
 			included: 3,
 			assigned: 2,
@@ -206,10 +203,9 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 1 }],
 		});
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -252,10 +248,9 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
 
 		const attachPreview = (await autumnV2_2.post("/licenses.preview_attach", {

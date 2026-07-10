@@ -110,27 +110,6 @@ export const LicenseListParamsSchema = z.object({
 	entity_id: z.string().optional(),
 });
 
-export const LicenseInventorySchema = z.object({
-	included: z.number(),
-	assigned: z.number(),
-	available: z.number(),
-});
-
-export const LicenseBalanceResponseSchema = z.object({
-	parent_plan_id: z.string(),
-	license_plan_id: z.string(),
-	license_plan_name: z.string(),
-	inventory: LicenseInventorySchema,
-	assignments: z.array(
-		z.object({
-			assignment_id: z.string(),
-			entity_id: z.string(),
-			license_plan_id: z.string(),
-			started_at: z.number(),
-		}),
-	),
-});
-
 export type LicensePatchParams = {
 	add_licenses?: z.infer<typeof CustomizePlanLicenseSchema>[];
 	remove_licenses?: string[];
@@ -145,6 +124,3 @@ export type LicenseListAssignmentsParams = z.infer<
 	typeof LicenseListAssignmentsParamsSchema
 >;
 export type LicenseListParams = z.infer<typeof LicenseListParamsSchema>;
-export type LicenseBalanceResponse = z.infer<
-	typeof LicenseBalanceResponseSchema
->;

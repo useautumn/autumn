@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiPlanLicenseV1Schema } from "../../api/products/apiPlanV1";
 import {
 	CustomerBillingControlsSchema,
 	DbBillingControlsSchema,
@@ -70,6 +71,8 @@ export const FullProductSchema = ProductSchema.extend({
 	free_trial: FreeTrialSchema.nullish(),
 	free_trials: z.array(FreeTrialSchema).nullish(),
 	free_trial_ids: z.array(z.string()).nullish(),
+	// Populated by ProductService.getFull/listFull; absent on hand-built FullProducts.
+	licenses: z.array(ApiPlanLicenseV1Schema).optional(),
 });
 
 export type ProductCounts = {

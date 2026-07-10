@@ -36,11 +36,11 @@ test.concurrent(
 		await expectAutumnError({
 			errMessage: "not yet available",
 			func: () =>
-				autumnV2_2.post("/licenses.link", {
-					parent_plan_id: parent.id,
-					license_plan_id: license.id,
-					included: 1,
-					prepaid_only: false,
+				autumnV2_2.post("/plans.update", {
+					plan_id: parent.id,
+					licenses: [
+						{ license_plan_id: license.id, included: 1, prepaid_only: false },
+					],
 				}),
 		});
 	},
