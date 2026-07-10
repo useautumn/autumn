@@ -1,4 +1,4 @@
-import { ErrCode, type LicenseCustomize, RecaseError } from "@autumn/shared";
+import { ErrCode, type LinkLicenseParams, RecaseError } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { serializePlanLicense } from "../../licenseResponseUtils.js";
@@ -11,37 +11,44 @@ import {
 	clearLicenseCustomize,
 	persistLicenseCustomize,
 } from "../customize/persistLicenseCustomize.js";
+import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 export const linkLicense = async ({
 	ctx,
-	parentPlanId,
-	licensePlanId,
-	included,
-	prepaidOnly,
-	customize,
-	metadata,
+	params,
 }: {
 	ctx: AutumnContext;
-	parentPlanId: string;
-	licensePlanId: string;
-	included: number;
-	prepaidOnly: boolean;
-	customize?: LicenseCustomize | null;
-	metadata?: Record<string, unknown>;
+	params: LinkLicenseParams;
 }) => {
-	// 1. Setup
+	const {
+		parent_plan_id: parentPlanId,
+		license_plan_id: licensePlanId,
+		included,
+		prepaid_only: prepaidOnly,
+		customize,
+		metadata,
+	} = params;
+
+	// 1. Setup: resolve products, the existing link, and the current max
+	// assignment count — all reads that later validation and execute consume.
 	const [parentProduct, licenseProduct] = await Promise.all([
 		getFullLicenseProduct({ ctx, idOrInternalId: parentPlanId }),
 		getFullLicenseProduct({ ctx, idOrInternalId: licensePlanId }),
 	]);
-	const existingLink = await planLicenseRepo.getCatalogByParentAndLicense({
-		db: ctx.db,
-		parentInternalProductId: parentProduct.internal_id,
-		licenseInternalProductId: licenseProduct.internal_id,
-	});
+	const [existingLink, maxAssigned] = await Promise.all([
+		planLicenseRepo.getCatalogByParentAndLicense({
+			db: ctx.db,
+			parentInternalProductId: parentProduct.internal_id,
+			licenseInternalProductId: licenseProduct.internal_id,
+		}),
+		licenseAssignmentRepo.maxActiveCountByCatalogLink({
+			db: ctx.db,
+			parentInternalProductId: parentProduct.internal_id,
+			licenseInternalProductId: licenseProduct.internal_id,
+		}),
+	]);
 
-	// 2. Compute the effective product and validate the link against it.
 	// An empty items array means stock — a frozen copy of today's items would
 	// silently stop base-item edits from rolling forward.
 	const normalizedCustomize = customize?.items?.length ? customize : null;
@@ -52,34 +59,40 @@ export const linkLicense = async ({
 				items: normalizedCustomize.items,
 			})
 		: null;
-	const effectiveProduct = computation?.effectiveProduct ?? licenseProduct;
 
+	logLicenseAction({
+		ctx,
+		action: "link",
+		details: {
+			parent: parentPlanId,
+			license: licensePlanId,
+			included,
+			customized: computation !== null,
+		},
+	});
+
+	// 2. Compute: validate the link against the effective product and guard
+	// against lowering capacity below active assignments (pure checks).
 	validateLicenseLink({
 		parentProduct,
-		licenseProduct: effectiveProduct,
+		licenseProduct: computation?.effectiveProduct ?? licenseProduct,
 		prepaidOnly,
 		licensePlanId,
 	});
-
-	if (existingLink && included < existingLink.included) {
-		const maxAssigned = await licenseAssignmentRepo.maxActiveCountByCatalogLink(
-			{
-				db: ctx.db,
-				parentInternalProductId: parentProduct.internal_id,
-				licenseInternalProductId: licenseProduct.internal_id,
-			},
-		);
-		if (maxAssigned > included) {
-			throw new RecaseError({
-				message: `Cannot set included to ${included}: a customer has ${maxAssigned} active assignments for ${licensePlanId}. Unassign licenses first.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+	if (
+		existingLink &&
+		included < existingLink.included &&
+		maxAssigned > included
+	) {
+		throw new RecaseError({
+			message: `Cannot set included to ${included}: a customer has ${maxAssigned} active assignments for ${licensePlanId}. Unassign licenses first.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	}
 
 	// 3. Execute: upsert the link and materialize its items atomically, so a
-	// failed customize step cannot leave the link with stale content
+	// failed customize step cannot leave the link with stale content.
 	const planLicense = await ctx.db.transaction(async (tx) => {
 		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
 		const upserted = await planLicenseRepo.upsert({

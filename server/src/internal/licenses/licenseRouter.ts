@@ -155,15 +155,7 @@ const handleLinkLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const planLicense = await linkLicense({
-			ctx,
-			parentPlanId: body.parent_plan_id,
-			licensePlanId: body.license_plan_id,
-			included: body.included,
-			prepaidOnly: body.prepaid_only,
-			customize: body.customize,
-			metadata: body.metadata,
-		});
+		const planLicense = await linkLicense({ ctx, params: body });
 
 		return c.json({ plan_license: planLicense });
 	},

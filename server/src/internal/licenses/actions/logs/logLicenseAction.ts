@@ -6,7 +6,8 @@ type LicenseLogAction =
 	| "preview_attach"
 	| "update"
 	| "preview_update"
-	| "reconcile";
+	| "reconcile"
+	| "link";
 
 export const logLicenseAction = ({
 	ctx,
