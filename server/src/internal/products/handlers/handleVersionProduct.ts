@@ -19,15 +19,9 @@ import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
 import { and, eq, ne } from "drizzle-orm";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
-import {
-	copyPlanLicensesToNewVersion,
-	validateCopiedPlanLicenses,
-} from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
-import {
-	rollForwardLicenseProductVersion,
-	validateRolledForwardLicenses,
-} from "@/internal/licenses/actions/links/rollForwardLicenseProductVersion.js";
-import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
+import { copyPlanLicensesToNewVersion } from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
+import { rollForwardLicenseProductVersion } from "@/internal/licenses/actions/links/rollForwardLicenseProductVersion.js";
+import { validateProductLicenseLinks } from "./handleUpdatePlan/validateProductLicenseLinks.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
@@ -121,27 +115,14 @@ export const handleVersionProductV2 = async ({
 
 	// License links must satisfy the link rules against the NEW version before
 	// anything is persisted — otherwise a rejected link leaves a half-created
-	// version behind. Build the new version's prices in-memory for the check.
-	const { prices: newPrices, entitlements: newEntitlements } =
-		convertProductV2ToV1({ productV2: newProductV2, orgId: org.id, features });
-	const newFullProduct: FullProduct = {
-		...newProduct,
-		prices: newPrices,
-		entitlements: getEntsWithFeature({
-			ents: Object.values(newEntitlements),
-			features,
-		}),
-		free_trial: null,
-	};
-	await validateCopiedPlanLicenses({
+	// version behind.
+	await validateProductLicenseLinks({
 		ctx,
 		fromInternalProductId: latestProduct.internal_id,
-		newParentProduct: newFullProduct,
-	});
-	await validateRolledForwardLicenses({
-		ctx,
-		fromInternalProductId: latestProduct.internal_id,
-		newLicenseProduct: newFullProduct,
+		newProductV2,
+		baseProduct: newProduct,
+		org,
+		features,
 	});
 
 	await ProductService.insert({ db, product: newProduct });

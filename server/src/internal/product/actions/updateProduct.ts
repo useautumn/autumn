@@ -19,6 +19,7 @@ import {
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
+import { validateProductLicenseLinks } from "@/internal/products/handlers/handleUpdatePlan/validateProductLicenseLinks.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -257,6 +258,18 @@ export const updateProduct = async ({
 		ctx,
 		body: productUpdates,
 		curProduct: fullProduct,
+	});
+
+	// Guard license links against the new item state before any write, so an
+	// in-place interval change can't silently invalidate a link (the versioning
+	// path validates the same way inside handleVersionProductV2).
+	await validateProductLicenseLinks({
+		ctx,
+		fromInternalProductId: fullProduct.internal_id,
+		newProductV2,
+		baseProduct: fullProduct,
+		org,
+		features,
 	});
 
 	const itemsExist = notNullish(productUpdates.items);
