@@ -35,14 +35,19 @@ const resolveLink = async ({
 	ctx,
 	parentProduct,
 	entry,
+	pinnedInternalIdByPublicId,
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
 	entry: CustomizePlanLicense;
+	pinnedInternalIdByPublicId: Map<string, string>;
 }): Promise<ResolvedLink> => {
+	// Existing links keep their pinned version; only new links resolve to latest.
 	const licenseProduct = await getFullLicenseProduct({
 		ctx,
-		idOrInternalId: entry.license_plan_id,
+		idOrInternalId:
+			pinnedInternalIdByPublicId.get(entry.license_plan_id) ??
+			entry.license_plan_id,
 	});
 	const normalizedCustomize = entry.customize?.items?.length
 		? entry.customize
@@ -123,9 +128,20 @@ export const syncPlanLicenses = async ({
 			db: ctx.db,
 			parentInternalProductIds: [parentProduct.internal_id],
 		});
+	const existingLinkProducts = await planLicenseRepo.listProductsByInternalIds({
+		db: ctx.db,
+		internalProductIds: existingLinks.map(
+			(link) => link.license_internal_product_id,
+		),
+	});
+	const pinnedInternalIdByPublicId = new Map(
+		existingLinkProducts.map((product) => [product.id, product.internal_id]),
+	);
 
 	const resolved = await Promise.all(
-		licenses.map((entry) => resolveLink({ ctx, parentProduct, entry })),
+		licenses.map((entry) =>
+			resolveLink({ ctx, parentProduct, entry, pinnedInternalIdByPublicId }),
+		),
 	);
 	const keepInternalIds = new Set(
 		resolved.map((link) => link.licenseProduct.internal_id),

@@ -20,7 +20,6 @@ import { addTaskToQueue } from "@server/queue/queueUtils.js";
 import { and, eq, ne } from "drizzle-orm";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { copyPlanLicensesToNewVersion } from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
-import { rollForwardLicenseProductVersion } from "@/internal/licenses/actions/links/rollForwardLicenseProductVersion.js";
 import { validateProductLicenseLinks } from "./handleUpdatePlan/validateProductLicenseLinks.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
@@ -155,12 +154,6 @@ export const handleVersionProductV2 = async ({
 	});
 
 	await copyPlanLicensesToNewVersion({
-		ctx,
-		fromInternalProductId: latestProduct.internal_id,
-		toInternalProductId: newProduct.internal_id,
-	});
-
-	await rollForwardLicenseProductVersion({
 		ctx,
 		fromInternalProductId: latestProduct.internal_id,
 		toInternalProductId: newProduct.internal_id,

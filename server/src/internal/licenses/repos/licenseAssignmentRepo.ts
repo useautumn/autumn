@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	CusProductStatus,
 	customerProducts,
 	type DbCustomerProduct,
@@ -254,26 +255,42 @@ const maxActiveCountByCatalogLink = async ({
 	return row?.value ?? 0;
 };
 
-/** Whether the customer holds this license plan at the customer level (any
- * billing-active status) — the priced-assignment gate's existence check. */
+/** Whether the customer holds this license plan (matched by public id, any
+ * version) at the customer level — the priced-assignment gate is plan-level. */
 const findCustomerLevelLicenseProduct = async ({
 	db,
 	internalCustomerId,
-	internalProductId,
+	productId,
+	orgId,
+	env,
 }: {
 	db: DrizzleCli;
 	internalCustomerId: string;
-	internalProductId: string;
-}) =>
-	await db.query.customerProducts.findFirst({
-		where: and(
-			eq(customerProducts.internal_customer_id, internalCustomerId),
-			eq(customerProducts.internal_product_id, internalProductId),
-			isNull(customerProducts.internal_entity_id),
-			inArray(customerProducts.status, licenseParentStatuses),
-			isNull(customerProducts.license_parent_customer_product_id),
-		),
-	});
+	productId: string;
+	orgId: string;
+	env: AppEnv;
+}): Promise<DbCustomerProduct | undefined> => {
+	const rows = await db
+		.select({ row: customerProducts })
+		.from(customerProducts)
+		.innerJoin(
+			products,
+			eq(customerProducts.internal_product_id, products.internal_id),
+		)
+		.where(
+			and(
+				eq(customerProducts.internal_customer_id, internalCustomerId),
+				eq(products.id, productId),
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				isNull(customerProducts.internal_entity_id),
+				inArray(customerProducts.status, licenseParentStatuses),
+				isNull(customerProducts.license_parent_customer_product_id),
+			),
+		)
+		.limit(1);
+	return rows[0]?.row;
+};
 
 const getEntityByInternalId = async ({
 	db,

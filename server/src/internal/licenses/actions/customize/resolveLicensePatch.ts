@@ -62,15 +62,19 @@ const resolveLicenseLinks = async ({
 	licensePlanId,
 	catalogByLicenseInternalId,
 	overrideByLicenseInternalId,
+	pinnedInternalIdByPublicId,
 }: {
 	ctx: AutumnContext;
 	licensePlanId: string;
 	catalogByLicenseInternalId: LinkMap;
 	overrideByLicenseInternalId: LinkMap;
+	pinnedInternalIdByPublicId: Map<string, string>;
 }) => {
+	// Existing links keep their pinned version; only new links resolve to latest.
 	const licenseProduct = await getFullLicenseProduct({
 		ctx,
-		idOrInternalId: licensePlanId,
+		idOrInternalId:
+			pinnedInternalIdByPublicId.get(licensePlanId) ?? licensePlanId,
 	});
 	return {
 		licenseProduct,
@@ -88,11 +92,13 @@ const resolveAddEntry = async ({
 	entry,
 	catalogByLicenseInternalId,
 	overrideByLicenseInternalId,
+	pinnedInternalIdByPublicId,
 }: {
 	ctx: AutumnContext;
 	entry: CustomizePlanLicense;
 	catalogByLicenseInternalId: LinkMap;
 	overrideByLicenseInternalId: LinkMap;
+	pinnedInternalIdByPublicId: Map<string, string>;
 }): Promise<ResolvedLicenseAdd> => {
 	const { licenseProduct, catalogLink, existingOverride } =
 		await resolveLicenseLinks({
@@ -100,6 +106,7 @@ const resolveAddEntry = async ({
 			licensePlanId: entry.license_plan_id,
 			catalogByLicenseInternalId,
 			overrideByLicenseInternalId,
+			pinnedInternalIdByPublicId,
 		});
 	const computation = entry.customize?.items
 		? await computeLicenseCustomize({
@@ -129,11 +136,13 @@ const resolveRemoveEntry = async ({
 	licensePlanId,
 	catalogByLicenseInternalId,
 	overrideByLicenseInternalId,
+	pinnedInternalIdByPublicId,
 }: {
 	ctx: AutumnContext;
 	licensePlanId: string;
 	catalogByLicenseInternalId: LinkMap;
 	overrideByLicenseInternalId: LinkMap;
+	pinnedInternalIdByPublicId: Map<string, string>;
 }): Promise<ResolvedLicenseRemove> => {
 	const { licenseProduct, catalogLink, existingOverride } =
 		await resolveLicenseLinks({
@@ -141,6 +150,7 @@ const resolveRemoveEntry = async ({
 			licensePlanId,
 			catalogByLicenseInternalId,
 			overrideByLicenseInternalId,
+			pinnedInternalIdByPublicId,
 		});
 	if (!(catalogLink || existingOverride)) {
 		throw new RecaseError({
@@ -197,6 +207,16 @@ export const resolveLicensePatch = async ({
 	const overrideByLicenseInternalId: LinkMap = new Map(
 		existingOverrides.map((link) => [link.license_internal_product_id, link]),
 	);
+	const linkedProducts = await planLicenseRepo.listProductsByInternalIds({
+		db: ctx.db,
+		internalProductIds: [
+			...catalogLinks.map((link) => link.license_internal_product_id),
+			...existingOverrides.map((link) => link.license_internal_product_id),
+		],
+	});
+	const pinnedInternalIdByPublicId = new Map(
+		linkedProducts.map((product) => [product.id, product.internal_id]),
+	);
 
 	const resolvedAdds = await Promise.all(
 		adds.map((entry) =>
@@ -205,6 +225,7 @@ export const resolveLicensePatch = async ({
 				entry,
 				catalogByLicenseInternalId,
 				overrideByLicenseInternalId,
+				pinnedInternalIdByPublicId,
 			}),
 		),
 	);
@@ -230,6 +251,7 @@ export const resolveLicensePatch = async ({
 				licensePlanId,
 				catalogByLicenseInternalId,
 				overrideByLicenseInternalId,
+				pinnedInternalIdByPublicId,
 			}),
 		),
 	);

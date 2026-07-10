@@ -43,7 +43,9 @@ export const setupLicenseAssignmentContext = async ({
 		await licenseAssignmentRepo.findCustomerLevelLicenseProduct({
 			db: ctx.db,
 			internalCustomerId: fullCustomer.internal_id,
-			internalProductId: licenseProduct.internal_id,
+			productId: licenseProduct.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
 		});
 
 	const resolution = await resolveLicenseAssignment({

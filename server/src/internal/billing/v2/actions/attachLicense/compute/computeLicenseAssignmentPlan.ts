@@ -10,7 +10,7 @@ export const computeLicenseAssignmentPlan = ({
 }: {
 	context: LicenseAssignmentContext;
 }): LicenseAssignmentPlan => {
-	const { fullCustomer, entity, licenseProduct, resolution } = context;
+	const { fullCustomer, entity, resolution } = context;
 	if (resolution.existing) return { existing: resolution.existing };
 
 	const {
@@ -33,7 +33,7 @@ export const computeLicenseAssignmentPlan = ({
 				op: "take",
 				internalCustomerId: fullCustomer.internal_id,
 				parentCustomerProductId: parent.id,
-				licenseInternalProductId: licenseProduct.internal_id,
+				licenseInternalProductId: licenseDefinition.license_internal_product_id,
 				granted: licenseDefinition.included,
 				entityId: entity.id ?? entity.internal_id,
 			},

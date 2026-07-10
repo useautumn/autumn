@@ -2,7 +2,6 @@ import {
 	type CusProductStatus,
 	ErrCode,
 	type FullCusProduct,
-	type FullCustomer,
 	LICENSE_ACTIVE_ASSIGNMENT_STATUSES,
 	LICENSE_ASSIGNABLE_STATUSES,
 	LICENSE_PARENT_STATUSES,

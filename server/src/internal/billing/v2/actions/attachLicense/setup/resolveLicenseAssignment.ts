@@ -23,27 +23,34 @@ export const resolveLicenseAssignment = async ({
 	planId: string;
 	parentPlanId?: string;
 }): Promise<LicenseAssignmentResolution> => {
+	const {
+		parent,
+		licenseDefinition,
+		licenseProduct: pinnedLicenseProduct,
+		effectiveProduct,
+		available,
+	} = await resolveAssignableLicenseParent({
+		ctx,
+		fullCustomer,
+		licenseProduct,
+		planId,
+		parentPlanId,
+	});
+
+	// Idempotency checks against the link's pinned version — the version the
+	// entity would actually be assigned.
 	const existing = await licenseAssignmentRepo.findActiveAssignment({
 		db: ctx.db,
 		internalCustomerId: fullCustomer.internal_id,
 		internalEntityId: entity.internal_id,
-		licenseInternalProductId: licenseProduct.internal_id,
+		licenseInternalProductId: licenseDefinition.license_internal_product_id,
 	});
 	if (existing) return { existing };
-
-	const { parent, licenseDefinition, effectiveProduct, available } =
-		await resolveAssignableLicenseParent({
-			ctx,
-			fullCustomer,
-			licenseProduct,
-			planId,
-			parentPlanId,
-		});
 
 	const provisioned = await buildLicenseCustomerProduct({
 		ctx,
 		fullCustomer,
-		licenseProduct,
+		licenseProduct: pinnedLicenseProduct,
 		licenseDefinition,
 		internalEntityId: entity.internal_id,
 		licenseParentCustomerProductId: parent.id,
