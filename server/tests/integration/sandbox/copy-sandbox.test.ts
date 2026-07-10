@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	FeatureUsageType,
 	mapToProductV2,
+	ResetInterval,
 	type Organization,
 	type OrgConfig,
 	organizations,
@@ -26,6 +27,8 @@ import {
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
+import { linkLicense } from "@/internal/licenses/actions/links/linkLicense.js";
+import { listLicenseLinks } from "@/internal/licenses/actions/links/listLicenseLinks.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { copySandboxForOrg } from "@/internal/sandboxes/copySandbox.js";
 import { generatePublishableKey } from "@/utils/encryptUtils.js";
@@ -50,6 +53,7 @@ const DASH_FEATURE = "copy_dashboard";
 const CREDIT_FEATURE = "copy_credits";
 const AI_CREDIT_FEATURE = "copy_ai_credits";
 const PRODUCT_ID = "copy_pro";
+const LICENSE_ID = "copy_license";
 
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -168,6 +172,34 @@ const seedSourceSandbox = async (sourceOrg: Organization) => {
 		ctx: { ...seedCtx, features: allFeatures },
 		data: product as unknown as CreateProductV2Params,
 	});
+	await createProduct({
+		ctx: { ...seedCtx, features: allFeatures },
+		data: products.base({
+			id: LICENSE_ID,
+			items: [
+				constructFeatureItem({ featureId: MSG_FEATURE, includedUsage: 25 }),
+			],
+		}) as unknown as CreateProductV2Params,
+	});
+	await linkLicense({
+		ctx: { ...seedCtx, features: allFeatures },
+		params: {
+			parent_plan_id: PRODUCT_ID,
+			license_plan_id: LICENSE_ID,
+			included: 3,
+			prepaid_only: true,
+			metadata: { source: "sandbox-copy" },
+			customize: {
+				items: [
+					{
+						feature_id: MSG_FEATURE,
+						included: 80,
+						reset: { interval: ResetInterval.Month },
+					},
+				],
+			},
+		},
+	});
 };
 
 beforeAll(async () => {
@@ -250,6 +282,27 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 			.map((i) => i.feature_id)
 			.filter((id): id is string => Boolean(id));
 		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
+
+		const links = await listLicenseLinks({
+			ctx: {
+				...baseCtx,
+				org: target,
+				env: AppEnv.Sandbox,
+				features: targetFeatures,
+			},
+			parentPlanId: PRODUCT_ID,
+		});
+		expect(links).toHaveLength(1);
+		expect(links[0]).toMatchObject({
+			parent_plan_id: PRODUCT_ID,
+			license_plan_id: LICENSE_ID,
+			included: 3,
+			metadata: { source: "sandbox-copy" },
+		});
+		expect(links[0].customize?.add_items?.[0]).toMatchObject({
+			feature_id: MSG_FEATURE,
+			included: 80,
+		});
 	}, 180_000);
 
 	test("rejects a non-owned source with a 404 (ownership masked)", async () => {
