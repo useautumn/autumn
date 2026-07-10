@@ -1,13 +1,13 @@
 import type {
+	ApiCustomerLicenseV0,
 	LicenseAttachParams,
-	LicenseBalanceResponse,
 	UpdateLicenseParams,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-const EMPTY_POOLS: LicenseBalanceResponse[] = [];
+const EMPTY_POOLS: ApiCustomerLicenseV0[] = [];
 
 /**
  * Loads the customer's license pools (inventory + active assignments) and
@@ -28,7 +28,7 @@ export const useLicenseBalancesQuery = ({
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error, refetch } = useQuery<{
-		list: LicenseBalanceResponse[];
+		list: ApiCustomerLicenseV0[];
 	}>({
 		queryKey: buildKey(["license_pools", customerId ?? null, entityId ?? null]),
 		queryFn: async () => {

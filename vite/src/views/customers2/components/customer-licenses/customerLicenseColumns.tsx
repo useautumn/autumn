@@ -1,4 +1,4 @@
-import type { LicenseBalanceResponse } from "@autumn/shared";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { DropdownMenuItem } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import {
@@ -13,7 +13,7 @@ export interface LicenseAssignmentRow {
 	id: string;
 	name: string;
 	started_at: number;
-	pool: LicenseBalanceResponse;
+	pool: ApiCustomerLicenseV0;
 }
 
 export const createCustomerLicenseColumns = ({

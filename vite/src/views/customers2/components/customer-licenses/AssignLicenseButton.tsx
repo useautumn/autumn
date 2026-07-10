@@ -1,4 +1,4 @@
-import type { LicenseBalanceResponse } from "@autumn/shared";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import {
 	Button,
 	DropdownMenu,
@@ -25,12 +25,12 @@ export function AssignLicenseButton({
 	onAssign,
 	isAssigning,
 }: {
-	pools: LicenseBalanceResponse[];
+	pools: ApiCustomerLicenseV0[];
 	entityId: string;
-	onAssign: (pool: LicenseBalanceResponse) => void;
+	onAssign: (pool: ApiCustomerLicenseV0) => void;
 	isAssigning: boolean;
 }) {
-	const isAssignedToEntity = (pool: LicenseBalanceResponse) =>
+	const isAssignedToEntity = (pool: ApiCustomerLicenseV0) =>
 		pool.assignments.some((assignment) => assignment.entity_id === entityId);
 
 	const assignablePools = pools.filter(

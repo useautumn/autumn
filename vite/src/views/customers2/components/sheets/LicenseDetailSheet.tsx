@@ -55,7 +55,6 @@ export function LicenseDetailSheet() {
 
 	const handleUnassign = async () => {
 		const success = await cancelLicenseAssignment({
-			pool,
 			assignmentId: assignment.assignment_id,
 		});
 		if (success) closeSheet();

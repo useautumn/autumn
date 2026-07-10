@@ -1,5 +1,4 @@
-import type { LicenseBalanceResponse } from "@autumn/shared";
-import { useState } from "react";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { useLicenseBalancesQuery } from "@/hooks/queries/useLicenseBalancesQuery";
 import { runWithErrorToast } from "@/views/products/plan/components/plan-licenses/runWithErrorToast";
 
@@ -20,28 +19,9 @@ export const useCustomerLicenseActions = ({
 		enabled: Boolean(entityId),
 	});
 
-	// The assign/unassign mutations are shared across rows, so track which pool
-	// is acting to scope pending state to that row alone.
-
-	const runForPool = async ({
-		poolId,
-		action,
-		errorMessage,
-	}: {
-		poolId: string;
-		action: () => Promise<unknown>;
-		errorMessage: string;
-	}) => {
-		try {
-			return await runWithErrorToast({ action, fallbackMessage: errorMessage });
-		} finally {
-		}
-	};
-
-	const attachLicense = (pool: LicenseBalanceResponse) => {
+	const attachLicense = (pool: ApiCustomerLicenseV0) => {
 		if (!(customerId && entityId)) return Promise.resolve(false);
-		return runForPool({
-			poolId: pool.parent_plan_id,
+		return runWithErrorToast({
 			action: () =>
 				assign.mutateAsync({
 					customer_id: customerId,
@@ -49,25 +29,22 @@ export const useCustomerLicenseActions = ({
 					plan_id: pool.license_plan_id,
 					parent_plan_id: pool.parent_plan_id,
 				}),
-			errorMessage: "Failed to assign license",
+			fallbackMessage: "Failed to assign license",
 		});
 	};
 
 	const cancelLicenseAssignment = ({
-		pool,
 		assignmentId,
 	}: {
-		pool: LicenseBalanceResponse;
 		assignmentId: string;
 	}) =>
-		runForPool({
-			poolId: pool.parent_plan_id,
+		runWithErrorToast({
 			action: () =>
 				unassign.mutateAsync({
 					customer_id: customerId ?? "",
 					assignment_id: assignmentId,
 				}),
-			errorMessage: "Failed to unassign license",
+			fallbackMessage: "Failed to unassign license",
 		});
 
 	return {

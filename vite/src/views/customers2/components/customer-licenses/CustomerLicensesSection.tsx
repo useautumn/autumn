@@ -41,8 +41,7 @@ export function CustomerLicensesSection() {
 	const columns = useMemo(
 		() =>
 			createCustomerLicenseColumns({
-				onUnassign: (row) =>
-					cancelLicenseAssignment({ pool: row.pool, assignmentId: row.id }),
+				onUnassign: (row) => cancelLicenseAssignment({ assignmentId: row.id }),
 			}),
 		[cancelLicenseAssignment],
 	);
