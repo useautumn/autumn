@@ -62,7 +62,13 @@ if (process.env.NEON_EVENTS_READ_ONLY_URL) {
 		);
 	}
 } else {
-	console.log("(skipped — NEON_EVENTS_READ_ONLY_URL not set)\n");
+	const message = "NEON_EVENTS_READ_ONLY_URL not set";
+	if (process.env.CI) {
+		failures.push("neon-events");
+		console.error(`❌ [neon-events] validation failed: ${message}\n`);
+	} else {
+		console.log(`(skipped — ${message})\n`);
+	}
 }
 
 if (failures.length > 0) {
