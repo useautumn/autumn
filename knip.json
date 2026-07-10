@@ -43,6 +43,7 @@
 			]
 		},
 		"shared": {
+			"entry": ["drizzle.config.events.ts"],
 			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
