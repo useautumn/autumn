@@ -74,6 +74,10 @@ export type UpdateBalanceParams = {
    * The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
    */
   nextResetAt?: number | undefined;
+  /**
+   * Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.
+   */
+  expiresAt?: number | undefined;
 };
 
 /**
@@ -100,6 +104,7 @@ export type UpdateBalanceParams$Outbound = {
   included_grant?: number | undefined;
   balance_id?: string | undefined;
   next_reset_at?: number | undefined;
+  expires_at?: number | undefined;
 };
 
 /** @internal */
@@ -118,6 +123,7 @@ export const UpdateBalanceParams$outboundSchema: z.ZodMiniType<
     includedGrant: z.optional(z.number()),
     balanceId: z.optional(z.string()),
     nextResetAt: z.optional(z.number()),
+    expiresAt: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -128,6 +134,7 @@ export const UpdateBalanceParams$outboundSchema: z.ZodMiniType<
       includedGrant: "included_grant",
       balanceId: "balance_id",
       nextResetAt: "next_reset_at",
+      expiresAt: "expires_at",
     });
   }),
 );

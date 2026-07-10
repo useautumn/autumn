@@ -13250,7 +13250,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783612913858,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784822513858,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -21336,6 +21336,9 @@ paths:
                 next_reset_at:
                   type: number
                   description: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
+                expires_at:
+                  type: number
+                  description: Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.
               required:
                 - customer_id
                 - feature_id

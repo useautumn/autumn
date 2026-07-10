@@ -22606,6 +22606,11 @@ paths:
                   description: The next reset time for the balance. If there are multiple
                     breakdowns, this will update the breakdown with the next
                     reset time.
+                expires_at:
+                  type: number
+                  description: Unix timestamp (milliseconds) when the balance expires. Targets a
+                    specific balance via balance_id / interval when the customer
+                    has multiple balances for the same feature.
               required:
                 - customer_id
                 - feature_id
