@@ -171,7 +171,7 @@ const reconcileAssignmentBalances = async ({
 
 	// Each pool's upsert -> setRemaining is independent of the others.
 	state.balances = await Promise.all(
-		[...offeredPools(state)].map(async ({ parent, definition }) => {
+		offeredPools(state).map(async ({ parent, definition }) => {
 			const balance = await customerLicenseRepo.upsertGranted({
 				db: ctx.db,
 				internalCustomerId: fullCustomer.internal_id,

@@ -10,17 +10,15 @@ export const poolKey = (
 
 /** Each parent × its live (non-tombstone) license definitions — the "offered
  * pools" every consumer iterates. */
-export function* offeredPools({
+export const offeredPools = ({
 	parents,
 	definitionsByParentId,
-}: Pick<CustomerLicenseState, "parents" | "definitionsByParentId">): Generator<{
+}: Pick<CustomerLicenseState, "parents" | "definitionsByParentId">): {
 	parent: FullCusProduct;
 	definition: DbPlanLicense;
-}> {
-	for (const parent of parents) {
-		for (const definition of definitionsByParentId.get(parent.id) ?? []) {
-			if (definition.included <= 0) continue;
-			yield { parent, definition };
-		}
-	}
-}
+}[] =>
+	parents.flatMap((parent) =>
+		(definitionsByParentId.get(parent.id) ?? [])
+			.filter((definition) => definition.included > 0)
+			.map((definition) => ({ parent, definition })),
+	);

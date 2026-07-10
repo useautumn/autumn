@@ -77,7 +77,7 @@ const updateDbPricesAndEnts = async ({
 	});
 	await deletePricesKeepingLicenseReferenced({
 		db,
-		deletedPriceIds: deletedPrices.map((price) => price.id!),
+		deletedPriceIds: deletedPrices.map((price) => price.id),
 	});
 	await deleteEntsKeepingReferenced({ db, deletedEnts });
 };
@@ -99,7 +99,7 @@ const repointLicenseItems = async ({
 }) => {
 	const entitlementRefs = await licenseItemRepo.listRefsByEntitlementIds({
 		db,
-		entitlementIds: deletedEnts.map((ent) => ent.id!),
+		entitlementIds: deletedEnts.map((ent) => ent.id),
 	});
 	for (const ref of entitlementRefs) {
 		const previousEntitlement = deletedEnts.find(
@@ -113,7 +113,7 @@ const repointLicenseItems = async ({
 		await licenseItemRepo.setEntitlementRef({
 			db,
 			refId: ref.id,
-			entitlementId: replacement.id!,
+			entitlementId: replacement.id,
 		});
 	}
 
@@ -126,7 +126,7 @@ const repointLicenseItems = async ({
 	};
 	const priceRefs = await licenseItemRepo.listRefsByPriceIds({
 		db,
-		priceIds: deletedPrices.map((price) => price.id!),
+		priceIds: deletedPrices.map((price) => price.id),
 	});
 	for (const ref of priceRefs) {
 		const previousPrice = deletedPrices.find(
@@ -144,7 +144,7 @@ const repointLicenseItems = async ({
 		await licenseItemRepo.setPriceRef({
 			db,
 			refId: ref.id,
-			priceId: replacement.id!,
+			priceId: replacement.id,
 		});
 	}
 };
@@ -187,7 +187,7 @@ const deleteEntsKeepingReferenced = async ({
 	deletedEnts: Entitlement[];
 }) => {
 	if (deletedEnts.length === 0) return;
-	const deletedEntIds = deletedEnts.map((ent) => ent.id!);
+	const deletedEntIds = deletedEnts.map((ent) => ent.id);
 	const [customPrices, licenseReferencedEntIds] = await Promise.all([
 		PriceService.getCustomInEntIds({ db, entitlementIds: deletedEntIds }),
 		licenseItemRepo.listReferencedEntitlementIds({
@@ -205,14 +205,14 @@ const deleteEntsKeepingReferenced = async ({
 		deletedEnts.map((ent) => {
 			const referenced =
 				customPrices.some((price) => price.entitlement_id === ent.id) ||
-				licenseReferencedEntIds.has(ent.id!);
+				licenseReferencedEntIds.has(ent.id);
 			return referenced
 				? EntitlementService.update({
 						db,
-						id: ent.id!,
+						id: ent.id,
 						updates: { is_custom: true },
 					})
-				: EntitlementService.deleteInIds({ db, ids: [ent.id!] });
+				: EntitlementService.deleteInIds({ db, ids: [ent.id] });
 		}),
 	);
 };
