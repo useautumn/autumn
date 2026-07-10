@@ -1,5 +1,4 @@
 import {
-	type CreatePlanItemParamsV1,
 	ErrCode,
 	type FullProduct,
 	getLargestInterval,
@@ -52,13 +51,11 @@ export const validateLicenseLink = ({
 	licenseProduct,
 	prepaidOnly,
 	licensePlanId,
-	customizeItems,
 }: {
 	parentProduct?: FullProduct;
 	licenseProduct: FullProduct;
 	prepaidOnly?: boolean;
 	licensePlanId?: string;
-	customizeItems?: CreatePlanItemParamsV1[];
 }) => {
 	if (prepaidOnly !== undefined) {
 		validateLicenseBillingMode({ prepaidOnly });

@@ -2,13 +2,11 @@ import type { LicenseBalanceResponse } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeLicenseInventory } from "../../../licenseUtils.js";
 import { planLicenseRepo } from "../../../repos/planLicenseRepo.js";
+import { offeredPools, poolKey } from "../../reconcile/stateHelpers.js";
 import type { CustomerLicenseState } from "../../reconcile/types.js";
 
 type LicenseProduct = { internal_id: string; id: string; name: string | null };
 type AssignmentRow = CustomerLicenseState["assignments"][number];
-
-const poolKey = (parentCustomerProductId: string, licenseInternalId: string) =>
-	`${parentCustomerProductId}:${licenseInternalId}`;
 
 const groupAssignmentsByPool = ({
 	assignments,
@@ -94,29 +92,29 @@ export const buildLicenseBalances = async ({
 	);
 	const assignmentsByPool = groupAssignmentsByPool({ assignments, entityId });
 
-	return parents.flatMap((parent) =>
-		(definitionsByParentId.get(parent.id) ?? []).flatMap((definition) => {
-			// A zero-capacity definition is a removal tombstone or an unoffered
-			// link; there is nothing to list.
-			if (definition.included <= 0) return [];
-			const licenseProduct = licenseProductByInternalId.get(
-				definition.license_internal_product_id,
-			);
-			if (!licenseProduct) return [];
+	const pools: LicenseBalanceResponse[] = [];
+	for (const { parent, definition } of offeredPools({
+		parents,
+		definitionsByParentId,
+	})) {
+		const licenseProduct = licenseProductByInternalId.get(
+			definition.license_internal_product_id,
+		);
+		if (!licenseProduct) continue;
 
-			const key = poolKey(parent.id, definition.license_internal_product_id);
-			const balance = balanceByKey.get(key);
-			const granted = balance?.granted ?? definition.included;
+		const key = poolKey(parent.id, definition.license_internal_product_id);
+		const balance = balanceByKey.get(key);
+		const granted = balance?.granted ?? definition.included;
 
-			return [
-				serializePool({
-					parentPlanId: parent.product.id,
-					licenseProduct,
-					granted,
-					assigned: granted - (balance?.remaining ?? granted),
-					assignmentRows: assignmentsByPool.get(key) ?? [],
-				}),
-			];
-		}),
-	);
+		pools.push(
+			serializePool({
+				parentPlanId: parent.product.id,
+				licenseProduct,
+				granted,
+				assigned: granted - (balance?.remaining ?? granted),
+				assignmentRows: assignmentsByPool.get(key) ?? [],
+			}),
+		);
+	}
+	return pools;
 };

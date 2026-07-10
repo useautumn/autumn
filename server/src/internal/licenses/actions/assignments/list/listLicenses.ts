@@ -12,13 +12,11 @@ export const listLicenses = async ({
 	customerId: string;
 	entityId?: string;
 }) => {
-	// 1. Setup
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
 		params: { customer_id: customerId, entity_id: entityId },
 	});
 
-	// 2. Converge to current state
 	const state = await reconcileLicenseStateForCustomer({
 		ctx,
 		customerId,
@@ -26,6 +24,5 @@ export const listLicenses = async ({
 	});
 	if (!state) return [];
 
-	// 3. Serialize balances per pool
 	return await buildLicenseBalances({ ctx, state, entityId });
 };

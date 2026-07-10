@@ -172,7 +172,6 @@ export const resolveLicensePatch = async ({
 			licenseProduct: computation?.effectiveProduct ?? licenseProduct,
 			prepaidOnly,
 			licensePlanId: entry.license_plan_id,
-			customizeItems: entry.customize?.items ?? undefined,
 		});
 	}
 

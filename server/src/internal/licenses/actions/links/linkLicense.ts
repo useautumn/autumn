@@ -59,7 +59,6 @@ export const linkLicense = async ({
 		licenseProduct: effectiveProduct,
 		prepaidOnly,
 		licensePlanId,
-		customizeItems: normalizedCustomize?.items,
 	});
 
 	if (existingLink && included < existingLink.included) {
