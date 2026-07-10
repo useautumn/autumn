@@ -1,9 +1,8 @@
-import type { ApiPlanLicenseV1, FullProduct } from "@autumn/shared";
+import type { ApiPlanLicenseV1 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getFullLicenseProduct } from "../../licenseUtils.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
-import { deriveCustomizeFromItems } from "../customize/deriveLicenseCustomize.js";
+import { deriveCustomizeByLinkId } from "../customize/deriveLicenseCustomize.js";
 
 /**
  * Plan-response license data, fully derived: response handlers fetch through
@@ -19,55 +18,24 @@ export const loadApiPlanLicenses = async ({
 	const result = new Map<string, ApiPlanLicenseV1[]>();
 	if (internalProductIds.length === 0) return result;
 
-	// 1. Catalog links for the requested plans
 	const links = await planLicenseRepo.listWithLicensePlanIdByParents({
 		db: ctx.db,
 		parentInternalProductIds: internalProductIds,
 	});
 	if (links.length === 0) return result;
 
-	// 2. Item rows grouped per link (customized links have them)
 	const itemRows = await licenseItemRepo.listByPlanLicenseIds({
 		db: ctx.db,
 		planLicenseIds: links.map(({ planLicense }) => planLicense.id),
 	});
-	const customizedLinkIds = new Set([
-		...itemRows.entitlements.map((row) => row.plan_license_id),
-		...itemRows.prices.map((row) => row.plan_license_id),
-	]);
+	const customizeByLinkId = await deriveCustomizeByLinkId({
+		ctx,
+		links,
+		itemRows,
+	});
 
-	// 3. License products, fetched once per distinct customized license
-	const licenseProducts = new Map<string, FullProduct>();
-	for (const { planLicense } of links) {
-		const internalId = planLicense.license_internal_product_id;
-		if (!customizedLinkIds.has(planLicense.id)) continue;
-		if (licenseProducts.has(internalId)) continue;
-		licenseProducts.set(
-			internalId,
-			await getFullLicenseProduct({ ctx, idOrInternalId: internalId }),
-		);
-	}
-
-	// 4. Assemble per parent, deriving customize for customized links
 	for (const { planLicense, licensePlanId } of links) {
-		const licenseProduct = licenseProducts.get(
-			planLicense.license_internal_product_id,
-		);
-		const customize = licenseProduct
-			? deriveCustomizeFromItems({
-					ctx,
-					licenseProduct,
-					itemRows: {
-						entitlements: itemRows.entitlements.filter(
-							(row) => row.plan_license_id === planLicense.id,
-						),
-						prices: itemRows.prices.filter(
-							(row) => row.plan_license_id === planLicense.id,
-						),
-					},
-				})
-			: null;
-
+		const customize = customizeByLinkId.get(planLicense.id) ?? null;
 		const existing = result.get(planLicense.parent_internal_product_id) ?? [];
 		existing.push({
 			license_plan_id: licensePlanId,
