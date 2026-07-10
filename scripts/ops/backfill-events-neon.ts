@@ -43,6 +43,8 @@ const COPY_TO_STAGING = `\\copy events_staging (${COLUMN_LIST}) FROM STDIN CSV`;
 
 const MERGE_SQL = `INSERT INTO events (${COLUMN_LIST}) SELECT ${COLUMN_LIST} FROM events_staging ON CONFLICT DO NOTHING`;
 
+// Tinybird wraps deductions as {list:[...]} (ClickHouse top-level-array limitation) while
+// live rows store the bare TrackDeduction[] — normalize every historical shape to bare array.
 // set_usage is absent from the parquet export; emit false (NOT NULL — readers and the
 // partial index filter on set_usage = false, so NULL rows would be silently excluded).
 const duckDbExportSql = (
@@ -51,14 +53,18 @@ const duckDbExportSql = (
 	year: string,
 	month: string,
 ): string => `
-INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws;
+INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws; INSTALL json; LOAD json;
 CREATE OR REPLACE SECRET s3_ambient (TYPE s3, PROVIDER credential_chain, REGION 'us-east-2');
 COPY (
 	SELECT id, org_id, COALESCE(org_slug,'') AS org_slug, internal_customer_id,
 	       COALESCE(env,'live') AS env, created_at, "timestamp",
 	       event_name, idempotency_key, value, false AS set_usage,
 	       entity_id, internal_entity_id, internal_product_id, customer_id,
-	       COALESCE(properties,'{}') AS properties, COALESCE(deductions,'[]') AS deductions
+	       COALESCE(properties,'{}') AS properties, CASE
+	         WHEN deductions IS NULL OR trim(deductions) IN ('', '{}', 'null') THEN '[]'
+	         WHEN trim(deductions) LIKE '[%' THEN deductions
+	         ELSE COALESCE(CAST(json_extract(deductions, '$.list') AS VARCHAR), '[]')
+	       END AS deductions
 	FROM read_parquet('${s3Prefix}/org_id=${orgId}/year=${year}/month=${month}/**/*.parquet')
 ) TO STDOUT (FORMAT CSV, HEADER false);
 `;
