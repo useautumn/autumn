@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { LicenseBalanceResponse } from "@autumn/shared";
+import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -14,7 +14,7 @@ const makeLicenseProduct = (id: string) =>
 		items: [items.monthlyMessages({ includedUsage: 25 })],
 	});
 
-type PoolsResponse = { list: LicenseBalanceResponse[] };
+type PoolsResponse = { list: ApiCustomerLicenseV0[] };
 type AssignmentsResponse = {
 	list: Array<{ id: string; entity_id: string; ended_at: number | null }>;
 };
@@ -41,10 +41,9 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -130,10 +129,9 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -194,10 +192,9 @@ test.concurrent(
 		});
 
 		for (const planId of [planA.id, planB.id]) {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: planId,
-				license_plan_id: license.id,
-				included: 2,
+			await autumnV2_2.post("/plans.update", {
+				plan_id: planId,
+				licenses: [{ license_plan_id: license.id, included: 2 }],
 			});
 		}
 
@@ -272,17 +269,16 @@ test.concurrent(
 		});
 
 		// P links both X and Y; the successor Q links only X.
-		for (const licensePlanId of [licenseX.id, licenseY.id]) {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: parentP.id,
-				license_plan_id: licensePlanId,
-				included: 1,
-			});
-		}
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: successorQ.id,
-			license_plan_id: licenseX.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parentP.id,
+			licenses: [
+				{ license_plan_id: licenseX.id, included: 1 },
+				{ license_plan_id: licenseY.id, included: 1 },
+			],
+		});
+		await autumnV2_2.post("/plans.update", {
+			plan_id: successorQ.id,
+			licenses: [{ license_plan_id: licenseX.id, included: 1 }],
 		});
 
 		await autumnV2_2.billing.attach({
@@ -360,10 +356,9 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 3,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 3 }],
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -378,10 +373,9 @@ test.concurrent(
 		}
 
 		// Drop capacity to exactly the active count; both assignments survive.
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
 		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
 
@@ -409,10 +403,9 @@ test.concurrent(
 		expect(openActive).toHaveLength(2);
 
 		// Raising capacity frees the difference back into availability.
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 4,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [{ license_plan_id: license.id, included: 4 }],
 		});
 		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
 

@@ -1,9 +1,9 @@
 import {
+	type ApiCustomerLicenseV0,
+	type ApiPlanV1,
 	customerLicenses,
 	customerProducts,
 	customers,
-	type LicenseBalanceResponse,
-	type PlanLicense,
 } from "@autumn/shared";
 import { and, eq, isNotNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -51,7 +51,7 @@ export const listLicensePools = async ({
 	const response = (await autumn.post("/licenses.list", {
 		customer_id: customerId,
 		entity_id: entityId,
-	})) as { list: LicenseBalanceResponse[] };
+	})) as { list: ApiCustomerLicenseV0[] };
 	return response.list;
 };
 
@@ -84,10 +84,10 @@ export const listLicenseLinks = async ({
 	autumn: AutumnInt;
 	parentPlanId: string;
 }) => {
-	const response = (await autumn.post("/licenses.list_links", {
-		parent_plan_id: parentPlanId,
-	})) as { list: PlanLicense[] };
-	return response.list;
+	const plan = (await autumn.post("/plans.get", {
+		plan_id: parentPlanId,
+	})) as ApiPlanV1;
+	return plan.licenses ?? [];
 };
 
 export const getLicenseDbState = async ({

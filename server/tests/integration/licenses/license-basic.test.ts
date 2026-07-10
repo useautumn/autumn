@@ -320,20 +320,24 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
-			customize: {
-				items: [itemsV2.monthlyMessages({ included: 100 })],
-			},
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 2,
+					customize: {
+						items: [itemsV2.monthlyMessages({ included: 100 })],
+					},
+				},
+			],
 		});
 
 		const enterprisePlanLicenses = await listLicenseLinks({
 			autumn: autumnV2_2,
 			parentPlanId: parent.id,
 		});
-		expect(enterprisePlanLicenses[0].parent_plan_id).toBe(parent.id);
+		expect(enterprisePlanLicenses).toHaveLength(1);
 		expect(enterprisePlanLicenses[0].license_plan_id).toBe(license.id);
 		expect("parent_internal_product_id" in enterprisePlanLicenses[0]).toBe(
 			false,
@@ -345,10 +349,17 @@ test.concurrent(
 			100,
 		);
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 3,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 3,
+					customize: {
+						items: [itemsV2.monthlyMessages({ included: 100 })],
+					},
+				},
+			],
 		});
 		const updatedEnterprisePlanLicenses = await listLicenseLinks({
 			autumn: autumnV2_2,

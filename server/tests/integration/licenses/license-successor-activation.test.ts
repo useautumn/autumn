@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import type {
+	ApiCustomerLicenseV0,
 	AttachParamsV0Input,
 	CheckResponseV3,
-	LicenseBalanceResponse,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
@@ -135,7 +135,7 @@ test.concurrent(
 
 		const scheduledPools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(scheduledPools.list).toHaveLength(0);
 
 		await timeout(4000);
@@ -150,7 +150,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0].inventory).toMatchObject({
 			included: 2,
@@ -180,7 +180,7 @@ test.concurrent(
 
 		const before = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(before.list).toHaveLength(1);
 		expect(before.list[0]).toMatchObject({
 			parent_plan_id: premium.id,
@@ -215,7 +215,7 @@ test.concurrent(
 
 		const after = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(after.list).toHaveLength(1);
 		expect(after.list[0]).toMatchObject({
 			parent_plan_id: pro.id,
@@ -269,7 +269,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(0);
 		const assignments = (await autumnV2_2.post("/licenses.list_assignments", {
 			customer_id: customerId,

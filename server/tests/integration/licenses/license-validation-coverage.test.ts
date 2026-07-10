@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	type ApiPlanV1,
 	type AttachParamsV1Input,
 	type CheckResponseV3,
 	ErrCode,
@@ -45,29 +46,29 @@ test.concurrent(
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "Billing intervals must match",
 			func: () =>
-				autumnV2_2.post("/licenses.link", {
-					parent_plan_id: monthlyParent.id,
-					license_plan_id: annualLicense.id,
-					included: 1,
+				autumnV2_2.post("/plans.update", {
+					plan_id: monthlyParent.id,
+					licenses: [{ license_plan_id: annualLicense.id, included: 1 }],
 				}),
 		});
 
-		const link = (await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: monthlyParent.id,
-			license_plan_id: monthlyLicense.id,
-			included: 1,
-		})) as { license_plan_id?: string };
+		await autumnV2_2.post("/plans.update", {
+			plan_id: monthlyParent.id,
+			licenses: [{ license_plan_id: monthlyLicense.id, included: 1 }],
+		});
+		const plan = (await autumnV2_2.post("/plans.get", {
+			plan_id: monthlyParent.id,
+		})) as ApiPlanV1;
+		const link = plan.licenses?.find(
+			(planLicense) => planLicense.license_plan_id === monthlyLicense.id,
+		);
 		expect(link).toBeDefined();
 
-		const { list } = (await autumnV2_2.post("/licenses.list_links", {
-			parent_plan_id: monthlyParent.id,
-		})) as {
-			list: Array<{ parent_plan_id: string; license_plan_id: string }>;
-		};
+		const list = plan.licenses ?? [];
 		expect(list).toHaveLength(1);
 		expect(list[0]).toMatchObject({
-			parent_plan_id: monthlyParent.id,
 			license_plan_id: monthlyLicense.id,
+			included: 1,
 		});
 	},
 );
@@ -90,10 +91,9 @@ test.concurrent(
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "cannot be linked as a license to itself",
 			func: () =>
-				autumnV2_2.post("/licenses.link", {
-					parent_plan_id: parent.id,
-					license_plan_id: parent.id,
-					included: 1,
+				autumnV2_2.post("/plans.update", {
+					plan_id: parent.id,
+					licenses: [{ license_plan_id: parent.id, included: 1 }],
 				}),
 		});
 	},
@@ -126,10 +126,9 @@ test.concurrent(
 			errCode: ErrCode.InvalidRequest,
 			errMessage: "is archived and cannot be linked",
 			func: () =>
-				autumnV2_2.post("/licenses.link", {
-					parent_plan_id: parent.id,
-					license_plan_id: license.id,
-					included: 1,
+				autumnV2_2.post("/plans.update", {
+					plan_id: parent.id,
+					licenses: [{ license_plan_id: license.id, included: 1 }],
 				}),
 		});
 	},

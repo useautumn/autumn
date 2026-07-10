@@ -1,12 +1,13 @@
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerLicenseV0,
 	type ApiEntityV2,
+	type ApiPlanV1,
 	type AttachParamsV1Input,
 	type CheckResponseV3,
 	ErrCode,
 	fullCustomerToFullSubject,
 	fullSubjectToApiCustomerProducts,
-	type LicenseBalanceResponse,
 	type ProductV2,
 	planLicenses,
 	type TrackResponseV3,
@@ -126,10 +127,14 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: baseLicense.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: baseLicense.id,
+					included: 1,
+				},
+			],
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -171,10 +176,14 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+				},
+			],
 		});
 		await autumnV2_2.billing.attach({
 			customer_id: customerId,
@@ -329,10 +338,14 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: firstParent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: firstParent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: firstParent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+				},
+			],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -388,10 +401,14 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: firstParent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: firstParent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: firstParent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+				},
+			],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -426,10 +443,14 @@ test.concurrent(
 			actions: [],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+				},
+			],
 		});
 		await autumnV2_2.billing.multiAttach({
 			customer_id: customerId,
@@ -923,23 +944,33 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-			customize: { items: [itemsV2.monthlyMessages({ included: 100 })] },
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: { items: [itemsV2.monthlyMessages({ included: 100 })] },
+				},
+			],
 		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-			customize: null,
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: null,
+				},
+			],
 		});
 
-		const { list } = (await autumnV2_2.post("/licenses.list_links", {
-			parent_plan_id: parent.id,
-		})) as { list: Array<{ customize: unknown }> };
-		expect(list[0].customize).toBeNull();
+		const plan = (await autumnV2_2.post("/plans.get", {
+			plan_id: parent.id,
+		})) as ApiPlanV1;
+		const links = plan.licenses ?? [];
+		expect(links).toHaveLength(1);
+		expect(links[0].customize ?? null).toBeNull();
 
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -970,22 +1001,30 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
-			customize: { items: [itemsV2.monthlyMessages({ included: 100 })] },
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 2,
+					customize: { items: [itemsV2.monthlyMessages({ included: 100 })] },
+				},
+			],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			plan_id: license.id,
 		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
-			customize: { items: [itemsV2.monthlyMessages({ included: 50 })] },
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 2,
+					customize: { items: [itemsV2.monthlyMessages({ included: 50 })] },
+				},
+			],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -1025,13 +1064,17 @@ test.concurrent(
 			],
 			actions: [s.billing.attach({ productId: parent.id })],
 		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-			customize: {
-				items: [itemsV2.monthlyWords({ included: 80 }), itemsV2.dashboard()],
-			},
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parent.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: {
+						items: [itemsV2.monthlyWords({ included: 80 }), itemsV2.dashboard()],
+					},
+				},
+			],
 		});
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -1117,17 +1160,25 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parentA.id,
-			license_plan_id: license.id,
-			included: 1,
-			customize: { items: [itemsV2.monthlyMessages({ included: 50 })] },
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parentA.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 1,
+					customize: { items: [itemsV2.monthlyMessages({ included: 50 })] },
+				},
+			],
 		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parentB.id,
-			license_plan_id: license.id,
-			included: 2,
-			customize: { items: [itemsV2.monthlyMessages({ included: 200 })] },
+		await autumnV2_2.post("/plans.update", {
+			plan_id: parentB.id,
+			licenses: [
+				{
+					license_plan_id: license.id,
+					included: 2,
+					customize: { items: [itemsV2.monthlyMessages({ included: 200 })] },
+				},
+			],
 		});
 		const poolsBefore = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,

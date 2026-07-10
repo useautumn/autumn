@@ -1460,6 +1460,9 @@ export async function initScenario({
 	// 5. Run actions in order.
 	let advancedTo: number = Date.now();
 	const licenseAssignments: GeneratedLicenseAssignment[] = [];
+	// plans.update takes the complete link set, so sequential link actions on
+	// the same parent accumulate here instead of clobbering earlier links.
+	const catalogLinksByParent = new Map<string, Record<string, unknown>[]>();
 	let referralCode: ReferralCode | null = null;
 	let redemption: RewardRedemption | null = null;
 
@@ -1732,13 +1735,22 @@ export async function initScenario({
 				{ timeout: action.timeout },
 			);
 		} else if (action.type === "linkLicense") {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: `${action.parentProductId}_${productPrefix}`,
+			const parentPlanId = `${action.parentProductId}_${productPrefix}`;
+			const entry = {
 				license_plan_id: `${action.licenseProductId}_${productPrefix}`,
 				included: action.included,
 				prepaid_only: action.prepaidOnly,
 				customize: action.customize,
 				metadata: action.metadata,
+			};
+			const links = (catalogLinksByParent.get(parentPlanId) ?? []).filter(
+				(link) => link.license_plan_id !== entry.license_plan_id,
+			);
+			links.push(entry);
+			catalogLinksByParent.set(parentPlanId, links);
+			await autumnV2_2.post("/plans.update", {
+				plan_id: parentPlanId,
+				licenses: links,
 			});
 		} else if (action.type === "assignLicense") {
 			if (!customerId) {
