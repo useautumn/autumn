@@ -32,12 +32,20 @@ export const applyCustomizeToProduct = ({
 	const productItems = product.items ?? [];
 
 	const featureItems: ProductItem[] = customize.items
-		? customize.items.map((item) =>
-				planItemV0ToProductItem({
-					ctx,
-					planItem: planItemV1ToV0({ ctx, item }),
-				}),
-			)
+		? customize.items.flatMap((item) => {
+				try {
+					return [
+						planItemV0ToProductItem({
+							ctx,
+							planItem: planItemV1ToV0({ ctx, item }),
+						}),
+					];
+				} catch {
+					// Conversion throws if the feature referenced in `customize` has been
+				// deleted since it was saved; drop that item instead of crashing the editor.
+					return [];
+				}
+			})
 		: productItems.filter((item) => !isPriceItem(item));
 
 	let priceItems: ProductItem[];
