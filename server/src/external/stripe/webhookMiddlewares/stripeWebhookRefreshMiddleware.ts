@@ -10,6 +10,7 @@ const updateProductEvents = ["customer.subscription.updated"];
 const coreEvents = [
 	"customer.subscription.deleted",
 	"subscription_schedule.canceled",
+	"subscription_schedule.updated",
 	"checkout.session.completed",
 ];
 

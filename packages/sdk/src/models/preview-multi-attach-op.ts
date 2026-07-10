@@ -485,6 +485,10 @@ export type PreviewMultiAttachSpendLimit = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -503,6 +507,15 @@ export type PreviewMultiAttachEntityDataInterval = ClosedEnum<
   typeof PreviewMultiAttachEntityDataInterval
 >;
 
+export type PreviewMultiAttachProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type PreviewMultiAttachFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type PreviewMultiAttachUsageLimit = {
   /**
    * The feature this usage limit applies to.
@@ -520,6 +533,10 @@ export type PreviewMultiAttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: PreviewMultiAttachEntityDataInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: PreviewMultiAttachFilter | undefined;
 };
 
 /**
@@ -1592,6 +1609,7 @@ export type PreviewMultiAttachSpendLimit$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1604,12 +1622,14 @@ export const PreviewMultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(PreviewMultiAttachLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -1630,11 +1650,55 @@ export const PreviewMultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewMultiAttachEntityDataInterval);
 
 /** @internal */
+export type PreviewMultiAttachProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const PreviewMultiAttachProperties$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachProperties$Outbound,
+  PreviewMultiAttachProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewMultiAttachPropertiesToJSON(
+  previewMultiAttachProperties: PreviewMultiAttachProperties,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachProperties$outboundSchema.parse(
+      previewMultiAttachProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewMultiAttachFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const PreviewMultiAttachFilter$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachFilter$Outbound,
+  PreviewMultiAttachFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function previewMultiAttachFilterToJSON(
+  previewMultiAttachFilter: PreviewMultiAttachFilter,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachFilter$outboundSchema.parse(previewMultiAttachFilter),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachUsageLimit$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: PreviewMultiAttachFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -1647,6 +1711,7 @@ export const PreviewMultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: PreviewMultiAttachEntityDataInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => PreviewMultiAttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

@@ -10,8 +10,10 @@ import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
 import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
 import { handleCreateSchedule } from "./v2/handlers/handleCreateSchedule.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
+import { handleMultiUpdate } from "./v2/handlers/handleMultiUpdate.js";
 import { handlePreviewCreateSchedule } from "./v2/handlers/handlePreviewCreateSchedule.js";
 import { handlePreviewMultiAttach } from "./v2/handlers/handlePreviewMultiAttach.js";
+import { handlePreviewMultiUpdate } from "./v2/handlers/handlePreviewMultiUpdate.js";
 import { handlePreviewUpdateSubscription } from "./v2/handlers/handlePreviewUpdateSubscription.js";
 import { handleRestore } from "./v2/handlers/handleRestore.js";
 import { handleSetupPaymentV2 } from "./v2/handlers/handleSetupPaymentV2.js";
@@ -48,6 +50,11 @@ billingRpcRouter.post("/billing.multi_attach", ...handleMultiAttach);
 billingRpcRouter.post(
 	"/billing.preview_multi_attach",
 	...handlePreviewMultiAttach,
+);
+billingRpcRouter.post("/billing.multi_update", ...handleMultiUpdate);
+billingRpcRouter.post(
+	"/billing.preview_multi_update",
+	...handlePreviewMultiUpdate,
 );
 billingRpcRouter.post("/billing.preview_attach", ...handlePreviewAttach);
 billingRpcRouter.post("/billing.setup_payment", ...handleSetupPaymentV2);

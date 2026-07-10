@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
@@ -48,6 +49,10 @@ export type UpdateEntitySpendLimitRequest = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -66,6 +71,15 @@ export type UpdateEntityIntervalRequestBody = ClosedEnum<
   typeof UpdateEntityIntervalRequestBody
 >;
 
+export type UpdateEntityProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateEntityFilterRequest = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type UpdateEntityUsageLimitRequest = {
   /**
    * The feature this usage limit applies to.
@@ -83,6 +97,10 @@ export type UpdateEntityUsageLimitRequest = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateEntityIntervalRequestBody;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateEntityFilterRequest | undefined;
 };
 
 /**
@@ -464,6 +482,10 @@ export type UpdateEntitySpendLimitResponse = {
    * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -482,6 +504,13 @@ export type UpdateEntityIntervalResponse = OpenEnum<
   typeof UpdateEntityIntervalResponse
 >;
 
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type UpdateEntityFilterResponse = {
+  properties: { [k: string]: any };
+};
+
 export type UpdateEntityUsageLimitResponse = {
   /**
    * The feature this usage limit applies to.
@@ -499,6 +528,10 @@ export type UpdateEntityUsageLimitResponse = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: UpdateEntityIntervalResponse;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: UpdateEntityFilterResponse | undefined;
   /**
    * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
    */
@@ -679,6 +712,7 @@ export type UpdateEntitySpendLimitRequest$Outbound = {
   enabled: boolean;
   limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -691,12 +725,14 @@ export const UpdateEntitySpendLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), false),
     limitType: z.optional(UpdateEntityLimitTypeRequestBody$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -717,11 +753,53 @@ export const UpdateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(UpdateEntityIntervalRequestBody);
 
 /** @internal */
+export type UpdateEntityProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const UpdateEntityProperties$outboundSchema: z.ZodMiniType<
+  UpdateEntityProperties$Outbound,
+  UpdateEntityProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function updateEntityPropertiesToJSON(
+  updateEntityProperties: UpdateEntityProperties,
+): string {
+  return JSON.stringify(
+    UpdateEntityProperties$outboundSchema.parse(updateEntityProperties),
+  );
+}
+
+/** @internal */
+export type UpdateEntityFilterRequest$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const UpdateEntityFilterRequest$outboundSchema: z.ZodMiniType<
+  UpdateEntityFilterRequest$Outbound,
+  UpdateEntityFilterRequest
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function updateEntityFilterRequestToJSON(
+  updateEntityFilterRequest: UpdateEntityFilterRequest,
+): string {
+  return JSON.stringify(
+    UpdateEntityFilterRequest$outboundSchema.parse(updateEntityFilterRequest),
+  );
+}
+
+/** @internal */
 export type UpdateEntityUsageLimitRequest$Outbound = {
   feature_id: string;
   enabled: boolean;
   limit: number;
   interval: string;
+  filter?: UpdateEntityFilterRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -734,6 +812,7 @@ export const UpdateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
     enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: UpdateEntityIntervalRequestBody$outboundSchema,
+    filter: z.optional(z.lazy(() => UpdateEntityFilterRequest$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1211,12 +1290,14 @@ export const UpdateEntitySpendLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     limit_type: types.optional(UpdateEntityLimitTypeResponse$inboundSchema),
     overage_limit: types.optional(types.number()),
+    skip_overage_billing: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "limit_type": "limitType",
       "overage_limit": "overageLimit",
+      "skip_overage_billing": "skipOverageBilling",
     });
   }),
 );
@@ -1238,6 +1319,24 @@ export const UpdateEntityIntervalResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdateEntityIntervalResponse);
 
 /** @internal */
+export const UpdateEntityFilterResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityFilterResponse,
+  unknown
+> = z.object({
+  properties: z.record(z.string(), z.any()),
+});
+
+export function updateEntityFilterResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityFilterResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityFilterResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityFilterResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityUsageLimitResponse,
   unknown
@@ -1247,6 +1346,9 @@ export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), true),
     limit: types.number(),
     interval: UpdateEntityIntervalResponse$inboundSchema,
+    filter: types.optional(
+      z.lazy(() => UpdateEntityFilterResponse$inboundSchema),
+    ),
     usage: types.optional(types.number()),
   }),
   z.transform((v) => {
