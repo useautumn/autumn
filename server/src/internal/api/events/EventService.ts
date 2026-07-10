@@ -14,7 +14,6 @@ export class EventService {
 		event: EventInsert | EventInsert[];
 		logger?: Logger;
 	}) {
-		if (process.env.NODE_ENV !== "development") return;
 		try {
 			const results = await db
 				.insert(events)

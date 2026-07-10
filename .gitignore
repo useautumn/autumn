@@ -174,3 +174,4 @@ apps/leaf/src/harness/claudeCode/runner/runner.mjs
 
 tmp/
 .env*.local
+.neon
