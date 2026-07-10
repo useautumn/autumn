@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import {
+	type CheckResponseV3,
 	CusProductStatus,
 	ErrCode,
-	type CheckResponseV3,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -30,17 +30,18 @@ const setupStatusScenario = async (customerId: string) => {
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 			s.products({ list: [parent, license] }),
 		],
-		actions: [s.billing.attach({ productId: parent.id })],
-	});
-	await scenario.autumnV2_2.post("/licenses.link", {
-		parent_plan_id: parent.id,
-		license_plan_id: license.id,
-		included: 2,
-	});
-	await scenario.autumnV2_2.post("/licenses.attach", {
-		customer_id: customerId,
-		entity_id: scenario.entities[0].id,
-		plan_id: license.id,
+		actions: [
+			s.licenses.link({
+				parentProductId: parent.id,
+				licenseProductId: license.id,
+				included: 2,
+			}),
+			s.billing.attach({ productId: parent.id }),
+			s.licenses.assign({
+				licenseProductId: license.id,
+				entityIndex: 0,
+			}),
+		],
 	});
 	return { ...scenario, license };
 };

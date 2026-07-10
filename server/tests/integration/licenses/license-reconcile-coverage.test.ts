@@ -1,16 +1,3 @@
-/**
- * Reconcile + lifecycle coverage for the license state machine.
- *
- * These drive reconcileLicenseStateForCustomer directly (initScenario exposes
- * ctx) and assert the observable surface via /licenses.list and
- * /licenses.list_assignments:
- *  - self-heal of a drifted `remaining` balance
- *  - reconcile idempotency (no re-expiry / drift / dupes on a second pass)
- *  - deterministic successor selection when two live parents offer one license
- *  - partial successor: one linked license re-parents, an unlinked one ends
- *  - granted decrease preserving in-flight assignments
- */
-
 import { expect, test } from "bun:test";
 import type { LicenseBalanceResponse } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -18,8 +5,8 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState.js";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
 
 const makeLicenseProduct = (id: string) =>
 	products.base({

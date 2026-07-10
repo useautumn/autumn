@@ -17,10 +17,12 @@ const setupLicense = async ({
 	customerId,
 	included = 2,
 	paidParent = false,
+	assignEntityIndex,
 }: {
 	customerId: string;
 	included?: number;
 	paidParent?: boolean;
+	assignEntityIndex?: number;
 }) => {
 	const parent = (paidParent ? products.pro : products.base)({
 		id: `${customerId}-parent`,
@@ -40,12 +42,22 @@ const setupLicense = async ({
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 			s.products({ list: [parent, license] }),
 		],
-		actions: [s.billing.attach({ productId: parent.id })],
-	});
-	await scenario.autumnV2_2.post("/licenses.link", {
-		parent_plan_id: parent.id,
-		license_plan_id: license.id,
-		included,
+		actions: [
+			s.licenses.link({
+				parentProductId: parent.id,
+				licenseProductId: license.id,
+				included,
+			}),
+			s.billing.attach({ productId: parent.id }),
+			...(assignEntityIndex === undefined
+				? []
+				: [
+						s.licenses.assign({
+							licenseProductId: license.id,
+							entityIndex: assignEntityIndex,
+						}),
+					]),
+		],
 	});
 	return { ...scenario, parent, license };
 };
@@ -53,13 +65,18 @@ const setupLicense = async ({
 test.concurrent(
 	`${chalk.yellowBright("licenses billing: generic cancellation releases an assignment completely")}`,
 	async () => {
-		const { customerId, entities, autumnV2_2, ctx, license } =
-			await setupLicense({ customerId: "lic-generic-cancel", included: 1 });
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: { id: string } };
+		const {
+			customerId,
+			entities,
+			autumnV2_2,
+			ctx,
+			license,
+			licenseAssignments: [assignment],
+		} = await setupLicense({
+			customerId: "lic-generic-cancel",
+			included: 1,
+			assignEntityIndex: 0,
+		});
 
 		expect(
 			(
@@ -111,7 +128,7 @@ test.concurrent(
 	async () => {
 		const { customerId, entities, autumnV2_2, ctx, license } =
 			await setupLicense({ customerId: "lic-same-entity-race" });
-		const results = await Promise.all(
+		const results = await Promise.allSettled(
 			[0, 1].map(() =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
@@ -120,13 +137,11 @@ test.concurrent(
 				}),
 			),
 		);
-		expect(
-			new Set(
-				results.map(
-					(result) => (result as { assignment: { id: string } }).assignment.id,
-				),
-			).size,
-		).toBe(1);
+		const fulfilled = results.filter(
+			(result): result is PromiseFulfilledResult<unknown> =>
+			result.status === "fulfilled",
+		);
+		expect(fulfilled).toHaveLength(1);
 
 		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(

@@ -1,24 +1,12 @@
-/**
- * TDD test for transferring a plan cusProduct that parents license pools.
- *
- * Red-failure mode (current behavior):
- *  - The transfer succeeds, moving the parent to an entity while its license
- *    pools/assignments stay customer-wide; later lifecycle transitions refuse
- *    entity-scoped successors, so assignments end instead of re-parenting.
- *
- * Green-success criteria (after fix):
- *  - Transfer of a license-pool parent is rejected with a 400, and transfers
- *    of plans without license pools keep working.
- */
-
 import { expect, test } from "bun:test";
-import { ErrCode, type LicenseBalanceResponse } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { listLicensePools } from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
 	...products.base({
@@ -43,19 +31,18 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(pools.list).toHaveLength(1);
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools).toHaveLength(1);
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
@@ -66,9 +53,10 @@ test.concurrent(
 				}),
 		});
 
-		const poolsAfter = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsAfter.list).toHaveLength(1);
+		const poolsAfter = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+		});
+		expect(poolsAfter).toHaveLength(1);
 	},
 );

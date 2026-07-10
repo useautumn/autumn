@@ -1,9 +1,3 @@
-/**
- * When a scheduled paid downgrade target carries a license link, activating it
- * at cycle end must run the license reconcile hook: the activated parent's
- * pool appears in pools.list with the linked inventory.
- */
-
 import { expect, test } from "bun:test";
 import type {
 	AttachParamsV0Input,
@@ -70,28 +64,34 @@ const setupAssignedDowngrade = async ({
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 			s.products({ list: [premium, pro, license] }),
 		],
-		actions: [s.billing.attach({ productId: premium.id })],
+		actions: [
+			...(successorOffersLicense ? [premium, pro] : [premium]).map((parent) =>
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+			),
+			s.billing.attach({ productId: premium.id }),
+			s.licenses.assign({
+				licenseProductId: license.id,
+				entityIndex: 0,
+			}),
+		],
 	});
-
-	for (const parent of successorOffersLicense ? [premium, pro] : [premium]) {
-		await scenario.autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-	}
-	const { assignment } = (await scenario.autumnV2_2.post("/licenses.attach", {
-		customer_id: customerId,
-		entity_id: scenario.entities[0].id,
-		plan_id: license.id,
-	})) as { assignment: { id: string } };
 	await scenario.autumnV1.billing.attach<AttachParamsV0Input>({
 		customer_id: customerId,
 		product_id: pro.id,
 		redirect_mode: "if_required",
 	});
 	await timeout(4000);
-	return { ...scenario, premium, pro, license, assignment };
+	return {
+		...scenario,
+		premium,
+		pro,
+		license,
+		assignment: scenario.licenseAssignments[0],
+	};
 };
 
 test.concurrent(
@@ -117,14 +117,15 @@ test.concurrent(
 					s.customer({ paymentMethod: "success" }),
 					s.products({ list: [premium, pro, license] }),
 				],
-				actions: [s.billing.attach({ productId: premium.id })],
+				actions: [
+					s.licenses.link({
+						parentProductId: pro.id,
+						licenseProductId: license.id,
+						included: 2,
+					}),
+					s.billing.attach({ productId: premium.id }),
+				],
 			});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: pro.id,
-			license_plan_id: license.id,
-			included: 2,
-		});
 
 		await autumnV1.billing.attach<AttachParamsV0Input>({
 			customer_id: customerId,

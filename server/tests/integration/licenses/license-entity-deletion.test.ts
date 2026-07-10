@@ -1,30 +1,12 @@
-/**
- * TDD test for entity deletion leaving license state inconsistent.
- *
- * Red-failure mode (current behavior):
- *  - Deleting an entity cascade-deletes its license assignment, but the
- *    provisioned license cusProduct survives with internal_entity_id SET NULL,
- *    staying Active as a customer-level product — its license feature grants
- *    leak into customer-level check/balances.
- *
- * Green-success criteria (after fix):
- *  - Entity deletion ends the entity's assignments and expires their
- *    provisioned customer products; license features stay invisible at the
- *    customer level, and the freed slot is re-assignable to another entity.
- */
-
 import { expect, test } from "bun:test";
-import {
-	type CheckResponseV3,
-	CusProductStatus,
-	type LicenseBalanceResponse,
-} from "@autumn/shared";
+import { type CheckResponseV3, CusProductStatus } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
+import { listLicensePools } from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
 	...products.base({
@@ -50,20 +32,19 @@ test.concurrent(
 					s.entities({ count: 2, featureId: TestFeature.Users }),
 					s.products({ list: [parent, license] }),
 				],
-				actions: [s.billing.attach({ productId: parent.id })],
+				actions: [
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: license.id,
+						included: 1,
+					}),
+					s.billing.attach({ productId: parent.id }),
+					s.licenses.assign({
+						licenseProductId: license.id,
+						entityIndex: 0,
+					}),
+				],
 			});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		});
 
 		const entityCheck = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,
@@ -99,11 +80,9 @@ test.concurrent(
 		});
 		expect(customerCheckAfter.allowed).toBe(false);
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0].inventory).toMatchObject({
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools).toHaveLength(1);
+		expect(pools[0].inventory).toMatchObject({
 			assigned: 0,
 			available: 1,
 		});

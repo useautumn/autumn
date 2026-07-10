@@ -1,27 +1,16 @@
-/**
- * TDD tests for license assign/unassign edge cases.
- *
- * Red-failure mode (current behavior):
- *  - licenses.update with an unknown assignment_id returns 200 with an
- *    undefined assignment (silent no-op) instead of 404.
- *  - When two plans on the customer offer the same license, attach is
- *    ambiguous and requires parent_plan_id.
- *
- * Green-success criteria (after fix):
- *  - Unknown assignment_id → 404.
- *  - licenses.attach accepts parent_plan_id to target an exact plan; without
- *    it the ambiguous case fails with a clear error.
- */
-
 import { expect, test } from "bun:test";
-import type { ApiCustomerLicenseV0, CheckResponseV3 } from "@autumn/shared";
+import type { CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import {
+	getLicenseDbState,
+	listLicenseAssignments,
+	listLicensePools,
+} from "./licenseTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses-attach-edge: detach with unknown assignment_id returns 404")}`,
@@ -65,32 +54,31 @@ test.concurrent(
 			}),
 		};
 
-		const { customerId, entities, autumnV2_2, ctx } = await initScenario({
+		const { customerId, entities, autumnV2_2 } = await initScenario({
 			customerId: "license-assign-pool-id",
 			setup: [
 				s.customer({ testClock: false }),
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parentA, parentB, license] }),
 			],
-			actions: [],
+			actions: [
+				...[parentA, parentB].flatMap((parent) => [
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: license.id,
+						included: 1,
+					}),
+					s.billing.attach({ productId: parent.id }),
+				]),
+			],
 		});
 
-		for (const parentId of [parentA.id, parentB.id]) {
-			await autumnV2_2.post("/plans.update", {
-				plan_id: parentId,
-				licenses: [{ license_plan_id: license.id, included: 1 }],
-			});
-			await autumnV2_2.billing.attach({
-				customer_id: customerId,
-				plan_id: parentId,
-			});
-		}
-
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toHaveLength(2);
+		const pools = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(pools).toHaveLength(2);
 
 		await expectAutumnError({
 			errMessage: "Multiple plans offer",
@@ -106,7 +94,7 @@ test.concurrent(
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			plan_id: license.id,
-			parent_plan_id: pools.list[0].parent_plan_id,
+			parent_plan_id: pools[0].parent_plan_id,
 		})) as { assignment: { id: string; ended_at: number | null } };
 		expect(assignment.id).toBeTruthy();
 		expect(assignment.ended_at).toBeNull();
@@ -133,17 +121,18 @@ test.concurrent(
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 1 }],
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
 		await expectAutumnError({
 			errMessage: "No available licenses",
@@ -155,9 +144,10 @@ test.concurrent(
 				}),
 		});
 
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 3 }],
+		await autumnV2_2.post("/licenses.link", {
+			parent_plan_id: parent.id,
+			license_plan_id: license.id,
+			included: 3,
 		});
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -166,10 +156,8 @@ test.concurrent(
 		})) as { assignment: { id: string } };
 		expect(assignment.id).toBeTruthy();
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list[0].inventory).toMatchObject({
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools[0].inventory).toMatchObject({
 			included: 3,
 			assigned: 2,
 			available: 1,
@@ -189,30 +177,30 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 25 })],
 		});
 
-		const { customerId, entities, autumnV2_2, ctx } = await initScenario({
+		const {
+			autumnV2_2,
+			licenseAssignments: [assignment],
+		} = await initScenario({
 			customerId: "license-ownership-a",
 			setup: [
 				s.customer({ testClock: false }),
+				s.otherCustomers([{ id: "license-ownership-b" }]),
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
-		await initScenario({
-			customerId: "license-ownership-b",
-			setup: [s.customer({ testClock: false })],
-			actions: [],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 1 }],
-		});
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: { id: string } };
 
 		await expectAutumnError({
 			errMessage: "not found",
@@ -246,12 +234,14 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 2 }],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 2,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
 		const attachPreview = (await autumnV2_2.post("/licenses.preview_attach", {
@@ -262,10 +252,11 @@ test.concurrent(
 		expect(attachPreview.intent).toBe("assign");
 		expect(attachPreview.available).toBe(2);
 
-		const assignments = (await autumnV2_2.post("/licenses.list_assignments", {
-			customer_id: customerId,
-		})) as { list: unknown[] };
-		expect(assignments.list).toHaveLength(0);
+		const assignments = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+		});
+		expect(assignments).toHaveLength(0);
 
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -281,10 +272,11 @@ test.concurrent(
 		expect(updatePreview.intent).toBe("cancel_immediately");
 		expect(updatePreview.ended_at).toBeGreaterThan(0);
 
-		const stillActive = (await autumnV2_2.post("/licenses.list_assignments", {
-			customer_id: customerId,
-		})) as { list: { id: string }[] };
-		expect(stillActive.list).toHaveLength(1);
+		const stillActive = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+		});
+		expect(stillActive).toHaveLength(1);
 	},
 );
 
@@ -307,12 +299,14 @@ test.concurrent(
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 1 }],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 		const results = await Promise.allSettled(
 			entities.map((entity) =>
@@ -337,16 +331,14 @@ test.concurrent(
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({ granted: 1, remaining: 0 });
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0].inventory).toEqual({
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools).toHaveLength(1);
+		expect(pools[0].inventory).toEqual({
 			included: 1,
 			assigned: 1,
 			available: 0,
 		});
-		expect(pools.list[0].assignments).toHaveLength(1);
+		expect(pools[0].assignments).toHaveLength(1);
 
 		const checks = await Promise.all(
 			entities.map((entity) =>

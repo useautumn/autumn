@@ -1,25 +1,5 @@
-/**
- * TDD test for plan-version migrations vs customized license sets.
- *
- * Red-failure mode (current behavior):
- *  - Migration only skips is_custom cusProducts. A customer with a customized
- *    license set (license_set_customized) is migrated onto a fresh cusProduct
- *    whose pools are rebuilt from the plan's inherited links — silently
- *    reverting their customization and re-parenting assignments over capacity.
- *
- * Green-success criteria (after fix):
- *  - Customized-license customers are excluded from migration (mirroring the
- *    is_custom exclusion); their custom pools and assignments stay intact.
- *  - Customers with inherited license sets still migrate, with assignments
- *    re-parented onto the new version's pools.
- */
-
 import { expect, test } from "bun:test";
-import type {
-	AttachParamsV1Input,
-	CheckResponseV3,
-	LicenseBalanceResponse,
-} from "@autumn/shared";
+import type { AttachParamsV1Input, CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -28,7 +8,11 @@ import chalk from "chalk";
 import { getMigrationCustomers } from "@/internal/migrations/migrationSteps/getMigrationCustomers.js";
 import { migrateCustomer } from "@/internal/migrations/migrationSteps/migrateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import {
+	assignLicense,
+	getLicenseDbState,
+	listLicensePools,
+} from "./licenseTestUtils.js";
 
 const expectUnsafeMigrationRejected = async ({
 	customerId,
@@ -50,34 +34,34 @@ const expectUnsafeMigrationRejected = async ({
 		items: [items.monthlyMessages({ includedUsage: 25 })],
 	});
 	const entityCount = targetIncluded === undefined ? 1 : targetIncluded + 1;
-	const { entities, autumnV2_2, ctx } = await initScenario({
+	const { ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: false }),
 			s.entities({ count: entityCount, featureId: TestFeature.Users }),
 			s.products({ list: [source, target, license] }),
 		],
-		actions: [s.billing.attach({ productId: source.id })],
+		actions: [
+			s.licenses.link({
+				parentProductId: source.id,
+				licenseProductId: license.id,
+				included: entityCount,
+			}),
+			...(targetIncluded === undefined
+				? []
+				: [
+						s.licenses.link({
+							parentProductId: target.id,
+							licenseProductId: license.id,
+							included: targetIncluded,
+						}),
+					]),
+			s.billing.attach({ productId: source.id }),
+			...Array.from({ length: entityCount }, (_, entityIndex) =>
+				s.licenses.assign({ licenseProductId: license.id, entityIndex }),
+			),
+		],
 	});
-	await autumnV2_2.post("/licenses.link", {
-		parent_plan_id: source.id,
-		license_plan_id: license.id,
-		included: entityCount,
-	});
-	if (targetIncluded !== undefined) {
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: target.id,
-			license_plan_id: license.id,
-			included: targetIncluded,
-		});
-	}
-	for (const entity of entities) {
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entity.id,
-			plan_id: license.id,
-		});
-	}
 	const [sourceProduct, targetProduct] = await Promise.all(
 		[source, target].map((product) =>
 			ProductService.getFull({
@@ -171,38 +155,40 @@ test.concurrent(
 			items: [items.monthlyWords({ includedUsage: 50 })],
 		});
 
-		const { customerId, entities, autumnV1, autumnV2_2, ctx } =
-			await initScenario({
-				customerId: "lic-mig-inherited",
-				setup: [
-					s.customer({ testClock: false }),
-					s.entities({ count: 2, featureId: TestFeature.Users }),
-					s.products({ list: [parent, messageLicense, wordLicense] }),
-				],
-				actions: [],
-			});
-
-		for (const license of [messageLicense, wordLicense]) {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: parent.id,
-				license_plan_id: license.id,
-				included: 2,
-			});
-		}
-		await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: parent.id,
+		const {
+			customerId,
+			entities,
+			autumnV1,
+			autumnV2_2,
+			ctx,
+			licenseAssignments,
+		} = await initScenario({
+			customerId: "lic-mig-inherited",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [parent, messageLicense, wordLicense] }),
+			],
+			actions: [
+				...[messageLicense, wordLicense].map((license) =>
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: license.id,
+						included: 2,
+					}),
+				),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: messageLicense.id,
+					entityIndex: 0,
+				}),
+				s.licenses.assign({
+					licenseProductId: wordLicense.id,
+					entityIndex: 1,
+				}),
+			],
 		});
-		const assignmentIds = await Promise.all(
-			[messageLicense, wordLicense].map(async (license, index) => {
-				const result = (await autumnV2_2.post("/licenses.attach", {
-					customer_id: customerId,
-					entity_id: entities[index].id,
-					plan_id: license.id,
-				})) as { assignment: { id: string } };
-				return result.assignment.id;
-			}),
-		);
+		const assignmentIds = licenseAssignments.map(({ id }) => id);
 
 		const parentV1 = await ProductService.getFull({
 			db: ctx.db,
@@ -268,12 +254,13 @@ test.concurrent(
 				});
 			}
 
-			const pools = (await autumnV2_2.post("/licenses.list", {
-				customer_id: customerId,
-			})) as { list: LicenseBalanceResponse[] };
-			expect(pools.list).toHaveLength(2);
+			const pools = await listLicensePools({
+				autumn: autumnV2_2,
+				customerId,
+			});
+			expect(pools).toHaveLength(2);
 			for (const [index, license] of [messageLicense, wordLicense].entries()) {
-				const pool = pools.list.find(
+				const pool = pools.find(
 					(candidate) => candidate.license_plan_id === license.id,
 				);
 				expect(pool).toMatchObject({
@@ -334,16 +321,16 @@ test.concurrent(
 					s.entities({ count: 2, featureId: TestFeature.Users }),
 					s.products({ list: [parent, license] }),
 				],
-				actions: [],
+				actions: [
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: license.id,
+						included: 1,
+					}),
+				],
 			});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-
-		await autumnV2_2.billing.attach({
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: parent.id,
 			customize: {
@@ -357,18 +344,20 @@ test.concurrent(
 		});
 
 		for (const entity of entities) {
-			await autumnV2_2.post("/licenses.attach", {
-				customer_id: customerId,
-				entity_id: entity.id,
-				plan_id: license.id,
+			await assignLicense({
+				autumn: autumnV2_2,
+				customerId,
+				entityId: entity.id,
+				licensePlanId: license.id,
 			});
 		}
 
-		const poolsBefore = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsBefore.list).toHaveLength(1);
-		expect(poolsBefore.list[0].inventory).toMatchObject({
+		const poolsBefore = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+		});
+		expect(poolsBefore).toHaveLength(1);
+		expect(poolsBefore[0].inventory).toMatchObject({
 			included: 3,
 			assigned: 2,
 		});
@@ -393,19 +382,18 @@ test.concurrent(
 		const migratedCustomer = await autumnV1.customers.get<{
 			products: { id: string; version?: number }[];
 		}>(customerId);
-		// Customized license parents are deliberately skipped by migration —
-		// the customer keeps v1 with its customization intact.
 		const parentVersions = migratedCustomer.products
 			.filter((product) => product.id === parent.id)
 			.map((product) => product.version);
 		expect(parentVersions).toContain(1);
 		expect(parentVersions).not.toContain(2);
 
-		const poolsAfter = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsAfter.list).toHaveLength(1);
-		expect(poolsAfter.list[0].inventory).toMatchObject({
+		const poolsAfter = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+		});
+		expect(poolsAfter).toHaveLength(1);
+		expect(poolsAfter[0].inventory).toMatchObject({
 			included: 3,
 			assigned: 2,
 		});

@@ -1,19 +1,15 @@
-/**
- * Customized links reference live base rows for untouched items (cusProduct-
- * style membership), so base edits propagate while overridden items stay
- * frozen. The base-price propagation observation (overflow seat billed at the
- * edited price) is parked with overflow re-enable in
- * LICENSE_BILLING_TEST_PLAN.md; this pins the surviving surfaces: the derived
- * customize response and the provisioned seat's grant.
- */
-
 import { expect, test } from "bun:test";
-import type { CheckResponseV3 } from "@autumn/shared";
+import {
+	type AttachParamsV1Input,
+	type CheckResponseV3,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { listLicenseLinks } from "./licenseTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses customize propagation: base price edit leaves the customized link's override intact")}`,
@@ -35,22 +31,23 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-			customize: {
-				items: [
-					{
-						feature_id: TestFeature.Messages,
-						included: 50,
-						reset: { interval: "month" },
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+					customize: {
+						items: [
+							{
+								feature_id: TestFeature.Messages,
+								included: 50,
+								reset: { interval: ResetInterval.Month },
+							},
+						],
 					},
-				],
-			},
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
 		await autumnV1.products.update(license.id, {
@@ -60,7 +57,7 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_2.billing.attach({
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: license.id,
 		});
@@ -79,16 +76,11 @@ test.concurrent(
 		expect(seatCheck.allowed).toBe(true);
 		expect(seatCheck.balance?.granted).toBe(75);
 
-		const links = (await autumnV2_2.post("/licenses.list_links", {
-			parent_plan_id: parent.id,
-		})) as {
-			list: {
-				customize: {
-					add_items?: { feature_id?: string; included?: number }[];
-				} | null;
-			}[];
-		};
-		const customizedItem = links.list[0].customize?.add_items?.find(
+		const links = await listLicenseLinks({
+			autumn: autumnV2_2,
+			parentPlanId: parent.id,
+		});
+		const customizedItem = links[0].customize?.add_items?.find(
 			(item) => item.feature_id === TestFeature.Messages,
 		);
 		expect(customizedItem?.included).toBe(50);

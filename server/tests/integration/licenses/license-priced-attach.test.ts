@@ -1,10 +1,5 @@
-/**
- * Assignment never bills: a priced license must already be attached at the
- * customer level (normal billing.attach) before licenses.attach accepts it.
- * Free licenses assign without any customer-level product.
- */
-
 import { expect, test } from "bun:test";
+import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -33,12 +28,14 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 2 }],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 2,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
 		await expectAutumnError({
@@ -51,7 +48,7 @@ test.concurrent(
 				}),
 		});
 
-		await autumnV2_2.billing.attach({
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
 			plan_id: license.id,
 		});
@@ -86,12 +83,14 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [{ license_plan_id: license.id, included: 1 }],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,

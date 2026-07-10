@@ -1,10 +1,5 @@
-/**
- * Gated license features are blocked: overflow billing (prepaid_only: false)
- * rejects with a 400 on every write path that could create
- * them. Re-enable scenarios are parked in LICENSE_BILLING_TEST_PLAN.md.
- */
-
 import { test } from "bun:test";
+import type { AttachParamsV1Input } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -71,7 +66,7 @@ test.concurrent(
 		await expectAutumnError({
 			errMessage: "not yet available",
 			func: () =>
-				autumnV2_2.billing.attach({
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
 					plan_id: parent.id,
 					customize: {

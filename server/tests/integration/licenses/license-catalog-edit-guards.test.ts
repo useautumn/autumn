@@ -1,20 +1,3 @@
-/**
- * TDD tests for license catalog edits.
- *
- * Red-failure modes (current behavior):
- *  - Versioning a license product (generic products update with active
- *    assignments) leaves plan_license/pools/assignments pinned to the
- *    old version's internal id — later assigns resolve the new version and
- *    fail with "No license pool found".
- *  - link accepts lowering included below a customer's
- *    active assignment count.
- *
- * Green-success criteria (after fix):
- *  - License versioning rolls plan_license/pools/assignments forward;
- *    assignment keeps working against the same pool.
- *  - link rejects capacity conflicts with a 400.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type CheckResponseV3,
@@ -57,18 +40,18 @@ test.concurrent(
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 2,
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 2,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
 
 		await autumnV1.products.update(license.id, {
@@ -114,25 +97,25 @@ test.concurrent(
 		});
 		const license = makeLicenseProduct({ id: "lic-cap-guard-seat" });
 
-		const { customerId, entities, autumnV2_2 } = await initScenario({
+		const { autumnV2_2 } = await initScenario({
 			customerId: "lic-capacity-guard",
 			setup: [
 				s.customer({ testClock: false }),
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
 
 		await expectAutumnError({

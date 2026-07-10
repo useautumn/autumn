@@ -1,52 +1,11 @@
-/**
- * Regression pins for FOUR confirmed license bugs.
- *
- * Every test below asserts the CURRENT (buggy) behavior so it passes today.
- * Each header block states what the code SHOULD do once the bug is fixed —
- * when the fix lands, flip the "Red" assertion to the "Green" expectation.
- *
- * B1 — Customer deletion leaks license state.
- *   Red (now): deleteCustomer.ts bare-deletes rows via CusService.deleteByInternalId.
- *     No license reconcile runs, and license_parent_customer_product_id has no FK /
- *     ON DELETE cascade. Deleting a customer that holds a license pool + its own
- *     assignment simply drops the rows with no reconcile or seat credit-back.
- *   Green (after fix): deletion runs a license reconcile so pools/assignments are
- *     released cleanly and cross-customer seats are credited back.
- *
- * B2 — Tombstone divergence between plan read path and license balances.
- *   Red (now): loadApiPlanLicenses (plans.get / plans.list) emits links with
- *     included:0, so a re-linked "tombstone" still appears in a plan's `licenses`.
- *     buildLicenseBalances skips definitions where included<=0, so /licenses.list
- *     OMITS that pool. Same catalog link, two different answers.
- *   Green (after fix): decide one intended semantics — either both surfaces hide a
- *     tombstoned (included:0) link, or both keep it. They must agree.
- *
- * B3 — Trial-revert bypasses license reconcile.
- *   Red (now): tryProcessRevertExpiry flips cusProduct statuses inside a raw
- *     ctx.db.transaction and never calls afterLicenseMutation / any reconcile.
- *     Revert preserving assignments is the CORRECT outcome, but there is no
- *     self-heal pass, so any drift on the parent's pools is never corrected.
- *   Green (after fix): revert still preserves open assignments AND runs a reconcile
- *     so pool balances self-heal. (Skipped — see TODO; setup needs a paused
- *     previous plan under an on_trial_end:"revert" trial.)
- *
- * B4 — Status asymmetry: parent gate vs assignable resolution. NOT A BUG.
- *   LICENSE_PARENT_STATUSES = [Active, PastDue, Trialing] and
- *   LICENSE_ASSIGNABLE_STATUSES = [Active] differ, but the test below proves a
- *   Trialing parent is BOTH a visible pool AND assignable in practice — the two
- *   sets don't conflict for attach. Pinned here so a future change to either
- *   constant that breaks Trialing assignment fails loudly.
- */
-
 import { expect, test } from "bun:test";
 import {
 	ALL_STATUSES,
 	type AttachParamsV1Input,
 	CusProductStatus,
-	FreeTrialDuration,
 	customerLicenses,
 	customerProducts,
-	type LicenseBalanceResponse,
+	FreeTrialDuration,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -57,7 +16,11 @@ import { eq } from "drizzle-orm";
 import { runProductCron } from "@/cron/productCron/runProductCron.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import {
+	assignLicense,
+	getLicenseDbState,
+	listLicensePools,
+} from "./licenseTestUtils.js";
 
 const makeLicenseProduct = (id: string) =>
 	products.base({
@@ -65,13 +28,6 @@ const makeLicenseProduct = (id: string) =>
 		items: [items.monthlyMessages({ includedUsage: 25 })],
 	});
 
-// B1 — customer deletion runs no license reconcile (deleteCustomer.ts does a
-// bare row delete; license_parent_customer_product_id has no FK/cascade). The
-// leak only manifests cross-customer: a DIFFERENT customer whose assignment
-// draws on the deleted customer's pool is orphaned, and the deleted holder's
-// seat is never credited back. That setup needs cross-customer pool sharing,
-// which isn't expressible through the current initScenario DSL — TODO wire a
-// two-customer scenario (or drive it via ctx.db) to repro the orphan.
 test.concurrent(
 	`${chalk.yellowBright("licenses cleanup: deleting a customer cascades assignments and pools")}`,
 	async () => {
@@ -80,25 +36,25 @@ test.concurrent(
 			items: [items.dashboard()],
 		});
 		const license = makeLicenseProduct("delete-customer-license");
-		const { customerId, entities, autumnV1, autumnV2_2, ctx } =
-			await initScenario({
-				customerId: "license-delete-customer",
-				setup: [
-					s.customer({ testClock: false }),
-					s.entities({ count: 1, featureId: TestFeature.Users }),
-					s.products({ list: [parent, license] }),
-				],
-				actions: [s.billing.attach({ productId: parent.id })],
-			});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
+		const { customerId, autumnV1, ctx } = await initScenario({
+			customerId: "license-delete-customer",
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [parent, license] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
 		const customer = await CusService.getFull({
 			ctx,
@@ -135,22 +91,22 @@ test.concurrent(
 				s.customer({ testClock: false }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 3,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 3,
-		});
-		// Re-link at included:0 — a removal "tombstone".
 		await autumnV2_2.post("/licenses.link", {
 			parent_plan_id: parent.id,
 			license_plan_id: license.id,
 			included: 0,
 		});
 
-		// Read path (loadApiPlanLicenses) keeps the included:0 link.
 		const plan = (await autumnV2_2.post("/plans.get", {
 			plan_id: parent.id,
 		})) as {
@@ -165,12 +121,8 @@ test.concurrent(
 			included: 0,
 		});
 
-		// Balance path (buildLicenseBalances) skips included<=0, so the pool is
-		// absent — the divergence this test pins.
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(pools.list.some((pool) => pool.license_plan_id === license.id)).toBe(
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		expect(pools.some((pool) => pool.license_plan_id === license.id)).toBe(
 			false,
 		);
 	},
@@ -195,18 +147,16 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [previous, trial, license] }),
 			],
-			actions: [],
-		});
-		for (const parent of [previous, trial]) {
-			await autumnV2_2.post("/licenses.link", {
-				parent_plan_id: parent.id,
-				license_plan_id: license.id,
-				included: 1,
-			});
-		}
-		await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			plan_id: previous.id,
+			actions: [
+				...[previous, trial].map((parent) =>
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: license.id,
+						included: 1,
+					}),
+				),
+				s.billing.attach({ productId: previous.id }),
+			],
 		});
 		await autumnV2_2.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
@@ -220,11 +170,12 @@ test.concurrent(
 				},
 			},
 		});
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		})) as { assignment: { id: string } };
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -290,17 +241,14 @@ test.concurrent(
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-		await autumnV2_2.billing.attach({
-			customer_id: customerId,
-			plan_id: parent.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 		const fullCustomer = await CusService.getFull({
 			ctx,
@@ -312,12 +260,13 @@ test.concurrent(
 			)?.status,
 		).toBe(CusProductStatus.Active);
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0]).toMatchObject({
+		const pools = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(pools).toHaveLength(1);
+		expect(pools[0]).toMatchObject({
 			license_plan_id: license.id,
 			inventory: { included: 1, assigned: 0, available: 1 },
 		});
@@ -328,11 +277,12 @@ test.concurrent(
 			plan_id: license.id,
 		});
 
-		const poolsAfter = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsAfter.list[0].inventory).toMatchObject({
+		const poolsAfter = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(poolsAfter[0].inventory).toMatchObject({
 			included: 1,
 			assigned: 1,
 			available: 0,

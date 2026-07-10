@@ -4,9 +4,6 @@ import {
 	type AttachParamsV1Input,
 	type CheckResponseV3,
 	ErrCode,
-	FreeTrialDuration,
-	type LicenseBalanceResponse,
-	ProductErrorCode,
 	type ProductV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -17,6 +14,12 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
+import {
+	listLicenseAssignments,
+	listLicenseLinks,
+	listLicensePools,
+	type TestLicenseAssignment,
+} from "./licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
 	...products.base({
@@ -41,13 +44,14 @@ test.concurrent(
 				s.entities({ count: 2, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+			],
 		});
 
 		const { products: licenseProducts } = (await autumnV2_2.get(
@@ -71,12 +75,13 @@ test.concurrent(
 			),
 		).toBe(true);
 
-		const poolsBeforeAssign = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsBeforeAssign.list).toHaveLength(1);
-		expect(poolsBeforeAssign.list[0]).toMatchObject({
+		const poolsBeforeAssign = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(poolsBeforeAssign).toHaveLength(1);
+		expect(poolsBeforeAssign[0]).toMatchObject({
 			license_plan_id: license.id,
 			license_plan_name: license.name,
 			inventory: {
@@ -97,15 +102,7 @@ test.concurrent(
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			plan_id: license.id,
-		})) as {
-			assignment: {
-				id: string;
-				entity_id: string;
-				license_plan_id: string;
-				started_at: number;
-				ended_at: number | null;
-			};
-		};
+		})) as { assignment: TestLicenseAssignment };
 		expect(assignment).toMatchObject({
 			entity_id: entities[0].id,
 			license_plan_id: license.id,
@@ -117,11 +114,12 @@ test.concurrent(
 		expect(assignment.id).toBeTruthy();
 		expect(assignment.started_at).toBeGreaterThan(0);
 
-		const poolsAfterAssign = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsAfterAssign.list[0]).toMatchObject({
+		const poolsAfterAssign = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(poolsAfterAssign[0]).toMatchObject({
 			license_plan_id: license.id,
 			inventory: {
 				included: 1,
@@ -135,36 +133,25 @@ test.concurrent(
 				},
 			],
 		});
-		expect(poolsAfterAssign.list[0].assignments[0].assignment_id).toBeTruthy();
-		expect(poolsAfterAssign.list[0].assignments[0].started_at).toBeGreaterThan(
-			0,
-		);
-		const assignmentId = poolsAfterAssign.list[0].assignments[0].assignment_id;
+		expect(poolsAfterAssign[0].assignments[0].assignment_id).toBeTruthy();
+		expect(poolsAfterAssign[0].assignments[0].started_at).toBeGreaterThan(0);
+		const assignmentId = poolsAfterAssign[0].assignments[0].assignment_id;
 		expect(assignmentId).toBe(assignment.id);
 
-		const activeAssignments = (await autumnV2_2.post(
-			"/licenses.list_assignments",
-			{
-				customer_id: customerId,
-				entity_id: entities[0].id,
-				plan_id: license.id,
-			},
-		)) as {
-			list: Array<{
-				id: string;
-				entity_id: string;
-				license_plan_id: string;
-				ended_at: number | null;
-			}>;
-		};
-		expect(activeAssignments.list).toHaveLength(1);
-		expect(activeAssignments.list[0]).toMatchObject({
+		const activeAssignments = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
+		expect(activeAssignments).toHaveLength(1);
+		expect(activeAssignments[0]).toMatchObject({
 			id: assignmentId,
 			entity_id: entities[0].id,
 			license_plan_id: license.id,
 			ended_at: null,
 		});
-		expect("internal_customer_id" in activeAssignments.list[0]).toBe(false);
+		expect("internal_customer_id" in activeAssignments[0]).toBe(false);
 
 		const assignedEntity = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,
@@ -190,14 +177,12 @@ test.concurrent(
 				}),
 		});
 
-		const assignmentsAfterExhaustedAttempt = (await autumnV2_2.post(
-			"/licenses.list_assignments",
-			{
-				customer_id: customerId,
-				plan_id: license.id,
-			},
-		)) as { list: unknown[] };
-		expect(assignmentsAfterExhaustedAttempt.list).toHaveLength(1);
+		const assignmentsAfterExhaustedAttempt = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			licensePlanId: license.id,
+		});
+		expect(assignmentsAfterExhaustedAttempt).toHaveLength(1);
 
 		const customerAfter = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,
@@ -241,35 +226,30 @@ test.concurrent(
 		expect(endedAssignment.license_plan_id).toBe(license.id);
 		expect(endedAssignment.ended_at).toBeGreaterThan(0);
 
-		const activeAssignmentsAfterUnassign = (await autumnV2_2.post(
-			"/licenses.list_assignments",
-			{
-				customer_id: customerId,
-				entity_id: entities[0].id,
-				plan_id: license.id,
-			},
-		)) as { list: unknown[] };
-		expect(activeAssignmentsAfterUnassign.list).toHaveLength(0);
+		const activeAssignmentsAfterUnassign = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+		});
+		expect(activeAssignmentsAfterUnassign).toHaveLength(0);
 
-		const allAssignmentsAfterUnassign = (await autumnV2_2.post(
-			"/licenses.list_assignments",
-			{
-				customer_id: customerId,
-				entity_id: entities[0].id,
-				plan_id: license.id,
-				active: false,
-			},
-		)) as {
-			list: Array<{ id: string; ended_at: number | null }>;
-		};
-		expect(allAssignmentsAfterUnassign.list[0].id).toBe(assignmentId);
-		expect(allAssignmentsAfterUnassign.list[0].ended_at).toBeGreaterThan(0);
+		const allAssignmentsAfterUnassign = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+			active: false,
+		});
+		expect(allAssignmentsAfterUnassign[0].id).toBe(assignmentId);
+		expect(allAssignmentsAfterUnassign[0].ended_at).toBeGreaterThan(0);
 
-		const poolsAfterUnassign = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-		})) as { list: LicenseBalanceResponse[] };
-		expect(poolsAfterUnassign.list[0]).toMatchObject({
+		const poolsAfterUnassign = await listLicensePools({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+		});
+		expect(poolsAfterUnassign[0]).toMatchObject({
 			inventory: {
 				included: 1,
 				assigned: 0,
@@ -349,16 +329,10 @@ test.concurrent(
 			},
 		});
 
-		const { list: enterprisePlanLicenses } = (await autumnV2_2.post(
-			"/licenses.list_links",
-			{ parent_plan_id: parent.id },
-		)) as {
-			list: Array<{
-				parent_plan_id: string;
-				license_plan_id: string;
-				customize?: { add_items?: Array<{ included?: number }> };
-			}>;
-		};
+		const enterprisePlanLicenses = await listLicenseLinks({
+			autumn: autumnV2_2,
+			parentPlanId: parent.id,
+		});
 		expect(enterprisePlanLicenses[0].parent_plan_id).toBe(parent.id);
 		expect(enterprisePlanLicenses[0].license_plan_id).toBe(license.id);
 		expect("parent_internal_product_id" in enterprisePlanLicenses[0]).toBe(
@@ -376,12 +350,10 @@ test.concurrent(
 			license_plan_id: license.id,
 			included: 3,
 		});
-		const { list: updatedEnterprisePlanLicenses } = (await autumnV2_2.post(
-			"/licenses.list_links",
-			{ parent_plan_id: parent.id },
-		)) as {
-			list: Array<{ customize?: { add_items?: Array<{ included?: number }> } }>;
-		};
+		const updatedEnterprisePlanLicenses = await listLicenseLinks({
+			autumn: autumnV2_2,
+			parentPlanId: parent.id,
+		});
 		expect(
 			updatedEnterprisePlanLicenses[0].customize?.add_items?.[0].included,
 		).toBe(100);
@@ -400,10 +372,8 @@ test.concurrent(
 
 		expect(enterpriseCheck.balance?.granted).toBe(100);
 
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
-		const enterprisePool = pools.list[0];
+		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
+		const enterprisePool = pools[0];
 		expect(enterprisePool?.inventory).toMatchObject({
 			included: 3,
 			assigned: 1,
@@ -430,13 +400,13 @@ test.concurrent(
 				s.customer({ testClock: false }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [],
-		});
-
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 3,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 3,
+				}),
+			],
 		});
 
 		const { list } = (await autumnV2_2.post("/plans.list", {})) as {

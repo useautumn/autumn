@@ -1,8 +1,3 @@
-/**
- * License products are plain plans: POST/DELETE /products/:id must work on
- * them like any other product.
- */
-
 import { expect, test } from "bun:test";
 import type { ProductV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -78,12 +73,13 @@ test.concurrent(
 				s.customer({ testClock: false }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [],
-		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+			],
 		});
 
 		await autumnV2_2.delete(`/products/${license.id}`);
@@ -106,24 +102,25 @@ test.concurrent(
 			id: "delete-assigned-license",
 			items: [items.monthlyMessages({ includedUsage: 25 })],
 		});
-		const { customerId, entities, autumnV2_2, ctx } = await initScenario({
+		const { customerId, autumnV2_2, ctx } = await initScenario({
 			customerId: "license-delete-assigned",
 			setup: [
 				s.customer({ testClock: false }),
 				s.entities({ count: 1, featureId: TestFeature.Users }),
 				s.products({ list: [parent, license] }),
 			],
-			actions: [s.billing.attach({ productId: parent.id })],
-		});
-		await autumnV2_2.post("/licenses.link", {
-			parent_plan_id: parent.id,
-			license_plan_id: license.id,
-			included: 1,
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: license.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: parent.id }),
+				s.licenses.assign({
+					licenseProductId: license.id,
+					entityIndex: 0,
+				}),
+			],
 		});
 		const before = await getLicenseDbState({ db: ctx.db, customerId });
 

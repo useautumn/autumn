@@ -5,6 +5,7 @@ import {
 	type CreateRewardProgram,
 	type CustomerBillingControlsParams,
 	type EntitlementDuration,
+	type LicenseCustomize,
 	type OrgConfig,
 	type PlanTiming,
 	type ProductItem,
@@ -53,6 +54,14 @@ type GeneratedEntity = {
 	id: string;
 	name: string;
 	featureId: string;
+};
+
+type GeneratedLicenseAssignment = {
+	id: string;
+	entity_id: string;
+	license_plan_id: string;
+	started_at: number;
+	ended_at: number | null;
 };
 
 type OtherCustomerConfig = {
@@ -179,6 +188,23 @@ type BillingMultiAttachAction = {
 	timeout?: number;
 };
 
+type LinkLicenseAction = {
+	type: "linkLicense";
+	parentProductId: string;
+	licenseProductId: string;
+	included: number;
+	prepaidOnly?: boolean;
+	customize?: LicenseCustomize | null;
+	metadata?: Record<string, unknown>;
+};
+
+type AssignLicenseAction = {
+	type: "assignLicense";
+	licenseProductId: string;
+	entityIndex: number;
+	parentProductId?: string;
+};
+
 type CreateReferralCodeAction = {
 	type: "createReferralCode";
 };
@@ -221,6 +247,8 @@ type ScenarioAction =
 	| AdvanceToNextInvoiceAction
 	| BillingAttachAction
 	| BillingMultiAttachAction
+	| LinkLicenseAction
+	| AssignLicenseAction
 	| CreateReferralCodeAction
 	| RedeemReferralCodeAction
 	| CreateAndRedeemReferralCodeAction
@@ -788,6 +816,61 @@ const billingMultiAttach = ({
 /** Top-level alias for billing multi-attach. */
 const multiAttach = billingMultiAttach;
 
+const linkLicense =
+	({
+		parentProductId,
+		licenseProductId,
+		included,
+		prepaidOnly,
+		customize,
+		metadata,
+	}: {
+		parentProductId: string;
+		licenseProductId: string;
+		included: number;
+		prepaidOnly?: boolean;
+		customize?: LicenseCustomize | null;
+		metadata?: Record<string, unknown>;
+	}): ConfigFn =>
+	(config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "linkLicense" as const,
+				parentProductId,
+				licenseProductId,
+				included,
+				prepaidOnly,
+				customize,
+				metadata,
+			},
+		],
+	});
+
+const assignLicense =
+	({
+		licenseProductId,
+		entityIndex,
+		parentProductId,
+	}: {
+		licenseProductId: string;
+		entityIndex: number;
+		parentProductId?: string;
+	}): ConfigFn =>
+	(config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{
+				type: "assignLicense" as const,
+				licenseProductId,
+				entityIndex,
+				parentProductId,
+			},
+		],
+	});
+
 /** Run independent scenario actions concurrently. */
 const parallel = (...actions: ConfigFn[]): ConfigFn => {
 	return (config) => {
@@ -928,6 +1011,10 @@ export const s = {
 		attach: billingAttach,
 		multiAttach: billingMultiAttach,
 	},
+	licenses: {
+		link: linkLicense,
+		assign: assignLicense,
+	},
 	multiAttach,
 	parallel,
 	featureGrant,
@@ -1000,6 +1087,7 @@ type InitScenarioImplementationResult = {
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
 	ctx: TestContext;
 	entities: GeneratedEntity[];
+	licenseAssignments: GeneratedLicenseAssignment[];
 	advancedTo: number;
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
@@ -1028,6 +1116,7 @@ export async function initScenario(params: {
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 	ctx: TestContext;
 	entities: GeneratedEntity[];
+	licenseAssignments: GeneratedLicenseAssignment[];
 	advancedTo: number;
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
@@ -1056,6 +1145,7 @@ export async function initScenario(params: {
 	customer: null;
 	ctx: TestContext;
 	entities: GeneratedEntity[];
+	licenseAssignments: GeneratedLicenseAssignment[];
 	advancedTo: number;
 	otherCustomers: Map<string, OtherCustomerResult>;
 	referralCode: ReferralCode | null;
@@ -1369,6 +1459,7 @@ export async function initScenario({
 
 	// 5. Run actions in order.
 	let advancedTo: number = Date.now();
+	const licenseAssignments: GeneratedLicenseAssignment[] = [];
 	let referralCode: ReferralCode | null = null;
 	let redemption: RewardRedemption | null = null;
 
@@ -1640,6 +1731,37 @@ export async function initScenario({
 				},
 				{ timeout: action.timeout },
 			);
+		} else if (action.type === "linkLicense") {
+			await autumnV2_2.post("/licenses.link", {
+				parent_plan_id: `${action.parentProductId}_${productPrefix}`,
+				license_plan_id: `${action.licenseProductId}_${productPrefix}`,
+				included: action.included,
+				prepaid_only: action.prepaidOnly,
+				customize: action.customize,
+				metadata: action.metadata,
+			});
+		} else if (action.type === "assignLicense") {
+			if (!customerId) {
+				throw new Error(
+					"Cannot assign license: customerId is required when using s.licenses.assign()",
+				);
+			}
+			if (action.entityIndex >= generatedEntities.length) {
+				throw new Error(
+					`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+				);
+			}
+			const response = (await autumnV2_2.post("/licenses.attach", {
+				customer_id: customerId,
+				entity_id: generatedEntities[action.entityIndex].id,
+				plan_id: `${action.licenseProductId}_${productPrefix}`,
+				...(action.parentProductId
+					? {
+							parent_plan_id: `${action.parentProductId}_${productPrefix}`,
+						}
+					: {}),
+			})) as { assignment: GeneratedLicenseAssignment };
+			licenseAssignments.push(response.assignment);
 		} else if (action.type === "createReferralCode") {
 			if (!customerId) {
 				throw new Error("Cannot create referral code: customerId is required");
@@ -1740,6 +1862,7 @@ export async function initScenario({
 		customer,
 		ctx,
 		entities: generatedEntities,
+		licenseAssignments,
 		advancedTo,
 		otherCustomers: otherCustomersMap,
 		referralCode,
