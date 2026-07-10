@@ -96,7 +96,7 @@ export const CustomButtonDialog = ({
 									<div>
 										<FormLabel>URL</FormLabel>
 										<Input
-											placeholder="https://internal.firecrawl.dev/{customerId}"
+											placeholder="https://example.com/{customerId}"
 											value={field.state.value}
 											onBlur={field.handleBlur}
 											onChange={(e) => field.handleChange(e.target.value)}
