@@ -266,57 +266,45 @@ export const updateProduct = async ({
 	const freeTrialProvided = "free_trial" in productUpdates;
 	const billingControlsProvided = "billing_controls" in productUpdates;
 
+	// Billing controls are a global setting: changing only them versions the
+	// product without going through the item/detail update paths. Returns false
+	// if anything else changed so those paths still run.
+	const isBillingControlsOnlyChange = () => {
+		const same = productsAreSame({ newProductV2, curProductV2, features });
+		return (
+			!same.billingControlsSame &&
+			same.itemsSame &&
+			same.freeTrialsSame &&
+			same.detailsSame &&
+			same.configSame &&
+			same.optionsSame &&
+			same.metadataSame
+		);
+	};
+
 	if (
 		versionableCustomerProductExists &&
 		!effectiveDisableVersion &&
 		!force_version &&
-		billingControlsProvided
+		billingControlsProvided &&
+		isBillingControlsOnlyChange()
 	) {
-		const {
-			billingControlsSame,
-			itemsSame,
-			freeTrialsSame,
-			detailsSame,
-			configSame,
-			optionsSame,
-			metadataSame,
-		} = productsAreSame({
+		const newProduct = await handleVersionProductV2({
+			ctx,
 			newProductV2: newProductV2,
-			curProductV2,
-			features,
+			latestProduct: fullProduct,
+			org,
+			env,
+			baseInternalProductId: nextBaseInternalProductId,
 		});
-
-		// Only take the billing-controls-only shortcut when nothing else changed;
-		// otherwise fall through so detail/default guards run on other fields.
-		const onlyBillingControlsChanged =
-			!billingControlsSame &&
-			itemsSame &&
-			freeTrialsSame &&
-			detailsSame &&
-			configSame &&
-			optionsSame &&
-			metadataSame;
-
-		if (onlyBillingControlsChanged) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-				baseInternalProductId: nextBaseInternalProductId,
-			});
-
-			const latestBase = await ProductService.getFull({
-				db,
-				idOrInternalId: newProduct.id,
-				orgId: org.id,
-				env,
-			});
-			await applyVariantUpdates({ latestBase });
-
-			return newProduct;
-		}
+		const latestBase = await ProductService.getFull({
+			db,
+			idOrInternalId: newProduct.id,
+			orgId: org.id,
+			env,
+		});
+		await applyVariantUpdates({ latestBase });
+		return newProduct;
 	}
 
 	await handleUpdateProductDetails({
