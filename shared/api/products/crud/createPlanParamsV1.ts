@@ -1,7 +1,7 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
-import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels.js";
+import { LinkPlanLicenseSchema } from "@models/licenseModels/licenseModels.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { idRegex } from "@utils/utils.js";
@@ -43,7 +43,7 @@ export const CreatePlanParamsV1Schema = z.object({
 			"Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.",
 	}),
 	// internal: dashboard-only license catalog surface, not part of the public plan API yet.
-	licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+	licenses: z.array(LinkPlanLicenseSchema).optional().meta({
 		internal: true,
 		description:
 			"Plans offered as assignable licenses under this plan. The full set replaces existing links.",

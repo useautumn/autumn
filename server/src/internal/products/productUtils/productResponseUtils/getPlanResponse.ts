@@ -133,7 +133,13 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
-		licenses: product.licenses?.length ? product.licenses : undefined,
+		licenses: product.licenses?.length
+			? product.licenses.map((license) => ({
+					license_plan_id: license.license_plan_id,
+					included: license.included,
+					prepaid_only: license.prepaid_only,
+				}))
+			: undefined,
 		free_trial: freeTrial,
 
 		created_at: product.created_at,

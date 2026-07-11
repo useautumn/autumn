@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import type { CheckResponseV3 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -16,7 +15,7 @@ const makeLicenseProduct = () => ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("licenses: plan license customize overrides the base grant")}`,
+	`${chalk.yellowBright("licenses: plan license included updates in place, assignments grant stock items")}`,
 	async () => {
 		const parent = products.base({
 			id: "license-custom-enterprise",
@@ -43,9 +42,6 @@ test.concurrent(
 				{
 					license_plan_id: license.id,
 					included: 2,
-					customize: {
-						items: [itemsV2.monthlyMessages({ included: 100 })],
-					},
 				},
 			],
 		});
@@ -62,9 +58,6 @@ test.concurrent(
 		expect("license_internal_product_id" in enterprisePlanLicenses[0]).toBe(
 			false,
 		);
-		expect(enterprisePlanLicenses[0].customize?.add_items?.[0].included).toBe(
-			100,
-		);
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,
@@ -72,9 +65,6 @@ test.concurrent(
 				{
 					license_plan_id: license.id,
 					included: 3,
-					customize: {
-						items: [itemsV2.monthlyMessages({ included: 100 })],
-					},
 				},
 			],
 		});
@@ -82,9 +72,7 @@ test.concurrent(
 			autumn: autumnV2_2,
 			parentPlanId: parent.id,
 		});
-		expect(
-			updatedEnterprisePlanLicenses[0].customize?.add_items?.[0].included,
-		).toBe(100);
+		expect(updatedEnterprisePlanLicenses[0].included).toBe(3);
 
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
@@ -98,7 +86,7 @@ test.concurrent(
 			feature_id: TestFeature.Messages,
 		});
 
-		expect(enterpriseCheck.balance?.granted).toBe(100);
+		expect(enterpriseCheck.balance?.granted).toBe(25);
 
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
 		const enterprisePool = pools[0];

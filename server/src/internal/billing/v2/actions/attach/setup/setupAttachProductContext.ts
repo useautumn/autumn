@@ -115,8 +115,6 @@ const resolveAttachProductContext = async ({
 		orgId: org.id,
 		env,
 		version: params.version,
-		logResult: true,
-		logger: ctx.logger,
 	});
 
 	if (fullCustomer) {

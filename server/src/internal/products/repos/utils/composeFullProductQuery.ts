@@ -10,31 +10,31 @@ import {
 } from "@autumn/shared";
 import { eq, isNull } from "drizzle-orm";
 
-const composeProductItems = () => ({
-	entitlements: {
-		with: { feature: true as const },
-		where: eq(entitlements.is_custom, false),
-	},
+const composeProductItems = ({ excludeEnts = false } = {}) => ({
+	entitlements: excludeEnts
+		? undefined
+		: {
+				with: { feature: true as const },
+				where: eq(entitlements.is_custom, false),
+			},
 	prices: { where: eq(prices.is_custom, false) },
 	free_trials: { where: eq(freeTrials.is_custom, false) },
 });
 
 export const composeFullProductQuery = ({
-	includeLicenses = false,
+	excludeEnts = false,
 }: {
-	includeLicenses?: boolean;
+	excludeEnts?: boolean;
 } = {}) => ({
-	...composeProductItems(),
-	licenses: includeLicenses
-		? {
-				where: isNull(planLicenses.parent_customer_product_id),
-				with: {
-					product: {
-						with: composeProductItems(),
-					},
-				},
-			}
-		: undefined,
+	...composeProductItems({ excludeEnts }),
+	licenses: {
+		where: isNull(planLicenses.parent_customer_product_id),
+		with: {
+			product: {
+				with: composeProductItems(),
+			},
+		},
+	},
 });
 
 export type ProductWithLicenseRelations = FullProductWithoutLicenses & {

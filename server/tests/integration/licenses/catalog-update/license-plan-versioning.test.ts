@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { items } from "@tests/utils/fixtures/items.js";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -32,9 +31,6 @@ test.concurrent(
 					parentProductId: parent.id,
 					licenseProductId: license.id,
 					included: 1,
-					customize: {
-						items: [itemsV2.monthlyMessages({ included: 100 })],
-					},
 				}),
 				s.billing.attach({ productId: parent.id }),
 			],
@@ -76,6 +72,5 @@ test.concurrent(
 			license_plan_id: license.id,
 			included: 1,
 		});
-		expect(afterVersioning[0].customize?.add_items?.[0].included).toBe(100);
 	},
 );

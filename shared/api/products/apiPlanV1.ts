@@ -74,10 +74,6 @@ export const ApiPlanLicenseV1Schema = z.object({
 		description:
 			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
 	}),
-	customize: VariantCustomizeSchema.nullish().meta({
-		description:
-			"Customization applied to the license plan when offered under this plan, as a diff from the stock license plan.",
-	}),
 });
 
 export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;

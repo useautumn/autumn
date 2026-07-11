@@ -1,5 +1,5 @@
 import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
-import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels.js";
+import { LinkPlanLicenseSchema } from "@models/licenseModels/licenseModels.js";
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
@@ -10,7 +10,7 @@ import { AppEnv } from "../../models/genModels/genEnums.js";
 
 /** A plan-level license link declared inline on a product. The full array is
  * the complete set of links for the plan: links absent from it are removed. */
-export const PlanLicenseParamsSchema = CustomizePlanLicenseSchema;
+export const PlanLicenseParamsSchema = LinkPlanLicenseSchema;
 
 // Use the full ProductItemSchema but mark backend fields as internal
 export const CreateProductItemParamsSchema = ProductItemSchema;

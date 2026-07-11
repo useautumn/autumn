@@ -9,7 +9,6 @@ import {
 	type OrgConfig,
 	organizations,
 	RecaseError,
-	ResetInterval,
 } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -24,7 +23,6 @@ import {
 	constructCreditSystem,
 	constructMeteredFeature,
 } from "@/internal/features/utils/constructFeatureUtils.js";
-import { loadApiPlanLicenses } from "@/internal/licenses/actions/links/loadApiPlanLicenses.js";
 import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
@@ -197,15 +195,6 @@ const seedSourceSandbox = async (sourceOrg: Organization) => {
 				included: 3,
 				prepaid_only: true,
 				metadata: { source: "sandbox-copy" },
-				customize: {
-					items: [
-						{
-							feature_id: MSG_FEATURE,
-							included: 80,
-							reset: { interval: ResetInterval.Month },
-						},
-					],
-				},
 			},
 		],
 	});
@@ -292,24 +281,11 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 			.filter((id): id is string => Boolean(id));
 		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
 
-		const linksByParent = await loadApiPlanLicenses({
-			ctx: {
-				...baseCtx,
-				org: target,
-				env: AppEnv.Sandbox,
-				features: targetFeatures,
-			},
-			internalProductIds: [copied!.internal_id],
-		});
-		const links = linksByParent.get(copied!.internal_id) ?? [];
+		const links = copied!.licenses ?? [];
 		expect(links).toHaveLength(1);
 		expect(links[0]).toMatchObject({
 			license_plan_id: LICENSE_ID,
 			included: 3,
-		});
-		expect(links[0].customize?.add_items?.[0]).toMatchObject({
-			feature_id: MSG_FEATURE,
-			included: 80,
 		});
 		const [storedLink] =
 			await planLicenseRepo.listCatalogByParentInternalProductIds({

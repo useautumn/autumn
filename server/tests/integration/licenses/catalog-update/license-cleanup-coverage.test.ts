@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { BillingInterval, ErrCode } from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
-import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -119,18 +118,18 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses catalog: list_links returns per-link customize for a mix of customized and uncustomized links")}`,
+	`${chalk.yellowBright("licenses catalog: list_links returns every link with its included quantity")}`,
 	async () => {
 		const parent = products.base({
 			id: "list-links-parent",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
-		const customizedLicense = products.base({
-			id: "list-links-customized",
+		const seatLicense = products.base({
+			id: "list-links-seat",
 			items: [items.monthlyMessages({ includedUsage: 25 })],
 		});
-		const stockLicense = products.base({
-			id: "list-links-stock",
+		const supportLicense = products.base({
+			id: "list-links-support",
 			items: [items.monthlyMessages({ includedUsage: 50 })],
 		});
 
@@ -138,20 +137,17 @@ test.concurrent(
 			customerId: "license-list-links-mix",
 			setup: [
 				s.customer({ testClock: false }),
-				s.products({ list: [parent, customizedLicense, stockLicense] }),
+				s.products({ list: [parent, seatLicense, supportLicense] }),
 			],
 			actions: [
 				s.licenses.link({
 					parentProductId: parent.id,
-					licenseProductId: customizedLicense.id,
+					licenseProductId: seatLicense.id,
 					included: 2,
-					customize: {
-						items: [itemsV2.monthlyMessages({ included: 80 })],
-					},
 				}),
 				s.licenses.link({
 					parentProductId: parent.id,
-					licenseProductId: stockLicense.id,
+					licenseProductId: supportLicense.id,
 					included: 3,
 				}),
 				s.billing.attach({ productId: parent.id }),
@@ -164,14 +160,12 @@ test.concurrent(
 		});
 		expect(list).toHaveLength(2);
 
-		const customized = list.find(
-			(row) => row.license_plan_id === customizedLicense.id,
+		const seat = list.find((row) => row.license_plan_id === seatLicense.id);
+		const support = list.find(
+			(row) => row.license_plan_id === supportLicense.id,
 		);
-		const stock = list.find((row) => row.license_plan_id === stockLicense.id);
 
-		expect(customized).toMatchObject({ included: 2 });
-		expect(customized?.customize?.add_items?.[0].included).toBe(80);
-		expect(stock).toMatchObject({ included: 3 });
-		expect(stock?.customize ?? null).toBeNull();
+		expect(seat).toMatchObject({ included: 2 });
+		expect(support).toMatchObject({ included: 3 });
 	},
 );

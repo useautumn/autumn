@@ -11,6 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
 const licenseProducts = alias(products, "license_products");
+const parentProducts = alias(products, "parent_products");
 
 const upsert = async ({
 	db,
@@ -180,19 +181,40 @@ const listCatalogByOrgEnv = async ({
 	return rows.map(({ row }) => row);
 };
 
-const listByLicenseInternalProductId = async ({
+/** Distinct parent plan (public) ids holding catalog links to any version of
+ * the given license plan — the one-to-one ownership lookup. */
+const listCatalogParentPlanIdsByLicensePlanId = async ({
 	db,
-	licenseInternalProductId,
+	orgId,
+	env,
+	licensePlanId,
 }: {
 	db: DrizzleCli;
-	licenseInternalProductId: string;
-}) =>
-	await db.query.planLicenses.findMany({
-		where: eq(
-			planLicenses.license_internal_product_id,
-			licenseInternalProductId,
-		),
-	});
+	orgId: string;
+	env: AppEnv;
+	licensePlanId: string;
+}): Promise<string[]> => {
+	const rows = await db
+		.selectDistinct({ parentPlanId: parentProducts.id })
+		.from(planLicenses)
+		.innerJoin(
+			licenseProducts,
+			eq(planLicenses.license_internal_product_id, licenseProducts.internal_id),
+		)
+		.innerJoin(
+			parentProducts,
+			eq(planLicenses.parent_internal_product_id, parentProducts.internal_id),
+		)
+		.where(
+			and(
+				eq(licenseProducts.id, licensePlanId),
+				eq(licenseProducts.org_id, orgId),
+				eq(licenseProducts.env, env),
+				isNull(planLicenses.parent_customer_product_id),
+			),
+		);
+	return rows.map((row) => row.parentPlanId);
+};
 
 const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
 	await db.delete(planLicenses).where(inArray(planLicenses.id, ids));
@@ -227,8 +249,8 @@ export const planLicenseRepo = {
 	listCatalogByLicenseInternalProductIds,
 	listCustomerByParentCustomerProductIds,
 	listWithLicensePlanIdByParents,
+	listCatalogParentPlanIdsByLicensePlanId,
 	listCatalogByOrgEnv,
-	listByLicenseInternalProductId,
 	deleteByIds,
 	listProductsByInternalIds,
 	getParentCustomerProductById,

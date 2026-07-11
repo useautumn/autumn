@@ -5,7 +5,6 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "../../ProductService.js";
-import { attachPlanLicenses } from "../../productUtils/productResponseUtils/attachPlanLicenses.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleGetPlanV2 = createRoute({
@@ -24,7 +23,6 @@ export const handleGetPlanV2 = createRoute({
 			version: version,
 		});
 
-		await attachPlanLicenses({ ctx, products: [fullProduct] });
 		const latestPlan = await getPlanResponse({
 			ctx,
 			product: fullProduct,

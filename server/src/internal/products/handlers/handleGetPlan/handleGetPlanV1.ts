@@ -10,7 +10,6 @@ import {
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { attachPlanLicenses } from "../../productUtils/productResponseUtils/attachPlanLicenses.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 const GetProductQuerySchema = z.object({
@@ -55,7 +54,6 @@ export const handleGetPlanV1 = createRoute({
 
 		if (schemaVersionInt === 1) return c.json(product);
 
-		await attachPlanLicenses({ ctx, products: [product] });
 		const planResponse = await getPlanResponse({
 			ctx,
 			product,

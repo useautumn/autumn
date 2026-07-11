@@ -26,7 +26,7 @@ const toPlanLicenses = ({
 		license_plan_id: link.license_plan_id,
 		included: link.included,
 		prepaid_only: link.prepaid_only,
-		customize: link.customize ?? null,
+		customize: null,
 		metadata: null,
 		created_at: 0,
 		updated_at: 0,
