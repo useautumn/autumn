@@ -38,7 +38,8 @@ export const PlanEditor = () => {
 					}}
 					transition={SHEET_ANIMATION}
 				>
-					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-20">
+					{/* pb matches PlanEditorBar's h-40 so the last card scrolls clear of it */}
+					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-40">
 						<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-10">
 							<OnboardingGuide />
 						</div>

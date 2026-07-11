@@ -19,8 +19,8 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
-import { checkItemIsValid, getFeature } from "@/utils/product/entitlementUtils";
-import { BasePriceDisplay } from "../plan-card/BasePriceDisplay";
+import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { LicensePriceTag } from "./LicensePriceTag";
 import { useLicenseDraft } from "./useLicenseDraftStore";
 
 /**
@@ -74,7 +74,10 @@ export function LicensePlanCardHeader({
 					</Tooltip>
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
-					{hasBasePrice && <BasePriceDisplay product={product} compact />}
+					{/* read-only: license customize can't persist a price edit yet */}
+					{hasBasePrice && (
+						<LicensePriceTag product={product} className="mr-1" />
+					)}
 					<IconButton
 						aria-label="License Settings"
 						icon={<PencilSimpleIcon />}

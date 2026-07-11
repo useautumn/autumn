@@ -48,6 +48,7 @@ function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
 
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
+	const { licenseProducts } = useLicenseProductsQuery();
 	const { queryStates } = useProductsQueryState();
 
 	// Shared sorting state for all tables
@@ -65,8 +66,14 @@ export function ProductListTable() {
 
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
-			const filtered = products?.filter((product) =>
-				queryStates.showArchivedProducts ? product.archived : !product.archived,
+			// Linked licenses render in their own section below, not as plans.
+			const licenseIds = new Set(licenseProducts.map((license) => license.id));
+			const filtered = products?.filter(
+				(product) =>
+					!licenseIds.has(product.id) &&
+					(queryStates.showArchivedProducts
+						? product.archived
+						: !product.archived),
 			);
 
 			// Deduplicate by ID, keeping the latest version
@@ -122,7 +129,7 @@ export function ProductListTable() {
 			const recurringAddOnPlans = recurringPlans.filter((p) => p.is_add_on);
 
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
-		}, [products, counts, queryStates.showArchivedProducts]);
+		}, [products, licenseProducts, counts, queryStates.showArchivedProducts]);
 
 	// Check if any product has a group
 	const hasAnyGroup = useMemo(
@@ -195,7 +202,6 @@ export function ProductListTable() {
 	const hasRecurringBasePlans = recurringBasePlans.length > 0;
 	const hasRecurringAddOns = recurringAddOnPlans.length > 0;
 	const hasOneTimePlans = oneTimePlans.length > 0;
-	const { licenseProducts } = useLicenseProductsQuery();
 	const hasLicensePlans = licenseProducts.length > 0;
 
 	// For archived view, always show table structure even if empty

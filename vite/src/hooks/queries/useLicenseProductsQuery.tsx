@@ -6,8 +6,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 const EMPTY_PRODUCTS: ProductV2[] = [];
 
 /**
- * Fetch plans that are linked as licenses. These are excluded from the
- * normal `/products/products` list, so they need their own route.
+ * Fetch plans that are linked as licenses somewhere in the catalog. The main
+ * `/products/products` list still includes them; list UIs filter them out.
  */
 export const useLicenseProductsQuery = ({
 	enabled = true,

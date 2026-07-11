@@ -1,5 +1,6 @@
 import {
 	applyDiff,
+	basePriceToProductItem,
 	type CustomizePlanLicense,
 	type Feature,
 	type FrontendProduct,
@@ -9,6 +10,7 @@ import {
 	type ProductV2,
 	productV2ToApiPlanV1,
 	productV2ToFeatureItems,
+	type SharedContext,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
@@ -21,9 +23,9 @@ export type LicenseEditSnapshot = {
 };
 
 /**
- * The license's effective feature items for a plan: the per-plan `customize`
- * diff applied onto the stock license plan, otherwise the license's own
- * feature items.
+ * The license's effective items for a plan (base price + feature items): the
+ * per-plan `customize` diff applied onto the stock license plan, otherwise the
+ * license's own items.
  */
 export const planLicenseItems = ({
 	planLicense,
@@ -35,15 +37,25 @@ export const planLicenseItems = ({
 	features: Feature[];
 }): ProductItem[] => {
 	if (!planLicense.customize) {
-		return productV2ToFeatureItems({ items: license.items });
+		return productV2ToFeatureItems({
+			items: license.items,
+			withBasePrice: true,
+		});
 	}
 
 	const stockPlan = productV2ToApiPlanV1({ product: license, features });
 	const applied = applyDiff({ base: stockPlan, diff: planLicense.customize });
-	return applied.items.flatMap((item) => {
+	const featureItems = applied.items.flatMap((item) => {
 		const productItem = planItemV1ToProductItem({ item, features });
 		return productItem ? [productItem] : [];
 	});
+	if (!applied.price) return featureItems;
+
+	const basePriceItem = basePriceToProductItem({
+		ctx: { features } as unknown as SharedContext,
+		basePrice: applied.price,
+	});
+	return [basePriceItem, ...featureItems];
 };
 
 /**

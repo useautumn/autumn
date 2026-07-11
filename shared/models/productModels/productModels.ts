@@ -1,11 +1,14 @@
 import { z } from "zod/v4";
-import { ApiPlanLicenseV1Schema } from "../../api/products/apiPlanV1";
 import {
 	CustomerBillingControlsSchema,
 	DbBillingControlsSchema,
 } from "../cusModels/billingControls/customerBillingControls";
 import { FeatureSchema } from "../featureModels/featureModels";
 import { AppEnv } from "../genModels/genEnums";
+import {
+	type FullPlanLicense,
+	FullPlanLicenseSchema,
+} from "../licenseModels/fullPlanLicenseModel";
 import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
 import { PriceSchema } from "./priceModels/priceModels";
@@ -64,16 +67,28 @@ export const UpdateProductSchema = z.object({
 	billing_controls: CustomerBillingControlsSchema.optional(),
 });
 
-export const FullProductSchema = ProductSchema.extend({
+/** Full product data without nested license links, enforcing one-level license hydration. */
+export const FullProductWithoutLicensesSchema = ProductSchema.extend({
 	description: z.string().nullable().optional().default(null),
 	prices: z.array(PriceSchema),
 	entitlements: z.array(EntitlementSchema.extend({ feature: FeatureSchema })),
 	free_trial: FreeTrialSchema.nullish(),
 	free_trials: z.array(FreeTrialSchema).nullish(),
 	free_trial_ids: z.array(z.string()).nullish(),
-	// Populated by ProductService.getFull/listFull; absent on hand-built FullProducts.
-	licenses: z.array(ApiPlanLicenseV1Schema).optional(),
 });
+
+export type FullProductWithoutLicenses = z.infer<
+	typeof FullProductWithoutLicensesSchema
+>;
+
+export type FullProduct = FullProductWithoutLicenses & {
+	licenses?: FullPlanLicense[];
+};
+
+export const FullProductSchema: z.ZodType<FullProduct> =
+	FullProductWithoutLicensesSchema.extend({
+		licenses: z.array(FullPlanLicenseSchema).optional(),
+	});
 
 export type ProductCounts = {
 	active: number;
@@ -84,6 +99,5 @@ export type ProductCounts = {
 };
 
 export type Product = z.infer<typeof ProductSchema>;
-export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
 export type UpdateProduct = z.infer<typeof UpdateProductSchema>;

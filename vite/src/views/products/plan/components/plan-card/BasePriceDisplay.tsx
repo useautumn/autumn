@@ -18,13 +18,11 @@ export const BasePriceDisplay = ({
 	product,
 	readOnly = false,
 	adminIds,
-	compact = false,
 }: {
 	isOnboarding?: boolean;
 	product: FrontendProduct;
 	readOnly?: boolean;
 	adminIds?: AdminPlanIds;
-	compact?: boolean;
 }) => {
 	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
@@ -102,7 +100,6 @@ export const BasePriceDisplay = ({
 			size="default"
 			className={cn(
 				"items-center h-9! gap-1 rounded-xl px-2.5! hover:z-95",
-				compact && "h-6! rounded-md px-2! [&_span]:text-xs!",
 				isEditingPlanPrice && !isOnboarding && "btn-secondary-active z-95",
 				isOnboarding &&
 					"bg-transparent! border-none! outline-0! border-transparent! pointer-events-none shadow-none! p-0! h-fit! mt-1",

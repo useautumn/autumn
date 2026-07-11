@@ -54,6 +54,7 @@ import {
 	licensePrices,
 	planLicenses,
 } from "../models/licenseModels/licenseTable.js";
+import { planLicenseRelations } from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -182,6 +183,7 @@ export {
 	// Tables
 	organizations,
 	planLicenses,
+	planLicenseRelations,
 	passkey,
 	// Relations
 	organizationsRelations,

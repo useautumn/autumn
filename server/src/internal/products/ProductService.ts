@@ -35,6 +35,11 @@ import {
 } from "./productCacheUtils";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
+import {
+	composeFullProductQuery,
+	normalizeFullProductLicenses,
+	type ProductWithLicenseRelations,
+} from "./repos/utils/composeFullProductQuery";
 
 const parseFreeTrials = ({
 	products,
@@ -576,40 +581,16 @@ export class ProductService {
 				version ? eq(products.version, version) : undefined,
 			),
 			orderBy: [desc(products.version)],
-			with: {
-				entitlements: {
-					with: {
-						feature: true,
-					},
-					where: eq(entitlements.is_custom, false),
-				},
-				prices: { where: eq(prices.is_custom, false) },
-				free_trials: { where: eq(freeTrials.is_custom, false) },
-			},
-		})) as FullProduct;
-
-		parseFreeTrials({ product: data });
-
-		// if (logResult && logger) {
-		// 	logger.info("full product:", {
-		// 		data: {
-		// 			result: data,
-		// 			params: {
-		// 				idOrInternalId,
-		// 				orgId,
-		// 				env,
-		// 				version,
-		// 			},
-		// 		},
-		// 	});
-		// }
+			with: composeFullProductQuery({ includeLicenses: true }),
+		})) as ProductWithLicenseRelations | undefined;
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;
 			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
-		return data as FullProduct;
+		parseFreeTrials({ product: data as FullProduct });
+		return normalizeFullProductLicenses({ product: data });
 	}
 
 	static async getProductVersionCount({

@@ -131,7 +131,8 @@ function InlinePlanEditorContent({
 					animate={{ width: sheetType ? "calc(100% - 28rem)" : "100%" }}
 					transition={SHEET_ANIMATION}
 				>
-					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-20">
+					{/* pb matches PlanEditorBar's h-40 so the last card scrolls clear of it */}
+					<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-40">
 						<div onClick={(e) => e.stopPropagation()}>
 							<EditPlanHeader />
 						</div>
