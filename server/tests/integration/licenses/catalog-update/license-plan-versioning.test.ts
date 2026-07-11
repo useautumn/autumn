@@ -5,7 +5,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { listLicenseLinks } from "./licenseTestUtils.js";
+import { listLicenseLinks } from "../licenseTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses: versioning a parent plan keeps its plan license links")}`,

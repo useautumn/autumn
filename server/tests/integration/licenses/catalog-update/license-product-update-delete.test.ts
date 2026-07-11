@@ -5,7 +5,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import { getLicenseDbState, listLicenseLinks } from "../licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
 	...products.base({
@@ -84,10 +84,11 @@ test.concurrent(
 
 		await autumnV2_2.delete(`/products/${license.id}`);
 
-		const { list } = (await autumnV2_2.post("/licenses.list_links", {
-			parent_plan_id: parent.id,
-		})) as { list: unknown[] };
-		expect(list).toHaveLength(0);
+		const links = await listLicenseLinks({
+			autumn: autumnV2_2,
+			parentPlanId: parent.id,
+		});
+		expect(links).toHaveLength(0);
 	},
 );
 

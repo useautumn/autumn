@@ -9,7 +9,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { listLicenseLinks } from "./licenseTestUtils.js";
+import { listLicenseLinks } from "../licenseTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses customize propagation: base price edit leaves the customized link's override intact")}`,

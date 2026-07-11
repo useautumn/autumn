@@ -152,7 +152,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: customLicense.id,
@@ -193,7 +193,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toEqual([]);
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
@@ -294,7 +294,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
 			inventory: { included: 3, assigned: 1, available: 2 },
@@ -307,7 +307,7 @@ test.concurrent(
 		});
 		const poolsAfterSecondAssign = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(poolsAfterSecondAssign.list[0]).toMatchObject({
 			license_plan_id: license.id,
 			inventory: { included: 3, assigned: 2, available: 1 },
@@ -368,7 +368,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
@@ -471,7 +471,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
@@ -758,7 +758,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
 			inventory: { assigned: 1, available: 0 },
@@ -1182,7 +1182,7 @@ test.concurrent(
 		});
 		const poolsBefore = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(poolsBefore.list).toHaveLength(2);
 		const poolA = poolsBefore.list.find(
 			(pool) => pool.inventory.included === 1,
@@ -1231,7 +1231,7 @@ test.concurrent(
 
 		const poolsAfter = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(
 			poolsAfter.list.find(
 				(pool) => pool.parent_plan_id === poolA?.parent_plan_id,

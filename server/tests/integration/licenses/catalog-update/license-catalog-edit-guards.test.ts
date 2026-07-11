@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerLicenseV0,
 	type CheckResponseV3,
 	ErrCode,
-	type LicenseBalanceResponse,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -25,7 +25,7 @@ const makeLicenseProduct = ({
 });
 
 test.concurrent(
-	`${chalk.yellowBright("licenses catalog: versioning a license product rolls links and pools forward")}`,
+	`${chalk.yellowBright("licenses catalog update: versioning a license product rolls links and pools forward")}`,
 	async () => {
 		const parent = products.base({
 			id: "lic-rollfwd-parent",
@@ -70,7 +70,7 @@ test.concurrent(
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
-		})) as { list: LicenseBalanceResponse[] };
+		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0].inventory).toMatchObject({
 			included: 2,
@@ -121,10 +121,9 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
-				autumnV2_2.post("/licenses.link", {
-					parent_plan_id: parent.id,
-					license_plan_id: license.id,
-					included: 0,
+				autumnV2_2.post("/plans.update", {
+					plan_id: parent.id,
+					licenses: [{ license_plan_id: license.id, included: 0 }],
 				}),
 		});
 	},

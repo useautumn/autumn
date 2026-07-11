@@ -7,7 +7,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { listLicenseLinks } from "./licenseTestUtils.js";
+import { listLicenseLinks } from "../licenseTestUtils.js";
 
 test.concurrent(
 	`${chalk.yellowBright("licenses catalog: versioning a parent to an incompatible interval is rejected and does not create a new version")}`,
