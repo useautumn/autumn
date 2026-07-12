@@ -7,6 +7,7 @@ import {
 	generateTrialChanges,
 	generateVersionChanges,
 	type ProductItem,
+	ProductItemFeatureType,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
@@ -79,7 +80,12 @@ export function useHasSubscriptionChanges({
 			const featureId = change.id.replace("prepaid-", "");
 			if (newlyAddedFeatureIds.has(featureId)) return false;
 			const item = prepaidItems.find((it) => it.feature_id === featureId);
-			if (item?.interval == null) {
+			// Consumable one-off top-ups only count as a change when increasing;
+			// non-consumables (continuous use) change on any delta, including a decrease.
+			const isConsumableOneOff =
+				item?.interval == null &&
+				item?.feature_type !== ProductItemFeatureType.ContinuousUse;
+			if (isConsumableOneOff) {
 				const initial = initialPrepaidOptions[featureId] ?? 0;
 				return (formValues.prepaidOptions[featureId] ?? 0) > initial;
 			}
