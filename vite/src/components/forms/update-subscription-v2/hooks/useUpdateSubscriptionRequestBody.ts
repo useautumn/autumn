@@ -3,6 +3,7 @@ import type {
 	ProductItemInterval,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
+import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
@@ -14,6 +15,7 @@ type PrepaidItemInput = {
 	feature?: { internal_id?: string | null } | null;
 	included_usage?: number | "inf" | null;
 	interval?: ProductItemInterval | null;
+	feature_type?: ProductItemFeatureType | null;
 };
 
 /** Pure function to build update subscription options from prepaid form values. Extracted for testability. */
@@ -81,8 +83,12 @@ export function buildUpdateSubscriptionOptions({
 				includedUsage: currentIncludedUsage,
 			});
 
-			const isOneOff = item.interval === null;
-			if (isOneOff) {
+			// Only consumable (single-use) items top up by delta. Non-consumables
+			// are continuous-use levels with interval === null — always absolute.
+			const isOneOffTopUp =
+				item.interval === null &&
+				item.feature_type !== ProductItemFeatureType.ContinuousUse;
+			if (isOneOffTopUp) {
 				const topUpDelta = newPurchasedQuantity - currentPurchasedQuantity;
 				if (topUpDelta <= 0) return null;
 				return { feature_id: featureId, quantity: topUpDelta };
