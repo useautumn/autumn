@@ -3,6 +3,7 @@ import {
 	cusEntToBillingObjects,
 	type FullCusEntWithFullCusProduct,
 	featureOptionUtils,
+	getPriceCurrencyStripeId,
 	InternalError,
 	isPrepaidPrice,
 	priceUtils,
@@ -21,10 +22,14 @@ import { cusEntToInlineStripePrice } from "./cusEntToInlineStripePrice";
 export const prepaidToStripeItemSpec = ({
 	ctx,
 	cusEntWithCusProduct,
+	currency,
+	orgDefault,
 	options,
 }: {
 	ctx: AutumnContext;
 	cusEntWithCusProduct: FullCusEntWithFullCusProduct;
+	currency: string;
+	orgDefault: string;
 	options?: { isDuplicateProductId?: boolean; billingVersion?: BillingVersion };
 }): StripeItemSpec | null => {
 	const billing = cusEntToBillingObjects({ cusEnt: cusEntWithCusProduct });
@@ -54,7 +59,13 @@ export const prepaidToStripeItemSpec = ({
 		const finalQuantity = optionsQuantity;
 
 		return {
-			stripePriceId: config.stripe_price_id ?? undefined,
+			stripePriceId:
+				getPriceCurrencyStripeId({
+					config,
+					currency,
+					orgDefault,
+					slot: "stripe_price_id",
+				}) ?? undefined,
 			quantity: finalQuantity,
 			autumnPrice: price,
 			autumnEntitlement: entitlement,
@@ -67,6 +78,7 @@ export const prepaidToStripeItemSpec = ({
 		const inlinePrice = cusEntToInlineStripePrice({
 			cusEnt: cusEntWithCusProduct,
 			org: ctx.org,
+			currency,
 		});
 
 		return {
@@ -82,9 +94,15 @@ export const prepaidToStripeItemSpec = ({
 		};
 	}
 
-	if (!config.stripe_prepaid_price_v2_id) {
+	const prepaidV2Id = getPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_prepaid_price_v2_id",
+	});
+	if (!prepaidV2Id) {
 		throw new InternalError({
-			message: `[prepaidToStripeItemSpec] Price ${price.id} has no stripe_prepaid_price_v2_id`,
+			message: `[prepaidToStripeItemSpec] Price ${price.id} has no stripe_prepaid_price_v2_id for currency '${currency}'`,
 		});
 	}
 
@@ -95,7 +113,7 @@ export const prepaidToStripeItemSpec = ({
 	});
 
 	return {
-		stripePriceId: config.stripe_prepaid_price_v2_id,
+		stripePriceId: prepaidV2Id,
 		quantity,
 		autumnPrice: price,
 		autumnEntitlement: entitlement,

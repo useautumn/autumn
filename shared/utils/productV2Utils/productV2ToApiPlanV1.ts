@@ -2,8 +2,8 @@ import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
 import type { ProductV2 } from "@models/productV2Models/productV2Models.js";
-import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
 import { sortProductItems } from "@utils/productDisplayUtils/sortProductItems.js";
+import { getProductItemDisplay } from "@utils/productDisplayUtils.js";
 import { productItemsToPlanItemsV1 } from "@utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1.js";
 import {
 	itemToBillingInterval,
@@ -40,6 +40,9 @@ export const productV2ToApiPlanV1 = ({
 	const basePrice: ApiPlanV1["price"] = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				...(itemToBillingIntervalCount({ item: basePriceItem }) !== 1
 					? {

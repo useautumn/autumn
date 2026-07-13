@@ -10,3 +10,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <Note>
   If the customer already exists and you try to create it again, you will simply be returned the customer object (rather than an error being thrown).
 </Note>
+
+### Currency
+
+Pass `currency` to bill this customer in a currency other than your organization's default. Their plans must offer a price in that currency via [`additional_currencies`](/documentation/concepts/plans#multiple-currencies). If omitted, the customer's currency is set by their first paid attach.

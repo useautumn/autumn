@@ -29,6 +29,10 @@ Each item in the `items` array configures a single feature. There are two types:
 - Do NOT set `reset` - usage persists across billing cycles
 - Use `billing_method: "prepaid"` for upfront payment per unit
 
+### Multiple Currencies
+
+To sell a plan in currencies beyond your organization's default, set `additional_currencies` on the base price, a feature price, or each tier of a tiered price. Amounts are explicit per currency - no exchange rates are applied - and tier boundaries stay the same across currencies. See [Plans](/documentation/concepts/plans#multiple-currencies) for how customers are matched to a currency.
+
 ### Common Use Cases
 
 <CodeGroup>

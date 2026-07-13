@@ -21,6 +21,10 @@ export interface AttachBillingContext extends BillingContext {
 	// The product being attached
 	attachProduct: FullProduct;
 
+	// Resolved billing currency for this attach (requested -> customer -> org default).
+	// Optional so multi-attach/schedule contexts spread into this type without it.
+	currency?: string;
+
 	// Transition context (only for main recurring products)
 	currentCustomerProduct?: FullCusProduct; // To transition from
 	scheduledCustomerProduct?: FullCusProduct; // To delete

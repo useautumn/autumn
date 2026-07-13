@@ -9,6 +9,7 @@ import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
@@ -97,6 +98,17 @@ export const executeAutumnBillingPlan = async ({
 		ctx,
 		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
 	});
+
+	// Lock the customer's currency on the first paid attach (conditional: no-op if
+	// already set). Runs on commit only — never in preview.
+	if (autumnBillingPlan.lockCustomerCurrency) {
+		await CusService.lockCurrencyIfUnset({
+			ctx,
+			internalCustomerId:
+				autumnBillingPlan.lockCustomerCurrency.internalCustomerId,
+			currency: autumnBillingPlan.lockCustomerCurrency.currency,
+		});
+	}
 
 	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {

@@ -2,6 +2,7 @@ import { isFeaturePriceItem } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
@@ -30,6 +31,7 @@ export const SaveChangesBar = ({
 	isOnboarding = false,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
+	const { org } = useOrg();
 	const { setShowNewVersionDialog } = useProductContext();
 
 	// Get product state from store
@@ -120,6 +122,7 @@ export const SaveChangesBar = ({
 			productId: product.id,
 			product,
 			version: product.version,
+			orgCurrency: org?.default_currency,
 			onSuccess: async () => {
 				await queryRefetch();
 				await Promise.all([invalidateProduct(), invalidateProducts()]);

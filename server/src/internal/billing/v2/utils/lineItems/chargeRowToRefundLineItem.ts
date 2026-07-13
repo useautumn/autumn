@@ -1,15 +1,15 @@
 import { generateKsuid } from "@autumn/ksuid";
 import type { BillingContext } from "@autumn/shared";
 import {
-	customerProductToEntity,
+	billingContextToCurrency,
 	cusPriceToCusEnt,
+	customerProductToEntity,
 	type DbInvoiceLineItem,
 	type FullCusProduct,
 	type InvoiceLineItemDiscount,
 	type LineItem,
 	type LineItemContext,
 	LineItemSchema,
-	orgToCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -70,7 +70,7 @@ export const chargeRowToRefundLineItem = ({
 		price,
 		product: customerProduct.product,
 		feature: matchingCusEnt?.entitlement.feature,
-		currency: orgToCurrency({ org: ctx.org }),
+		currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 		billingPeriod: { start: periodStart, end: periodEnd },
 		effectivePeriod: { start: effectiveNow, end: periodEnd },
 		direction: "refund",
