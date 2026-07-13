@@ -158,6 +158,7 @@ export function AttachAdvancedSection() {
 		isEndOfCycleSelected,
 		isNoChargesAllowed,
 		canChooseBillingCycle,
+		createsNewStripeSubscription,
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
@@ -172,8 +173,6 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
-	const createsNewStripeSubscription =
-		!hasActiveSubscription || newBillingSubscription;
 	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
