@@ -67,10 +67,18 @@ export function AttachFooterV3() {
 				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
 				: null;
 
-	// Usage-in-arrears subscription: nothing to invoice now, so start it directly
-	// in invoice mode instead of opening the send-invoice sheet.
+	// Trials and credit-covered charges still create a $0 invoice, so keep the
+	// invoice sheet for those; only bypass it when no invoice is created at all.
+	const willCreateZeroDollarInvoice =
+		(previewData?.subtotal ?? 0) > 0 ||
+		(previewData?.invoice_credits?.balance ?? 0) > 0 ||
+		formValues.trialEnabled === true;
+
 	const isInvoiceOnlyStart =
-		!!previewData && previewData.total <= 0 && createsRecurringSubscription;
+		!!previewData &&
+		previewData.total <= 0 &&
+		createsRecurringSubscription &&
+		!willCreateZeroDollarInvoice;
 
 	const invoiceButtonLabel = isInvoiceOnlyStart
 		? "Start subscription in invoice mode"
