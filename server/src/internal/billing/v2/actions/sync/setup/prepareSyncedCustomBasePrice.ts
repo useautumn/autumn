@@ -10,9 +10,11 @@ import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/conver
 
 const findReusableCustomBasePrice = ({
 	currentCustomerProduct,
+	baseCurrency,
 	stripePriceId,
 }: {
 	currentCustomerProduct?: FullCusProduct;
+	baseCurrency: string;
 	stripePriceId: string;
 }): Price | undefined => {
 	const existingCustomBase = currentCustomerProduct
@@ -20,6 +22,8 @@ const findReusableCustomBasePrice = ({
 		: undefined;
 	const matchesSource =
 		existingCustomBase?.is_custom &&
+		existingCustomBase.config.base_currency?.toLowerCase() ===
+			baseCurrency.toLowerCase() &&
 		getAllPriceStripeIds({ config: existingCustomBase.config }).includes(
 			stripePriceId,
 		);
@@ -57,6 +61,7 @@ export const prepareSyncedCustomBasePrice = ({
 	};
 	const reusableCustomBase = findReusableCustomBasePrice({
 		currentCustomerProduct,
+		baseCurrency: customBaseParams.base_currency,
 		stripePriceId: customBaseParams.stripe_price_id,
 	});
 	const customBase = reusableCustomBase ?? importedCustomBase;

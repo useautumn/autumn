@@ -342,6 +342,22 @@ test(`${chalk.yellowBright("sync multi-currency: shared USD Price imports its EU
 			errorOnNotFound: true,
 		}).id,
 	).toBe(customBase.id);
+
+	await ctx.stripeCli.subscriptions.cancel(subscription.id);
+	const gbpSubscription = await createExternalSubscription({
+		customerId,
+		items: [{ price: sharedPrice.id }],
+		currency: "gbp",
+	});
+	const { params } = await subscriptionToSyncParams({
+		ctx,
+		customerId,
+		subscription: gbpSubscription,
+	});
+	await expectAutumnError({
+		errCode: ErrCode.CurrencyMismatch,
+		func: () => autumnV1.post("/billing.sync_v2", params),
+	});
 });
 
 test(`${chalk.yellowBright("sync multi-currency: existing USD customer rejects an EUR subscription")}`, async () => {
