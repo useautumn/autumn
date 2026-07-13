@@ -3,31 +3,29 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { LicenseEditorProvider } from "./LicenseEditorProvider";
 import { LicensePlanCardEditor } from "./LicensePlanCardEditor";
 import { planLicenseItems } from "./licenseCustomizeUtils";
-import { useLicenseCustomize } from "./useLicenseCustomize";
+import { useLicenseCardEditor } from "./useLicenseCardEditor";
 
 export function LicensePlanCard({
 	planLicense,
 	license,
-	parentPlanId,
 	isPendingLink = false,
 	isLast = true,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
-	parentPlanId: string;
 	isPendingLink?: boolean;
 	isLast?: boolean;
 }) {
 	const { features, isLoading: isFeaturesLoading } = useFeaturesQuery();
-	const items = planLicenseItems({ planLicense, license, features });
+	const items = planLicenseItems({ license });
 
-	const { seededProduct, save, buildCustomize } = useLicenseCustomize({
-		parentPlanId,
-		planLicense,
-		license,
-		items,
-		features,
-	});
+	const { seededProduct, buildEntry, saveItems, buildCustomize } =
+		useLicenseCardEditor({
+			planLicense,
+			license,
+			items,
+			features,
+		});
 
 	// The editor seeds once from initialProduct; mounting before features load
 	// would bake an empty item set into the draft.
@@ -38,7 +36,8 @@ export function LicensePlanCard({
 			<LicensePlanCardEditor
 				planLicense={planLicense}
 				license={license}
-				onSave={save}
+				buildEntry={buildEntry}
+				saveItems={saveItems}
 				buildCustomize={buildCustomize}
 				isPendingLink={isPendingLink}
 				isLast={isLast}

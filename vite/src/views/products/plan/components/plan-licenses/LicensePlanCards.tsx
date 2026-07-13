@@ -62,7 +62,6 @@ export function LicensePlanCards() {
 						key={planLicense.id}
 						planLicense={planLicense}
 						license={license}
-						parentPlanId={product.id}
 						isPendingLink={pendingPlanLicenses.includes(planLicense)}
 						isLast={index === allPlanLicenses.length - 1}
 					/>

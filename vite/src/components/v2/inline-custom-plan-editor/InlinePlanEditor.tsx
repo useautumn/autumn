@@ -13,6 +13,7 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
+import { CreateLicenseButton } from "@/views/products/plan/components/plan-licenses/CreateLicenseButton";
 import {
 	collectLicensePatchAdds,
 	LicenseCustomizeCollectorProvider,
@@ -143,6 +144,7 @@ function InlinePlanEditorContent({
 								<>
 									<LicensePlanCards />
 									<LinkLicenseButton />
+									<CreateLicenseButton />
 								</>
 							)}
 						</div>

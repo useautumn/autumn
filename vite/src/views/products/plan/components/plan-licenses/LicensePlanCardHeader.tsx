@@ -1,16 +1,17 @@
+import type { PlanLicense, ProductV2 } from "@autumn/shared";
 import {
-	type PlanLicense,
-	type ProductV2,
-	productV2ToBasePrice,
-} from "@autumn/shared";
-import {
+	Button,
 	CardHeader,
 	IconButton,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "@autumn/ui";
-import { ArrowRightIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import {
+	ArrowRightIcon,
+	PencilSimpleIcon,
+	TrashIcon,
+} from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import {
 	useCurrentItem,
@@ -20,35 +21,75 @@ import {
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
-import { LicensePriceTag } from "./LicensePriceTag";
-import { useLicenseDraft } from "./useLicenseDraftStore";
+import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
+import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
+import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
 /**
- * Compact header for a license card: identity, link config (included quantity,
- * pooling), and actions in one row — slimmer than the plan card's header so the
- * card reads as a child of the plan.
+ * Compact header for a license card: identity, link config (included quantity),
+ * and actions in one row — slimmer than the plan card's header so the card
+ * reads as a child of the plan. A staged removal keeps the card mounted
+ * (greyed) with an Undo, so its config survives until the plan is saved.
  */
 export function LicensePlanCardHeader({
 	planLicense,
 	license,
+	isPendingLink,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
+	isPendingLink: boolean;
 }) {
 	const navigate = useNavigate();
 	const { product } = useProduct();
 	const { sheetType, setSheet } = useSheet();
 	const item = useCurrentItem();
+	const patchDraft = useLicenseDraftStore((s) => s.patch);
+	const { removePendingLink } = usePendingLicenseLinks();
 
-	const included =
-		useLicenseDraft(license.id)?.included ?? planLicense.included;
+	const draft = useLicenseDraft(license.id);
+	const included = draft?.included ?? planLicense.included;
+	const removed = draft?.removed ?? false;
 	const isEditingSettings = sheetType === "edit-plan";
-	const hasBasePrice = Boolean(productV2ToBasePrice({ product }));
 
 	const openSettings = () => {
 		if (item && !checkItemIsValid(item)) return;
 		setSheet({ type: "edit-plan", itemId: product.id });
 	};
+
+	const removeCard = () => {
+		// A staged (unsaved) link has nothing to soft-delete — drop it outright.
+		if (isPendingLink) {
+			removePendingLink(license.id);
+			return;
+		}
+		patchDraft(license.id, { removed: true });
+	};
+
+	if (removed) {
+		return (
+			<CardHeader className="px-3">
+				<div className="flex items-center justify-between w-full gap-2">
+					<div className="flex items-center gap-2 text-xs min-w-0">
+						<span className="font-medium truncate line-through text-tertiary-foreground">
+							{license.name ?? license.id}
+						</span>
+						<span className="shrink-0 text-tertiary-foreground">
+							Removed on save
+						</span>
+					</div>
+					<Button
+						variant="secondary"
+						size="sm"
+						className="shrink-0"
+						onClick={() => patchDraft(license.id, { removed: false })}
+					>
+						Undo
+					</Button>
+				</div>
+			</CardHeader>
+		);
+	}
 
 	return (
 		<CardHeader className="px-3">
@@ -63,21 +104,12 @@ export function LicensePlanCardHeader({
 						</TooltipTrigger>
 						<TooltipContent>Included quantity</TooltipContent>
 					</Tooltip>
-					<Tooltip>
-						<TooltipTrigger className="font-medium truncate">
-							{license.name ?? license.id}
-						</TooltipTrigger>
-						<TooltipContent>
-							Editing this license for this plan only — the base license is
-							unchanged
-						</TooltipContent>
-					</Tooltip>
+					<span className="font-medium truncate">
+						{license.name ?? license.id}
+					</span>
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
-					{/* read-only: license customize can't persist a price edit yet */}
-					{hasBasePrice && (
-						<LicensePriceTag product={product} className="mr-1" />
-					)}
+					<BasePriceDisplay product={product} slim />
 					<IconButton
 						aria-label="License Settings"
 						icon={<PencilSimpleIcon />}
@@ -86,6 +118,14 @@ export function LicensePlanCardHeader({
 						size="mini"
 						variant="secondary"
 						className={cn(isEditingSettings && "btn-secondary-active")}
+					/>
+					<IconButton
+						aria-label={`Remove ${license.name ?? license.id} from this plan`}
+						icon={<TrashIcon size={14} />}
+						iconOrientation="center"
+						onClick={removeCard}
+						size="mini"
+						variant="secondary"
 					/>
 					<IconButton
 						aria-label={`Go to ${license.name ?? license.id}`}

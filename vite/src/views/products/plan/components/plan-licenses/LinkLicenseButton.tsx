@@ -10,15 +10,14 @@ import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useLinkableLicenses } from "./useLinkableLicenses";
 
 /**
- * Visible "Link License" affordance for the customize editor, where the plan
- * toolbar (and its Link license menu item) is hidden. Stages a pending license
- * card, same as the menu item. Hidden when there are no other plans to link.
+ * Visible "Link License" affordance under a plan's license cards. Stages a
+ * pending license card, same as the toolbar menu item. Hidden when nothing is
+ * linkable — Create License next to it covers that state.
  */
 export function LinkLicenseButton() {
-	const { isLicense, hasAnyLinkablePlans, availableLicenses, linkLicense } =
-		useLinkableLicenses();
+	const { isLicense, availableLicenses, linkLicense } = useLinkableLicenses();
 
-	if (isLicense || !hasAnyLinkablePlans) return null;
+	if (isLicense || availableLicenses.length === 0) return null;
 
 	return (
 		<DropdownMenu>
@@ -26,12 +25,9 @@ export function LinkLicenseButton() {
 				<Button
 					variant="dotted"
 					className="w-full max-w-xl !h-9 !rounded-xl !bg-transparent !border-dashed text-tertiary-foreground hover:text-foreground"
-					disabled={availableLicenses.length === 0}
 				>
 					<PlusIcon className="size-3" weight="bold" />
-					{availableLicenses.length === 0
-						? "All licenses linked"
-						: "Link License"}
+					Link License
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="center" sideOffset={4}>

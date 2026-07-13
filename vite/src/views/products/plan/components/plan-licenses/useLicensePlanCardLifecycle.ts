@@ -1,6 +1,7 @@
 import {
 	type CustomizePlanLicense,
 	type PlanLicense,
+	type PlanLicenseParams,
 	type ProductV2,
 	sortPlanItems,
 } from "@autumn/shared";
@@ -19,21 +20,24 @@ import { useLicenseSaveRegistry } from "./useLicenseSaveRegistry";
 /**
  * Bridges a license card to its editor's save flow: seeds the license's draft
  * slot while mounted, and registers its dirty state plus ref-read callbacks.
- * On the plan page that's the save registry (link on plan save);
- * inside a customize editor it's the collector (snapshot into the attach/update
- * payload). A pending (staged, unsaved) link is always dirty — its save creates
- * the link, its discard drops the card.
+ * On the plan page that's the save registry (the save bar composes one
+ * plans.update from every card's entry); inside a customize editor it's the
+ * collector (snapshot into the attach/update payload). A pending (staged,
+ * unsaved) link is always dirty — saving creates the link, discarding drops
+ * the card.
  */
 export const useLicensePlanCardLifecycle = ({
 	planLicense,
 	license,
-	onSave,
+	buildEntry,
+	saveItems,
 	buildCustomize,
 	isPendingLink,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
-	onSave: (snapshot: LicenseEditSnapshot) => Promise<boolean>;
+	buildEntry: () => PlanLicenseParams;
+	saveItems: (snapshot: LicenseEditSnapshot) => Promise<boolean>;
 	buildCustomize: (snapshot: LicenseEditSnapshot) => CustomizePlanLicense;
 	isPendingLink: boolean;
 }) => {
@@ -48,9 +52,13 @@ export const useLicensePlanCardLifecycle = ({
 
 	const draft = useLicenseDraft(license.id);
 	const included = draft?.included ?? planLicense.included;
+	const removed = draft?.removed ?? false;
 	const itemsChanged = useHasPlanChanges();
 	const hasChanges =
-		isPendingLink || itemsChanged || included !== planLicense.included;
+		isPendingLink ||
+		removed ||
+		itemsChanged ||
+		included !== planLicense.included;
 
 	const editedProduct = () => ({
 		...product,
@@ -63,22 +71,32 @@ export const useLicensePlanCardLifecycle = ({
 	collectRef.current = () =>
 		buildCustomize({ product: editedProduct(), itemsChanged });
 
-	const saveRef = useRef<() => Promise<boolean>>(async () => true);
-	saveRef.current = async () => {
-		const success = await onSave({
-			product: editedProduct(),
-			itemsChanged,
-		});
-		if (success) {
-			// Commit so the card stops reading as dirty; drafts fall back to the
-			// refetched persisted values.
-			itemDraft.commit();
-			seed(license.id, {});
-			// The refetched plan_licenses now include this link (mutateAsync
-			// resolves after invalidation), so the staged entry can go.
-			if (isPendingLink) removePendingLink(license.id);
+	const entryRef = useRef<() => PlanLicenseParams | null>(() => null);
+	entryRef.current = () => {
+		if (useLicenseDraftStore.getState().drafts[license.id]?.removed) {
+			return null;
 		}
-		return success;
+		return buildEntry();
+	};
+
+	const saveItemsRef = useRef<() => Promise<boolean>>(async () => true);
+	saveItemsRef.current = () => {
+		// A removed card unlinks; its license plan's items are left alone.
+		if (useLicenseDraftStore.getState().drafts[license.id]?.removed) {
+			return Promise.resolve(true);
+		}
+		return saveItems({ product: editedProduct(), itemsChanged });
+	};
+
+	const commitRef = useRef<() => void>(() => {});
+	commitRef.current = () => {
+		// Reset so the card stops reading as dirty; drafts fall back to the
+		// refetched persisted values.
+		itemDraft.commit();
+		seed(license.id, {});
+		// The refetched plan_licenses now include this link, so the staged
+		// entry can go.
+		if (isPendingLink) removePendingLink(license.id);
 	};
 
 	const discardRef = useRef<() => void>(() => {});
@@ -111,7 +129,9 @@ export const useLicensePlanCardLifecycle = ({
 
 		register(license.id, {
 			dirty: hasChanges,
-			save: () => saveRef.current(),
+			getEntry: () => entryRef.current(),
+			saveItems: () => saveItemsRef.current(),
+			commit: () => commitRef.current(),
 			discard: () => discardRef.current(),
 		});
 		return () => unregister(license.id);

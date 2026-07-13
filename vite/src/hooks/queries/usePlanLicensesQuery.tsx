@@ -1,17 +1,9 @@
-import type {
-	ApiPlanV1,
-	CustomizePlanLicense,
-	PlanLicense,
-} from "@autumn/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ApiPlanV1, PlanLicense } from "@autumn/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const EMPTY_PLAN_LICENSES: PlanLicense[] = [];
-
-export type LinkLicenseInput = CustomizePlanLicense & {
-	parent_plan_id: string;
-};
 
 const toPlanLicenses = ({
 	parentPlanId,
@@ -34,9 +26,9 @@ const toPlanLicenses = ({
 
 /**
  * Loads the license offerings configured on a parent plan (the plan's
- * `licenses` from plans.get), plus a mutation to link/update one via
- * plans.update. Pass a falsy `parentPlanId` (e.g. when the product is itself
- * a license) to skip the query.
+ * `licenses` from plans.get). Pass a falsy `parentPlanId` (e.g. when the
+ * product is itself a license) to skip the query. Writes go through the plan
+ * save bar, which composes the full `licenses` array into one plans.update.
  */
 export const usePlanLicensesQuery = (parentPlanId?: string) => {
 	const axiosInstance = useAxiosInstance();
@@ -62,33 +54,11 @@ export const usePlanLicensesQuery = (parentPlanId?: string) => {
 	const invalidate = () =>
 		queryClient.invalidateQueries({ queryKey: ["plan_licenses"] });
 
-	// plans.update takes the complete link set: merge the edited entry into the
-	// current links (customize omitted on untouched links preserves theirs).
-	const linkLicense = useMutation({
-		mutationFn: async ({ parent_plan_id, ...entry }: LinkLicenseInput) => {
-			const currentLinks = await fetchPlanLicenses(parent_plan_id);
-			const otherLinks: CustomizePlanLicense[] = currentLinks
-				.filter((link) => link.license_plan_id !== entry.license_plan_id)
-				.map((link) => ({
-					license_plan_id: link.license_plan_id,
-					included: link.included,
-					prepaid_only: link.prepaid_only,
-				}));
-			const { data } = await axiosInstance.post("/v1/plans.update", {
-				plan_id: parent_plan_id,
-				licenses: [...otherLinks, entry],
-			});
-			return data;
-		},
-		onSuccess: invalidate,
-	});
-
 	return {
 		planLicenses: data ?? EMPTY_PLAN_LICENSES,
 		isLoading,
 		error,
 		refetch,
 		invalidate,
-		linkLicense,
 	};
 };

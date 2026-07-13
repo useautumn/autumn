@@ -3,6 +3,7 @@ import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -44,6 +45,8 @@ export const SaveChangesBar = ({
 	const planHasChanges = useHasChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
+	const { planLicenses, invalidate: invalidatePlanLicenses } =
+		usePlanLicensesQuery(product.id);
 	const { features = [] } = useFeaturesQuery();
 	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
@@ -137,7 +140,12 @@ export const SaveChangesBar = ({
 						},
 					})
 				: Promise.resolve(true),
-			saveAllLicenses(),
+			saveAllLicenses({
+				axiosInstance,
+				parentPlanId: product.id,
+				persistedLinks: planLicenses,
+				onSuccess: () => invalidatePlanLicenses(),
+			}),
 		]);
 
 		// License failures already toast their own error, so only the combined
