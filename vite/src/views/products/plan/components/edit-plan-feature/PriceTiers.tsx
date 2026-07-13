@@ -11,7 +11,7 @@ import {
 	InputGroupAddon,
 	InputGroupInput,
 } from "@autumn/ui";
-import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
@@ -200,7 +200,7 @@ export function PriceTiers({
 							}}
 						/>
 						<InputGroupAddon align="inline-end">
-							<span className="text-tertiary-foreground text-tiny">
+							<span className="text-tertiary-foreground text-xs">
 								{currency}
 							</span>
 						</InputGroupAddon>
@@ -213,10 +213,10 @@ export function PriceTiers({
 							variant="muted"
 							className="text-tertiary-foreground text-xs"
 							onClick={() => addTier({ item, setItem })}
-							icon={<PlusIcon size={12} />}
+							icon={<PlusIcon size={10} />}
 							iconOrientation="left"
 						>
-							Add Tiers
+							Add Tier
 						</IconButton>
 					</div>
 				</div>
@@ -297,7 +297,7 @@ export function PriceTiers({
 								placeholder="0.00"
 							/>
 							<InputGroupAddon align="inline-end">
-								<span className="text-tertiary-foreground text-tiny">
+								<span className="text-tertiary-foreground text-xs">
 									{currency}
 								</span>
 							</InputGroupAddon>
@@ -342,7 +342,7 @@ export function PriceTiers({
 										placeholder="0.00"
 									/>
 									<InputGroupAddon align="inline-end">
-										<span className="text-tertiary-foreground text-tiny uppercase">
+										<span className="text-tertiary-foreground text-xs uppercase">
 											{code}
 										</span>
 									</InputGroupAddon>
@@ -356,7 +356,7 @@ export function PriceTiers({
 							<IconButton
 								variant="muted"
 								onClick={() => removeTier({ item, setItem, index })}
-								icon={<TrashSimpleIcon size={10} />}
+								icon={<TrashIcon size={10} />}
 								className="p-1 text-tertiary-foreground hover:text-red-500"
 							/>
 						</div>
@@ -368,7 +368,7 @@ export function PriceTiers({
 				className="w-full text-tertiary-foreground text-xs"
 				size="sm"
 				onClick={() => addTier({ item, setItem })}
-				icon={<PlusIcon size={8} />}
+				icon={<PlusIcon size={10} />}
 			>
 				Add Tier
 			</IconButton>
@@ -383,7 +383,7 @@ export function PriceTiers({
 					{currencyCodes.map((code) => (
 						<IconButton
 							className="text-tertiary-foreground text-xs uppercase"
-							icon={<TrashSimpleIcon size={10} />}
+							icon={<TrashIcon size={10} />}
 							key={code}
 							onClick={() =>
 								setItem(

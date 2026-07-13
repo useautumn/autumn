@@ -7,14 +7,7 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
-import {
-	Button,
-	FormLabel,
-	GroupedTabButton,
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-} from "@autumn/ui";
+import { Button, FormLabel, GroupedTabButton } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
 	CheckCircleIcon,
@@ -26,6 +19,7 @@ import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
 import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
+import { CurrencyAmountInput } from "../shared/CurrencyAmountInput";
 import { FreeTrialOption } from "./FreeTrialOption";
 import { SelectBillingCycle } from "./SelectBillingCycle";
 
@@ -213,29 +207,13 @@ export const BasePriceSection = ({
 							<div className="flex gap-2">
 								<div className="w-full">
 									<FormLabel disabled={disabled}>Price</FormLabel>
-									<InputGroup>
-										<InputGroupInput
-											type="number"
-											placeholder="eg. 100"
-											value={basePrice?.price ?? ""}
-											onKeyDown={(e) => {
-												if (e.key === "-" || e.key === "Minus") {
-													e.preventDefault();
-												}
-											}}
-											onChange={(e) => {
-												const cleanedValue = e.target.value.replace(/-/g, "");
-												if (Number(cleanedValue) >= 0) {
-													handleUpdateBasePrice({ amount: cleanedValue });
-												}
-											}}
-										/>
-										<InputGroupAddon align="inline-end">
-											<span className="text-tertiary-foreground text-xs">
-												{defaultCurrency}
-											</span>
-										</InputGroupAddon>
-									</InputGroup>
+									<CurrencyAmountInput
+										currencyCode={defaultCurrency}
+										displayValue={basePrice?.price?.toString() ?? ""}
+										onRawChange={(raw) =>
+											handleUpdateBasePrice({ amount: raw })
+										}
+									/>
 								</div>
 								{billingType === "recurring" && (
 									<div className="w-full">

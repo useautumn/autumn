@@ -6,6 +6,7 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
+	cn,
 	IconButton,
 	Popover,
 	PopoverContent,
@@ -18,10 +19,12 @@ export const CurrencyPicker = ({
 	excludedCodes,
 	onSelect,
 	label,
+	className,
 }: {
 	excludedCodes: string[];
 	onSelect: (code: string) => void;
 	label: string;
+	className?: string;
 }) => {
 	const [open, setOpen] = useState(false);
 	const excluded = new Set(excludedCodes.map((code) => code.toLowerCase()));
@@ -31,7 +34,7 @@ export const CurrencyPicker = ({
 		<Popover onOpenChange={setOpen} open={open}>
 			<PopoverTrigger asChild>
 				<IconButton
-					className="text-tertiary-foreground text-xs"
+					className={cn("text-tertiary-foreground text-xs", className)}
 					icon={<PlusIcon size={10} />}
 					iconOrientation="left"
 					variant="muted"
@@ -39,7 +42,7 @@ export const CurrencyPicker = ({
 					{label}
 				</IconButton>
 			</PopoverTrigger>
-			<PopoverContent align="start" className="w-56 p-0">
+			<PopoverContent align="start" className="w-(--anchor-width) min-w-56 p-0">
 				<Command>
 					<CommandInput className="h-9" placeholder="Search currency..." />
 					<CommandList>
