@@ -480,6 +480,8 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     r"""Stripe customer ID if you already have one"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    currency: NotRequired[Nullable[str]]
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[UpdateCustomerConfigRequestTypedDict]
@@ -510,6 +512,9 @@ class UpdateCustomerParams(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    currency: OptionalNullable[str] = UNSET
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
+
     billing_controls: Optional[UpdateCustomerBillingControlsRequest] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -529,12 +534,15 @@ class UpdateCustomerParams(BaseModel):
                 "metadata",
                 "stripe_id",
                 "send_email_receipts",
+                "currency",
                 "billing_controls",
                 "config",
                 "new_customer_id",
             ]
         )
-        nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
+        nullable_fields = set(
+            ["name", "email", "fingerprint", "metadata", "stripe_id", "currency"]
+        )
         serialized = handler(self)
         m = {}
 

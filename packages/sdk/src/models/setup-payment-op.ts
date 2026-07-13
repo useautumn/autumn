@@ -51,6 +51,17 @@ export type SetupPaymentPriceInterval = ClosedEnum<
   typeof SetupPaymentPriceInterval
 >;
 
+export type SetupPaymentAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -67,6 +78,10 @@ export type SetupPaymentBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<SetupPaymentAdditionalCurrency> | undefined;
 };
 
 /**
@@ -104,12 +119,44 @@ export type SetupPaymentItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type SetupPaymentItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type SetupPaymentItemTo = number | string;
+
+export type SetupPaymentItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type SetupPaymentItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const SetupPaymentItemTierBehavior = {
@@ -160,6 +207,10 @@ export type SetupPaymentItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<SetupPaymentItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -339,12 +390,44 @@ export type SetupPaymentAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type SetupPaymentAddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type SetupPaymentAddItemTo = number | string;
+
+export type SetupPaymentAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type SetupPaymentAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const SetupPaymentAddItemTierBehavior = {
@@ -395,6 +478,12 @@ export type SetupPaymentAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<SetupPaymentAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -1067,6 +1156,10 @@ export type SetupPaymentParams = {
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
   taxRateId?: string | undefined;
+  /**
+   * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
 };
 
 /**
@@ -1127,10 +1220,38 @@ export const SetupPaymentPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentPriceInterval);
 
 /** @internal */
+export type SetupPaymentAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  SetupPaymentAdditionalCurrency$Outbound,
+  SetupPaymentAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function setupPaymentAdditionalCurrencyToJSON(
+  setupPaymentAdditionalCurrency: SetupPaymentAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1142,10 +1263,14 @@ export const SetupPaymentBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: SetupPaymentPriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => SetupPaymentAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1194,6 +1319,31 @@ export function setupPaymentItemResetToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemAdditionalCurrency$Outbound,
+  SetupPaymentItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function setupPaymentItemAdditionalCurrencyToJSON(
+  setupPaymentItemAdditionalCurrency: SetupPaymentItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemAdditionalCurrency$outboundSchema.parse(
+      setupPaymentItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1211,10 +1361,49 @@ export function setupPaymentItemToToJSON(
 }
 
 /** @internal */
+export type SetupPaymentItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentItemTierAdditionalCurrency$Outbound,
+    SetupPaymentItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function setupPaymentItemTierAdditionalCurrencyToJSON(
+  setupPaymentItemTierAdditionalCurrency:
+    SetupPaymentItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemTierAdditionalCurrency$outboundSchema.parse(
+      setupPaymentItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1226,10 +1415,14 @@ export const SetupPaymentItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      SetupPaymentItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1260,6 +1453,9 @@ export const SetupPaymentItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<SetupPaymentItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1276,6 +1472,9 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => SetupPaymentItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => SetupPaymentItemTier$outboundSchema)),
     ),
@@ -1288,6 +1487,7 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1465,6 +1665,32 @@ export function setupPaymentAddItemResetToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const SetupPaymentAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemAdditionalCurrency$Outbound,
+    SetupPaymentAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function setupPaymentAddItemAdditionalCurrencyToJSON(
+  setupPaymentAddItemAdditionalCurrency: SetupPaymentAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1482,10 +1708,49 @@ export function setupPaymentAddItemToToJSON(
 }
 
 /** @internal */
+export type SetupPaymentAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    SetupPaymentAddItemTierAdditionalCurrency$Outbound,
+    SetupPaymentAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function setupPaymentAddItemTierAdditionalCurrencyToJSON(
+  setupPaymentAddItemTierAdditionalCurrency:
+    SetupPaymentAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemTierAdditionalCurrency$outboundSchema.parse(
+      setupPaymentAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1497,10 +1762,14 @@ export const SetupPaymentAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      SetupPaymentAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1531,6 +1800,9 @@ export const SetupPaymentAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<SetupPaymentAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<SetupPaymentAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1547,6 +1819,11 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(
+        z.lazy(() => SetupPaymentAddItemAdditionalCurrency$outboundSchema),
+      ),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => SetupPaymentAddItemTier$outboundSchema)),
     ),
@@ -1559,6 +1836,7 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -2365,6 +2643,7 @@ export type SetupPaymentParams$Outbound = {
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
+  currency?: string | undefined;
 };
 
 /** @internal */
@@ -2405,6 +2684,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
+    currency: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
