@@ -66,27 +66,40 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 
 	try {
 		let iteration = 0;
+		let totalFetched = 0;
+		let totalUpserted = 0;
+
+		logger.info({ jobName: "reset-cus-ents" }, "[reset-cus-ents] started");
 
 		while (iteration < maxIterations && Date.now() - startTime < timeoutMs) {
 			iteration++;
 
+			const fetchStartedAt = Date.now();
 			const cusEnts = await CusEntService.getActiveResetPassed({
 				db,
 				batchSize: 5_000,
 				limit: 5_000,
 				includeSeparateIntervalResets: false,
 			});
+			totalFetched += cusEnts.length;
+
+			logger.info(
+				{
+					jobName: "reset-cus-ents",
+					iteration,
+					fetched: cusEnts.length,
+					fetchDurationMs: Date.now() - fetchStartedAt,
+				},
+				`[reset-cus-ents] iteration ${iteration}: fetched ${cusEnts.length} in ${Date.now() - fetchStartedAt}ms`,
+			);
 
 			if (cusEnts.length < 5_000) {
-				console.log(
-					`Reset cron: only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
+				logger.info(
+					{ jobName: "reset-cus-ents", fetched: cusEnts.length },
+					`[reset-cus-ents] only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
 				);
 				break;
 			}
-
-			console.log(
-				`Reset cron iteration ${iteration}: processing ${cusEnts.length} entitlements`,
-			);
 
 			const batchSize = 1000;
 			for (let i = 0; i < cusEnts.length; i += batchSize) {
@@ -137,7 +150,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 					db,
 					data: toUpsert,
 				});
-				console.log(`Upserted ${toUpsert.length} short entitlements`);
+				totalUpserted += toUpsert.length;
 
 				await clearCusEntsFromCache({
 					cusEnts: updatedCusEnts,
@@ -145,12 +158,25 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 			}
 		}
 
+		logger.info(
+			{
+				jobName: "reset-cus-ents",
+				iterations: iteration,
+				totalFetched,
+				totalUpserted,
+				durationMs: Date.now() - startTime,
+			},
+			`[reset-cus-ents] finished: ${totalUpserted} reset across ${iteration} iteration(s) in ${Date.now() - startTime}ms`,
+		);
 		console.log(
 			"FINISHED RESET CRON:",
 			format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
 		);
-		console.log("----------------------------------\n");
 	} catch (error) {
+		logger.error(
+			{ jobName: "reset-cus-ents", durationMs: Date.now() - startTime },
+			`[reset-cus-ents] failed: ${error}`,
+		);
 		console.error("Error getting entitlements for reset:", error);
 		return;
 	}

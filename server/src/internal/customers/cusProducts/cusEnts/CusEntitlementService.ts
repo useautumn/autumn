@@ -30,7 +30,6 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { unionAll } from "drizzle-orm/pg-core";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -190,8 +189,8 @@ export class CusEntService {
 		includeSeparateIntervalResets?: boolean;
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
-		let offset = 0;
-		let hasMore = true;
+		const now = customDateUnix ?? Date.now();
+		let cursor: { nextResetAt: number; id: string } | null = null;
 
 		// Shared projection across all three UNION ALL branches. Keeping the
 		// column list identical across branches is required for UNION ALL and
@@ -210,12 +209,18 @@ export class CusEntService {
 		const commonResetPredicates = () =>
 			and(
 				sql`${customerEntitlements.expired} IS NOT TRUE`,
-				lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
+				lt(customerEntitlements.next_reset_at, now),
 				or(
 					isNull(customerEntitlements.expires_at),
-					gt(customerEntitlements.expires_at, customDateUnix ?? Date.now()),
+					gt(customerEntitlements.expires_at, now),
 				),
 			);
+
+		// COLLATE "C" must match the JS merge comparison (code-unit order).
+		const afterCursor = () =>
+			cursor
+				? sql`(${customerEntitlements.next_reset_at}, ${customerEntitlements.id} COLLATE "C") > (${cursor.nextResetAt}, ${cursor.id})`
+				: undefined;
 
 		// Exclude normal price-backed cusEnts: their reset is owned by the Stripe
 		// invoice.created handler, not this cron. Split prepaid reset intervals
@@ -242,7 +247,12 @@ export class CusEntService {
 				? or(eq(customerEntitlements.separate_interval, true), notPriceBacked())
 				: notPriceBacked();
 
-		while (hasMore) {
+		const orderKey = [
+			customerEntitlements.next_reset_at,
+			sql`${customerEntitlements.id} COLLATE "C"`,
+		];
+
+		while (true) {
 			// Branch 1: cusEnts with no customer_product. Left-join to
 			// customer_products on a false predicate so the row shape matches
 			// the other branches (customer_products columns come back NULL).
@@ -266,8 +276,11 @@ export class CusEntService {
 					and(
 						isNull(customerEntitlements.customer_product_id),
 						commonResetPredicates(),
+						afterCursor(),
 					),
-				);
+				)
+				.orderBy(...orderKey)
+				.limit(batchSize);
 
 			// Branch 2: cusEnts on active customer_products.
 			const branch2 = db
@@ -294,8 +307,11 @@ export class CusEntService {
 						eq(customerProducts.status, CusProductStatus.Active),
 						commonResetPredicates(),
 						resetOwnedByAutumn(),
+						afterCursor(),
 					),
-				);
+				)
+				.orderBy(...orderKey)
+				.limit(batchSize);
 
 			// Branch 3: cusEnts on past_due customer_products whose product
 			// opted into ignore_past_due via products.config.
@@ -328,37 +344,55 @@ export class CusEntService {
 						sql`(${products.config}->>'ignore_past_due')::boolean = true`,
 						commonResetPredicates(),
 						resetOwnedByAutumn(),
+						afterCursor(),
 					),
-				);
+				)
+				.orderBy(...orderKey)
+				.limit(batchSize);
 
-			const data = await unionAll(branch1, branch2, branch3)
-				.limit(batchSize)
-				.offset(offset);
+			const [rows1, rows2, rows3] = await Promise.all([
+				branch1,
+				branch2,
+				branch3,
+			]);
 
-			// Note: PlanetScale tag would be added here but Drizzle 0.43.1's unionAll
-			// doesn't support .comment() method. Tag will be added after Drizzle upgrade.
-			// Target tag: planetScaleTag({ query: "getActiveResetPassed" })
+			// The three branches are status-disjoint, so a plain merge is dedup-free.
+			const page = [...rows1, ...rows2, ...rows3]
+				.sort((a, b) => {
+					const aReset = Number(a.customer_entitlements.next_reset_at);
+					const bReset = Number(b.customer_entitlements.next_reset_at);
+					if (aReset !== bReset) return aReset - bReset;
+					const aId = a.customer_entitlements.id;
+					const bId = b.customer_entitlements.id;
+					return aId < bId ? -1 : aId > bId ? 1 : 0;
+				})
+				.slice(0, batchSize);
 
-			if (data.length === 0 || (limit && allResults.length >= limit)) {
-				hasMore = false;
-			} else {
-				const mappedData = data.map((item) => ({
-					...item.customer_entitlements,
-					entitlement: {
-						...item.entitlements,
-						feature: item.features,
-					},
-					customer_product: item.customer_products,
-					customer: item.customers,
-					replaceables: [],
-					rollovers: [],
-				})) as ResetCusEnt[];
+			if (page.length === 0) break;
 
-				allResults.push(...mappedData);
-				offset += batchSize;
-				hasMore = data.length === batchSize;
-				console.log(`Fetched ${allResults.length} entitlements to reset`);
-			}
+			const mappedData = page.map((item) => ({
+				...item.customer_entitlements,
+				entitlement: {
+					...item.entitlements,
+					feature: item.features,
+				},
+				customer_product: item.customer_products,
+				customer: item.customers,
+				replaceables: [],
+				rollovers: [],
+			})) as ResetCusEnt[];
+
+			allResults.push(...mappedData);
+			console.log(`Fetched ${allResults.length} entitlements to reset`);
+
+			const lastRow = page[page.length - 1].customer_entitlements;
+			cursor = {
+				nextResetAt: Number(lastRow.next_reset_at),
+				id: lastRow.id,
+			};
+
+			if (page.length < batchSize) break;
+			if (limit && allResults.length >= limit) break;
 		}
 
 		return allResults as ResetCusEnt[];
