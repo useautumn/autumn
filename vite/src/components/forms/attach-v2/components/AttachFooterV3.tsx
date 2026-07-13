@@ -41,12 +41,13 @@ export function getConfirmLabel({
 }
 
 export function AttachFooterV3() {
-	const { isPending, previewQuery, handleConfirm, formValues } =
+	const { isPending, previewQuery, handleConfirm, handleInvoiceAttach, formValues } =
 		useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const { isEndOfCycleSelected } = useAttachBillingOptionsState();
+	const { isEndOfCycleSelected, createsRecurringSubscription } =
+		useAttachBillingOptionsState();
 
 	const previewData = previewQuery.data;
 	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
@@ -55,15 +56,36 @@ export function AttachFooterV3() {
 		startDate: formValues.startDate,
 	});
 
-	const isZeroAmount = previewData && previewData.total <= 0;
+	const hasNothingToInvoice =
+		!!previewData && previewData.total <= 0 && !createsRecurringSubscription;
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
 		: hasFutureStartDate
 			? "Invoices are not available for future start dates. Schedule the plan instead."
-			: isZeroAmount
+			: hasNothingToInvoice
 				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
 				: null;
+
+	// Usage-in-arrears subscription: nothing to invoice now, so start it directly
+	// in invoice mode instead of opening the send-invoice sheet.
+	const isInvoiceOnlyStart =
+		!!previewData && previewData.total <= 0 && createsRecurringSubscription;
+
+	const invoiceButtonLabel = isInvoiceOnlyStart
+		? "Start subscription in invoice mode"
+		: "Send an Invoice";
+
+	const handleInvoiceButtonClick = () => {
+		if (isInvoiceOnlyStart) {
+			handleInvoiceAttach({
+				enableProductImmediately: true,
+				finalizeInvoice: true,
+			});
+			return;
+		}
+		setSheet({ type: "attach-send-invoice", itemId });
+	};
 
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
@@ -83,11 +105,10 @@ export function AttachFooterV3() {
 									invoiceDisabledReason && "pointer-events-none opacity-50",
 								)}
 								disabled={!invoiceDisabledReason && isPending}
-								onClick={() =>
-									setSheet({ type: "attach-send-invoice", itemId })
-								}
+								isLoading={isInvoiceOnlyStart && isPending}
+								onClick={handleInvoiceButtonClick}
 							>
-								Send an Invoice
+								{invoiceButtonLabel}
 							</Button>
 						</span>
 					</TooltipTrigger>
