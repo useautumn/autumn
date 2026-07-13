@@ -175,3 +175,5 @@ apps/leaf/src/harness/claudeCode/runner/runner.mjs
 tmp/
 .env*.local
 .neon
+scripts/ops/.duckdb_export.sql
+scripts/ops/.backfill_neon_done

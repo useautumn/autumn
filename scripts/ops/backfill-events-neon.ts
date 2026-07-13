@@ -4,6 +4,11 @@
 // and ambient AWS credentials.
 import { appendFile } from "node:fs/promises";
 import { $ } from "bun";
+import { Client } from "pg";
+
+// Session-scoped advisory lock: serializes runs so two invocations can't interleave
+// TRUNCATE/COPY/MERGE on the shared events_staging table.
+const ADVISORY_LOCK_KEY = 741_006_001;
 
 const DEFAULT_FROM_MONTH = "2024-04";
 const MONTH_PATTERN = /^\d{4}-(?:0[1-9]|1[0-2])$/;
@@ -39,10 +44,15 @@ const STAGING_DDL = `CREATE TABLE IF NOT EXISTS events_staging (
 	internal_product_id text, customer_id text, properties jsonb, deductions jsonb
 )`;
 
-const COPY_TO_STAGING = `\\copy events_staging (${COLUMN_LIST}) FROM STDIN CSV`;
+const copyToStaging = (csvPath: string): string =>
+	`\\copy events_staging (${COLUMN_LIST}) FROM '${csvPath}' CSV`;
 
 const MERGE_SQL = `INSERT INTO events (${COLUMN_LIST}) SELECT ${COLUMN_LIST} FROM events_staging ON CONFLICT DO NOTHING`;
 
+// Parquet string columns are un-annotated BYTE_ARRAY -> DuckDB BLOB; decode() (NOT ::VARCHAR,
+// which emits an escaped repr) restores clean UTF-8. Dot-commands silence setup banners that
+// would otherwise pollute the CSV stream. Tinybird wraps deductions as {list:[...]} while
+// live rows store the bare TrackDeduction[] — normalize every historical shape to bare array.
 // set_usage is absent from the parquet export; emit false (NOT NULL — readers and the
 // partial index filter on set_usage = false, so NULL rows would be silently excluded).
 const duckDbExportSql = (
@@ -50,17 +60,27 @@ const duckDbExportSql = (
 	orgId: string,
 	year: string,
 	month: string,
-): string => `
-INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws;
+	outPath: string,
+): string => `.output /dev/null
+INSTALL httpfs; LOAD httpfs; INSTALL aws; LOAD aws; INSTALL json; LOAD json;
 CREATE OR REPLACE SECRET s3_ambient (TYPE s3, PROVIDER credential_chain, REGION 'us-east-2');
+.output
 COPY (
-	SELECT id, org_id, COALESCE(org_slug,'') AS org_slug, internal_customer_id,
-	       COALESCE(env,'live') AS env, created_at, "timestamp",
-	       event_name, idempotency_key, value, false AS set_usage,
-	       entity_id, internal_entity_id, internal_product_id, customer_id,
-	       COALESCE(properties,'{}') AS properties, COALESCE(deductions,'[]') AS deductions
+	SELECT decode(CAST(id AS BLOB)) AS id, decode(CAST(org_id AS BLOB)) AS org_id,
+	       COALESCE(decode(CAST(org_slug AS BLOB)),'') AS org_slug,
+	       decode(CAST(internal_customer_id AS BLOB)) AS internal_customer_id,
+	       COALESCE(decode(CAST(env AS BLOB)),'live') AS env, created_at, "timestamp",
+	       decode(CAST(event_name AS BLOB)) AS event_name, decode(CAST(idempotency_key AS BLOB)) AS idempotency_key,
+	       value, false AS set_usage,
+	       decode(CAST(entity_id AS BLOB)) AS entity_id, decode(CAST(internal_entity_id AS BLOB)) AS internal_entity_id,
+	       decode(CAST(internal_product_id AS BLOB)) AS internal_product_id, decode(CAST(customer_id AS BLOB)) AS customer_id,
+	       COALESCE(decode(CAST(properties AS BLOB)),'{}') AS properties, CASE
+	         WHEN deductions IS NULL OR trim(decode(CAST(deductions AS BLOB))) IN ('', '{}', 'null') THEN '[]'
+	         WHEN trim(decode(CAST(deductions AS BLOB))) LIKE '[%' THEN decode(CAST(deductions AS BLOB))
+	         ELSE COALESCE(CAST(json_extract(decode(CAST(deductions AS BLOB)), '$.list') AS VARCHAR), '[]')
+	       END AS deductions
 	FROM read_parquet('${s3Prefix}/org_id=${orgId}/year=${year}/month=${month}/**/*.parquet')
-) TO STDOUT (FORMAT CSV, HEADER false);
+) TO '${outPath}' (FORMAT CSV, HEADER false);
 `;
 
 const USAGE = `Backfill S3 parquet events into Neon (events_staging -> events, dedup on conflict).
@@ -89,6 +109,13 @@ const fail = (message: string): never => {
 	console.error(message);
 	process.exit(1);
 };
+
+// psql needs an explicit root-cert source for sslmode=verify-full URLs; Node's pg uses
+// the system CA store natively, so only the psql-facing URL gets the parameter.
+const withSystemRootCert = (url: string): string =>
+	url.includes("sslrootcert=")
+		? url
+		: `${url}${url.includes("?") ? "&" : "?"}sslrootcert=system`;
 
 const currentMonth = (): string => new Date().toISOString().slice(0, 7);
 
@@ -171,9 +198,26 @@ const formatDuration = (seconds: number): string => {
 	return `${Math.floor(minutes / 60)}h${minutes % 60}m`;
 };
 
+// The lock lives on this held session; it auto-releases when the process exits.
+const acquireRunLock = async (neonUrl: string): Promise<Client> => {
+	const client = new Client({ connectionString: neonUrl });
+	await client.connect();
+	const { rows } = await client.query<{ locked: boolean }>(
+		"SELECT pg_try_advisory_lock($1) AS locked",
+		[ADVISORY_LOCK_KEY],
+	);
+	if (!rows[0].locked) {
+		await client.end();
+		fail(
+			"Another backfill run holds the advisory lock — refusing to start a second.",
+		);
+	}
+	return client;
+};
+
 const ensureStagingTable = async (neonUrl: string): Promise<void> => {
 	const result =
-		await $`psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${STAGING_DDL}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${STAGING_DDL}`
 			.quiet()
 			.nothrow();
 	if (result.exitCode !== 0) {
@@ -184,6 +228,8 @@ const ensureStagingTable = async (neonUrl: string): Promise<void> => {
 };
 
 // Returns rows staged; empty=true when the parquet glob matched no files (not an error).
+// duckdb and psql run as separate commands (no pipe: Bun's Linux pipeline breaks duckdb's
+// /dev/stdout, and separate exit codes make failure detection exact).
 const stageChunk = async (
 	neonUrl: string,
 	s3Prefix: string,
@@ -191,28 +237,40 @@ const stageChunk = async (
 	month: string,
 ): Promise<{ empty: boolean; staged: number }> => {
 	const [year, monthNumber] = month.split("-") as [string, string];
-	const exportSql = duckDbExportSql(s3Prefix, orgId, year, monthNumber);
+	// /var/tmp is disk-backed; /tmp is a small RAM tmpfs on Amazon Linux and fills instantly.
+	const scriptPath = "/var/tmp/backfill_export.sql";
+	const csvPath = "/var/tmp/backfill_chunk.csv";
+	await Bun.write(
+		scriptPath,
+		duckDbExportSql(s3Prefix, orgId, year, monthNumber, csvPath),
+	);
+	console.log(`[${hms()}]   ${month}: exporting from S3 (duckdb)...`);
+	const duck = await $`duckdb < ${Bun.file(scriptPath)}`.quiet().nothrow();
+	const duckErr = duck.stderr.toString();
+	if (duck.exitCode !== 0) {
+		if (/no files found/i.test(duckErr)) {
+			return { empty: true, staged: 0 };
+		}
+		throw new Error(`duckdb export failed (${month}): ${duckErr.trim()}`);
+	}
+	const csvBytes = Bun.file(csvPath).size;
+	console.log(
+		`[${hms()}]   ${month}: staging ${(csvBytes / 1e6).toFixed(0)}MB CSV into Neon (psql \\copy)...`,
+	);
 	// Truncate first so rows left by a previously crashed run aren't double-staged.
 	const result =
-		await $`duckdb -c ${exportSql} | psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${COPY_TO_STAGING}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${"TRUNCATE events_staging"} -c ${SET_UTC} -c ${copyToStaging(csvPath)}`
 			.quiet()
 			.nothrow();
-	const stderr = result.stderr.toString();
-	// An unmatched glob is an expected empty month — check BEFORE the exit-code throw
-	// (duckdb exits non-zero on it and the pipeline can propagate that status).
-	if (/no files found/i.test(stderr)) {
-		return { empty: true, staged: 0 };
-	}
+	await $`rm -f ${csvPath}`.quiet().nothrow();
 	if (result.exitCode !== 0) {
-		throw new Error(`staging failed (${month}): ${stderr.trim()}`);
-	}
-	// Pipeline exit code is psql's, so a mid-pipe duckdb failure only surfaces on stderr.
-	if (/error|fatal|exception/i.test(stderr)) {
-		throw new Error(`duckdb failed (${month}): ${stderr.trim()}`);
+		throw new Error(
+			`staging failed (${month}): ${result.stderr.toString().trim()}`,
+		);
 	}
 	const staged = Number(result.stdout.toString().match(/COPY (\d+)/)?.[1] ?? 0);
-	// Files existed but zero rows staged — anomalous (silent duckdb death?); refuse to
-	// mark the chunk done. Operator can append the key to .backfill_neon_done if truly empty.
+	// Files existed but zero rows staged — anomalous; refuse to mark the chunk done.
+	// Operator can append the key to .backfill_neon_done if truly empty.
 	if (staged === 0) {
 		throw new Error(
 			`0 rows staged for ${month} despite parquet files existing — investigate before marking done`,
@@ -222,8 +280,9 @@ const stageChunk = async (
 };
 
 const mergeChunk = async (neonUrl: string): Promise<number> => {
+	console.log(`[${hms()}]   merging staged rows into events (dedup on conflict)...`);
 	const result =
-		await $`psql ${neonUrl} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
+		await $`psql ${withSystemRootCert(neonUrl)} -X -v ON_ERROR_STOP=1 -c ${SET_UTC} -c ${MERGE_SQL} -c ${"TRUNCATE events_staging"}`
 			.quiet()
 			.nothrow();
 	if (result.exitCode !== 0) {
@@ -266,6 +325,7 @@ const main = async (): Promise<void> => {
 	}
 	const orgSlugs = args.org === "all" ? Object.keys(orgs) : [args.org];
 
+	const lockClient = await acquireRunLock(neonUrl);
 	await ensureStagingTable(neonUrl);
 	const doneChunks = await loadDoneChunks();
 	const months = monthsNewestFirst(args.from, args.to);
@@ -323,6 +383,7 @@ const main = async (): Promise<void> => {
 	console.log(
 		"\nVerify in Neon:\n  SELECT org_id, count(*) FROM events GROUP BY 1;",
 	);
+	await lockClient.end();
 };
 
 await main();
