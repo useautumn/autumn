@@ -155,6 +155,7 @@ export const planItemV0ToProductItem = ({
 		price_interval_count: priceIntervalCount,
 
 		price: planItem.price?.amount,
+		stripe_price_id: planItem.price?.stripe_price_id,
 
 		tiers: planItem.price?.tiers?.map((tier) => ({
 			amount: tier.amount,

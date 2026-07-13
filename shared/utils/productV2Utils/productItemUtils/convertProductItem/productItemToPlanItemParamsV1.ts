@@ -74,6 +74,7 @@ export const productItemToPlanItemParamsV1 = ({
 		reset: planItemV1.reset ?? undefined,
 		price: planItemV1.price
 			? {
+					stripe_price_id: item.stripe_price_id ?? undefined,
 					amount: planItemV1.price.amount,
 					tiers: planItemV1.price.tiers,
 					interval: planItemV1.price.interval,

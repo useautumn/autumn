@@ -13,6 +13,10 @@ import {
 	nullish,
 } from "@autumn/shared";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	ToolbarButton,
 	Tooltip,
 	TooltipContent,
@@ -31,18 +35,13 @@ import {
 import type { Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
+import { AdminSyncAnchorMenuItem } from "./AdminSyncAnchorMenuItem";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
@@ -413,6 +412,10 @@ function BalanceActionsCell({
 			featureId: row.original.entitlement.feature.id,
 			entityId,
 		});
+	const customerEntitlements =
+		row.subRows.length > 0
+			? row.subRows.map((subRow) => subRow.original)
+			: [row.original];
 
 	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
 		return null;
@@ -472,6 +475,11 @@ function BalanceActionsCell({
 								/>
 							</div>
 						</DropdownMenuItem>
+					)}
+					{isParentRow && (
+						<AdminSyncAnchorMenuItem
+							customerEntitlements={customerEntitlements}
+						/>
 					)}
 					{canDelete && onDeleteClick && (
 						<DropdownMenuItem

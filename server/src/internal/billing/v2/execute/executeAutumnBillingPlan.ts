@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
@@ -25,14 +26,17 @@ export const executeAutumnBillingPlan = async ({
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
+	withTransaction = false,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
+	/** Wrap the DB mutations (steps 1-6) in a single transaction so concurrent
+	 * writers can't observe or delete half-inserted customer product rows. */
+	withTransaction?: boolean;
 }) => {
-	const { db } = ctx;
 	const {
 		insertCustomerProducts,
 		customPrices,
@@ -47,106 +51,116 @@ export const executeAutumnBillingPlan = async ({
 		autumnBillingPlan,
 	});
 
-	if (customEntitlements) {
-		await EntitlementService.insert({
-			db,
-			data: customEntitlements,
+	const runDbMutations = async (execCtx: AutumnContext) => {
+		const { db } = execCtx;
+
+		if (customEntitlements) {
+			await EntitlementService.insert({
+				db,
+				data: customEntitlements,
+			});
+		}
+
+		if (customPrices) {
+			await PriceService.insert({
+				db,
+				data: customPrices,
+			});
+		}
+
+		if (customFreeTrial) {
+			await FreeTrialService.insert({
+				db,
+				data: customFreeTrial,
+			});
+		}
+
+		if (insertCustomerEntitlements) {
+			await CusEntService.insert({
+				ctx: execCtx,
+				data: insertCustomerEntitlements,
+			});
+		}
+
+		if (autumnBillingPlan.patchCustomerProducts) {
+			// Custom prices/entitlements above must be inserted before customer rows can reference them.
+			// Patch execution only inserts/deletes customer_prices and customer_entitlements.
+			await executePatchCustomerProducts({
+				ctx: execCtx,
+				patchCustomerProducts: autumnBillingPlan.patchCustomerProducts,
+			});
+		}
+
+		// 2. Insert new customer products
+		await insertNewCusProducts({
+			ctx: execCtx,
+			newCusProducts: insertCustomerProducts,
 		});
-	}
 
-	if (customPrices) {
-		await PriceService.insert({
-			db,
-			data: customPrices,
+		await replaceScheduledPhaseCustomerProductIds({
+			ctx: execCtx,
+			replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
 		});
-	}
 
-	if (customFreeTrial) {
-		await FreeTrialService.insert({
-			db,
-			data: customFreeTrial,
-		});
-	}
+		// 3. Update customer product (DB only)
+		for (const { customerProduct, updates } of updateCustomerProducts) {
+			// Skip empty updates — drizzle throws "No values to set" on empty SET.
+			// This happens when the billing plan registers a customer product update
+			// entry (e.g. for intent=None discount-only flows) but there are no
+			// actual DB columns to change.
+			if (!updates || Object.keys(updates).length === 0) continue;
 
-	if (insertCustomerEntitlements) {
-		await CusEntService.insert({
-			ctx,
-			data: insertCustomerEntitlements,
-		});
-	}
+			await CusProductService.update({
+				ctx: execCtx,
+				cusProductId: customerProduct.id,
+				updates: updates,
+			});
+		}
 
-	if (autumnBillingPlan.patchCustomerProducts) {
-		// Custom prices/entitlements above must be inserted before customer rows can reference them.
-		// Patch execution only inserts/deletes customer_prices and customer_entitlements.
-		await executePatchCustomerProducts({
-			ctx,
-			patchCustomerProducts: autumnBillingPlan.patchCustomerProducts,
-		});
-	}
+		// 4. Delete scheduled customer product (e.g., when updating while canceling)
+		for (const deleteCustomerProduct of deleteCustomerProducts) {
+			execCtx.logger.debug(
+				`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
+			);
+			await CusProductService.delete({
+				ctx: execCtx,
+				cusProductId: deleteCustomerProduct.id,
+			});
+		}
 
-	// ctx.logger.debug(
-	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
-	// );
-	// 2. Insert new customer products
-	await insertNewCusProducts({
-		ctx,
-		newCusProducts: insertCustomerProducts,
-	});
-
-	await replaceScheduledPhaseCustomerProductIds({
-		ctx,
-		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
-	});
-
-	// 3. Update customer product (DB only)
-	for (const { customerProduct, updates } of updateCustomerProducts) {
-		// Skip empty updates — drizzle throws "No values to set" on empty SET.
-		// This happens when the billing plan registers a customer product update
-		// entry (e.g. for intent=None discount-only flows) but there are no
-		// actual DB columns to change.
-		if (!updates || Object.keys(updates).length === 0) continue;
-
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: updates,
-		});
-	}
-
-	// 4. Delete scheduled customer product (e.g., when updating while canceling)
-	for (const deleteCustomerProduct of deleteCustomerProducts) {
-		ctx.logger.debug(
-			`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
-		);
-		await CusProductService.delete({
-			ctx,
-			cusProductId: deleteCustomerProduct.id,
-		});
-	}
-
-	// 5. Update entitlement balances
-	await updateCustomerEntitlements({
-		ctx,
-		customerId: autumnBillingPlan.customerId,
-		updates: autumnBillingPlan.updateCustomerEntitlements,
-	});
-
-	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
-	// atomic SQL `balance + delta` increments.
-	if (autumnBillingPlan.autoTopupRebalance) {
-		await executeAutoTopupRebalance({
-			ctx,
+		// 5. Update entitlement balances
+		await updateCustomerEntitlements({
+			ctx: execCtx,
 			customerId: autumnBillingPlan.customerId,
-			deltas: autumnBillingPlan.autoTopupRebalance.deltas,
+			updates: autumnBillingPlan.updateCustomerEntitlements,
 		});
-	}
 
-	// 6. Upsert subscription (if provided)
-	if (autumnBillingPlan.upsertSubscription) {
-		await SubService.upsertByStripeId({
-			db,
-			subscription: autumnBillingPlan.upsertSubscription,
-		});
+		// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
+		// atomic SQL `balance + delta` increments.
+		if (autumnBillingPlan.autoTopupRebalance) {
+			await executeAutoTopupRebalance({
+				ctx: execCtx,
+				customerId: autumnBillingPlan.customerId,
+				deltas: autumnBillingPlan.autoTopupRebalance.deltas,
+			});
+		}
+
+		// 6. Upsert subscription (if provided)
+		if (autumnBillingPlan.upsertSubscription) {
+			await SubService.upsertByStripeId({
+				db,
+				subscription: autumnBillingPlan.upsertSubscription,
+			});
+		}
+	};
+
+	if (withTransaction) {
+		// initDrizzle normalizes transaction clients to the same execute contract as ctx.db.
+		await ctx.db.transaction((tx) =>
+			runDbMutations({ ...ctx, db: tx as unknown as DrizzleCli }),
+		);
+	} else {
+		await runDbMutations(ctx);
 	}
 
 	// 7. Upsert invoice (if provided)

@@ -14,12 +14,14 @@ export const evaluateSchedulePhases = async ({
 	scheduledPhases,
 	storedPriceCatalog,
 	cusPriceCatalog,
+	strict,
 }: {
 	stripeCli: Stripe;
 	sub: Stripe.Subscription;
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	storedPriceCatalog: StoredPriceCatalog;
 	cusPriceCatalog: CusPriceCatalog;
+	strict?: boolean;
 }): Promise<SubscriptionMismatch[]> => {
 	if (!sub.schedule) {
 		return [
@@ -89,6 +91,7 @@ export const evaluateSchedulePhases = async ({
 				storedPriceCatalog,
 				cusPriceCatalog,
 				phaseStartsAt: expectedStartSeconds,
+				strict,
 			}),
 		);
 	}

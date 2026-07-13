@@ -96,6 +96,7 @@ export const handleCopyProducts = async ({
 				price_id: _price_id,
 				entitlement_id: _ent_id,
 				price_config: _price_config,
+				stripe_price_id: _stripe_price_id,
 				...rest
 			} = i;
 			return rest;

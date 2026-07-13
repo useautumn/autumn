@@ -45,10 +45,13 @@ export const syncV2 = async ({
 	ctx,
 	params,
 	webhook,
+	withTransaction,
 }: {
 	ctx: AutumnContext;
 	params: SyncParamsV1;
 	webhook?: { tags?: string[] };
+	/** Execute the billing plan's DB mutations in a single transaction. */
+	withTransaction?: boolean;
 }): Promise<SyncV2Result> => {
 	// 1. Setup
 	const syncContext = await setupSyncContext({ ctx, params });
@@ -62,7 +65,7 @@ export const syncV2 = async ({
 	logSyncPlan({ ctx, autumnBillingPlan, phases });
 
 	// 4. Execute
-	await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+	await executeAutumnBillingPlan({ ctx, autumnBillingPlan, withTransaction });
 
 	// 5. Persist scheduled phases (only when sync produced more than one phase)
 	let scheduleId: string | null = null;

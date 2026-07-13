@@ -40,6 +40,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleSyncCustomerEntitlementAnchors } from "./handleSyncCustomerEntitlementAnchors";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
@@ -188,6 +189,10 @@ honoAdminRouter.patch(
 );
 honoAdminRouter.delete("/chat/slack-admin", ...handleDeleteSlackAdminInstall);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
+honoAdminRouter.post(
+	"/customer-entitlements/sync-anchor",
+	...handleSyncCustomerEntitlementAnchors,
+);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);
 honoAdminRouter.put("/rollouts/:rollout_id", ...handleUpdateRollout);

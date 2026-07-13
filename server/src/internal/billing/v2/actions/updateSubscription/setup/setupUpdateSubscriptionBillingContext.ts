@@ -90,14 +90,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		),
 	);
 
+	// no_billing_changes suppresses writes but still reads an existing Stripe sub
+	// so anchors and subscription linkage survive replacement updates.
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||
-		params.no_billing_changes === true ||
+		contextOverride.skipBillingFetching === true ||
 		billingRelatedFields.length === 0 ||
 		isUpdatingFreeCustomerProduct;
 
 	const skipBillingChanges =
-		skipBillingFetching || params.processor_subscription_id !== undefined;
+		skipBillingFetching ||
+		params.no_billing_changes === true ||
+		params.processor_subscription_id !== undefined;
 
 	const {
 		stripeSubscription,
@@ -116,7 +120,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		skipBillingFetching,
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
-		createStripeCustomerIfMissing: !preview,
+		createStripeCustomerIfMissing:
+			!preview && params.no_billing_changes !== true,
 	});
 
 	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];

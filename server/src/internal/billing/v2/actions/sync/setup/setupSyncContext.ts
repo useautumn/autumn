@@ -100,7 +100,7 @@ const buildProductContext = async ({
 		fullProduct,
 		customPrices = [],
 		customEnts: customEntitlements = [],
-	} = await setupAttachProductContext({ ctx, params: plan });
+	} = await setupAttachProductContext({ ctx, params: plan, fullCustomer });
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,

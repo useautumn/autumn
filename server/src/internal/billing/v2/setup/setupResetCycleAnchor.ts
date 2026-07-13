@@ -23,8 +23,7 @@ export const setupResetCycleAnchor = ({
 	billingStartsAt?: number;
 }): number | "now" => {
 	const hasFutureBillingStart = billingStartsAt !== undefined;
-	const shouldAnchorToBillingStart =
-		hasFutureBillingStart && !customerProduct;
+	const shouldAnchorToBillingStart = hasFutureBillingStart && !customerProduct;
 
 	if (shouldAnchorToBillingStart) {
 		return billingStartsAt;

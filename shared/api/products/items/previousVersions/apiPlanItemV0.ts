@@ -32,6 +32,9 @@ export const ApiPlanItemV0Schema = z
 
 		price: z
 			.object({
+				stripe_price_id: z.string().optional().meta({
+					internal: true,
+				}),
 				amount: z.number().optional(),
 				tiers: z.array(UsageTierSchema).optional(),
 				tier_behavior: z.enum(TierBehavior).optional(),

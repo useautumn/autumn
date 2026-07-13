@@ -27,6 +27,10 @@ export const basePriceToProductItem = ({
 			: undefined;
 	const priceId =
 		"price_id" in basePrice ? (basePrice.price_id ?? undefined) : undefined;
+	const stripePriceId =
+		"stripe_price_id" in basePrice
+			? (basePrice.stripe_price_id ?? undefined)
+			: undefined;
 
 	const item = {
 		type: ProductItemType.Price,
@@ -40,6 +44,7 @@ export const basePriceToProductItem = ({
 
 		entitlement_id: entitlementId,
 		price_id: priceId,
+		stripe_price_id: stripePriceId,
 	} satisfies ProductItem;
 
 	const display = basePriceDisplay

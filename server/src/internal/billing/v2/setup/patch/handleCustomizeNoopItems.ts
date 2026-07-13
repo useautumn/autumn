@@ -2,9 +2,9 @@ import {
 	type CreatePlanItemParamsV1,
 	type CustomizePlanV1,
 	type Feature,
+	type FullCusProduct,
 	findCustomerEntitlementByFeature,
 	findFeatureById,
-	type FullCusProduct,
 	isBooleanFeature,
 } from "@autumn/shared";
 

@@ -179,15 +179,21 @@ export const ProductItemSchema = z.object({
 	price_id: z.string().nullish().meta({
 		internal: true,
 	}),
-	price_interval: z
-		.enum(ProductItemInterval)
-		.nullish()
-		.meta({
-			internal: true,
-		}),
+	/** Set only by producers that KNOW the item corresponds to an existing Stripe
+	 * price of the same shape (e.g. sync custom bases) — flows into the created
+	 * price's config via itemToPriceAndEnt. */
+	stripe_price_id: z.string().nullish().meta({
+		internal: true,
+	}),
+	price_interval: z.enum(ProductItemInterval).nullish().meta({
+		internal: true,
+	}),
 	price_interval_count: z.number().nullish().meta({
 		internal: true,
 	}),
+	/** One-way price→item copy of price.config (display/round-trip context only).
+	 * NEVER read back when building a price: an edited item still carries the old
+	 * config, and stale Stripe ids on a new-shape price mean wrong billing. */
 	price_config: z.any().nullish().meta({
 		internal: true,
 	}),

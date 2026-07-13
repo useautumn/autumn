@@ -44,6 +44,11 @@ export const CreatePlanItemParamsV1Schema = z
 
 		price: z
 			.object({
+				stripe_price_id: z.string().optional().meta({
+					description:
+						"Stripe price id this feature price is billed under. Set by sync flows to preserve an existing Stripe price.",
+					internal: true,
+				}),
 				amount: z.number().optional().meta({
 					description:
 						"Price per billing_units after included usage. Either 'amount' or 'tiers' is required.",

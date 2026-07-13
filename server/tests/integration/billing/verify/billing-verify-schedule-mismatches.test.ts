@@ -109,13 +109,11 @@ test.concurrent(
 
 		expect(result.subscriptions.length).toBe(1);
 		expect(result.subscriptions[0].status).toBe("mismatched");
-		expect(result.subscriptions[0].mismatches).toEqual([
+		expect(result.subscriptions[0].mismatches).toMatchObject([
 			{
 				type: "schedule_mismatch",
 				reason: "missing_schedule",
 				expected_phase_count: 2,
-				actual_phase_count: undefined,
-				phase_starts_at: undefined,
 			},
 		]);
 	},

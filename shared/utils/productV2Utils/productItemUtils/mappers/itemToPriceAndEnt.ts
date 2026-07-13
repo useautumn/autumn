@@ -2,8 +2,8 @@
 
 import { generateKsuid } from "@autumn/ksuid";
 import {
-	AllowanceType,
 	AllocatedBillingBehavior,
+	AllowanceType,
 	BillingInterval,
 	BillingType,
 	BillWhen,
@@ -86,6 +86,7 @@ const toPrice = ({
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
+		stripe_price_id: item.stripe_price_id ?? null,
 		stripe_product_id: null,
 		feature_id: null,
 		internal_feature_id: null,
@@ -274,6 +275,7 @@ const toFeatureAndPrice = ({
 				}) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
+		stripe_price_id: item.stripe_price_id ?? null,
 	};
 
 	const canProrate =
