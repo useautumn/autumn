@@ -14,6 +14,7 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionSchedulePhaseCurrent } from "@/external/stripe/subscriptionSchedules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { STRIPE_SYNC_SCHEDULE_EXPAND } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
 import { CusService } from "@/internal/customers/CusService";
 import { subscriptionToSyncParams } from "./subscriptionToSyncParams";
 
@@ -194,7 +195,7 @@ export const syncProposalsV2 = async ({
 	const scheduleProposals = await Promise.all(
 		scheduleList.data.map(async ({ id }) => {
 			const schedule = await stripeCli.subscriptionSchedules.retrieve(id, {
-				expand: ["phases.items.price.product"],
+				expand: STRIPE_SYNC_SCHEDULE_EXPAND,
 			});
 			return buildProposal({
 				ctx,

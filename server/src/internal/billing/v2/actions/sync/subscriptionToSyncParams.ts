@@ -12,6 +12,10 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	STRIPE_SYNC_SCHEDULE_EXPAND,
+	STRIPE_SYNC_SUBSCRIPTION_EXPAND,
+} from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
 import { CusService } from "@/internal/customers/CusService";
 import { buildFeatureQuantities } from "./buildSyncParams/buildFeatureQuantities";
 import { detectSubscriptionMatch } from "./detect/detectSubscriptionMatch";
@@ -141,24 +145,38 @@ export const subscriptionToSyncParams = async ({
 	params: SyncParamsV1;
 	schedule: Stripe.SubscriptionSchedule | null;
 }> => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const resolvedSubscription = subscription
+		? await stripeCli.subscriptions.retrieve(subscription.id, {
+				expand: STRIPE_SYNC_SUBSCRIPTION_EXPAND,
+			})
+		: undefined;
+	const needsCustomer = customerProducts === undefined || !resolvedSubscription;
+	const fullCustomer = needsCustomer
+		? await CusService.getFull({ ctx, idOrInternalId: customerId })
+		: undefined;
+	const resolvedCustomerProducts =
+		customerProducts ?? fullCustomer?.customer_products ?? [];
+
 	let resolvedSchedule = schedule;
 	if (!resolvedSchedule) {
 		const scheduleId = stripeSubscriptionToScheduleId({
-			stripeSubscription: subscription,
+			stripeSubscription: resolvedSubscription,
 		});
 		if (scheduleId) {
 			resolvedSchedule = await getStripeActiveSubscriptionSchedule({
-				stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
+				stripeClient: stripeCli,
 				subscriptionScheduleId: scheduleId,
-				expand: ["phases.items.price.product"],
+				expand: STRIPE_SYNC_SCHEDULE_EXPAND,
 			});
 		}
 	}
 
 	const match = await detectSubscriptionMatch({
 		ctx,
-		subscription,
+		subscription: resolvedSubscription,
 		schedule: resolvedSchedule,
+		billingCurrency: fullCustomer?.currency,
 		fullProducts,
 	});
 
@@ -166,22 +184,15 @@ export const subscriptionToSyncParams = async ({
 		.filter((phase) => phase.plans.length > 0)
 		.map((phaseMatch) => phaseMatchToSyncPhase({ phaseMatch }));
 
-	const resolvedCustomerProducts =
-		customerProducts ??
-		(subscription
-			? (await CusService.getFull({ ctx, idOrInternalId: customerId }))
-					.customer_products
-			: []);
-
 	const phases = stampEntityFromExistingLinks({
 		phases: detectedPhases,
-		subscription,
+		subscription: resolvedSubscription,
 		customerProducts: resolvedCustomerProducts,
 	});
 
 	const params: SyncParamsV1 = {
 		customer_id: customerId,
-		stripe_subscription_id: subscription?.id,
+		stripe_subscription_id: resolvedSubscription?.id,
 		stripe_schedule_id: match.stripe_schedule_id ?? undefined,
 		phases,
 	};

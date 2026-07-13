@@ -29,16 +29,20 @@ const stripeItemToBasePrice = ({
 }: {
 	item: StripeItemSnapshot;
 }): CustomBasePrice | null => {
-	if (item.unit_amount === null) return null;
-	if (!item.recurring_interval) return null;
+	const amount = Number(item.unit_amount_decimal ?? item.unit_amount);
+	if (!Number.isFinite(amount) || !item.currency || !item.recurring_interval) {
+		return null;
+	}
 	const interval = STRIPE_TO_AUTUMN_INTERVAL[item.recurring_interval];
 	if (!interval) return null;
 	return {
 		amount: stripeToAtmnAmount({
-			amount: item.unit_amount,
-			currency: item.currency ?? "usd",
+			amount,
+			currency: item.currency,
 		}),
 		interval,
+		interval_count: item.recurring_interval_count ?? 1,
+		base_currency: item.currency,
 		stripe_price_id: item.stripe_price_id,
 	};
 };
@@ -84,7 +88,11 @@ const partitionDiffs = ({
 		const m = diff.match;
 		if (m.kind === "autumn_price") {
 			if (autumnBasePriceId && m.price.id === autumnBasePriceId) {
-				matchedBase.push(diff);
+				if (m.matched_on.type === "stripe_base_price_shape") {
+					customBase.push(diff);
+				} else {
+					matchedBase.push(diff);
+				}
 			} else {
 				features.push(diff);
 			}
