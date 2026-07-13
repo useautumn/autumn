@@ -12,10 +12,8 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import {
-	STRIPE_SYNC_SCHEDULE_EXPAND,
-	STRIPE_SYNC_SUBSCRIPTION_EXPAND,
-} from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
+import { fetchStripeSyncSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncSubscription";
+import { STRIPE_SYNC_SCHEDULE_EXPAND } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
 import { CusService } from "@/internal/customers/CusService";
 import { buildFeatureQuantities } from "./buildSyncParams/buildFeatureQuantities";
 import { detectSubscriptionMatch } from "./detect/detectSubscriptionMatch";
@@ -146,11 +144,11 @@ export const subscriptionToSyncParams = async ({
 	schedule: Stripe.SubscriptionSchedule | null;
 }> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const resolvedSubscription = subscription
-		? await stripeCli.subscriptions.retrieve(subscription.id, {
-				expand: STRIPE_SYNC_SUBSCRIPTION_EXPAND,
-			})
-		: undefined;
+	const resolvedSubscription =
+		(await fetchStripeSyncSubscription({
+			stripeCli,
+			subscriptionId: subscription?.id,
+		})) ?? undefined;
 	const needsCustomer = customerProducts === undefined || !resolvedSubscription;
 	const fullCustomer = needsCustomer
 		? await CusService.getFull({ ctx, idOrInternalId: customerId })
