@@ -1,16 +1,16 @@
 import type { CreatePlanParams } from "@api/products/crud/createPlanParamsV1";
 import type { UpdatePlanParams } from "@api/products/crud/updatePlanParamsV1";
 import type { AppEnv } from "@models/genModels/genEnums";
-import type { LinkPlanLicense } from "@models/licenseModels/licenseModels";
 import type { FullProduct } from "@models/productModels/productModels";
 import type { ProductV2 } from "@models/productV2Models/productV2Models";
 import { notNullish } from "@utils/index";
 import type { SharedContext } from "../../../../types/sharedContext";
+import type { PlanLicenseParams } from "../licenses/planLicenseParams";
 import { planParamsV1ToProductItems } from "./planParamsV1ToProductItems";
 
 type ProductV2UpdateParams = Partial<ProductV2> & {
 	base_plan_id?: string | null;
-	licenses?: LinkPlanLicense[];
+	licenses?: PlanLicenseParams[];
 };
 
 export function planParamsV1ToProductV2({

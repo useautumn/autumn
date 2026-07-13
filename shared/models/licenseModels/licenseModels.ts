@@ -38,12 +38,6 @@ export const CustomizePlanLicenseSchema = z.object({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-/** Catalog link entry (plans.create/update licenses[]): links carry no item
- * customize — that surface is customer-level only (add_licenses). */
-export const LinkPlanLicenseSchema = CustomizePlanLicenseSchema.omit({
-	customize: true,
-});
-
 export const CustomLicenseChangeSchema = z.object({
 	parentCustomerProductId: z.string(),
 	previousParentCustomerProductId: z.string().optional(),
@@ -125,7 +119,6 @@ export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
 export type LicenseAttachParams = z.infer<typeof LicenseAttachParamsSchema>;
 export type CustomizePlanLicense = z.infer<typeof CustomizePlanLicenseSchema>;
-export type LinkPlanLicense = z.infer<typeof LinkPlanLicenseSchema>;
 export type UpdateLicenseParams = z.infer<typeof UpdateLicenseParamsSchema>;
 export type LicenseListAssignmentsParams = z.infer<
 	typeof LicenseListAssignmentsParamsSchema

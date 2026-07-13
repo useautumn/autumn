@@ -1,7 +1,7 @@
 import {
 	ErrCode,
 	type FullProduct,
-	type LinkPlanLicense,
+	type PlanLicenseParams,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -13,7 +13,7 @@ import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 type ResolvedLink = {
-	entry: LinkPlanLicense;
+	entry: PlanLicenseParams;
 	licenseProduct: FullProduct;
 	included: number;
 	prepaidOnly: boolean;
@@ -29,15 +29,20 @@ const resolveLink = async ({
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
-	entry: LinkPlanLicense;
+	entry: PlanLicenseParams;
 	pinnedInternalIdByPublicId: Map<string, string>;
 }): Promise<ResolvedLink> => {
-	// Existing links keep their pinned version; only new links resolve to latest.
+	// An explicit entry.version pins the link to that version of the license
+	// plan (the manual re-link after versioning it). Otherwise existing links
+	// keep their pinned version and only new links resolve to latest.
 	const licenseProduct = await getFullLicenseProduct({
 		ctx,
 		idOrInternalId:
-			pinnedInternalIdByPublicId.get(entry.license_plan_id) ??
-			entry.license_plan_id,
+			entry.version !== undefined
+				? entry.license_plan_id
+				: (pinnedInternalIdByPublicId.get(entry.license_plan_id) ??
+					entry.license_plan_id),
+		version: entry.version,
 	});
 
 	validateLicenseLink({
@@ -113,10 +118,11 @@ const assertCapacityAllowed = async ({
 };
 
 /**
- * Declaratively syncs a plan's catalog license links to `licenses`: the array
- * is the complete set — links absent from it are removed (guarded against
- * active assignments), present ones are upserted. No-op when `licenses` is
- * undefined (the field was not part of the update).
+ * Declaratively syncs a plan's catalog `licenses`: the array is the complete
+ * set — links absent from it are removed (guarded against active
+ * assignments), present ones are upserted, and entries carrying `items` have
+ * them applied to the license plan itself. No-op when `licenses` is undefined
+ * (the field was not part of the update).
  */
 export const syncPlanLicenses = async ({
 	ctx,
@@ -125,7 +131,7 @@ export const syncPlanLicenses = async ({
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
-	licenses?: LinkPlanLicense[];
+	licenses?: PlanLicenseParams[];
 }) => {
 	if (licenses === undefined) return;
 

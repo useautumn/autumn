@@ -14,17 +14,13 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
-import { validateInPlaceLicenseEdit } from "@/internal/licenses/actions/links/validateInPlaceLicenseEdit.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
-import {
-	buildFullProductFromV2,
-	validateProductLicenseLinks,
-} from "@/internal/products/handlers/handleUpdatePlan/validateProductLicenseLinks.js";
+import { validateProductLicenseLinks } from "@/internal/products/handlers/handleUpdatePlan/validateProductLicenseLinks.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -417,18 +413,6 @@ export const updateProduct = async ({
 	const { free_trial } = productUpdates;
 
 	if (productUpdates.items) {
-		// Items mutate under existing pinned links here, so every linked parent
-		// must still accept the new item state before the write.
-		await validateInPlaceLicenseEdit({
-			ctx,
-			fromInternalProductId: fullProduct.internal_id,
-			newLicenseProduct: buildFullProductFromV2({
-				newProductV2,
-				baseProduct: fullProduct,
-				org,
-				features,
-			}),
-		});
 		await updateProductItems({
 			ctx,
 			db,

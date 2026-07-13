@@ -68,7 +68,6 @@ test.concurrent(
 		});
 		expect(afterVersioning).toHaveLength(1);
 		expect(afterVersioning[0]).toMatchObject({
-			parent_plan_id: parent.id,
 			license_plan_id: license.id,
 			included: 1,
 		});

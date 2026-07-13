@@ -14,15 +14,18 @@ import { nullish } from "@/utils/genUtils.js";
 export const getFullLicenseProduct = async ({
 	ctx,
 	idOrInternalId,
+	version,
 }: {
 	ctx: AutumnContext;
 	idOrInternalId: string;
+	version?: number;
 }) =>
 	await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId,
 		orgId: ctx.org.id,
 		env: ctx.env,
+		version,
 	});
 
 export const validateLicenseBillingMode = ({

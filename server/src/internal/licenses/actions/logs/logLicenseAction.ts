@@ -7,7 +7,8 @@ type LicenseLogAction =
 	| "update"
 	| "preview_update"
 	| "reconcile"
-	| "link";
+	| "link"
+	| "edit_items";
 
 export const logLicenseAction = ({
 	ctx,

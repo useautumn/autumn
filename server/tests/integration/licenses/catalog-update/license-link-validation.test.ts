@@ -7,7 +7,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("licenses catalog: interval-mismatch link rejects, matching intervals link succeeds")}`,
+	`${chalk.yellowBright("licenses catalog: links succeed regardless of billing interval")}`,
 	async () => {
 		const monthlyParent = products.base({
 			id: "interval-monthly-parent",
@@ -31,34 +31,25 @@ test.concurrent(
 			actions: [],
 		});
 
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "Billing intervals must match",
-			func: () =>
-				autumnV2_2.post("/plans.update", {
-					plan_id: monthlyParent.id,
-					licenses: [{ license_plan_id: annualLicense.id, included: 1 }],
-				}),
-		});
-
 		await autumnV2_2.post("/plans.update", {
 			plan_id: monthlyParent.id,
-			licenses: [{ license_plan_id: monthlyLicense.id, included: 1 }],
+			licenses: [
+				{ license_plan_id: annualLicense.id, included: 1 },
+				{ license_plan_id: monthlyLicense.id, included: 1 },
+			],
 		});
 		const plan = (await autumnV2_2.post("/plans.get", {
 			plan_id: monthlyParent.id,
 		})) as ApiPlanV1;
-		const link = plan.licenses?.find(
-			(planLicense) => planLicense.license_plan_id === monthlyLicense.id,
-		);
-		expect(link).toBeDefined();
 
 		const list = plan.licenses ?? [];
-		expect(list).toHaveLength(1);
-		expect(list[0]).toMatchObject({
-			license_plan_id: monthlyLicense.id,
-			included: 1,
-		});
+		expect(list).toHaveLength(2);
+		expect(
+			list.find((link) => link.license_plan_id === annualLicense.id),
+		).toMatchObject({ included: 1 });
+		expect(
+			list.find((link) => link.license_plan_id === monthlyLicense.id),
+		).toMatchObject({ included: 1 });
 	},
 );
 

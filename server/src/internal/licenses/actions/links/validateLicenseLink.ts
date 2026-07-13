@@ -1,50 +1,10 @@
-import {
-	ErrCode,
-	type FullProduct,
-	getLargestInterval,
-	RecaseError,
-} from "@autumn/shared";
+import { ErrCode, type FullProduct, RecaseError } from "@autumn/shared";
 import { validateLicenseBillingMode } from "../../licenseUtils.js";
 
 /**
- * A priced license is attached at the customer level alongside the parent's
- * subscription, so their billing intervals must line up. Free products (no
- * recurring price) always pass.
- */
-const validateMatchingBillingIntervals = ({
-	parentProduct,
-	licenseProduct,
-}: {
-	parentProduct: FullProduct;
-	licenseProduct: FullProduct;
-}) => {
-	const parentInterval = getLargestInterval({
-		prices: parentProduct.prices,
-		excludeOneOff: true,
-	});
-	const licenseInterval = getLargestInterval({
-		prices: licenseProduct.prices,
-		excludeOneOff: true,
-	});
-	if (!parentInterval || !licenseInterval) return;
-
-	const matches =
-		parentInterval.interval === licenseInterval.interval &&
-		parentInterval.intervalCount === licenseInterval.intervalCount;
-	if (matches) return;
-
-	throw new RecaseError({
-		message: `License plan ${licenseProduct.id} bills ${licenseInterval.interval} but ${parentProduct.id} bills ${parentInterval.interval}. Billing intervals must match.`,
-		code: ErrCode.InvalidRequest,
-		statusCode: 400,
-	});
-};
-
-/**
- * Every rule a parent→license link must satisfy. licenseProduct is the
- * effective product; parent-dependent checks run only when parentProduct is
- * present, billing mode only when prepaidOnly is present, archived only when
- * licensePlanId is present.
+ * Every rule a parent→license link must satisfy. Parent-dependent checks run
+ * only when parentProduct is present, billing mode only when prepaidOnly is
+ * present, archived only when licensePlanId is present.
  */
 export const validateLicenseLink = ({
 	parentProduct,
@@ -67,14 +27,11 @@ export const validateLicenseLink = ({
 			statusCode: 400,
 		});
 	}
-	if (parentProduct) {
-		if (licenseProduct.id === parentProduct.id) {
-			throw new RecaseError({
-				message: `A plan cannot be linked as a license to itself (${licensePlanId ?? licenseProduct.id}).`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		validateMatchingBillingIntervals({ parentProduct, licenseProduct });
+	if (parentProduct && licenseProduct.id === parentProduct.id) {
+		throw new RecaseError({
+			message: `A plan cannot be linked as a license to itself (${licensePlanId ?? licenseProduct.id}).`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	}
 };
