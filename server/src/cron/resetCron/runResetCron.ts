@@ -174,8 +174,12 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 		);
 	} catch (error) {
 		logger.error(
-			{ jobName: "reset-cus-ents", durationMs: Date.now() - startTime },
-			`[reset-cus-ents] failed: ${error}`,
+			{
+				jobName: "reset-cus-ents",
+				durationMs: Date.now() - startTime,
+				err: error,
+			},
+			"[reset-cus-ents] failed",
 		);
 		console.error("Error getting entitlements for reset:", error);
 		return;
