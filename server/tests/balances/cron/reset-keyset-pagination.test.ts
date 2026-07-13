@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import {
 	ApiVersion,
 	CusProductStatus,
@@ -200,6 +200,10 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: exactly-once, ordering,
 		});
 	});
 
+	afterAll(async () => {
+		await cleanupCustomers(ownCustomers);
+	});
+
 	test.concurrent(
 		"multi-page fetch returns every seeded candidate exactly once, in (next_reset_at, id) order",
 		async () => {
@@ -241,6 +245,10 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: limit semantics")}`, ()
 		}
 	});
 
+	afterAll(async () => {
+		await cleanupCustomers(ownCustomers);
+	});
+
 	test.concurrent("limit stops fetching at the page boundary", async () => {
 		const results = await fetchAll({ batchSize: 3, limit: 4 });
 		expect(results.length).toBe(6);
@@ -263,10 +271,20 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: shrink + re-qualify mut
 		}
 	});
 
+	afterAll(async () => {
+		await cleanupCustomers(ownCustomers);
+	});
+
 	test.concurrent(
-		"a row leaving the predicate mid-run does not skip unread rows; a re-qualifying emitted row is not duplicated",
+		"an emitted row leaving the predicate does not skip unread rows; an emitted row re-qualifying ahead of the cursor is not duplicated",
 		async () => {
-			let mutated = false;
+			// Mutation targets are chosen from rows PROVEN emitted in delivered
+			// pages, so ambient rows shifting page boundaries cannot silently
+			// downgrade this into a test that never exercises dedup.
+			const emitted = new Set<string>();
+			let shrunkId: string | undefined;
+			let requalifiedId: string | undefined;
+			let unreadAtMutation: string[] = [];
 
 			const results = await CusEntService.getActiveResetPassed({
 				db: ctx.db,
@@ -274,16 +292,30 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: shrink + re-qualify mut
 				batchSize: 2,
 				limit: 1_000_000,
 				onPageFetched: async (page) => {
-					if (mutated) return;
-					if (!page.some((ce) => ce.id === seeded[0])) return;
-					mutated = true;
+					for (const ce of page) {
+						if (seeded.includes(ce.id)) emitted.add(ce.id);
+					}
+					if (requalifiedId) return;
 
-					await setResetAt(seeded[0], CUTOFF + 1_000_000);
-					await setResetAt(seeded[1], BAND + 5_000);
+					const unread = seeded.filter((id) => !emitted.has(id));
+					if (emitted.size < 2 || unread.length < 2) return;
+
+					// Both targets are behind the cursor: shrinking one is the
+					// OFFSET-skip repro; re-qualifying the other ahead of the
+					// cursor forces a second emission that dedup must filter.
+					const [first, second] = [...emitted];
+					shrunkId = first;
+					requalifiedId = second;
+					unreadAtMutation = unread;
+
+					await setResetAt(shrunkId, CUTOFF + 1_000_000);
+					await setResetAt(requalifiedId, BAND + 5_000);
 				},
 			});
 
-			expect(mutated).toBe(true);
+			expect(shrunkId).toBeDefined();
+			expect(requalifiedId).toBeDefined();
+			expect(unreadAtMutation.length).toBeGreaterThanOrEqual(2);
 
 			const returnedSeeded = results
 				.map((ce) => ce.id)
@@ -291,6 +323,9 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: shrink + re-qualify mut
 
 			expect(new Set(returnedSeeded).size).toBe(returnedSeeded.length);
 			expect([...returnedSeeded].sort()).toEqual([...seeded].sort());
+			for (const id of unreadAtMutation) {
+				expect(returnedSeeded).toContain(id);
+			}
 		},
 	);
 });
@@ -309,6 +344,10 @@ describe(`${chalk.yellowBright("reset-keyset-pagination: backward cursor movemen
 		for (const [i, customerId] of ownCustomers.entries()) {
 			seeded.push(await seedLooseCusEnt({ customerId, nextResetAt: BAND + i }));
 		}
+	});
+
+	afterAll(async () => {
+		await cleanupCustomers(ownCustomers);
 	});
 
 	test.concurrent(
