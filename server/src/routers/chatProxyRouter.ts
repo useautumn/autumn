@@ -33,6 +33,8 @@ export const createChatProxyRouter = (
 	// Dashboard chat → Leaf. Pass-through (cookies forwarded); Leaf's web adapter
 	// authenticates the dashboard session in getUser.
 	router.post("/agent/chat", proxy);
+	router.get("/agent/chat/threads", proxy);
+	router.delete("/agent/chat/threads", proxy);
 	router.get("/agent/chat/:threadId/messages", proxy);
 
 	// Plan-preview / approval interactions for the dashboard chat (state-backed,

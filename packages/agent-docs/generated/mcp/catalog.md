@@ -6,16 +6,379 @@ First read the `autumn-concepts` knowledge — it defines Autumn's data model �
 
 - Modeling is iterative: translate the user's intended pricing into Autumn's model (features + plans + plan items). Ask clarifying questions and never assume behavior — confirm, for example, whether a paid item is usage-based or prepaid, and at what interval a metered allowance resets.
 - If one ambiguity changes which other questions apply, resolve it first before asking those.
+- For a new codebase-managed catalog, ask whether the user wants to use `atmn` to create, pull, preview, and push their catalog. Recommend `atmn` unless they explicitly want dashboard/API-first changes.
+- For an existing project, check whether `autumn.config.ts` exists. If it does, treat it as the local catalog source and prefer `atmn`; otherwise use MCP/API tools directly or ask whether to initialize/pull config first.
 - Use stable lowercase IDs with underscores (`pro_plan`, `chat_messages`).
 - Never create duplicate features for one resource; vary allowance, interval, or price via plan items instead (one `tokens` feature, not `monthly_tokens` + `one_time_tokens`).
 - Keep it simple to start: if there are many features, build the most important (prioritise metered ones) and confirm before adding more.
+
+## Updating a catalog
+
+Follow the same preview-decision-apply shape as `atmn` and the dashboard:
+
+1. Build or edit the desired catalog shape.
+2. Preview it: use `atmn` for `autumn.config.ts` projects, or `catalog.preview_update` for MCP/API flows.
+3. Summarize feature changes first: created, updated, skipped, deleted/archived, and blocked updates.
+4. For each changed base plan or plan family, surface the plan diff, customer impact, versioning choices, variants, conflicts, and migration option.
+5. If the user changes any decision, revise the config or params and preview again.
+6. Apply only the exact previewed update, following the global write approval rules for `catalog.update` or `atmn --headless push --yes`.
+
+For plan families with customers or variants, ask decisions in this order:
+
+1. Versioning: create a new version, update the current version with `disable_version: true`, update all versions with `all_versions: true`, or skip.
+2. Variants: inspect `plan.variants[n].update_source`. `propagated` variants need a propagation choice; `direct` variants are being updated like their own plan and may need their own versioning and migration decisions.
+3. Migration: whether to create a migration draft to move existing customers onto the new plan shape.
 
 ## Rules
 
 - Never give a default/auto-enabled plan a paid price: its base price must be null and its items must not contain paid prepaid or usage-based prices.
 - Per-unit pricing (e.g. "$X per seat") always pairs a base fee on `Plan.price` with a per-unit plan item — never a bare per-unit price with no base.
-- Variants (monthly vs annual, or two price points of one plan) are separate plans (`pro_monthly`, `pro_annual`); Autumn has no single "plan with variants".
+- Use variants for named derivatives of a base plan: annual/monthly intervals, A/B price packages, or different volume ladders.
 - Ignore "Enterprise"/custom plans here — those are created per-customer in the dashboard.
+
+## Catalog operations
+
+# Catalog update flow
+
+Use this when changing an existing Autumn catalog through MCP/API or when mapping an `atmn push` preview back to tool params. For a single plan edit, use the same catalog flow with a one-plan `plans` array.
+
+## Loop
+
+1. Inspect the current catalog and the proposed catalog.
+2. Build `catalog.preview_update` params: `features`, `plans`, optional `skip_deletions`, `skip_feature_ids`, `skip_plan_ids`, `expand`.
+3. Run `catalog.preview_update`; never skip this before a write.
+4. Summarize the preview and ask for decisions per feature and per base plan family.
+5. Revise params or config based on the decisions, then preview again if anything changed.
+6. Run `catalog.update` with the exact previewed params, following the global write approval rules.
+
+For single-plan updates, pass that plan inside `catalog.preview_update.plans[]`. Include `include_versions: true` and `include_variants: true` when the plan has customers, historical versions, or variants so the user can choose the right scope.
+
+## Preview summary checklist
+
+- Feature changes: created, updated, skipped, removed, archived, and any blockers.
+- Plan changes: created, updated, deleted, skipped, unchanged, and whether deletion archives because customers exist.
+- For each changed plan: `customize`, `price_change`, `item_changes`, `previous_attributes`, `has_customers`, `customer_count`, and `versionable`.
+- Variants: affected variant IDs, `will_apply`, `plan.variants[n].update_source` (`direct` vs `propagated`), conflicts, and whether selected variants have customers.
+- Other versions: historical versions that can receive the same diff.
+- Migration: whether preview returned a draft, which plan IDs it covers, whether it includes custom plans, and whether billing changes exist.
+
+## Per-plan family decisions
+
+For each changed base plan or plan family, ask decisions in the same order as the dashboard:
+
+1. Versioning strategy.
+2. Variant handling: propagation choices for `propagated` variants, standalone update choices for `direct` variants.
+3. Migration draft.
+
+### Versioning
+
+Use `versionable`, `has_customers`, `customer_count`, and `other_versions` to explain why this matters.
+
+- Create new version: omit `disable_version`; existing customers remain on their current version.
+- Update current version: send `disable_version: true`; existing customers keep their rows unless a migration draft is created and run.
+- Update all versions: send `all_versions: true`; do not combine with `disable_version`.
+- Force a new version even without customers only when the user explicitly asks: `force_version: true`.
+- Skip a plan by adding its ID to `skip_plan_ids`, then preview again.
+
+`create_version` is usually the safest live choice because it grandfathers existing customers. `update_current` and `update_all_versions` patch existing versions, so they may need a migration draft if customers should move to the new shape.
+
+### Variant propagation
+
+- `update_variant_ids` propagates the base plan diff to selected variant plan IDs.
+- `variants` contains direct variant updates or new variant definitions under the base plan.
+- If `plan.variants[n].update_source` is `propagated`, the variant would receive the base plan diff. Show its ID/name, customer impact, item/price changes, and conflicts, then ask whether to include it in `update_variant_ids`.
+- Default to selecting conflict-free propagated variants only. Ask explicitly before propagating into variants with conflicts.
+- If `plan.variants[n].update_source` is `direct`, treat it like updating that variant plan itself. It can have its own `create_version` / `update_current` choice and its own migration draft question when it has customers.
+- Variants cannot use `update_all_versions` in atmn headless mode.
+
+### Migration
+
+If updating in place or all versions and the user wants affected customers moved, include `migration: { "draft": true }`. Add `include_custom: true` only when the user explicitly wants custom plan versions included.
+
+Migration drafts do not move customers by themselves. The returned migration must be reviewed/run separately.
+
+## Dashboard plan edit flow
+
+Mirror the dashboard's `PlanChangeDialog` when asking a human:
+
+1. Review the backend preview: price, item, trial, billing control, and settings changes.
+2. Choose strategy: create a new version, update the current version, or update all versions.
+3. Choose variant propagation when variants exist; default to conflict-free variants only.
+4. Review migration targets. If customers should move, create a migration draft and send the user to run/review it.
+5. Apply the write with the exact previewed params, following the global write approval rules.
+
+Metadata-only edits apply across all versions and variants. A past version cannot create a new version from the dashboard flow; update that version or all versions instead.
+
+## API param mapping
+
+```json
+{
+  "plan_id": "pro",
+  "price": { "amount": 29, "interval": "month" },
+  "items": [],
+  "disable_version": true,
+  "update_variant_ids": ["pro_annual"],
+  "migration": { "draft": true }
+}
+```
+
+- New version: remove `disable_version`, `all_versions`, and `migration` unless explicitly needed.
+- Update current version: set `disable_version: true`.
+- Update all versions: set `all_versions: true`; remove `disable_version`.
+- Propagate to variants: set `update_variant_ids` to the selected variant plan IDs.
+- Directly update variants: include `variants[]` under the base plan.
+- Migration draft: set `migration: { "draft": true }` on the plan, or use top-level catalog `migration` only when every relevant plan should share it.
+- Skip a plan or variant: add its ID to `skip_plan_ids`.
+
+Direct variant migration drafts cannot be mixed with incompatible direct variant updates; follow the preview/tool error and split the work if needed.
+
+## catalog.update ordering
+
+`catalog.update` applies features first, then plans, then missing plan removals, then missing feature removals. With `skip_deletions: false`, missing plans/features are removed; customer-bearing plans are archived instead of deleted.
+
+`catalog.preview_update` previews feature writes first and then plan writes, so plan previews can reference features created in the same catalog update. `catalog.update` follows the same ordering.
+
+# atmn catalog flows
+
+Use `atmn` when a project has or should have an `autumn.config.ts` source of truth.
+
+## When to use it
+
+- New project: ask whether to use `atmn` to build and push the catalog. Recommend it for code-managed catalogs.
+- Existing project: if `autumn.config.ts` exists, inspect and edit it before pushing.
+- Use MCP/API directly when the user wants dashboard/API-first changes or there is no local config workflow.
+
+## Config shapes
+
+`autumn.config.ts` uses the atmn package types, not raw API JSON. Field names are camelCase: `featureId`, `billingMethod`, `billingUnits`, `freeTrial`, `addItems`, `removeItems`, `intervalCount`. Follow the exported types from the package when editing config.
+
+Core builders:
+
+```ts
+const messages = feature({
+  id: "messages",
+  name: "Messages",
+  type: "metered",
+  consumable: true,
+});
+
+const messagesItem = item({
+  featureId: messages.id,
+  included: 10000,
+  reset: { interval: "month" },
+});
+
+export const pro = plan({
+  id: "pro",
+  name: "Pro",
+  price: { amount: 20, interval: "month" },
+  items: [messagesItem],
+});
+
+export const proAnnual = pro.variant({
+  id: "pro_annual",
+  name: "Pro Annual",
+  customize: {
+    price: { amount: 200, interval: "year" },
+  },
+});
+```
+
+Usage-priced item:
+
+```ts
+item({
+  featureId: messages.id,
+  included: 10000,
+  price: {
+    amount: 0.9,
+    billingMethod: "usage_based",
+    billingUnits: 1000,
+    interval: "month",
+  },
+});
+```
+
+## Headless update loop
+
+1. Inspect or create `autumn.config.ts`.
+2. Edit the config to represent the desired catalog.
+3. Run `atmn --headless push` to preview changes and required decisions.
+4. For each affected plan family, show the user the versioning choice, variant propagation choices/conflicts, and migration draft choice.
+5. Rerun `atmn --headless push --yes` with explicit decision flags.
+6. Report created/updated/deleted/archived features and plans.
+
+If the user changes the catalog shape or any decision, edit `autumn.config.ts` or the flags and preview again before pushing.
+
+## Decision flags
+
+```sh
+atmn --headless push --yes --plan-intents '{"pro":"create_version"}'
+atmn --headless push --yes --plan-intents '{"pro":"update_current"}'
+atmn --headless push --yes --plan-intents '{"pro":"update_all_versions"}'
+atmn --headless push --yes --plan-intents '{"pro":"update_current_and_migrate"}'
+atmn --headless push --yes --plan-intents '{"pro":"update_all_versions_and_migrate"}'
+atmn --headless push --yes --migration-drafts '{"pro":true}'
+atmn --headless push --yes --variant-propagations '{"pro":["pro_annual"]}'
+atmn --headless push --yes --variant-propagations '{"pro":[]}'
+```
+
+`create_version` grandfathers existing customers. `update_current` edits the current version in place. `update_all_versions` applies the diff to historical versions too. The `*_and_migrate` shortcuts also choose a migration draft for current customers.
+
+Use keys like `pro@v1` when the prompt targets a historical version. For variants, `update_all_versions` is not valid; choose `create_version` or `update_current`.
+
+## What to show the user
+
+- Required plan intents and whether live defaults favor creating a new version.
+- Required variant propagation choices and conflicts.
+- Required migration choices; drafts do not move customers until run.
+- Feature/plan deletions that will archive instead because dependencies or customers exist.
+
+### Plan
+
+- Plan is the attachable package: Free, Pro, Enterprise, Credit Pack, Add-on, etc.
+- A plan answers two questions: what should this customer get, and how should Autumn treat it when attached?
+- Most "what they get" detail lives in `items[]`; most lifecycle behavior lives on plan-level fields.
+
+</intro>
+
+<relationships>
+
+- `Plan -> Plan Item`: a plan has many items; items define feature grants, limits, prepaid packages, and overage prices.
+- `Subscription -> Plan`: recurring or free plan attached to a customer or entity.
+- `Purchase -> Plan`: one-off plan attached to a customer or entity.
+- `Customer/Entity + Plan --billing.attach--> Subscription/Purchase`: attach turns plan configuration into customer state.
+
+</relationships>
+
+<composition>
+
+- Use `price` for the plan-level/base charge, such as $20/month for Pro or a one-off flat fee.
+- Use `items[]` as the packaging of the plan: feature grants, seats, overages, prepaid packs, boolean access, and add-on contents.
+- Common pattern: `Plan.price` is the platform/package fee; `Plan.items[]` define the packaged value and any feature-level billing.
+- `price: null` does not always mean free; the plan can still be paid if its items contain usage-based or prepaid prices.
+- If the pricing question is "what does this feature grant or bill?", answer it in Plan Item, not Plan.
+
+</composition>
+
+<plan-types>
+
+- Recurring plan: has at least one recurring paid price or recurring lifecycle; attach creates a subscription.
+- Free plan: has no paid prices; attach creates a free subscription.
+- One-off plan: has at least one paid price and all paid prices are one-off; attach creates a purchase.
+- One-off examples: $10 flat purchase, or $10 for 100 prepaid credits.
+- If any price is monthly or yearly, e.g. $10/month, it is not a one-off plan.
+
+</plan-types>
+
+<default-behavior>
+
+- `auto_enable` automatically attaches the plan when a subject is created.
+- Use it for free/default access, not normal paid plans.
+- Common examples: free tier, limited-time trial access plan, entity default tier.
+- If multiple defaults exist across groups, Autumn can assign one default per group.
+- Never use `auto_enable: true` for paid plans; `Plan.price` must be null and plan items should not contain paid prepaid or usage-based prices.
+
+</default-behavior>
+
+<variants>
+
+- Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
+- `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
+- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
+- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- Common variant uses: billing intervals, A/B price packages, and volume ladders.
+
+Annual interval variant:
+
+```json
+{
+  "variant_plan_id": "pro_annual",
+  "name": "Pro Annual",
+  "customize": {
+    "price": { "amount": 200, "interval": "year" }
+  }
+}
+```
+
+A/B testing variant:
+
+```json
+{
+  "variant_plan_id": "pro_b",
+  "name": "Pro B",
+  "customize": {
+    "price": { "amount": 29, "interval": "month" },
+    "add_items": [{ "feature_id": "analytics" }]
+  }
+}
+```
+
+Metered volume variant:
+
+```json
+{
+  "variant_plan_id": "pro_100k",
+  "name": "Pro 100k",
+  "customize": {
+    "price": { "amount": 35, "interval": "month" },
+    "remove_items": [
+      { "feature_id": "emails", "billing_method": "usage_based" }
+    ],
+    "add_items": [
+      {
+        "feature_id": "emails",
+        "included": 100000,
+        "price": {
+          "amount": 0.9,
+          "billing_units": 1000,
+          "billing_method": "usage_based",
+          "interval": "month"
+        }
+      }
+    ]
+  }
+}
+```
+
+</variants>
+
+<trial-behavior>
+
+- This covers how to MODEL trials in the catalog. For how to put a customer on a trial at attach time (card-required, no-card, revert), see the Trials concept.
+- For card-required trials, put `free_trial` on the real paid plan.
+- For no-card trials, prefer a separate limited-time trial plan, e.g. `pro_trial`, plus the real paid `pro` — it gives temporary access, expires automatically, and lets the user later enter the normal checkout flow for `pro`.
+
+</trial-behavior>
+
+<replacement-behavior>
+
+- By default, attaching a plan replaces the customer's current plan in the same group.
+- Use `group` when customers can have one active plan from each independent product line.
+- Example: one `support` plan and one `sales` plan can coexist, but two `support` plans should transition.
+- Groups are not needed for simple pricing with one main subscription line.
+
+</replacement-behavior>
+
+<add-on-behavior>
+
+- `add_on` makes the plan additive instead of a replacement.
+- Use add-ons for top-up packs, feature packs, extra concurrency, extra storage, or recurring bolt-ons.
+- Add-ons can be attached alongside other add-ons; repeated attachment can be useful for top-ups or stacked purchases.
+- Add-ons do not participate in normal upgrade/downgrade transitions.
+
+</add-on-behavior>
+
+<useful-docs>
+
+- Concepts overview: https://docs.useautumn.com/documentation/concepts/overview
+- Plans concept: https://docs.useautumn.com/documentation/concepts/plans
+- Free plans: https://docs.useautumn.com/documentation/modelling-pricing/free-plans
+- Recurring plans: https://docs.useautumn.com/documentation/modelling-pricing/recurring
+- Trials: https://docs.useautumn.com/documentation/modelling-pricing/trials
+- Add-ons: https://docs.useautumn.com/documentation/modelling-pricing/add-ons
+
+</useful-docs>
 
 ## Pricing patterns
 

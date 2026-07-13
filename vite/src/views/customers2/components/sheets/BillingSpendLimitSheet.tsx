@@ -18,6 +18,12 @@ import {
 } from "@autumn/ui";
 import { type ChangeEvent, useState } from "react";
 import { toast } from "sonner";
+import {
+	OVERAGE_BILLING_OPTIONS,
+	type OverageBillingOption,
+	optionToSkipOverageBilling,
+	skipOverageBillingToOption,
+} from "@/components/billing-controls/overageBillingOptions";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
@@ -66,6 +72,9 @@ export function BillingSpendLimitSheet() {
 	);
 	const [limitType, setLimitType] = useState<SpendLimitType>(
 		existingItem?.limit_type ?? "absolute",
+	);
+	const [overageBilling, setOverageBilling] = useState<OverageBillingOption>(
+		skipOverageBillingToOption(existingItem?.skip_overage_billing),
 	);
 
 	const isUsagePercentage = limitType === "usage_percentage";
@@ -132,6 +141,7 @@ export function BillingSpendLimitSheet() {
 			enabled,
 			overage_limit: parsedOverageLimit,
 			limit_type: limitType,
+			skip_overage_billing: optionToSkipOverageBilling(overageBilling),
 		} satisfies DbSpendLimit;
 
 		const currentSpendLimits = getCurrentSpendLimits();
@@ -249,6 +259,31 @@ export function BillingSpendLimitSheet() {
 									setOverageLimit(e.target.value)
 								}
 							/>
+						</div>
+
+						<div>
+							<FormLabel>Overage billing</FormLabel>
+							<Select
+								value={overageBilling}
+								onValueChange={(value: string) =>
+									setOverageBilling(value as OverageBillingOption)
+								}
+								items={OVERAGE_BILLING_OPTIONS}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									{OVERAGE_BILLING_OPTIONS.map((option) => (
+										<SelectItem key={option.value} value={option.value}>
+											{option.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+							<div className="mt-1 text-xs text-tertiary-foreground">
+								Skipped usage still resets each cycle but is never invoiced.
+							</div>
 						</div>
 					</div>
 				</SheetSection>

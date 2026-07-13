@@ -8,6 +8,10 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	IconButton,
 	Input,
 	Select,
@@ -43,17 +47,16 @@ import {
 	useQueryState,
 	useQueryStates,
 } from "nuqs";
-import { useCallback, useDeferredValue, useMemo, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useDeferredValue,
+	useMemo,
+	useState,
+} from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
-import { Table } from "@/components/general/table";
-import { useCursorPagination } from "@/components/general/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
+import { Table, useCursorPagination } from "@/components/general/table";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,
@@ -73,6 +76,7 @@ import {
 } from "@/utils/constants/customerListPagination";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
@@ -106,13 +110,20 @@ type AdminRunControls = {
 
 const MIN_CONCURRENCY = 1;
 const MAX_CONCURRENCY = 5;
+const ADMIN_MAX_CONCURRENCY = 100;
 
-function parseConcurrency(value: string): number | undefined {
+function parseConcurrency({
+	value,
+	maxConcurrency,
+}: {
+	value: string;
+	maxConcurrency: number;
+}): number | undefined {
 	const trimmed = value.trim();
 	if (trimmed === "") return undefined;
 	const parsed = Number(trimmed);
 	if (!Number.isInteger(parsed)) return undefined;
-	if (parsed < MIN_CONCURRENCY || parsed > MAX_CONCURRENCY) return undefined;
+	if (parsed < MIN_CONCURRENCY || parsed > maxConcurrency) return undefined;
 	return parsed;
 }
 
@@ -214,6 +225,7 @@ export function MigrationLiveView({
 	noBillingChanges,
 	step,
 	onStepChange,
+	headerActions,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
@@ -221,6 +233,7 @@ export function MigrationLiveView({
 	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
+	headerActions?: ReactNode;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const env = useEnv();
@@ -295,14 +308,21 @@ export function MigrationLiveView({
 	});
 	const { cancelRun, isCanceling } = useMigrationsQuery();
 
+	const { isAdmin } = useAdmin();
+	const maxConcurrency = isAdmin ? ADMIN_MAX_CONCURRENCY : MAX_CONCURRENCY;
+
 	const resolvedRunControls = {
 		lazyRun: runControls.lazyRun,
 		retryItemStatuses: buildRetryItemStatuses(runControls),
-		concurrency: parseConcurrency(runControls.concurrency),
+		concurrency: parseConcurrency({
+			value: runControls.concurrency,
+			maxConcurrency,
+		}),
 	};
 	const invalidConcurrency =
 		runControls.concurrency.trim() !== "" &&
-		parseConcurrency(runControls.concurrency) === undefined;
+		parseConcurrency({ value: runControls.concurrency, maxConcurrency }) ===
+			undefined;
 
 	const handleSearchChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -477,6 +497,7 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
+				{headerActions}
 				{activeRun && (
 					<Button
 						variant="secondary"
@@ -601,6 +622,7 @@ export function MigrationLiveView({
 							value={runControls}
 							onChange={setRunControls}
 							invalidConcurrency={invalidConcurrency}
+							maxConcurrency={maxConcurrency}
 							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 						/>
@@ -711,6 +733,7 @@ export function MigrationLiveView({
 								value={runControls}
 								onChange={setRunControls}
 								invalidConcurrency={invalidConcurrency}
+								maxConcurrency={maxConcurrency}
 								lazyDisabled={sample.mode === "select"}
 								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
@@ -924,6 +947,7 @@ function MigrationRunControls({
 	value,
 	onChange,
 	invalidConcurrency = false,
+	maxConcurrency = MAX_CONCURRENCY,
 	lazyDisabled = false,
 	hasFailedItems = false,
 	hasSkippedItems = false,
@@ -931,6 +955,7 @@ function MigrationRunControls({
 	value: AdminRunControls;
 	onChange: (value: AdminRunControls) => void;
 	invalidConcurrency?: boolean;
+	maxConcurrency?: number;
 	lazyDisabled?: boolean;
 	hasFailedItems?: boolean;
 	hasSkippedItems?: boolean;
@@ -964,13 +989,13 @@ function MigrationRunControls({
 						Concurrency
 					</span>
 					<span className="text-xs text-tertiary-foreground">
-						Customers processed in parallel. Max {MAX_CONCURRENCY}.
+						Customers processed in parallel. Max {maxConcurrency}.
 					</span>
 				</div>
 				<Input
 					type="number"
 					min={MIN_CONCURRENCY}
-					max={MAX_CONCURRENCY}
+					max={maxConcurrency}
 					value={value.concurrency}
 					onChange={(e) => onChange({ ...value, concurrency: e.target.value })}
 					placeholder="Auto"
@@ -982,7 +1007,7 @@ function MigrationRunControls({
 			</div>
 			{invalidConcurrency && (
 				<span className="text-xs text-red-500">
-					Concurrency must be less than {MAX_CONCURRENCY}.
+					Concurrency must be between {MIN_CONCURRENCY} and {maxConcurrency}.
 				</span>
 			)}
 			{hasFailedItems && (

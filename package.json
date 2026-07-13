@@ -26,6 +26,7 @@
 			"packages/ksuid",
 			"packages/stripe-sync",
 			"packages/gateway",
+			"packages/render",
 			"packages/ui"
 		],
 		"catalog": {
@@ -70,7 +71,10 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.20.0"
+		"@types/pg": "8.20.0",
+		"@typescript/native-preview": "7.0.0-dev.20260511.1",
+		"@tanstack/react-query": "5.101.1",
+		"drizzle-orm": "0.43.1"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -89,7 +93,10 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.20.0"
+		"@types/pg": "8.20.0",
+		"@typescript/native-preview": "7.0.0-dev.20260511.1",
+		"@tanstack/react-query": "5.101.1",
+		"drizzle-orm": "0.43.1"
 	},
 	"type": "module",
 	"scripts": {
@@ -164,6 +171,7 @@
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@useautumn/gateway --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
 		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
+		"atl": "NODE_PATH=packages bun packages/atmn/dist/cli.js",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",

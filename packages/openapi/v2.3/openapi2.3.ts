@@ -14,6 +14,7 @@ import {
 	CreateBalanceParamsV0Schema,
 	CreateCustomerParamsV1Schema,
 	CustomerDataSchema,
+	DfuFlashParamsSchema,
 	CustomerExpandEnum,
 	CustomerIdSchema,
 	GetCustomerParamsV1Schema,
@@ -78,6 +79,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
 	registerInternalSchemas(ApiEventsListV2_3ParamsSchema);
+	registerInternalSchemas(DfuFlashParamsSchema);
 
 	const openApiDocument = (await generator.generate(v2_3ContractRouter, {
 		info: {

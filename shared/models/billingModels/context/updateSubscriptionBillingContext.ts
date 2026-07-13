@@ -63,6 +63,13 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 
 	/** Customer-facing `carry_over_usages` param; resolved into the carry config per reader. */
 	carryOverUsages?: CarryOverUsages;
+
+	/**
+	 * Set by migrations-v2's `update_plan` operation when `op.proration === true`.
+	 * Lets `evaluateMigrateCustomerStripe` skip its no-charge guard for this
+	 * subscription only — every other migration keeps the guard.
+	 */
+	allowCharges?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverrides {

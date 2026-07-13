@@ -229,8 +229,85 @@
     {
       "idx": 32,
       "version": "7",
-      "when": 1782827315856,
-      "tag": "0032_flimsy_yellow_claw",
+      "when": 1782760749233,
+      "tag": "0032_white_stone_men",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1782770925277,
+      "tag": "0033_dusty_crystal",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782836417268,
+      "tag": "0034_ambiguous_wolfsbane",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1782844933101,
+      "tag": "0035_boring_maggott",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782907607380,
+      "tag": "0036_remarkable_spirit",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1782981605443,
+      "tag": "0037_match_slack_auth_mode",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1783090737295,
+      "tag": "0038_exotic_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1783200161669,
+      "tag": "0039_unique_molecule_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1783416274113,
+      "tag": "0040_abnormal_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783529369844,
+      "tag": "0041_sweet_klaw",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1783533774922,
+      "tag": "0042_shocking_sharon_carter",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1783954630481,
+      "tag": "0043_motionless_agent_brand",
       "breakpoints": true
     }
   ]

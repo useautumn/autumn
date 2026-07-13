@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -55,7 +55,7 @@ UpdatePlanPriceIntervalRequestBody = Literal[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
-class UpdatePlanBasePriceTypedDict(TypedDict):
+class UpdatePlanBasePriceRequestTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -66,7 +66,7 @@ class UpdatePlanBasePriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
 
-class UpdatePlanBasePrice(BaseModel):
+class UpdatePlanBasePriceRequest(BaseModel):
     r"""Base price configuration for a plan."""
 
     amount: float
@@ -95,7 +95,7 @@ class UpdatePlanBasePrice(BaseModel):
         return m
 
 
-UpdatePlanResetIntervalRequestBody = Literal[
+UpdatePlanItemResetIntervalRequestBody = Literal[
     "one_off",
     "minute",
     "hour",
@@ -109,19 +109,19 @@ UpdatePlanResetIntervalRequestBody = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class UpdatePlanResetRequestBodyTypedDict(TypedDict):
+class UpdatePlanItemResetRequestBodyTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanResetIntervalRequestBody
+    interval: UpdatePlanItemResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class UpdatePlanResetRequestBody(BaseModel):
+class UpdatePlanItemResetRequestBody(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanResetIntervalRequestBody
+    interval: UpdatePlanItemResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -144,22 +144,24 @@ class UpdatePlanResetRequestBody(BaseModel):
         return m
 
 
-UpdatePlanToRequestBodyTypedDict = TypeAliasType(
-    "UpdatePlanToRequestBodyTypedDict", Union[float, str]
+UpdatePlanItemToRequestBodyTypedDict = TypeAliasType(
+    "UpdatePlanItemToRequestBodyTypedDict", Union[float, str]
 )
 
 
-UpdatePlanToRequestBody = TypeAliasType("UpdatePlanToRequestBody", Union[float, str])
+UpdatePlanItemToRequestBody = TypeAliasType(
+    "UpdatePlanItemToRequestBody", Union[float, str]
+)
 
 
-class UpdatePlanTierRequestBodyTypedDict(TypedDict):
-    to: UpdatePlanToRequestBodyTypedDict
+class UpdatePlanItemTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanItemToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
 
 
-class UpdatePlanTierRequestBody(BaseModel):
-    to: UpdatePlanToRequestBody
+class UpdatePlanItemTierRequestBody(BaseModel):
+    to: UpdatePlanItemToRequestBody
 
     amount: Optional[float] = None
 
@@ -182,7 +184,7 @@ class UpdatePlanTierRequestBody(BaseModel):
         return m
 
 
-UpdatePlanTierBehaviorRequestBody = Literal[
+UpdatePlanItemTierBehaviorRequestBody = Literal[
     "graduated",
     "volume",
 ]
@@ -199,25 +201,25 @@ UpdatePlanItemPriceIntervalRequestBody = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanBillingMethodRequestBody = Literal[
+UpdatePlanItemBillingMethodRequestBody = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class UpdatePlanPriceRequestBodyTypedDict(TypedDict):
+class UpdatePlanItemPriceRequestBodyTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanBillingMethodRequestBody
+    billing_method: UpdatePlanItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    tiers: NotRequired[List[UpdatePlanTierRequestBodyTypedDict]]
+    tiers: NotRequired[List[UpdatePlanItemTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[UpdatePlanTierBehaviorRequestBody]
+    tier_behavior: NotRequired[UpdatePlanItemTierBehaviorRequestBody]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -226,22 +228,22 @@ class UpdatePlanPriceRequestBodyTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class UpdatePlanPriceRequestBody(BaseModel):
+class UpdatePlanItemPriceRequestBody(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanBillingMethodRequestBody
+    billing_method: UpdatePlanItemBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    tiers: Optional[List[UpdatePlanTierRequestBody]] = None
+    tiers: Optional[List[UpdatePlanItemTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[UpdatePlanTierBehaviorRequestBody] = None
+    tier_behavior: Optional[UpdatePlanItemTierBehaviorRequestBody] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -287,7 +289,7 @@ class UpdatePlanPriceRequestBody(BaseModel):
         return m
 
 
-UpdatePlanOnIncrease = Literal[
+UpdatePlanItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -296,7 +298,7 @@ UpdatePlanOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-UpdatePlanOnDecrease = Literal[
+UpdatePlanItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -306,36 +308,36 @@ UpdatePlanOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanProrationTypedDict(TypedDict):
+class UpdatePlanItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanOnIncrease
+    on_increase: UpdatePlanItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: UpdatePlanOnDecrease
+    on_decrease: UpdatePlanItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class UpdatePlanProration(BaseModel):
+class UpdatePlanItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: UpdatePlanOnIncrease
+    on_increase: UpdatePlanItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: UpdatePlanOnDecrease
+    on_decrease: UpdatePlanItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-UpdatePlanExpiryDurationTypeRequestBody = Literal[
+UpdatePlanItemExpiryDurationTypeRequestBody = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class UpdatePlanRolloverRequestBodyTypedDict(TypedDict):
+class UpdatePlanItemRolloverRequestBodyTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanExpiryDurationTypeRequestBody
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -345,10 +347,10 @@ class UpdatePlanRolloverRequestBodyTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class UpdatePlanRolloverRequestBody(BaseModel):
+class UpdatePlanItemRolloverRequestBody(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanExpiryDurationTypeRequestBody
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -377,7 +379,7 @@ class UpdatePlanRolloverRequestBody(BaseModel):
         return m
 
 
-class UpdatePlanPlanItemTypedDict(TypedDict):
+class UpdatePlanItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -386,17 +388,17 @@ class UpdatePlanPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
-    reset: NotRequired[UpdatePlanResetRequestBodyTypedDict]
+    reset: NotRequired[UpdatePlanItemResetRequestBodyTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[UpdatePlanPriceRequestBodyTypedDict]
+    price: NotRequired[UpdatePlanItemPriceRequestBodyTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[UpdatePlanProrationTypedDict]
+    proration: NotRequired[UpdatePlanItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[UpdatePlanRolloverRequestBodyTypedDict]
+    rollover: NotRequired[UpdatePlanItemRolloverRequestBodyTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class UpdatePlanPlanItem(BaseModel):
+class UpdatePlanItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -408,16 +410,16 @@ class UpdatePlanPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
-    reset: Optional[UpdatePlanResetRequestBody] = None
+    reset: Optional[UpdatePlanItemResetRequestBody] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[UpdatePlanPriceRequestBody] = None
+    price: Optional[UpdatePlanItemPriceRequestBody] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[UpdatePlanProration] = None
+    proration: Optional[UpdatePlanItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[UpdatePlanRolloverRequestBody] = None
+    rollover: Optional[UpdatePlanItemRolloverRequestBody] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -454,7 +456,7 @@ UpdatePlanOnEndRequest = Literal[
 r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class UpdatePlanFreeTrialParamsTypedDict(TypedDict):
+class UpdatePlanFreeTrialParamsRequestTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
@@ -467,7 +469,7 @@ class UpdatePlanFreeTrialParamsTypedDict(TypedDict):
     r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
-class UpdatePlanFreeTrialParams(BaseModel):
+class UpdatePlanFreeTrialParamsRequest(BaseModel):
     r"""Free trial configuration for a plan."""
 
     duration_length: float
@@ -529,11 +531,1486 @@ class UpdatePlanConfigRequest(BaseModel):
         return m
 
 
+UpdatePlanPurchaseLimitIntervalRequestBody = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class UpdatePlanPurchaseLimitRequestTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanPurchaseLimitIntervalRequestBody
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class UpdatePlanPurchaseLimitRequest(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanPurchaseLimitIntervalRequestBody
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanAutoTopupRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[UpdatePlanPurchaseLimitRequestTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class UpdatePlanAutoTopupRequest(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[UpdatePlanPurchaseLimitRequest] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLimitTypeRequestBody = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class UpdatePlanSpendLimitRequestTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UpdatePlanLimitTypeRequestBody]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class UpdatePlanSpendLimitRequest(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[UpdatePlanLimitTypeRequestBody] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanUsageLimitIntervalRequestBody = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+UpdatePlanPropertiesTypedDict = TypeAliasType(
+    "UpdatePlanPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+UpdatePlanProperties = TypeAliasType("UpdatePlanProperties", Union[str, float, bool])
+
+
+class UpdatePlanFilterRequestTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdatePlanPropertiesTypedDict]
+
+
+class UpdatePlanFilterRequest(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, UpdatePlanProperties]
+
+
+class UpdatePlanUsageLimitRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UpdatePlanUsageLimitIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanFilterRequestTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class UpdatePlanUsageLimitRequest(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UpdatePlanUsageLimitIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UpdatePlanFilterRequest], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanThresholdTypeRequestBody = Literal[
+    "usage",
+    "usage_percentage",
+    "remaining",
+    "remaining_percentage",
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UpdatePlanUsageAlertRequestBodyTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UpdatePlanThresholdTypeRequestBody
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UpdatePlanUsageAlertRequestBody(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UpdatePlanThresholdTypeRequestBody
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanOverageAllowedRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdatePlanOverageAllowedRequest(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanBillingControlsRequestTypedDict(TypedDict):
+    r"""Plan-level billing controls used as customer defaults."""
+
+    auto_topups: NotRequired[List[UpdatePlanAutoTopupRequestTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UpdatePlanSpendLimitRequestTypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UpdatePlanUsageLimitRequestTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[UpdatePlanUsageAlertRequestBodyTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdatePlanOverageAllowedRequestTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class UpdatePlanBillingControlsRequest(BaseModel):
+    r"""Plan-level billing controls used as customer defaults."""
+
+    auto_topups: Optional[List[UpdatePlanAutoTopupRequest]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[UpdatePlanSpendLimitRequest]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UpdatePlanUsageLimitRequest]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[UpdatePlanUsageAlertRequestBody]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UpdatePlanOverageAllowedRequest]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class MigrationTypedDict(TypedDict):
+    draft: NotRequired[bool]
+    include_custom: NotRequired[bool]
+
+
+class Migration(BaseModel):
+    draft: Optional[bool] = False
+
+    include_custom: Optional[bool] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["draft", "include_custom"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PriceVariantInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class VariantBasePriceTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+    interval: PriceVariantInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+
+class VariantBasePrice(BaseModel):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+
+    interval: PriceVariantInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class VariantResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: VariantResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class VariantReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: VariantResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantToTypedDict = TypeAliasType("VariantToTypedDict", Union[float, str])
+
+
+VariantTo = TypeAliasType("VariantTo", Union[float, str])
+
+
+class VariantTierTypedDict(TypedDict):
+    to: VariantToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+
+
+class VariantTier(BaseModel):
+    to: VariantTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+VariantAddItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+VariantAddItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class VariantPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: VariantAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: VariantAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[VariantTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[VariantTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+
+class VariantPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: VariantAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: VariantAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[VariantTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[VariantTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        nullable_fields = set(["max_purchase"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+VariantOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+VariantOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class VariantProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: VariantOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: VariantOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class VariantProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: VariantOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: VariantOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+VariantExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class VariantRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: VariantExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class VariantRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: VariantExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    reset: NotRequired[VariantResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[VariantPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[VariantProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[VariantRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class VariantPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    reset: Optional[VariantReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[VariantPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[VariantProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[VariantRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantRemoveItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+IntervalVariantRemoveItemEnum2 = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+IntervalVariantRemoveItemEnum1 = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+VariantIntervalUnionTypedDict = TypeAliasType(
+    "VariantIntervalUnionTypedDict",
+    Union[IntervalVariantRemoveItemEnum1, IntervalVariantRemoveItemEnum2],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+VariantIntervalUnion = TypeAliasType(
+    "VariantIntervalUnion",
+    Union[IntervalVariantRemoveItemEnum1, IntervalVariantRemoveItemEnum2],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+class VariantPlanItemFilterTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[VariantRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[VariantIntervalUnionTypedDict]
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+    interval_count: NotRequired[int]
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+
+class VariantPlanItemFilter(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[VariantRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[VariantIntervalUnion] = None
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+    interval_count: Optional[int] = None
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["feature_id", "billing_method", "interval", "interval_count"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantDurationType = Literal[
+    "day",
+    "month",
+    "year",
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+
+VariantOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class VariantFreeTrialParamsTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[VariantDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[VariantOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class VariantFreeTrialParams(BaseModel):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+
+    duration_type: Optional[VariantDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+
+    on_end: Optional[VariantOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["duration_type", "card_required", "on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantPurchaseLimitInterval = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class VariantPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: VariantPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class VariantPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: VariantPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[VariantPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class VariantAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[VariantPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantLimitType = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class VariantSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[VariantLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class VariantSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[VariantLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantUsageLimitInterval = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+VariantPropertiesTypedDict = TypeAliasType(
+    "VariantPropertiesTypedDict", Union[str, float, bool]
+)
+
+
+VariantProperties = TypeAliasType("VariantProperties", Union[str, float, bool])
+
+
+class VariantFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, VariantPropertiesTypedDict]
+
+
+class VariantFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, VariantProperties]
+
+
+class VariantUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: VariantUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[VariantFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class VariantUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: VariantUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[Optional[VariantFilter], pydantic.Field(alias="filter")] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+VariantThresholdType = Literal[
+    "usage",
+    "usage_percentage",
+    "remaining",
+    "remaining_percentage",
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class VariantUsageAlertTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: VariantThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class VariantUsageAlert(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: VariantThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantOverageAllowedTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class VariantOverageAllowed(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantBillingControlsTypedDict(TypedDict):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: NotRequired[List[VariantAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[VariantSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[VariantUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[VariantUsageAlertTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[VariantOverageAllowedTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class VariantBillingControls(BaseModel):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: Optional[List[VariantAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[VariantSpendLimit]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[VariantUsageLimit]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[VariantUsageAlert]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[VariantOverageAllowed]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantCustomizeTypedDict(TypedDict):
+    r"""The exact customize patch to apply to this variant."""
+
+    price: NotRequired[Nullable[VariantBasePriceTypedDict]]
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+    add_items: NotRequired[List[VariantPlanItemTypedDict]]
+    r"""Items to add to the plan."""
+    remove_items: NotRequired[List[VariantPlanItemFilterTypedDict]]
+    r"""Filters selecting items to remove from the plan."""
+    free_trial: NotRequired[Nullable[VariantFreeTrialParamsTypedDict]]
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+    billing_controls: NotRequired[VariantBillingControlsTypedDict]
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+
+class VariantCustomize(BaseModel):
+    r"""The exact customize patch to apply to this variant."""
+
+    price: OptionalNullable[VariantBasePrice] = UNSET
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+
+    add_items: Optional[List[VariantPlanItem]] = None
+    r"""Items to add to the plan."""
+
+    remove_items: Optional[List[VariantPlanItemFilter]] = None
+    r"""Filters selecting items to remove from the plan."""
+
+    free_trial: OptionalNullable[VariantFreeTrialParams] = UNSET
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+    billing_controls: Optional[VariantBillingControls] = None
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["price", "add_items", "remove_items", "free_trial", "billing_controls"]
+        )
+        nullable_fields = set(["price", "free_trial"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class VariantMigrationTypedDict(TypedDict):
+    r"""Migration draft options for an in-place direct variant update."""
+
+    draft: NotRequired[bool]
+    include_custom: NotRequired[bool]
+
+
+class VariantMigration(BaseModel):
+    r"""Migration draft options for an in-place direct variant update."""
+
+    draft: Optional[bool] = False
+
+    include_custom: Optional[bool] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["draft", "include_custom"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class VariantTypedDict(TypedDict):
+    variant_plan_id: str
+    r"""The variant plan ID to update or create."""
+    customize: VariantCustomizeTypedDict
+    r"""The exact customize patch to apply to this variant."""
+    name: NotRequired[str]
+    r"""Display name to use when creating the variant if it does not exist."""
+    disable_version: NotRequired[bool]
+    r"""Edit this variant in place instead of versioning it for this update."""
+    force_version: NotRequired[bool]
+    r"""Force this variant update to create a new version."""
+    migration: NotRequired[VariantMigrationTypedDict]
+    r"""Migration draft options for an in-place direct variant update."""
+
+
+class Variant(BaseModel):
+    variant_plan_id: str
+    r"""The variant plan ID to update or create."""
+
+    customize: VariantCustomize
+    r"""The exact customize patch to apply to this variant."""
+
+    name: Optional[str] = None
+    r"""Display name to use when creating the variant if it does not exist."""
+
+    disable_version: Optional[bool] = None
+    r"""Edit this variant in place instead of versioning it for this update."""
+
+    force_version: Optional[bool] = None
+    r"""Force this variant update to create a new version."""
+
+    migration: Optional[VariantMigration] = None
+    r"""Migration draft options for an in-place direct variant update."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["name", "disable_version", "force_version", "migration"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanParamsTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to update."""
     group: NotRequired[str]
-    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
     name: NotRequired[str]
     r"""Display name of the plan."""
     description: NotRequired[str]
@@ -541,28 +2018,44 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Whether the plan is an add-on."""
     auto_enable: NotRequired[bool]
     r"""Whether the plan is automatically enabled."""
-    price: NotRequired[Nullable[UpdatePlanBasePriceTypedDict]]
+    price: NotRequired[Nullable[UpdatePlanBasePriceRequestTypedDict]]
     r"""The price of the plan. Set to null to remove the base price."""
-    items: NotRequired[List[UpdatePlanPlanItemTypedDict]]
+    items: NotRequired[List[UpdatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
-    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsTypedDict]]
+    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
     config: NotRequired[UpdatePlanConfigRequestTypedDict]
     r"""Miscellaneous plan-level configuration flags."""
+    billing_controls: NotRequired[UpdatePlanBillingControlsRequestTypedDict]
+    r"""Plan-level billing controls used as customer defaults."""
+    metadata: NotRequired[Dict[str, Any]]
+    r"""Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan."""
     create_in_stripe: NotRequired[bool]
     version: NotRequired[float]
     archived: NotRequired[bool]
+    base_plan_id: NotRequired[Nullable[str]]
+    r"""The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan."""
     new_plan_id: NotRequired[str]
     r"""The new ID to use for the plan. Can only be updated if the plan has not been used by any customers."""
     disable_version: NotRequired[bool]
+    all_versions: NotRequired[bool]
+    r"""Apply the update diff to all versions of this plan. Mutually exclusive with disable_version."""
+    migration: NotRequired[MigrationTypedDict]
+    force_version: NotRequired[bool]
+    r"""Force versioning even when no customers exist. Mutually exclusive with disable_version."""
+    update_variant_ids: NotRequired[List[str]]
+    r"""Variant plan IDs to apply this update to. Empty or omitted means no propagation."""
+    variants: NotRequired[List[VariantTypedDict]]
+    r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
+    is_default: NotRequired[bool]
+    r"""Whether this is the org's default plan. Cannot be true on a variant."""
 
 
 class UpdatePlanParams(BaseModel):
     plan_id: str
     r"""The ID of the plan to update."""
 
-    group: Optional[str] = ""
-    r"""Group identifier for organizing related plans. Plans in the same group are mutually exclusive."""
+    group: Optional[str] = None
 
     name: Optional[str] = None
     r"""Display name of the plan."""
@@ -575,17 +2068,23 @@ class UpdatePlanParams(BaseModel):
     auto_enable: Optional[bool] = None
     r"""Whether the plan is automatically enabled."""
 
-    price: OptionalNullable[UpdatePlanBasePrice] = UNSET
+    price: OptionalNullable[UpdatePlanBasePriceRequest] = UNSET
     r"""The price of the plan. Set to null to remove the base price."""
 
-    items: Optional[List[UpdatePlanPlanItem]] = None
+    items: Optional[List[UpdatePlanItemPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
 
-    free_trial: OptionalNullable[UpdatePlanFreeTrialParams] = UNSET
+    free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequest] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
 
     config: Optional[UpdatePlanConfigRequest] = None
     r"""Miscellaneous plan-level configuration flags."""
+
+    billing_controls: Optional[UpdatePlanBillingControlsRequest] = None
+    r"""Plan-level billing controls used as customer defaults."""
+
+    metadata: Optional[Dict[str, Any]] = None
+    r"""Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan."""
 
     create_in_stripe: Optional[bool] = True
 
@@ -593,10 +2092,30 @@ class UpdatePlanParams(BaseModel):
 
     archived: Optional[bool] = False
 
+    base_plan_id: OptionalNullable[str] = UNSET
+    r"""The base plan this plan should be linked to as a variant. Set to null to detach it from its base plan."""
+
     new_plan_id: Optional[str] = None
     r"""The new ID to use for the plan. Can only be updated if the plan has not been used by any customers."""
 
     disable_version: Optional[bool] = None
+
+    all_versions: Optional[bool] = None
+    r"""Apply the update diff to all versions of this plan. Mutually exclusive with disable_version."""
+
+    migration: Optional[Migration] = None
+
+    force_version: Optional[bool] = None
+    r"""Force versioning even when no customers exist. Mutually exclusive with disable_version."""
+
+    update_variant_ids: Optional[List[str]] = None
+    r"""Variant plan IDs to apply this update to. Empty or omitted means no propagation."""
+
+    variants: Optional[List[Variant]] = None
+    r"""Additive variant updates for this base plan. Missing variants are created when name is provided."""
+
+    is_default: Optional[bool] = None
+    r"""Whether this is the org's default plan. Cannot be true on a variant."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -611,14 +2130,23 @@ class UpdatePlanParams(BaseModel):
                 "items",
                 "free_trial",
                 "config",
+                "billing_controls",
+                "metadata",
                 "create_in_stripe",
                 "version",
                 "archived",
+                "base_plan_id",
                 "new_plan_id",
                 "disable_version",
+                "all_versions",
+                "migration",
+                "force_version",
+                "update_variant_ids",
+                "variants",
+                "is_default",
             ]
         )
-        nullable_fields = set(["price", "free_trial"])
+        nullable_fields = set(["price", "free_trial", "base_plan_id"])
         serialized = handler(self)
         m = {}
 
@@ -839,7 +2367,7 @@ class UpdatePlanFeature(BaseModel):
         return m
 
 
-UpdatePlanResetIntervalResponse = Union[
+UpdatePlanResetItemIntervalResponse = Union[
     Literal[
         "one_off",
         "minute",
@@ -856,15 +2384,15 @@ UpdatePlanResetIntervalResponse = Union[
 r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
 
 
-class UpdatePlanResetResponseTypedDict(TypedDict):
-    interval: UpdatePlanResetIntervalResponse
+class UpdatePlanItemResetResponseTypedDict(TypedDict):
+    interval: UpdatePlanResetItemIntervalResponse
     r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class UpdatePlanResetResponse(BaseModel):
-    interval: UpdatePlanResetIntervalResponse
+class UpdatePlanItemResetResponse(BaseModel):
+    interval: UpdatePlanResetItemIntervalResponse
     r"""The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored."""
 
     interval_count: Optional[float] = None
@@ -887,22 +2415,22 @@ class UpdatePlanResetResponse(BaseModel):
         return m
 
 
-UpdatePlanToResponseTypedDict = TypeAliasType(
-    "UpdatePlanToResponseTypedDict", Union[float, str]
+UpdatePlanItemToResponseTypedDict = TypeAliasType(
+    "UpdatePlanItemToResponseTypedDict", Union[float, str]
 )
 
 
-UpdatePlanToResponse = TypeAliasType("UpdatePlanToResponse", Union[float, str])
+UpdatePlanItemToResponse = TypeAliasType("UpdatePlanItemToResponse", Union[float, str])
 
 
-class UpdatePlanTierResponseTypedDict(TypedDict):
-    to: UpdatePlanToResponseTypedDict
+class UpdatePlanItemTierResponseTypedDict(TypedDict):
+    to: UpdatePlanItemToResponseTypedDict
     amount: float
     flat_amount: NotRequired[float]
 
 
-class UpdatePlanTierResponse(BaseModel):
-    to: UpdatePlanToResponse
+class UpdatePlanItemTierResponse(BaseModel):
+    to: UpdatePlanItemToResponse
 
     amount: float
 
@@ -925,7 +2453,7 @@ class UpdatePlanTierResponse(BaseModel):
         return m
 
 
-UpdatePlanTierBehaviorResponse = Union[
+UpdatePlanItemTierBehaviorResponse = Union[
     Literal[
         "graduated",
         "volume",
@@ -948,7 +2476,7 @@ UpdatePlanPriceItemIntervalResponse = Union[
 r"""Billing interval for this price. For consumable features, should match reset.interval."""
 
 
-UpdatePlanBillingMethodResponse = Union[
+UpdatePlanItemBillingMethodResponse = Union[
     Literal[
         "prepaid",
         "usage_based",
@@ -963,15 +2491,15 @@ class UpdatePlanItemPriceResponseTypedDict(TypedDict):
     r"""Billing interval for this price. For consumable features, should match reset.interval."""
     billing_units: float
     r"""Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200)."""
-    billing_method: UpdatePlanBillingMethodResponse
+    billing_method: UpdatePlanItemBillingMethodResponse
     r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
     max_purchase: Nullable[float]
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
-    tiers: NotRequired[List[UpdatePlanTierResponseTypedDict]]
+    tiers: NotRequired[List[UpdatePlanItemTierResponseTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
-    tier_behavior: NotRequired[UpdatePlanTierBehaviorResponse]
+    tier_behavior: NotRequired[UpdatePlanItemTierBehaviorResponse]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
@@ -983,7 +2511,7 @@ class UpdatePlanItemPriceResponse(BaseModel):
     billing_units: float
     r"""Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200)."""
 
-    billing_method: UpdatePlanBillingMethodResponse
+    billing_method: UpdatePlanItemBillingMethodResponse
     r"""'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage."""
 
     max_purchase: Nullable[float]
@@ -992,10 +2520,10 @@ class UpdatePlanItemPriceResponse(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
-    tiers: Optional[List[UpdatePlanTierResponse]] = None
+    tiers: Optional[List[UpdatePlanItemTierResponse]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
-    tier_behavior: Optional[UpdatePlanTierBehaviorResponse] = None
+    tier_behavior: Optional[UpdatePlanItemTierBehaviorResponse] = None
 
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -1061,7 +2589,7 @@ class UpdatePlanItemDisplay(BaseModel):
         return m
 
 
-UpdatePlanExpiryDurationTypeResponse = Union[
+UpdatePlanItemExpiryDurationTypeResponse = Union[
     Literal[
         "month",
         "forever",
@@ -1071,12 +2599,12 @@ UpdatePlanExpiryDurationTypeResponse = Union[
 r"""When rolled over units expire."""
 
 
-class UpdatePlanRolloverResponseTypedDict(TypedDict):
+class UpdatePlanItemRolloverResponseTypedDict(TypedDict):
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
     max: Nullable[float]
     r"""Maximum rollover units. Null for unlimited rollover."""
-    expiry_duration_type: UpdatePlanExpiryDurationTypeResponse
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeResponse
     r"""When rolled over units expire."""
     max_percentage: NotRequired[Nullable[float]]
     r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
@@ -1084,13 +2612,13 @@ class UpdatePlanRolloverResponseTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class UpdatePlanRolloverResponse(BaseModel):
+class UpdatePlanItemRolloverResponse(BaseModel):
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
     max: Nullable[float]
     r"""Maximum rollover units. Null for unlimited rollover."""
 
-    expiry_duration_type: UpdatePlanExpiryDurationTypeResponse
+    expiry_duration_type: UpdatePlanItemExpiryDurationTypeResponse
     r"""When rolled over units expire."""
 
     max_percentage: OptionalNullable[float] = UNSET
@@ -1132,7 +2660,7 @@ class UpdatePlanItemTypedDict(TypedDict):
     r"""Number of free units included. For consumable features, balance resets to this number each interval."""
     unlimited: bool
     r"""Whether the customer has unlimited access to this feature."""
-    reset: Nullable[UpdatePlanResetResponseTypedDict]
+    reset: Nullable[UpdatePlanItemResetResponseTypedDict]
     r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
     price: Nullable[UpdatePlanItemPriceResponseTypedDict]
     r"""Pricing configuration for usage beyond included units. Null if feature is entirely free."""
@@ -1140,7 +2668,7 @@ class UpdatePlanItemTypedDict(TypedDict):
     r"""The full feature object if expanded."""
     display: NotRequired[UpdatePlanItemDisplayTypedDict]
     r"""Display text for showing this item in pricing pages."""
-    rollover: NotRequired[UpdatePlanRolloverResponseTypedDict]
+    rollover: NotRequired[UpdatePlanItemRolloverResponseTypedDict]
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
 
@@ -1154,7 +2682,7 @@ class UpdatePlanItem(BaseModel):
     unlimited: bool
     r"""Whether the customer has unlimited access to this feature."""
 
-    reset: Nullable[UpdatePlanResetResponse]
+    reset: Nullable[UpdatePlanItemResetResponse]
     r"""Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles."""
 
     price: Nullable[UpdatePlanItemPriceResponse]
@@ -1166,7 +2694,7 @@ class UpdatePlanItem(BaseModel):
     display: Optional[UpdatePlanItemDisplay] = None
     r"""Display text for showing this item in pricing pages."""
 
-    rollover: Optional[UpdatePlanRolloverResponse] = None
+    rollover: Optional[UpdatePlanItemRolloverResponse] = None
     r"""Rollover configuration for unused units. If set, unused included units roll over to the next period."""
 
     @model_serializer(mode="wrap")
@@ -1279,6 +2807,1081 @@ UpdatePlanEnv = Union[
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
+UpdatePlanPriceVariantDetailsInterval = Union[
+    Literal[
+        "one_off",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Billing interval (e.g. 'month', 'year')."""
+
+
+class UpdatePlanBasePriceResponseTypedDict(TypedDict):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+    interval: UpdatePlanPriceVariantDetailsInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+
+class UpdatePlanBasePriceResponse(BaseModel):
+    r"""Base price configuration for a plan."""
+
+    amount: float
+    r"""Base price amount for the plan."""
+
+    interval: UpdatePlanPriceVariantDetailsInterval
+    r"""Billing interval (e.g. 'month', 'year')."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsResetInterval = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class UpdatePlanVariantDetailsResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UpdatePlanVariantDetailsResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class UpdatePlanVariantDetailsReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: UpdatePlanVariantDetailsResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsToTypedDict = TypeAliasType(
+    "UpdatePlanVariantDetailsToTypedDict", Union[float, str]
+)
+
+
+UpdatePlanVariantDetailsTo = TypeAliasType(
+    "UpdatePlanVariantDetailsTo", Union[float, str]
+)
+
+
+class UpdatePlanVariantDetailsTierTypedDict(TypedDict):
+    to: UpdatePlanVariantDetailsToTypedDict
+    amount: float
+    flat_amount: NotRequired[float]
+
+
+class UpdatePlanVariantDetailsTier(BaseModel):
+    to: UpdatePlanVariantDetailsTo
+
+    amount: float
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsTierBehavior = Union[
+    Literal[
+        "graduated",
+        "volume",
+    ],
+    UnrecognizedStr,
+]
+
+
+UpdatePlanVariantDetailsAddItemPriceInterval = Union[
+    Literal[
+        "one_off",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+UpdatePlanVariantDetailsAddItemBillingMethod = Union[
+    Literal[
+        "prepaid",
+        "usage_based",
+    ],
+    UnrecognizedStr,
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class UpdatePlanVariantDetailsPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UpdatePlanVariantDetailsAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[UpdatePlanVariantDetailsTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[UpdatePlanVariantDetailsTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+
+class UpdatePlanVariantDetailsPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: UpdatePlanVariantDetailsAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: UpdatePlanVariantDetailsAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[UpdatePlanVariantDetailsTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[UpdatePlanVariantDetailsTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        nullable_fields = set(["max_purchase"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsOnIncrease = Union[
+    Literal[
+        "bill_immediately",
+        "prorate_immediately",
+        "prorate_next_cycle",
+        "bill_next_cycle",
+    ],
+    UnrecognizedStr,
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+UpdatePlanVariantDetailsOnDecrease = Union[
+    Literal[
+        "prorate",
+        "prorate_immediately",
+        "prorate_next_cycle",
+        "none",
+        "no_prorations",
+    ],
+    UnrecognizedStr,
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UpdatePlanProrationResponseTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanVariantDetailsOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: UpdatePlanVariantDetailsOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class UpdatePlanProrationResponse(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: UpdatePlanVariantDetailsOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: UpdatePlanVariantDetailsOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+UpdatePlanVariantDetailsExpiryDurationType = Union[
+    Literal[
+        "month",
+        "forever",
+    ],
+    UnrecognizedStr,
+]
+r"""When rolled over units expire."""
+
+
+class UpdatePlanVariantDetailsRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanVariantDetailsExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class UpdatePlanVariantDetailsRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: UpdatePlanVariantDetailsExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanPlanItemResponseTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    reset: NotRequired[UpdatePlanVariantDetailsResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[UpdatePlanVariantDetailsPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[UpdatePlanProrationResponseTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[UpdatePlanVariantDetailsRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class UpdatePlanPlanItemResponse(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    reset: Optional[UpdatePlanVariantDetailsReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[UpdatePlanVariantDetailsPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[UpdatePlanProrationResponse] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[UpdatePlanVariantDetailsRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsRemoveItemBillingMethod = Union[
+    Literal[
+        "prepaid",
+        "usage_based",
+    ],
+    UnrecognizedStr,
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+UpdatePlanIntervalVariantDetailsRemoveItemEnum2 = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+UpdatePlanIntervalVariantDetailsRemoveItemEnum1 = Union[
+    Literal[
+        "one_off",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+UpdatePlanVariantDetailsIntervalUnionTypedDict = TypeAliasType(
+    "UpdatePlanVariantDetailsIntervalUnionTypedDict",
+    Union[
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2,
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+UpdatePlanVariantDetailsIntervalUnion = TypeAliasType(
+    "UpdatePlanVariantDetailsIntervalUnion",
+    Union[
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum1,
+        UpdatePlanIntervalVariantDetailsRemoveItemEnum2,
+    ],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+class UpdatePlanPlanItemFilterResponseTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[UpdatePlanVariantDetailsRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[UpdatePlanVariantDetailsIntervalUnionTypedDict]
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+    interval_count: NotRequired[int]
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+
+class UpdatePlanPlanItemFilterResponse(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[UpdatePlanVariantDetailsRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[UpdatePlanVariantDetailsIntervalUnion] = None
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+    interval_count: Optional[int] = None
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["feature_id", "billing_method", "interval", "interval_count"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsDurationType = Union[
+    Literal[
+        "day",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+
+UpdatePlanVariantDetailsOnEnd = Union[
+    Literal[
+        "bill",
+        "revert",
+    ],
+    UnrecognizedStr,
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class UpdatePlanFreeTrialParamsResponseTypedDict(TypedDict):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+    duration_type: NotRequired[UpdatePlanVariantDetailsDurationType]
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+    card_required: NotRequired[bool]
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[UpdatePlanVariantDetailsOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
+class UpdatePlanFreeTrialParamsResponse(BaseModel):
+    r"""Free trial configuration for a plan."""
+
+    duration_length: float
+    r"""Number of duration_type periods the trial lasts."""
+
+    duration_type: Optional[UpdatePlanVariantDetailsDurationType] = "month"
+    r"""Unit of time for the trial ('day', 'month', 'year')."""
+
+    card_required: Optional[bool] = True
+    r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+
+    on_end: Optional[UpdatePlanVariantDetailsOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["duration_type", "card_required", "on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsPurchaseLimitInterval = Union[
+    Literal[
+        "hour",
+        "day",
+        "week",
+        "month",
+    ],
+    UnrecognizedStr,
+]
+r"""The time interval for the purchase limit window."""
+
+
+class UpdatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanVariantDetailsPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class UpdatePlanVariantDetailsPurchaseLimit(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanVariantDetailsPurchaseLimitInterval
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanVariantDetailsAutoTopupTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[UpdatePlanVariantDetailsPurchaseLimitTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class UpdatePlanVariantDetailsAutoTopup(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[UpdatePlanVariantDetailsPurchaseLimit] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsLimitType = Union[
+    Literal[
+        "absolute",
+        "usage_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class UpdatePlanVariantDetailsSpendLimitTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UpdatePlanVariantDetailsLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class UpdatePlanVariantDetailsSpendLimit(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[UpdatePlanVariantDetailsLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsUsageLimitInterval = Union[
+    Literal[
+        "day",
+        "week",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class UpdatePlanVariantDetailsFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanVariantDetailsFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanVariantDetailsUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UpdatePlanVariantDetailsUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanVariantDetailsFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class UpdatePlanVariantDetailsUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UpdatePlanVariantDetailsUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UpdatePlanVariantDetailsFilter], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanVariantDetailsThresholdType = Union[
+    Literal[
+        "usage",
+        "usage_percentage",
+        "remaining",
+        "remaining_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UpdatePlanVariantDetailsUsageAlertTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UpdatePlanVariantDetailsThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UpdatePlanVariantDetailsUsageAlert(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UpdatePlanVariantDetailsThresholdType
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanVariantDetailsOverageAllowedTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdatePlanVariantDetailsOverageAllowed(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanVariantDetailsBillingControlsTypedDict(TypedDict):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: NotRequired[List[UpdatePlanVariantDetailsAutoTopupTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UpdatePlanVariantDetailsSpendLimitTypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UpdatePlanVariantDetailsUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[UpdatePlanVariantDetailsUsageAlertTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdatePlanVariantDetailsOverageAllowedTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class UpdatePlanVariantDetailsBillingControls(BaseModel):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: Optional[List[UpdatePlanVariantDetailsAutoTopup]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[UpdatePlanVariantDetailsSpendLimit]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UpdatePlanVariantDetailsUsageLimit]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[UpdatePlanVariantDetailsUsageAlert]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UpdatePlanVariantDetailsOverageAllowed]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanCustomizeResponseTypedDict(TypedDict):
+    r"""The customization that transforms the base plan into this variant."""
+
+    price: NotRequired[Nullable[UpdatePlanBasePriceResponseTypedDict]]
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+    add_items: NotRequired[List[UpdatePlanPlanItemResponseTypedDict]]
+    r"""Items to add to the plan."""
+    remove_items: NotRequired[List[UpdatePlanPlanItemFilterResponseTypedDict]]
+    r"""Filters selecting items to remove from the plan."""
+    free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsResponseTypedDict]]
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+    billing_controls: NotRequired[UpdatePlanVariantDetailsBillingControlsTypedDict]
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+
+class UpdatePlanCustomizeResponse(BaseModel):
+    r"""The customization that transforms the base plan into this variant."""
+
+    price: OptionalNullable[UpdatePlanBasePriceResponse] = UNSET
+    r"""Override the base price of the plan. Pass null to remove the base price."""
+
+    add_items: Optional[List[UpdatePlanPlanItemResponse]] = None
+    r"""Items to add to the plan."""
+
+    remove_items: Optional[List[UpdatePlanPlanItemFilterResponse]] = None
+    r"""Filters selecting items to remove from the plan."""
+
+    free_trial: OptionalNullable[UpdatePlanFreeTrialParamsResponse] = UNSET
+    r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
+
+    billing_controls: Optional[UpdatePlanVariantDetailsBillingControls] = None
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["price", "add_items", "remove_items", "free_trial", "billing_controls"]
+        )
+        nullable_fields = set(["price", "free_trial"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanVariantDetailsTypedDict(TypedDict):
+    r"""Details about how this variant relates to its latest base plan."""
+
+    base_plan_id: str
+    r"""The ID of the base plan this variant was derived from."""
+    customize: NotRequired[UpdatePlanCustomizeResponseTypedDict]
+    r"""The customization that transforms the base plan into this variant."""
+
+
+class UpdatePlanVariantDetails(BaseModel):
+    r"""Details about how this variant relates to its latest base plan."""
+
+    base_plan_id: str
+    r"""The ID of the base plan this variant was derived from."""
+
+    customize: Optional[UpdatePlanCustomizeResponse] = None
+    r"""The customization that transforms the base plan into this variant."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["customize"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanConfigResponseTypedDict(TypedDict):
     r"""Miscellaneous plan-level configuration flags."""
 
@@ -1295,6 +3898,392 @@ class UpdatePlanConfigResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["ignore_past_due"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanPurchaseLimitIntervalResponse = Union[
+    Literal[
+        "hour",
+        "day",
+        "week",
+        "month",
+    ],
+    UnrecognizedStr,
+]
+r"""The time interval for the purchase limit window."""
+
+
+class UpdatePlanPurchaseLimitResponseTypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanPurchaseLimitIntervalResponse
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class UpdatePlanPurchaseLimitResponse(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: UpdatePlanPurchaseLimitIntervalResponse
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanAutoTopupResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[UpdatePlanPurchaseLimitResponseTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class UpdatePlanAutoTopupResponse(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[UpdatePlanPurchaseLimitResponse] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanLimitTypeResponse = Union[
+    Literal[
+        "absolute",
+        "usage_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class UpdatePlanSpendLimitResponseTypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[UpdatePlanLimitTypeResponse]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class UpdatePlanSpendLimitResponse(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[UpdatePlanLimitTypeResponse] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanUsageLimitIntervalResponse = Union[
+    Literal[
+        "day",
+        "week",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class UpdatePlanFilterResponseTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanFilterResponse(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class UpdatePlanUsageLimitResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UpdatePlanUsageLimitIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[UpdatePlanFilterResponseTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class UpdatePlanUsageLimitResponse(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UpdatePlanUsageLimitIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[UpdatePlanFilterResponse], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdatePlanThresholdTypeResponse = Union[
+    Literal[
+        "usage",
+        "usage_percentage",
+        "remaining",
+        "remaining_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UpdatePlanUsageAlertResponseTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UpdatePlanThresholdTypeResponse
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UpdatePlanUsageAlertResponse(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UpdatePlanThresholdTypeResponse
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanOverageAllowedResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdatePlanOverageAllowedResponse(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdatePlanBillingControlsResponseTypedDict(TypedDict):
+    r"""Plan-level billing controls used as customer defaults."""
+
+    auto_topups: NotRequired[List[UpdatePlanAutoTopupResponseTypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[UpdatePlanSpendLimitResponseTypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UpdatePlanUsageLimitResponseTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[UpdatePlanUsageAlertResponseTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdatePlanOverageAllowedResponseTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class UpdatePlanBillingControlsResponse(BaseModel):
+    r"""Plan-level billing controls used as customer defaults."""
+
+    auto_topups: Optional[List[UpdatePlanAutoTopupResponse]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[UpdatePlanSpendLimitResponse]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UpdatePlanUsageLimitResponse]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[UpdatePlanUsageAlertResponse]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UpdatePlanOverageAllowedResponse]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -1406,11 +4395,17 @@ class UpdatePlanResponseTypedDict(TypedDict):
     archived: bool
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
-    r"""If this is a variant, the ID of the base plan it was created from."""
+    r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
     config: UpdatePlanConfigResponseTypedDict
     r"""Miscellaneous plan-level configuration flags."""
+    metadata: Dict[str, Any]
+    r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
     free_trial: NotRequired[UpdatePlanFreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
+    variant_details: NotRequired[UpdatePlanVariantDetailsTypedDict]
+    r"""Details about how this variant relates to its latest base plan."""
+    billing_controls: NotRequired[UpdatePlanBillingControlsResponseTypedDict]
+    r"""Plan-level billing controls used as customer defaults."""
     customer_eligibility: NotRequired[UpdatePlanCustomerEligibilityTypedDict]
 
 
@@ -1454,19 +4449,35 @@ class UpdatePlanResponse(BaseModel):
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
 
     base_variant_id: Nullable[str]
-    r"""If this is a variant, the ID of the base plan it was created from."""
+    r"""Deprecated. Use variant_details.base_plan_id instead. If this is a variant, the ID of the base plan it was created from."""
 
     config: UpdatePlanConfigResponse
     r"""Miscellaneous plan-level configuration flags."""
 
+    metadata: Dict[str, Any]
+    r"""Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan."""
+
     free_trial: Optional[UpdatePlanFreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
+
+    variant_details: Optional[UpdatePlanVariantDetails] = None
+    r"""Details about how this variant relates to its latest base plan."""
+
+    billing_controls: Optional[UpdatePlanBillingControlsResponse] = None
+    r"""Plan-level billing controls used as customer defaults."""
 
     customer_eligibility: Optional[UpdatePlanCustomerEligibility] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["free_trial", "customer_eligibility"])
+        optional_fields = set(
+            [
+                "free_trial",
+                "variant_details",
+                "billing_controls",
+                "customer_eligibility",
+            ]
+        )
         nullable_fields = set(["description", "group", "price", "base_variant_id"])
         serialized = handler(self)
         m = {}
@@ -1488,3 +4499,21 @@ class UpdatePlanResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    UpdatePlanUsageLimitRequest.model_rebuild()
+except NameError:
+    pass
+try:
+    VariantUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdatePlanVariantDetailsUsageLimit.model_rebuild()
+except NameError:
+    pass
+try:
+    UpdatePlanUsageLimitResponse.model_rebuild()
+except NameError:
+    pass

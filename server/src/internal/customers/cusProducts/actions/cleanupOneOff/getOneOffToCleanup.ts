@@ -26,11 +26,18 @@ export const getOneOffCustomerProductsToCleanup = async ({
 }): Promise<OneOffCustomerProductResult[]> => {
 	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
 		WITH 
-		-- CTE 1: Active customer products with at least one price
+		-- CTE 1: Active customer products (with at least one price) on products that
+		-- have a one_off price. Driving from the catalog side keeps this off the
+		-- full customer_products table.
 		active_cus_products_with_prices AS (
 			SELECT DISTINCT cp.id
 			FROM customer_products cp
 			WHERE cp.status IN ('${CusProductStatus.Active}', '${CusProductStatus.PastDue}')
+			  AND cp.internal_product_id IN (
+				SELECT DISTINCT p.internal_product_id
+				FROM prices p
+				WHERE COALESCE(p.config->>'interval', '') = '${BillingInterval.OneOff}'
+			)
 			  AND EXISTS (
 				SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id
 			)

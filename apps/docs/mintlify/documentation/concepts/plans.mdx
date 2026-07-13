@@ -102,3 +102,21 @@ For a step-by-step guide on enabling, cancelling and ending trials, see our exam
 <Tip>
   When creating an Autumn customer, you can set the `customer.fingerprint` field (eg. device ID, browser fingerprint). This will limit the customer to one trial of the plan per fingerprint to prevent abuse.
 </Tip>
+
+## Plan Variants
+
+Plan variants are named alternatives of a base plan. They inherit the base plan and store only the differences, such as a different billing interval, a different experiment package, or a different included usage ladder.
+
+For example, an annual Pro plan can be modeled as a variant of monthly Pro:
+
+```json
+{
+  "variant_plan_id": "pro_annual",
+  "name": "Pro Annual",
+  "customize": {
+    "price": { "amount": 200, "interval": "year" }
+  }
+}
+```
+
+Variants are useful for monthly/annual pricing, A/B testing plan packages, and volume-based offers that share most of the same features.

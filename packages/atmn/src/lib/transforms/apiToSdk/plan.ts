@@ -9,6 +9,13 @@ import type { ApiPlan } from "../../api/types/index.js";
 import { transformApiPlanItem } from "./planItem.js";
 import { createTransformer } from "./Transformer.js";
 
+const hasBillingControls = (value: unknown): boolean =>
+	Boolean(
+		value &&
+			typeof value === "object" &&
+			Object.keys(value as Record<string, unknown>).length > 0,
+	);
+
 /**
  * Declarative plan transformer - replaces 57 lines with ~20 lines of config
  */
@@ -56,6 +63,11 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 						durationType: api.free_trial.duration_type,
 						cardRequired: api.free_trial.card_required,
 					}
+				: undefined,
+
+		billingControls: (api) =>
+			hasBillingControls(api.billing_controls)
+				? api.billing_controls
 				: undefined,
 	},
 });
@@ -136,9 +148,6 @@ const transformApiCustomizePlan = (
 							}
 						: null,
 				}
-			: {}),
-		...(customize.billing_controls !== undefined
-			? { billingControls: customize.billing_controls }
 			: {}),
 	};
 

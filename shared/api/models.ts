@@ -35,6 +35,7 @@ export * from "./referrals/redeemReferralCodeParams.js";
 export * from "./referrals/referralOpModels.js";
 // Rewards
 export * from "./rewards/index.js";
+export * from "./stripe/stripeProductModels.js";
 // Helpers
 export * from "./utils/openApiHelpers.js";
 export * from "./utils/zodToJSDoc.js";

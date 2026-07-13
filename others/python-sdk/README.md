@@ -235,8 +235,15 @@ Use this endpoint to update prepaid quantities, cancel a subscription (immediate
 * [preview_update](docs/sdks/billing/README.md#preview_update) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
+* [multi_update](docs/sdks/billing/README.md#multi_update) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+* [preview_multi_update](docs/sdks/billing/README.md#preview_multi_update) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
 * [open_customer_portal](docs/sdks/billing/README.md#open_customer_portal) - Create a billing portal session for a customer to manage their subscription.
 * [setup_payment](docs/sdks/billing/README.md#setup_payment) - Create a payment setup session for a customer to add or update their payment method.
+* [import_](docs/sdks/billing/README.md#import_) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -318,6 +325,7 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Rewards](docs/sdks/rewardssdk/README.md)
 
+* [list](docs/sdks/rewardssdk/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 
 </details>

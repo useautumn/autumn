@@ -29,6 +29,7 @@ export const ProductSchema = z.object({
 		.object({
 			type: z.string(),
 			id: z.string(),
+			additional_ids: z.array(z.string()).optional(),
 		})
 		.nullish(),
 	base_variant_id: z.string().nullable(),

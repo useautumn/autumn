@@ -3,14 +3,20 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { migrationItemRuns, migrations } from "@autumn/shared";
+import { AppEnv, migrationItemRuns, migrations } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
+import {
+	createHardcodedKey,
+	hashApiKey,
+} from "../../../../../server/src/internal/dev/api-keys/apiKeyUtils.js";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
 import { invalidateProductsCache } from "../../../../../server/src/internal/products/productCacheUtils.js";
+import { CacheManager } from "../../../../../server/src/utils/cacheUtils/CacheManager.js";
+import { CacheType } from "../../../../../server/src/utils/cacheUtils/CacheType.js";
 import { getFeatures } from "../../../../../server/tests/setup/v2Features.js";
 import { clearOrgDbOnly } from "../../../../../server/tests/utils/setup/clearOrg.js";
-import { createTestContext } from "../../../../../server/tests/utils/testInitUtils/createTestContext.js";
 import type { TestContext } from "../../../../../server/tests/utils/testInitUtils/createTestContext.js";
+import { createTestContext } from "../../../../../server/tests/utils/testInitUtils/createTestContext.js";
 import type { AtmnScenario, AtmnSeedResult } from "../scenarios/types.js";
 
 const repoRoot = fileURLToPath(new URL("../../../../../", import.meta.url));
@@ -27,6 +33,7 @@ export type PreparedAtmnScenario = AtmnSeedResult & {
 
 export type PreparedAtmnWorkspace = {
 	configPath: string;
+	secretKey: string;
 	workspaceDir: string;
 };
 
@@ -148,11 +155,11 @@ const ensureAtmnPackageShim = async (workspaceDir: string) => {
 		),
 		writeFile(
 			join(packageDir, "index.ts"),
-			`export { feature, item, plan } from "${composeImportPath}";\n`,
+			`export { billingControls, feature, item, plan } from "${composeImportPath}";\n`,
 		),
 		writeFile(
 			join(packageDir, "index.d.ts"),
-			`export { feature, item, plan } from "${composeTypesImportPath}";\n`,
+			`export { billingControls, feature, item, plan } from "${composeTypesImportPath}";\n`,
 		),
 	]);
 };
@@ -188,6 +195,18 @@ export const createCleanAtmnIntegrationContext =
 		ensureTestOrg();
 
 		const ctx = await createTestContext();
+		await createHardcodedKey({
+			db: ctx.db,
+			env: AppEnv.Sandbox,
+			name: "Atmn Integration Test Key",
+			orgId: ctx.org.id,
+			hardcodedKey: ctx.orgSecretKey,
+			meta: { createdBy: "atmn-integration" },
+		});
+		await CacheManager.invalidate({
+			action: CacheType.SecretKey,
+			value: hashApiKey(ctx.orgSecretKey),
+		});
 		await clearOrgDbOnly({
 			db: ctx.db,
 			env: ctx.env,
@@ -297,21 +316,19 @@ export const prepareAtmnIntegrationWorkspace = async ({
 	await ensureAtmnPackageShim(workspaceDir);
 
 	const configPath = join(workspaceDir, "autumn.config.ts");
-	await Promise.all([
-		writeFile(join(workspaceDir, ".env"), `AUTUMN_SECRET_KEY=${secretKey}\n`),
-		writeFile(
-			join(workspaceDir, "README.md"),
-			[
-				"# atmn integration",
-				"",
-				"Shared atmn integration-test workspace. Integration tests run one at a time and reset this directory before using it.",
-				"",
-			].join("\n"),
-		),
-	]);
+	await writeFile(
+		join(workspaceDir, "README.md"),
+		[
+			"# atmn integration",
+			"",
+			"Shared atmn integration-test workspace. Integration tests run one at a time and reset this directory before using it.",
+			"",
+		].join("\n"),
+	);
 
 	return {
 		configPath,
+		secretKey,
 		workspaceDir,
 	};
 };
@@ -402,6 +419,7 @@ export const runAtmnCli = async ({
 	const child = spawn(
 		"bun",
 		[
+			"--no-env-file",
 			atmnCliPath,
 			"--local",
 			...(headless ? ["--headless"] : []),
@@ -411,7 +429,7 @@ export const runAtmnCli = async ({
 			...(args ?? []),
 		],
 		{
-			cwd: repoRoot,
+			cwd: workspaceDir,
 			env: {
 				...process.env,
 				AUTUMN_SECRET_KEY: readWorkspaceSecretKey(workspaceDir),
@@ -441,7 +459,6 @@ export const runAtmnWorkspaceCli = async ({
 	workspace: PreparedAtmnWorkspace;
 }) => {
 	await ensureAtmnPackageShim(workspace.workspaceDir);
-	await ensureWorkspaceSecretKey(workspace.workspaceDir);
 
 	if (command === "push" && !existsSync(workspace.configPath)) {
 		throw new Error("No autumn.config.ts found for atmn integration workspace");
@@ -450,6 +467,7 @@ export const runAtmnWorkspaceCli = async ({
 	const child = spawn(
 		"bun",
 		[
+			"--no-env-file",
 			atmnCliPath,
 			"--local",
 			...(headless ? ["--headless"] : []),
@@ -459,10 +477,11 @@ export const runAtmnWorkspaceCli = async ({
 			...(args ?? []),
 		],
 		{
-			cwd: repoRoot,
+			cwd: workspace.workspaceDir,
 			env: {
 				...process.env,
-				AUTUMN_SECRET_KEY: readWorkspaceSecretKey(workspace.workspaceDir),
+				ATMN_DISABLE_AUTH_RECOVERY: "1",
+				AUTUMN_SECRET_KEY: workspace.secretKey,
 			},
 			stdio: "inherit",
 		},
@@ -498,6 +517,7 @@ export const runAtmnScratchCli = async ({
 	const child = spawn(
 		"bun",
 		[
+			"--no-env-file",
 			atmnCliPath,
 			"--local",
 			...(headless ? ["--headless"] : []),
@@ -507,7 +527,7 @@ export const runAtmnScratchCli = async ({
 			...(args ?? []),
 		],
 		{
-			cwd: repoRoot,
+			cwd: prepared.workspaceDir,
 			env: {
 				...process.env,
 				AUTUMN_SECRET_KEY: readWorkspaceSecretKey(prepared.workspaceDir),

@@ -6,4 +6,6 @@ export type MigrateCustomerContext = {
 	migration: MigrationRuntime;
 	fullCustomer: FullCustomer;
 	stripeCache: MigrationStripeCache;
+	/** Preview/dry-run — seeds placeholder Stripe ids instead of calling Stripe for real. */
+	preview: boolean;
 };

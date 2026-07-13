@@ -1,16 +1,24 @@
 import type {
-	CustomizePlanV1,
-	PlanItemFilter as ApiPlanItemFilter,
-} from "@autumn/shared";
-import type { FreeTrial, Plan as BasePlan, PlanItem } from "./planModels.js";
+	BillingInterval,
+	BillingMethod,
+	FreeTrial,
+	Plan as BasePlan,
+	PlanItem,
+	PlanPriceInterval,
+	ResetInterval,
+} from "./planModels.js";
 
-type ApiBasePrice = NonNullable<CustomizePlanV1["price"]>;
+type ApiBasePrice = {
+	amount: number;
+	interval: PlanPriceInterval;
+	interval_count?: number;
+};
 
 export type PlanItemFilter = {
-	featureId?: ApiPlanItemFilter["feature_id"];
-	billingMethod?: ApiPlanItemFilter["billing_method"];
-	interval?: ApiPlanItemFilter["interval"];
-	intervalCount?: ApiPlanItemFilter["interval_count"];
+	featureId?: string;
+	billingMethod?: BillingMethod;
+	interval?: BillingInterval | ResetInterval;
+	intervalCount?: number;
 };
 
 export type CustomizePlan = {
@@ -23,7 +31,6 @@ export type CustomizePlan = {
 	addItems?: PlanItem[];
 	removeItems?: PlanItemFilter[];
 	freeTrial?: FreeTrial | null;
-	billingControls?: CustomizePlanV1["billing_controls"];
 };
 
 export type Variant = {

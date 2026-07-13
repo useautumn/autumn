@@ -97,10 +97,58 @@ GetCustomerPurchaseLimitInterval2 = Union[
     ],
     UnrecognizedStr,
 ]
+r"""The time interval for the purchase limit window."""
 
 
 class GetCustomerPurchaseLimit2TypedDict(TypedDict):
-    interval: Nullable[GetCustomerPurchaseLimitInterval2]
+    interval: GetCustomerPurchaseLimitInterval2
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class GetCustomerPurchaseLimit2(BaseModel):
+    interval: GetCustomerPurchaseLimitInterval2
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetCustomerPurchaseLimitInterval1 = Union[
+    Literal[
+        "hour",
+        "day",
+        "week",
+        "month",
+    ],
+    UnrecognizedStr,
+]
+
+
+class GetCustomerPurchaseLimit1TypedDict(TypedDict):
+    interval: Nullable[GetCustomerPurchaseLimitInterval1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
     interval_count: Nullable[float]
     r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
@@ -112,8 +160,8 @@ class GetCustomerPurchaseLimit2TypedDict(TypedDict):
     r"""Unix ms timestamp when the current purchase window ends and the count resets."""
 
 
-class GetCustomerPurchaseLimit2(BaseModel):
-    interval: Nullable[GetCustomerPurchaseLimitInterval2]
+class GetCustomerPurchaseLimit1(BaseModel):
+    interval: Nullable[GetCustomerPurchaseLimitInterval1]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
 
     interval_count: Nullable[float]
@@ -143,66 +191,28 @@ class GetCustomerPurchaseLimit2(BaseModel):
         return m
 
 
-GetCustomerPurchaseLimitInterval1 = Union[
-    Literal[
-        "hour",
-        "day",
-        "week",
-        "month",
-    ],
-    UnrecognizedStr,
-]
-r"""The time interval for the purchase limit window."""
-
-
-class GetCustomerPurchaseLimit1TypedDict(TypedDict):
-    interval: GetCustomerPurchaseLimitInterval1
-    r"""The time interval for the purchase limit window."""
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-    interval_count: NotRequired[float]
-    r"""Number of intervals in the purchase limit window."""
-
-
-class GetCustomerPurchaseLimit1(BaseModel):
-    interval: GetCustomerPurchaseLimitInterval1
-    r"""The time interval for the purchase limit window."""
-
-    limit: float
-    r"""Maximum number of auto top-ups allowed within the interval."""
-
-    interval_count: Optional[float] = 1
-    r"""Number of intervals in the purchase limit window."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
 GetCustomerPurchaseLimitUnionTypedDict = TypeAliasType(
     "GetCustomerPurchaseLimitUnionTypedDict",
-    Union[GetCustomerPurchaseLimit1TypedDict, GetCustomerPurchaseLimit2TypedDict],
+    Union[GetCustomerPurchaseLimit2TypedDict, GetCustomerPurchaseLimit1TypedDict],
 )
 r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
 
 
 GetCustomerPurchaseLimitUnion = TypeAliasType(
     "GetCustomerPurchaseLimitUnion",
-    Union[GetCustomerPurchaseLimit1, GetCustomerPurchaseLimit2],
+    Union[GetCustomerPurchaseLimit2, GetCustomerPurchaseLimit1],
 )
 r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
+
+
+GetCustomerAutoTopupSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerAutoTopupTypedDict(TypedDict):
@@ -218,6 +228,8 @@ class GetCustomerAutoTopupTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+    source: NotRequired[GetCustomerAutoTopupSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerAutoTopup(BaseModel):
@@ -239,9 +251,12 @@ class GetCustomerAutoTopup(BaseModel):
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
+    source: Optional[GetCustomerAutoTopupSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode", "source"])
         serialized = handler(self)
         m = {}
 
@@ -256,13 +271,39 @@ class GetCustomerAutoTopup(BaseModel):
         return m
 
 
+GetCustomerLimitType = Union[
+    Literal[
+        "absolute",
+        "usage_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+GetCustomerSpendLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class GetCustomerSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
     r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[GetCustomerLimitType]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
     overage_limit: NotRequired[float]
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+    source: NotRequired[GetCustomerSpendLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerSpendLimit(BaseModel):
@@ -272,12 +313,30 @@ class GetCustomerSpendLimit(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether the overage spend limit is enabled."""
 
+    limit_type: Optional[GetCustomerLimitType] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
     overage_limit: Optional[float] = None
-    r"""Maximum allowed overage spend for the target feature."""
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    source: Optional[GetCustomerSpendLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+                "source",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
@@ -304,6 +363,28 @@ GetCustomerUsageLimitInterval = Union[
 r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
+class GetCustomerFilterTypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class GetCustomerFilter(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+GetCustomerUsageLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class GetCustomerUsageLimitTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -311,8 +392,14 @@ class GetCustomerUsageLimitTypedDict(TypedDict):
     r"""Maximum units allowed per interval."""
     interval: GetCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[GetCustomerFilterTypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    source: NotRequired[GetCustomerUsageLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerUsageLimit(BaseModel):
@@ -325,12 +412,23 @@ class GetCustomerUsageLimit(BaseModel):
     interval: GetCustomerUsageLimitInterval
     r"""Interval for the cap, aligned to the customer's billing cycle."""
 
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[Optional[GetCustomerFilter], pydantic.Field(alias="filter")] = (
+        None
+    )
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
+    source: Optional[GetCustomerUsageLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["usage"])
+        optional_fields = set(["enabled", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -357,6 +455,16 @@ GetCustomerThresholdType = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+GetCustomerUsageAlertSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class GetCustomerUsageAlertTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -368,6 +476,8 @@ class GetCustomerUsageAlertTypedDict(TypedDict):
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+    source: NotRequired[GetCustomerUsageAlertSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerUsageAlert(BaseModel):
@@ -386,9 +496,12 @@ class GetCustomerUsageAlert(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
+    source: Optional[GetCustomerUsageAlertSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "name", "source"])
         serialized = handler(self)
         m = {}
 
@@ -403,11 +516,23 @@ class GetCustomerUsageAlert(BaseModel):
         return m
 
 
+GetCustomerOverageAllowedSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class GetCustomerOverageAllowedTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
+    source: NotRequired[GetCustomerOverageAllowedSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class GetCustomerOverageAllowed(BaseModel):
@@ -417,9 +542,12 @@ class GetCustomerOverageAllowed(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
+    source: Optional[GetCustomerOverageAllowedSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "source"])
         serialized = handler(self)
         m = {}
 
@@ -960,6 +1088,8 @@ class GetCustomerConfigTypedDict(TypedDict):
 
     disable_pooled_balance: NotRequired[bool]
     r"""Whether to disable the shared customer-level pool for entities."""
+    disable_overage_billing: NotRequired[bool]
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
 
 
 class GetCustomerConfig(BaseModel):
@@ -968,9 +1098,12 @@ class GetCustomerConfig(BaseModel):
     disable_pooled_balance: Optional[bool] = None
     r"""Whether to disable the shared customer-level pool for entities."""
 
+    disable_overage_billing: Optional[bool] = None
+    r"""Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["disable_pooled_balance"])
+        optional_fields = set(["disable_pooled_balance", "disable_overage_billing"])
         serialized = handler(self)
         m = {}
 
@@ -1275,7 +1408,7 @@ class GetCustomerTrialsUsed(BaseModel):
         return m
 
 
-GetCustomerRewardsType = Union[
+GetCustomerDiscountType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -1304,7 +1437,7 @@ class GetCustomerDiscountTypedDict(TypedDict):
     r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: GetCustomerRewardsType
+    type: GetCustomerDiscountType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -1331,7 +1464,7 @@ class GetCustomerDiscount(BaseModel):
     name: str
     r"""The name of the discount or coupon"""
 
-    type: GetCustomerRewardsType
+    type: GetCustomerDiscountType
     r"""The type of reward"""
 
     discount_value: float
@@ -1631,3 +1764,9 @@ class GetCustomerResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    GetCustomerUsageLimit.model_rebuild()
+except NameError:
+    pass

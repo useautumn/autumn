@@ -17,6 +17,29 @@ import type { Stripe } from "stripe";
 import { timeout } from "./genUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
+const CLOCK_READY_TIMEOUT_MS = 180_000;
+const CLOCK_READY_POLL_MS = 3000;
+
+// Stripe rejects mutations while a clock is advancing; poll until status is "ready".
+export const waitForClockReady = async ({
+	stripeCli,
+	testClockId,
+}: {
+	stripeCli: Stripe;
+	testClockId: string;
+}) => {
+	const deadline = Date.now() + CLOCK_READY_TIMEOUT_MS;
+	while (Date.now() < deadline) {
+		const clock = await stripeCli.testHelpers.testClocks.retrieve(testClockId);
+		if (clock.status === "ready") {
+			return;
+		}
+		await timeout(CLOCK_READY_POLL_MS);
+	}
+	throw new Error(
+		`Test clock ${testClockId} not ready after ${CLOCK_READY_TIMEOUT_MS}ms`,
+	);
+};
 
 export const deleteAllStripeProducts = async ({
 	stripeCli,
@@ -188,9 +211,11 @@ export const advanceTestClock = async ({
 	}
 
 	console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
+	await waitForClockReady({ stripeCli, testClockId });
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.floor(advanceTo / 1000),
 	});
+	await waitForClockReady({ stripeCli, testClockId });
 
 	await timeout(
 		waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
@@ -233,9 +258,11 @@ export const advanceClockForInvoice = async ({
 	}
 	// advanceTo = subHours(addMonths(Date.now(), 1), 1).getTime();
 
+	await waitForClockReady({ stripeCli, testClockId });
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.ceil(advanceTo / 1000),
 	});
+	await waitForClockReady({ stripeCli, testClockId });
 
 	console.log(
 		"   - advanceClockForInvoice (1): ",
@@ -254,9 +281,11 @@ export const advanceClockForInvoice = async ({
 
 	// const advanceTo2 = addHours(new Date(advanceTo), 30).getTime();
 	const advanceTo2 = addDays(new Date(advanceTo), 4).getTime();
+	await waitForClockReady({ stripeCli, testClockId });
 	await stripeCli.testHelpers.testClocks.advance(testClockId, {
 		frozen_time: Math.floor(advanceTo2 / 1000),
 	});
+	await waitForClockReady({ stripeCli, testClockId });
 
 	console.log(
 		"   - advanceClockForInvoice (2): ",
@@ -285,6 +314,7 @@ export const advanceMonths = async ({
 		);
 
 		try {
+			await waitForClockReady({ stripeCli, testClockId });
 			await stripeCli.testHelpers.testClocks.advance(testClockId, {
 				frozen_time: Math.floor(advanceTo.getTime() / 1000),
 			});

@@ -31,8 +31,7 @@ export const OrgConfigSchema = z.object({
 	// default
 	default_applies_to_entities: z.boolean().default(false),
 
-	// skip_overage_submission
-	skip_overage_submission: z.boolean().default(false),
+	disable_overage_billing: z.boolean().default(false),
 
 	// disable stripe writes
 	disable_stripe_writes: z.boolean().default(false),

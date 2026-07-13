@@ -16,7 +16,8 @@
 # AUTUMN_DB_DIRECT=1 + a localhost DATABASE_URL (no secrets in the µVM).
 set -euo pipefail
 
-log() { echo "[tw-warmup] $*"; }
+# SECONDS-since-start prefix so the run log doubles as a stage profile.
+log() { echo "[tw-warmup] +${SECONDS}s $*"; }
 die() { echo "[tw-warmup] ERROR: $*" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -88,8 +89,33 @@ log "HEAD at $(git rev-parse --short HEAD)"
 # ---------------------------------------------------------------------------
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)
 # ---------------------------------------------------------------------------
-log "bun install --frozen-lockfile"
-bun install --frozen-lockfile
+# Even a no-op frozen install costs ~65s (relink scan of ~350k files), so skip
+# it entirely when the lockfile hash matches the stamp from the last install.
+LOCK_FILE=""
+for candidate in bun.lock bun.lockb package-lock.json; do
+  [ -f "$candidate" ] && LOCK_FILE="$candidate" && break
+done
+LOCK_STAMP="$TW_PREFIX/bun-lock.sha256"
+LOCK_HASH=""
+if [ -n "$LOCK_FILE" ] && command -v sha256sum >/dev/null 2>&1; then
+  LOCK_HASH="$(sha256sum "$LOCK_FILE" | cut -d' ' -f1)"
+fi
+if [ -n "$LOCK_HASH" ] && [ -f "$LOCK_STAMP" ] \
+  && [ "$(cat "$LOCK_STAMP")" = "$LOCK_HASH" ]; then
+  log "lockfile unchanged ($LOCK_FILE) — skipping bun install"
+else
+  log "bun install --frozen-lockfile"
+  # Self-repair: a failing lifecycle script (native-dep rebuild on a delta
+  # install) must not abort the warm-up — deps land, optional builds are skipped.
+  if ! bun install --frozen-lockfile; then
+    log "install failed — retrying with --ignore-scripts"
+    bun install --frozen-lockfile --ignore-scripts \
+      || die "bun install FAILED even with --ignore-scripts"
+  fi
+  if [ -n "$LOCK_HASH" ]; then
+    echo "$LOCK_HASH" > "$LOCK_STAMP"
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Ensure services are up for migrate + seed (idempotent).
@@ -104,7 +130,24 @@ TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
 #    non-zero exit aborts the whole warm-up before any worker is forked.
 # ---------------------------------------------------------------------------
 log "bun db migrate --bootstrap (DATABASE_URL=localhost autumn)"
-bun db migrate --bootstrap || die "migration FAILED — aborting warm-up, no workers forked"
+# Self-repair: on ANY migrate error (e.g. journal/DB drift on a fast-forwarded
+# warm base), drop the throwaway DB and bootstrap from zero instead of dying.
+if ! bun db migrate --bootstrap; then
+  log "migrate failed — self-repair: dropping DB and bootstrapping from zero"
+  for candidate in /usr/pgsql-18/bin /usr/lib/postgresql/18/bin /usr/bin; do
+    [ -x "$candidate/dropdb" ] && export PATH="$candidate:$PATH" && break
+  done
+  export PGPASSWORD=postgres
+  dropdb -h localhost -p "$PG_PORT" -U postgres --if-exists autumn \
+    || die "self-repair dropdb FAILED"
+  createdb -h localhost -p "$PG_PORT" -U postgres autumn \
+    || die "self-repair createdb FAILED"
+  psql -h localhost -p "$PG_PORT" -U postgres -d autumn \
+    -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;' >/dev/null \
+    || die "self-repair pg_trgm FAILED"
+  bun db migrate --bootstrap \
+    || die "migration FAILED even after DB rebuild — aborting warm-up"
+fi
 
 # ---------------------------------------------------------------------------
 # 4. Load DB functions (separate step!). 10 SQL procs in dependency order
@@ -126,8 +169,12 @@ bun scripts/setup/setup-test.ts --yes || die "setup-test seed FAILED"
 # ---------------------------------------------------------------------------
 # 6. Clean-stop services for a snapshot-consistent filesystem (plan §5a step 6).
 # ---------------------------------------------------------------------------
-log "Clean-stopping services for snapshot consistency"
-TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
-  bash "$SCRIPT_DIR/stop-services.sh"
+if [ "${TW_SKIP_CLEAN_STOP:-}" = "1" ]; then
+  log "TW_SKIP_CLEAN_STOP=1 — leaving services running (worker fast-forward path)"
+else
+  log "Clean-stopping services for snapshot consistency"
+  TW_PREFIX="$TW_PREFIX" PG_PORT="$PG_PORT" DRAGONFLY_PORT="$DRAGONFLY_PORT" \
+    bash "$SCRIPT_DIR/stop-services.sh"
+fi
 
 log "WARM layer ready on ref $(git rev-parse --short HEAD). Snapshot now -> fork N workers."

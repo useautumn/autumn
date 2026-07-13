@@ -107,6 +107,7 @@ export const createNewCustomer = async ({
 		org_id: org.id,
 		created_at: Date.now(),
 		env,
+		processors: parsedCustomer.processors ?? null,
 		processor: parsedCustomer.stripe_id
 			? {
 					id: parsedCustomer.stripe_id,

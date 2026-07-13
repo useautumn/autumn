@@ -17,6 +17,9 @@ export const corruptStripeSubscription = async ({
 		removeItemPriceIds?: string[];
 		addItems?: Array<{ price: string; quantity?: number }>;
 		setItemQuantities?: Array<{ priceId: string; quantity: number }>;
+		/** Replaces an inline item's price amount in place, preserving item-level metadata
+		 * (e.g. `autumn_customer_price_id`) so the item's identity is unchanged. */
+		setInlineItemAmounts?: Array<{ priceId: string; unitAmount: number }>;
 		releaseSchedule?: boolean;
 	};
 }): Promise<Stripe.Subscription> => {
@@ -57,6 +60,26 @@ export const corruptStripeSubscription = async ({
 	if (mutations.addItems?.length) {
 		for (const add of mutations.addItems) {
 			updateItems.push({ price: add.price, quantity: add.quantity ?? 1 });
+		}
+	}
+
+	if (mutations.setInlineItemAmounts?.length) {
+		for (const { priceId, unitAmount } of mutations.setInlineItemAmounts) {
+			const item = sub.items.data.find((i) => i.price.id === priceId);
+			if (!item) continue;
+			updateItems.push({
+				id: item.id,
+				quantity: item.quantity,
+				price_data: {
+					currency: item.price.currency,
+					product: item.price.product as string,
+					unit_amount: unitAmount,
+					recurring: {
+						interval: item.price.recurring?.interval ?? "month",
+						interval_count: item.price.recurring?.interval_count ?? 1,
+					},
+				},
+			});
 		}
 	}
 

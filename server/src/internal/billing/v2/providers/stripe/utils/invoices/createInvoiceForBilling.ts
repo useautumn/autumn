@@ -24,25 +24,18 @@ const stripeDiscountsToInvoiceParams = ({
 }: {
 	stripeDiscounts: StripeDiscountWithCoupon[];
 }): Stripe.InvoiceCreateParams["discounts"] => {
-	return stripeDiscounts.map((discount) => {
-		if (discount.id) return { discount: discount.id };
-		if (discount.promotionCodeId)
-			return { promotion_code: discount.promotionCodeId };
-		return { coupon: discount.source.coupon.id };
-	});
+	return stripeDiscounts
+		.filter((discount): discount is StripeDiscountWithCoupon & { id: string } =>
+			Boolean(discount.id),
+		)
+		.map((discount) => ({ discount: discount.id }));
 };
 
-const getInvoiceEligibleStripeDiscounts = ({
-	stripeDiscounts,
+const invoiceLinesAllowStripeDiscounts = ({
+	lines,
 }: {
-	stripeDiscounts: StripeDiscountWithCoupon[];
-}) => {
-	return stripeDiscounts.filter((discount) => {
-		if (discount.id) return true;
-
-		return discount.source.coupon.duration !== "repeating";
-	});
-};
+	lines: StripeInvoiceAction["addLineParams"]["lines"];
+}) => lines.some((line) => line.discountable !== false);
 
 export const createInvoiceForBilling = async ({
 	ctx,
@@ -88,14 +81,17 @@ export const createInvoiceForBilling = async ({
 		},
 	});
 
-	const invoiceEligibleStripeDiscounts = getInvoiceEligibleStripeDiscounts({
-		stripeDiscounts: billingContext.stripeDiscounts ?? [],
-	});
-
 	const wantsAutoTax = shouldEnableStripeAutomaticTax({ ctx, billingContext });
 	const stripeSubId = options.skipSubscriptionLink
 		? undefined
 		: billingContext.stripeSubscription?.id;
+	const invoiceDiscounts = invoiceLinesAllowStripeDiscounts({
+		lines: addLineParams.lines,
+	})
+		? stripeDiscountsToInvoiceParams({
+				stripeDiscounts: billingContext.stripeDiscounts ?? [],
+			})
+		: undefined;
 
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
@@ -111,10 +107,11 @@ export const createInvoiceForBilling = async ({
 		footer: invoiceMode?.footer,
 		description: invoiceMode?.memo,
 		metadata: invoiceMetadata,
-		discounts: stripeDiscountsToInvoiceParams({
-			stripeDiscounts: invoiceEligibleStripeDiscounts,
-		}),
+		discounts: invoiceDiscounts,
 		automaticTax: wantsAutoTax,
+		defaultTaxRates: billingContext.taxRateId
+			? [billingContext.taxRateId]
+			: undefined,
 	});
 
 	const invoiceWithLines = await addStripeInvoiceLines({

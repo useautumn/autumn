@@ -9,6 +9,7 @@ import {
 import { sqlNow } from "../../db/utils.js";
 import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
+import type { ChatAuthMode } from "./chatEnums.js";
 
 export type ChatProvider =
 	| "slack"
@@ -28,6 +29,7 @@ export const chatInstallations = pgTable(
 		bot_user_id: text("bot_user_id"),
 		bot_access_token: text("bot_access_token").notNull(),
 		scopes: jsonb().$type<string[]>().notNull(),
+		auth_mode: text("auth_mode").$type<ChatAuthMode>(),
 		default_env: text("default_env").$type<AppEnv>().notNull(),
 		sandbox_api_key_id: text("sandbox_api_key_id"),
 		sandbox_api_key: text("sandbox_api_key"),

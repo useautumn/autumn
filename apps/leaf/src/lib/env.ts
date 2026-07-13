@@ -5,7 +5,7 @@ import {
 	DEFAULT_WEB_AGENT_HARNESS,
 } from "./chatAgentConfig.js";
 
-const harnessSchema = z.enum(["mastra", "claude-managed"]);
+const harnessSchema = z.enum(["mastra", "claude-managed", "eve"]);
 
 const optionalString = z.preprocess(
 	(value) => (value === "" ? undefined : value),
@@ -28,6 +28,14 @@ const envSchema = z
 		CLIENT_URL: z.string().min(1).default("http://localhost:3000"),
 		DATABASE_URL: z.string().min(1),
 		ENCRYPTION_PASSWORD: z.string().min(1),
+		// Kill switch for eve file ingestion (falls back to an honest "can't view
+		// files" note) in case the upstream queue byte-corruption bug resurfaces.
+		EVE_ATTACHMENTS_ENABLED: z
+			.enum(["true", "false", "1", "0"])
+			.default("true")
+			.transform((value) => value === "true" || value === "1"),
+		EVE_INTERNAL_AUTH_TOKEN: optionalString,
+		EVE_SERVER_URL: z.string().url().default("http://127.0.0.1:3999"),
 		FIRECRAWL_API_KEY: z.string().min(1),
 		MCP_OAUTH_ENVIRONMENT: z.enum(["live", "sandbox"]).default("sandbox"),
 		PORT: z.coerce.number().int().positive().default(3099),
@@ -69,6 +77,12 @@ const envSchema = z
 			CHAT_STATE_DATABASE_URL:
 				values.CHAT_STATE_DATABASE_URL ?? databaseUrl.toString(),
 			CHAT_STATE_SECRET:
+				values.CHAT_STATE_SECRET ??
+				values.SLACK_STATE_SECRET ??
+				values.BETTER_AUTH_SECRET ??
+				values.ENCRYPTION_PASSWORD,
+			EVE_INTERNAL_AUTH_TOKEN:
+				values.EVE_INTERNAL_AUTH_TOKEN ??
 				values.CHAT_STATE_SECRET ??
 				values.SLACK_STATE_SECRET ??
 				values.BETTER_AUTH_SECRET ??

@@ -69,6 +69,18 @@ export const payStripeInvoice = async ({
 		return handleInvoicePaymentFailure({ invoice, error });
 	}
 
+	if (paidInvoice.status !== "paid") {
+		const isProcessing = paidInvoice.status === "open";
+		return {
+			paid: false,
+			invoice: paidInvoice,
+			requiredAction: {
+				code: isProcessing ? "payment_processing" : "payment_failed",
+				reason: `Invoice is ${paidInvoice.status ?? "not paid"}`,
+			},
+		};
+	}
+
 	return {
 		paid: true,
 		invoice: paidInvoice,

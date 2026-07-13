@@ -156,6 +156,9 @@ export const updateCustomer = async ({
 					...(config.disable_pooled_balance !== undefined && {
 						disable_pooled_balance: config.disable_pooled_balance,
 					}),
+					...(config.disable_overage_billing !== undefined && {
+						disable_overage_billing: config.disable_overage_billing,
+					}),
 				},
 			}
 		: {};
@@ -183,31 +186,6 @@ export const updateCustomer = async ({
 		idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
 		update: updateData,
 	});
-
-	const originalCustomerId =
-		originalCustomer.id || originalCustomer.internal_id;
-	// const updatedCustomerId = newCustomerId ?? customerId;
-
-	// if (updatedCustomerId !== originalCustomerId) {
-	// 	await invalidateCachedFullSubject({
-	// 		ctx,
-	// 		customerId: originalCustomerId,
-	// 		source: "updateCustomer:id_changed",
-	// 	});
-	// }
-
-	await Promise.all([
-		// updateCachedCustomerData({
-		// 	ctx,
-		// 	customerId: originalCustomerId,
-		// 	updates: updateData,
-		// }),
-		// updateCachedCustomerDataV2({
-		// 	ctx,
-		// 	customerId: originalCustomerId,
-		// 	updates: updateData,
-		// }),
-	]);
 
 	ctx.skipCache = true;
 	const resolvedCustomerId = newCustomerId ?? customerId;

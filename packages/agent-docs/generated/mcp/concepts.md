@@ -168,8 +168,63 @@ Load the matching definition when reasoning about that object.
 
 <variants>
 
-- Today, Autumn has no concept of "variants"; each variant is its own plan, e.g. `pro_monthly` or `pro_annual`.
-- Annual plan pricing can coexist with shorter plan item reset intervals, e.g. annual base price with monthly credit resets.
+- Variants group related plans under one base definition and store each variant's diff as `variant_details.customize`.
+- `plans.list` returns a flat plan list; each variant plan points back to its base through `variant_details`.
+- In `catalog.preview_update` / `catalog.update`, define or customize variants under the base plan's `plans[n].variants`.
+- Updating a base plan can propagate its diff to selected variants through the catalog update flow.
+- Common variant uses: billing intervals, A/B price packages, and volume ladders.
+
+Annual interval variant:
+
+```json
+{
+  "variant_plan_id": "pro_annual",
+  "name": "Pro Annual",
+  "customize": {
+    "price": { "amount": 200, "interval": "year" }
+  }
+}
+```
+
+A/B testing variant:
+
+```json
+{
+  "variant_plan_id": "pro_b",
+  "name": "Pro B",
+  "customize": {
+    "price": { "amount": 29, "interval": "month" },
+    "add_items": [{ "feature_id": "analytics" }]
+  }
+}
+```
+
+Metered volume variant:
+
+```json
+{
+  "variant_plan_id": "pro_100k",
+  "name": "Pro 100k",
+  "customize": {
+    "price": { "amount": 35, "interval": "month" },
+    "remove_items": [
+      { "feature_id": "emails", "billing_method": "usage_based" }
+    ],
+    "add_items": [
+      {
+        "feature_id": "emails",
+        "included": 100000,
+        "price": {
+          "amount": 0.9,
+          "billing_units": 1000,
+          "billing_method": "usage_based",
+          "interval": "month"
+        }
+      }
+    ]
+  }
+}
+```
 
 </variants>
 
@@ -339,6 +394,94 @@ Load the matching definition when reasoning about that object.
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
 - `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
+
+# Customize
+
+`customize` is a patch over a catalog plan. Use it for customer-specific terms, variant definitions, plan update previews, migration drafts, and catalog update previews.
+
+## Rules
+
+- Base price changes go in `customize.price`.
+- Plan item changes are PATCH-style: use `add_items` and `remove_items` in API params.
+- Avoid full `items` replacement unless the API or config workflow specifically requires it.
+- Each remove entry is a filter. Include `billing_method`, `interval`, or `interval_count` when `feature_id` alone could match multiple items.
+- Replace an item by removing the old item and adding the new one in the same patch.
+- Prefer the smallest diff that preserves the plan's existing structure.
+
+## API examples
+
+Change base price:
+
+```json
+{ "customize": { "price": { "amount": 50, "interval": "month" } } }
+```
+
+Add a boolean feature:
+
+```json
+{ "customize": { "add_items": [{ "feature_id": "sso" }] } }
+```
+
+Remove a feature:
+
+```json
+{ "customize": { "remove_items": [{ "feature_id": "audit_logs" }] } }
+```
+
+Change included amount:
+
+```json
+{
+  "customize": {
+    "remove_items": [{ "feature_id": "credits" }],
+    "add_items": [{ "feature_id": "credits", "included": 5000 }]
+  }
+}
+```
+
+Change only the monthly item when the same feature also has a lifetime item:
+
+```json
+{
+  "customize": {
+    "remove_items": [
+      {
+        "feature_id": "credits",
+        "billing_method": "prepaid",
+        "interval": "month"
+      }
+    ],
+    "add_items": [
+      {
+        "feature_id": "credits",
+        "included": 5000,
+        "reset": { "interval": "month" }
+      }
+    ]
+  }
+}
+```
+
+Change prepaid to usage-based:
+
+```json
+{
+  "customize": {
+    "remove_items": [{ "feature_id": "credits" }],
+    "add_items": [
+      {
+        "feature_id": "credits",
+        "included": 0,
+        "price": {
+          "amount": 0.01,
+          "interval": "month",
+          "billing_method": "usage_based"
+        }
+      }
+    ]
+  }
+}
+```
 
 ### Trials
 

@@ -1,6 +1,8 @@
 import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
+import { findEveSessionForThread } from "../../harness/eve/repo.js";
+import type { EveSessionRef } from "../../harness/eve/types.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
@@ -9,9 +11,9 @@ import { logger as rootLogger } from "../../lib/logger.js";
 import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
-import { selectChatEnv } from "./setup/selectChatEnv.js";
-import { getDefaultChatEnv } from "./setup/selectChatEnv.js";
 import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
+import { resolveSlackCallerAuth } from "./setup/resolveSlackCallerAuth.js";
+import { getDefaultChatEnv, selectChatEnv } from "./setup/selectChatEnv.js";
 import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
 
@@ -36,12 +38,14 @@ export const runMessage = async ({
 	agentRunId,
 	attachmentFetchFallback,
 	attachments,
+	clientContext,
 	installation,
 	logger = rootLogger,
 	onAction,
 	onActionKeyed,
 	onAgentReady,
 	onApprovalsSuperseded,
+	onReasoning,
 	onThinking,
 	onTurnComplete,
 	providerUserId,
@@ -85,6 +89,27 @@ export const runMessage = async ({
 				workspaceId: effectiveInstallation.workspace_id,
 			};
 
+			// Admin installs act as Autumn staff, never as org members.
+			let autumnUserId: string | undefined;
+			if (!orgContext.admin) {
+				const callerAuth = await resolveSlackCallerAuth({
+					installation: effectiveInstallation,
+					logger,
+					orgId: org.id,
+					slackUserId: providerUserId,
+				});
+				if (callerAuth.usePerUser && !callerAuth.ok) {
+					await onAgentReady?.();
+					return {
+						env: getDefaultChatEnv(),
+						text: callerAuth.text,
+					};
+				}
+				if (callerAuth.usePerUser) {
+					autumnUserId = callerAuth.userId;
+				}
+			}
+
 			const preparedPromise = prepareAttachmentMessage({
 				attachments,
 				fetchFallback: attachmentFetchFallback,
@@ -94,6 +119,14 @@ export const runMessage = async ({
 			const existingSessionPromise = (() => {
 				if (engine.name === "claude-managed") {
 					return findClaudeManagedSessionForThread({
+						db,
+						orgId: org.id,
+						thread: effectiveThread,
+						userId: autumnUserId,
+					});
+				}
+				if (engine.name === "eve") {
+					return findEveSessionForThread({
 						db,
 						orgId: org.id,
 						thread: effectiveThread,
@@ -112,6 +145,7 @@ export const runMessage = async ({
 					mimeType: part.mediaType,
 					name: part.filename,
 				})),
+				clientContext,
 				recentMessages,
 				text: prepared.userText,
 			};
@@ -135,22 +169,37 @@ export const runMessage = async ({
 				},
 			});
 
+			// Legacy/admin installs resolve no per-user id; fall back to the
+			// installer's credential.
+			const tokenUserId =
+				autumnUserId ?? effectiveInstallation.installed_by_user_id;
+			if (!tokenUserId) {
+				throw new Error(
+					"Missing installer user id for chat MCP OAuth credentials",
+				);
+			}
 			const token = await getInstallationOAuthAccessToken({
 				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
+				userId: tokenUserId,
 			});
 
 			const agentTools =
-				engine.name === "claude-managed"
+				engine.name === "claude-managed" || engine.name === "eve"
 					? { destructiveTools: new Set<string>() }
 					: await setupAgentToolContext({ env, logger, token });
 
 			const ctx: MessageContext = {
 				agentTools,
+				autumnUserId,
 				claudeManagedSession:
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
+						: undefined,
+				eveSession:
+					engine.name === "eve"
+						? (existingHarnessSession as EveSessionRef | undefined)
 						: undefined,
 				deadlineAt,
 				env,
@@ -160,6 +209,7 @@ export const runMessage = async ({
 				onActionKeyed,
 				onAgentReady,
 				onApprovalsSuperseded,
+				onReasoning,
 				onThinking,
 				org,
 				onTurnComplete,

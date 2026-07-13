@@ -664,6 +664,226 @@ export type PreviewAttachFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const PreviewAttachPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type PreviewAttachPurchaseLimitInterval = ClosedEnum<
+  typeof PreviewAttachPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type PreviewAttachPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: PreviewAttachPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type PreviewAttachAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: PreviewAttachPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const PreviewAttachLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type PreviewAttachLimitType = ClosedEnum<typeof PreviewAttachLimitType>;
+
+export type PreviewAttachSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: PreviewAttachLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const PreviewAttachUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type PreviewAttachUsageLimitInterval = ClosedEnum<
+  typeof PreviewAttachUsageLimitInterval
+>;
+
+export type PreviewAttachProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type PreviewAttachFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+export type PreviewAttachUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: PreviewAttachUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: PreviewAttachFilter | undefined;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const PreviewAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type PreviewAttachThresholdType = ClosedEnum<
+  typeof PreviewAttachThresholdType
+>;
+
+export type PreviewAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: PreviewAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type PreviewAttachOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type PreviewAttachBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<PreviewAttachAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<PreviewAttachSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<PreviewAttachUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PreviewAttachUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<PreviewAttachOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type PreviewAttachCustomize = {
@@ -687,6 +907,10 @@ export type PreviewAttachCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: PreviewAttachFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: PreviewAttachBillingControls | undefined;
 };
 
 /**
@@ -2040,12 +2264,344 @@ export function previewAttachFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const PreviewAttachPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachPurchaseLimitInterval
+> = z.enum(PreviewAttachPurchaseLimitInterval);
+
+/** @internal */
+export type PreviewAttachPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const PreviewAttachPurchaseLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachPurchaseLimit$Outbound,
+  PreviewAttachPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: PreviewAttachPurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function previewAttachPurchaseLimitToJSON(
+  previewAttachPurchaseLimit: PreviewAttachPurchaseLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachPurchaseLimit$outboundSchema.parse(previewAttachPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type PreviewAttachAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: PreviewAttachPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const PreviewAttachAutoTopup$outboundSchema: z.ZodMiniType<
+  PreviewAttachAutoTopup$Outbound,
+  PreviewAttachAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => PreviewAttachPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function previewAttachAutoTopupToJSON(
+  previewAttachAutoTopup: PreviewAttachAutoTopup,
+): string {
+  return JSON.stringify(
+    PreviewAttachAutoTopup$outboundSchema.parse(previewAttachAutoTopup),
+  );
+}
+
+/** @internal */
+export const PreviewAttachLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachLimitType
+> = z.enum(PreviewAttachLimitType);
+
+/** @internal */
+export type PreviewAttachSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
+};
+
+/** @internal */
+export const PreviewAttachSpendLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachSpendLimit$Outbound,
+  PreviewAttachSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(PreviewAttachLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
+    });
+  }),
+);
+
+export function previewAttachSpendLimitToJSON(
+  previewAttachSpendLimit: PreviewAttachSpendLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachSpendLimit$outboundSchema.parse(previewAttachSpendLimit),
+  );
+}
+
+/** @internal */
+export const PreviewAttachUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachUsageLimitInterval
+> = z.enum(PreviewAttachUsageLimitInterval);
+
+/** @internal */
+export type PreviewAttachProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const PreviewAttachProperties$outboundSchema: z.ZodMiniType<
+  PreviewAttachProperties$Outbound,
+  PreviewAttachProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function previewAttachPropertiesToJSON(
+  previewAttachProperties: PreviewAttachProperties,
+): string {
+  return JSON.stringify(
+    PreviewAttachProperties$outboundSchema.parse(previewAttachProperties),
+  );
+}
+
+/** @internal */
+export type PreviewAttachFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const PreviewAttachFilter$outboundSchema: z.ZodMiniType<
+  PreviewAttachFilter$Outbound,
+  PreviewAttachFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function previewAttachFilterToJSON(
+  previewAttachFilter: PreviewAttachFilter,
+): string {
+  return JSON.stringify(
+    PreviewAttachFilter$outboundSchema.parse(previewAttachFilter),
+  );
+}
+
+/** @internal */
+export type PreviewAttachUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+  filter?: PreviewAttachFilter$Outbound | undefined;
+};
+
+/** @internal */
+export const PreviewAttachUsageLimit$outboundSchema: z.ZodMiniType<
+  PreviewAttachUsageLimit$Outbound,
+  PreviewAttachUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: PreviewAttachUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => PreviewAttachFilter$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewAttachUsageLimitToJSON(
+  previewAttachUsageLimit: PreviewAttachUsageLimit,
+): string {
+  return JSON.stringify(
+    PreviewAttachUsageLimit$outboundSchema.parse(previewAttachUsageLimit),
+  );
+}
+
+/** @internal */
+export const PreviewAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachThresholdType
+> = z.enum(PreviewAttachThresholdType);
+
+/** @internal */
+export type PreviewAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const PreviewAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  PreviewAttachUsageAlert$Outbound,
+  PreviewAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: PreviewAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function previewAttachUsageAlertToJSON(
+  previewAttachUsageAlert: PreviewAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    PreviewAttachUsageAlert$outboundSchema.parse(previewAttachUsageAlert),
+  );
+}
+
+/** @internal */
+export type PreviewAttachOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewAttachOverageAllowed$outboundSchema: z.ZodMiniType<
+  PreviewAttachOverageAllowed$Outbound,
+  PreviewAttachOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewAttachOverageAllowedToJSON(
+  previewAttachOverageAllowed: PreviewAttachOverageAllowed,
+): string {
+  return JSON.stringify(
+    PreviewAttachOverageAllowed$outboundSchema.parse(
+      previewAttachOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewAttachBillingControls$Outbound = {
+  auto_topups?: Array<PreviewAttachAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<PreviewAttachSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<PreviewAttachUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<PreviewAttachUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<PreviewAttachOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const PreviewAttachBillingControls$outboundSchema: z.ZodMiniType<
+  PreviewAttachBillingControls$Outbound,
+  PreviewAttachBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => PreviewAttachAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => PreviewAttachSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => PreviewAttachUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => PreviewAttachUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => PreviewAttachOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function previewAttachBillingControlsToJSON(
+  previewAttachBillingControls: PreviewAttachBillingControls,
+): string {
+  return JSON.stringify(
+    PreviewAttachBillingControls$outboundSchema.parse(
+      previewAttachBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachCustomize$Outbound = {
   price?: PreviewAttachBasePrice$Outbound | null | undefined;
   items?: Array<PreviewAttachItemPlanItem$Outbound> | undefined;
   add_items?: Array<PreviewAttachAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<PreviewAttachPlanItemFilter$Outbound> | undefined;
   free_trial?: PreviewAttachFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: PreviewAttachBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -2069,12 +2625,16 @@ export const PreviewAttachCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => PreviewAttachFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => PreviewAttachBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );

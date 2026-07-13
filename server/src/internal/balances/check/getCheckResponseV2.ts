@@ -9,9 +9,11 @@ import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 export const getCheckResponseV2 = async ({
 	checkData,
 	requiredBalance,
+	properties,
 }: {
 	checkData: CheckDataV2;
 	requiredBalance: number;
+	properties?: Record<string, unknown> | null;
 }) => {
 	const {
 		customerId,
@@ -56,6 +58,7 @@ export const getCheckResponseV2 = async ({
 					feature: featureToUse,
 					requiredBalance,
 					originalFeature,
+					properties,
 				}).allowed
 			: false;
 

@@ -30,6 +30,8 @@ type AdminOrgRedisConfigResponse = {
 	org_slug: string;
 	redis_config: {
 		host: string;
+		hasPublicUrl: boolean;
+		publicHost: string | null;
 		migrationPercent: number;
 		previousMigrationPercent: number;
 		migrationChangedAt: number;
@@ -52,6 +54,7 @@ export function OrgRedisConfigDialog({
 	const axiosInstance = useAxiosInstance();
 
 	const [connectionString, setConnectionString] = useState("");
+	const [publicConnectionString, setPublicConnectionString] = useState("");
 	// `null` = "show the current server value". A string means the admin has
 	// typed something; that draft takes precedence until a successful update
 	// or a dialog reopen clears it. Deriving `migrationInput` during render
@@ -63,6 +66,7 @@ export function OrgRedisConfigDialog({
 
 	const [saving, setSaving] = useState(false);
 	const [updatingMigration, setUpdatingMigration] = useState(false);
+	const [savingPublicUrl, setSavingPublicUrl] = useState(false);
 	const [removing, setRemoving] = useState(false);
 
 	const { data, isLoading, isError, refetch } =
@@ -96,6 +100,7 @@ export function OrgRedisConfigDialog({
 	useEffect(() => {
 		if (open && orgId) {
 			setConnectionString("");
+			setPublicConnectionString("");
 			setRemoveConfirm("");
 			setMigrationInputDraft(null);
 		}
@@ -126,14 +131,33 @@ export function OrgRedisConfigDialog({
 		try {
 			await axiosInstance.patch(`/admin/orgs/${orgId}/redis`, {
 				connectionString: connectionString.trim(),
+				publicConnectionString: publicConnectionString.trim() || undefined,
 			});
 			setConnectionString("");
+			setPublicConnectionString("");
 			toast.success("Redis connected");
 			await refreshAfterMutation();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to connect Redis"));
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	const handleUpdatePublicUrl = async () => {
+		if (!orgId || !publicConnectionString.trim()) return;
+		setSavingPublicUrl(true);
+		try {
+			await axiosInstance.patch(`/admin/orgs/${orgId}/redis/public-url`, {
+				publicConnectionString: publicConnectionString.trim(),
+			});
+			setPublicConnectionString("");
+			toast.success("Public URL updated");
+			await refreshAfterMutation();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to update public URL"));
+		} finally {
+			setSavingPublicUrl(false);
 		}
 	};
 
@@ -196,6 +220,41 @@ export function OrgRedisConfigDialog({
 						<div className="flex flex-col gap-1">
 							<FormLabel>Connected host</FormLabel>
 							<Input value={cfg.host} readOnly className="font-mono text-xs" />
+						</div>
+
+						<div className="flex flex-col gap-1">
+							<FormLabel>Public URL</FormLabel>
+							<span className="text-subtle text-xs">
+								{cfg.hasPublicUrl
+									? "Configured — used off-AWS (local dev, trigger.dev)."
+									: "Not set — off-AWS callers fall back to the private URL, which may not be reachable."}
+							</span>
+							{cfg.publicHost && (
+								<Input
+									value={cfg.publicHost}
+									readOnly
+									className="font-mono text-xs"
+								/>
+							)}
+							<div className="flex items-center gap-2">
+								<Input
+									value={publicConnectionString}
+									onChange={(e) => setPublicConnectionString(e.target.value)}
+									placeholder="rediss://default:password@public-host:6379"
+									className="font-mono text-xs"
+								/>
+								<Button
+									variant="secondary"
+									disabled={savingPublicUrl || !publicConnectionString.trim()}
+									onClick={handleUpdatePublicUrl}
+								>
+									{savingPublicUrl
+										? "Saving…"
+										: cfg.hasPublicUrl
+											? "Update"
+											: "Set"}
+								</Button>
+							</div>
 						</div>
 
 						<div className="flex flex-col gap-1">
@@ -263,13 +322,27 @@ export function OrgRedisConfigDialog({
 					</div>
 				) : (
 					<div className="flex flex-col gap-3">
-						<FormLabel>Redis connection string</FormLabel>
+						<FormLabel>Redis connection string (private)</FormLabel>
 						<Input
 							value={connectionString}
 							onChange={(e) => setConnectionString(e.target.value)}
 							placeholder="rediss://default:password@host:port"
 							className="font-mono text-xs"
 						/>
+
+						<FormLabel>Public connection string (optional)</FormLabel>
+						<Input
+							value={publicConnectionString}
+							onChange={(e) => setPublicConnectionString(e.target.value)}
+							placeholder="rediss://default:password@public-host:port"
+							className="font-mono text-xs"
+						/>
+						<span className="text-subtle text-[11px]">
+							Used off-AWS (local dev, trigger.dev) when the private URL sits on
+							a VPC those callers can't reach. Leave blank if the private URL is
+							publicly reachable.
+						</span>
+
 						<span className="text-subtle text-[11px]">
 							Stored encrypted (AES-256-CBC). Frontend never sees the connection
 							string after save — only the host. Migration starts at 0% (no

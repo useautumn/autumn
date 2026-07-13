@@ -98,6 +98,16 @@ export const customerProducts = pgTable(
 			table.internal_customer_id,
 			table.status,
 		),
+		index("idx_customer_products_customer_status_created_at")
+			.on(
+				table.internal_customer_id,
+				table.status,
+				sql`${table.created_at} DESC`,
+			)
+			.concurrently(),
+		index("idx_customer_products_product_status")
+			.on(table.internal_product_id, table.status)
+			.concurrently(),
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
@@ -115,9 +125,28 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_free_trial_id")
+			.on(table.free_trial_id)
+			.where(sql`${table.free_trial_id} IS NOT NULL`)
+			.concurrently(),
 		index("idx_customer_products_revenuecat_processor")
 			.on(table.internal_customer_id)
 			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
+		index("idx_customer_products_ended_at")
+			.on(table.ended_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.ended_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_trial_ends_at")
+			.on(table.trial_ends_at)
+			.where(
+				sql`${table.status} IN ('active', 'past_due') AND ${table.trial_ends_at} IS NOT NULL`,
+			)
+			.concurrently(),
+		index("idx_customer_products_product_id")
+			.on(table.product_id)
+			.concurrently(),
 	],
 );
 

@@ -3,7 +3,6 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	billingContextToCurrency,
-	copyStripeResourcesToMatchingPrice,
 	cusProductToProduct,
 	type FullProduct,
 	getPriceCurrencyStripeId,
@@ -22,19 +21,30 @@ import {
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
-import { PriceService } from "@/internal/products/prices/PriceService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
+import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 
 export const initStripeResourcesForProducts = async ({
 	ctx,
 	products,
+	candidateProducts = [],
 	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	products: FullProduct[];
+	candidateProducts?: FullProduct[];
 	internalEntityId?: string;
 }) => {
 	const { db, org, env, logger } = ctx;
+
+	await Promise.all(
+		products.map((product) =>
+			applyStripeResourceReuseForProduct({ ctx, product, candidateProducts }),
+		),
+	);
+	await applyStripeReuseFromVariantFamilies({ ctx, products });
+
 	if (env === AppEnv.Live) return;
 	if (orgDisableStripeWrites({ ctx, includeSandbox: true })) return;
 
@@ -79,36 +89,6 @@ const shouldInitializeStripePrice = ({ price }: { price: Price }) => {
 	return (price.config.amount ?? 0) > 0;
 };
 
-const applyStripeReuseWithinProduct = async ({
-	db,
-	product,
-}: {
-	db: AutumnContext["db"];
-	product: FullProduct;
-}) => {
-	for (const targetPrice of product.prices) {
-		const candidatePrices = product.prices.filter(
-			(price) => price.id !== targetPrice.id,
-		);
-		if (candidatePrices.length === 0) continue;
-
-		const { copiedFields } = copyStripeResourcesToMatchingPrice({
-			targetPrice,
-			candidatePrices,
-			targetEntitlements: product.entitlements,
-			candidateEntitlements: product.entitlements,
-		});
-
-		if (copiedFields.length === 0) continue;
-
-		await PriceService.update({
-			db,
-			id: targetPrice.id,
-			update: { config: targetPrice.config },
-		});
-	}
-};
-
 export const initStripeResourcesForBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
@@ -132,8 +112,6 @@ export const initStripeResourcesForBillingPlan = async ({
 		});
 		return;
 	}
-
-	if (orgDisableStripeWrites({ ctx })) return;
 
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
@@ -192,17 +170,20 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
+	const targetProducts = [...newProducts, ...patchProducts, ...existingProducts];
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	await Promise.all(
-		allProducts.map((product) =>
-			applyStripeReuseWithinProduct({ db, product }),
+		targetProducts.map((product) =>
+			applyStripeResourceReuseForProduct({ ctx, product }),
 		),
 	);
+	await applyStripeReuseFromVariantFamilies({ ctx, products: targetProducts });
+
+	if (orgDisableStripeWrites({ ctx })) return;
 
 	const batchProductUpdates = [];
-	for (const product of allProducts) {
+	for (const product of targetProducts) {
 		if (product.processor?.id != null) continue;
 		if (isFreeProduct({ prices: product.prices })) continue;
 
@@ -220,7 +201,7 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const batchPriceUpdates = [];
 
-	for (const product of allProducts) {
+	for (const product of targetProducts) {
 		for (const price of product.prices) {
 			if (!shouldInitializeStripePrice({ price })) continue;
 

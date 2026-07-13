@@ -1,5 +1,5 @@
 {
-  "id": "7968721c-42da-4f84-9b9d-74aef3072dd4",
+  "id": "d0552dec-2a3a-45fe-9462-32eff307cf80",
   "prevId": "a419bdbc-4014-4ff2-be3b-6195f7029943",
   "version": "7",
   "dialect": "postgresql",
@@ -2520,12 +2520,6 @@
           "notNull": false,
           "default": false
         },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "auto_topups": {
           "name": "auto_topups",
           "type": "jsonb",
@@ -3682,6 +3676,13 @@
         },
         "model_markups": {
           "name": "model_markups",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "null"
+        },
+        "stripe_meter": {
+          "name": "stripe_meter",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false,

@@ -6,12 +6,20 @@ import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
-import { fetchApprovalPreview } from "../../utils/fetchApprovalPreview.js";
+import {
+	fetchApprovalPreview,
+	shouldRefreshApprovalPreview,
+} from "../../utils/fetchApprovalPreview.js";
 
 const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
 		? (args.request as Record<string, unknown>)
 		: args;
+
+const publicToolArgs = (args: Record<string, unknown>) =>
+	Object.fromEntries(
+		Object.entries(args).filter(([key]) => !key.startsWith("_eve")),
+	);
 
 /**
  * Record an approval for a suspended web turn. The dashboard fetches it via
@@ -55,17 +63,23 @@ export const presentWebApproval = async ({
 		return undefined;
 	}
 
-	if (!approval.preview) {
+	if (
+		shouldRefreshApprovalPreview({
+			preview: approval.preview,
+			toolName: approval.toolName,
+		})
+	) {
 		try {
-			const request = getRequest(approval.toolArgs);
+			const request = getRequest(publicToolArgs(approval.toolArgs));
 			if (request) {
-				approval.preview = await fetchApprovalPreview({
+				const preview = await fetchApprovalPreview({
 					env: approval.env,
 					logger,
 					request,
 					token,
 					toolName: approval.toolName,
 				});
+				if (preview) approval.preview = preview;
 			}
 		} catch (error) {
 			logger.warn("Could not backfill web approval preview", {
@@ -103,7 +117,9 @@ export const presentWebApproval = async ({
 
 	return {
 		approvalId,
-		params: getRequest(approval.toolArgs) ?? approval.toolArgs,
+		params:
+			getRequest(publicToolArgs(approval.toolArgs)) ??
+			publicToolArgs(approval.toolArgs),
 		preview: approval.preview,
 		toolName: approval.toolName,
 	};

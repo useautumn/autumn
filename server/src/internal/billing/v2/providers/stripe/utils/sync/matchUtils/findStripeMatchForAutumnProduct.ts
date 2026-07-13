@@ -1,20 +1,36 @@
-import { type Product, productToStripeId } from "@autumn/shared";
+import {
+	type FullProduct,
+	isFixedPrice,
+	productToStripeIds,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import type { ProductMatchCondition } from "./matchConditions";
 
 /**
- * Find the match condition (if any) between an Autumn product and a pool
- * of Stripe product ids. Returns null when the product's processor id is
- * absent or not in the pool.
+ * A product is a candidate for a Stripe item when the item's Stripe product id
+ * is on the product mapping or on any non-fixed price's config.stripe_product_id.
  */
 export const findStripeMatchForAutumnProduct = ({
 	product,
 	stripeProductIds,
 }: {
-	product: Product;
+	product: FullProduct;
 	stripeProductIds: Set<string>;
 }): ProductMatchCondition | null => {
-	const stripeProductId = productToStripeId({ product });
-	if (!stripeProductId) return null;
-	if (!stripeProductIds.has(stripeProductId)) return null;
-	return { type: "stripe_product_id", stripe_product_id: stripeProductId };
+	for (const stripeProductId of productToStripeIds({ product })) {
+		if (stripeProductIds.has(stripeProductId)) {
+			return { type: "stripe_product_id", stripe_product_id: stripeProductId };
+		}
+	}
+
+	for (const price of product.prices) {
+		if (isFixedPrice(price)) continue;
+		const stripeProductId = (price.config as UsagePriceConfig)
+			.stripe_product_id;
+		if (stripeProductId && stripeProductIds.has(stripeProductId)) {
+			return { type: "stripe_product_id", stripe_product_id: stripeProductId };
+		}
+	}
+
+	return null;
 };

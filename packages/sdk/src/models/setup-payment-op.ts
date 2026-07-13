@@ -662,6 +662,226 @@ export type SetupPaymentFreeTrialParams = {
 };
 
 /**
+ * The time interval for the purchase limit window.
+ */
+export const SetupPaymentPurchaseLimitInterval = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+/**
+ * The time interval for the purchase limit window.
+ */
+export type SetupPaymentPurchaseLimitInterval = ClosedEnum<
+  typeof SetupPaymentPurchaseLimitInterval
+>;
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur.
+ */
+export type SetupPaymentPurchaseLimit = {
+  /**
+   * The time interval for the purchase limit window.
+   */
+  interval: SetupPaymentPurchaseLimitInterval;
+  /**
+   * Number of intervals in the purchase limit window.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Maximum number of auto top-ups allowed within the interval.
+   */
+  limit: number;
+};
+
+export type SetupPaymentAutoTopup = {
+  /**
+   * The ID of the feature (credit balance) to auto top-up.
+   */
+  featureId: string;
+  /**
+   * Whether auto top-up is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * When the balance drops below this threshold, an auto top-up will be purchased.
+   */
+  threshold: number;
+  /**
+   * Amount of credits to add per auto top-up.
+   */
+  quantity: number;
+  /**
+   * Optional rate limit to cap how often auto top-ups occur.
+   */
+  purchaseLimit?: SetupPaymentPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
+};
+
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const SetupPaymentLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type SetupPaymentLimitType = ClosedEnum<typeof SetupPaymentLimitType>;
+
+export type SetupPaymentSpendLimit = {
+  /**
+   * Optional feature ID this spend limit applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether the overage spend limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: SetupPaymentLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+   */
+  overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const SetupPaymentUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type SetupPaymentUsageLimitInterval = ClosedEnum<
+  typeof SetupPaymentUsageLimitInterval
+>;
+
+export type SetupPaymentProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type SetupPaymentFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+export type SetupPaymentUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: SetupPaymentUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: SetupPaymentFilter | undefined;
+};
+
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const SetupPaymentThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type SetupPaymentThresholdType = ClosedEnum<
+  typeof SetupPaymentThresholdType
+>;
+
+export type SetupPaymentUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: SetupPaymentThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type SetupPaymentOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
+ * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+ */
+export type SetupPaymentBillingControls = {
+  /**
+   * List of auto top-up configurations per feature.
+   */
+  autoTopups?: Array<SetupPaymentAutoTopup> | undefined;
+  /**
+   * List of overage spend limits per feature (caps overage spend).
+   */
+  spendLimits?: Array<SetupPaymentSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<SetupPaymentUsageLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<SetupPaymentUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<SetupPaymentOverageAllowed> | undefined;
+};
+
+/**
  * Customize the plan to attach. Can override the price, items, free trial, or a combination.
  */
 export type SetupPaymentCustomize = {
@@ -685,6 +905,10 @@ export type SetupPaymentCustomize = {
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
   freeTrial?: SetupPaymentFreeTrialParams | null | undefined;
+  /**
+   * Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.
+   */
+  billingControls?: SetupPaymentBillingControls | undefined;
 };
 
 /**
@@ -1613,12 +1837,342 @@ export function setupPaymentFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export const SetupPaymentPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentPurchaseLimitInterval
+> = z.enum(SetupPaymentPurchaseLimitInterval);
+
+/** @internal */
+export type SetupPaymentPurchaseLimit$Outbound = {
+  interval: string;
+  interval_count: number;
+  limit: number;
+};
+
+/** @internal */
+export const SetupPaymentPurchaseLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentPurchaseLimit$Outbound,
+  SetupPaymentPurchaseLimit
+> = z.pipe(
+  z.object({
+    interval: SetupPaymentPurchaseLimitInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    limit: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function setupPaymentPurchaseLimitToJSON(
+  setupPaymentPurchaseLimit: SetupPaymentPurchaseLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentPurchaseLimit$outboundSchema.parse(setupPaymentPurchaseLimit),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAutoTopup$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  threshold: number;
+  quantity: number;
+  purchase_limit?: SetupPaymentPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAutoTopup$outboundSchema: z.ZodMiniType<
+  SetupPaymentAutoTopup$Outbound,
+  SetupPaymentAutoTopup
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+    threshold: z.number(),
+    quantity: z.number(),
+    purchaseLimit: z.optional(
+      z.lazy(() => SetupPaymentPurchaseLimit$outboundSchema),
+    ),
+    invoiceMode: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
+    });
+  }),
+);
+
+export function setupPaymentAutoTopupToJSON(
+  setupPaymentAutoTopup: SetupPaymentAutoTopup,
+): string {
+  return JSON.stringify(
+    SetupPaymentAutoTopup$outboundSchema.parse(setupPaymentAutoTopup),
+  );
+}
+
+/** @internal */
+export const SetupPaymentLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentLimitType
+> = z.enum(SetupPaymentLimitType);
+
+/** @internal */
+export type SetupPaymentSpendLimit$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  limit_type?: string | undefined;
+  overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
+};
+
+/** @internal */
+export const SetupPaymentSpendLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentSpendLimit$Outbound,
+  SetupPaymentSpendLimit
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), false),
+    limitType: z.optional(SetupPaymentLimitType$outboundSchema),
+    overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      limitType: "limit_type",
+      overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
+    });
+  }),
+);
+
+export function setupPaymentSpendLimitToJSON(
+  setupPaymentSpendLimit: SetupPaymentSpendLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentSpendLimit$outboundSchema.parse(setupPaymentSpendLimit),
+  );
+}
+
+/** @internal */
+export const SetupPaymentUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentUsageLimitInterval
+> = z.enum(SetupPaymentUsageLimitInterval);
+
+/** @internal */
+export type SetupPaymentProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const SetupPaymentProperties$outboundSchema: z.ZodMiniType<
+  SetupPaymentProperties$Outbound,
+  SetupPaymentProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function setupPaymentPropertiesToJSON(
+  setupPaymentProperties: SetupPaymentProperties,
+): string {
+  return JSON.stringify(
+    SetupPaymentProperties$outboundSchema.parse(setupPaymentProperties),
+  );
+}
+
+/** @internal */
+export type SetupPaymentFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const SetupPaymentFilter$outboundSchema: z.ZodMiniType<
+  SetupPaymentFilter$Outbound,
+  SetupPaymentFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function setupPaymentFilterToJSON(
+  setupPaymentFilter: SetupPaymentFilter,
+): string {
+  return JSON.stringify(
+    SetupPaymentFilter$outboundSchema.parse(setupPaymentFilter),
+  );
+}
+
+/** @internal */
+export type SetupPaymentUsageLimit$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+  limit: number;
+  interval: string;
+  filter?: SetupPaymentFilter$Outbound | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUsageLimit$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageLimit$Outbound,
+  SetupPaymentUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
+    limit: z.number(),
+    interval: SetupPaymentUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => SetupPaymentFilter$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function setupPaymentUsageLimitToJSON(
+  setupPaymentUsageLimit: SetupPaymentUsageLimit,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageLimit$outboundSchema.parse(setupPaymentUsageLimit),
+  );
+}
+
+/** @internal */
+export const SetupPaymentThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentThresholdType
+> = z.enum(SetupPaymentThresholdType);
+
+/** @internal */
+export type SetupPaymentUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const SetupPaymentUsageAlert$outboundSchema: z.ZodMiniType<
+  SetupPaymentUsageAlert$Outbound,
+  SetupPaymentUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: SetupPaymentThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function setupPaymentUsageAlertToJSON(
+  setupPaymentUsageAlert: SetupPaymentUsageAlert,
+): string {
+  return JSON.stringify(
+    SetupPaymentUsageAlert$outboundSchema.parse(setupPaymentUsageAlert),
+  );
+}
+
+/** @internal */
+export type SetupPaymentOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const SetupPaymentOverageAllowed$outboundSchema: z.ZodMiniType<
+  SetupPaymentOverageAllowed$Outbound,
+  SetupPaymentOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function setupPaymentOverageAllowedToJSON(
+  setupPaymentOverageAllowed: SetupPaymentOverageAllowed,
+): string {
+  return JSON.stringify(
+    SetupPaymentOverageAllowed$outboundSchema.parse(setupPaymentOverageAllowed),
+  );
+}
+
+/** @internal */
+export type SetupPaymentBillingControls$Outbound = {
+  auto_topups?: Array<SetupPaymentAutoTopup$Outbound> | undefined;
+  spend_limits?: Array<SetupPaymentSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<SetupPaymentUsageLimit$Outbound> | undefined;
+  usage_alerts?: Array<SetupPaymentUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<SetupPaymentOverageAllowed$Outbound> | undefined;
+};
+
+/** @internal */
+export const SetupPaymentBillingControls$outboundSchema: z.ZodMiniType<
+  SetupPaymentBillingControls$Outbound,
+  SetupPaymentBillingControls
+> = z.pipe(
+  z.object({
+    autoTopups: z.optional(
+      z.array(z.lazy(() => SetupPaymentAutoTopup$outboundSchema)),
+    ),
+    spendLimits: z.optional(
+      z.array(z.lazy(() => SetupPaymentSpendLimit$outboundSchema)),
+    ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => SetupPaymentUsageLimit$outboundSchema)),
+    ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => SetupPaymentUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => SetupPaymentOverageAllowed$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      autoTopups: "auto_topups",
+      spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
+    });
+  }),
+);
+
+export function setupPaymentBillingControlsToJSON(
+  setupPaymentBillingControls: SetupPaymentBillingControls,
+): string {
+  return JSON.stringify(
+    SetupPaymentBillingControls$outboundSchema.parse(
+      setupPaymentBillingControls,
+    ),
+  );
+}
+
+/** @internal */
 export type SetupPaymentCustomize$Outbound = {
   price?: SetupPaymentBasePrice$Outbound | null | undefined;
   items?: Array<SetupPaymentItemPlanItem$Outbound> | undefined;
   add_items?: Array<SetupPaymentAddItemPlanItem$Outbound> | undefined;
   remove_items?: Array<SetupPaymentPlanItemFilter$Outbound> | undefined;
   free_trial?: SetupPaymentFreeTrialParams$Outbound | null | undefined;
+  billing_controls?: SetupPaymentBillingControls$Outbound | undefined;
 };
 
 /** @internal */
@@ -1642,12 +2196,16 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => SetupPaymentFreeTrialParams$outboundSchema)),
     ),
+    billingControls: z.optional(
+      z.lazy(() => SetupPaymentBillingControls$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       addItems: "add_items",
       removeItems: "remove_items",
       freeTrial: "free_trial",
+      billingControls: "billing_controls",
     });
   }),
 );

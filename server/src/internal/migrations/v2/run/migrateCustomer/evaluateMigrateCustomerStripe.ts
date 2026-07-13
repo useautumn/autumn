@@ -87,18 +87,23 @@ export const evaluateMigrateCustomerStripe = async ({
 				}),
 		});
 
-		assertStripePlanNoCharges({
-			stripeBillingPlan,
-			subscriptionId,
-			createError: (violation) =>
-				new MigrationOperationError({
-					code: "unsupported_operation_input",
-					operationType: "update_plan",
-					field: "customize",
-					message: `Migration update_plan ${violation.message}`,
-					details: violation.details,
-				}),
-		});
+		// `contextBySubscriptionId` keeps the first billingContext per subscription;
+		// consistent as long as one migration doesn't mix proration-allowed and
+		// charge-free ops on the same subscription.
+		if (billingContext.allowCharges !== true) {
+			assertStripePlanNoCharges({
+				stripeBillingPlan,
+				subscriptionId,
+				createError: (violation) =>
+					new MigrationOperationError({
+						code: "unsupported_operation_input",
+						operationType: "update_plan",
+						field: "customize",
+						message: `Migration update_plan ${violation.message}`,
+						details: violation.details,
+					}),
+			});
+		}
 
 		stripeBillingPlans.push({
 			subscriptionId,

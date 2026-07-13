@@ -11,53 +11,33 @@ export const attachFeatureQuantitySchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const attachAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
-export const attachItemAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const attachItemToSchema = z.union([z.number(), z.string()]);
-
-export const attachItemTierAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-});
 
 export const attachItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(attachItemTierAdditionalCurrencySchema), z.undefined()])
-		.optional(),
-});
-
-export const attachAddItemAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
 });
 
 export const attachAddItemToSchema = z.union([z.number(), z.string()]);
-
-export const attachAddItemTierAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-});
 
 export const attachAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(attachAddItemTierAdditionalCurrencySchema), z.undefined()])
-		.optional(),
+});
+
+export const attachPropertiesSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const attachFilterSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const attachOverageAllowedSchema = z.object({
@@ -107,18 +87,10 @@ export const attachFeatureQuantityOutboundSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const attachAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const attachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z
-		.union([z.array(attachAdditionalCurrencyOutboundSchema), z.undefined()])
-		.optional(),
 });
 
 export const attachItemResetOutboundSchema = z.object({
@@ -126,36 +98,16 @@ export const attachItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachItemAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const attachItemToOutboundSchema = z.union([z.number(), z.string()]);
-
-export const attachItemTierAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.string(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-});
 
 export const attachItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z
-		.union([
-			z.array(attachItemTierAdditionalCurrencyOutboundSchema),
-			z.undefined(),
-		])
-		.optional(),
 });
 
 export const attachItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z
-		.union([z.array(attachItemAdditionalCurrencyOutboundSchema), z.undefined()])
-		.optional(),
 	tiers: z
 		.union([z.array(attachItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -198,39 +150,16 @@ export const attachAddItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachAddItemAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const attachAddItemToOutboundSchema = z.union([z.number(), z.string()]);
-
-export const attachAddItemTierAdditionalCurrencyOutboundSchema = z.object({
-	currency: z.string(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-});
 
 export const attachAddItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z
-		.union([
-			z.array(attachAddItemTierAdditionalCurrencyOutboundSchema),
-			z.undefined(),
-		])
-		.optional(),
 });
 
 export const attachAddItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additional_currencies: z
-		.union([
-			z.array(attachAddItemAdditionalCurrencyOutboundSchema),
-			z.undefined(),
-		])
-		.optional(),
 	tiers: z
 		.union([z.array(attachAddItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -309,6 +238,20 @@ export const attachSpendLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit_type: z.union([z.string(), z.undefined()]).optional(),
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
+	skip_overage_billing: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const attachPropertiesOutboundSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+]);
+
+export const attachFilterOutboundSchema = z.object({
+	properties: z.record(
+		z.string(),
+		z.union([z.string(), z.number(), z.boolean()]),
+	),
 });
 
 export const attachUsageLimitOutboundSchema = z.object({
@@ -316,6 +259,7 @@ export const attachUsageLimitOutboundSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: z.string(),
+	filter: z.union([attachFilterOutboundSchema, z.undefined()]).optional(),
 });
 
 export const attachUsageAlertOutboundSchema = z.object({
@@ -444,7 +388,6 @@ export const attachParamsOutboundSchema = z.object({
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
-	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -457,9 +400,6 @@ export const attachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: attachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(attachAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 });
 
 export const attachItemResetIntervalSchema = closedEnumSchema;
@@ -477,9 +417,6 @@ export const attachItemBillingMethodSchema = closedEnumSchema;
 
 export const attachItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(attachItemAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 	tiers: z.union([z.array(attachItemTierSchema), z.undefined()]).optional(),
 	tierBehavior: z
 		.union([attachItemTierBehaviorSchema, z.undefined()])
@@ -534,9 +471,6 @@ export const attachAddItemBillingMethodSchema = closedEnumSchema;
 
 export const attachAddItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(attachAddItemAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 	tiers: z.union([z.array(attachAddItemTierSchema), z.undefined()]).optional(),
 	tierBehavior: z
 		.union([attachAddItemTierBehaviorSchema, z.undefined()])
@@ -637,6 +571,7 @@ export const attachSpendLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limitType: z.union([attachLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const attachUsageLimitIntervalSchema = closedEnumSchema;
@@ -646,6 +581,7 @@ export const attachUsageLimitSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 	limit: z.number(),
 	interval: attachUsageLimitIntervalSchema,
+	filter: z.union([attachFilterSchema, z.undefined()]).optional(),
 });
 
 export const attachThresholdTypeSchema = closedEnumSchema;
@@ -744,7 +680,6 @@ export const attachParamsSchema = z.object({
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
-	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;

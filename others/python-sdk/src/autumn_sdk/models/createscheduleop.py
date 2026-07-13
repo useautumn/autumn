@@ -145,7 +145,7 @@ CreateScheduleRedirectMode = Literal[
 r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
 
-BillingBehavior = Literal[
+CreateScheduleBillingBehavior = Literal[
     "prorate_immediately",
     "none",
 ]
@@ -1040,6 +1040,380 @@ class CreateSchedulePlanItemFilter2(BaseModel):
         return m
 
 
+CreateSchedulePurchaseLimitInterval2 = Literal[
+    "hour",
+    "day",
+    "week",
+    "month",
+]
+r"""The time interval for the purchase limit window."""
+
+
+class CreateSchedulePurchaseLimit2TypedDict(TypedDict):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CreateSchedulePurchaseLimitInterval2
+    r"""The time interval for the purchase limit window."""
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals in the purchase limit window."""
+
+
+class CreateSchedulePurchaseLimit2(BaseModel):
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    interval: CreateSchedulePurchaseLimitInterval2
+    r"""The time interval for the purchase limit window."""
+
+    limit: float
+    r"""Maximum number of auto top-ups allowed within the interval."""
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals in the purchase limit window."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateScheduleAutoTopup2TypedDict(TypedDict):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+    enabled: NotRequired[bool]
+    r"""Whether auto top-up is enabled."""
+    purchase_limit: NotRequired[CreateSchedulePurchaseLimit2TypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+
+class CreateScheduleAutoTopup2(BaseModel):
+    feature_id: str
+    r"""The ID of the feature (credit balance) to auto top-up."""
+
+    threshold: float
+    r"""When the balance drops below this threshold, an auto top-up will be purchased."""
+
+    quantity: float
+    r"""Amount of credits to add per auto top-up."""
+
+    enabled: Optional[bool] = False
+    r"""Whether auto top-up is enabled."""
+
+    purchase_limit: Optional[CreateSchedulePurchaseLimit2] = None
+    r"""Optional rate limit to cap how often auto top-ups occur."""
+
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateScheduleLimitType2 = Literal[
+    "absolute",
+    "usage_percentage",
+]
+r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+
+class CreateScheduleSpendLimit2TypedDict(TypedDict):
+    feature_id: NotRequired[str]
+    r"""Optional feature ID this spend limit applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether the overage spend limit is enabled."""
+    limit_type: NotRequired[CreateScheduleLimitType2]
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+    overage_limit: NotRequired[float]
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+    skip_overage_billing: NotRequired[bool]
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+
+class CreateScheduleSpendLimit2(BaseModel):
+    feature_id: Optional[str] = None
+    r"""Optional feature ID this spend limit applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether the overage spend limit is enabled."""
+
+    limit_type: Optional[CreateScheduleLimitType2] = None
+    r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
+
+    overage_limit: Optional[float] = None
+    r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
+
+    skip_overage_billing: Optional[bool] = None
+    r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "feature_id",
+                "enabled",
+                "limit_type",
+                "overage_limit",
+                "skip_overage_billing",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateScheduleUsageLimitInterval2 = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CreateScheduleFilter2TypedDict(TypedDict):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CreateScheduleFilter2(BaseModel):
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    properties: Dict[str, Any]
+
+
+class CreateScheduleUsageLimit2TypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: CreateScheduleUsageLimitInterval2
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage limit is enabled."""
+    filter_: NotRequired[CreateScheduleFilter2TypedDict]
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+
+class CreateScheduleUsageLimit2(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: CreateScheduleUsageLimitInterval2
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage limit is enabled."""
+
+    filter_: Annotated[
+        Optional[CreateScheduleFilter2], pydantic.Field(alias="filter")
+    ] = None
+    r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled", "filter"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateScheduleThresholdType2 = Literal[
+    "usage",
+    "usage_percentage",
+    "remaining",
+    "remaining_percentage",
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class CreateScheduleUsageAlert2TypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: CreateScheduleThresholdType2
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class CreateScheduleUsageAlert2(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: CreateScheduleThresholdType2
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateScheduleOverageAllowed2TypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class CreateScheduleOverageAllowed2(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateScheduleBillingControls2TypedDict(TypedDict):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: NotRequired[List[CreateScheduleAutoTopup2TypedDict]]
+    r"""List of auto top-up configurations per feature."""
+    spend_limits: NotRequired[List[CreateScheduleSpendLimit2TypedDict]]
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[CreateScheduleUsageLimit2TypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
+    usage_alerts: NotRequired[List[CreateScheduleUsageAlert2TypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[CreateScheduleOverageAllowed2TypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+
+class CreateScheduleBillingControls2(BaseModel):
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
+    auto_topups: Optional[List[CreateScheduleAutoTopup2]] = None
+    r"""List of auto top-up configurations per feature."""
+
+    spend_limits: Optional[List[CreateScheduleSpendLimit2]] = None
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[CreateScheduleUsageLimit2]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
+
+    usage_alerts: Optional[List[CreateScheduleUsageAlert2]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[CreateScheduleOverageAllowed2]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class CreateScheduleCustomize2TypedDict(TypedDict):
     r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
@@ -1051,6 +1425,8 @@ class CreateScheduleCustomize2TypedDict(TypedDict):
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[CreateSchedulePlanItemFilter2TypedDict]]
     r"""Filters selecting items to remove from the plan."""
+    billing_controls: NotRequired[CreateScheduleBillingControls2TypedDict]
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
 
 
 class CreateScheduleCustomize2(BaseModel):
@@ -1068,9 +1444,14 @@ class CreateScheduleCustomize2(BaseModel):
     remove_items: Optional[List[CreateSchedulePlanItemFilter2]] = None
     r"""Filters selecting items to remove from the plan."""
 
+    billing_controls: Optional[CreateScheduleBillingControls2] = None
+    r"""Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price", "items", "add_items", "remove_items"])
+        optional_fields = set(
+            ["price", "items", "add_items", "remove_items", "billing_controls"]
+        )
         nullable_fields = set(["price"])
         serialized = handler(self)
         m = {}
@@ -1142,16 +1523,22 @@ class CreateSchedulePlan2(BaseModel):
         return m
 
 
-class PhaseRequest2TypedDict(TypedDict):
+BillingCycleAnchor2 = Literal["phase_start",]
+r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
+
+class PhaseStartTypedDict(TypedDict):
     plans: List[CreateSchedulePlan2TypedDict]
     r"""Plans to materialize for this phase."""
     starts_at: NotRequired[StartsAt2TypedDict]
     r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
     starting_after: NotRequired[StartingAfter2TypedDict]
     r"""Relative start offset from the previous resolved schedule phase."""
+    billing_cycle_anchor: NotRequired[BillingCycleAnchor2]
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
 
 
-class PhaseRequest2(BaseModel):
+class PhaseStart(BaseModel):
     plans: List[CreateSchedulePlan2]
     r"""Plans to materialize for this phase."""
 
@@ -1161,9 +1548,12 @@ class PhaseRequest2(BaseModel):
     starting_after: Optional[StartingAfter2] = None
     r"""Relative start offset from the previous resolved schedule phase."""
 
+    billing_cycle_anchor: Optional[BillingCycleAnchor2] = None
+    r"""Pass 'phase_start' to reset the Stripe billing cycle anchor when this phase starts."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["starts_at", "starting_after"])
+        optional_fields = set(["starts_at", "starting_after", "billing_cycle_anchor"])
         serialized = handler(self)
         m = {}
 
@@ -1178,16 +1568,16 @@ class PhaseRequest2(BaseModel):
         return m
 
 
-PhaseTypedDict = PhaseRequest2TypedDict
+PhaseStartUnionTypedDict = PhaseStartTypedDict
 
 
-Phase = PhaseRequest2
+PhaseStartUnion = PhaseStart
 
 
 class CreateScheduleParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
-    phases: List[PhaseTypedDict]
+    phases: List[PhaseStartUnionTypedDict]
     r"""Ordered phase definitions for the schedule."""
     entity_id: NotRequired[str]
     r"""Optional entity ID for an entity-scoped schedule."""
@@ -1201,7 +1591,7 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     redirect_mode: NotRequired[CreateScheduleRedirectMode]
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
-    billing_behavior: NotRequired[BillingBehavior]
+    billing_behavior: NotRequired[CreateScheduleBillingBehavior]
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
     billing_cycle_anchor: Literal["now"]
     r"""Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time."""
@@ -1213,7 +1603,7 @@ class CreateScheduleParams(BaseModel):
     customer_id: str
     r"""The ID of the customer to create the schedule for."""
 
-    phases: List[Phase]
+    phases: List[PhaseStartUnion]
     r"""Ordered phase definitions for the schedule."""
 
     entity_id: Optional[str] = None
@@ -1234,7 +1624,7 @@ class CreateScheduleParams(BaseModel):
     redirect_mode: Optional[CreateScheduleRedirectMode] = "if_required"
     r"""Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects."""
 
-    billing_behavior: Optional[BillingBehavior] = None
+    billing_behavior: Optional[CreateScheduleBillingBehavior] = None
     r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
 
     billing_cycle_anchor: Annotated[
@@ -1358,6 +1748,7 @@ CreateScheduleCode = Union[
         "3ds_required",
         "payment_method_required",
         "payment_failed",
+        "payment_processing",
     ],
     UnrecognizedStr,
 ]
@@ -1451,6 +1842,10 @@ class CreateScheduleResponse(BaseModel):
         return m
 
 
+try:
+    CreateScheduleUsageLimit2.model_rebuild()
+except NameError:
+    pass
 try:
     CreateScheduleParams.model_rebuild()
 except NameError:

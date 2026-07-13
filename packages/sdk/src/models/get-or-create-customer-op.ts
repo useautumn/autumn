@@ -5,6 +5,7 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { ClosedEnum } from "../types/enums.js";
+import { smartUnion } from "../types/smart-union.js";
 import {
   CustomerExpand,
   CustomerExpand$outboundSchema,
@@ -75,6 +76,20 @@ export type GetOrCreateCustomerAutoTopup = {
   invoiceMode?: boolean | undefined;
 };
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const GetOrCreateCustomerLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type GetOrCreateCustomerLimitType = ClosedEnum<
+  typeof GetOrCreateCustomerLimitType
+>;
+
 export type GetOrCreateCustomerSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -85,9 +100,17 @@ export type GetOrCreateCustomerSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: GetOrCreateCustomerLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -106,11 +129,24 @@ export type GetOrCreateCustomerUsageLimitInterval = ClosedEnum<
   typeof GetOrCreateCustomerUsageLimitInterval
 >;
 
+export type GetOrCreateCustomerProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type GetOrCreateCustomerFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type GetOrCreateCustomerUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -119,6 +155,10 @@ export type GetOrCreateCustomerUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: GetOrCreateCustomerUsageLimitInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: GetOrCreateCustomerFilter | undefined;
 };
 
 /**
@@ -205,6 +245,10 @@ export type GetOrCreateCustomerConfig = {
    * Whether to disable the shared customer-level pool for entities.
    */
   disablePooledBalance?: boolean | undefined;
+  /**
+   * Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+   */
+  disableOverageBilling?: boolean | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -340,10 +384,17 @@ export function getOrCreateCustomerAutoTopupToJSON(
 }
 
 /** @internal */
+export const GetOrCreateCustomerLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerLimitType
+> = z.enum(GetOrCreateCustomerLimitType);
+
+/** @internal */
 export type GetOrCreateCustomerSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -354,12 +405,16 @@ export const GetOrCreateCustomerSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(GetOrCreateCustomerLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -381,10 +436,55 @@ export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
   );
 
 /** @internal */
+export type GetOrCreateCustomerProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const GetOrCreateCustomerProperties$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerProperties$Outbound,
+  GetOrCreateCustomerProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function getOrCreateCustomerPropertiesToJSON(
+  getOrCreateCustomerProperties: GetOrCreateCustomerProperties,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerProperties$outboundSchema.parse(
+      getOrCreateCustomerProperties,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const GetOrCreateCustomerFilter$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerFilter$Outbound,
+  GetOrCreateCustomerFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function getOrCreateCustomerFilterToJSON(
+  getOrCreateCustomerFilter: GetOrCreateCustomerFilter,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerFilter$outboundSchema.parse(getOrCreateCustomerFilter),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
+  filter?: GetOrCreateCustomerFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -394,8 +494,10 @@ export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => GetOrCreateCustomerFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -547,6 +649,7 @@ export function getOrCreateCustomerBillingControlsToJSON(
 /** @internal */
 export type GetOrCreateCustomerConfig$Outbound = {
   disable_pooled_balance?: boolean | undefined;
+  disable_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -556,10 +659,12 @@ export const GetOrCreateCustomerConfig$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     disablePooledBalance: z.optional(z.boolean()),
+    disableOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       disablePooledBalance: "disable_pooled_balance",
+      disableOverageBilling: "disable_overage_billing",
     });
   }),
 );

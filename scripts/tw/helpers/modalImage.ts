@@ -13,7 +13,8 @@
  *   - goaws (native Go SQS, via crane) → /opt/autumn-tw/bin/goaws
  *   - goaws config → /opt/autumn-tw/goaws/goaws.yaml (port 9324, AccountId
  *     "000000000000", EnableDuplicates env-level, queues autumn.fifo + autumn-track.fifo)
- *   - bun → /usr/local/bin/bun ; node (Debian) for the ingress script
+ *   - bun (pinned to .bun-version) → /usr/local/bin/bun, with `node` symlinked
+ *     to bun so the whole image runs on one runtime (ingress + native installs)
  *
  * What's NOT baked here (done per-run by warmup.sh on Modal, since the repo isn't
  * present at image-build time): `bun install`, `bun db migrate`, the seed, and
@@ -27,7 +28,38 @@
  * chowned to `postgres` here and the service scripts run `pg_ctl` via
  * `runuser -u postgres` when EUID=0 (a no-op on the non-root Vercel µVM).
  */
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { App, Image, ModalClient } from "modal";
+
+/** Bun version pinned for the swarm — matches the repo's `.bun-version` so the
+ * image runtime equals what the server is developed against. */
+const BUN_VERSION = readFileSync(
+	join(import.meta.dir, "../../../.bun-version"),
+	"utf8",
+).trim();
+
+/**
+ * Tiny image for the ingress sandbox: debian + git + bun, nothing else. The
+ * ingress server (scripts/tw/ingress/server.mjs) is a self-contained http server
+ * using only node built-ins, so it needs neither node_modules nor PG/Dragonfly/
+ * goaws/chromium — building the full base image for it just wastes ~2-3 min and
+ * couples ingress to a build that can fail independently of the ingress code.
+ */
+export const buildIngressImage = (
+	modal: ModalClient,
+	app: App,
+): Promise<Image> =>
+	// oven/bun:1 (same proven base as the nuke sandbox — pulls + builds reliably in
+	// Modal's builder, where debian:bookworm-slim's apt/bun bootstrap does not). Bun
+	// is already present; we only add git for cloneRepo.
+	modal.images
+		.fromRegistry("oven/bun:1")
+		.dockerfileCommands([
+			"RUN apt-get update && apt-get install -y --no-install-recommends " +
+				"git ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
+		])
+		.build(app);
 
 /** Inputs for baking node_modules into the base image (see buildBaseImage). */
 export type BaseImageDeps = {
@@ -68,14 +100,16 @@ export const buildBaseImage = (
 ): Promise<Image> =>
 	modal.images
 		.fromRegistry("debian:bookworm-slim")
-		// 1. Base system packages (+ redis-tools for redis-cli, nodejs for ingress).
-		//    Pre-create /repo so the sandbox's default workdir exists before the
-		//    warm parent's clone runs (execing in a missing cwd is a git-128 error).
+		// 1. Base system packages (+ redis-tools for redis-cli). No `nodejs`: bun
+		//    is the only runtime (step 6 symlinks `node` → bun). `python3 make g++`
+		//    are needed when native deps fall back to node-gyp. Pre-create /repo so
+		//    the sandbox's default workdir exists before the warm parent's clone runs
+		//    (execing in a missing cwd is a git-128 error).
 		.dockerfileCommands([
 			"RUN apt-get update && apt-get install -y --no-install-recommends " +
 				"ca-certificates curl wget gnupg bash git xz-utils procps tar gzip " +
-				"locales unzip redis-tools nodejs && rm -rf /var/lib/apt/lists/* && " +
-				"mkdir -p /repo",
+				"locales unzip redis-tools python3 make g++ && " +
+				"rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
 		])
 		// 2. PostgreSQL 18 + contrib (pg_trgm) from the PGDG apt repo.
 		.dockerfileCommands([
@@ -117,10 +151,15 @@ export const buildBaseImage = (
 				"'  Queues:' '    - Name: autumn.fifo' '    - Name: autumn-track.fifo' " +
 				`> ${TW_PREFIX}/goaws/goaws.yaml`,
 		])
-		// 6. bun → /usr/local/bin/bun (so `bun` resolves for warmup / boot / tests).
+		// 6. bun → /usr/local/bin/bun (pinned to .bun-version, so `bun` resolves for
+		//    warmup / boot / tests). `node` → bun too: the ingress server and any
+		//    `env node` install shebang (e.g. better-sqlite3's prebuild-install) run
+		//    on bun's Node 24 compat, which HAS prebuilds — no native compile, no
+		//    Python/build toolchain needed.
 		.dockerfileCommands([
-			"RUN curl -fsSL https://bun.sh/install | bash && " +
-				"ln -sf /root/.bun/bin/bun /usr/local/bin/bun && bun --version",
+			`RUN curl -fsSL https://bun.sh/install | bash -s "bun-v${BUN_VERSION}" && ` +
+				"ln -sf /root/.bun/bin/bun /usr/local/bin/bun && " +
+				"ln -sf /root/.bun/bin/bun /usr/local/bin/node && bun --version",
 		])
 		// 7. initdb the PG18 cluster (as postgres), tune for ephemeral test DBs,
 		//    createdb autumn + pg_trgm on an EMPTY schema, then clean-stop. PGDATA +
@@ -170,7 +209,7 @@ export const buildBaseImage = (
 		.dockerfileCommands([
 			"# chromium bake\n" +
 				"RUN export PATH=/root/.bun/bin:/usr/local/bin:$PATH && cd /repo && " +
-				"PWV=$(node -p \"require('playwright-core/package.json').version\" 2>/dev/null || echo 1.60.0) && " +
+				"PWV=$(bun -p \"require('playwright-core/package.json').version\" 2>/dev/null || echo 1.60.0) && " +
 				"apt-get update && " +
 				"bun x playwright@$PWV install --with-deps chromium && " +
 				"rm -rf /var/lib/apt/lists/*",

@@ -1,6 +1,7 @@
-import type { AppEnv, FrontendOrg } from "@autumn/shared";
+import { AppEnv, type FrontendOrg } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import {
 	authClient,
 	useListOrganizations,
@@ -37,12 +38,17 @@ export const useSwitchActiveOrg = () => {
 	);
 };
 
-export const useOrg = (params?: { env?: AppEnv }) => {
+export const useOrg = (params?: { env?: AppEnv; skipSandbox?: boolean }) => {
+	const skipSandbox = params?.skipSandbox ?? true;
 	const currentEnv = useEnv();
-	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox: true });
+	const env = params?.env ?? currentEnv;
+	const activeSandbox = useActiveSandbox();
+	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox });
 	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
 	const { data: session } = useSession();
 	const activeOrgId = session?.session.activeOrganizationId;
+	const sandboxOrgId =
+		!skipSandbox && env === AppEnv.Sandbox ? (activeSandbox?.id ?? null) : null;
 
 	const fetcher = async () => {
 		const { data } = await axiosInstance.get("/organization");
@@ -54,7 +60,9 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["org", params?.env ?? currentEnv, activeOrgId],
+		queryKey: sandboxOrgId
+			? ["org", env, activeOrgId, "sandbox", sandboxOrgId]
+			: ["org", env, activeOrgId],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
@@ -70,8 +78,9 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		lastOrgId !== activeOrgId &&
 		rememberedOrgValid;
 
+	const expectedOrgId = sandboxOrgId ?? activeOrgId;
 	const orgIsReady =
-		!!org && !!activeOrgId && org.id === activeOrgId && !pendingOrgSwitch;
+		!!org && !!activeOrgId && org.id === expectedOrgId && !pendingOrgSwitch;
 	const orgLoading = !session || (!!activeOrgId && !orgIsReady);
 
 	useEffect(() => {

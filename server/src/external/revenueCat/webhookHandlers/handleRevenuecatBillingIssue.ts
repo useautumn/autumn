@@ -6,6 +6,11 @@ import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMidd
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
+import {
+	getRevenueCatCustomerEmail,
+	getRevenueCatCustomerFingerprint,
+	getRevenueCatOverrideCustomerId,
+} from "../misc/getRevenueCatOverrideCustomerId";
 import { resolveRevenuecatResources } from "../misc/resolveRevenuecatResources";
 
 export const handleBillingIssue = async ({
@@ -16,7 +21,7 @@ export const handleBillingIssue = async ({
 	ctx: RevenueCatWebhookContext;
 }) => {
 	const { logger } = ctx;
-	const { product_id, app_user_id } = event;
+	const { product_id, app_user_id, original_app_user_id } = event;
 
 	const {
 		ctx: customerCtx,
@@ -27,6 +32,10 @@ export const handleBillingIssue = async ({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
+		originalAppUserId: original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
+		customerEmail: getRevenueCatCustomerEmail(event),
+		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

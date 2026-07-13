@@ -186,3 +186,32 @@ export const useDeleteSandbox = () => {
 		},
 	});
 };
+
+export const useCopySandbox = () => {
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		// Source is exactly one of fromSandboxId / fromMaster — a union so bad
+		// combos fail to compile instead of hitting a guaranteed server 400.
+		mutationFn: async (
+			input: (
+				| { fromSandboxId: string; fromMaster?: never }
+				| { fromMaster: true; fromSandboxId?: never }
+			) & {
+				toSandboxId: string;
+				productIds?: string[];
+				featureIds?: string[];
+			},
+		) => {
+			await axiosInstance.post("/v1/sandboxes.copy", input);
+		},
+		// Copy overwrites the target's whole catalog, so refresh any open plan/feature views.
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["products"] });
+			queryClient.invalidateQueries({ queryKey: ["product_counts"] });
+			queryClient.invalidateQueries({ queryKey: ["product"] });
+			queryClient.invalidateQueries({ queryKey: ["features"] });
+		},
+	});
+};

@@ -1,5 +1,6 @@
 import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
 export const CUSTOMER_PRODUCT_LIMIT = 200;
@@ -52,6 +53,7 @@ export const getFullSubjectRowsQuery = ({
 	includeInvoices,
 	includeEntityAggregations,
 	entityScopedOnly = false,
+	queryTag = "getFullSubject",
 }: {
 	leadingCtes: SQL;
 	inStatuses: CusProductStatus[];
@@ -59,6 +61,7 @@ export const getFullSubjectRowsQuery = ({
 	includeEntityAggregations: boolean;
 	/** Only hydrate rows scoped to the subject's entity (requires non-null internal_entity_id on every subject). Customer-level rows must be merged back in separately. */
 	entityScopedOnly?: boolean;
+	queryTag?: string;
 }) => {
 	const statusFilter =
 		inStatuses.length > 0
@@ -521,5 +524,6 @@ export const getFullSubjectRowsQuery = ({
 		LEFT JOIN entities er
 			ON er.internal_id = sr.internal_entity_id
 		ORDER BY sr.subject_order
+		${planetScaleTag({ query: queryTag })}
 	`;
 };

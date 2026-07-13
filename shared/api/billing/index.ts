@@ -14,14 +14,18 @@ export * from "./checkout/prevVersions/checkoutResponseV0";
 export * from "./common/index";
 export * from "./createSchedule/createScheduleParamsV0";
 export * from "./createSchedule/createScheduleResponse";
+// Multi Update
+export * from "./multiUpdate/multiUpdateParamsV0";
+export * from "./multiUpdate/multiUpdatePreviewResponseV0";
+// DFU (customer imaging / live migration)
+export * from "./dfu/dfuFlashParams";
 export * from "./openBillingPortal/openBillingPortalParamsV1";
 export * from "./openBillingPortal/openBillingPortalResponse";
+// Restore
+export * from "./restore/restoreParamsV1";
 // Setup Payment
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
-
-// Restore
-export * from "./restore/restoreParamsV1";
 
 // Sync
 export * from "./sync/syncParamsV0";
@@ -33,3 +37,6 @@ export * from "./sync/syncProposalsV2";
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";
 export * from "./updateSubscription/updateSubscriptionV0Params";
 export * from "./updateSubscription/updateSubscriptionV1Params";
+
+// Verify
+export * from "./verify/verifyParamsV1";

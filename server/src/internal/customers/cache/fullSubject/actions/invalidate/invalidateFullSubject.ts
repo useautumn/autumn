@@ -13,12 +13,14 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	ctx,
 	source,
 	redisV2,
+	flushBalances,
 }: {
 	customerId: string;
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
 	redisV2: Redis;
+	flushBalances?: boolean;
 }): Promise<void> => {
 	if (redisV2.status !== "ready") {
 		const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
@@ -32,6 +34,7 @@ const invalidateCachedFullSubjectOnRedis = async ({
 		ctx,
 		customerId,
 		redisV2,
+		flushBalances,
 	});
 
 	const { org, env, logger } = ctx;
@@ -80,11 +83,16 @@ export const invalidateCachedFullSubject = async ({
 	entityId,
 	ctx,
 	source,
+	flushBalances,
 }: {
 	customerId: string;
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
+	/** Flush cached balances to Postgres before deleting them. Only safe when
+	 *  the caller has NOT just written balances to Postgres directly — the
+	 *  cached balances must still be the source of truth. */
+	flushBalances?: boolean;
 }): Promise<void> => {
 	if (!customerId) return;
 
@@ -99,6 +107,7 @@ export const invalidateCachedFullSubject = async ({
 				ctx,
 				source,
 				redisV2,
+				flushBalances,
 			}),
 		),
 	);

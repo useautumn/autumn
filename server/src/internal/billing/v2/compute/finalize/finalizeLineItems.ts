@@ -74,7 +74,7 @@ export const finalizeLineItems = ({
 			lineItems: finalizedLineItems,
 			discounts: billingContext.stripeDiscounts,
 			options: {
-				disableDiscountableForRecurringDiscounts: true,
+				disableDiscountableForFreshDiscounts: true,
 			},
 		});
 	}

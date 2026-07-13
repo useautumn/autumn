@@ -6,7 +6,11 @@ import {
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import type { DecidingState } from "../chatTypes";
-import { isBillingPreview, type LeafApprovalData } from "../chatTypes";
+import {
+	isBillingPreview,
+	isCatalogPreview,
+	type LeafApprovalData,
+} from "../chatTypes";
 import { BillingPreviewCard } from "./BillingPreviewCard";
 import { CatalogPreviewCard } from "./CatalogPreviewCard";
 import { JsonSheet } from "./JsonSheet";
@@ -15,9 +19,29 @@ import { ParamsSheet } from "./ParamsSheet";
 const approvalSummary = (approval: LeafApprovalData): string => {
 	const { preview } = approval;
 	if (isBillingPreview(preview)) return "Apply this billing change?";
-	const plans = preview?.plans ?? [];
-	const planLabel = `${plans.length} plan${plans.length === 1 ? "" : "s"}`;
-	return `Apply changes to ${planLabel}?`;
+	if (isCatalogPreview(preview)) {
+		const plans = preview.plan_changes ?? [];
+		const features = preview.feature_changes ?? [];
+		const parts = [
+			plans.length
+				? `${plans.length} plan${plans.length === 1 ? "" : "s"}`
+				: "",
+			features.length
+				? `${features.length} feature${features.length === 1 ? "" : "s"}`
+				: "",
+		].filter(Boolean);
+		return parts.length
+			? `Apply changes to ${parts.join(" and ")}?`
+			: "Apply this catalog change?";
+	}
+	const toolName =
+		approval.toolName
+			?.split("__")
+			.pop()
+			?.replace(/^_+/, "")
+			.replace(/([a-z])([A-Z])/g, "$1 $2")
+			.replace(/^./, (char) => char.toUpperCase()) ?? "write";
+	return `Apply ${toolName}?`;
 };
 
 /** The plan-write approval, rendered inline in the thread. The card stays put
@@ -65,9 +89,9 @@ export function ApprovalCard({
 			{preview &&
 				(isBillingPreview(preview) ? (
 					<BillingPreviewCard params={params} preview={preview} />
-				) : (
-					<CatalogPreviewCard preview={preview} />
-				))}
+				) : isCatalogPreview(preview) ? (
+					<CatalogPreviewCard params={params} preview={preview} />
+				) : null)}
 
 			{params && (
 				<ParamsSheet

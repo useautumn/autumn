@@ -101,7 +101,8 @@ const toApiPlanItemPrice = (item: PlanItem): CreatePlanItemParamsV1Input["price"
 		interval,
 		interval_count: price.intervalCount,
 		max_purchase: price.maxPurchase,
-		tier_behavior: "tierBehaviour" in price ? toTierBehavior(price.tierBehaviour) : undefined,
+		tier_behavior:
+			"tierBehavior" in price ? toTierBehavior(price.tierBehavior) : undefined,
 		tiers: price.tiers,
 	};
 };

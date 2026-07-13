@@ -861,6 +861,152 @@ const { allowed } = await autumn.check({
           ID of the base variant this product is derived from
         </DynamicResponseField>
 
+        <DynamicResponseField name="billing_controls" type="object">
+          Plan-level billing controls used as customer defaults
+          <Expandable title="properties">
+            <DynamicResponseField name="auto_topups" type="object[]">
+              List of auto top-up configurations per feature.
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string">
+                  The ID of the feature (credit balance) to auto top-up.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="enabled" type="boolean">
+                  Whether auto top-up is enabled.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="threshold" type="number">
+                  When the balance drops below this threshold, an auto top-up will be purchased.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="quantity" type="number">
+                  Amount of credits to add per auto top-up.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="purchase_limit" type="object">
+                  Optional rate limit to cap how often auto top-ups occur.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
+                      The time interval for the purchase limit window.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="interval_count" type="number">
+                      Number of intervals in the purchase limit window.
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="limit" type="number">
+                      Maximum number of auto top-ups allowed within the interval.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
+                <DynamicResponseField name="invoice_mode" type="boolean">
+                  When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="spend_limits" type="object[]">
+              List of overage spend limits per feature (caps overage spend).
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string">
+                  Optional feature ID this spend limit applies to.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="enabled" type="boolean">
+                  Whether the overage spend limit is enabled.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="limit_type" type="'absolute' | 'usage_percentage'">
+                  How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="overage_limit" type="number">
+                  Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="skip_overage_billing" type="boolean">
+                  When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="usage_limits" type="object[]">
+              List of hard usage caps per feature (max units per interval).
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string">
+                  The feature this usage limit applies to.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="enabled" type="boolean">
+                  Whether this usage limit is enabled.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="limit" type="number">
+                  Maximum units allowed per interval.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="interval" type="'day' | 'week' | 'month' | 'year'">
+                  Interval for the cap, aligned to the customer's billing cycle.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="filter" type="object">
+                  When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="properties" type="object" />
+
+                  </Expandable>
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="usage_alerts" type="object[]">
+              List of usage alert configurations per feature.
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string">
+                  The feature ID this alert applies to.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="enabled" type="boolean">
+                  Whether this usage alert is enabled.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="threshold" type="number">
+                  The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+                </DynamicResponseField>
+
+                <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
+                  Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="name" type="string">
+                  Optional user-defined label to distinguish multiple alerts on the same feature.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+            <DynamicResponseField name="overage_allowed" type="object[]">
+              List of overage allowed controls per feature. When enabled, usage can exceed balance.
+              <Expandable title="properties">
+                <DynamicResponseField name="feature_id" type="string">
+                  The feature ID this overage allowed control applies to.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="enabled" type="boolean">
+                  Whether overage is allowed for this feature.
+                </DynamicResponseField>
+
+              </Expandable>
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="scenario" type="'scheduled' | 'active' | 'new' | 'renew' | 'upgrade' | 'update_prepaid_quantity' | 'downgrade' | 'cancel' | 'expired' | 'past_due'">
           Scenario for when this product is used in attach flows
         </DynamicResponseField>

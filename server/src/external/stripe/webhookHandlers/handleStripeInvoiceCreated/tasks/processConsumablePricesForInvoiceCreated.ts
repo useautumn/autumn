@@ -6,13 +6,14 @@ import {
 } from "@autumn/shared";
 import { getLatestPeriodStart } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers/common";
+import { shouldDisableOverageBilling } from "@/external/stripe/webhookHandlers/common/shouldDisableOverageBilling";
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
-import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
@@ -89,11 +90,15 @@ export const processConsumablePricesForInvoiceCreated = async ({
 					billingCycleAnchorMs,
 				}),
 		});
-	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
+	const disableOverageBilling = shouldDisableOverageBilling({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
+		customerConfig: eventContext.fullCustomer.config,
 	});
-	if (lineItems.length > 0 && !skipOverageSubmission) {
+	if (disableOverageBilling && lineItems.length > 0) {
+		addToExtraLogs({ ctx, extras: { overageBillingDisabledByConfig: true } });
+	}
+	if (lineItems.length > 0 && !disableOverageBilling) {
 		await createStripeInvoiceItems({
 			ctx,
 			invoiceItems: lineItemsToCreateInvoiceItemsParams({

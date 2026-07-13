@@ -11,13 +11,6 @@ export const willStripeSubscriptionUpdateCreateInvoice = ({
 	const actionType = stripeSubscriptionAction?.type;
 	if (actionType !== "update") return false;
 
-	// if (
-	// 	billingContext.requestedBillingCycleAnchor !== undefined &&
-	// 	billingContext.billingCycleAnchorMs === "now"
-	// ) {
-	// 	return true;
-	// }
-
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,
 	});

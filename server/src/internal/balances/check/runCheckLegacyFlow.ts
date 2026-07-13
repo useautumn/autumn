@@ -38,6 +38,7 @@ export const runCheckLegacyFlow = async ({
 			: await getV2CheckResponse({
 					checkData,
 					requiredBalance,
+					properties: body.properties,
 				});
 
 	return {

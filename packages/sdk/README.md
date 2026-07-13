@@ -227,7 +227,7 @@ const response = await client.trackTokens({
 @param customerId - The ID of the customer.
 @param entityId - The ID of the entity for entity-scoped balances. (optional)
 @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
-@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
 @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
 @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
 @param cacheReadTokens - Number of cached input tokens read. (optional)
@@ -309,7 +309,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782399908997,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783609508997,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -458,6 +458,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -486,12 +487,50 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
+* [multiUpdate](docs/sdks/billing/README.md#multiupdate) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+@example
+```typescript
+// Cancel a plan and an add-on at end of cycle
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
+```
+
+@example
+```typescript
+// Uncancel one plan and cancel another immediately
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
+* [previewMultiUpdate](docs/sdks/billing/README.md#previewmultiupdate) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+@example
+```typescript
+// Preview canceling two plans immediately
+const response = await client.billing.previewMultiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_immediately"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 * [setupPayment](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
+* [import](docs/sdks/billing/README.md#import) - Import
 
 ### [Customers](docs/sdks/customers/README.md)
 
@@ -768,6 +807,7 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 ### [Rewards](docs/sdks/rewards/README.md)
 
+* [list](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 * [redeemCode](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 
 </details>
@@ -851,7 +891,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782399908997,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783609508997,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -867,6 +907,7 @@ const response = await client.billing.createSchedule({ customerId: "cus_123", ph
 @param phases - Ordered phase definitions for the schedule.
 
 @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+- [`billingImport`](docs/sdks/billing/README.md#import) - Import
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
 Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
@@ -902,6 +943,27 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
+- [`billingMultiUpdate`](docs/sdks/billing/README.md#multiupdate) - Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+@example
+```typescript
+// Cancel a plan and an add-on at end of cycle
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
+```
+
+@example
+```typescript
+// Uncancel one plan and cancel another immediately
+const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
 - [`billingOpenCustomerPortal`](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
 - [`billingPreviewAttach`](docs/sdks/billing/README.md#previewattach) - Previews the billing changes that would occur when attaching a plan, without actually making any changes.
 
@@ -965,6 +1027,21 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
+- [`billingPreviewMultiUpdate`](docs/sdks/billing/README.md#previewmultiupdate) - Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+@example
+```typescript
+// Preview canceling two plans immediately
+const response = await client.billing.previewMultiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_immediately"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+```
+
+@param customerId - The ID of the customer to update plans for.
+@param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+@param updates - The list of plan updates to apply to the customer.
+
+@returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
 - [`billingPreviewUpdate`](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
 
 Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
@@ -989,6 +1066,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -1030,6 +1108,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
@@ -1315,6 +1394,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+- [`rewardsList`](docs/sdks/rewards/README.md#list) - List the coupons and feature grants configured for the org.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
@@ -1362,7 +1442,7 @@ const response = await client.trackTokens({
 @param customerId - The ID of the customer.
 @param entityId - The ID of the entity for entity-scoped balances. (optional)
 @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
-@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param modelId - The AI model as '[provider]/[model]' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
 @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
 @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
 @param cacheReadTokens - Number of cached input tokens read. (optional)

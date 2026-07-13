@@ -112,6 +112,34 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			expect(result[0].discounts[0].percentOff).toBe(25);
 		});
 
+		test("fresh one-time percent_off discount disables Stripe discounting when requested", () => {
+			const lineItem = lineItemFixtures.charge({ amount: 100 });
+			const lineItems = [
+				{
+					...lineItem,
+					context: {
+						...lineItem.context,
+						discountable: true,
+					},
+				},
+			];
+			const discountList = [
+				withDuration({
+					discount: discounts.percentOff({ percentOff: 25 }),
+					duration: "once",
+				}),
+			];
+
+			const result = applyStripeDiscountsToLineItems({
+				lineItems,
+				discounts: discountList,
+				options: { disableDiscountableForFreshDiscounts: true },
+			});
+
+			expect(result[0].amountAfterDiscounts).toBe(75);
+			expect(result[0].context.discountable).toBe(false);
+		});
+
 		test("single amount_off discount applied correctly", () => {
 			const lineItems = [lineItemFixtures.charge({ amount: 100 })];
 			const discountList = [discounts.amountOff({ amountOffCents: 1500 })]; // $15

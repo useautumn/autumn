@@ -1,10 +1,12 @@
-import type Stripe from "stripe";
 import {
-	filterCustomerProductsByStripeSubscriptionId,
+	CusProductStatus,
 	type FullCusProduct,
+	filterCustomerProductsByStripeSubscriptionId,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync";
+import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
+import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
 import type { SyncV2Result } from "@/internal/billing/v2/actions/sync/syncV2";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
@@ -16,12 +18,9 @@ import {
 } from "../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
-type SyncParamsResult = Awaited<ReturnType<typeof subscriptionToSyncParams>>;
-
 const stripeProductId = (
 	product: string | Stripe.Product | Stripe.DeletedProduct,
-) =>
-	typeof product === "string" ? product : product.id;
+) => (typeof product === "string" ? product : product.id);
 
 const priceOrProductChanged = ({
 	subscriptionUpdatedContext,
@@ -43,51 +42,30 @@ const priceOrProductChanged = ({
 		return (
 			currentItem.price.id !== previousItem.price.id ||
 			stripeProductId(currentItem.price.product) !==
-				stripeProductId(previousItem.price.product)
+				stripeProductId(previousItem.price.product) ||
+			// Quantity-only changes matter too (e.g. prepaid add-on packs).
+			(currentItem.quantity ?? 1) !== (previousItem.quantity ?? 1)
 		);
 	});
-};
-
-const shouldSyncPlanChange = ({
-	match,
-	params,
-	linkedProduct,
-}: {
-	match: SyncParamsResult["match"];
-	params: SyncParamsResult["params"];
-	linkedProduct: FullCusProduct;
-}) => {
-	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
-	const matchedPlan = currentPhase?.plans[0];
-	const matchedProductGroup = matchedPlan?.product.group;
-
-	return (
-		currentPhase?.plans.length === 1 &&
-		params.phases?.length === 1 &&
-		params.phases[0].plans.length === 1 &&
-		matchedPlan?.product.id !== linkedProduct.product.id &&
-		matchedProductGroup != null &&
-		matchedProductGroup === linkedProduct.product.group
-	);
 };
 
 const trackSyncResult = async ({
 	ctx,
 	subscriptionUpdatedContext,
 	result,
-	linkedProducts,
+	linkedCustomerProducts,
 }: {
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 	result: SyncV2Result;
-	linkedProducts: FullCusProduct[];
+	linkedCustomerProducts: FullCusProduct[];
 }) => {
 	const { customerProducts, fullCustomer } = subscriptionUpdatedContext;
 
 	for (const id of result.expired_cus_product_ids) {
 		const customerProduct =
 			customerProducts.find((cp) => cp.id === id) ??
-			linkedProducts.find((cp) => cp.id === id);
+			linkedCustomerProducts.find((cp) => cp.id === id);
 		const syncedProduct = await CusProductService.getFull({ db: ctx.db, id });
 		if (!customerProduct || !syncedProduct) continue;
 
@@ -118,6 +96,36 @@ const trackSyncResult = async ({
 	}
 };
 
+const expireRemovedCustomerProducts = async ({
+	ctx,
+	subscriptionUpdatedContext,
+	removedCustomerProducts,
+}: {
+	ctx: StripeWebhookContext;
+	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	removedCustomerProducts: FullCusProduct[];
+}) => {
+	const nowMs = Date.now();
+	for (const customerProduct of removedCustomerProducts) {
+		const updates = {
+			status: CusProductStatus.Expired,
+			ended_at: nowMs,
+			canceled: true,
+			canceled_at: nowMs,
+		};
+		await CusProductService.update({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates,
+		});
+		trackCustomerProductUpdate({
+			eventContext: subscriptionUpdatedContext,
+			customerProduct,
+			updates,
+		});
+	}
+};
+
 export const autoSyncUpdatedSubscription = async ({
 	ctx,
 	subscriptionUpdatedContext,
@@ -142,13 +150,13 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	const linkedProducts = filterCustomerProductsByStripeSubscriptionId({
+	const linkedCustomerProducts = filterCustomerProductsByStripeSubscriptionId({
 		customerProducts,
 		stripeSubscriptionId: stripeSubscription.id,
 	});
-	if (linkedProducts.length !== 1) {
+	if (linkedCustomerProducts.length === 0) {
 		logger.info(
-			`sub.updated auto-sync skipping ${stripeSubscription.id}: expected 1 linked product, found ${linkedProducts.length}`,
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: expected linked products, found 0`,
 		);
 		return;
 	}
@@ -169,22 +177,42 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	const linkedProduct = linkedProducts[0];
-	if (!shouldSyncPlanChange({ match, params, linkedProduct })) {
+	const incremental = buildIncrementalSyncParams({
+		match,
+		params,
+		linkedCustomerProducts,
+	});
+	if (!incremental.shouldSync) {
 		logger.info(
-			`sub.updated auto-sync skipping ${stripeSubscription.id}: not a single same-group plan change`,
+			`sub.updated auto-sync skipping ${stripeSubscription.id}: ${incremental.reason}`,
 		);
 		return;
 	}
 
-	const result = await billingActions.syncV2({ ctx, params });
+	await expireRemovedCustomerProducts({
+		ctx,
+		subscriptionUpdatedContext,
+		removedCustomerProducts: incremental.removedCustomerProducts,
+	});
+
+	if (!incremental.params) {
+		logger.info(
+			`sub.updated auto-sync applied ${stripeSubscription.id}: removed=${incremental.removedCustomerProducts.length}`,
+		);
+		return;
+	}
+
+	const result = await billingActions.syncV2({
+		ctx,
+		params: incremental.params,
+	});
 	await trackSyncResult({
 		ctx,
 		subscriptionUpdatedContext,
 		result,
-		linkedProducts,
+		linkedCustomerProducts,
 	});
 	logger.info(
-		`sub.updated auto-sync applied ${stripeSubscription.id}: expired=${result.expired_cus_product_ids.length}, inserted=${result.inserted_cus_product_ids.length}`,
+		`sub.updated auto-sync applied ${stripeSubscription.id}: expired=${result.expired_cus_product_ids.length}, inserted=${result.inserted_cus_product_ids.length}, removed=${incremental.removedCustomerProducts.length}`,
 	);
 };

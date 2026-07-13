@@ -12,11 +12,6 @@ export const listPlansParamsSchema = z.object({
 	allVersions: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const listPlansAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const listPlansPriceDisplaySchema = z.object({
 	primaryText: z.string(),
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
@@ -32,26 +27,12 @@ export const listPlansCreditSchemaSchema = z.object({
 	creditCost: z.number(),
 });
 
-export const listPlansItemAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const listPlansToSchema = z.union([z.number(), z.string()]);
-
-export const listPlansTierAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-});
 
 export const listPlansItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.number(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(listPlansTierAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 });
 
 export const listPlansItemDisplaySchema = z.object({
@@ -59,23 +40,14 @@ export const listPlansItemDisplaySchema = z.object({
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const listPlansVariantDetailsAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
-export const listPlansAddItemAdditionalCurrencySchema = z.object({
-	currency: z.string(),
-	amount: z.number(),
-});
-
 export const listPlansVariantDetailsTierSchema = z.object({
 	to: z.union([z.any(), z.undefined()]).optional(),
 	amount: z.number(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(z.any().nullable()), z.undefined()])
-		.optional(),
+});
+
+export const listPlansVariantDetailsFilterSchema = z.object({
+	properties: z.record(z.string(), z.any()),
 });
 
 export const listPlansVariantDetailsOverageAllowedSchema = z.object({
@@ -85,6 +57,10 @@ export const listPlansVariantDetailsOverageAllowedSchema = z.object({
 
 export const listPlansConfigSchema = z.object({
 	ignorePastDue: z.boolean(),
+});
+
+export const listPlansFilterSchema = z.object({
+	properties: z.record(z.string(), z.any()),
 });
 
 export const listPlansOverageAllowedSchema = z.object({
@@ -105,9 +81,6 @@ export const listPlansPriceIntervalSchema = openEnumSchema;
 
 export const listPlansPriceSchema = z.object({
 	amount: z.number(),
-	additionalCurrencies: z
-		.union([z.array(listPlansAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 	interval: listPlansPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	display: z.union([listPlansPriceDisplaySchema, z.undefined()]).optional(),
@@ -145,9 +118,6 @@ export const listPlansItemBillingMethodSchema = openEnumSchema;
 
 export const listPlansItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(listPlansItemAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 	tiers: z.union([z.array(listPlansItemTierSchema), z.undefined()]).optional(),
 	tierBehavior: z
 		.union([listPlansItemTierBehaviorSchema, z.undefined()])
@@ -198,12 +168,6 @@ export const listPlansBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: listPlansPriceVariantDetailsIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([
-			z.array(listPlansVariantDetailsAdditionalCurrencySchema),
-			z.undefined(),
-		])
-		.optional(),
 });
 
 export const listPlansAddItemResetIntervalSchema = openEnumSchema;
@@ -221,9 +185,6 @@ export const listPlansAddItemBillingMethodSchema = openEnumSchema;
 
 export const listPlansVariantDetailsPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	additionalCurrencies: z
-		.union([z.array(listPlansAddItemAdditionalCurrencySchema), z.undefined()])
-		.optional(),
 	tiers: z
 		.union([z.array(listPlansVariantDetailsTierSchema), z.undefined()])
 		.optional(),
@@ -339,6 +300,7 @@ export const listPlansVariantDetailsSpendLimitSchema = z.object({
 		.union([listPlansVariantDetailsLimitTypeSchema, z.undefined()])
 		.optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const listPlansVariantDetailsUsageLimitIntervalSchema = openEnumSchema;
@@ -348,6 +310,9 @@ export const listPlansVariantDetailsUsageLimitSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansVariantDetailsUsageLimitIntervalSchema,
+	filter: z
+		.union([listPlansVariantDetailsFilterSchema, z.undefined()])
+		.optional(),
 });
 
 export const listPlansVariantDetailsThresholdTypeSchema = openEnumSchema;
@@ -432,6 +397,7 @@ export const listPlansSpendLimitSchema = z.object({
 	enabled: z.boolean(),
 	limitType: z.union([listPlansLimitTypeSchema, z.undefined()]).optional(),
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
+	skipOverageBilling: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const listPlansUsageLimitIntervalSchema = openEnumSchema;
@@ -441,6 +407,7 @@ export const listPlansUsageLimitSchema = z.object({
 	enabled: z.boolean(),
 	limit: z.number(),
 	interval: listPlansUsageLimitIntervalSchema,
+	filter: z.union([listPlansFilterSchema, z.undefined()]).optional(),
 });
 
 export const listPlansThresholdTypeSchema = openEnumSchema;

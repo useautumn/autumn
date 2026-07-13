@@ -364,8 +364,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the overage spend limit is enabled.
             </DynamicParamField>
 
+            <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+              How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+            </DynamicParamField>
+
             <DynamicParamField body="overage_limit" type="number">
-              Maximum allowed overage spend for the target feature.
+              Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+            </DynamicParamField>
+
+            <DynamicParamField body="skip_overage_billing" type="boolean">
+              When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
             </DynamicParamField>
 
           </Expandable>
@@ -378,12 +386,24 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               The feature this usage limit applies to.
             </DynamicParamField>
 
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage limit is enabled.
+            </DynamicParamField>
+
             <DynamicParamField body="limit" type="number" required>
               Maximum units allowed per interval.
             </DynamicParamField>
 
             <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
               Interval for the cap, aligned to the customer's billing cycle.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+              <Expandable title="properties">
+                <DynamicParamField body="properties.{key}" type="string" required />
+
+              </Expandable>
             </DynamicParamField>
 
           </Expandable>
@@ -439,6 +459,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
           Whether to disable the shared customer-level pool for entities.
         </DynamicParamField>
 
+        <DynamicParamField body="disable_overage_billing" type="boolean">
+          Stops Autumn from posting usage-overage line items to Stripe for this customer. Check/track and balance resets still behave normally. When set, this overrides the organization-level disable_overage_billing setting.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -469,8 +493,16 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               Whether the overage spend limit is enabled.
             </DynamicParamField>
 
+            <DynamicParamField body="limit_type" type="'absolute' | 'usage_percentage'">
+              How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+            </DynamicParamField>
+
             <DynamicParamField body="overage_limit" type="number">
-              Maximum allowed overage spend for the target feature.
+              Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
+            </DynamicParamField>
+
+            <DynamicParamField body="skip_overage_billing" type="boolean">
+              When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
             </DynamicParamField>
 
           </Expandable>
@@ -483,12 +515,24 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
               The feature this usage limit applies to.
             </DynamicParamField>
 
+            <DynamicParamField body="enabled" type="boolean">
+              Whether this usage limit is enabled.
+            </DynamicParamField>
+
             <DynamicParamField body="limit" type="number" required>
               Maximum units allowed per interval.
             </DynamicParamField>
 
             <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
               Interval for the cap, aligned to the customer's billing cycle.
+            </DynamicParamField>
+
+            <DynamicParamField body="filter" type="object">
+              When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+              <Expandable title="properties">
+                <DynamicParamField body="properties.{key}" type="string" required />
+
+              </Expandable>
             </DynamicParamField>
 
           </Expandable>
@@ -584,7 +628,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <DynamicResponseField name="required_action" type="object">
   Details about any action required to complete the payment. Present when the payment could not be processed automatically.
   <Expandable title="properties">
-    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed'">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed' | 'payment_processing'">
       The type of action required to complete the payment.
     </DynamicResponseField>
 

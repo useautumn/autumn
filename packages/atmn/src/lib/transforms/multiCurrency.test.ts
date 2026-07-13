@@ -41,7 +41,7 @@ const sdkPlan: Plan = {
 						additionalCurrencies: [{ currency: "eur", amount: 0.25 }],
 					},
 				],
-				tierBehaviour: "graduated",
+				tierBehavior: "graduated",
 				interval: "month",
 				billingMethod: "usage_based",
 			},

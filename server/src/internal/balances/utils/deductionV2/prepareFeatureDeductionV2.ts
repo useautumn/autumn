@@ -1,7 +1,6 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
-	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
@@ -15,7 +14,7 @@ import {
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
-	RecaseError,
+	usageLimitFilterMatchesProperties,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
@@ -125,13 +124,22 @@ export const prepareFeatureDeductionV2 = ({
 				featureId: feature.id,
 			}).map((candidate) => candidate.id)
 		: effectiveFeatureIds;
-	const usageWindowLimits = fullSubjectToUsageWindowLimits({
+	const allUsageWindowLimits = fullSubjectToUsageWindowLimits({
 		fullSubject,
 		featureIds: windowFeatureIds,
 		features: ctx.features,
 		now,
 		inStatuses: orgToInStatuses({ org }),
 	});
+
+	// Filtered limits only bind events whose properties match; the script never
+	// sees non-matching limits, so their counters stay untouched.
+	const usageWindowLimits = allUsageWindowLimits.filter((windowLimit) =>
+		usageLimitFilterMatchesProperties({
+			filterProperties: windowLimit.filter_properties,
+			eventProperties: options.eventProperties,
+		}),
+	);
 
 	// Counters are customer-scoped: a null anchor only means calendar-aligned
 	// bounds with no provenance, not an unenforceable cap.
@@ -142,14 +150,6 @@ export const prepareFeatureDeductionV2 = ({
 				`usage window for feature ${windowLimit.feature_id} has no anchor entitlement; using calendar-aligned bounds with no provenance.`,
 			);
 		}
-	}
-	// set_usage carries no window provenance, so it would silently bypass the hard
-	// cap; reject it when the feature has an enforced usage window.
-	if (notNullish(targetBalance) && usageWindowLimits.length > 0) {
-		throw new RecaseError({
-			message: `Cannot set usage for feature ${feature.id}: it has an active usage limit. Remove or adjust the limit, or record usage normally instead of using set_usage.`,
-			code: ErrCode.SetUsageNotAllowedWithUsageLimit,
-		});
 	}
 
 	const nativeUsageAllowedFeatureIds = new Set(

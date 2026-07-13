@@ -6,6 +6,7 @@ import { coreBalances } from "./core/coreBalances";
 import { coreBilling } from "./core/coreBilling";
 import { coreLegacy } from "./core/coreLegacy";
 import { coreMigrations } from "./core/coreMigrations";
+import { coreMultiUpdate } from "./core/coreMultiUpdate";
 import { coreStripe } from "./core/coreStripe";
 import { coreUpdateSubscription } from "./core/coreUpdateSubscription";
 import { advanced } from "./domains/advanced";
@@ -18,22 +19,26 @@ import { billingDiscounts } from "./domains/billing/billingDiscounts";
 import { billingV1 } from "./domains/billing/billingV1";
 import { billingV2 } from "./domains/billing/billingV2";
 import { billingV2Misc } from "./domains/billing/billingV2Misc";
+import { sync } from "./domains/billing/sync";
 import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
+import { all } from "./all";
 import { temp } from "./temp";
 import type { TestGroup, TestSuite } from "./types";
 
 export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
+	all,
 	core,
 	coreBilling,
 	coreAttach,
 	coreBalances,
 	coreLegacy,
 	coreMigrations,
+	coreMultiUpdate,
 	coreStripe,
 	coreUpdateSubscription,
 	balances,
@@ -45,6 +50,7 @@ const allGroups: TestGroup[] = [
 	billingV1,
 	billingV2,
 	billingV2Misc,
+	sync,
 	temp,
 	crud,
 	webhooks,

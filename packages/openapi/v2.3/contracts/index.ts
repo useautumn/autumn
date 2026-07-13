@@ -13,13 +13,16 @@ import {
 	billingAttachContract,
 	billingCreateScheduleContract,
 	billingMultiAttachContract,
+	billingMultiUpdateContract,
 	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
 	billingPreviewMultiAttachContract,
+	billingPreviewMultiUpdateContract,
 	billingPreviewUpdateContract,
 	billingSetupPaymentContract,
 	billingUpdateContract,
 } from "./billingContract.js";
+import { dfuFlashContract } from "./dfuContract.js";
 import {
 	deleteCustomerContract,
 	getCustomerContract,
@@ -65,6 +68,7 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
+	rewardsListContract,
 	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
 
@@ -98,8 +102,13 @@ export const v2_3ContractRouter = oc.router({
 	billingPreviewMultiAttach: billingPreviewMultiAttachContract,
 	billingUpdate: billingUpdateContract,
 	billingPreviewUpdate: billingPreviewUpdateContract,
+	billingMultiUpdate: billingMultiUpdateContract,
+	billingPreviewMultiUpdate: billingPreviewMultiUpdateContract,
 	billingOpenCustomerPortal: billingOpenCustomerPortalContract,
 	billingSetupPayment: billingSetupPaymentContract,
+
+	// DFU (customer imaging / live migration)
+	dfuFlash: dfuFlashContract,
 
 	// Balances
 	balancesCreate: balancesCreateContract,
@@ -125,6 +134,7 @@ balancesTrackTokens: balancesTrackTokensContract,
 	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	rewardsList: rewardsListContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
 
 	// Platform

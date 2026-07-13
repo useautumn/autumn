@@ -45,7 +45,7 @@ type VercelConfigState = {
 };
 
 export const ConfigureVercel = () => {
-	const { org, isLoading, mutate } = useOrg();
+	const { org, isLoading, mutate } = useOrg({ skipSandbox: false });
 	const {
 		svixDashboardUrl,
 		isLoading: isVercelLoading,

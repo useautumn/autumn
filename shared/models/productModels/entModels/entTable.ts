@@ -71,6 +71,9 @@ export const entitlements = pgTable(
 		index("idx_entitlements_internal_feature_id_c")
 			.on(sql`${table.internal_feature_id} COLLATE "C"`)
 			.concurrently(),
+		index("idx_entitlements_internal_feature_id")
+			.on(table.internal_feature_id)
+			.concurrently(),
 		// Serves joins on rewards.internal_id (collation C). The plain
 		// internal_reward_id index above is default-collation and can't be used
 		// when the join collation is C.

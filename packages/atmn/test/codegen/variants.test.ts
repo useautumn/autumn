@@ -47,6 +47,16 @@ describe("variant config generation", () => {
 					base_plan_id: "pro",
 					customize: {
 						price: { amount: 500, interval: "year" },
+						billing_controls: {
+							usage_limits: [
+								{
+									feature_id: "messages",
+									enabled: true,
+									limit: 5000,
+									interval: "month",
+								},
+							],
+						},
 						remove_items: [{ feature_id: "messages", interval: "month" }],
 						add_items: [
 							{
@@ -78,6 +88,9 @@ describe("variant config generation", () => {
 				},
 			},
 		]);
+		expect(plans[0]?.variants?.[0]?.customize).not.toHaveProperty(
+			"billingControls",
+		);
 	});
 
 	test("buildConfigFile emits method-style variant composers with feature references", () => {
@@ -193,5 +206,74 @@ describe("variant config generation", () => {
 		expect(code).toContain("export const engagementTracking = feature(");
 		expect(code).toContain("item({ featureId: engagementTracking.id }),");
 		expect(code).not.toContain("included: 0");
+	});
+
+	test("buildConfigFile emits base plan billing controls with helper import", () => {
+		const plans = transformApiPlans([
+			baseApiPlan({
+				id: "pro",
+				name: "Pro",
+				billing_controls: {
+					usage_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							limit: 1000,
+							interval: "month",
+						},
+					],
+				},
+			}),
+		]);
+
+		const code = buildConfigFile([], plans);
+
+		expect(plans[0]?.billingControls).toEqual({
+			usage_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					limit: 1000,
+					interval: "month",
+				},
+			],
+		});
+		expect(code).toContain(
+			"import { billingControls, feature, item, plan } from 'atmn';",
+		);
+		expect(code).toContain("billingControls: billingControls({");
+		expect(code).toContain("usage_limits:");
+	});
+
+	test("buildConfigFile emits spend limits with skip_overage_billing", () => {
+		const plans = transformApiPlans([
+			baseApiPlan({
+				id: "pro",
+				name: "Pro",
+				billing_controls: {
+					spend_limits: [
+						{
+							feature_id: "messages",
+							enabled: true,
+							skip_overage_billing: true,
+						},
+					],
+				},
+			}),
+		]);
+
+		const code = buildConfigFile([], plans);
+
+		expect(plans[0]?.billingControls).toEqual({
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					skip_overage_billing: true,
+				},
+			],
+		});
+		expect(code).toContain("spend_limits:");
+		expect(code).toContain("skip_overage_billing: true");
 	});
 });

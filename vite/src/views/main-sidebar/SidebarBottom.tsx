@@ -3,17 +3,17 @@
 import { BooksIcon } from "@phosphor-icons/react";
 import { useEnv } from "@/utils/envUtils";
 import { WorkbenchButton } from "@/views/customers2/customer/workbench/WorkbenchButton";
+import { LeafButton } from "./components/LeafButton";
 import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
-import { useSidebarContext } from "./SidebarContext";
 
 export default function SidebarBottom() {
 	const env = useEnv();
-	const { expanded } = useSidebarContext();
 
 	return (
 		<div className="">
 			<div className="px-2 flex flex-col gap-1 mb-2">
+				<LeafButton />
 				<WorkbenchButton />
 				<NavButton
 					value="docs"

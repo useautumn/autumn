@@ -6,6 +6,7 @@ import {
 	FeatureUsageType,
 	PurchaseLimitInterval,
 	ResetInterval,
+	type SpendLimitType,
 } from "@autumn/shared";
 import {
 	Button,
@@ -30,6 +31,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
+import { OVERAGE_BILLING_OPTIONS } from "@/components/billing-controls/overageBillingOptions";
 import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -77,6 +79,11 @@ const THRESHOLD_TYPE_OPTIONS: SelectOption[] = [
 	{ value: "usage_percentage", label: "% used of allowance" },
 	{ value: "remaining", label: "Absolute remaining" },
 	{ value: "remaining_percentage", label: "% remaining of allowance" },
+];
+
+const SPEND_LIMIT_TYPE_OPTIONS: SelectOption[] = [
+	{ value: "absolute", label: "Absolute" },
+	{ value: "usage_percentage", label: "Usage %" },
 ];
 
 const UNIQUE_FEATURE_KEYS = [
@@ -213,7 +220,11 @@ function SelectFieldRow({
 	options,
 }: {
 	form: UsePlanBillingControlForm;
-	name: "purchase_limit_interval" | "usage_interval" | "threshold_type";
+	name:
+		| "purchase_limit_interval"
+		| "usage_interval"
+		| "threshold_type"
+		| "overage_billing";
 	label: string;
 	placeholder: string;
 	options: SelectOption[];
@@ -330,12 +341,58 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
 		<div className="flex flex-col gap-2.5">
-			<NumberFieldRow
+			<form.Field name="limit_type">
+				{(field) => (
+					<div>
+						<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+							Limit type
+						</FormLabel>
+						<Select
+							value={field.state.value}
+							onValueChange={(value) => {
+								field.handleChange(value as SpendLimitType);
+								// Units and percent aren't interchangeable.
+								form.setFieldValue("overage_limit", null);
+							}}
+							items={SPEND_LIMIT_TYPE_OPTIONS}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Type" />
+							</SelectTrigger>
+							<SelectContent>
+								{SPEND_LIMIT_TYPE_OPTIONS.map((option) => (
+									<SelectItem key={option.value} value={option.value}>
+										{option.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+				)}
+			</form.Field>
+			<form.Subscribe selector={(state) => state.values.limit_type}>
+				{(limitType) => (
+					<NumberFieldRow
+						form={form}
+						name="overage_limit"
+						label={
+							limitType === "usage_percentage"
+								? "Overage limit (%)"
+								: "Overage limit"
+						}
+						placeholder={
+							limitType === "usage_percentage" ? "eg. 120" : "No limit"
+						}
+						parse="float"
+					/>
+				)}
+			</form.Subscribe>
+			<SelectFieldRow
 				form={form}
-				name="overage_limit"
-				label="Overage limit"
-				placeholder="No limit"
-				parse="float"
+				name="overage_billing"
+				label="Overage billing"
+				placeholder="Default"
+				options={OVERAGE_BILLING_OPTIONS}
 			/>
 		</div>
 	);

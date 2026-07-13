@@ -4,6 +4,7 @@ export * from "./cusPlanUtils/cusPlanUtils";
 export * from "./fullCusUtils/enrichFullCustomer";
 export * from "./fullCusUtils/fullCustomerToCustomerEntitlements";
 export * from "./fullCusUtils/fullCustomerToOverageAllowed";
+export * from "./fullCusUtils/fullCustomerToSkipOverageBilling";
 export * from "./fullCusUtils/fullCustomerToSpendLimit";
 export * from "./fullCusUtils/fullCustomerToTags";
 export * from "./fullCusUtils/getCusStripeSubCount";

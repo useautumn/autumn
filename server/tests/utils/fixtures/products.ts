@@ -80,18 +80,24 @@ const pro = ({
 	items,
 	id = "pro",
 	group,
+	billingControls,
 }: {
 	items: ProductItem[];
 	id?: string;
 	group?: string;
-}): ProductV2 =>
-	constructProduct({
+	billingControls?: CustomerBillingControlsParams;
+}): ProductV2 => ({
+	...constructProduct({
 		id,
 		items: [...items],
 		type: "pro",
 		isDefault: false,
 		group,
-	});
+	}),
+	...(billingControls
+		? { billing_controls: billingControls as CustomerBillingControls }
+		: {}),
+});
 
 /**
  * Pro annual product - $200/year base price
@@ -331,17 +337,23 @@ const oneOff = ({
 const recurringAddOn = ({
 	items,
 	id = "addon",
+	billingControls,
 }: {
 	items: ProductItem[];
 	id?: string;
-}): ProductV2 =>
-	constructProduct({
+	billingControls?: CustomerBillingControlsParams;
+}): ProductV2 => ({
+	...constructProduct({
 		id,
 		items: [...items],
 		type: "pro",
 		isDefault: false,
 		isAddOn: true,
-	});
+	}),
+	...(billingControls
+		? { billing_controls: billingControls as CustomerBillingControls }
+		: {}),
+});
 
 /**
  * One-off add-on product - $10 base price (one-time), is_add_on: true

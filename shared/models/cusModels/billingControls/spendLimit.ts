@@ -19,11 +19,19 @@ export const DbSpendLimitSchema = z
 			description:
 				"Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.",
 		}),
+		skip_overage_billing: z.boolean().optional().meta({
+			description:
+				"When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.",
+		}),
 	})
 	.refine(
-		(data) => data.overage_limit === undefined || data.feature_id !== undefined,
+		(data) =>
+			(data.overage_limit === undefined &&
+				data.skip_overage_billing === undefined) ||
+			data.feature_id !== undefined,
 		{
-			message: "feature_id is required when overage_limit is provided",
+			message:
+				"feature_id is required when overage_limit or skip_overage_billing is provided",
 			path: ["feature_id"],
 		},
 	);

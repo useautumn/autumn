@@ -5,15 +5,17 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
+	IconTooltipButton,
 	Skeleton,
 	SmallSpinner,
 } from "@autumn/ui";
 import {
+	ArrowSquareOutIcon,
 	KeyIcon,
 	LinkBreakIcon,
 	PlugsConnectedIcon,
 } from "@phosphor-icons/react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -21,8 +23,14 @@ import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { getStripeDashboardLink } from "@/utils/linkUtils";
+import {
+	getStripeConnectViewAsLink,
+	getStripeDashboardLink,
+} from "@/utils/linkUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import ConnectStripeDialog from "@/views/onboarding2/ConnectStripeDialog";
+import { CatalogMappingsCard } from "./mappings/CatalogMappingsCard";
 import { DisconnectStripeDialog } from "./DisconnectStripeDialog";
 import { StripeAccountMismatchBanner } from "./StripeAccountMismatchBanner";
 import { StripeChannelCell } from "./StripeChannelCell";
@@ -31,12 +39,14 @@ import { StripeDuplicateAccountDialog } from "./StripeDuplicateAccountDialog";
 import { useStripeOAuthParams } from "./useStripeOAuthParams";
 
 export const ConfigureStripe = () => {
-	const { org, mutate } = useOrg();
+	const { org, mutate } = useOrg({ skipSandbox: false });
 	const { stripeAccount, isLoading: isLoadingStripeAccount } =
 		useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
 	const { params, clear: clearOAuthParams } = useStripeOAuthParams();
 	const env = useEnv();
+	const { isAdmin } = useAdmin();
+	const { masterStripeAccount } = useMasterStripeAccount();
 
 	const [showConnectDialog, setShowConnectDialog] = useState(false);
 	const [secretKeyMismatch, setSecretKeyMismatch] = useState<string | null>(
@@ -69,14 +79,37 @@ export const ConfigureStripe = () => {
 	const secretKeyConnected = org?.stripe_secret_key_connected ?? false;
 	const oauthConnected = org?.stripe_oauth_connected ?? false;
 	const anyConnected = secretKeyConnected || oauthConnected;
+	const { data: defaultStripeAccount } = useQuery<{ id: string | null }>({
+		queryKey: ["admin", "default-stripe-account", org?.id, env],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/admin/default-stripe-account");
+			return data;
+		},
+		enabled: isAdmin && !!org?.id && !anyConnected,
+	});
 
 	const accountName =
 		stripeAccount?.business_profile?.name ||
 		stripeAccount?.settings?.dashboard?.display_name;
 	const connectedSubtitle = accountName || "Connected";
 
+	const adminConnectedAccountId = oauthConnected
+		? stripeAccount?.id
+		: !anyConnected
+			? defaultStripeAccount?.id
+			: null;
+	const adminDashboardUrl =
+		isAdmin && masterStripeAccount?.id && adminConnectedAccountId
+			? getStripeConnectViewAsLink({
+					masterAccountId: masterStripeAccount.id,
+					connectedAccountId: adminConnectedAccountId,
+					env,
+					path: "dashboard",
+				})
+			: null;
 	const dashboardUrl = anyConnected
-		? getStripeDashboardLink({ env, accountId: stripeAccount?.id })
+		? (adminDashboardUrl ??
+			getStripeDashboardLink({ env, accountId: stripeAccount?.id }))
 		: null;
 
 	const description =
@@ -94,9 +127,18 @@ export const ConfigureStripe = () => {
 			<div className="flex flex-col gap-4">
 				<Card className="bg-interactive-secondary shadow-none">
 					<CardHeader>
-						<CardTitle className="text-base">
-							Connect your Stripe account
-						</CardTitle>
+						<div className="flex items-start justify-between gap-4">
+							<CardTitle className="text-base">
+								Connect your Stripe account
+							</CardTitle>
+							{adminDashboardUrl && (
+								<IconTooltipButton
+									tooltip="Open in Stripe"
+									icon={<ArrowSquareOutIcon size={14} />}
+									onClick={() => window.open(adminDashboardUrl, "_blank")}
+								/>
+							)}
+						</div>
 						{isLoadingStripeAccount ? (
 							<div className="space-y-2">
 								<Skeleton className="h-4 w-full" />
@@ -199,6 +241,7 @@ export const ConfigureStripe = () => {
 				</Card>
 
 				{org && <StripeCheckoutSettings key={org.id} />}
+				<CatalogMappingsCard />
 			</div>
 
 			<ConnectStripeDialog

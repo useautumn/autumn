@@ -10,6 +10,7 @@ export const billing: TestGroup = {
 		"migrations",
 		"billing/attach",
 		"billing/update-subscription",
+		"billing/multi-update",
 		"stripe-webhooks",
 	],
 };

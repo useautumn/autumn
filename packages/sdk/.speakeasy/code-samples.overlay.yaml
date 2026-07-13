@@ -266,6 +266,52 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.import"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.import({
+                customerId: "cus_123",
+                processors: [
+                  {
+                    type: "stripe",
+                    id: "cus_stripe_123",
+                  },
+                ],
+                billables: [
+                  {
+                    processor: "stripe",
+                    link: {
+                      subscriptionId: "sub_123",
+                    },
+                    plan: {
+                      planId: "pro",
+                      status: "active",
+                      balances: [
+                        {
+                          featureId: "messages",
+                          usage: 10,
+                        },
+                      ],
+                    },
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.multi_attach"]["post"]
     update:
       x-codeSamples:
@@ -294,6 +340,38 @@ actions:
                         quantity: 5,
                       },
                     ],
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/billing.multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.multiUpdate({
+                customerId: "cus_123",
+                updates: [
+                  {
+                    planId: "pro_plan",
+                    cancelAction: "cancel_end_of_cycle",
+                  },
+                  {
+                    planId: "addon_seats",
+                    cancelAction: "cancel_end_of_cycle",
                   },
                 ],
               });
@@ -376,6 +454,38 @@ actions:
                         quantity: 5,
                       },
                     ],
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/billing.preview_multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.previewMultiUpdate({
+                customerId: "cus_123",
+                updates: [
+                  {
+                    planId: "pro_plan",
+                    cancelAction: "cancel_immediately",
+                  },
+                  {
+                    planId: "addon_seats",
+                    cancelAction: "cancel_immediately",
                   },
                 ],
               });
@@ -693,7 +803,8 @@ actions:
                     {
                       featureId: "messages",
                       enabled: true,
-                      overageLimit: 25,
+                      limitType: "usage_percentage",
+                      overageLimit: 120,
                     },
                   ],
                 },
@@ -1169,6 +1280,26 @@ actions:
                 code: "REF123",
                 customerId: "cus_456",
               });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/rewards.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.rewards.list({});
 
               console.log(result);
             }

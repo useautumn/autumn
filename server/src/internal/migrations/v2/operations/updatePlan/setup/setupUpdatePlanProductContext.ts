@@ -17,6 +17,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
 import type { MigrateCustomerContext } from "../../types/index.js";
 import { applyPrepareResultsToUpdatePlan } from "../applyPrepareResults/index.js";
+import { resolveFeatureQuantityStrategy } from "../compute/resolveFeatureQuantityStrategy.js";
 import { itemAlreadyExists } from "./itemAlreadyExists.js";
 import type { UpdatePlanProductContext } from "./types.js";
 
@@ -82,6 +83,16 @@ export const setupUpdatePlanProductContext = async ({
 		? { ...projectedFullCustomer, entity }
 		: projectedFullCustomer;
 
+	const strategyFeatureQuantities = preparedOp.feature_quantities_strategy
+		? resolveFeatureQuantityStrategy({
+				strategies: preparedOp.feature_quantities_strategy,
+				customerProduct,
+				addItems: customize.add_items,
+			})
+		: [];
+
+	const allowCharges = preparedOp.proration === true;
+
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: customerId,
 		entity_id: customerProduct.entity_id ?? undefined,
@@ -89,7 +100,13 @@ export const setupUpdatePlanProductContext = async ({
 		plan_id: customerProduct.product.id,
 		version: preparedOp.version,
 		...(preparedOp.customize ? { customize } : {}),
-		proration_behavior: "none",
+		...(strategyFeatureQuantities.length > 0
+			? { feature_quantities: strategyFeatureQuantities }
+			: {}),
+		// Explicitly "none" unless proration is true (internal-only op field,
+		// never settable from the frontend) — default migration behavior stays
+		// charge-free for every op that doesn't opt in.
+		proration_behavior: allowCharges ? undefined : "none",
 		no_billing_changes:
 			context.migration.no_billing_changes === true ? true : undefined,
 	};
@@ -158,6 +175,10 @@ export const setupUpdatePlanProductContext = async ({
 		billingVersion: BillingVersion.V2,
 		actionSource: "migration",
 		skipBillingChanges,
+		allowCharges,
+		// Preview never creates real Stripe resources — seed placeholder ids
+		// instead, same mechanism attach/updateSubscription previews use.
+		dryRunStripe: context.preview,
 		checkoutMode: null,
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

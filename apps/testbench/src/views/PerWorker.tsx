@@ -9,12 +9,23 @@ import type { Snapshot, WorkerRow } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
 import { WorkerStatusBadge } from "../widgets";
 
+/** "ready" only means booted — show "running" while the worker has a file in flight. */
+const deriveWorkerStatus = (
+	worker: WorkerRow,
+	busyWorkers: Set<string>,
+): string =>
+	worker.status === "ready" && busyWorkers.has(worker.name)
+		? "running"
+		: worker.status;
+
 function WorkerList({
 	workers,
+	busyWorkers,
 	active,
 	onPick,
 }: {
 	workers: WorkerRow[];
+	busyWorkers: Set<string>;
 	active?: string;
 	onPick: (worker: string) => void;
 }) {
@@ -28,6 +39,7 @@ function WorkerList({
 					)}
 					key={w.name}
 					onClick={() => onPick(w.name)}
+					title={`${w.name} · ${deriveWorkerStatus(w, busyWorkers)}${w.reason ? ` — ${w.reason}` : ""}`}
 					type="button"
 				>
 					<span className="truncate font-mono text-tertiary-foreground">
@@ -37,7 +49,7 @@ function WorkerList({
 						<span className="text-muted-foreground tabular-nums">
 							{w.fileCount}
 						</span>
-						<WorkerStatusBadge status={w.status} />
+						<WorkerStatusBadge status={deriveWorkerStatus(w, busyWorkers)} />
 					</span>
 				</button>
 			))}
@@ -58,12 +70,18 @@ export function PerWorker({
 		socket.sub?.kind === "worker" ? socket.sub.key : undefined;
 	const row = snap.workers.find((w) => w.name === activeWorker);
 	const showOutput = socket.sub?.kind === "worker";
+	const busyWorkers = new Set(
+		snap.files
+			.filter((f) => f.status === "running" && f.worker)
+			.map((f) => f.worker as string),
+	);
 	return (
 		<ResizablePanelGroup className="h-full" orientation="horizontal">
 			<ResizablePanel defaultSize={26} minSize={18}>
 				<div className="h-full min-h-0 pr-3">
 					<WorkerList
 						active={activeWorker}
+						busyWorkers={busyWorkers}
 						onPick={socket.subscribeWorker}
 						workers={snap.workers}
 					/>
@@ -75,10 +93,20 @@ export function PerWorker({
 					{row ? (
 						<div className="flex shrink-0 flex-wrap items-center gap-2">
 							<span className="font-mono text-sm">{row.name}</span>
-							<WorkerStatusBadge status={row.status} />
+							<WorkerStatusBadge
+								status={deriveWorkerStatus(row, busyWorkers)}
+							/>
 							<span className="text-muted-foreground text-xs">
 								{row.fileCount} files
 							</span>
+							{row.reason ? (
+								<span
+									className="truncate text-red-500 text-xs"
+									title={row.reason}
+								>
+									{row.reason}
+								</span>
+							) : null}
 						</div>
 					) : (
 						<div className="shrink-0 text-muted-foreground text-sm">

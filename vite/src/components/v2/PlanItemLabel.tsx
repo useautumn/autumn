@@ -40,6 +40,16 @@ const PRICE_CHIP_CLASS =
 const isTieredPrice = (item: ProductItem): boolean =>
 	(item.tiers?.length ?? 0) > 1;
 
+/** A rollover config can sit on any item of a feature; only items with a
+ * resetting included/prepaid balance actually roll anything over. */
+const itemCanRollOver = (item: ProductItem): boolean => {
+	if (!item.feature_id) return false;
+	if (intervalIsNone(item.interval)) return false;
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
+	return includedUsage > 0 || item.usage_model === UsageModel.Prepaid;
+};
+
 /** Volume-based tiers priced as a flat amount per band — the real price lives in
  * `flat_amount`, matching getFeaturePriceItemDisplay's formatting. */
 const isVolumeFlatAmountItem = (item: ProductItem): boolean =>
@@ -111,25 +121,38 @@ function priceTierRows(
 	item: ProductItem,
 	currency: string,
 ): { range: string; value: string }[] {
-	let from = 0;
-	return (item.tiers ?? []).map((tier) => {
-		const isInfinite = tier.to === TierInfinite;
-		const range = isInfinite ? `${from}+` : `${from}–${tier.to}`;
-		if (!isInfinite && typeof tier.to === "number") from = tier.to;
+	// Tiers store `to` relative to the granted usage, so add it back to show the
+	// same absolute boundaries as the editor (PriceTiers' getTierToDisplay).
+	const includedUsage =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
 
-		const fmt = (amount: number) =>
-			formatAmount({
-				currency,
-				amount,
-				amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-			});
+	const fmt = (amount: number) =>
+		formatAmount({
+			currency,
+			amount,
+			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		});
+
+	const rows: { range: string; value: string }[] = [];
+	if (includedUsage > 0) {
+		rows.push({ range: `0–${includedUsage}`, value: "Included" });
+	}
+
+	let from = includedUsage;
+	for (const tier of item.tiers ?? []) {
+		const isInfinite = tier.to === TierInfinite;
+		const to = typeof tier.to === "number" ? tier.to + includedUsage : tier.to;
+		const range = isInfinite ? `${from}+` : `${from}–${to}`;
+		if (!isInfinite && typeof to === "number") from = to;
 
 		const parts: string[] = [];
 		if (tier.amount) parts.push(fmt(tier.amount));
 		if (tier.flat_amount) parts.push(`${fmt(tier.flat_amount)} flat`);
 
-		return { range, value: parts.length > 0 ? parts.join(" + ") : "Free" };
-	});
+		rows.push({ range, value: parts.length > 0 ? parts.join(" + ") : "Free" });
+	}
+
+	return rows;
 }
 
 function KeyValueRow({ label, value }: { label: string; value: string }) {
@@ -154,7 +177,13 @@ function TierBreakdownChip({
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<span className={cn(PRICE_CHIP_CLASS, "cursor-help")}>{priceStr}</span>
+				{/* pointer-events-auto: read-only rows disable pointer events, which
+				 * would otherwise swallow the hover that opens this tooltip. */}
+				<span
+					className={cn(PRICE_CHIP_CLASS, "cursor-help pointer-events-auto")}
+				>
+					{priceStr}
+				</span>
 			</TooltipTrigger>
 			<TooltipContent className="max-w-xs" side="top">
 				<div className="flex flex-col gap-2">
@@ -182,6 +211,52 @@ function TierBreakdownChip({
 	);
 }
 
+/** Splits `text` around the embedded price substring and renders that portion
+ * via `renderPrice`. Returns null when the price isn't present in `text`. */
+function highlightPrice({
+	item,
+	currency,
+	text,
+	renderPrice,
+}: {
+	item: ProductItem;
+	currency: string;
+	text: string;
+	renderPrice: (priceStr: string) => ReactNode;
+}): ReactNode {
+	const priceStr = priceString(item, currency);
+	const priceIndex = priceStr ? text.indexOf(priceStr) : -1;
+	if (!priceStr || priceIndex === -1) return null;
+
+	return (
+		<>
+			{text.slice(0, priceIndex)}
+			{renderPrice(priceStr)}
+			{text.slice(priceIndex + priceStr.length)}
+		</>
+	);
+}
+
+/** Embeds the tier-breakdown chip in place of the price. Null unless the item
+ * is tiered and its price string appears in `text`. */
+function tieredPriceChip(args: {
+	item: ProductItem;
+	currency: string;
+	text: string;
+}): ReactNode {
+	if (!isTieredPrice(args.item)) return null;
+	return highlightPrice({
+		...args,
+		renderPrice: (priceStr) => (
+			<TierBreakdownChip
+				currency={args.currency}
+				item={args.item}
+				priceStr={priceStr}
+			/>
+		),
+	});
+}
+
 /** Renders the price secondary text with the price amount as a chip.
  * Tiered prices also reveal the full tier breakdown on hover. */
 function PriceText({
@@ -193,27 +268,20 @@ function PriceText({
 	currency: string;
 	text: string;
 }) {
-	const priceStr = priceString(item, currency);
-	const priceIndex = priceStr ? text.indexOf(priceStr) : -1;
-
-	if (!priceStr || priceIndex === -1) {
-		return <span className="text-body-secondary"> {text}</span>;
-	}
+	const content =
+		tieredPriceChip({ item, currency, text }) ??
+		highlightPrice({
+			item,
+			currency,
+			text,
+			renderPrice: (priceStr) => <span className="text-body">{priceStr}</span>,
+		}) ??
+		text;
 
 	return (
 		<span className="text-body-secondary">
 			{" "}
-			{text.slice(0, priceIndex)}
-			{isTieredPrice(item) ? (
-				<TierBreakdownChip
-					currency={currency}
-					item={item}
-					priceStr={priceStr}
-				/>
-			) : (
-				<span className="text-body">{priceStr}</span>
-			)}
-			{text.slice(priceIndex + priceStr.length)}
+			{content}
 		</span>
 	);
 }
@@ -248,7 +316,7 @@ export function PlanItemLabel({
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
-	const rollover = item.config?.rollover;
+	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
 
 	const icons = <FeatureIconCluster item={item} />;
 
@@ -257,7 +325,10 @@ export function PlanItemLabel({
 			{wrapIcons ? wrapIcons(icons) : icons}
 			<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body-secondary">
 				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
-					{displayText}
+					{hasFeatureName
+						? (tieredPriceChip({ item, currency, text: displayText }) ??
+							displayText)
+						: displayText}
 				</span>
 				{display.secondary_text && (
 					<PriceText

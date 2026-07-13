@@ -80,6 +80,7 @@
 						"group": "Configure Pricing",
 						"pages": [
 							"documentation/modelling-pricing/recurring",
+							"documentation/modelling-pricing/plan-variants",
 							"documentation/modelling-pricing/one-off-purchases",
 							"documentation/modelling-pricing/free-plans",
 							"documentation/modelling-pricing/credit-systems",
@@ -207,7 +208,10 @@
 							"api-reference/billing/setupPayment",
 							"api-reference/billing/previewMultiAttach",
 							"api-reference/billing/multiAttach",
-							"api-reference/billing/createSchedule"
+							"api-reference/billing/previewMultiUpdate",
+							"api-reference/billing/multiUpdate",
+							"api-reference/billing/createSchedule",
+							"api-reference/billing/import"
 						]
 					},
 					{
@@ -283,6 +287,7 @@
 						"pages": [
 							"api-reference/referrals/createReferralCode",
 							"api-reference/referrals/redeemReferralCode",
+							"api-reference/rewards/listRewards",
 							"api-reference/rewards/redeemRewardCode"
 						]
 					},
@@ -299,6 +304,7 @@
 							{
 								"group": "Billing",
 								"pages": [
+									"api-reference/webhooks/billingAutoTopupFailed",
 									"api-reference/webhooks/billingAutoTopupSucceeded",
 									"api-reference/webhooks/billingUpdated"
 								]

@@ -1,6 +1,7 @@
 import type {
 	AddPlanOp,
 	CustomerOperation,
+	MigrationFilter,
 	Operations,
 	UpdatePlanOp,
 } from "@autumn/shared";
@@ -22,21 +23,19 @@ import {
 import { ActionCard } from "../shared/ActionCard";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";
+import { getInheritedPlanFilter } from "../shared/inheritPlanFilter";
 import { AddPlansSection } from "./AddPlanOpForm";
 import { UpdatePlanOpForm } from "./UpdatePlanOpForm";
 
-const DEFAULT_UPDATE_PLAN: CustomerOperation = {
-	type: "update_plan",
-	plan_filter: {},
-};
-
 export function OperationsForm({
 	value,
+	filter,
 	onChange,
 	noBillingChanges,
 	onNoBillingChangesChange,
 }: {
 	value: Operations;
+	filter: MigrationFilter;
 	onChange: (value: Operations) => void;
 	noBillingChanges: boolean;
 	onNoBillingChangesChange: (value: boolean) => void;
@@ -48,6 +47,11 @@ export function OperationsForm({
 	);
 	const hasAddPlans = addPlanOps.length > 0;
 	const isEmpty = operations.length === 0;
+	const inheritedPlanFilter = getInheritedPlanFilter(filter);
+	const defaultUpdatePlan = (): CustomerOperation => ({
+		type: "update_plan",
+		plan_filter: inheritedPlanFilter ?? {},
+	});
 
 	const setOperations = (next: CustomerOperation[]) =>
 		onChange({ ...value, customer: next });
@@ -143,7 +147,7 @@ export function OperationsForm({
 							heading="Update Plan"
 							subheading="Modify existing customer plans"
 							onClick={() => {
-								setOperations([DEFAULT_UPDATE_PLAN]);
+								setOperations([defaultUpdatePlan()]);
 								setAutoOpenPicker(true);
 							}}
 							className="flex-1"
@@ -207,7 +211,7 @@ export function OperationsForm({
 								<DropdownMenuItem
 									closeOnClick
 									onClick={() =>
-										setOperations([...operations, DEFAULT_UPDATE_PLAN])
+										setOperations([...operations, defaultUpdatePlan()])
 									}
 								>
 									<PencilSimpleIcon size={14} weight="duotone" />

@@ -447,6 +447,18 @@ export type MultiAttachRedirectMode = ClosedEnum<
   typeof MultiAttachRedirectMode
 >;
 
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export const MultiAttachLimitType = {
+  Absolute: "absolute",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+ */
+export type MultiAttachLimitType = ClosedEnum<typeof MultiAttachLimitType>;
+
 export type MultiAttachSpendLimit = {
   /**
    * Optional feature ID this spend limit applies to.
@@ -457,9 +469,17 @@ export type MultiAttachSpendLimit = {
    */
   enabled?: boolean | undefined;
   /**
-   * Maximum allowed overage spend for the target feature.
+   * How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance.
+   */
+  limitType?: MultiAttachLimitType | undefined;
+  /**
+   * Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage.
    */
   overageLimit?: number | undefined;
+  /**
+   * When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally.
+   */
+  skipOverageBilling?: boolean | undefined;
 };
 
 /**
@@ -478,11 +498,24 @@ export type MultiAttachEntityDataInterval = ClosedEnum<
   typeof MultiAttachEntityDataInterval
 >;
 
+export type MultiAttachProperties = string | number | boolean;
+
+/**
+ * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+ */
+export type MultiAttachFilter = {
+  properties: { [k: string]: string | number | boolean };
+};
+
 export type MultiAttachUsageLimit = {
   /**
    * The feature this usage limit applies to.
    */
   featureId: string;
+  /**
+   * Whether this usage limit is enabled.
+   */
+  enabled?: boolean | undefined;
   /**
    * Maximum units allowed per interval.
    */
@@ -491,6 +524,10 @@ export type MultiAttachUsageLimit = {
    * Interval for the cap, aligned to the customer's billing cycle.
    */
   interval: MultiAttachEntityDataInterval;
+  /**
+   * When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature.
+   */
+  filter?: MultiAttachFilter | undefined;
 };
 
 /**
@@ -665,6 +702,7 @@ export const MultiAttachCode = {
   ThreedsRequired: "3ds_required",
   PaymentMethodRequired: "payment_method_required",
   PaymentFailed: "payment_failed",
+  PaymentProcessing: "payment_processing",
 } as const;
 /**
  * The type of action required to complete the payment.
@@ -1226,10 +1264,17 @@ export const MultiAttachRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachRedirectMode);
 
 /** @internal */
+export const MultiAttachLimitType$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachLimitType
+> = z.enum(MultiAttachLimitType);
+
+/** @internal */
 export type MultiAttachSpendLimit$Outbound = {
   feature_id?: string | undefined;
   enabled: boolean;
+  limit_type?: string | undefined;
   overage_limit?: number | undefined;
+  skip_overage_billing?: boolean | undefined;
 };
 
 /** @internal */
@@ -1240,12 +1285,16 @@ export const MultiAttachSpendLimit$outboundSchema: z.ZodMiniType<
   z.object({
     featureId: z.optional(z.string()),
     enabled: z._default(z.boolean(), false),
+    limitType: z.optional(MultiAttachLimitType$outboundSchema),
     overageLimit: z.optional(z.number()),
+    skipOverageBilling: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
+      limitType: "limit_type",
       overageLimit: "overage_limit",
+      skipOverageBilling: "skip_overage_billing",
     });
   }),
 );
@@ -1264,10 +1313,53 @@ export const MultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachEntityDataInterval);
 
 /** @internal */
+export type MultiAttachProperties$Outbound = string | number | boolean;
+
+/** @internal */
+export const MultiAttachProperties$outboundSchema: z.ZodMiniType<
+  MultiAttachProperties$Outbound,
+  MultiAttachProperties
+> = smartUnion([z.string(), z.number(), z.boolean()]);
+
+export function multiAttachPropertiesToJSON(
+  multiAttachProperties: MultiAttachProperties,
+): string {
+  return JSON.stringify(
+    MultiAttachProperties$outboundSchema.parse(multiAttachProperties),
+  );
+}
+
+/** @internal */
+export type MultiAttachFilter$Outbound = {
+  properties: { [k: string]: string | number | boolean };
+};
+
+/** @internal */
+export const MultiAttachFilter$outboundSchema: z.ZodMiniType<
+  MultiAttachFilter$Outbound,
+  MultiAttachFilter
+> = z.object({
+  properties: z.record(
+    z.string(),
+    smartUnion([z.string(), z.number(), z.boolean()]),
+  ),
+});
+
+export function multiAttachFilterToJSON(
+  multiAttachFilter: MultiAttachFilter,
+): string {
+  return JSON.stringify(
+    MultiAttachFilter$outboundSchema.parse(multiAttachFilter),
+  );
+}
+
+/** @internal */
 export type MultiAttachUsageLimit$Outbound = {
   feature_id: string;
+  enabled: boolean;
   limit: number;
   interval: string;
+  filter?: MultiAttachFilter$Outbound | undefined;
 };
 
 /** @internal */
@@ -1277,8 +1369,10 @@ export const MultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     featureId: z.string(),
+    enabled: z._default(z.boolean(), true),
     limit: z.number(),
     interval: MultiAttachEntityDataInterval$outboundSchema,
+    filter: z.optional(z.lazy(() => MultiAttachFilter$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

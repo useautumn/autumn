@@ -425,7 +425,9 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
+        phases: Union[
+            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
+        ],
         entity_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -442,7 +444,7 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
-        billing_behavior: Optional[models.BillingBehavior] = None,
+        billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -492,7 +494,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
-            phases=utils.get_pydantic_model(phases, List[models.Phase]),
+            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 
         req = self._build_request(
@@ -558,7 +560,9 @@ class Billing(BaseSDK):
         self,
         *,
         customer_id: str,
-        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
+        phases: Union[
+            List[models.PhaseStartUnion], List[models.PhaseStartUnionTypedDict]
+        ],
         entity_id: Optional[str] = None,
         invoice_mode: Optional[
             Union[
@@ -575,7 +579,7 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
-        billing_behavior: Optional[models.BillingBehavior] = None,
+        billing_behavior: Optional[models.CreateScheduleBillingBehavior] = None,
         enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -625,7 +629,7 @@ class Billing(BaseSDK):
             redirect_mode=redirect_mode,
             billing_behavior=billing_behavior,
             enable_plan_immediately=enable_plan_immediately,
-            phases=utils.get_pydantic_model(phases, List[models.Phase]),
+            phases=utils.get_pydantic_model(phases, List[models.PhaseStartUnion]),
         )
 
         req = self._build_request_async(
@@ -1786,6 +1790,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -1820,6 +1825,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -1859,6 +1865,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -1959,6 +1966,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.BillingUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.BillingUpdateRecalculateBalances,
@@ -1993,6 +2001,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2032,6 +2041,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
             ),
@@ -2132,6 +2142,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2166,6 +2177,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2206,6 +2218,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),
@@ -2306,6 +2319,7 @@ class Billing(BaseSDK):
         ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        refund_last_payment: Optional[models.PreviewUpdateRefundLastPayment] = None,
         recalculate_balances: Optional[
             Union[
                 models.PreviewUpdateRecalculateBalances,
@@ -2340,6 +2354,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param refund_last_payment: Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
@@ -2380,6 +2395,7 @@ class Billing(BaseSDK):
             ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            refund_last_payment=refund_last_payment,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
             ),
@@ -2434,6 +2450,412 @@ class Billing(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.PreviewUpdateResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def multi_update(
+        self,
+        *,
+        customer_id: str,
+        updates: Union[
+            List[models.MultiUpdateUpdate], List[models.MultiUpdateUpdateTypedDict]
+        ],
+        entity_id: Optional[str] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.MultiUpdateResponse:
+        r"""Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+        Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+        :param customer_id: The ID of the customer to update plans for.
+        :param updates: The list of plan updates to apply to the customer.
+        :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.MultiUpdateParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            updates=utils.get_pydantic_model(updates, List[models.MultiUpdateUpdate]),
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.multi_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.MultiUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.MultiUpdateParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="multiUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.MultiUpdateResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def multi_update_async(
+        self,
+        *,
+        customer_id: str,
+        updates: Union[
+            List[models.MultiUpdateUpdate], List[models.MultiUpdateUpdateTypedDict]
+        ],
+        entity_id: Optional[str] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.MultiUpdateResponse:
+        r"""Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+
+        Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+
+        :param customer_id: The ID of the customer to update plans for.
+        :param updates: The list of plan updates to apply to the customer.
+        :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.MultiUpdateParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            updates=utils.get_pydantic_model(updates, List[models.MultiUpdateUpdate]),
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.multi_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.MultiUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.MultiUpdateParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="multiUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.MultiUpdateResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def preview_multi_update(
+        self,
+        *,
+        customer_id: str,
+        updates: Union[
+            List[models.PreviewMultiUpdateUpdate],
+            List[models.PreviewMultiUpdateUpdateTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.MultiUpdatePreviewResponse:
+        r"""Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+        Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+        :param customer_id: The ID of the customer to update plans for.
+        :param updates: The list of plan updates to apply to the customer.
+        :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.PreviewMultiUpdateParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            updates=utils.get_pydantic_model(
+                updates, List[models.PreviewMultiUpdateUpdate]
+            ),
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.preview_multi_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.PreviewMultiUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.PreviewMultiUpdateParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="previewMultiUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.MultiUpdatePreviewResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def preview_multi_update_async(
+        self,
+        *,
+        customer_id: str,
+        updates: Union[
+            List[models.PreviewMultiUpdateUpdate],
+            List[models.PreviewMultiUpdateUpdateTypedDict],
+        ],
+        entity_id: Optional[str] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.MultiUpdatePreviewResponse:
+        r"""Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+
+        Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+
+        :param customer_id: The ID of the customer to update plans for.
+        :param updates: The list of plan updates to apply to the customer.
+        :param entity_id: The ID of the entity to update plans for. Individual updates can override this with their own entity_id.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.PreviewMultiUpdateParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            updates=utils.get_pydantic_model(
+                updates, List[models.PreviewMultiUpdateUpdate]
+            ),
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.preview_multi_update",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.PreviewMultiUpdateGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.PreviewMultiUpdateParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="previewMultiUpdate",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.MultiUpdatePreviewResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -3004,6 +3426,230 @@ class Billing(BaseSDK):
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.SetupPaymentResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def import_(
+        self,
+        *,
+        customer_id: str,
+        billables: Union[List[models.Billable], List[models.BillableTypedDict]],
+        customer_data: Optional[
+            Union[models.ImportCustomerData, models.ImportCustomerDataTypedDict]
+        ] = None,
+        processors: Optional[
+            Union[List[models.ImportProcessor], List[models.ImportProcessorTypedDict]]
+        ] = None,
+        dry_run: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.DfuFlashResult:
+        r"""Import
+
+        Image a customer into Autumn for live migration. Read-only against processors.
+
+        :param customer_id: Autumn customer to image into.
+        :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
+        :param customer_data: Optional identity fields upserted onto the customer (applied to existing customers too).
+        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
+        :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.DfuFlashParams(
+            customer_id=customer_id,
+            customer_data=utils.get_pydantic_model(
+                customer_data, Optional[models.ImportCustomerData]
+            ),
+            processors=utils.get_pydantic_model(
+                processors, Optional[List[models.ImportProcessor]]
+            ),
+            billables=utils.get_pydantic_model(billables, List[models.Billable]),
+            dry_run=dry_run,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.import",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.ImportGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.DfuFlashParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="import",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.DfuFlashResult, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def import__async(
+        self,
+        *,
+        customer_id: str,
+        billables: Union[List[models.Billable], List[models.BillableTypedDict]],
+        customer_data: Optional[
+            Union[models.ImportCustomerData, models.ImportCustomerDataTypedDict]
+        ] = None,
+        processors: Optional[
+            Union[List[models.ImportProcessor], List[models.ImportProcessorTypedDict]]
+        ] = None,
+        dry_run: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.DfuFlashResult:
+        r"""Import
+
+        Image a customer into Autumn for live migration. Read-only against processors.
+
+        :param customer_id: Autumn customer to image into.
+        :param billables: The billing objects (subscriptions, one-offs) to image, each carrying its plan.
+        :param customer_data: Optional identity fields upserted onto the customer (applied to existing customers too).
+        :param processors: The customer's processor identities (e.g. Stripe customer id, RevenueCat app_user_id). Omit for customers with no processor, e.g. those only ever on a free plan.
+        :param dry_run: If true, validate and compute without persisting; returns what would be flashed.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.DfuFlashParams(
+            customer_id=customer_id,
+            customer_data=utils.get_pydantic_model(
+                customer_data, Optional[models.ImportCustomerData]
+            ),
+            processors=utils.get_pydantic_model(
+                processors, Optional[List[models.ImportProcessor]]
+            ),
+            billables=utils.get_pydantic_model(billables, List[models.Billable]),
+            dry_run=dry_run,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.import",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.ImportGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.DfuFlashParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="import",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.DfuFlashResult, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

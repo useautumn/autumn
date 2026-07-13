@@ -1,15 +1,11 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { type LeafSurface, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import { env as chatEnv } from "../../lib/env.js";
-import { leafSystemPrompt, type LeafSurface } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "./config.js";
-import {
-	ensureLeafSkills,
-	type LeafSkillRef,
-	skillsMatch,
-} from "./skills.js";
+import { ensureLeafSkills, type LeafSkillRef, skillsMatch } from "./skills.js";
 import {
 	buildDesiredTools,
 	builtinSignatureFromToolset,

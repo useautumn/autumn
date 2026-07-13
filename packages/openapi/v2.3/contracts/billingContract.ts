@@ -5,6 +5,8 @@ import {
 	CreateScheduleParamsV0Schema,
 	CreateScheduleResponseSchema,
 	ExtAttachPreviewResponseSchema,
+	ExtMultiUpdateParamsV0Schema,
+	ExtMultiUpdatePreviewResponseV0Schema,
 	ExtPreviewUpdateSubscriptionResponseSchema,
 	ExtUpdateSubscriptionV1ParamsSchema,
 	MultiAttachParamsV0Schema,
@@ -18,8 +20,10 @@ import {
 	billingAttachJsDoc,
 	billingCreateScheduleJsDoc,
 	billingMultiAttachJsDoc,
+	billingMultiUpdateJsDoc,
 	billingPreviewAttachJsDoc,
 	billingPreviewMultiAttachJsDoc,
+	billingPreviewMultiUpdateJsDoc,
 	billingPreviewUpdateJsDoc,
 	billingUpdateJsDoc,
 } from "../jsDocs/billingJsDocs";
@@ -332,6 +336,103 @@ export const billingMultiAttachContract = oc
 						hosted_invoice_url: "https://invoice.stripe.com/...",
 					},
 					payment_url: null,
+				},
+			],
+		}),
+	);
+
+export const billingMultiUpdateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.multi_update",
+		operationId: "multiUpdate",
+		tags: ["billing"],
+		description: billingMultiUpdateJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "multiUpdate",
+		}),
+	})
+	.input(
+		ExtMultiUpdateParamsV0Schema.meta({
+			title: "MultiUpdateParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					updates: [
+						{ plan_id: "pro_plan", cancel_action: "cancel_end_of_cycle" },
+						{ plan_id: "addon_seats", cancel_action: "cancel_end_of_cycle" },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		BillingResponseSchema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					invoice: {
+						status: "paid",
+						stripe_id: "in_1234",
+						total: -20,
+						currency: "usd",
+						hosted_invoice_url: "https://invoice.stripe.com/...",
+					},
+					payment_url: null,
+				},
+			],
+		}),
+	);
+
+export const billingPreviewMultiUpdateContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.preview_multi_update",
+		operationId: "previewMultiUpdate",
+		tags: ["billing"],
+		description: billingPreviewMultiUpdateJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "previewMultiUpdate",
+		}),
+	})
+	.input(
+		ExtMultiUpdateParamsV0Schema.meta({
+			title: "PreviewMultiUpdateParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					updates: [
+						{ plan_id: "pro_plan", cancel_action: "cancel_immediately" },
+						{ plan_id: "addon_seats", cancel_action: "cancel_immediately" },
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		ExtMultiUpdatePreviewResponseV0Schema.meta({
+			title: "MultiUpdatePreviewResponse",
+			examples: [
+				{
+					customer_id: "cus_123",
+					currency: "usd",
+					total: -40,
+					subscriptions: [
+						{
+							...BILLING_PREVIEW_RESPONSE_EXAMPLE,
+							plan_ids: ["pro_plan"],
+							subtotal: -20,
+							total: -20,
+						},
+						{
+							...BILLING_PREVIEW_RESPONSE_EXAMPLE,
+							plan_ids: ["addon_seats"],
+							subtotal: -20,
+							total: -20,
+						},
+					],
 				},
 			],
 		}),

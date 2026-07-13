@@ -1,5 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
+import { ensureOrgSvixApps } from "@tests/utils/setup/ensureOrgSvixApps.js";
 import axios from "axios";
 import { initDrizzle } from "@/db/initDrizzle";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -61,4 +62,5 @@ export const setupOrg = async ({
 		},
 	});
 
+	await ensureOrgSvixApps({ db, org });
 };

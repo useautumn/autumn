@@ -109,7 +109,12 @@ export const planItemTransformer = createTransformer<
 		rollover: (api) =>
 			api.rollover
 				? {
-						max: api.rollover.max ?? 0,
+						...(api.rollover.max_percentage == null && {
+							max: api.rollover.max ?? 0,
+						}),
+						...(api.rollover.max_percentage != null && {
+							maxPercentage: api.rollover.max_percentage,
+						}),
 						expiryDurationType: api.rollover.expiry_duration_type,
 						...(api.rollover.expiry_duration_length !== undefined && {
 							expiryDurationLength: api.rollover.expiry_duration_length,

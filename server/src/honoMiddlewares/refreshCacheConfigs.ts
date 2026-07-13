@@ -3,14 +3,20 @@ import { matchRoute } from "./middlewareUtils.js";
 export type RefreshCacheRouteConfig = {
 	method: string;
 	url: string;
+	/** Flush cached balances to Postgres before invalidating. Only safe on
+	 *  balance-neutral routes — everywhere else Postgres was just written
+	 *  directly and the cached balances are stale. */
+	flushBalances?: boolean;
 };
 
 const route = ({
 	method,
 	url,
+	flushBalances,
 }: RefreshCacheRouteConfig): RefreshCacheRouteConfig => ({
 	method,
 	url,
+	flushBalances,
 });
 
 export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
@@ -22,10 +28,12 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/customers/:customer_id",
+		flushBalances: true,
 	}),
 	route({
 		method: "PATCH",
 		url: "/customers/:customer_id",
+		flushBalances: true,
 	}),
 
 	route({
@@ -78,6 +86,12 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		url: "/balances/create",
 	}),
 
+	route({
+		method: "POST",
+		url: "/balances/update",
+		flushBalances: true,
+	}),
+
 	// RPC ROUTES
 	route({
 		method: "POST",
@@ -92,6 +106,7 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/billing.setup_payment",
+		flushBalances: true,
 	}),
 
 	route({
@@ -107,11 +122,18 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/billing.open_customer_portal",
+		flushBalances: true,
 	}),
 
 	route({
 		method: "POST",
 		url: "/balances.create",
+	}),
+
+	route({
+		method: "POST",
+		url: "/balances.update",
+		flushBalances: true,
 	}),
 
 	route({
@@ -142,6 +164,22 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/customers.update",
+		flushBalances: true,
+	}),
+
+	route({
+		method: "POST",
+		url: "/billing.import",
+	}),
+
+	route({
+		method: "POST",
+		url: "/billing.sync",
+	}),
+
+	route({
+		method: "POST",
+		url: "/billing.sync_v2",
 	}),
 ];
 

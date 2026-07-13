@@ -1,9 +1,11 @@
+import type { FullProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
 import { ProductService } from "@/internal/products/ProductService";
+import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
 import { rollupMatchedPlans } from "./rollupMatchedPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
@@ -22,11 +24,15 @@ export const detectSubscriptionMatch = async ({
 	subscription,
 	schedule,
 	nowSec,
+	fullProducts: preloadedFullProducts,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
 	nowSec?: number;
+	/** Optional pre-fetched catalog (callers matching many subscriptions pass
+	 * this to avoid a per-call fetch). */
+	fullProducts?: FullProduct[];
 }): Promise<SubscriptionMatch> => {
 	if (!subscription && !schedule) {
 		throw new Error(
@@ -40,16 +46,28 @@ export const detectSubscriptionMatch = async ({
 		nowSec,
 	});
 
-	const fullProducts = await ProductService.listFull({
-		db: ctx.db,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
+	// Disabled: the per-tiered-price Stripe fetch makes bulk detection slow.
+	// Cost: tiered prices can't shape-match (payloads omit price.tiers).
+	// await enrichSnapshotTiers({
+	// 	stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+	// 	phaseSnapshots,
+	// });
+
+	const fullProducts =
+		preloadedFullProducts ??
+		(await ProductService.listFull({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		}));
 
 	const phaseMatches: PhaseMatch[] = phaseSnapshots.map((snapshot) => {
-		const itemDiffs = snapshot.items.map((item) =>
-			findAutumnMatchForStripeItem({ item, fullProducts }),
-		);
+		const itemDiffs = rematchFeaturesWithinAnchoredPlans({
+			itemDiffs: snapshot.items.map((item) =>
+				findAutumnMatchForStripeItem({ item, fullProducts, org: ctx.org }),
+			),
+			org: ctx.org,
+		});
 		const plans = rollupMatchedPlans({ itemDiffs });
 		return {
 			start_date: snapshot.start_date,

@@ -4,10 +4,13 @@
 
 import { billingAttach } from "../funcs/billing-attach.js";
 import { billingCreateSchedule } from "../funcs/billing-create-schedule.js";
+import { billingImport } from "../funcs/billing-import.js";
 import { billingMultiAttach } from "../funcs/billing-multi-attach.js";
+import { billingMultiUpdate } from "../funcs/billing-multi-update.js";
 import { billingOpenCustomerPortal } from "../funcs/billing-open-customer-portal.js";
 import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
 import { billingPreviewMultiAttach } from "../funcs/billing-preview-multi-attach.js";
+import { billingPreviewMultiUpdate } from "../funcs/billing-preview-multi-update.js";
 import { billingPreviewUpdate } from "../funcs/billing-preview-update.js";
 import { billingSetupPayment } from "../funcs/billing-setup-payment.js";
 import { billingUpdate } from "../funcs/billing-update.js";
@@ -88,7 +91,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782399908997,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783609508997,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783704123534,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784913723534,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
@@ -289,6 +292,7 @@ export class Billing extends ClientSDK {
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+   * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    *
@@ -330,6 +334,7 @@ export class Billing extends ClientSDK {
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+   * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    *
@@ -340,6 +345,68 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.PreviewUpdateResponse> {
     return unwrapAsync(billingPreviewUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Updates multiple plans on a customer in a single request. Currently supports cancel actions (immediately, end of cycle, or uncancel) across one or more subscriptions.
+   *
+   * Use this endpoint to cancel or uncancel several plans atomically in one call — for example canceling a main plan together with its add-ons, or plans across multiple entities.
+   *
+   * @example
+   * ```typescript
+   * // Cancel a plan and an add-on at end of cycle
+   * const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_end_of_cycle"},{"planId":"addon_seats","cancelAction":"cancel_end_of_cycle"}] });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Uncancel one plan and cancel another immediately
+   * const response = await client.billing.multiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"uncancel"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+   * ```
+   *
+   * @param customerId - The ID of the customer to update plans for.
+   * @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+   * @param updates - The list of plan updates to apply to the customer.
+   *
+   * @returns A billing response with the resulting invoice summary (one credit invoice per affected subscription for immediate cancels).
+   */
+  async multiUpdate(
+    request: models.MultiUpdateParams,
+    options?: RequestOptions,
+  ): Promise<models.MultiUpdateResponse> {
+    return unwrapAsync(billingMultiUpdate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Previews the billing changes of a multi-plan update without making any changes. Returns one core preview per affected subscription.
+   *
+   * Use this endpoint to show customers the credits and next-cycle changes of canceling multiple plans before confirming.
+   *
+   * @example
+   * ```typescript
+   * // Preview canceling two plans immediately
+   * const response = await client.billing.previewMultiUpdate({ customerId: "cus_123", updates: [{"planId":"pro_plan","cancelAction":"cancel_immediately"},{"planId":"addon_seats","cancelAction":"cancel_immediately"}] });
+   * ```
+   *
+   * @param customerId - The ID of the customer to update plans for.
+   * @param entityId - The ID of the entity to update plans for. Individual updates can override this with their own entity_id. (optional)
+   * @param updates - The list of plan updates to apply to the customer.
+   *
+   * @returns A preview with the combined total plus one entry per subscription, each with its own line items, totals, and next-cycle preview.
+   */
+  async previewMultiUpdate(
+    request: models.PreviewMultiUpdateParams,
+    options?: RequestOptions,
+  ): Promise<models.MultiUpdatePreviewResponse> {
+    return unwrapAsync(billingPreviewMultiUpdate(
       this,
       request,
       options,
@@ -368,6 +435,23 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.SetupPaymentResponse> {
     return unwrapAsync(billingSetupPayment(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Import
+   *
+   * @remarks
+   * Image a customer into Autumn for live migration. Read-only against processors.
+   */
+  async import(
+    request: models.DfuFlashParams,
+    options?: RequestOptions,
+  ): Promise<models.DfuFlashResult> {
+    return unwrapAsync(billingImport(
       this,
       request,
       options,

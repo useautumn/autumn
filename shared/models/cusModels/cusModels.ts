@@ -23,6 +23,7 @@ export const CustomerSchema = z.object({
 	config: z
 		.object({
 			disable_pooled_balance: z.boolean().optional(),
+			disable_overage_billing: z.boolean().optional(),
 		})
 		.nullish(),
 });

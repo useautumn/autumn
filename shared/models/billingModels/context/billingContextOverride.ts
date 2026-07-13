@@ -87,6 +87,10 @@ export interface UpdateSubscriptionBillingContextOverride
 		customEnts?: Entitlement[];
 	};
 
+	/** Build the context against this customer instead of fetching from DB.
+	 * For fold-style callers (multiUpdate) whose customer carries prior updates. */
+	projectedFullCustomer?: FullCustomer;
+
 	/**
 	 * When true, `buildAutumnLineItems` is called with
 	 * `includeArrearLineItems: true` — existing consumable overage on the

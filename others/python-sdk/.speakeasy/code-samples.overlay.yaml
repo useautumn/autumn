@@ -213,6 +213,46 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/billing.import"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.import_(customer_id="cus_123", billables=[
+                    {
+                        "processor": "stripe",
+                        "link": {
+                            "subscription_id": "sub_123",
+                        },
+                        "plan": {
+                            "plan_id": "pro",
+                            "status": "active",
+                            "balances": [
+                                {
+                                    "feature_id": "messages",
+                                    "usage": 10,
+                                },
+                            ],
+                        },
+                    },
+                ], processors=[
+                    {
+                        "type": "stripe",
+                        "id": "cus_stripe_123",
+                    },
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/billing.multi_attach"]["post"]
     update:
       x-codeSamples:
@@ -241,6 +281,33 @@ actions:
                         ],
                     },
                 ], redirect_mode="if_required")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.multi_update(customer_id="cus_123", updates=[
+                    {
+                        "plan_id": "pro_plan",
+                        "cancel_action": "cancel_end_of_cycle",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "cancel_action": "cancel_end_of_cycle",
+                    },
+                ])
 
                 # Handle response
                 print(res)
@@ -308,6 +375,33 @@ actions:
                         ],
                     },
                 ], redirect_mode="if_required")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/billing.preview_multi_update"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.preview_multi_update(customer_id="cus_123", updates=[
+                    {
+                        "plan_id": "pro_plan",
+                        "cancel_action": "cancel_immediately",
+                    },
+                    {
+                        "plan_id": "addon_seats",
+                        "cancel_action": "cancel_immediately",
+                    },
+                ])
 
                 # Handle response
                 print(res)
@@ -556,7 +650,8 @@ actions:
                         {
                             "feature_id": "messages",
                             "enabled": True,
-                            "overage_limit": 25,
+                            "limit_type": "usage_percentage",
+                            "overage_limit": 120,
                         },
                     ],
                 })
@@ -840,7 +935,7 @@ actions:
                 secret_key="<YOUR_BEARER_TOKEN_HERE>",
             ) as autumn:
 
-                res = autumn.plans.update(plan_id="pro_plan", group="", name="Pro Plan (Updated)", price={
+                res = autumn.plans.update(plan_id="pro_plan", name="Pro Plan (Updated)", price={
                     "amount": 15,
                     "interval": "month",
                 }, create_in_stripe=True, archived=False)
@@ -937,6 +1032,24 @@ actions:
             ) as autumn:
 
                 res = autumn.referrals.redeem_code(code="REF123", customer_id="cus_456")
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/rewards.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.list(request={})
 
                 # Handle response
                 print(res)

@@ -18,7 +18,6 @@ import {
 	type FilterRule,
 	planFilterToGroups,
 	planKeysToFilter,
-	ruleToStringMatcher,
 	stringsToCustomerId,
 } from "./filterRowTypes";
 
@@ -60,9 +59,15 @@ function planNoneInner(plan: unknown): PlanFilter | null {
 }
 
 // Fields whose negation is a customer-level `$none` quantifier ("no plan that
-// is X" / "no plan with feature X"), not a per-plan matcher. Both fan out
-// one-to-many, so `$some ... <> X` would match customers who also hold X.
-const NEGATABLE_FIELDS = new Set<FilterField>(["plan_id", "item_feature_id"]);
+// is X"), not a per-plan matcher; otherwise multi-plan customers can leak in.
+const NEGATABLE_FIELDS = new Set<FilterField>(["plan_id"]);
+
+const PLAN_PROPERTY_FIELDS = new Set<FilterField>([
+	"custom",
+	"paid",
+	"recurring",
+	"price",
+]);
 
 function isNegatedRule(rule: FilterRule): boolean {
 	return (
@@ -111,42 +116,41 @@ function planIdQuantifier(rule: FilterRule): CustomerFilter | null {
 		: { plan: planFilter };
 }
 
-function featureQuantifier(rule: FilterRule): CustomerFilter | null {
-	if (!hasStringValue(rule)) return null;
-	if (isNegatedRule(rule))
-		return {
-			plan: {
-				$none: {
-					item: {
-						feature_id: ruleToStringMatcher(flipNegatedToPositive(rule)),
-					},
-				},
-			},
-		};
-	return { plan: { item: { feature_id: ruleToStringMatcher(rule) } } };
-}
-
-function ruleToQuantifier(rule: FilterRule): CustomerFilter | null {
+function ruleToPlanProperty(rule: FilterRule): PlanFilter | null {
 	switch (rule.field) {
-		case "plan_id":
-			return planIdQuantifier(rule);
-		case "item_feature_id":
-			return featureQuantifier(rule);
 		case "custom":
-			return { plan: { custom: rule.values[0] === "true" } };
+			return { custom: rule.values[0] === "true" };
 		case "paid":
-			return { plan: { paid: rule.values[0] === "true" } };
+			return { paid: rule.values[0] === "true" };
 		case "recurring":
-			return { plan: { recurring: rule.values[0] === "true" } };
+			return { recurring: rule.values[0] === "true" };
 		case "price":
 			return {
-				plan: { price: rule.operator === "exists" ? { $ne: null } : null },
+				price: rule.operator === "exists" ? { $ne: null } : null,
 			};
-		case "item_unlimited":
-			return { plan: { item: { unlimited: rule.values[0] === "true" } } };
 		default:
 			return null;
 	}
+}
+
+function isPositivePlanRule(rule: FilterRule): boolean {
+	return (
+		rule.field === "plan_id" &&
+		rule.operator !== "none" &&
+		!isNegatedRule(rule) &&
+		hasStringValue(rule)
+	);
+}
+
+function mergePlanProperties(rules: FilterRule[]): PlanFilter | null {
+	let planFilter: PlanFilter | null = null;
+	for (const rule of rules) {
+		if (!PLAN_PROPERTY_FIELDS.has(rule.field)) continue;
+		const propertyFilter = ruleToPlanProperty(rule);
+		if (propertyFilter)
+			planFilter = { ...(planFilter ?? {}), ...propertyFilter };
+	}
+	return planFilter;
 }
 
 // DECODE — reverse a single `plan` quantifier back into its UI row(s).
@@ -258,15 +262,40 @@ function groupToNode(group: FilterGroupData): {
 } {
 	let customerId: StringMatcher | undefined;
 	const quantifiers: CustomerFilter[] = [];
+	const positivePlanRules: FilterRule[] = [];
+	const planProperties = mergePlanProperties(group.rules);
+
 	for (const rule of group.rules) {
 		if (rule.field === "customer_id") {
 			const matcher = ruleToCustomerIdMatcher(rule);
 			if (matcher !== undefined) customerId = matcher;
 			continue;
 		}
-		const quantifier = ruleToQuantifier(rule);
+
+		if (isPositivePlanRule(rule)) {
+			positivePlanRules.push(rule);
+			continue;
+		}
+
+		if (PLAN_PROPERTY_FIELDS.has(rule.field)) continue;
+
+		const quantifier = rule.field === "plan_id" ? planIdQuantifier(rule) : null;
 		if (quantifier) quantifiers.push(quantifier);
 	}
+
+	if (positivePlanRules.length === 1) {
+		const rule = positivePlanRules[0];
+		quantifiers.push({
+			plan: { ...planKeysToFilter(rule.values), ...(planProperties ?? {}) },
+		});
+	} else {
+		for (const rule of positivePlanRules) {
+			const quantifier = planIdQuantifier(rule);
+			if (quantifier) quantifiers.push(quantifier);
+		}
+		if (planProperties) quantifiers.push({ plan: planProperties });
+	}
+
 	if (quantifiers.length === 0) return { customerId, node: null };
 	if (quantifiers.length === 1) return { customerId, node: quantifiers[0] };
 	return { customerId, node: { $and: quantifiers } };
@@ -304,6 +333,9 @@ function isEmptyFilter(groups: FilterGroupData[]): boolean {
 	if (rules.length !== 1) return false;
 	// A `none` rule is fully specified without any values.
 	if (rules[0].operator === "none") return false;
+	// Only the pristine plan_id placeholder collapses to the "Add Filter" card;
+	// a row switched to another field stays open while the user fills it in.
+	if (rules[0].field !== "plan_id") return false;
 	return rules[0].values.length === 0;
 }
 

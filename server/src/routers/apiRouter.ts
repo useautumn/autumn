@@ -39,7 +39,6 @@ import { platformBetaRouter } from "../internal/platform/platformBeta/platformBe
 import {
 	honoProductBetaRouter,
 	honoProductRouter,
-	migrationRouter,
 } from "../internal/products/productRouter.js";
 import { rpcRouter } from "./rpcRouter.js";
 
@@ -66,7 +65,6 @@ apiRouter.use("*", idempotencyMiddleware);
 apiRouter.route("", rpcRouter);
 apiRouter.route("", billingRouter);
 apiRouter.route("", balancesRouter);
-apiRouter.route("", migrationRouter);
 apiRouter.route("", entityRouter);
 apiRouter.route("/customers", cusRouter);
 apiRouter.route("/invoices", invoiceRouter);

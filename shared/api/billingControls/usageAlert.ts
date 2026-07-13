@@ -3,8 +3,11 @@ import {
 	DbUsageAlertSchema,
 	UsageAlertThresholdType,
 } from "../../models/cusModels/billingControls/usageAlert.js";
+import { BillingControlSourceSchema } from "./billingControlSource.js";
 
-export const ApiUsageAlertSchema = DbUsageAlertSchema;
+export const ApiUsageAlertSchema = DbUsageAlertSchema.extend({
+	source: BillingControlSourceSchema.optional(),
+});
 export { UsageAlertThresholdType };
 
 export type ApiUsageAlert = z.infer<typeof ApiUsageAlertSchema>;

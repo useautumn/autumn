@@ -58,6 +58,7 @@ const initCustomer = ({
 					type: "stripe",
 				}
 			: null,
+		processors: customerData?.processors ?? null,
 		send_email_receipts: customerData?.send_email_receipts ?? false,
 		currency: customerData?.currency?.toLowerCase() || null,
 		auto_topups: customerData?.billing_controls?.auto_topups,

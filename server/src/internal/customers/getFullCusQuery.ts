@@ -6,6 +6,7 @@ import {
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+import { planetScaleTag } from "@/db/dbUtils.js";
 
 const RECURRING_BILLING_INTERVALS = [
 	BillingInterval.Week,
@@ -454,7 +455,9 @@ export const getFullCusQuery = ({
 	// Add customer products CTE
 	sqlChunks.push(sql`, `);
 	// sqlChunks.push(buildCusProductsCTE(inStatuses));
-	sqlChunks.push(buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }));
+	sqlChunks.push(
+		buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit, entityId }),
+	);
 
 	// Conditionally add trials used CTE
 	if (withTrialsUsed) {
@@ -605,6 +608,8 @@ export const getFullCusQuery = ({
     SELECT ${sql.join(selectFieldsChunks, sql``)}
     FROM customer_record cr
   `);
+
+	sqlChunks.push(planetScaleTag({ query: "getFullCusQuery" }));
 
 	return sql.join(sqlChunks, sql``);
 };
@@ -1118,8 +1123,8 @@ export const getCustomerListFilterSql = ({
 		}
 
 		if (hasProductFilter) {
-			const versionClauses = productFilters.map(
-				(filter) => dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
+			const versionClauses = productFilters.map((filter) =>
+				dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
 			);
 			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
 		}
@@ -1137,10 +1142,10 @@ export const getCustomerListFilterSql = ({
 			return sql.join(filters, sql` `);
 		}
 
-		const joinProducts = hasVersion
-			&& !(orgId && env)
-			? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
-			: sql``;
+		const joinProducts =
+			hasVersion && !(orgId && env)
+				? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
+				: sql``;
 
 		filters.push(sql`AND EXISTS (
 			SELECT 1

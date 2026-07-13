@@ -115,6 +115,7 @@ export const evaluateStripeBillingPlan = async ({
 			lineItems: autumnBillingPlan.lineItems ?? undefined,
 			customLineItems,
 			currency,
+			stripeDiscounts: billingContext.stripeDiscounts ?? [],
 		});
 
 		// Invoice items only apply when using normal line items (not custom)

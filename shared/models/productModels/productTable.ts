@@ -18,6 +18,8 @@ import type { ProductMetadata } from "./productMetadata";
 type ProductProcessor = {
 	type: string;
 	id: string;
+	/** Legacy/alias Stripe product ids that also map to this product. */
+	additional_ids?: string[];
 };
 
 export const products = pgTable(
@@ -57,6 +59,10 @@ export const products = pgTable(
 			table.id,
 			table.version,
 		),
+		index("idx_products_org_env_base_internal_product_id")
+			.on(table.org_id, table.env, table.base_internal_product_id)
+			.where(sql`${table.base_internal_product_id} IS NOT NULL`)
+			.concurrently(),
 		unique("unique_product").on(
 			table.org_id,
 			table.id,

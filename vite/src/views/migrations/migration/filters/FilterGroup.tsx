@@ -1,10 +1,5 @@
-import { UserIcon } from "@phosphor-icons/react";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { AddButton } from "../shared/AddButton";
-import { buildFeatureSuggestions } from "../shared/featureSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
-import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
 import {
 	FIELD_CONFIGS,
@@ -13,35 +8,6 @@ import {
 	type FilterGroupData,
 	type FilterRule,
 } from "./filterRowTypes";
-
-function useSuggestionsForField(
-	field: string,
-): ValuePickerOption[] | undefined {
-	const { features } = useFeaturesQuery();
-	const { customers } = useCusSearchQueryV2({
-		search: "",
-		page: 1,
-		page_size: 250,
-	});
-
-	if (field === "customer_id") {
-		return customers
-			.filter((c): c is typeof c & { id: string } => Boolean(c.id))
-			.map((c) => {
-				const label = c.name ?? c.email ?? c.id;
-				return {
-					value: c.id,
-					label,
-					sublabel: label === c.id ? undefined : c.id,
-					icon: <UserIcon size={14} className="text-tertiary-foreground" />,
-				};
-			});
-	}
-	if (field === "item_feature_id") {
-		return buildFeatureSuggestions(features);
-	}
-	return undefined;
-}
 
 function getNextAvailableField(usedFields: Set<string>): FilterRule {
 	const available = FILTER_FIELD_OPTIONS.find(
@@ -105,7 +71,7 @@ export function FilterGroup({
 				{showDelete && <RemoveButton onClick={onDelete} />}
 			</div>
 			{group.rules.map((rule, index) => (
-				<FilterRowWithSuggestions
+				<FilterRow
 					key={`rule-${index}`}
 					rule={rule}
 					connector={index > 0 ? "And" : undefined}
@@ -120,31 +86,5 @@ export function FilterGroup({
 				className="mt-1"
 			/>
 		</div>
-	);
-}
-
-function FilterRowWithSuggestions({
-	rule,
-	connector,
-	onChange,
-	onRemove,
-	defaultOpenField = false,
-}: {
-	rule: FilterRule;
-	connector?: "And";
-	onChange: (rule: FilterRule) => void;
-	onRemove: () => void;
-	defaultOpenField?: boolean;
-}) {
-	const suggestions = useSuggestionsForField(rule.field);
-	return (
-		<FilterRow
-			rule={rule}
-			connector={connector}
-			onChange={onChange}
-			onRemove={onRemove}
-			suggestions={suggestions}
-			defaultOpenField={defaultOpenField}
-		/>
 	);
 }

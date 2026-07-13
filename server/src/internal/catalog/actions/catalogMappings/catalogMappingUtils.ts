@@ -1,47 +1,30 @@
 import {
+	type ApiPlanItemV1,
+	FixedPriceConfigSchema,
 	type Feature,
 	type FullProduct,
-	type ApiPlanItemV1,
+	getProductItemDisplay,
+	isFeaturePriceItem,
+	isFixedPrice,
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+	itemToBillingMethod,
+	matchesPlanItemFilter,
 	type PlanItemFilter,
 	type Price,
 	type ProductItem,
-	UsageModel,
-	getProductItemDisplay,
-	itemToBillingInterval,
-	itemToBillingIntervalCount,
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
 	sortProductItems,
+	UsagePriceConfigSchema,
 } from "@autumn/shared";
 import type {
 	CatalogStripeMapping,
 	CatalogStripeProduct,
 } from "@autumn/shared/api/catalog/catalogMappingModels.js";
-import { BillingMethod } from "@autumn/shared/api/products/components/billingMethod.js";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
-import { isPriceItem } from "@utils/productV2Utils/productItemUtils/getItemType.js";
-import { matchesPlanItemFilter } from "@utils/productV2Utils/productItemUtils/matchPlanItem.js";
 import type Stripe from "stripe";
-
-export const dependentStripePriceFields = [
-	"stripe_price_id",
-	"stripe_empty_price_id",
-	"stripe_placeholder_price_id",
-	"stripe_prepaid_price_v2_id",
-	"stripe_meter_id",
-	"stripe_event_name",
-] as const;
-
-export type PriceConfigWithStripe = Price["config"] & {
-	stripe_product_id?: string | null;
-	stripe_price_id?: string | null;
-	stripe_empty_price_id?: string | null;
-	stripe_placeholder_price_id?: string | null;
-	stripe_prepaid_price_v2_id?: string | null;
-	stripe_meter_id?: string | null;
-	stripe_event_name?: string | null;
-};
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 
 export type ProductMappingContext = {
 	product: FullProduct;
@@ -67,10 +50,14 @@ export const buildStripeMapping = ({
 	stripeProductId,
 	stripeProductsById,
 	stripeConnected,
+	deferred = true,
 }: {
 	stripeProductId: string | null | undefined;
 	stripeProductsById: Map<string, CatalogStripeProduct>;
 	stripeConnected: boolean;
+	// When true, skip resolving against Stripe and return `unchecked` for mapped
+	// ids so the client can resolve names/status lazily.
+	deferred?: boolean;
 }): CatalogStripeMapping => {
 	if (!stripeProductId) {
 		return {
@@ -80,7 +67,7 @@ export const buildStripeMapping = ({
 		};
 	}
 
-	if (!stripeConnected) {
+	if (deferred || !stripeConnected) {
 		return {
 			stripe_product_id: stripeProductId,
 			stripe_product: null,
@@ -104,17 +91,23 @@ export const buildStripeMapping = ({
 	};
 };
 
-const itemToCanonicalFilter = ({
+const itemToMaxFilter = (item: ProductItem): PlanItemFilter => ({
+	feature_id: item.feature_id!,
+	billing_method: itemToBillingMethod({ item }),
+	interval: itemToBillingInterval({ item }),
+	interval_count: itemToBillingIntervalCount({ item }),
+});
+
+const filterKey = (filter: PlanItemFilter) => JSON.stringify(filter);
+
+export const itemToCanonicalFilter = ({
 	item,
 	allItems,
 }: {
 	item: ProductItem;
 	allItems: ProductItem[];
 }): PlanItemFilter => {
-	const billing_method =
-		item.usage_model === UsageModel.PayPerUse
-			? BillingMethod.UsageBased
-			: BillingMethod.Prepaid;
+	const billing_method = itemToBillingMethod({ item });
 	const candidates: PlanItemFilter[] = [
 		{ feature_id: item.feature_id! },
 		{
@@ -133,14 +126,23 @@ const itemToCanonicalFilter = ({
 			interval_count: itemToBillingIntervalCount({ item }),
 		},
 	];
+	const itemMaxFilterKey = filterKey(itemToMaxFilter(item));
 
 	return (
-		candidates.find(
-			(filter) =>
-				allItems.filter((candidate) =>
-					matchesPlanItemFilter({ item: candidate, filter }),
-				).length === 1,
-		) ?? candidates[candidates.length - 1]!
+		candidates.find((filter) => {
+			const matchingMaxFilterKeys = new Set(
+				allItems
+					.filter((candidate) =>
+						matchesPlanItemFilter({ item: candidate, filter }),
+					)
+					.map((candidate) => filterKey(itemToMaxFilter(candidate))),
+			);
+
+			return (
+				matchingMaxFilterKeys.size === 1 &&
+				matchingMaxFilterKeys.has(itemMaxFilterKey)
+			);
+		}) ?? candidates[candidates.length - 1]!
 	);
 };
 
@@ -171,7 +173,7 @@ export const buildProductMappingContext = ({
 		withBasePrice: false,
 	});
 	const itemPrices = featureItems
-		.filter((item) => item.price_id && !isPriceItem(item))
+		.filter((item) => item.price_id && isFeaturePriceItem(item))
 		.map((item) => {
 			const price = product.prices.find((p) => p.id === item.price_id);
 			const apiItem = productItemsToPlanItemsV1({
@@ -203,22 +205,37 @@ export const buildProductMappingContext = ({
 };
 
 export const clearDependentStripePriceFields = ({
-	config,
+	price,
 	stripeProductId,
+	stripePriceId,
+	stripeMeterId,
 }: {
-	config: PriceConfigWithStripe;
+	price: Price;
 	stripeProductId: string | null;
-}): PriceConfigWithStripe => {
-	const nextConfig: PriceConfigWithStripe = {
-		...config,
-		stripe_product_id: stripeProductId,
-	};
-
-	for (const field of dependentStripePriceFields) {
-		nextConfig[field] = null;
+	stripePriceId?: string | null;
+	stripeMeterId?: string | null;
+}): Price["config"] => {
+	if (isFixedPrice(price)) {
+		const config = FixedPriceConfigSchema.parse(price.config);
+		return {
+			...config,
+			stripe_product_id: stripeProductId,
+			stripe_price_id: stripePriceId ?? null,
+			stripe_empty_price_id: null,
+		};
 	}
 
-	return nextConfig;
+	const config = UsagePriceConfigSchema.parse(price.config);
+	return {
+		...config,
+		stripe_product_id: stripeProductId,
+		stripe_price_id: stripePriceId ?? null,
+		stripe_empty_price_id: null,
+		stripe_placeholder_price_id: null,
+		stripe_prepaid_price_v2_id: null,
+		stripe_meter_id: stripeMeterId ?? null,
+		stripe_event_name: null,
+	};
 };
 
 export const productHasStripeProductId = ({
@@ -230,7 +247,5 @@ export const productHasStripeProductId = ({
 }) =>
 	product.processor?.id === stripeProductId ||
 	product.prices.some(
-		(price) =>
-			(price.config as PriceConfigWithStripe).stripe_product_id ===
-			stripeProductId,
+		(price) => price.config.stripe_product_id === stripeProductId,
 	);

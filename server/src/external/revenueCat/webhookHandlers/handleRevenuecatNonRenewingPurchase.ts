@@ -1,5 +1,10 @@
 import type { WebhookNonRenewingPurchase } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
+import {
+	getRevenueCatCustomerEmail,
+	getRevenueCatCustomerFingerprint,
+	getRevenueCatOverrideCustomerId,
+} from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
@@ -19,10 +24,15 @@ export const handleNonRenewingPurchase = async ({
 		ctx: customerCtx,
 		product,
 		customer,
+		featureQuantities,
 	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: event.product_id,
 		customerId: event.app_user_id,
+		originalAppUserId: event.original_app_user_id,
+		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
+		customerEmail: getRevenueCatCustomerEmail(event),
+		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
 	if (!oneOffOrAddOn({ product, prices: product.prices })) {
@@ -37,6 +47,8 @@ export const handleNonRenewingPurchase = async ({
 		ctx: customerCtx,
 		customer,
 		product,
+		featureQuantities,
+		appUserId: event.app_user_id,
 	});
 
 	logger.info(`Created RC cus_product for ${product.id} (non-renewing purchase)`);

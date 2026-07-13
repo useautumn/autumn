@@ -142,3 +142,57 @@ test("diffPlanV1PreviewFields ignores joined item feature fields", () => {
 	expect(diff.previous_attributes).toBeNull();
 	expect(diff.item_changes).toEqual([]);
 });
+
+test("billing_controls: skip_overage_billing false vs unset is not a change", () => {
+	const from = plan({
+		billing_controls: {
+			spend_limits: [
+				{ feature_id: "messages", enabled: true, overage_limit: 100 },
+			],
+		},
+	});
+	const to = plan({
+		billing_controls: {
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					overage_limit: 100,
+					skip_overage_billing: false,
+				},
+			],
+		},
+	});
+
+	const diff = diffPlanV1PreviewFields({ from, to });
+
+	expect(diff.previous_attributes).toBeNull();
+});
+
+test("billing_controls: skip_overage_billing true vs unset is a change", () => {
+	const from = plan({
+		billing_controls: {
+			spend_limits: [
+				{ feature_id: "messages", enabled: true, overage_limit: 100 },
+			],
+		},
+	});
+	const to = plan({
+		billing_controls: {
+			spend_limits: [
+				{
+					feature_id: "messages",
+					enabled: true,
+					overage_limit: 100,
+					skip_overage_billing: true,
+				},
+			],
+		},
+	});
+
+	const diff = diffPlanV1PreviewFields({ from, to });
+
+	expect(diff.previous_attributes).toMatchObject({
+		billing_controls: from.billing_controls,
+	});
+});

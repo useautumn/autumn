@@ -30,6 +30,12 @@ export const runWebMessage = async ({
 	// The per-user credential is minted at the cookie boundary (bot.ts getUser);
 	// here we only read this user's scoped token.
 	const harness = chatEnv.WEB_AGENT_HARNESS;
+	if (harness === "eve") {
+		await thread.post(
+			"Eve is only supported by the dashboard streaming route.",
+		);
+		return;
+	}
 	const { accessToken } = await getOrgInstallationToken({
 		env,
 		orgId,
@@ -42,6 +48,8 @@ export const runWebMessage = async ({
 		// Neither engine reads ctx.agentTools (CMA loads its own toolset in
 		// ensureLeafResources; mastra loads tools in-engine), so skip the load.
 		agentTools: { destructiveTools: new Set<string>() },
+		// Web's MCP credential + vault are keyed by the dashboard user id.
+		autumnUserId: userId,
 		env,
 		id: crypto.randomUUID(),
 		logger,

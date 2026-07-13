@@ -1,78 +1,27 @@
 import type { ProductV2 } from "@autumn/shared";
 import { MiniCopyButton } from "@autumn/ui";
-import { CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
-import { AdminHover } from "@/components/general/AdminHover";
-import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { cn } from "@/lib/utils";
+import type { SandboxSummary } from "@/hooks/queries/useSandboxesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { getPlanHoverTexts } from "@/views/admin/adminUtils";
 import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
 import { ProductListRowToolbar } from "./ProductListRowToolbar";
+import { ProductNameCell } from "./ProductNameCell";
 
 export const createProductListColumns = ({
 	showGroup = false,
 	onDeleteClick,
+	sandboxes = [],
 }: {
 	showGroup?: boolean;
 	onDeleteClick?: (product: ProductV2) => void;
+	sandboxes?: SandboxSummary[];
 } = {}) => [
 	{
 		size: 300,
 		header: "Name",
 		accessorKey: "name",
 		enableSorting: true,
-		cell: ({ row }: { row: Row<ProductV2> }) => {
-			const isVariant = row.depth > 0;
-			const canExpand = row.getCanExpand();
-			return (
-				<div className="font-medium text-foreground flex items-center gap-1">
-					{canExpand && (
-						<button
-							type="button"
-							aria-label={row.getIsExpanded() ? "Collapse" : "Expand"}
-							onMouseDown={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-							}}
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								row.toggleExpanded();
-							}}
-							className="flex items-center justify-center size-5 -ml-1 rounded cursor-pointer text-tertiary-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-						>
-							<CaretRightIcon
-								size={12}
-								className={cn(
-									"transition-transform duration-150",
-									row.getIsExpanded() && "rotate-90",
-								)}
-							/>
-						</button>
-					)}
-					{isVariant && (
-						<>
-							{/* Spacer matches the chevron so the variant marker aligns
-							    with the base plan's name. */}
-							<span className="size-5 -ml-1 shrink-0" aria-hidden />
-							<span className="text-tertiary-foreground pr-1">└</span>
-						</>
-					)}
-					<AdminHover
-						texts={getPlanHoverTexts({ plan: row.original })}
-						side="right"
-					>
-						{row.original.name}
-					</AdminHover>
-					<PlanTypeBadges
-						product={row.original}
-						iconOnly
-						className="bg-transparent"
-					/>
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<ProductV2> }) => <ProductNameCell row={row} />,
 	},
 	{
 		header: "ID",
@@ -146,6 +95,7 @@ export const createProductListColumns = ({
 					<ProductListRowToolbar
 						product={row.original}
 						onDeleteClick={onDeleteClick}
+						sandboxes={sandboxes}
 					/>
 				</div>
 			);

@@ -22,7 +22,7 @@ export default function DevScreen() {
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
 
 	const tab = queryStates.tab;
-	const { pkey, webhooks, vercel, revenuecat } = useAutumnFlags();
+	const { pkey, webhooks, vercel } = useAutumnFlags();
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -70,7 +70,7 @@ export default function DevScreen() {
 					<ConfigureVercel />
 				</div>
 			)}
-			{tab === "revenuecat" && revenuecat && <ConfigureRevenueCat />}
+			{tab === "revenuecat" && <ConfigureRevenueCat />}
 		</PageContainer>
 	);
 }

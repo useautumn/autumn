@@ -40,6 +40,7 @@ import {
 	type Migration,
 	type MigrationFilter,
 	type MigrationRun,
+	type MultiUpdateParamsV0Input,
 	type Operations,
 	type OrgConfig,
 	type PlanUpdatePreview,
@@ -951,7 +952,11 @@ export class AutumnInt {
 		aggregate: async (params: {
 			customer_id: string;
 			entity_id?: string;
-			feature_id?: string;
+			feature_id?: string | string[];
+			group_by?: string;
+			range?: string;
+			bin_size?: string;
+			max_groups?: number;
 		}) => {
 			const data = await this.post(`/events/aggregate`, params);
 			return data;
@@ -1396,6 +1401,43 @@ export class AutumnInt {
 				...params,
 				redirect_mode: "if_required",
 			});
+			return data;
+		},
+
+		multiUpdate: async <TInput = MultiUpdateParamsV0Input>(
+			params: TInput,
+			{
+				skipWebhooks,
+				timeout,
+			}: {
+				skipWebhooks?: boolean;
+				timeout?: number;
+			} = {},
+		): Promise<any> => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/billing.multi_update`,
+				params,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+			return data;
+		},
+
+		previewMultiUpdate: async <TInput = MultiUpdateParamsV0Input>(
+			params: TInput,
+		): Promise<any> => {
+			const data = await this.post(`/billing.preview_multi_update`, params);
 			return data;
 		},
 
