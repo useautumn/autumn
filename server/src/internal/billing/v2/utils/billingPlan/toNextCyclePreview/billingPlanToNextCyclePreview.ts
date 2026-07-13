@@ -157,7 +157,9 @@ export const billingPlanToNextCyclePreview = ({
 				{
 					customerProducts: event.incomingCustomerProducts,
 					direction: "charge",
-					billingCycleAnchorMs: anchorMs,
+					billingCycleAnchorMs: event.resetsBillingCycle
+						? event.startsAtMs
+						: anchorMs,
 					filterBillingPeriodStart: false,
 					priceFilters: { excludeOneOffPrices: true },
 				},
