@@ -12,7 +12,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import { getStripeActiveSubscriptionSchedule } from "@/external/stripe/subscriptionSchedules";
 import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { fetchStripeSyncSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncSubscription";
+import { fetchStripeSyncSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
 import { STRIPE_SYNC_SCHEDULE_EXPAND } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
 import { CusService } from "@/internal/customers/CusService";
 import { buildFeatureQuantities } from "./buildSyncParams/buildFeatureQuantities";

@@ -12,30 +12,18 @@ import {
 	type SyncPlanInstance,
 	type SyncProductContext,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
-import { fetchStripeSyncSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncSubscription";
+import {
+	fetchStripeSyncSchedule,
+	fetchStripeSyncSubscription,
+} from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
 import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
-import { STRIPE_SYNC_SCHEDULE_EXPAND } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/stripeSyncExpand";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
-
-const fetchStripeSchedule = async ({
-	stripeCli,
-	id,
-}: {
-	stripeCli: Stripe;
-	id?: string;
-}) =>
-	id
-		? stripeCli.subscriptionSchedules.retrieve(id, {
-				expand: STRIPE_SYNC_SCHEDULE_EXPAND,
-			})
-		: null;
 
 const resolvePlanEntity = ({
 	plan,
@@ -189,7 +177,10 @@ export const setupSyncContext = async ({
 			stripeCli,
 			subscriptionId: params.stripe_subscription_id,
 		}),
-		fetchStripeSchedule({ stripeCli, id: params.stripe_schedule_id }),
+		fetchStripeSyncSchedule({
+			stripeCli,
+			scheduleId: params.stripe_schedule_id,
+		}),
 	]);
 	const currency = resolveStripeSyncCurrency({
 		subscription: stripeSubscription,
