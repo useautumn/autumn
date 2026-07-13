@@ -11,20 +11,59 @@ export const previewAttachFeatureQuantityRequestSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewAttachAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const previewAttachItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachItemToSchema = z.union([z.number(), z.string()]);
+
+export const previewAttachItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const previewAttachItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
+export const previewAttachAddItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
 });
 
 export const previewAttachAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const previewAttachAddItemTierAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
 
 export const previewAttachAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachAddItemTierAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachPropertiesSchema = z.union([
@@ -172,10 +211,21 @@ export const previewAttachFeatureQuantityRequestOutboundSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewAttachAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachItemResetOutboundSchema = z.object({
@@ -183,19 +233,42 @@ export const previewAttachItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
-export const previewAttachItemTierOutboundSchema = z.object({
-	to: z.union([z.number(), z.string()]),
+export const previewAttachItemTierAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+});
+
 export const previewAttachItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -242,19 +315,43 @@ export const previewAttachAddItemResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewAttachAddItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const previewAttachAddItemToOutboundSchema = z.union([
 	z.number(),
 	z.string(),
 ]);
 
+export const previewAttachAddItemTierAdditionalCurrencyOutboundSchema =
+	z.object({
+		currency: z.string(),
+		amount: z.union([z.number(), z.undefined()]).optional(),
+		flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	});
+
 export const previewAttachAddItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAddItemTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const previewAttachAddItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(previewAttachAddItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachAddItemTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -494,6 +591,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -508,6 +606,9 @@ export const previewAttachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: previewAttachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(previewAttachAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const previewAttachItemResetIntervalSchema = closedEnumSchema;
@@ -525,6 +626,9 @@ export const previewAttachItemBillingMethodSchema = closedEnumSchema;
 
 export const previewAttachItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(previewAttachItemAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachItemTierSchema), z.undefined()])
 		.optional(),
@@ -585,6 +689,12 @@ export const previewAttachAddItemBillingMethodSchema = closedEnumSchema;
 
 export const previewAttachAddItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([
+			z.array(previewAttachAddItemAdditionalCurrencySchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(previewAttachAddItemTierSchema), z.undefined()])
 		.optional(),
@@ -815,6 +925,7 @@ export const previewAttachParamsSchema = z.object({
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	taxRateId: z.union([z.string(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({
