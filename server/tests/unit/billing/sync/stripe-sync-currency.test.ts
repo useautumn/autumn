@@ -5,12 +5,15 @@ import {
 	type FullProduct,
 	type Price,
 	PriceType,
+	type SyncBillingContext,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { rollupMatchedPlans } from "@/internal/billing/v2/actions/sync/detect/rollupMatchedPlans";
 import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
+import { syncContextHasPaidProduct } from "@/internal/billing/v2/actions/sync/utils/syncContextUtils";
 import { autumnBasePriceToStripePriceShape } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/autumnPriceShape";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
+import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
 import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
 
 const stripePrice = {
@@ -110,6 +113,15 @@ describe("Stripe sync currency normalization", () => {
 			normalizeSubscriptionPhases({ schedule: schedule() }),
 		).toThrow();
 	});
+
+	test("rejects an unsupported locked customer currency", () => {
+		expect(() =>
+			resolveStripeSyncCurrency({
+				schedule: schedule(),
+				customerCurrency: "cad",
+			}),
+		).toThrow();
+	});
 });
 
 const catalogPrice = {
@@ -147,8 +159,14 @@ const snapshot = {
 	metadata: {},
 } satisfies StripeItemSnapshot;
 
-const itemDiff = ({ exact }: { exact: boolean }): ItemDiff => ({
-	stripe: snapshot,
+const itemDiff = ({
+	exact,
+	stripe = snapshot,
+}: {
+	exact: boolean;
+	stripe?: StripeItemSnapshot;
+}): ItemDiff => ({
+	stripe,
 	match: {
 		kind: "autumn_price",
 		matched_on: exact
@@ -187,6 +205,53 @@ describe("Stripe sync base rollup", () => {
 			stripe_price_id: "price_shared",
 		});
 	});
+
+	test("does not coerce a missing Stripe amount to zero", () => {
+		const [plan] = rollupMatchedPlans({
+			itemDiffs: [
+				itemDiff({
+					exact: false,
+					stripe: {
+						...snapshot,
+						unit_amount: null,
+						unit_amount_decimal: null,
+					},
+				}),
+			],
+		});
+
+		expect(plan?.base.kind).toBe("dropped");
+		expect(plan?.customize?.price).toBeNull();
+	});
+});
+
+test("detects a product paid only in the sync currency", () => {
+	const syncContext = {
+		currency: "eur",
+		immediatePhase: {
+			productContexts: [
+				{
+					fullProduct: {
+						...product,
+						prices: [
+							{
+								...catalogPrice,
+								config: {
+									...catalogPrice.config,
+									amount: 0,
+									base_currency: "usd",
+									currencies: { eur: { amount: 10 } },
+								},
+							},
+						],
+					},
+				},
+			],
+		},
+		futurePhases: [],
+	} as unknown as SyncBillingContext;
+
+	expect(syncContextHasPaidProduct({ syncContext })).toBe(true);
 });
 
 describe("Autumn base price currency shape", () => {

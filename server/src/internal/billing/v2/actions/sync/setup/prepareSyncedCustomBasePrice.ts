@@ -5,9 +5,26 @@ import {
 	isFixedPrice,
 	type Price,
 	type SyncPlanInstance,
-	setPriceCurrencyStripeId,
 } from "@autumn/shared";
 import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/convertCusProduct/customerProductToPrice";
+
+const findReusableCustomBasePrice = ({
+	currentCustomerProduct,
+	stripePriceId,
+}: {
+	currentCustomerProduct?: FullCusProduct;
+	stripePriceId: string;
+}): Price | undefined => {
+	const existingCustomBase = currentCustomerProduct
+		? customerProductToBasePrice({ customerProduct: currentCustomerProduct })
+		: undefined;
+	const matchesSource =
+		existingCustomBase?.is_custom &&
+		getAllPriceStripeIds({ config: existingCustomBase.config }).includes(
+			stripePriceId,
+		);
+	return matchesSource ? existingCustomBase : undefined;
+};
 
 export const prepareSyncedCustomBasePrice = ({
 	currentCustomerProduct,
@@ -19,35 +36,42 @@ export const prepareSyncedCustomBasePrice = ({
 	fullProduct: FullProduct;
 	customPrices: Price[];
 	plan: SyncPlanInstance;
-}) => {
-	const source = plan.customize?.price;
-	const generated = customPrices.find(isFixedPrice);
-	if (!source?.base_currency || !source.stripe_price_id || !generated) return;
-
-	const currency = source.base_currency.toLowerCase();
-	generated.config.base_currency = currency;
-	setPriceCurrencyStripeId({
-		config: generated.config,
-		currency,
-		orgDefault: currency,
-		slot: "stripe_price_id",
-		id: source.stripe_price_id,
-	});
-
-	if (!currentCustomerProduct) return;
-	const existing = customerProductToBasePrice({
-		customerProduct: currentCustomerProduct,
-	});
+}): { fullProduct: FullProduct; customPrices: Price[] } => {
+	const customBaseParams = plan.customize?.price;
+	const generatedCustomBase = customPrices.find(isFixedPrice);
 	if (
-		!existing?.is_custom ||
-		!getAllPriceStripeIds({ config: existing.config }).includes(
-			source.stripe_price_id,
-		)
+		!customBaseParams?.base_currency ||
+		!customBaseParams.stripe_price_id ||
+		!generatedCustomBase
 	) {
-		return;
+		return { fullProduct, customPrices };
 	}
 
-	const productIndex = fullProduct.prices.indexOf(generated);
-	if (productIndex >= 0) fullProduct.prices[productIndex] = existing;
-	customPrices.splice(customPrices.indexOf(generated), 1);
+	const importedCustomBase = {
+		...generatedCustomBase,
+		config: {
+			...generatedCustomBase.config,
+			base_currency: customBaseParams.base_currency.toLowerCase(),
+			stripe_price_id: customBaseParams.stripe_price_id,
+		},
+	};
+	const reusableCustomBase = findReusableCustomBasePrice({
+		currentCustomerProduct,
+		stripePriceId: customBaseParams.stripe_price_id,
+	});
+	const customBase = reusableCustomBase ?? importedCustomBase;
+
+	return {
+		fullProduct: {
+			...fullProduct,
+			prices: fullProduct.prices.map((price) =>
+				price === generatedCustomBase ? customBase : price,
+			),
+		},
+		customPrices: reusableCustomBase
+			? customPrices.filter((price) => price !== generatedCustomBase)
+			: customPrices.map((price) =>
+					price === generatedCustomBase ? importedCustomBase : price,
+				),
+	};
 };

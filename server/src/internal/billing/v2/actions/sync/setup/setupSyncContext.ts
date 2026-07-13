@@ -145,7 +145,7 @@ const buildProductContext = async ({
 			currentCustomerProduct = transition.currentCustomerProduct;
 		}
 	}
-	prepareSyncedCustomBasePrice({
+	const preparedCustomBase = prepareSyncedCustomBasePrice({
 		currentCustomerProduct,
 		fullProduct,
 		customPrices,
@@ -154,8 +154,8 @@ const buildProductContext = async ({
 
 	return {
 		plan,
-		fullProduct,
-		customPrices,
+		fullProduct: preparedCustomBase.fullProduct,
+		customPrices: preparedCustomBase.customPrices,
 		customEntitlements,
 		featureQuantities,
 		entity,

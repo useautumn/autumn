@@ -21,10 +21,26 @@ export const resolveStripeSyncCurrency = ({
 	schedule?: Stripe.SubscriptionSchedule | null;
 	customerCurrency?: string | null;
 }): string => {
-	if (subscription?.currency) return subscription.currency.toLowerCase();
-	if (customerCurrency) return customerCurrency.toLowerCase();
-
 	const prices = schedulePrices({ schedule });
+	const selectedCurrency = (
+		subscription?.currency ?? customerCurrency
+	)?.toLowerCase();
+	if (selectedCurrency) {
+		const unsupportedPrice = prices.find(
+			(price) =>
+				price.currency.toLowerCase() !== selectedCurrency &&
+				!price.currency_options?.[selectedCurrency],
+		);
+		if (unsupportedPrice) {
+			throw new RecaseError({
+				message: `Stripe Price '${unsupportedPrice.id}' does not support ${selectedCurrency.toUpperCase()}`,
+				code: ErrCode.CurrencyMismatch,
+				statusCode: 400,
+			});
+		}
+		return selectedCurrency;
+	}
+
 	const currencies = new Set(
 		prices.flatMap((price) =>
 			[price.currency, ...Object.keys(price.currency_options ?? {})].map(

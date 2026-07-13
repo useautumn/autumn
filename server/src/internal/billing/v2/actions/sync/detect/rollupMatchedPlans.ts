@@ -29,10 +29,12 @@ const stripeItemToBasePrice = ({
 }: {
 	item: StripeItemSnapshot;
 }): CustomBasePrice | null => {
-	const amount = Number(item.unit_amount_decimal ?? item.unit_amount);
-	if (!Number.isFinite(amount) || !item.currency || !item.recurring_interval) {
+	const rawAmount = item.unit_amount_decimal ?? item.unit_amount;
+	if (rawAmount === null || !item.currency || !item.recurring_interval) {
 		return null;
 	}
+	const amount = Number(rawAmount);
+	if (!Number.isFinite(amount)) return null;
 	const interval = STRIPE_TO_AUTUMN_INTERVAL[item.recurring_interval];
 	if (!interval) return null;
 	return {

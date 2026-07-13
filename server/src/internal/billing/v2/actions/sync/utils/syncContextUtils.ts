@@ -1,4 +1,26 @@
-import { isFreeProduct, type SyncBillingContext } from "@autumn/shared";
+import {
+	type Price,
+	priceAmountsForCurrency,
+	type SyncBillingContext,
+} from "@autumn/shared";
+
+const isPaidInCurrency = ({
+	prices,
+	currency,
+}: {
+	prices: Price[];
+	currency: string;
+}) =>
+	prices.some((price) => {
+		const { amount, usage_tiers: tiers } = priceAmountsForCurrency({
+			config: price.config,
+			currency,
+		});
+		return (
+			(amount ?? 0) > 0 ||
+			tiers?.some((tier) => tier.amount + (tier.flat_amount ?? 0) > 0)
+		);
+	});
 
 export const syncContextHasPaidProduct = ({
 	syncContext,
@@ -13,8 +35,11 @@ export const syncContextHasPaidProduct = ({
 			? syncContext.futurePhases.flatMap((phase) => phase.productContexts)
 			: []),
 	];
-	return productContexts.some(
-		({ fullProduct }) => !isFreeProduct({ prices: fullProduct.prices }),
+	return productContexts.some(({ fullProduct }) =>
+		isPaidInCurrency({
+			prices: fullProduct.prices,
+			currency: syncContext.currency,
+		}),
 	);
 };
 
