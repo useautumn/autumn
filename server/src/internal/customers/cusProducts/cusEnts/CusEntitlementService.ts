@@ -181,12 +181,15 @@ export class CusEntService {
 		batchSize = 1000,
 		limit,
 		includeSeparateIntervalResets = true,
+		onPageFetched,
 	}: {
 		db: DrizzleCli;
 		customDateUnix?: number;
 		batchSize?: number;
 		limit?: number;
 		includeSeparateIntervalResets?: boolean;
+		/** Test seam: runs between pages to exercise mid-pagination mutations. */
+		onPageFetched?: (page: ResetCusEnt[]) => void | Promise<void>;
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
 		const now = customDateUnix ?? Date.now();
@@ -252,11 +255,13 @@ export class CusEntService {
 			sql`${customerEntitlements.id} COLLATE "C"`,
 		];
 
-		while (true) {
+		// One snapshot per page: the three branch reads run inside a repeatable-read
+		// transaction so a status transition mid-page cannot duplicate or omit a row.
+		const fetchBranches = (client: DrizzleCli) => {
 			// Branch 1: cusEnts with no customer_product. Left-join to
 			// customer_products on a false predicate so the row shape matches
 			// the other branches (customer_products columns come back NULL).
-			const branch1 = db
+			const branch1 = client
 				.select(baseSelect)
 				.from(customerEntitlements)
 				.innerJoin(
@@ -283,7 +288,7 @@ export class CusEntService {
 				.limit(batchSize);
 
 			// Branch 2: cusEnts on active customer_products.
-			const branch2 = db
+			const branch2 = client
 				.select(baseSelect)
 				.from(customerEntitlements)
 				.innerJoin(
@@ -315,7 +320,7 @@ export class CusEntService {
 
 			// Branch 3: cusEnts on past_due customer_products whose product
 			// opted into ignore_past_due via products.config.
-			const branch3 = db
+			const branch3 = client
 				.select(baseSelect)
 				.from(customerEntitlements)
 				.innerJoin(
@@ -350,13 +355,27 @@ export class CusEntService {
 				.orderBy(...orderKey)
 				.limit(batchSize);
 
-			const [rows1, rows2, rows3] = await Promise.all([
-				branch1,
-				branch2,
-				branch3,
-			]);
+			return { branch1, branch2, branch3 };
+		};
 
-			// The three branches are status-disjoint, so a plain merge is dedup-free.
+		const emittedIds = new Set<string>();
+
+		while (true) {
+			const [rows1, rows2, rows3] = await db.transaction(
+				async (transaction) => {
+					const tx = transaction as unknown as DrizzleCli;
+					const { branch1, branch2, branch3 } = fetchBranches(tx);
+					const r1 = await branch1;
+					const r2 = await branch2;
+					const r3 = await branch3;
+					return [r1, r2, r3] as const;
+				},
+				{ isolationLevel: "repeatable read", accessMode: "read only" },
+			);
+
+			// Branches are status-disjoint within the shared snapshot, so the merge
+			// only needs cross-page dedup (a row whose next_reset_at advanced but is
+			// still overdue can reappear past the cursor).
 			const page = [...rows1, ...rows2, ...rows3]
 				.sort((a, b) => {
 					const aReset = Number(a.customer_entitlements.next_reset_at);
@@ -370,7 +389,14 @@ export class CusEntService {
 
 			if (page.length === 0) break;
 
-			const mappedData = page.map((item) => ({
+			const freshRows = page.filter(
+				(item) => !emittedIds.has(item.customer_entitlements.id),
+			);
+			for (const item of freshRows) {
+				emittedIds.add(item.customer_entitlements.id);
+			}
+
+			const mappedData = freshRows.map((item) => ({
 				...item.customer_entitlements,
 				entitlement: {
 					...item.entitlements,
@@ -390,6 +416,8 @@ export class CusEntService {
 				nextResetAt: Number(lastRow.next_reset_at),
 				id: lastRow.id,
 			};
+
+			if (onPageFetched) await onPageFetched(mappedData);
 
 			if (page.length < batchSize) break;
 			if (limit && allResults.length >= limit) break;

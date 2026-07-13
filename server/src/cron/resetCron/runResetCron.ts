@@ -166,7 +166,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				totalUpserted,
 				durationMs: Date.now() - startTime,
 			},
-			`[reset-cus-ents] finished: ${totalUpserted} reset across ${iteration} iteration(s) in ${Date.now() - startTime}ms`,
+			`[reset-cus-ents] finished: fetched ${totalFetched}, upserted ${totalUpserted} (monthly/yearly resets update in place and are not counted here) across ${iteration} iteration(s) in ${Date.now() - startTime}ms`,
 		);
 		console.log(
 			"FINISHED RESET CRON:",
