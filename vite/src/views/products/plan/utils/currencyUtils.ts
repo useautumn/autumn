@@ -4,6 +4,36 @@ import {
 	type ProductItem,
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
+import { toast } from "sonner";
+
+export const unsetCurrencyCodes = (item: ProductItem): string[] => {
+	const codes = new Set<string>();
+	for (const entry of item.additional_currencies ?? []) {
+		if (!entry.amount) codes.add(entry.currency.toUpperCase());
+	}
+	for (const tier of item.tiers ?? []) {
+		for (const entry of tier.additional_currencies ?? []) {
+			if (!entry.amount && !entry.flat_amount) {
+				codes.add(entry.currency.toUpperCase());
+			}
+		}
+	}
+	return [...codes];
+};
+
+export const checkItemCurrenciesValid = (
+	item: ProductItem,
+	showToast = true,
+) => {
+	const codes = unsetCurrencyCodes(item);
+	if (codes.length === 0) return true;
+	if (showToast) {
+		toast.error(
+			`Set an amount for ${codes.join(", ")} or remove ${codes.length === 1 ? "it" : "them"} from the plan`,
+		);
+	}
+	return false;
+};
 
 export const stampBaseCurrency = ({
 	item,
@@ -105,6 +135,43 @@ export const updateTierCurrencyAmount = ({
 	return { ...item, tiers };
 };
 
+export const migrateTierCurrenciesForMode = ({
+	entries,
+	mode,
+}: {
+	entries: AdditionalCurrencyTier[] | null | undefined;
+	mode: "flat" | "per_unit";
+}): AdditionalCurrencyTier[] | undefined =>
+	entries?.map((entry) =>
+		mode === "flat"
+			? {
+					...entry,
+					flat_amount: entry.flat_amount ?? entry.amount ?? 0,
+					amount: 0,
+				}
+			: {
+					...entry,
+					amount: entry.amount || entry.flat_amount || 0,
+					flat_amount: undefined,
+				},
+	);
+
+// The API rejects currency tiers whose flat_amount presence differs from the
+// base tier, so realign entries before building request payloads.
+export const alignTierCurrencyShapes = (item: ProductItem): ProductItem => {
+	if (!item.tiers) return item;
+	return {
+		...item,
+		tiers: item.tiers.map((tier) => ({
+			...tier,
+			additional_currencies: migrateTierCurrenciesForMode({
+				entries: tier.additional_currencies,
+				mode: tier.flat_amount != null ? "flat" : "per_unit",
+			}),
+		})),
+	};
+};
+
 const cleanCurrencyEntries = <
 	T extends AdditionalCurrencyPrice | AdditionalCurrencyTier,
 >(
@@ -135,9 +202,12 @@ export const normalizeItemCurrencies = ({
 
 	const tiers = item.tiers?.map((tier) => ({
 		...tier,
-		additional_currencies: cleanCurrencyEntries(
-			tier.additional_currencies,
-		)?.filter((entry) => entry.currency !== orgCurrency.toLowerCase()),
+		additional_currencies: migrateTierCurrenciesForMode({
+			entries: cleanCurrencyEntries(tier.additional_currencies)?.filter(
+				(entry) => entry.currency !== orgCurrency.toLowerCase(),
+			),
+			mode: tier.flat_amount != null ? "flat" : "per_unit",
+		}),
 	}));
 
 	return stampBaseCurrency({

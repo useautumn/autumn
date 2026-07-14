@@ -5,6 +5,7 @@ import type {
 	FrontendProduct,
 	MigrationFilter,
 	Operations,
+	ProductItem,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -17,6 +18,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
+import { alignTierCurrencyShapes } from "../utils/currencyUtils";
 
 export interface MigrationDraft {
 	id: string;
@@ -116,7 +118,15 @@ export function buildInPlaceUpdatePlanParams({
 	editedProduct: FrontendProduct;
 	features: Feature[];
 }): UpdatePlanParamsV2Input {
-	const plan = frontendProductToApiPlanV1(editedProduct, features);
+	const plan = frontendProductToApiPlanV1(
+		{
+			...editedProduct,
+			items: editedProduct.items.map((item) =>
+				alignTierCurrencyShapes(item as ProductItem),
+			) as typeof editedProduct.items,
+		},
+		features,
+	);
 
 	return {
 		plan_id: baseProduct.id,
