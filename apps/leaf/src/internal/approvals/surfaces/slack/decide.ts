@@ -41,9 +41,11 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 });
 
 const authorizeSlackApprovalClicker = async ({
+	action,
 	approval,
 	providerUserId,
 }: {
+	action: "approve" | "dismiss";
 	approval: ChatApproval;
 	providerUserId: string;
 }): Promise<ApprovalAuthorization> => {
@@ -64,7 +66,7 @@ const authorizeSlackApprovalClicker = async ({
 		});
 		return {
 			allowed: false,
-			text: `I can't determine the permissions required to approve ${toolName}, so I won't run it.`,
+			text: `I can't determine the permissions required to ${action} ${toolName}, so I won't do it.`,
 		};
 	}
 
@@ -78,7 +80,7 @@ const authorizeSlackApprovalClicker = async ({
 	if (!installation) {
 		return {
 			allowed: false,
-			text: "I couldn't verify your Slack workspace installation, so I can't approve this action.",
+			text: `I couldn't verify your Slack workspace installation, so I can't ${action} this action.`,
 		};
 	}
 
@@ -101,9 +103,10 @@ const authorizeSlackApprovalClicker = async ({
 	if (!allowed) {
 		return {
 			allowed: false,
-			text: `You don't have permission to approve ${toolName}. Missing: ${missing.join(", ")}.`,
+			text: `You don't have permission to ${action} ${toolName}. Missing: ${missing.join(", ")}.`,
 		};
 	}
+	if (action === "dismiss") return { allowed: true };
 
 	const approverToken = await getInstallationOAuthAccessToken({
 		installation,
@@ -122,13 +125,16 @@ const defaultApprovalActionDeps: ApprovalActionDeps = {
 	authorizeApprovalClicker: authorizeSlackApprovalClicker,
 	claimApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.claim({ approvalId, db, providerUserId }),
-	releaseApproval: ({ approvalId, providerUserId }) =>
-		chatApprovalRepo.release({ approvalId, db, providerUserId }),
 	editActionMessage: async ({ content, event }) => {
 		await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 	},
 	getApproval: ({ approvalId }) => chatApprovalRepo.get({ approvalId, db }),
 	logger: rootLogger,
+	postEphemeralReply: async ({ event, markdown }) => {
+		await event.thread?.postEphemeral(event.user, { markdown }, {
+			fallbackToDM: false,
+		});
+	},
 	postThreadReply: async ({ event, markdown }) => {
 		await event.thread?.post({ markdown });
 	},
@@ -158,6 +164,17 @@ export const handleApprovalActionWithDeps = async ({
 	const approvalId = event.value;
 	if (!approvalId) return;
 	const providerUserId = event.user.userId;
+	const postPermissionFailure = async (markdown: string) => {
+		try {
+			await deps.postEphemeralReply?.({ event, markdown });
+		} catch (error) {
+			deps.logger.warn("Could not post private approval denial", {
+				event: "leaf.approval_ephemeral_reply_failed",
+				approval_id: approvalId,
+				error,
+			});
+		}
+	};
 
 	const editToCurrentStatus = async () => {
 		const current = await deps.getApproval({ approvalId });
@@ -200,27 +217,40 @@ export const handleApprovalActionWithDeps = async ({
 				return;
 			}
 		}
+		const action =
+			event.actionId === "cancel_billing_action" ? "dismiss" : "approve";
+		let authorization: ApprovalAuthorization | undefined;
+		try {
+			authorization = await deps.authorizeApprovalClicker?.({
+				action,
+				approval,
+				providerUserId,
+			});
+		} catch (error) {
+			deps.logger.error("[chat] Approval authorization failed", error, {
+				event: "leaf.approval_authorization_failed",
+				approval_id: approvalId,
+				tool: approval.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await postPermissionFailure(
+				"I couldn't verify your Autumn permissions, so I didn't change this approval. Please try again.",
+			);
+			return;
+		}
+		if (authorization && !authorization.allowed) {
+			deps.logger.warn("Approval action denied by Autumn scopes", {
+				event: "leaf.approval_scope_denied",
+				approval_id: approvalId,
+				tool: approval.tool_name,
+				data: { provider_user_id: providerUserId },
+			});
+			await postPermissionFailure(authorization.text);
+			return;
+		}
 
 		if (event.actionId === "cancel_billing_action") {
-			// Eve parks the whole turn on the approval — deny it in the session too,
-			// or it keeps waiting, holds the next message behind the stale approval,
-			// and the discarded write can still run later.
-			if (approval.harness === "eve" && approval.status === "pending") {
-				const denied = await denyEveApproval({ approval, providerUserId });
-				if ("error" in denied && denied.error) {
-					deps.logger.warn("Could not deny Eve approval on dismiss", {
-						event: "leaf.eve_dismiss_deny_failed",
-						approval_id: approvalId,
-						data: { message: denied.message },
-					});
-				} else if ("text" in denied && denied.text.trim()) {
-					try {
-						await deps.postThreadReply({ event, markdown: denied.text });
-					} catch {
-						// The acknowledgement reply is cosmetic.
-					}
-				}
-			}
+			// Cancel first so only the winning click can resume Eve.
 			const cancelled = await deps.cancelApproval({
 				approvalId,
 				providerUserId,
@@ -246,10 +276,32 @@ export const handleApprovalActionWithDeps = async ({
 				approval_id: approvalId,
 				tool: cancelled.tool_name,
 			});
+
+			// Deny Eve too or the discarded write can still run later and block
+			// the next message behind the parked turn.
+			if (cancelled.harness === "eve") {
+				const denied = await (deps.denyApproval ?? denyEveApproval)({
+					approval: cancelled,
+					providerUserId,
+				});
+				if ("error" in denied && denied.error) {
+					deps.logger.warn("Could not deny Eve approval on dismiss", {
+						event: "leaf.eve_dismiss_deny_failed",
+						approval_id: approvalId,
+						data: { message: denied.message },
+					});
+				} else if ("text" in denied && denied.text.trim()) {
+					try {
+						await deps.postThreadReply({ event, markdown: denied.text });
+					} catch {
+						// The acknowledgement reply is cosmetic.
+					}
+				}
+			}
 			return;
 		}
 
-		// Claim first so exactly one click wins; losers never reach authorization.
+		// Authorized clicks race on the atomic pending→running claim.
 		const claimed = await deps.claimApproval({ approvalId, providerUserId });
 		if (!claimed) {
 			deps.logger.warn("Approval claim rejected", {
@@ -260,42 +312,6 @@ export const handleApprovalActionWithDeps = async ({
 			return;
 		}
 
-		// On denial, release the claim so another authorized user can still approve.
-		let authorization: ApprovalAuthorization | undefined;
-		try {
-			authorization = await deps.authorizeApprovalClicker?.({
-				approval: claimed,
-				providerUserId,
-			});
-		} catch (error) {
-			await deps.releaseApproval?.({ approvalId, providerUserId });
-			deps.logger.error("[chat] Approval authorization failed", error, {
-				event: "leaf.approval_authorization_failed",
-				approval_id: approvalId,
-				tool: claimed.tool_name,
-				data: { provider_user_id: providerUserId },
-			});
-			await deps.postThreadReply({
-				event,
-				markdown:
-					"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
-			});
-			return;
-		}
-		if (authorization && !authorization.allowed) {
-			await deps.releaseApproval?.({ approvalId, providerUserId });
-			deps.logger.warn("Approval action denied by Autumn scopes", {
-				event: "leaf.approval_scope_denied",
-				approval_id: approvalId,
-				tool: approval.tool_name,
-				data: { provider_user_id: providerUserId },
-			});
-			await deps.postThreadReply({
-				event,
-				markdown: authorization.text,
-			});
-			return;
-		}
 		const details = detailsFromApproval({ approval: claimed });
 		const startedAt = Date.now();
 		let statusText: string | undefined;

@@ -41,6 +41,10 @@ export type ApprovalActionDeps = {
 		providerUserId: string;
 		approverToken?: string;
 	}) => Promise<ApprovalRunResult>;
+	denyApproval?: (input: {
+		approval: ChatApproval;
+		providerUserId: string;
+	}) => Promise<ApprovalRunResult>;
 	cancelApproval: (input: {
 		approvalId: string;
 		providerUserId: string;
@@ -49,11 +53,8 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 		providerUserId: string;
 	}) => Promise<ChatApproval | undefined>;
-	releaseApproval?: (input: {
-		approvalId: string;
-		providerUserId: string;
-	}) => Promise<ChatApproval | undefined>;
 	authorizeApprovalClicker?: (input: {
+		action: "approve" | "dismiss";
 		approval: ChatApproval;
 		providerUserId: string;
 	}) => Promise<ApprovalAuthorization>;
@@ -65,6 +66,10 @@ export type ApprovalActionDeps = {
 		approvalId: string;
 	}) => Promise<ChatApproval | undefined>;
 	logger: Pick<AutumnLogger, "error" | "info" | "warn">;
+	postEphemeralReply?: (input: {
+		event: ActionEvent;
+		markdown: string;
+	}) => Promise<void>;
 	postThreadReply: (input: {
 		event: ActionEvent;
 		markdown: string;

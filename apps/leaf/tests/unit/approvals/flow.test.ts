@@ -318,12 +318,13 @@ describe("approval flow", () => {
 		expect(JSON.stringify(edits[1])).toContain("approved by <@U1>");
 	});
 
-	test("releases the claim and does not run when the Slack approver lacks Autumn scopes", async () => {
+	test("does not claim or run when the Slack approver lacks Autumn scopes", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
 			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const calls: string[] = [];
+		const ephemeralReplies: string[] = [];
 		const replies: string[] = [];
 		const approval = {
 			env: AppEnv.Sandbox,
@@ -348,16 +349,12 @@ describe("approval flow", () => {
 					return { result: {}, text: "ran" };
 				},
 				cancelApproval: async () => approval,
-				authorizeApprovalClicker: async () => ({
-					allowed: false,
-					text: "Missing plans:write.",
-				}),
+				authorizeApprovalClicker: async () => {
+					calls.push("authorize");
+					return { allowed: false, text: "Missing plans:write." };
+				},
 				claimApproval: async () => {
 					calls.push("claim");
-					return approval;
-				},
-				releaseApproval: async () => {
-					calls.push("release");
 					return approval;
 				},
 				editActionMessage: async () => {
@@ -365,24 +362,134 @@ describe("approval flow", () => {
 				},
 				getApproval: async () => approval,
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postEphemeralReply: async ({ markdown }) => {
+					ephemeralReplies.push(markdown);
+				},
 				postThreadReply: async ({ markdown }) => {
 					replies.push(markdown);
 				},
 			},
 		});
 
-		// Claim wins first, then authorization denies and releases it back to
-		// pending; the write never runs and no card edit happens.
-		expect(calls).toEqual(["claim", "release"]);
-		expect(replies).toEqual(["Missing plans:write."]);
+		// Authorization fails before the shared approval state is touched.
+		expect(calls).toEqual(["authorize"]);
+		expect(ephemeralReplies).toEqual(["Missing plans:write."]);
+		expect(replies).toEqual([]);
 	});
 
-	test("releases the claim and does not run when Slack approver authorization throws", async () => {
+	test("does not dismiss when the Slack user lacks Autumn scopes", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
 			"../../../src/internal/approvals/surfaces/slack/decide.js"
 		);
 		const calls: string[] = [];
+		const ephemeralReplies: string[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			status: "pending",
+			tool_name: "attach",
+			tool_args: { request: { customer_id: "cus_1", plan_id: "pro" } },
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "cancel_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				resolveApproval: async () => ({ result: {}, text: "" }),
+				cancelApproval: async () => {
+					calls.push("cancel");
+					return approval;
+				},
+				authorizeApprovalClicker: async () => {
+					calls.push("authorize");
+					return { allowed: false, text: "Missing billing:write." };
+				},
+				claimApproval: async () => undefined,
+				editActionMessage: async () => {
+					calls.push("edit");
+				},
+				getApproval: async () => approval,
+				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postEphemeralReply: async ({ markdown }) => {
+					ephemeralReplies.push(markdown);
+				},
+				postThreadReply: async () => {},
+			},
+		});
+
+		expect(calls).toEqual(["authorize"]);
+		expect(ephemeralReplies).toEqual(["Missing billing:write."]);
+	});
+
+	test("resumes Eve once when dismiss is clicked concurrently", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		let cancelled = false;
+		let denyCount = 0;
+		const replies: string[] = [];
+		const approval = {
+			env: AppEnv.Sandbox,
+			expires_at: Date.now() + 60_000,
+			harness: "eve",
+			status: "pending",
+			tool_name: "updateCustomer",
+			tool_args: {},
+		} as unknown as ChatApproval;
+		const event = {
+			actionId: "cancel_billing_action",
+			messageId: "message_1",
+			threadId: "thread_1",
+			user: { userId: "U1" },
+			value: "approval_1",
+		} as unknown as ActionEvent;
+		const deps = {
+			resolveApproval: async () => ({ result: {}, text: "" }),
+			denyApproval: async () => {
+				denyCount += 1;
+				return { result: {}, text: "Discarded." };
+			},
+			cancelApproval: async () => {
+				if (cancelled) return undefined;
+				cancelled = true;
+				return { ...approval, status: "cancelled" } as ChatApproval;
+			},
+			claimApproval: async () => undefined,
+			editActionMessage: async () => {},
+			getApproval: async () =>
+				cancelled
+					? ({ ...approval, status: "cancelled" } as ChatApproval)
+					: approval,
+			logger: { error: () => {}, info: () => {}, warn: () => {} },
+			postThreadReply: async ({ markdown }: { markdown: string }) => {
+				replies.push(markdown);
+			},
+		};
+
+		await Promise.all([
+			handleApprovalActionWithDeps({ deps, event }),
+			handleApprovalActionWithDeps({ deps, event }),
+		]);
+
+		expect(denyCount).toBe(1);
+		expect(replies).toEqual(["Discarded."]);
+	});
+
+	test("does not claim or run when Slack approver authorization throws", async () => {
+		setLeafTestEnv();
+		const { handleApprovalActionWithDeps } = await import(
+			"../../../src/internal/approvals/surfaces/slack/decide.js"
+		);
+		const calls: string[] = [];
+		const ephemeralReplies: string[] = [];
 		const replies: string[] = [];
 		const edits: unknown[] = [];
 		const approval = {
@@ -416,16 +523,16 @@ describe("approval flow", () => {
 					calls.push("claim");
 					return approval;
 				},
-				releaseApproval: async () => {
-					calls.push("release");
-					return approval;
-				},
 				editActionMessage: async ({ content }) => {
 					calls.push("edit");
 					edits.push(content);
 				},
 				getApproval: async () => approval,
 				logger: { error: () => {}, info: () => {}, warn: () => {} },
+				postEphemeralReply: async ({ markdown }) => {
+					calls.push("ephemeral");
+					ephemeralReplies.push(markdown);
+				},
 				postThreadReply: async ({ markdown }) => {
 					calls.push("reply");
 					replies.push(markdown);
@@ -433,11 +540,12 @@ describe("approval flow", () => {
 			},
 		});
 
-		expect(calls).toEqual(["claim", "authorize", "release", "reply"]);
+		expect(calls).toEqual(["authorize", "ephemeral"]);
 		expect(edits).toEqual([]);
-		expect(replies).toEqual([
-			"I couldn't verify your Autumn permissions, so I didn't run this action. Please try again.",
+		expect(ephemeralReplies).toEqual([
+			"I couldn't verify your Autumn permissions, so I didn't change this approval. Please try again.",
 		]);
+		expect(replies).toEqual([]);
 	});
 
 	test("passes the authorized Slack approver token to the approval resolver", async () => {
