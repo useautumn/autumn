@@ -1,5 +1,6 @@
 import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { type Metadata, MetadataType, metadata } from "@autumn/shared";
+import { addDays } from "date-fns";
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -93,6 +94,21 @@ export const handleVoidInvoiceCron = async ({
 				id: metadata.id,
 			});
 		} catch (error) {
+			if (
+				error instanceof Error &&
+				error.message.includes("pending payments waiting to clear")
+			) {
+				await MetadataService.update({
+					db,
+					id: metadata.id,
+					updates: { expires_at: addDays(Date.now(), 1).getTime() },
+				});
+				logger.info(
+					`Invoice ${metadata.stripe_invoice_id} has a pending payment; retrying cleanup in 24 hours`,
+				);
+				return;
+			}
+
 			logger.error(`Error voiding invoice: ${error}`);
 			if (
 				error instanceof Error &&
@@ -104,7 +120,6 @@ export const handleVoidInvoiceCron = async ({
 				});
 				return;
 			}
-			logger.error(`Error voiding invoice: ${error}`);
 		}
 	} else if (invoice.status === "void" || invoice.status === "uncollectible") {
 		await MetadataService.delete({
