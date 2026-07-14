@@ -66,7 +66,7 @@ test.concurrent(
 		await runUpdatePlanMigration({
 			ctx,
 			migrationClient: autumnV2_2,
-			migrationId: `${customerId}-mc-migrate`,
+			migrationId: `${customerId}-${planId}`,
 			customerId,
 			filter: { customer: { plan: { plan_id: planId } } },
 			operations: {
