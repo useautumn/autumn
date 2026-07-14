@@ -14,12 +14,12 @@ import {
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
+import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
 
@@ -65,15 +65,9 @@ export const SaveChangesBar = ({
 	);
 
 	const handleSaveClicked = async () => {
-		// if (
-		// 	product.planType === "paid" &&
-		// 	product.basePriceType !== "usage" &&
-		// 	!basePrice?.price
-		// ) {
-		// 	toast.error("Please add a plan price greater than 0, or remove it.");
-		// 	setSaving(false);
-		// 	return;
-		// }
+		for (const item of product.items) {
+			if (!checkItemCurrenciesValid(item)) return;
+		}
 
 		if (!isOnboarding) {
 			if (isCountsLoading) {
