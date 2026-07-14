@@ -43,9 +43,11 @@ const formatCurrencyAmount = (entry: AdditionalCurrencyPrice) =>
 export const AdditionalCurrenciesHint = ({
 	currencies,
 	changeStates,
+	count,
 }: {
 	currencies: AdditionalCurrencyPrice[];
 	changeStates?: Record<string, CurrencyChangeState>;
+	count?: number;
 }) => {
 	const showDots = Object.keys(changeStates ?? {}).length > 0;
 
@@ -53,7 +55,7 @@ export const AdditionalCurrenciesHint = ({
 		<Tooltip>
 			<TooltipTrigger asChild>
 				<span className="mt-0.5 text-tertiary-foreground text-xs">
-					+{currencies.length}
+					+{count ?? currencies.length}
 				</span>
 			</TooltipTrigger>
 			<TooltipContent>
