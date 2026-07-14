@@ -254,7 +254,7 @@ export class CusService {
 						fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 					}
 				}
-				fullCus.customer_licenses = await hydrateFullCustomerLicenses({
+				await hydrateFullCustomerLicenses({
 					ctx,
 					fullCustomer: fullCus,
 				});

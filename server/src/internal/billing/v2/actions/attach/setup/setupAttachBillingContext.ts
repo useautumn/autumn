@@ -17,8 +17,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFinalizeFirstInvoice";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
@@ -163,6 +165,10 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 	});
 
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params,
+	});
+
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,
@@ -271,11 +277,15 @@ export const setupAttachBillingContext = async ({
 			outgoingCusProductIds,
 		});
 
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
+
 	return {
 		fullCustomer,
 		fullProducts: [attachProduct],
 		attachProduct,
 		featureQuantities,
+		customerLicenseQuantities,
 		transitionConfig,
 
 		currentCustomerProduct,
@@ -336,6 +346,7 @@ export const setupAttachBillingContext = async ({
 
 		storedChargeLineItems,
 		storedRefundLineItems,
+		customerLicenseBillingContext,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

@@ -9,6 +9,8 @@ export * from "./convertCusProduct/customerProductsToRecurringActiveAndScheduled
 export * from "./convertCusProduct/customerProductsToStripeSubscriptionIds";
 export * from "./cusProductConstants";
 export * from "./cusProductUtils";
+export * from "./customerLicenses/convertCustomerLicense/customerLicenseToGranted";
+export * from "./customerLicenses/convertCustomerLicense/customerLicenseToUsed";
 export * from "./featureOptionUtils/findFeatureOptions";
 export * from "./featureOptionUtils/index";
 export * from "./filterCusProductUtils";
@@ -18,6 +20,7 @@ export * from "./filterCustomerProducts/filterCustomerProductsByProcessorType.js
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
 export * from "./findCustomerProduct/findActiveCustomerProduct.js";
 export * from "./findCustomerProduct/findCustomerProduct.js";
+export * from "./findCustomerProduct/findCustomerProductSuccessor.js";
 export * from "./findCustomerProduct/findScheduledCustomerProduct.js";
 export * from "./getCusProductFromCustomer.js";
 export * from "./productIdToCusProduct.js";

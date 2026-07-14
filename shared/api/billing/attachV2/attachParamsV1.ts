@@ -4,6 +4,7 @@ import { PlanTimingSchema } from "../../../models/billingModels/context/attachBi
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem";
+import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -74,6 +75,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		}),
 
 	carry_over_usages: CarryOverUsagesSchema,
+
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+		description:
+			"Seat quantities for the plan's licenses, keyed by license plan.",
+	}),
 
 	metadata: z.record(z.string(), z.string()).optional().meta({
 		description:

@@ -17,6 +17,9 @@ export const customerLicenses = pgTable(
 	"customer_licenses",
 	{
 		id: text().primaryKey().notNull(),
+		// Stable logical identity: minted at first creation, copied to every
+		// successor row so seats never repoint across plan transitions.
+		link_id: text("link_id").notNull(),
 		internal_customer_id: text("internal_customer_id").notNull(),
 		parent_customer_product_id: text("parent_customer_product_id").notNull(),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
@@ -25,6 +28,11 @@ export const customerLicenses = pgTable(
 		plan_license_id: text("plan_license_id"),
 		granted: numeric("granted", { mode: "number" }).notNull().default(0),
 		remaining: numeric("remaining", { mode: "number" }).notNull().default(0),
+		// Prepaid seats purchased on top of — NOT including — the link's
+		// included amount. granted = included + paid_quantity, always derived.
+		paid_quantity: numeric("paid_quantity", { mode: "number" })
+			.notNull()
+			.default(0),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	},
@@ -58,6 +66,7 @@ export const customerLicenses = pgTable(
 		index("idx_customer_licenses_customer")
 			.on(table.internal_customer_id)
 			.concurrently(),
+		index("idx_customer_licenses_link").on(table.link_id).concurrently(),
 	],
 );
 

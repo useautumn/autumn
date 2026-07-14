@@ -165,17 +165,17 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
-/** Ends active seats anchored to no surviving customer license (unstamped or
+/** Ends active seats anchored to no surviving pool link (unstamped or
  * dangling) — one set-based UPDATE per reconcile. */
 const expireOrphanAssignments = async ({
 	db,
 	internalCustomerId,
-	validCustomerLicenseIds,
+	validCustomerLicenseLinkIds,
 	endedAt,
 }: {
 	db: DrizzleCli;
 	internalCustomerId: string;
-	validCustomerLicenseIds: string[];
+	validCustomerLicenseLinkIds: string[];
 	endedAt: number;
 }) => {
 	await db
@@ -186,12 +186,12 @@ const expireOrphanAssignments = async ({
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				...activeAssignmentConditions(),
 				or(
-					isNull(customerProducts.customer_license_id),
-					...(validCustomerLicenseIds.length > 0
+					isNull(customerProducts.customer_license_link_id),
+					...(validCustomerLicenseLinkIds.length > 0
 						? [
 								notInArray(
-									customerProducts.customer_license_id,
-									validCustomerLicenseIds,
+									customerProducts.customer_license_link_id,
+									validCustomerLicenseLinkIds,
 								),
 							]
 						: []),
@@ -221,7 +221,7 @@ const maxActiveCountByCatalogLink = async ({
 		.from(customerProducts)
 		.innerJoin(
 			customerLicenses,
-			eq(customerProducts.customer_license_id, customerLicenses.id),
+			eq(customerProducts.customer_license_link_id, customerLicenses.link_id),
 		)
 		.innerJoin(
 			parent,
@@ -236,7 +236,7 @@ const maxActiveCountByCatalogLink = async ({
 				...activeAssignmentConditions(),
 			),
 		)
-		.groupBy(customerProducts.customer_license_id)
+		.groupBy(customerProducts.customer_license_link_id)
 		.orderBy(desc(count()))
 		.limit(1);
 	return row?.value ?? 0;

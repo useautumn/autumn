@@ -61,7 +61,6 @@ export const executeMultiSubscriptionBillingPlan = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan,
-		fullCustomer: originalFullCustomer,
 		stripeInvoice: primaryStripeResult?.stripeInvoice,
 		stripeInvoiceItems: primaryStripeResult?.stripeInvoiceItems,
 		autumnInvoice: primaryStripeResult?.autumnInvoice,

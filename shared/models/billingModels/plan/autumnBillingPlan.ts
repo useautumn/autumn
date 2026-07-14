@@ -23,6 +23,10 @@ import { CustomLicenseChangeSchema } from "../../licenseModels/licenseModels";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
+import {
+	CustomerLicenseTransitionSchema,
+	LicenseOpSchema,
+} from "./customerLicensePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
@@ -72,23 +76,6 @@ export const PatchCustomerProductSchema = z.object({
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
-export const LicenseOpSchema = z.object({
-	op: z.enum(["take", "release"]),
-	internalCustomerId: z.string(),
-	parentCustomerProductId: z.string(),
-	licenseInternalProductId: z.string(),
-	// The plan_license the pool instantiates, stamped when the pool is upserted.
-	planLicenseId: z.string().optional(),
-	granted: z.number(),
-	entityId: z.string().optional(),
-	// take: the provisioned seat row to stamp with the pool id at execute time.
-	customerProductId: z.string().optional(),
-	// release: the seat's pool anchor — survives reparenting, the parent pair
-	// does not.
-	customerLicenseId: z.string().nullish(),
-});
-export type LicenseOp = z.infer<typeof LicenseOpSchema>;
-
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
@@ -122,6 +109,9 @@ export const AutumnBillingPlanSchema = z.object({
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 	customLicenses: z.array(CustomLicenseChangeSchema).optional(),
 	licenseOps: z.array(LicenseOpSchema).optional(),
+	customerLicenseTransitions: z
+		.array(CustomerLicenseTransitionSchema)
+		.optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

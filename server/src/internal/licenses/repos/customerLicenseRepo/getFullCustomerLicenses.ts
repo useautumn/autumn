@@ -13,8 +13,6 @@ import { planLicenseFullProductJson } from "../utils/planLicenseFullProductSql.j
 type FullCustomerLicenseRow = {
 	pool: DbCustomerLicense;
 	license: DbPlanLicense | null;
-	parent_plan_id: string;
-	license_plan_id: string;
 	product: FullProductWithoutLicenses;
 };
 
@@ -40,8 +38,6 @@ export const getFullCustomerLicenses = async ({
 		SELECT
 			to_jsonb(cl.*) AS pool,
 			to_jsonb(pl.*) AS license,
-			parent_product.id AS parent_plan_id,
-			license_product.id AS license_plan_id,
 			${planLicenseFullProductJson({
 				planLicenseAlias: "pl",
 				productAlias: "license_product",
@@ -49,8 +45,6 @@ export const getFullCustomerLicenses = async ({
 		FROM customer_licenses cl
 		JOIN customers c ON c.internal_id = cl.internal_customer_id
 		JOIN customer_products cp ON cp.id = cl.parent_customer_product_id
-		JOIN products parent_product
-			ON parent_product.internal_id = cp.internal_product_id
 		JOIN products license_product
 			ON license_product.internal_id = cl.license_internal_product_id
 		LEFT JOIN LATERAL (
@@ -79,16 +73,9 @@ export const getFullCustomerLicenses = async ({
 	const rows = (await db.execute(query)) as unknown as FullCustomerLicenseRow[];
 	return rows.map((row) => ({
 		...row.pool,
-		license: row.license
+		planLicense: row.license
 			? {
-					id: row.license.id,
-					parent_plan_id: row.parent_plan_id,
-					license_plan_id: row.license_plan_id,
-					included: row.license.included,
-					prepaid_only: row.license.prepaid_only,
-					metadata: row.license.metadata,
-					created_at: row.license.created_at,
-					updated_at: row.license.updated_at,
+					...row.license,
 					product: row.product,
 				}
 			: null,

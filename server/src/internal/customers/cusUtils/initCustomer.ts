@@ -56,7 +56,6 @@ export const initFullCustomer = ({
 	return {
 		...initCustomer({ ctx, customerId, customerData }),
 		customer_products: [],
-		customer_licenses: [],
 		entities: [],
 		extra_customer_entitlements: [],
 		subscriptions: [],

@@ -1,9 +1,10 @@
 import {
 	type FullCustomer,
+	fullCustomerToCustomerLicenses,
 	fullCustomerToLicenseParentCustomerProducts,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { countActiveByCustomerLicenseIds } from "../../repos/customerLicenseRepo/countActiveByCustomerLicenseIds.js";
+import { countActiveByCustomerLicenseLinkIds } from "../../repos/customerLicenseRepo/countActiveByCustomerLicenseLinkIds.js";
 import { listAdoptableStrandedCustomerLicenses } from "../../repos/customerLicenseRepo/listAdoptableStrandedCustomerLicenses.js";
 import type { ReconcileContext } from "./types.js";
 
@@ -22,7 +23,7 @@ export const setupReconcileContext = async ({
 	const parentCustomerProducts = fullCustomerToLicenseParentCustomerProducts({
 		fullCustomer,
 	});
-	const customerLicenses = fullCustomer.customer_licenses;
+	const customerLicenses = fullCustomerToCustomerLicenses({ fullCustomer });
 
 	const strandedCustomerLicenses = await listAdoptableStrandedCustomerLicenses({
 		db: ctx.db,
@@ -32,15 +33,23 @@ export const setupReconcileContext = async ({
 		),
 	});
 
-	const seatCountByCustomerLicenseId = await countActiveByCustomerLicenseIds({
+	const allCustomerLicenses = [
+		...customerLicenses,
+		...strandedCustomerLicenses.map(({ customerLicense }) => customerLicense),
+	];
+	const seatCountByLinkId = await countActiveByCustomerLicenseLinkIds({
 		db: ctx.db,
-		customerLicenseIds: [
-			...customerLicenses.map((customerLicense) => customerLicense.id),
-			...strandedCustomerLicenses.map(
-				({ customerLicense }) => customerLicense.id,
-			),
-		],
+		customerLicenseLinkIds: allCustomerLicenses.map(
+			(customerLicense) => customerLicense.link_id,
+		),
 	});
+	// Seats anchor by link; downstream still keys by row id.
+	const seatCountByCustomerLicenseId = new Map(
+		allCustomerLicenses.map((customerLicense) => [
+			customerLicense.id,
+			seatCountByLinkId.get(customerLicense.link_id) ?? 0,
+		]),
+	);
 
 	return {
 		fullCustomer,

@@ -6,6 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
@@ -50,6 +51,18 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 		params,
 	});
+
+	// Customer licenses follow the incoming definitions on immediate swaps;
+	// scheduled swaps transition at activation instead.
+	const customerLicenseTransitions =
+		planTiming === "immediate" && currentCustomerProduct
+			? computeCustomerLicenseTransitions({
+					outgoingCustomerProducts: [currentCustomerProduct],
+					incomingCustomerProducts: [newCustomerProduct],
+					customerLicenseBillingContext:
+						attachBillingContext.customerLicenseBillingContext,
+				})
+			: [];
 
 	const {
 		entitlements: carriedOverEntitlements,
@@ -106,6 +119,7 @@ export const computeAttachPlan = ({
 			previousParentCustomerProduct: currentCustomerProduct,
 			licensePatch: attachBillingContext.licensePatch,
 		}),
+		customerLicenseTransitions,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),

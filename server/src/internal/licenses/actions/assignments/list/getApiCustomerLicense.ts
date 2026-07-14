@@ -5,7 +5,7 @@ import type {
 	LicenseAssignmentRow,
 } from "../../reconcile/types.js";
 
-const groupAssignmentsByCustomerLicenseId = ({
+const groupAssignmentsByCustomerLicenseLinkId = ({
 	assignments,
 	entityId,
 }: {
@@ -15,16 +15,16 @@ const groupAssignmentsByCustomerLicenseId = ({
 	const scoped = entityId
 		? assignments.filter((row) => row.entity_id === entityId)
 		: assignments;
-	const byCustomerLicenseId = new Map<string, LicenseAssignmentRow[]>();
+	const byCustomerLicenseLinkId = new Map<string, LicenseAssignmentRow[]>();
 	for (const row of scoped) {
-		const customerLicenseId = row.assignment.customer_license_id;
-		if (!customerLicenseId) continue;
-		byCustomerLicenseId.set(customerLicenseId, [
-			...(byCustomerLicenseId.get(customerLicenseId) ?? []),
+		const customerLicenseLinkId = row.assignment.customer_license_link_id;
+		if (!customerLicenseLinkId) continue;
+		byCustomerLicenseLinkId.set(customerLicenseLinkId, [
+			...(byCustomerLicenseLinkId.get(customerLicenseLinkId) ?? []),
 			row,
 		]);
 	}
-	return byCustomerLicenseId;
+	return byCustomerLicenseLinkId;
 };
 
 /** Serializes a customer's license state to the API shape — each customer
@@ -39,31 +39,33 @@ export const getApiCustomerLicense = ({
 	assignments: LicenseAssignmentRow[];
 	entityId?: string;
 }): ApiCustomerLicenseV0[] => {
-	const assignmentsByCustomerLicenseId = groupAssignmentsByCustomerLicenseId({
-		assignments,
-		entityId,
-	});
+	const assignmentsByCustomerLicenseLinkId =
+		groupAssignmentsByCustomerLicenseLinkId({
+			assignments,
+			entityId,
+		});
 	// Scheduled parents' rows exist from insert but aren't inventory until
 	// activation makes the parent live.
-	const liveParentIds = new Set(
-		state.parentCustomerProducts.map((parent) => parent.id),
+	const liveParentById = new Map(
+		state.parentCustomerProducts.map((parent) => [parent.id, parent]),
 	);
 
 	return state.customerLicenses
 		.flatMap((customerLicense) => {
-			const { license } = customerLicense;
-			if (!license) return [];
-			if (!liveParentIds.has(customerLicense.parent_customer_product_id)) {
-				return [];
-			}
+			const { planLicense } = customerLicense;
+			if (!planLicense) return [];
+			const parent = liveParentById.get(
+				customerLicense.parent_customer_product_id,
+			);
+			if (!parent) return [];
 
 			const assignmentRows =
-				assignmentsByCustomerLicenseId.get(customerLicense.id) ?? [];
+				assignmentsByCustomerLicenseLinkId.get(customerLicense.link_id) ?? [];
 			return [
 				{
-					parent_plan_id: license.parent_plan_id,
-					license_plan_id: license.license_plan_id,
-					license_plan_name: license.product.name ?? "",
+					parent_plan_id: parent.product.id,
+					license_plan_id: planLicense.product.id,
+					license_plan_name: planLicense.product.name ?? "",
 					inventory: computeLicenseInventory({
 						included: customerLicense.granted,
 						assigned: customerLicense.granted - customerLicense.remaining,
@@ -71,7 +73,7 @@ export const getApiCustomerLicense = ({
 					assignments: assignmentRows.map(({ assignment, entity_id }) => ({
 						assignment_id: assignment.id,
 						entity_id: entity_id ?? "",
-						license_plan_id: license.license_plan_id,
+						license_plan_id: planLicense.product.id,
 						started_at: assignment.created_at ?? 0,
 					})),
 				},

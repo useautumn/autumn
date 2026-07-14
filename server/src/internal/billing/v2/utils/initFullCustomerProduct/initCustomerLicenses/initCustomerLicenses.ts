@@ -1,4 +1,5 @@
 import {
+	type CustomerLicenseQuantity,
 	customerProductHasRelevantStatus,
 	type FullCusProduct,
 	type FullCustomerLicense,
@@ -14,9 +15,11 @@ import { generateId, nullish } from "@/utils/genUtils";
 export const initCustomerLicenses = ({
 	customerProduct,
 	fullProduct,
+	customerLicenseQuantities,
 }: {
 	customerProduct: FullCusProduct;
 	fullProduct: FullProduct;
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 }): FullCustomerLicense[] => {
 	const ownsLicenses =
 		nullish(customerProduct.internal_entity_id) &&
@@ -25,18 +28,31 @@ export const initCustomerLicenses = ({
 	if (!ownsLicenses) return [];
 
 	const now = Date.now();
-	return (fullProduct.licenses ?? [])
-		.filter((link) => link.included > 0)
-		.map((link) => ({
-			id: generateId("cus_lic"),
-			internal_customer_id: customerProduct.internal_customer_id,
-			parent_customer_product_id: customerProduct.id,
-			license_internal_product_id: link.product.internal_id,
-			plan_license_id: link.id,
-			granted: link.included,
-			remaining: link.included,
-			created_at: now,
-			updated_at: now,
-			license: link,
-		}));
+	return (fullProduct.licenses ?? []).flatMap((link) => {
+		const totalQuantity =
+			customerLicenseQuantities?.find(
+				(licenseQuantity) => licenseQuantity.licensePlanId === link.product.id,
+			)?.totalQuantity ?? 0;
+		const paidQuantity = Math.max(0, totalQuantity - link.included);
+		const granted = link.included + paidQuantity;
+		if (granted === 0) return [];
+
+		return [
+			{
+				id: generateId("cus_lic"),
+				// Fresh identity; transitions overwrite it with the predecessor's.
+				link_id: generateId("cus_lic_link"),
+				internal_customer_id: customerProduct.internal_customer_id,
+				parent_customer_product_id: customerProduct.id,
+				license_internal_product_id: link.product.internal_id,
+				plan_license_id: link.id,
+				granted,
+				remaining: granted,
+				paid_quantity: paidQuantity,
+				created_at: now,
+				updated_at: now,
+				planLicense: link,
+			},
+		];
+	});
 };

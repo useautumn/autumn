@@ -5,6 +5,7 @@ export * from "./cusPlanUtils/cusPlanUtils";
 export * from "./fullCusUtils/enrichFullCustomer";
 
 export * from "./fullCusUtils/fullCustomerToCustomerEntitlements";
+export * from "./fullCusUtils/convertFullCustomer/fullCustomerToCustomerLicenses";
 export * from "./fullCusUtils/convertFullCustomer/fullCustomerToLicenseParentCustomerProducts";
 export * from "./fullCusUtils/fullCustomerToOverageAllowed";
 export * from "./fullCusUtils/fullCustomerToSkipOverageBilling";

@@ -100,7 +100,6 @@ const makeFullCustomer = (id: string) =>
 		processor: null,
 		send_email_receipts: false,
 		customer_products: [],
-		customer_licenses: [],
 		extra_customer_entitlements: [],
 		entities: [],
 	}) as FullCustomer;

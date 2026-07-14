@@ -70,7 +70,6 @@ export const executeBillingPlan = async ({
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
-		fullCustomer: billingContext.fullCustomer,
 		stripeInvoice: stripeBillingResult.stripeInvoice,
 		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
 		autumnInvoice: stripeBillingResult.autumnInvoice,

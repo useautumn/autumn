@@ -135,7 +135,7 @@ export const getPlanResponse = async ({
 		items: planItems ?? [],
 		licenses: product.licenses?.length
 			? product.licenses.map((license) => ({
-					license_plan_id: license.license_plan_id,
+					license_plan_id: license.product.id,
 					included: license.included,
 					prepaid_only: license.prepaid_only,
 				}))

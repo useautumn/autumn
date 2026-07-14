@@ -22,10 +22,10 @@ export const computeCustomerLicenseBalancePlan = ({
 	context: ReconcileContext;
 }): CustomerLicenseBalancePlan => {
 	const balanceUpdates = context.customerLicenses.flatMap((customerLicense) => {
-		const { license } = customerLicense;
-		if (!license) return [];
+		const { planLicense } = customerLicense;
+		if (!planLicense) return [];
 
-		const granted = license.included;
+		const granted = planLicense.included;
 		const remaining =
 			granted -
 			(context.seatCountByCustomerLicenseId.get(customerLicense.id) ?? 0);
@@ -33,13 +33,13 @@ export const computeCustomerLicenseBalancePlan = ({
 		const drifted =
 			customerLicense.granted !== granted ||
 			customerLicense.remaining !== remaining ||
-			customerLicense.plan_license_id !== license.id;
+			customerLicense.plan_license_id !== planLicense.id;
 		if (!drifted) return [];
 
 		return [
 			{
 				customerLicenseId: customerLicense.id,
-				updates: { granted, remaining, plan_license_id: license.id },
+				updates: { granted, remaining, plan_license_id: planLicense.id },
 			},
 		];
 	});

@@ -73,9 +73,9 @@ export const CusProductSchema = z.object({
 
 	is_custom: z.boolean().default(false),
 	license_parent_customer_product_id: z.string().nullish(),
-	// Seat rows point at their pool (customer_licenses.id); the pool carries
-	// the shared parent so transitions re-point one row, not every seat.
-	customer_license_id: z.string().nullish(),
+	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);
+	// successor pool rows copy the link, so transitions never touch seats.
+	customer_license_link_id: z.string().nullish(),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 
@@ -95,8 +95,9 @@ export const FullCusProductSchema = CusProductSchema.extend({
 	product: ProductSchema,
 	free_trial: FreeTrialSchema.nullish(),
 
-	// License pools initialized with a new parent customer product (billing
-	// actions) and inserted alongside it. Absent on rows read from the DB.
+	// The product's customer licenses — same hierarchy as customer_prices.
+	// Stitched at hydration for DB rows, set by init for planned rows; only
+	// hand-built products (tests, cache converters) may omit it.
 	customer_licenses: z.array(FullCustomerLicenseSchema).optional(),
 });
 

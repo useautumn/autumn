@@ -41,7 +41,7 @@ export const endLicenseAssignmentsForEntity = async ({
 				assignment.license_parent_customer_product_id as string,
 			licenseInternalProductId: assignment.internal_product_id,
 			granted: 0,
-			customerLicenseId: assignment.customer_license_id,
+			customerLicenseLinkId: assignment.customer_license_link_id,
 		}));
 
 	await executeAutumnBillingPlan({

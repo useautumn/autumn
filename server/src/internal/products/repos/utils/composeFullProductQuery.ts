@@ -53,14 +53,7 @@ export const normalizeFullProductLicenses = ({
 	...product,
 	licenses: product.licenses?.map(
 		(link): FullPlanLicense => ({
-			id: link.id,
-			parent_plan_id: product.id,
-			license_plan_id: link.product.id,
-			included: link.included,
-			prepaid_only: link.prepaid_only,
-			metadata: link.metadata,
-			created_at: link.created_at,
-			updated_at: link.updated_at,
+			...link,
 			product: {
 				...link.product,
 				free_trial: link.product.free_trials?.[0] ?? null,

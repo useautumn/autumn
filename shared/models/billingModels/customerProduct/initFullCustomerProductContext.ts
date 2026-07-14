@@ -17,6 +17,7 @@ import type {
 } from "../../cusProductModels/cusProductModels";
 import type { ProcessorType } from "../../genModels/genEnums";
 import type { FullProduct } from "../../productModels/productModels";
+import type { CustomerLicenseQuantity } from "../customerLicenseQuantity";
 
 export interface ExistingUsagesConfig {
 	fromCustomerProduct: FullCusProduct;
@@ -32,6 +33,7 @@ export interface InitFullCustomerProductContext {
 	fullCustomer: FullCustomer;
 	fullProduct: FullProduct;
 	featureQuantities: FeatureOptions[];
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
 
 	/**
 	 * Per-call override for the entity the resulting cusProduct should bind to.

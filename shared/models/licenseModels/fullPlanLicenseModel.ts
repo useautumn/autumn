@@ -3,14 +3,23 @@ import {
 	type FullProductWithoutLicenses,
 	FullProductWithoutLicensesSchema,
 } from "../productModels/productModels";
-import { type PlanLicense, PlanLicenseSchema } from "./licenseModels";
+import type { DbPlanLicense } from "./planLicenseTable";
 
-export type FullPlanLicense = PlanLicense & {
+export type FullPlanLicense = DbPlanLicense & {
 	product: FullProductWithoutLicenses;
 };
 
-export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> =
-	PlanLicenseSchema.extend({
-		// Defers module initialization only; the product shape cannot nest licenses.
-		product: z.lazy(() => FullProductWithoutLicensesSchema),
-	});
+export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
+	id: z.string(),
+	parent_internal_product_id: z.string(),
+	parent_customer_product_id: z.string().nullable(),
+	license_internal_product_id: z.string(),
+	included: z.number(),
+	prepaid_only: z.boolean(),
+	customized: z.boolean(),
+	metadata: z.record(z.string(), z.unknown()).nullable(),
+	created_at: z.number(),
+	updated_at: z.number(),
+	// Defers module initialization only; the product shape cannot nest licenses.
+	product: z.lazy(() => FullProductWithoutLicensesSchema),
+});

@@ -48,7 +48,7 @@ export const executeLicenseTakes = async ({
 		const seat = insertCustomerProducts.find(
 			(customerProduct) => customerProduct.id === licenseOp.customerProductId,
 		);
-		if (seat) seat.customer_license_id = taken.id;
+		if (seat) seat.customer_license_link_id = taken.link_id;
 	}
 };
 
@@ -61,12 +61,12 @@ export const executeLicenseReleases = async ({
 }) => {
 	for (const licenseOp of licenseOps ?? []) {
 		if (licenseOp.op !== "release") continue;
-		// The pool anchor survives reparenting; the (parent, license) pair is the
-		// legacy fallback for unstamped seats.
-		if (licenseOp.customerLicenseId) {
-			await customerLicenseRepo.releaseAssignmentsById({
+		// The link anchor survives plan transitions; the (parent, license) pair
+		// is the legacy fallback for unstamped seats.
+		if (licenseOp.customerLicenseLinkId) {
+			await customerLicenseRepo.releaseAssignmentsByLinkId({
 				db: ctx.db,
-				customerLicenseId: licenseOp.customerLicenseId,
+				customerLicenseLinkId: licenseOp.customerLicenseLinkId,
 				count: 1,
 			});
 			continue;

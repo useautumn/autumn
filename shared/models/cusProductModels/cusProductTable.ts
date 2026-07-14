@@ -56,9 +56,9 @@ export const customerProducts = pgTable(
 		license_parent_customer_product_id: text(
 			"license_parent_customer_product_id",
 		),
-		// Marks the row as a license assignment (seat) of that pool. The pool
-		// carries the shared parent, so transitions re-point ONE pool row.
-		customer_license_id: text("customer_license_id"),
+		// Anchors the seat to its pool's stable link identity — successor pool
+		// rows copy the link, so plan transitions never touch seats.
+		customer_license_link_id: text("customer_license_link_id"),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -147,14 +147,20 @@ export const customerProducts = pgTable(
 			)
 			.concurrently(),
 		index("idx_customer_products_customer_license")
-			.on(table.customer_license_id)
-			.where(sql`${table.customer_license_id} IS NOT NULL`)
+			.on(table.customer_license_link_id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
 			.concurrently(),
-		// One active seat per (pool, entity); the pool already pins the license.
+		// Top-N walk for "earliest `included` seats per customer license".
+		index("idx_customer_products_license_seat_order")
+			.on(table.customer_license_link_id, table.created_at, table.id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
+		// One active seat per (pool link, entity); the link survives successor
+		// pool rows, so the guard holds across plan transitions.
 		uniqueIndex("unique_active_pool_assignment")
-			.on(table.customer_license_id, table.internal_entity_id)
+			.on(table.customer_license_link_id, table.internal_entity_id)
 			.where(
-				sql`${table.customer_license_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due')`,
+				sql`${table.customer_license_link_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due')`,
 			)
 			.concurrently(),
 		index("idx_customer_products_free_trial_id")

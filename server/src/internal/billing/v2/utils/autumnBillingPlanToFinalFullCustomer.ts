@@ -1,8 +1,7 @@
-import {
-	type AutumnBillingPlan,
-	type BillingContext,
-	customerProductHasRelevantStatus,
-	type FullCustomer,
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	FullCustomer,
 } from "@autumn/shared";
 import {
 	applyCustomerProductPatch,
@@ -129,29 +128,11 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		}
 	}
 
-	// 5. Mirror customer-license hydration: rows of still-relevant parents,
-	// plus the ones born with inserted products.
-	const relevantParentIds = new Set(
-		customerProducts
-			.filter((customerProduct) =>
-				customerProductHasRelevantStatus(customerProduct),
-			)
-			.map((customerProduct) => customerProduct.id),
-	);
-	const customerLicenses = [
-		...finalFullCustomer.customer_licenses.filter((customerLicense) =>
-			relevantParentIds.has(customerLicense.parent_customer_product_id),
-		),
-		...insertCustomerProducts.flatMap(
-			(customerProduct) => customerProduct.customer_licenses ?? [],
-		),
-	];
-
-	// 6. Return final full customer
+	// 5. Return final full customer. Customer licenses need no merge — they
+	// ride each customer product (hydration-stitched or init-planned).
 	return {
 		...finalFullCustomer,
 		customer_products: customerProducts,
-		customer_licenses: customerLicenses,
 	};
 };
 

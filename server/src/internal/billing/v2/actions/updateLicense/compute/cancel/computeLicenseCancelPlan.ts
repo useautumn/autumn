@@ -33,7 +33,7 @@ export const computeLicenseCancelPlan = ({
 					licenseInternalProductId: assignment.internal_product_id,
 					granted: 0,
 					entityId: entityExternalId,
-					customerLicenseId: assignment.customer_license_id,
+					customerLicenseLinkId: assignment.customer_license_link_id,
 				},
 			]
 		: [];

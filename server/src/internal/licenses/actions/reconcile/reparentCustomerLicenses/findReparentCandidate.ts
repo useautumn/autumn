@@ -32,7 +32,7 @@ export const findReparentCandidate = ({
 
 	return successorCandidates.find(({ customerLicense, parent }) => {
 		const offersSameLicensePlan =
-			customerLicense.license?.license_plan_id === licensePlanId;
+			customerLicense.planLicense?.product.id === licensePlanId;
 
 		const inSameGroup = parent.product.group === parentGroup;
 

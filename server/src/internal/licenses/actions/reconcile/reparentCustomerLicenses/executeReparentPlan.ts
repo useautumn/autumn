@@ -45,15 +45,15 @@ export const executeReparentPlan = async ({
 		...plan.reparentOps.map((op) => ({
 			...op.strandedCustomerLicense,
 			...reparentOpToUpdates(op),
-			license: op.replacedFreshCustomerLicense.license,
+			planLicense: op.replacedFreshCustomerLicense.planLicense,
 		})),
 	];
 
 	await licenseAssignmentRepo.expireOrphanAssignments({
 		db: ctx.db,
 		internalCustomerId: context.fullCustomer.internal_id,
-		validCustomerLicenseIds: context.customerLicenses.map(
-			(customerLicense) => customerLicense.id,
+		validCustomerLicenseLinkIds: context.customerLicenses.map(
+			(customerLicense) => customerLicense.link_id,
 		),
 		endedAt: Date.now(),
 	});

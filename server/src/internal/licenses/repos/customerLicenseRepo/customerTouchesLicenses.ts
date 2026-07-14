@@ -17,12 +17,8 @@ export const customerTouchesLicenses = async ({
 	fullCustomer?: FullCustomer;
 }): Promise<boolean> => {
 	if (fullCustomer) {
-		return (
-			fullCustomer.customer_licenses.length > 0 ||
-			fullCustomer.customer_products.some(
-				(customerProduct) =>
-					(customerProduct.customer_licenses?.length ?? 0) > 0,
-			)
+		return fullCustomer.customer_products.some(
+			(customerProduct) => (customerProduct.customer_licenses?.length ?? 0) > 0,
 		);
 	}
 	if (!idOrInternalId) return false;

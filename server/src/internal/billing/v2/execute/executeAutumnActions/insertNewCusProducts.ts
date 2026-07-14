@@ -35,7 +35,7 @@ export const insertNewCusProducts = async ({
 		db: ctx.db,
 		rows: newCusProducts.flatMap((cusProduct) =>
 			(cusProduct.customer_licenses ?? []).map(
-				({ license: _license, ...row }) => row,
+				({ planLicense: _planLicense, ...row }) => row,
 			),
 		),
 	});

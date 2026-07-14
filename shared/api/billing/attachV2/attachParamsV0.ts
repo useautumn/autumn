@@ -4,6 +4,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
+import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -39,6 +40,8 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	no_billing_changes: z.boolean().optional(),
 
 	tax_rate_id: z.string().optional(),
+
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({

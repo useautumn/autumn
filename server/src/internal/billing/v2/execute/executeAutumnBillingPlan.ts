@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan, FullCustomer, Invoice } from "@autumn/shared";
+import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
@@ -9,7 +9,6 @@ import {
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
-import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
@@ -19,7 +18,6 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { syncCustomLicenseChanges } from "@/internal/licenses/actions/customize/syncCustomLicenseChanges";
-import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
@@ -29,16 +27,12 @@ import { workflows } from "@/queue/workflows";
 export const executeAutumnBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
-	fullCustomer,
 	stripeInvoice,
 	stripeInvoiceItems,
 	autumnInvoice,
 }: {
 	ctx: AutumnContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	// Pre-mutation snapshot; the plan is applied to it so license reconcile
-	// sees post-mutation state without a re-fetch. Absent -> fresh read.
-	fullCustomer?: FullCustomer;
 	stripeInvoice?: Stripe.Invoice;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	autumnInvoice?: Invoice;
@@ -147,18 +141,6 @@ export const executeAutumnBillingPlan = async ({
 			cusProductId: deleteCustomerProduct.id,
 		});
 	}
-
-	// Route middleware / webhook flows own the cache drop on these paths.
-	await reconcileLicenseStateForCustomer({
-		ctx,
-		fullCustomer: fullCustomer
-			? applyAutumnBillingPlanToFullCustomer({
-					fullCustomer,
-					autumnBillingPlan,
-				})
-			: undefined,
-		idOrInternalId: fullCustomer ? undefined : autumnBillingPlan.customerId,
-	});
 
 	// 5. Update entitlement balances
 	await updateCustomerEntitlements({

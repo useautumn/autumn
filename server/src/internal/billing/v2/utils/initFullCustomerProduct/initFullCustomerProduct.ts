@@ -64,6 +64,7 @@ export const initFullCustomerProduct = ({
 	newFullCustomerProduct.customer_licenses = initCustomerLicenses({
 		customerProduct: newFullCustomerProduct,
 		fullProduct,
+		customerLicenseQuantities: initContext.customerLicenseQuantities,
 	});
 
 	applyExistingStatesToCustomerProduct({

@@ -6,6 +6,7 @@ import {
 import { and, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
+import { listBillingPriceRows } from "./customerLicenseRepo/listBillingPriceRows.js";
 
 const getByParentAndLicense = async ({
 	db,
@@ -107,6 +108,8 @@ const upsertGranted = async ({
 		.insert(customerLicenses)
 		.values({
 			id: generateId("cus_lic"),
+			// Conflicting rows keep their link; only genuinely new pools mint.
+			link_id: generateId("cus_lic_link"),
 			internal_customer_id: internalCustomerId,
 			parent_customer_product_id: parentCustomerProductId,
 			license_internal_product_id: licenseInternalProductId,
@@ -203,13 +206,13 @@ const releaseAssignments = async ({
 	return row;
 };
 
-const releaseAssignmentsById = async ({
+const releaseAssignmentsByLinkId = async ({
 	db,
-	customerLicenseId,
+	customerLicenseLinkId,
 	count,
 }: {
 	db: DrizzleCli;
-	customerLicenseId: string;
+	customerLicenseLinkId: string;
 	count: number;
 }): Promise<DbCustomerLicense | undefined> => {
 	const [row] = await db
@@ -218,7 +221,7 @@ const releaseAssignmentsById = async ({
 			remaining: sql`LEAST(${customerLicenses.remaining} + ${count}, ${customerLicenses.granted})`,
 			updated_at: Date.now(),
 		})
-		.where(eq(customerLicenses.id, customerLicenseId))
+		.where(eq(customerLicenses.link_id, customerLicenseLinkId))
 		.returning();
 	return row;
 };
@@ -269,13 +272,14 @@ export const customerLicenseRepo = {
 	getByParentAndLicense,
 	listByInternalCustomerId,
 	listByParentCustomerProductIds,
+	listBillingPriceRows,
 	update,
 	deleteByIds,
 	upsertGranted,
 	insertMany,
 	takeAssignment,
 	releaseAssignments,
-	releaseAssignmentsById,
+	releaseAssignmentsByLinkId,
 	setRemaining,
 	deleteByParentIdsExcept,
 } as const;
