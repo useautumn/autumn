@@ -603,7 +603,14 @@ export default function PlanChangeDialog({
 												</span>
 											</div>
 											{isMetadataOnly ? (
-												<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
+												<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
+													{priceChange && (
+														<PlanPriceHeader
+															priceChange={priceChange}
+															product={product}
+															currency={currency}
+														/>
+													)}
 													<PlanSettingsChanges changes={settingsChanges} />
 												</div>
 											) : (
