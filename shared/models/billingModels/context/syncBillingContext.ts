@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages";
 import type {
 	SyncParamsV1,
 	SyncPlanInstance,
@@ -52,4 +53,7 @@ export interface SyncBillingContext {
 	/** Carry an expired plan's consumed usage onto the replacement plan's
 	 * balances for shared features on the same subject. Defaults to true. */
 	carryOverUsage: boolean;
+
+	/** Inherited org transition-rule carry config; undefined = carry all consumables. */
+	carryOverUsages?: CarryOverUsages;
 }

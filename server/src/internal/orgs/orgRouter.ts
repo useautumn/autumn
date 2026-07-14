@@ -35,6 +35,10 @@ import {
 	handleGetRevenueCatConfig,
 	handleUpsertRevenueCatConfig,
 } from "./handlers/handleRevenueCatConfig.js";
+import {
+	handleGetTransitionRules,
+	handleUpdateTransitionRules,
+} from "./handlers/handleTransitionRules.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
 import { handleUpdateOrgConfig } from "./handlers/handleUpdateOrgConfig.js";
 import {
@@ -59,6 +63,8 @@ internalOrgRouter.delete("", ...handleDeleteOrg);
 internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 internalOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
 internalOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
+internalOrgRouter.get("/transition_rules", ...handleGetTransitionRules);
+internalOrgRouter.patch("/transition_rules", ...handleUpdateTransitionRules);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
@@ -95,6 +101,8 @@ honoOrgRouter.patch("", ...handleUpdateOrg);
 honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 honoOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
 honoOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
+honoOrgRouter.get("/transition_rules", ...handleGetTransitionRules);
+honoOrgRouter.patch("/transition_rules", ...handleUpdateTransitionRules);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.get("/stripe/products/search", ...handleSearchStripeProducts);
 honoOrgRouter.post("/stripe/products/resolve", ...handleResolveStripeProducts);

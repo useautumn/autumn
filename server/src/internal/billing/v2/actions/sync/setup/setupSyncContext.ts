@@ -19,6 +19,7 @@ import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 
 const fetchStripeSubscription = async ({
 	ctx,
@@ -267,5 +268,9 @@ export const setupSyncContext = async ({
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
 		carryOverUsage: params.carry_over_usage ?? true,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: undefined,
+		}),
 	};
 };
