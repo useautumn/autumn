@@ -76,6 +76,7 @@ export const useRevenueByProduct = ({
 		queryKey: buildKey(["revenue-by-product", granularity]),
 		queryFn: () => fetchGranularity({ g: granularity }),
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled,
 	});
 
@@ -111,6 +112,7 @@ export const useRevenueProductShare = () => {
 			return data as ProductShareRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled:
 			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
@@ -131,6 +133,7 @@ export const useArpc = () => {
 			return data as ArpcRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled:
 			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
@@ -154,6 +157,7 @@ export const useInvoiceStatus = () => {
 			return data as InvoiceStatusRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled:
 			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
@@ -177,6 +181,7 @@ export const useCustomerLeaderboard = () => {
 			return data as CustomerLeaderboardResult;
 		},
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled:
 			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
@@ -206,6 +211,7 @@ export const useEstimatedMrr = () => {
 			return data as EstimatedMrrResult;
 		},
 		staleTime: 5 * 60 * 1000,
+		refetchOnWindowFocus: true,
 		enabled:
 			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
