@@ -1,14 +1,19 @@
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@autumn/ui";
 import { useState } from "react";
 
+export const amountDisplayValue = (amount: number) =>
+	amount === 0 ? "" : amount.toString();
+
 export const CurrencyAmountInput = ({
 	displayValue,
 	currencyCode,
 	onRawChange,
+	className,
 }: {
 	displayValue: string;
 	currencyCode: string;
 	onRawChange: (raw: string) => void;
+	className?: string;
 }) => {
 	const [editingValue, setEditingValue] = useState<string | undefined>();
 
@@ -20,7 +25,7 @@ export const CurrencyAmountInput = ({
 	};
 
 	return (
-		<InputGroup>
+		<InputGroup className={className}>
 			<InputGroupInput
 				inputMode="decimal"
 				onBlur={() => setEditingValue(undefined)}

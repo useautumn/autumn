@@ -4,6 +4,7 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { PlanSheetFooter } from "@/components/v2/sheets/PlanSheetFooter";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { checkItemCurrenciesValid } from "../../utils/currencyUtils";
 
 export function SheetFooterActions({
 	isDirty,
@@ -14,7 +15,7 @@ export function SheetFooterActions({
 	canConfirm: boolean;
 	onBeforeCommit?: () => void;
 }) {
-	const { handleUpdateProductItem } = useProductItemContext();
+	const { item, handleUpdateProductItem } = useProductItemContext();
 	const { initialItem, itemDraft, closeSheet } = useSheet();
 	const setCurrentItem = useSetCurrentItem();
 
@@ -29,6 +30,7 @@ export function SheetFooterActions({
 	};
 
 	const handleUpdateItem = async () => {
+		if (item && !checkItemCurrenciesValid(item)) return;
 		await onBeforeCommit?.();
 		await handleUpdateProductItem();
 	};

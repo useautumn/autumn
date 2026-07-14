@@ -1,6 +1,5 @@
 import { type AdditionalCurrencyPrice, formatAmount } from "@autumn/shared";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
-import { CoinsIcon } from "@phosphor-icons/react";
 
 const formatCurrencyAmount = (entry: AdditionalCurrencyPrice) =>
 	entry.amount === 0
@@ -21,9 +20,8 @@ export const AdditionalCurrenciesHint = ({
 }) => (
 	<Tooltip>
 		<TooltipTrigger asChild>
-			<span className="mt-0.5 flex items-center gap-0.5 text-tertiary-foreground text-xs">
+			<span className="mt-0.5 text-tertiary-foreground text-xs">
 				+{currencies.length}
-				<CoinsIcon size={12} />
 			</span>
 		</TooltipTrigger>
 		<TooltipContent>

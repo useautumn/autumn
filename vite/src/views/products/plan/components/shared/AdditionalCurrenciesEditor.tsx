@@ -2,10 +2,10 @@ import {
 	type AdditionalCurrencyPrice,
 	roundToCurrencyPrecision,
 } from "@autumn/shared";
-import { IconButton } from "@autumn/ui";
+import { FormLabel, IconButton } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
-import { CurrencyAmountInput } from "./CurrencyAmountInput";
-import { CurrencyPicker } from "./CurrencyPicker";
+import { AddCurrencyButton } from "./AddCurrencyButton";
+import { amountDisplayValue, CurrencyAmountInput } from "./CurrencyAmountInput";
 
 export const AdditionalCurrenciesEditor = ({
 	currencies,
@@ -31,40 +31,32 @@ export const AdditionalCurrenciesEditor = ({
 	};
 
 	return (
-		<div className="space-y-2">
-			{entries.map((entry, index) => (
-				<div
-					className="flex items-center gap-2"
-					key={`currency-${
-						// biome-ignore lint/suspicious/noArrayIndexKey: rows are positional, codes are picked once
-						index
-					}`}
-				>
-					<CurrencyAmountInput
-						currencyCode={entry.currency}
-						displayValue={entry.amount === 0 ? "" : entry.amount.toString()}
-						onRawChange={(raw) => updateAmount(index, raw)}
-					/>
-					<IconButton
-						className="shrink-0 p-1 text-tertiary-foreground hover:text-red-500"
-						icon={<TrashIcon size={10} />}
-						onClick={() => onChange(entries.filter((_, i) => i !== index))}
-						variant="muted"
-					/>
-				</div>
-			))}
-			<CurrencyPicker
-				className="w-full"
-				excludedCodes={[baseCurrency, ...entries.map((e) => e.currency)]}
-				label={
-					entries.length === 0
-						? `Add currency (base ${baseCurrency.toUpperCase()})`
-						: "Add currency"
-				}
-				onSelect={(code) =>
-					onChange([...entries, { currency: code, amount: 0 }])
-				}
-			/>
+		<div>
+			<FormLabel>Additional currencies</FormLabel>
+			<div className="space-y-2">
+				{entries.map((entry, index) => (
+					<div className="flex items-center gap-2" key={`currency-${index}`}>
+						<CurrencyAmountInput
+							currencyCode={entry.currency}
+							displayValue={amountDisplayValue(entry.amount)}
+							onRawChange={(raw) => updateAmount(index, raw)}
+						/>
+						<IconButton
+							className="shrink-0 p-1 text-tertiary-foreground hover:text-red-500"
+							icon={<TrashIcon size={10} />}
+							onClick={() => onChange(entries.filter((_, i) => i !== index))}
+							variant="muted"
+						/>
+					</div>
+				))}
+				<AddCurrencyButton
+					baseCurrency={baseCurrency}
+					currencyCodes={entries.map((entry) => entry.currency)}
+					onSelect={(code) =>
+						onChange([...entries, { currency: code, amount: 0 }])
+					}
+				/>
+			</div>
 		</div>
 	);
 };
