@@ -33,8 +33,9 @@ type BasePriceInput = {
 	additional_currencies?: AdditionalCurrencyInput[] | null;
 };
 
-// Currencies added in `to` don't change what existing customers pay, so they
-// don't force a version; changed or removed ones do.
+// Adding or removing a catalog currency doesn't change what existing
+// customers pay (their prices are snapshots), so neither forces a version or
+// migration; only changed amounts for a currency present on both sides do.
 const additionalCurrenciesCompatible = (
 	from: AdditionalCurrencyInput[] | null | undefined,
 	to: AdditionalCurrencyInput[] | null | undefined,
@@ -44,9 +45,9 @@ const additionalCurrenciesCompatible = (
 			(other) => other.currency.toLowerCase() === entry.currency.toLowerCase(),
 		);
 		return (
-			!!match &&
-			(entry.amount ?? null) === (match.amount ?? null) &&
-			(entry.flat_amount ?? null) === (match.flat_amount ?? null)
+			!match ||
+			((entry.amount ?? null) === (match.amount ?? null) &&
+				(entry.flat_amount ?? null) === (match.flat_amount ?? null))
 		);
 	});
 

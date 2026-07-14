@@ -43,6 +43,23 @@ const priceOffersCurrency = ({
 		isFixed: isFixedPrice(price),
 	});
 
+export const planOffersCurrency = ({
+	ctx,
+	prices,
+	currency,
+}: {
+	ctx: AutumnContext;
+	prices: Price[];
+	currency: string;
+}): boolean => {
+	if (isFreeProduct({ prices })) return true;
+
+	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
+	return !prices
+		.filter(priceCharges)
+		.some((price) => !priceOffersCurrency({ price, currency, orgDefault }));
+};
+
 export const assertPlanOffersCurrency = ({
 	ctx,
 	prices,
@@ -54,14 +71,7 @@ export const assertPlanOffersCurrency = ({
 	planName: string;
 	currency: string;
 }) => {
-	if (isFreeProduct({ prices })) return;
-
-	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
-	const planMissesCurrency = prices
-		.filter(priceCharges)
-		.some((price) => !priceOffersCurrency({ price, currency, orgDefault }));
-
-	if (planMissesCurrency) {
+	if (!planOffersCurrency({ ctx, prices, currency })) {
 		throw new RecaseError({
 			code: ErrCode.CurrencyMismatch,
 			message: `Plan '${planName}' does not offer a price in ${currency.toUpperCase()}`,
