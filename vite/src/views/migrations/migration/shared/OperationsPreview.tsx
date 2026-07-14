@@ -164,6 +164,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 										hintCurrencies.length > 0 ? (
 											<AdditionalCurrenciesHint
 												changeStates={currencyChangeStates}
+												count={priceCurrencies.length}
 												currencies={hintCurrencies}
 											/>
 										) : undefined
