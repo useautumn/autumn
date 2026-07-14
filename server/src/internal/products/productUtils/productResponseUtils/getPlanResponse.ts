@@ -3,6 +3,8 @@ import {
 	ApiFreeTrialV2Schema,
 	type ApiPlanV1,
 	ApiPlanV1Schema,
+	billingControlsFromColumns,
+	diffPlanV1,
 	type Feature,
 	type FullCustomer,
 	type FullProduct,
@@ -12,8 +14,6 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
-	billingControlsFromColumns,
-	diffPlanV1,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -78,6 +78,9 @@ export const getPlanResponse = async ({
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
 					itemToBillingIntervalCount({ item: basePriceItem }) !== 1

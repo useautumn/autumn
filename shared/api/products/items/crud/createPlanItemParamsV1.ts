@@ -1,11 +1,13 @@
+import {
+	AdditionalCurrencyPriceArraySchema,
+	ApiUsageTierWithCurrenciesSchema,
+	additionalCurrencyPlanItemIssues,
+} from "@api/products/components/additionalCurrencies";
 import { BillingMethod } from "@api/products/components/billingMethod";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
-import {
-	TierBehavior,
-	UsageTierSchema,
-} from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 
 import {
 	OnDecrease,
@@ -48,7 +50,12 @@ export const CreatePlanItemParamsV1Schema = z
 					description:
 						"Price per billing_units after included usage. Either 'amount' or 'tiers' is required.",
 				}),
-				tiers: z.array(UsageTierSchema).optional().meta({
+				additional_currencies:
+					AdditionalCurrencyPriceArraySchema.optional().meta({
+						description:
+							"Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.",
+					}),
+				tiers: z.array(ApiUsageTierWithCurrenciesSchema).optional().meta({
 					description:
 						"Tiered pricing.  Either 'amount' or 'tiers' is required.",
 				}),
@@ -252,6 +259,14 @@ export const CreatePlanItemParamsV1Schema = z
 					input: ctx.value.price,
 				});
 			}
+		}
+
+		for (const message of additionalCurrencyPlanItemIssues(ctx.value.price)) {
+			ctx.issues.push({
+				code: "custom",
+				message,
+				input: ctx.value.price,
+			});
 		}
 	})
 	.meta({

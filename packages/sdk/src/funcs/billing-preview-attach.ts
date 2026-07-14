@@ -64,6 +64,7 @@ import { Result } from "../types/fp.js";
  * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
  * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
  * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
+ * @param currency - Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */

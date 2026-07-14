@@ -1,5 +1,6 @@
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { z } from "zod/v4";
+import { AdditionalCurrencyPriceArraySchema } from "../additionalCurrencies";
 import { DisplaySchema } from "../display";
 
 export const BasePriceSchema = z.object({
@@ -23,6 +24,14 @@ export const BasePriceParamsSchema = BasePriceSchema.omit({
 	.extend({
 		interval_count: z.number().optional().meta({
 			description: "Number of intervals per billing cycle. Defaults to 1.",
+		}),
+
+		additional_currencies: AdditionalCurrencyPriceArraySchema.optional().meta({
+			description:
+				"Base price amounts in additional currencies. The base 'amount' is in the org's default currency.",
+		}),
+		base_currency: z.string().optional().meta({
+			internal: true,
 		}),
 
 		entitlement_id: z.string().optional().meta({

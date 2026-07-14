@@ -28,7 +28,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 	balanceChange: z.number().optional(),
 
 	// For arrear billing:
-		updates: z
+	updates: z
 		.object({
 			next_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
@@ -128,6 +128,15 @@ export const AutumnBillingPlanSchema = z.object({
 					delta: z.number(),
 				}),
 			),
+		})
+		.optional(),
+
+	// Lock the customer to a currency on the first paid attach (only set when the
+	// customer has none yet). Applied as a conditional, race-safe DB update.
+	lockCustomerCurrency: z
+		.object({
+			internalCustomerId: z.string(),
+			currency: z.string(),
 		})
 		.optional(),
 

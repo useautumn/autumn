@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
+import { isValidCurrencyCode } from "../../utils/currencyUtils/stripeCurrencies";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
@@ -55,6 +56,15 @@ export const CustomerDataSchema = z
 		send_email_receipts: z.boolean().optional().meta({
 			description: "Whether to send email receipts to this customer",
 		}),
+
+		currency: z
+			.string()
+			.refine(isValidCurrencyCode, "must be a Stripe-supported currency code")
+			.nullish()
+			.meta({
+				description:
+					"Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.",
+			}),
 
 		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the customer (auto top-ups, etc.)",

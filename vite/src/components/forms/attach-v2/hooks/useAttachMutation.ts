@@ -80,6 +80,11 @@ export function useAttachMutation({
 			if (useInvoice) {
 				if (data?.invoice) {
 					toast.success("Invoice created successfully");
+				} else {
+					// Invoice-mode subscription with no immediate invoice (usage-in-arrears):
+					// nothing to send now, so confirm and close instead of dead-ending.
+					toast.success("Subscription started");
+					onSuccess?.();
 				}
 			} else if (data?.payment_url) {
 				onCheckoutRedirect?.(data.payment_url);

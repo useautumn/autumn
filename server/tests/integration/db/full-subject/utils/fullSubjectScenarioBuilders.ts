@@ -91,6 +91,7 @@ const buildCustomer = ({
 	processor: null,
 	processors: {},
 	send_email_receipts: false,
+	currency: null,
 	auto_topups: null,
 	spend_limits: null,
 	usage_limits: null,

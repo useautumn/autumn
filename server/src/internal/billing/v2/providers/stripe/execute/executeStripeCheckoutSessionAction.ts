@@ -1,6 +1,7 @@
 import {
 	type BillingContext,
 	type BillingPlan,
+	billingContextToCurrency,
 	MetadataType,
 	type StripeBillingPlanResult,
 	type StripeCheckoutSessionAction,
@@ -15,7 +16,6 @@ import {
 	insertMetadataFromBillingPlan,
 	updateMetadataWithCheckoutSession,
 } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
-import { orgToCurrency } from "@/internal/orgs/orgUtils";
 
 export const executeStripeCheckoutSessionAction = async ({
 	ctx,
@@ -54,7 +54,7 @@ export const executeStripeCheckoutSessionAction = async ({
 	const fullParams = buildCheckoutSessionParams({
 		params: checkoutSessionAction.params,
 		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,
-		currency: orgToCurrency({ org }),
+		currency: billingContextToCurrency({ org, billingContext }),
 		defaultAllowPromotionCodes: true,
 		defaultSavedPaymentMethodOptions: { payment_method_save: "enabled" },
 		defaultInvoiceCreation:

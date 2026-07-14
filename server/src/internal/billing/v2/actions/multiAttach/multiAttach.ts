@@ -11,6 +11,7 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { computeMultiAttachPlan } from "./compute/computeMultiAttachPlan";
+import { handleMultiAttachCurrencyErrors } from "./errors/handleMultiAttachCurrencyErrors";
 import {
 	handleMultiAttachBillingPlanErrors,
 	handleMultiAttachErrors,
@@ -46,6 +47,8 @@ export async function multiAttach({
 		billingContext,
 		redirectMode: params.redirect_mode,
 	});
+
+	handleMultiAttachCurrencyErrors({ ctx, billingContext });
 
 	// 2b. Log context
 	logMultiAttachContext({ ctx, billingContext });

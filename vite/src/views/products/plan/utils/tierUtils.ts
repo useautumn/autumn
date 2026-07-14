@@ -1,4 +1,12 @@
-import { Infinite, type ProductItem } from "@autumn/shared";
+import { Infinite, type PriceTier, type ProductItem } from "@autumn/shared";
+
+const zeroedCurrencyEntries = (tier: PriceTier | undefined) =>
+	tier?.additional_currencies?.length
+		? tier.additional_currencies.map((entry) => ({
+				currency: entry.currency,
+				amount: 0,
+			}))
+		: undefined;
 
 export const addTier = ({
 	item,
@@ -18,8 +26,12 @@ export const addTier = ({
 		setItem({
 			...item,
 			tiers: [
-				{ to: 100, amount: firstTier.amount }, // First tier with default limit
-				{ to: Infinite, amount: 0 }, // Second tier is infinite
+				{ ...firstTier, to: 100 }, // First tier with default limit
+				{
+					to: Infinite,
+					amount: 0,
+					additional_currencies: zeroedCurrencyEntries(firstTier),
+				}, // Second tier is infinite
 			],
 		});
 	} else {
@@ -34,7 +46,11 @@ export const addTier = ({
 		}
 
 		// Add new infinite tier
-		newTiers.push({ to: Infinite, amount: 0 });
+		newTiers.push({
+			to: Infinite,
+			amount: 0,
+			additional_currencies: zeroedCurrencyEntries(lastTier),
+		});
 		setItem({ ...item, tiers: newTiers });
 	}
 };

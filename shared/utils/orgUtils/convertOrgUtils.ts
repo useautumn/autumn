@@ -52,6 +52,10 @@ export const orgPersistFreeOverage = ({ org }: { org: Organization }) => {
 	return org.config.persist_free_overage ?? false;
 };
 
+export const orgMultiCurrencyEnabled = ({ org }: { org: Organization }) => {
+	return org.config.multi_currency ?? false;
+};
+
 export const orgToFeaturesByOrgEnv = ({
 	org,
 	env,

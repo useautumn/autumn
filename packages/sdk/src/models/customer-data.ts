@@ -278,6 +278,10 @@ export type CustomerData = {
    */
   sendEmailReceipts?: boolean | undefined;
   /**
+   * Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
+   */
+  currency?: string | null | undefined;
+  /**
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: CustomerDataBillingControls | undefined;
@@ -653,6 +657,7 @@ export type CustomerData$Outbound = {
   create_in_stripe?: boolean | undefined;
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
+  currency?: string | null | undefined;
   billing_controls?: CustomerDataBillingControls$Outbound | undefined;
   config?: CustomerDataConfig$Outbound | undefined;
 };
@@ -671,6 +676,7 @@ export const CustomerData$outboundSchema: z.ZodMiniType<
     createInStripe: z.optional(z.boolean()),
     autoEnablePlanId: z.optional(z.string()),
     sendEmailReceipts: z.optional(z.boolean()),
+    currency: z.optional(z.nullable(z.string())),
     billingControls: z.optional(
       z.lazy(() => CustomerDataBillingControls$outboundSchema),
     ),

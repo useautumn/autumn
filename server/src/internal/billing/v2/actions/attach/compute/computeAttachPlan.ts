@@ -1,7 +1,8 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	AutumnBillingPlan,
+import {
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type AutumnBillingPlan,
+	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
@@ -88,9 +89,27 @@ export const computeAttachPlan = ({
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
+	// Lock the customer's currency on the first paid attach (only when they have
+	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
+	const {
+		fullCustomer,
+		attachProduct,
+		currency: resolvedCurrency,
+	} = attachBillingContext;
+	const lockCustomerCurrency =
+		resolvedCurrency &&
+		!fullCustomer.currency &&
+		!isFreeProduct({ prices: attachProduct.prices })
+			? {
+					internalCustomerId: fullCustomer.internal_id,
+					currency: resolvedCurrency,
+				}
+			: undefined;
+
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [newCustomerProduct],
+		lockCustomerCurrency,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,

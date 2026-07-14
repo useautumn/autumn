@@ -11,16 +11,25 @@ import {
 	InputGroupAddon,
 	InputGroupInput,
 } from "@autumn/ui";
-import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import {
+	addCurrencyToTiers,
+	itemCurrencyCodes,
+	removeCurrencyFromTiers,
+	stampBaseCurrency,
+	updateTierCurrencyAmount,
+} from "../../utils/currencyUtils";
 import {
 	addTier,
 	removeTier,
 	updateTier,
 	type VolumePricingMode,
 } from "../../utils/tierUtils";
+import { AdditionalCurrenciesEditor } from "../shared/AdditionalCurrenciesEditor";
+import { CurrencyPicker } from "../shared/CurrencyPicker";
 import { BillingUnits } from "./BillingUnits";
 
 const getTierToDisplay = ({
@@ -191,7 +200,7 @@ export function PriceTiers({
 							}}
 						/>
 						<InputGroupAddon align="inline-end">
-							<span className="text-tertiary-foreground text-tiny">
+							<span className="text-tertiary-foreground text-xs">
 								{currency}
 							</span>
 						</InputGroupAddon>
@@ -204,30 +213,64 @@ export function PriceTiers({
 							variant="muted"
 							className="text-tertiary-foreground text-xs"
 							onClick={() => addTier({ item, setItem })}
-							icon={<PlusIcon size={12} />}
+							icon={<PlusIcon size={10} />}
 							iconOrientation="left"
 						>
-							Add Tiers
+							Add Tier
 						</IconButton>
 					</div>
 				</div>
+
+				{org?.config?.multi_currency && (
+					<AdditionalCurrenciesEditor
+						currencies={firstTier.additional_currencies?.map((entry) => ({
+							currency: entry.currency,
+							amount: entry.amount ?? 0,
+						}))}
+						onChange={(currencies) =>
+							setItem(
+								stampBaseCurrency({
+									item: {
+										...item,
+										tiers: [
+											{ ...firstTier, additional_currencies: currencies },
+										],
+									},
+									orgCurrency: currency,
+								}),
+							)
+						}
+						baseCurrency={currency}
+					/>
+				)}
 			</div>
 		);
 	}
 
 	// Multi-tier UI - full tier management
+	const isFlatMode = volumePricingMode === "flat";
+	const amountField = isFlatMode ? "flat_amount" : "amount";
+	const currencyCodes = itemCurrencyCodes(item);
+
+	const addCurrency = (code: string) => {
+		setItem(
+			stampBaseCurrency({
+				item: addCurrencyToTiers({ item, code: code.toLowerCase() }),
+				orgCurrency: currency,
+			}),
+		);
+	};
+
 	return (
 		<div className="space-y-2">
 			{tiers.map((tier: PriceTier, index: number) => {
-				const isFlatMode = volumePricingMode === "flat";
-				const amountField = isFlatMode ? "flat_amount" : "amount";
 				const amountKey = `tier-${index}-${amountField}`;
 				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
 				return (
 					<div
 						key={`${index}-${tier.to}`}
-						className="flex gap-2 w-full items-center"
+						className="flex flex-wrap gap-2 w-full items-center"
 					>
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
 							{Number(includedUsage) === 0 && index === 0
@@ -254,11 +297,58 @@ export function PriceTiers({
 								placeholder="0.00"
 							/>
 							<InputGroupAddon align="inline-end">
-								<span className="text-tertiary-foreground text-tiny">
+								<span className="text-tertiary-foreground text-xs">
 									{currency}
 								</span>
 							</InputGroupAddon>
 						</InputGroup>
+
+						{currencyCodes.map((code) => {
+							const entry = tier.additional_currencies?.find(
+								(candidate) => candidate.currency.toLowerCase() === code,
+							);
+							const entryValue = isFlatMode
+								? (entry?.flat_amount ?? 0)
+								: (entry?.amount ?? 0);
+							const entryKey = `tier-${index}-${code}-${amountField}`;
+
+							return (
+								<InputGroup key={code} className="min-w-0 w-26 shrink-0">
+									<InputGroupInput
+										value={getDisplayValue(entryKey, entryValue)}
+										onFocus={() => handleInputFocus(entryKey, entryValue)}
+										onBlur={() =>
+											setIsEditing((prev) => ({ ...prev, [entryKey]: false }))
+										}
+										onChange={(e) => {
+											setEditingValues((prev) => ({
+												...prev,
+												[entryKey]: e.target.value,
+											}));
+											setItem(
+												stampBaseCurrency({
+													item: updateTierCurrencyAmount({
+														item,
+														tierIndex: index,
+														code,
+														field: amountField,
+														value: e.target.value,
+													}),
+													orgCurrency: currency,
+												}),
+											);
+										}}
+										inputMode="decimal"
+										placeholder="0.00"
+									/>
+									<InputGroupAddon align="inline-end">
+										<span className="text-tertiary-foreground text-xs uppercase">
+											{code}
+										</span>
+									</InputGroupAddon>
+								</InputGroup>
+							);
+						})}
 
 						{!isFlatMode && <BillingUnits />}
 
@@ -266,7 +356,7 @@ export function PriceTiers({
 							<IconButton
 								variant="muted"
 								onClick={() => removeTier({ item, setItem, index })}
-								icon={<TrashSimpleIcon size={10} />}
+								icon={<TrashIcon size={10} />}
 								className="p-1 text-tertiary-foreground hover:text-red-500"
 							/>
 						</div>
@@ -278,10 +368,38 @@ export function PriceTiers({
 				className="w-full text-tertiary-foreground text-xs"
 				size="sm"
 				onClick={() => addTier({ item, setItem })}
-				icon={<PlusIcon size={8} />}
+				icon={<PlusIcon size={10} />}
 			>
 				Add Tier
 			</IconButton>
+
+			{org?.config?.multi_currency && (
+				<div className="flex flex-wrap items-center gap-2">
+					<CurrencyPicker
+						excludedCodes={[currency, ...currencyCodes]}
+						label="Add currency"
+						onSelect={addCurrency}
+					/>
+					{currencyCodes.map((code) => (
+						<IconButton
+							className="text-tertiary-foreground text-xs uppercase"
+							icon={<TrashIcon size={10} />}
+							key={code}
+							onClick={() =>
+								setItem(
+									stampBaseCurrency({
+										item: removeCurrencyFromTiers({ item, code }),
+										orgCurrency: currency,
+									}),
+								)
+							}
+							variant="muted"
+						>
+							{code}
+						</IconButton>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

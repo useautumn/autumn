@@ -93,6 +93,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.",
 	}),
+
+	currency: z.string().optional().meta({
+		description:
+			"Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
+	}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;
