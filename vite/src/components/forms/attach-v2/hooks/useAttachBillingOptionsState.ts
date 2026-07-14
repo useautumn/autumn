@@ -91,12 +91,16 @@ export function useAttachBillingOptionsState() {
 	const defaultPlanSchedule = useMemo((): PlanTiming => {
 		if (!previewData || !hasOutgoing) return "immediate";
 
+		// Free → paid is always an upgrade; the amount check below misreads
+		// usage-only plans (null base price) as $0 and would defer them.
+		if (isFreeToPaidTransition) return "immediate";
+
 		const incomingPrice = previewData.incoming[0]?.plan.price?.amount ?? 0;
 		const outgoingPrice = previewData.outgoing[0]?.plan.price?.amount ?? 0;
 		const isUpgrade = incomingPrice > outgoingPrice;
 
 		return isUpgrade ? "immediate" : "end_of_cycle";
-	}, [previewData, hasOutgoing]);
+	}, [previewData, hasOutgoing, isFreeToPaidTransition]);
 
 	const effectivePlanSchedule = !hasOutgoing
 		? "immediate"
