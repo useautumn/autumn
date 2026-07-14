@@ -3,6 +3,7 @@ import { isStripeSubscriptionSchedulePhaseCurrent } from "@/external/stripe/subs
 import { stripeSubscriptionToStartDate } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import { normalizePhaseItem } from "./normalizePhaseItem";
 import { normalizeSubscriptionItem } from "./normalizeSubscriptionItem";
+import { resolveStripeSyncCurrency } from "./resolveStripeSyncCurrency";
 import type { PhaseSnapshot } from "./types";
 
 /**
@@ -16,10 +17,12 @@ import type { PhaseSnapshot } from "./types";
 export const normalizeSubscriptionPhases = ({
 	subscription,
 	schedule,
+	billingCurrency,
 	nowSec = Math.floor(Date.now() / 1000),
 }: {
 	subscription?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule | null;
+	billingCurrency?: string | null;
 	nowSec?: number;
 }): PhaseSnapshot[] => {
 	if (!schedule && !subscription) {
@@ -27,10 +30,15 @@ export const normalizeSubscriptionPhases = ({
 			"normalizeSubscriptionPhases requires a subscription or a schedule",
 		);
 	}
+	const currency = resolveStripeSyncCurrency({
+		subscription,
+		schedule,
+		customerCurrency: billingCurrency,
+	});
 
 	if (!schedule) {
 		const items = subscription!.items.data
-			.map((stripeItem) => normalizeSubscriptionItem({ stripeItem }))
+			.map((stripeItem) => normalizeSubscriptionItem({ stripeItem, currency }))
 			.filter((item): item is NonNullable<typeof item> => item !== null);
 
 		return [
@@ -51,6 +59,7 @@ export const normalizeSubscriptionPhases = ({
 				normalizePhaseItem({
 					phaseItem,
 					syntheticId: `${phaseIndex}:${itemIndex}`,
+					currency,
 				}),
 			)
 			.filter((item): item is NonNullable<typeof item> => item !== null);

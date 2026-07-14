@@ -3,7 +3,9 @@ import type Stripe from "stripe";
 export type StripeItemTier = {
 	up_to: number | null;
 	unit_amount: number | null;
+	unit_amount_decimal?: string | null;
 	flat_amount: number | null;
+	flat_amount_decimal?: string | null;
 };
 
 export type StripeItemSnapshot = {

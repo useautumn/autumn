@@ -6,6 +6,7 @@ import {
 	BillingInterval,
 	type CreatePlanParamsV2Input,
 } from "@autumn/shared";
+import { runUpdatePlanMigration } from "@tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -13,12 +14,14 @@ import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 
 const autumnRpc = new AutumnRpcCli({ version: ApiVersion.V2_1 });
 const getSuffix = () => Math.random().toString(36).slice(2, 9);
-const waitForMigration = (ms = 20000) =>
-	new Promise((resolve) => setTimeout(resolve, ms));
 
 // Migrating a locked-eur customer to a new plan version must keep the
 // subscription in eur and re-point it at the v2 eur price (migrations create no
 // new charge, so this verifies the currency-aware v2 price is used).
+//
+// Uses migrations V2 (`/v1/migrations.*`) — legacy `POST /v1/migrations` was
+// removed, and unmatched `/v1` paths fall through to the session-authed root
+// router ("Unauthorized - no session found").
 test.concurrent(
 	`${chalk.yellowBright("multi-currency e2e: migration keeps the subscription in eur on the v2 price")}`,
 	async () => {
@@ -34,7 +37,7 @@ test.concurrent(
 			},
 		});
 
-		const { customerId, autumnV1, ctx } = await initScenario({
+		const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId: "mc-migrate-eur",
 			setup: [
 				s.customer({ paymentMethod: "success", data: { currency: "eur" } }),
@@ -60,13 +63,28 @@ test.concurrent(
 			},
 		});
 
-		await autumnV1.migrate({
-			from_product_id: planId,
-			to_product_id: planId,
-			from_version: 1,
-			to_version: 2,
+		await runUpdatePlanMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId: `${customerId}-${planId}`,
+			customerId,
+			filter: { customer: { plan: { plan_id: planId } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: planId },
+						version: 2,
+					},
+				],
+			},
+			waitFor: async () => {
+				const customer =
+					await autumnV1.customers.get<ApiCustomerV3>(customerId);
+				const product = customer.products?.find((p) => p.id === planId);
+				expect(product?.version).toBe(2);
+			},
 		});
-		await waitForMigration();
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectProductActive({ customer, productId: planId });

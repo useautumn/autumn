@@ -34,10 +34,16 @@ export const basePriceToProductItem = ({
 		"additional_currencies" in basePrice
 			? basePrice.additional_currencies
 			: undefined;
+	const explicitBaseCurrency =
+		"base_currency" in basePrice
+			? basePrice.base_currency?.toLowerCase()
+			: undefined;
 
-	const baseCurrency = additionalCurrencies?.length
-		? (ctx.org.default_currency || "usd").toLowerCase()
-		: undefined;
+	const baseCurrency =
+		explicitBaseCurrency ??
+		(additionalCurrencies?.length
+			? (ctx.org.default_currency || "usd").toLowerCase()
+			: undefined);
 
 	if (baseCurrency) {
 		for (const { currency } of additionalCurrencies ?? []) {
