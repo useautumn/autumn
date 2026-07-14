@@ -45,6 +45,9 @@ export function frontendProductToApiPlanV1(
 	const basePrice: ApiPlanV1["price"] = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				...(basePriceItem.interval_count !== 1 &&
 				typeof basePriceItem.interval_count === "number"

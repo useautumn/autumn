@@ -1,10 +1,12 @@
 import {
+	type ApiPlanV1,
 	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	diffPlanV1,
-	planDiffHasBillingChanges,
-	type ApiPlanV1,
 	type FullProduct,
+	type Operations,
+	planDiffHasBillingChanges,
+	toBasePriceParams,
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -37,6 +39,34 @@ const hasVersionableUsage = ({
 	);
 
 const unique = (ids: string[]) => [...new Set(ids)];
+
+// Stamped onto price-change ops so the migration UI can show per-currency
+// diffs after the catalog has already been updated in place.
+const withPreviousPrice = <T extends { operations: Operations }>({
+	draft,
+	fromPlan,
+}: {
+	draft: T;
+	fromPlan: ApiPlanV1;
+}): T => ({
+	...draft,
+	operations: {
+		...draft.operations,
+		customer: draft.operations.customer?.map((op) =>
+			op.type === "update_plan" && op.customize?.price !== undefined
+				? {
+						...op,
+						customize: {
+							...op.customize,
+							previous_price: fromPlan.price
+								? toBasePriceParams(fromPlan.price)
+								: null,
+						},
+					}
+				: op,
+		),
+	},
+});
 
 export const getVariantMigrationSnapshots = async ({
 	ctx,
@@ -120,7 +150,10 @@ export const createPlanMigrationDraft = async ({
 	const selectedVariantsBefore =
 		variantsBefore.length > 0 || selectedVariantIds.length === 0
 			? variantsBefore
-			: await getVariantMigrationSnapshots({ ctx, variantIds: selectedVariantIds });
+			: await getVariantMigrationSnapshots({
+					ctx,
+					variantIds: selectedVariantIds,
+				});
 
 	if (mode === "version") {
 		const baseUsage = await customerProductRepo.getVersioningUsageForProduct({
@@ -144,7 +177,10 @@ export const createPlanMigrationDraft = async ({
 		});
 		if (!draft) return;
 
-		const migration = await migrationRepo.insert({ ctx, insert: draft });
+		const migration = await migrationRepo.insert({
+			ctx,
+			insert: withPreviousPrice({ draft, fromPlan }),
+		});
 		return migration.id;
 	}
 
@@ -176,6 +212,9 @@ export const createPlanMigrationDraft = async ({
 	});
 	if (!draft) return;
 
-	const migration = await migrationRepo.insert({ ctx, insert: draft });
+	const migration = await migrationRepo.insert({
+		ctx,
+		insert: withPreviousPrice({ draft, fromPlan }),
+	});
 	return migration.id;
 };
