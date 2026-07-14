@@ -34,6 +34,27 @@ const twWorkerStripeKey = (): string | undefined => {
 	}
 };
 
+/**
+ * tw-swarm seam: SDK-level retries are test-harness-only, gated on the same
+ * TW_WORKER_MODE signal as twWorkerStripeKey — never set outside a bun-tw
+ * worker, so this is provably inert in production and in a plain local dev
+ * server. Deliberately not the default everywhere: blind retries on
+ * non-idempotent billing calls (attach, checkout, subscription create) risk
+ * double-creating a subscription if a request actually succeeded on Stripe's
+ * side but the response was lost. Tests don't carry that risk and benefit far
+ * more from absorbing a 429 than from dying on it — see the key-pool sharding
+ * in scripts/tw/helpers/stripeKeyPool.ts for the complementary half of this.
+ */
+export const stripeRetryOptions = (): { maxNetworkRetries?: number } => {
+	if (
+		process.env.TW_WORKER_MODE !== "1" ||
+		process.env.NODE_ENV === "production"
+	) {
+		return {};
+	}
+	return { maxNetworkRetries: 3 };
+};
+
 export const initMasterStripe = (params?: {
 	accountId?: string;
 	legacyVersion?: boolean;
@@ -75,6 +96,7 @@ export const initMasterStripe = (params?: {
 				apiVersion: params?.legacyVersion
 					? ("2025-02-24.acacia" as any)
 					: undefined,
+				...stripeRetryOptions(),
 			});
 			return params?.skipInstrumentation ? client : instrumentStripe({ client });
 		},
@@ -134,6 +156,7 @@ export const initPlatformStripe = ({
 			const client = new Stripe(decrypted, {
 				stripeAccount: accountId || undefined,
 				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+				...stripeRetryOptions(),
 			});
 			return skipInstrumentation ? client : instrumentStripe({ client });
 		},
