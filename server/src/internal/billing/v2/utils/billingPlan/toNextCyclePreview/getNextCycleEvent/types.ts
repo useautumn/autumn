@@ -20,6 +20,7 @@ export type NextCycleEvent =
 	| ({
 			kind: "scheduled_start";
 			startsAtMs: number;
+			resetsBillingCycle: boolean;
 			customerProducts: FullCusProduct[];
 	  } & NextCycleEventContext)
 	| ({

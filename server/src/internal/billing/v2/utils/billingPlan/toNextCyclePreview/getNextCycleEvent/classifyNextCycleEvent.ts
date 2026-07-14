@@ -117,6 +117,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_start",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			resetsBillingCycle: isAnchorReset,
 			customerProducts: incomingCustomerProducts,
 		};
 	}
