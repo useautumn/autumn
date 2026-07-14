@@ -6,11 +6,13 @@ import {
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 
+// `is_default` is deliberately excluded — validateDefaultFlag already blocks it
+// on variants unconditionally with the more specific VariantCannotBeDefault error,
+// and running before that check here would mask it behind InvalidPropagationTarget.
 const variantSettingsFields = [
 	"description",
 	"group",
 	"is_add_on",
-	"is_default",
 	"config",
 	"billing_controls",
 	"metadata",

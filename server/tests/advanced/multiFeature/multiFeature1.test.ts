@@ -181,7 +181,7 @@ describe(`${chalk.yellowBright(
 			feature_id: TestFeature.Messages,
 		});
 
-		// totalUsage += value;
+		totalUsage += value;
 
 		await timeout(2500);
 

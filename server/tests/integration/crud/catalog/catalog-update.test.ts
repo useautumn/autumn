@@ -1249,14 +1249,16 @@ test(`${chalk.yellowBright("catalog: preview_update includes auto-propagated var
 	});
 	const variantPreview = preview.plan_changes[0].variants[0];
 
+	// `name` is variant-owned (omitVariantOwnedSettings) and never propagates from
+	// base, so it never shows up in the diffed previous_attributes.
 	expect(variantPreview).toMatchObject({
 		plan_id: variantId,
 		will_apply: false,
 		previous_attributes: {
-			name: "Annual",
 			add_on: false,
 		},
 	});
+	expect(variantPreview.previous_attributes?.name).toBeUndefined();
 	expect(variantPreview.previous_attributes?.group).toBe(null);
 });
 
@@ -1560,7 +1562,8 @@ test(`${chalk.yellowBright("catalog: update auto-propagates base settings to var
 	const variant = await autumnV2_2.post("/plans.get", {
 		plan_id: variantId,
 	});
-	expect(variant.name).toBe("Base Renamed");
+	// `name` is variant-owned (omitVariantOwnedSettings) and never propagates from base.
+	expect(variant.name).toBe("Annual");
 	expect(variant.add_on).toBe(true);
 	expect(variant.group).toBe("team");
 	expect(variant.config?.ignore_past_due).toBe(true);

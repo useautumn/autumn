@@ -30,7 +30,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path shoul
 		]),
 	]);
 
-	// One should succeed, one should fail with 429 (lock conflict)
+	// One should succeed, one should fail with 423 (lock conflict)
 	const successes = [result1, result2].filter((r) => r.status === "fulfilled");
 	const failures = [result1, result2].filter((r) => r.status === "rejected");
 
@@ -38,8 +38,9 @@ test.concurrent(`${chalk.yellowBright("create-entity-race: mainCusEnt path shoul
 	expect(failures.length).toBe(1);
 
 	const failedResult = failures[0] as PromiseRejectedResult;
-	// AutumnInt returns code: "rate_limit_exceeded" for 429 errors
-	expect(failedResult.reason.code).toBe("rate_limit_exceeded");
+	// acquireLock throws ErrCode.LockAlreadyExists (423), not a 429 — AutumnInt
+	// only rewrites the code to "rate_limit_exceeded" on an actual HTTP 429.
+	expect(failedResult.reason.code).toBe("lock_already_exists");
 });
 
 test.concurrent(`${chalk.yellowBright("create-entity-race: non-mainCusEnt path allows concurrent creation")}`, async () => {

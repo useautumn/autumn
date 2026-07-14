@@ -156,10 +156,9 @@ const allocatedWorkflows = ({
 		billing_method: BillingMethod.UsageBased,
 		billing_units: 1,
 	},
-	proration: {
-		on_increase: OnIncrease.BillImmediately,
-		on_decrease: OnDecrease.None,
-	},
+	// The public CreatePlanItemParamsV1Schema rejects `proration` on
+	// billing_method: UsageBased items — allocated items default to arrear
+	// billing behavior without it.
 });
 
 const prepaidUsers = ({
