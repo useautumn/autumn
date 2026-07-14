@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -142,6 +143,14 @@ export const executeAutumnBillingPlan = async ({
 		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	if (autumnBillingPlan.oneOffPurchaseRebalance) {
+		await executeOneOffPurchaseRebalance({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			rebalance: autumnBillingPlan.oneOffPurchaseRebalance,
+		});
+	}
 
 	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
 	// atomic SQL `balance + delta` increments.

@@ -124,6 +124,7 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 			updateCustomerProducts,
 			insertCustomerEntitlements: undefined,
 			updateCustomerEntitlements: [],
+			oneOffPurchaseRebalance: undefined,
 		},
 		stripeInvoice,
 	});
