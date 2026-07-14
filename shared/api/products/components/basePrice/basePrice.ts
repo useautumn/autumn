@@ -30,6 +30,9 @@ export const BasePriceParamsSchema = BasePriceSchema.omit({
 			description:
 				"Base price amounts in additional currencies. The base 'amount' is in the org's default currency.",
 		}),
+		base_currency: z.string().optional().meta({
+			internal: true,
+		}),
 
 		entitlement_id: z.string().optional().meta({
 			internal: true,

@@ -88,11 +88,11 @@ const toPrice = ({
 	};
 
 	const currencies = buildFixedPriceCurrencies(item.additional_currencies);
-	if (currencies) {
-		config.currencies = currencies;
-		config.base_currency =
-			item.base_currency ?? curPrice?.config?.base_currency ?? undefined;
-	}
+	if (currencies) config.currencies = currencies;
+	const baseCurrency =
+		item.base_currency ??
+		(currencies ? curPrice?.config?.base_currency : undefined);
+	if (baseCurrency) config.base_currency = baseCurrency;
 
 	let price: Price = {
 		id: item.price_id || curPrice?.id || generateId("pr"),

@@ -40,6 +40,8 @@ export interface SyncBillingContext {
 
 	stripeSubscription: Stripe.Subscription | null;
 	stripeSchedule: Stripe.SubscriptionSchedule | null;
+	/** Effective billing currency used by every normalized Stripe item. */
+	currency: string;
 
 	/** First phase if its `starts_at` was `"now"`, else null. */
 	immediatePhase: SyncPhaseContext | null;
