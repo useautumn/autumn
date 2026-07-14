@@ -77,8 +77,15 @@ export const LicenseOpSchema = z.object({
 	internalCustomerId: z.string(),
 	parentCustomerProductId: z.string(),
 	licenseInternalProductId: z.string(),
+	// The plan_license the pool instantiates, stamped when the pool is upserted.
+	planLicenseId: z.string().optional(),
 	granted: z.number(),
 	entityId: z.string().optional(),
+	// take: the provisioned seat row to stamp with the pool id at execute time.
+	customerProductId: z.string().optional(),
+	// release: the seat's pool anchor — survives reparenting, the parent pair
+	// does not.
+	customerLicenseId: z.string().nullish(),
 });
 export type LicenseOp = z.infer<typeof LicenseOpSchema>;
 

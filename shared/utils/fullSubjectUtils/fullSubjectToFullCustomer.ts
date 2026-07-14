@@ -8,6 +8,8 @@ export const fullSubjectToFullCustomer = ({
 }): FullCustomer => ({
 	...fullSubject.customer,
 	customer_products: fullSubject.customer_products,
+	// FullSubject does not carry license pools; consumers needing them load fresh.
+	customer_licenses: [],
 	entities: fullSubject.entity ? [fullSubject.entity] : [],
 	entity: fullSubject.entity,
 	extra_customer_entitlements: fullSubject.extra_customer_entitlements,

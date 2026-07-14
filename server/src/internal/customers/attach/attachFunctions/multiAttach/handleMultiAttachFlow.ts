@@ -18,7 +18,6 @@ import {
 	attachToInvoiceResponse,
 	insertInvoiceFromAttach,
 } from "@/internal/invoices/invoiceUtils.js";
-import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv.js";
 import {
@@ -144,14 +143,6 @@ export const handleMultiAttachFlow = async ({
 			updates: {
 				status: CusProductStatus.Expired,
 			},
-		});
-	}
-
-	if (expireCusProducts.length > 0) {
-		await afterLicenseMutation({
-			ctx,
-			customerId: attachParams.customer.id || attachParams.customer.internal_id,
-			internalCustomerId: attachParams.customer.internal_id,
 		});
 	}
 

@@ -56,6 +56,9 @@ export const customerProducts = pgTable(
 		license_parent_customer_product_id: text(
 			"license_parent_customer_product_id",
 		),
+		// Marks the row as a license assignment (seat) of that pool. The pool
+		// carries the shared parent, so transitions re-point ONE pool row.
+		customer_license_id: text("customer_license_id"),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -141,6 +144,17 @@ export const customerProducts = pgTable(
 			)
 			.where(
 				sql`${table.license_parent_customer_product_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due', 'trialing')`,
+			)
+			.concurrently(),
+		index("idx_customer_products_customer_license")
+			.on(table.customer_license_id)
+			.where(sql`${table.customer_license_id} IS NOT NULL`)
+			.concurrently(),
+		// One active seat per (pool, entity); the pool already pins the license.
+		uniqueIndex("unique_active_pool_assignment")
+			.on(table.customer_license_id, table.internal_entity_id)
+			.where(
+				sql`${table.customer_license_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due')`,
 			)
 			.concurrently(),
 		index("idx_customer_products_free_trial_id")

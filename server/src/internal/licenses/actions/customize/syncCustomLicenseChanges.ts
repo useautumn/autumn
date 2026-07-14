@@ -11,10 +11,7 @@ import {
 	persistLicenseCustomize,
 } from "./persistLicenseCustomize.js";
 import { resolveLicensePatch } from "./resolveLicensePatch.js";
-import type {
-	ResolvedLicenseAdd,
-	ResolvedLicenseRemove,
-} from "./types.js";
+import type { ResolvedLicenseAdd, ResolvedLicenseRemove } from "./types.js";
 
 const resolvedAddHasItemRows = async ({
 	ctx,

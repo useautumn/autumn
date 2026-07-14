@@ -1,0 +1,1 @@
+ALTER TABLE "plan_license" ADD COLUMN "customized" boolean DEFAULT false NOT NULL;

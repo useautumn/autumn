@@ -1,0 +1,3 @@
+ALTER TABLE "customer_licenses" ADD COLUMN "plan_license_id" text;--> statement-breakpoint
+ALTER TABLE "customer_licenses" ADD CONSTRAINT "customer_licenses_plan_license_fkey" FOREIGN KEY ("plan_license_id") REFERENCES "public"."plan_license"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_licenses_plan_license" ON "customer_licenses" USING btree ("plan_license_id");

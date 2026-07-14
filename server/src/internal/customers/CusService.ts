@@ -37,6 +37,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import {
@@ -253,6 +254,11 @@ export class CusService {
 						fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 					}
 				}
+				fullCus.customer_licenses = await hydrateFullCustomerLicenses({
+					ctx,
+					fullCustomer: fullCus,
+				});
+
 				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.

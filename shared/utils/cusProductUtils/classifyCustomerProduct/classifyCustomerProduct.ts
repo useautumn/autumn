@@ -10,11 +10,11 @@ import {
 	orgDefaultAppliesToEntities,
 } from "../../..";
 import type { SharedContext } from "../../../types/sharedContext";
+import { ms } from "../../common";
 import {
 	isFreeProduct,
 	isOneOffProduct,
 } from "../../productUtils/classifyProduct/classifyProductUtils";
-import { ms } from "../../common";
 import { notNullish, nullish } from "../../utils";
 import { ACTIVE_STATUSES, RELEVANT_STATUSES } from "..";
 import { cusProductToPrices } from "../convertCusProduct";
@@ -143,6 +143,22 @@ export const customerProductHasRelevantStatus = (cp?: FullCusProduct) => {
 export const customerProductHasActiveStatus = (cp?: FullCusProduct) => {
 	if (!cp) return false;
 	return ACTIVE_STATUSES.includes(cp.status);
+};
+
+/** A pool owner: customer-level, not itself an assignment, in a live status
+ * (PastDue included — dunning must not revoke pools). */
+export const isCustomerProductLicenseParent = (
+	customerProduct?: Pick<
+		FullCusProduct,
+		"internal_entity_id" | "license_parent_customer_product_id" | "status"
+	>,
+) => {
+	if (!customerProduct) return false;
+	return (
+		nullish(customerProduct.internal_entity_id) &&
+		nullish(customerProduct.license_parent_customer_product_id) &&
+		ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus)
+	);
 };
 
 // ============================================================================

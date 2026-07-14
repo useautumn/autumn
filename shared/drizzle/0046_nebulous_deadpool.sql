@@ -1,0 +1,3 @@
+ALTER TABLE "customer_products" ADD COLUMN "customer_license_id" text;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_customer_license" ON "customer_products" USING btree ("customer_license_id") WHERE "customer_products"."customer_license_id" IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX CONCURRENTLY "unique_active_pool_assignment" ON "customer_products" USING btree ("customer_license_id","internal_entity_id") WHERE "customer_products"."customer_license_id" IS NOT NULL AND "customer_products"."internal_entity_id" IS NOT NULL AND "customer_products"."status" IN ('active', 'past_due');

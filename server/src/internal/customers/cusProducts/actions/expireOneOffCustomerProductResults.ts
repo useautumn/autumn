@@ -8,7 +8,6 @@ import type { RepoContext } from "@/db/repoContext.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 import { batchUpdateCustomerProducts } from "../repos/batchUpdateCustomerProducts.js";
 import type { OneOffCustomerProductResult } from "./oneOffCustomerProductResult.js";
 
@@ -27,7 +26,7 @@ export const expireOneOffCustomerProductResults = async ({
 			org: Organization;
 			env: AppEnv;
 			customerProductIds: Set<string>;
-			internalCustomerIdByCustomerId: Map<string, string>;
+			customerIds: Set<string>;
 		}
 	>();
 
@@ -37,15 +36,10 @@ export const expireOneOffCustomerProductResults = async ({
 			org: result.org,
 			env: result.customer.env,
 			customerProductIds: new Set<string>(),
-			internalCustomerIdByCustomerId: new Map<string, string>(),
+			customerIds: new Set<string>(),
 		};
 		group.customerProductIds.add(result.customer_product.id);
-		if (result.customer.id) {
-			group.internalCustomerIdByCustomerId.set(
-				result.customer.id,
-				result.customer.internal_id,
-			);
-		}
+		if (result.customer.id) group.customerIds.add(result.customer.id);
 		grouped.set(key, group);
 	}
 
@@ -66,18 +60,15 @@ export const expireOneOffCustomerProductResults = async ({
 			})),
 		});
 
-		for (const [
-			customerId,
-			internalCustomerId,
-		] of group.internalCustomerIdByCustomerId) {
-			const licenseCtx = repoContext as unknown as AutumnContext;
-			await afterLicenseMutation({
-				ctx: licenseCtx,
-				customerId,
-				internalCustomerId,
-			});
-			await deleteCachedFullCustomer({ ctx: licenseCtx, customerId, source });
-		}
+		await Promise.all(
+			[...group.customerIds].map((customerId) =>
+				deleteCachedFullCustomer({
+					ctx: repoContext as unknown as AutumnContext,
+					customerId,
+					source,
+				}),
+			),
+		);
 	}
 
 	return new Set(results.map((result) => result.customer_product.id)).size;

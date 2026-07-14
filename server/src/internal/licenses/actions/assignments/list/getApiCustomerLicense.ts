@@ -1,122 +1,85 @@
 import type { ApiCustomerLicenseV0 } from "@autumn/shared";
 import { computeLicenseInventory } from "../../../licenseUtils.js";
-import { offeredPools, poolKey } from "../../reconcile/stateHelpers.js";
-import type { CustomerLicenseState } from "../../reconcile/types.js";
+import type {
+	CustomerLicenseState,
+	LicenseAssignmentRow,
+} from "../../reconcile/types.js";
 
-type LicenseProduct = { internal_id: string; id: string; name: string | null };
-type AssignmentRow = CustomerLicenseState["assignments"][number];
-
-const groupAssignmentsByPool = ({
+const groupAssignmentsByCustomerLicenseId = ({
 	assignments,
 	entityId,
 }: {
-	assignments: AssignmentRow[];
+	assignments: LicenseAssignmentRow[];
 	entityId?: string;
 }) => {
 	const scoped = entityId
 		? assignments.filter((row) => row.entity_id === entityId)
 		: assignments;
-	const byPool = new Map<string, AssignmentRow[]>();
+	const byCustomerLicenseId = new Map<string, LicenseAssignmentRow[]>();
 	for (const row of scoped) {
-		const key = poolKey(
-			row.assignment.license_parent_customer_product_id ?? "",
-			row.assignment.internal_product_id,
-		);
-		byPool.set(key, [...(byPool.get(key) ?? []), row]);
+		const customerLicenseId = row.assignment.customer_license_id;
+		if (!customerLicenseId) continue;
+		byCustomerLicenseId.set(customerLicenseId, [
+			...(byCustomerLicenseId.get(customerLicenseId) ?? []),
+			row,
+		]);
 	}
-	return byPool;
+	return byCustomerLicenseId;
 };
 
-const serializePool = ({
-	parentPlanId,
-	licenseProduct,
-	granted,
-	assigned,
-	assignmentRows,
-}: {
-	parentPlanId: string;
-	licenseProduct: LicenseProduct;
-	granted: number;
-	assigned: number;
-	assignmentRows: AssignmentRow[];
-}): ApiCustomerLicenseV0 => ({
-	parent_plan_id: parentPlanId,
-	license_plan_id: licenseProduct.id,
-	license_plan_name: licenseProduct.name ?? "",
-	inventory: computeLicenseInventory({ included: granted, assigned }),
-	assignments: assignmentRows.map(({ assignment, entity_id }) => ({
-		assignment_id: assignment.id,
-		entity_id: entity_id ?? "",
-		license_plan_id: licenseProduct.id,
-		started_at: assignment.created_at ?? 0,
-	})),
-});
-
-/** Serializes a customer's license pools to the API shape. Pure — the caller
- * fetches the license products and passes them in. */
+/** Serializes a customer's license state to the API shape — each customer
+ * license row is the source of truth for what the customer has. Pure; the
+ * caller fetches the assignment rows and passes them in. */
 export const getApiCustomerLicense = ({
 	state,
-	licenseProducts,
+	assignments,
 	entityId,
 }: {
 	state: CustomerLicenseState;
-	licenseProducts: LicenseProduct[];
+	assignments: LicenseAssignmentRow[];
 	entityId?: string;
 }): ApiCustomerLicenseV0[] => {
-	const { parents, definitionsByParentId, balances } = state;
-
-	const licenseProductByInternalId = new Map(
-		licenseProducts.map((product) => [product.internal_id, product]),
-	);
-	const balanceByKey = new Map(
-		balances.map((balance) => [
-			poolKey(
-				balance.parent_customer_product_id,
-				balance.license_internal_product_id,
-			),
-			balance,
-		]),
-	);
-	const assignmentsByPool = groupAssignmentsByPool({
-		assignments: state.assignments,
+	const assignmentsByCustomerLicenseId = groupAssignmentsByCustomerLicenseId({
+		assignments,
 		entityId,
 	});
+	// Scheduled parents' rows exist from insert but aren't inventory until
+	// activation makes the parent live.
+	const liveParentIds = new Set(
+		state.parentCustomerProducts.map((parent) => parent.id),
+	);
 
-	const pools: ApiCustomerLicenseV0[] = [];
-	for (const { parent, definition } of offeredPools({
-		parents,
-		definitionsByParentId,
-	})) {
-		const licenseProduct = licenseProductByInternalId.get(
-			definition.license_internal_product_id,
+	return state.customerLicenses
+		.flatMap((customerLicense) => {
+			const { license } = customerLicense;
+			if (!license) return [];
+			if (!liveParentIds.has(customerLicense.parent_customer_product_id)) {
+				return [];
+			}
+
+			const assignmentRows =
+				assignmentsByCustomerLicenseId.get(customerLicense.id) ?? [];
+			return [
+				{
+					parent_plan_id: license.parent_plan_id,
+					license_plan_id: license.license_plan_id,
+					license_plan_name: license.product.name ?? "",
+					inventory: computeLicenseInventory({
+						included: customerLicense.granted,
+						assigned: customerLicense.granted - customerLicense.remaining,
+					}),
+					assignments: assignmentRows.map(({ assignment, entity_id }) => ({
+						assignment_id: assignment.id,
+						entity_id: entity_id ?? "",
+						license_plan_id: license.license_plan_id,
+						started_at: assignment.created_at ?? 0,
+					})),
+				},
+			];
+		})
+		.sort(
+			(a, b) =>
+				a.parent_plan_id.localeCompare(b.parent_plan_id) ||
+				a.license_plan_id.localeCompare(b.license_plan_id),
 		);
-		if (!licenseProduct) continue;
-
-		const key = poolKey(parent.id, definition.license_internal_product_id);
-		const balance = balanceByKey.get(key);
-		const granted = balance?.granted ?? definition.included;
-
-		pools.push(
-			serializePool({
-				parentPlanId: parent.product.id,
-				licenseProduct,
-				granted,
-				assigned: granted - (balance?.remaining ?? granted),
-				assignmentRows: assignmentsByPool.get(key) ?? [],
-			}),
-		);
-	}
-	return pools;
 };
-
-/** The distinct license product internal ids a customer's state offers —
- * the fetch set the caller resolves before serializing. */
-export const licenseProductInternalIds = (
-	state: CustomerLicenseState,
-): string[] => [
-	...new Set(
-		[...state.definitionsByParentId.values()]
-			.flat()
-			.map((definition) => definition.license_internal_product_id),
-	),
-];

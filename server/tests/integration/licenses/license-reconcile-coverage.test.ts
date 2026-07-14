@@ -69,11 +69,11 @@ test.concurrent(
 		// remaining to simulate a lost/duplicated atomic take.
 		const state = await reconcileLicenseStateForCustomer({
 			ctx,
-			customerId: customerId,
+			idOrInternalId: customerId,
 		});
 		if (!state) throw new Error("expected customer to touch licenses");
-		expect(state.balances).toHaveLength(1);
-		const balance = state.balances[0];
+		expect(state.customerLicenses).toHaveLength(1);
+		const balance = state.customerLicenses[0];
 
 		await customerLicenseRepo.setRemaining({
 			db: ctx.db,
@@ -90,7 +90,7 @@ test.concurrent(
 		expect(drifted?.remaining).toBe(2);
 
 		// Next reconcile self-heals remaining back to granted - live assignments.
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
 		const healed = await customerLicenseRepo.getByParentAndLicense({
 			db: ctx.db,
@@ -143,12 +143,12 @@ test.concurrent(
 			plan_id: license.id,
 		});
 
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 		const first = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
 
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 		const second = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
@@ -214,7 +214,7 @@ test.concurrent(
 			plan_id: planB.id,
 		});
 
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 		const first = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
@@ -236,7 +236,7 @@ test.concurrent(
 		expect(firstPoolB?.assignments).toHaveLength(0);
 
 		// Determinism: a repeat reconcile lands the assignment on the same parent.
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 		const second = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
@@ -298,7 +298,7 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: successorQ.id,
 		});
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
@@ -377,7 +377,7 @@ test.concurrent(
 			plan_id: parent.id,
 			licenses: [{ license_plan_id: license.id, included: 2 }],
 		});
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
 		const tight = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
@@ -407,7 +407,7 @@ test.concurrent(
 			plan_id: parent.id,
 			licenses: [{ license_plan_id: license.id, included: 4 }],
 		});
-		await reconcileLicenseStateForCustomer({ ctx, customerId: customerId });
+		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
 
 		const roomy = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,

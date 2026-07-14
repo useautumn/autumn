@@ -9,6 +9,10 @@ import {
 } from "../cusProductModels/cusProductModels.js";
 import type { Event } from "../eventModels/eventTable.js";
 import {
+	type FullCustomerLicense,
+	FullCustomerLicenseSchema,
+} from "../licenseModels/fullCustomerLicense.js";
+import {
 	type MigrationItemRunData,
 	MigrationItemRunSchema,
 } from "../migrationV2Models/migrationItemRunSchema.js";
@@ -46,6 +50,9 @@ export const FullCustomerScheduleSchema = z.object({
 
 export const FullCustomerSchema = CustomerSchema.extend({
 	customer_products: z.array(FullCusProductSchema),
+	// `.default([])` keeps the FullCustomer cache tolerant of entries written
+	// before this field existed (hole-filling via `normalizeFromSchema`).
+	customer_licenses: z.array(FullCustomerLicenseSchema).default([]),
 	entities: z.array(EntitySchema),
 	subscriptions: z.array(SubscriptionSchema).optional(),
 	entity: EntitySchema.optional(),
@@ -72,6 +79,7 @@ export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
 
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
+	customer_licenses: FullCustomerLicense[];
 	products_total_count?: number;
 	products_page?: CustomerProductsPage;
 	entities: Entity[];

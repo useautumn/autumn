@@ -2,6 +2,7 @@ import { formatMs, notNullish } from "@autumn/shared";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { addBillingChangeTag } from "../../../common";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts";
@@ -76,5 +77,14 @@ export const handleSchedulePhaseChanges = async ({
 		eventContext.insertedCustomerProducts.length > insertsBefore
 	) {
 		addBillingChangeTag(eventContext, "phase_changed");
+
+		// Phase transitions swap license parents outside any billing action —
+		// converge now instead of on the customer's next read. No route
+		// middleware here, so reconcile owns the cache drop.
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: eventContext.fullCustomer.internal_id,
+			deleteCache: true,
+		});
 	}
 };

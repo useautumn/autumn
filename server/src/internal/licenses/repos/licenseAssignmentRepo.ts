@@ -1,6 +1,8 @@
 import {
+	ACTIVE_STATUSES,
 	type AppEnv,
 	CusProductStatus,
+	customerLicenses,
 	customerProducts,
 	type DbCustomerProduct,
 	entities,
@@ -15,12 +17,9 @@ import {
 	isNotNull,
 	isNull,
 	notInArray,
+	or,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import {
-	licenseActiveAssignmentStatuses,
-	licenseParentStatuses,
-} from "../licenseUtils.js";
 
 export type DbLicenseAssignment = DbCustomerProduct;
 
@@ -31,7 +30,7 @@ const assignmentConditions = () => [
 
 export const activeAssignmentConditions = () => [
 	...assignmentConditions(),
-	inArray(customerProducts.status, licenseActiveAssignmentStatuses),
+	inArray(customerProducts.status, ACTIVE_STATUSES),
 ];
 
 const findActiveAssignment = async ({
@@ -135,7 +134,7 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 					: []),
 				...assignmentConditions(),
 				...(activeOnly
-					? [inArray(customerProducts.status, licenseActiveAssignmentStatuses)]
+					? [inArray(customerProducts.status, ACTIVE_STATUSES)]
 					: []),
 				...(entityId ? [eq(entities.id, entityId)] : []),
 				...(licenseInternalProductId
@@ -152,30 +151,6 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 			),
 		);
 
-const listActiveStrandedByCustomer = async ({
-	db,
-	internalCustomerId,
-	validParentCustomerProductIds,
-}: {
-	db: DrizzleCli;
-	internalCustomerId: string;
-	validParentCustomerProductIds: string[];
-}): Promise<DbLicenseAssignment[]> =>
-	await db.query.customerProducts.findMany({
-		where: and(
-			eq(customerProducts.internal_customer_id, internalCustomerId),
-			...activeAssignmentConditions(),
-			...(validParentCustomerProductIds.length > 0
-				? [
-						notInArray(
-							customerProducts.license_parent_customer_product_id,
-							validParentCustomerProductIds,
-						),
-					]
-				: []),
-		),
-	});
-
 const listActiveAssignmentsByInternalEntityId = async ({
 	db,
 	internalEntityId,
@@ -190,38 +165,43 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
-const reparentAssignmentsByIds = async ({
+/** Ends active seats anchored to no surviving customer license (unstamped or
+ * dangling) — one set-based UPDATE per reconcile. */
+const expireOrphanAssignments = async ({
 	db,
-	assignmentIds,
-	parentCustomerProductId,
-}: {
-	db: DrizzleCli;
-	assignmentIds: string[];
-	parentCustomerProductId: string;
-}) => {
-	if (assignmentIds.length === 0) return;
-	await db
-		.update(customerProducts)
-		.set({ license_parent_customer_product_id: parentCustomerProductId })
-		.where(inArray(customerProducts.id, assignmentIds));
-};
-
-const expireAssignmentsByIds = async ({
-	db,
-	assignmentIds,
+	internalCustomerId,
+	validCustomerLicenseIds,
 	endedAt,
 }: {
 	db: DrizzleCli;
-	assignmentIds: string[];
+	internalCustomerId: string;
+	validCustomerLicenseIds: string[];
 	endedAt: number;
 }) => {
-	if (assignmentIds.length === 0) return;
 	await db
 		.update(customerProducts)
 		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
-		.where(inArray(customerProducts.id, assignmentIds));
+		.where(
+			and(
+				eq(customerProducts.internal_customer_id, internalCustomerId),
+				...activeAssignmentConditions(),
+				or(
+					isNull(customerProducts.customer_license_id),
+					...(validCustomerLicenseIds.length > 0
+						? [
+								notInArray(
+									customerProducts.customer_license_id,
+									validCustomerLicenseIds,
+								),
+							]
+						: []),
+				),
+			),
+		);
 };
 
+/** Seats are grouped through their customer license — the seat's own parent
+ * column goes stale on reparent; the customer license's never does. */
 const maxActiveCountByCatalogLink = async ({
 	db,
 	parentInternalProductId,
@@ -240,16 +220,23 @@ const maxActiveCountByCatalogLink = async ({
 		.select({ value: count() })
 		.from(customerProducts)
 		.innerJoin(
+			customerLicenses,
+			eq(customerProducts.customer_license_id, customerLicenses.id),
+		)
+		.innerJoin(
 			parent,
-			eq(customerProducts.license_parent_customer_product_id, parent.id),
+			eq(customerLicenses.parent_customer_product_id, parent.id),
 		)
 		.where(
 			and(
-				eq(customerProducts.internal_product_id, licenseInternalProductId),
+				eq(
+					customerLicenses.license_internal_product_id,
+					licenseInternalProductId,
+				),
 				...activeAssignmentConditions(),
 			),
 		)
-		.groupBy(customerProducts.license_parent_customer_product_id)
+		.groupBy(customerProducts.customer_license_id)
 		.orderBy(desc(count()))
 		.limit(1);
 	return row?.value ?? 0;
@@ -284,7 +271,7 @@ const findCustomerLevelLicenseProduct = async ({
 				eq(products.org_id, orgId),
 				eq(products.env, env),
 				isNull(customerProducts.internal_entity_id),
-				inArray(customerProducts.status, licenseParentStatuses),
+				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNull(customerProducts.license_parent_customer_product_id),
 			),
 		)
@@ -309,9 +296,7 @@ export const licenseAssignmentRepo = {
 	countActiveByParentAndLicense,
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
-	listActiveStrandedByCustomer,
-	reparentAssignmentsByIds,
-	expireAssignmentsByIds,
+	expireOrphanAssignments,
 	maxActiveCountByCatalogLink,
 	findCustomerLevelLicenseProduct,
 	getEntityByInternalId,

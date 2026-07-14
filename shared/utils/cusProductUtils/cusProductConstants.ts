@@ -26,17 +26,4 @@ export const ALL_STATUSES = [
 	CusProductStatus.Expired,
 ];
 
-// PastDue retains pools/assignments (dunning must not revoke); Trialing
-// parents may still assign, but assignments themselves are always Active.
-export const LICENSE_PARENT_STATUSES = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Trialing,
-];
-
-export const LICENSE_ACTIVE_ASSIGNMENT_STATUSES = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-];
-
 export const LICENSE_ASSIGNABLE_STATUSES = [CusProductStatus.Active];

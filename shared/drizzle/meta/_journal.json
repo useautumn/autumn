@@ -309,6 +309,27 @@
       "when": 1783674857290,
       "tag": "0043_milky_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1783959559895,
+      "tag": "0044_dapper_freak",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1783967328481,
+      "tag": "0045_safe_silhouette",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1783970500887,
+      "tag": "0046_nebulous_deadpool",
+      "breakpoints": true
     }
   ]
 }

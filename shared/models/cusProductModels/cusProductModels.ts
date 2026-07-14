@@ -3,6 +3,7 @@ import { BillingVersion } from "@models/billingModels/context/billingContext.js"
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
+import { FullCustomerLicenseSchema } from "../licenseModels/fullCustomerLicense.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { FullCustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
@@ -72,6 +73,9 @@ export const CusProductSchema = z.object({
 
 	is_custom: z.boolean().default(false),
 	license_parent_customer_product_id: z.string().nullish(),
+	// Seat rows point at their pool (customer_licenses.id); the pool carries
+	// the shared parent so transitions re-point one row, not every seat.
+	customer_license_id: z.string().nullish(),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 
@@ -90,6 +94,10 @@ export const FullCusProductSchema = CusProductSchema.extend({
 	customer: CustomerSchema.optional(),
 	product: ProductSchema,
 	free_trial: FreeTrialSchema.nullish(),
+
+	// License pools initialized with a new parent customer product (billing
+	// actions) and inserted alongside it. Absent on rows read from the DB.
+	customer_licenses: z.array(FullCustomerLicenseSchema).optional(),
 });
 
 export type CusProduct = z.infer<typeof CusProductSchema>;

@@ -21,7 +21,6 @@ import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { afterLicenseMutation } from "@/internal/licenses/actions/reconcile/afterLicenseMutation.js";
 import {
 	attachToInsertParams,
 	isOneOff,
@@ -211,7 +210,6 @@ export const handleLegacyUpgradeFlow = async ({
 		sub = res.updatedSub;
 	}
 
-	let expiredPreviousCustomerProductId: string | undefined;
 	if (
 		curCusProduct &&
 		!isOneOff(cusProductToPrices({ cusProduct: curCusProduct }))
@@ -226,7 +224,6 @@ export const handleLegacyUpgradeFlow = async ({
 				ended_at: Date.now(),
 			},
 		});
-		expiredPreviousCustomerProductId = curCusProduct.id;
 
 		try {
 			await addProductsUpdatedWebhookTask({
@@ -278,14 +275,6 @@ export const handleLegacyUpgradeFlow = async ({
 			subscriptionStatus:
 				sub?.status === "past_due" ? CusProductStatus.PastDue : undefined,
 			logger,
-		});
-	}
-
-	if (expiredPreviousCustomerProductId) {
-		await afterLicenseMutation({
-			ctx,
-			customerId: attachParams.customer.id || attachParams.customer.internal_id,
-			internalCustomerId: attachParams.customer.internal_id,
 		});
 	}
 

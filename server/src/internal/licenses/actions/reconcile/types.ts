@@ -1,9 +1,9 @@
 import type {
-	DbCustomerLicense,
-	DbPlanLicense,
 	FullCusProduct,
-	FullProduct,
+	FullCustomer,
+	FullCustomerLicense,
 } from "@autumn/shared";
+import type { StrandedCustomerLicense } from "../../repos/customerLicenseRepo/listAdoptableStrandedCustomerLicenses.js";
 import type { DbLicenseAssignment } from "../../repos/licenseAssignmentRepo.js";
 
 export type LicenseAssignmentRow = {
@@ -12,14 +12,21 @@ export type LicenseAssignmentRow = {
 	license_product_id: string;
 };
 
-/** The customer's full license state, loaded once per converge: the desired
- * half (parents + definitions) and the actual half (assignments + balances).
- * Reconcile phases patch it in place as they write, so the returned state
- * always mirrors the database. */
+/** Everything reconcile reads, gathered once (billing-action setup shape).
+ * Parents and customer licenses come straight off the FullCustomer (live
+ * parents only); stranded rows come from one time-windowed query; seat
+ * counts from one aggregate. Every read is bounded. */
+export type ReconcileContext = {
+	fullCustomer: FullCustomer;
+	parentCustomerProducts: FullCusProduct[];
+	customerLicenses: FullCustomerLicense[];
+	strandedCustomerLicenses: StrandedCustomerLicense[];
+	seatCountByCustomerLicenseId: Map<string, number>;
+};
+
+/** Post-reconcile snapshot returned to callers; mirrors the database after
+ * the writes. */
 export type CustomerLicenseState = {
-	parents: FullCusProduct[];
-	definitionsByParentId: Map<string, DbPlanLicense[]>;
-	assignments: LicenseAssignmentRow[];
-	balances: DbCustomerLicense[];
-	getLicenseProduct: (licenseInternalProductId: string) => Promise<FullProduct>;
+	parentCustomerProducts: FullCusProduct[];
+	customerLicenses: FullCustomerLicense[];
 };

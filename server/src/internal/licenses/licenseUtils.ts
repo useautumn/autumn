@@ -2,9 +2,7 @@ import {
 	type CusProductStatus,
 	ErrCode,
 	type FullCusProduct,
-	LICENSE_ACTIVE_ASSIGNMENT_STATUSES,
 	LICENSE_ASSIGNABLE_STATUSES,
-	LICENSE_PARENT_STATUSES,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -48,32 +46,13 @@ type LicenseParentCandidate = Pick<
 	"internal_entity_id" | "license_parent_customer_product_id" | "status"
 >;
 
-// PastDue retains pools/assignments/grants (dunning must not revoke assignments);
-// new assignments still require an assignable status.
-export const licenseParentStatuses = LICENSE_PARENT_STATUSES;
-
-export const licenseActiveAssignmentStatuses =
-	LICENSE_ACTIVE_ASSIGNMENT_STATUSES;
-
 const licenseAssignableStatuses = LICENSE_ASSIGNABLE_STATUSES;
-
-const isLicensePoolParentStatus = ({ status }: { status: string | null }) =>
-	licenseParentStatuses.includes(status as CusProductStatus);
 
 export const isLicenseAssignableStatus = ({
 	status,
 }: {
 	status: string | null;
 }) => licenseAssignableStatuses.includes(status as CusProductStatus);
-
-export const isLicenseParentCustomerProduct = ({
-	customerProduct,
-}: {
-	customerProduct: LicenseParentCandidate;
-}) =>
-	nullish(customerProduct.internal_entity_id) &&
-	nullish(customerProduct.license_parent_customer_product_id) &&
-	isLicensePoolParentStatus({ status: customerProduct.status });
 
 export const isLicenseAssignableParentCustomerProduct = ({
 	customerProduct,

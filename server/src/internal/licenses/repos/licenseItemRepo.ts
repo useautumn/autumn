@@ -6,6 +6,7 @@ import {
 	entitlements,
 	licenseEntitlements,
 	licensePrices,
+	planLicenses,
 	prices,
 } from "@autumn/shared";
 import { and, eq, inArray, notExists } from "drizzle-orm";
@@ -186,6 +187,13 @@ const replaceItems = async ({
 		entitlementIds: previous.entitlements.map((row) => row.id),
 		priceIds: previous.prices.map((row) => row.id),
 	});
+
+	// The flag mirrors ref existence and is only ever written here, so the
+	// two can never disagree.
+	await db
+		.update(planLicenses)
+		.set({ customized: items.length > 0, updated_at: now })
+		.where(eq(planLicenses.id, planLicenseId));
 };
 
 const listRefsByEntitlementIds = async ({

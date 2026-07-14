@@ -1,11 +1,8 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
-import { planLicenseRepo } from "../../../repos/planLicenseRepo.js";
+import { licenseAssignmentRepo } from "../../../repos/licenseAssignmentRepo.js";
 import { reconcileLicenseStateForCustomer } from "../../reconcile/reconcileLicenseState.js";
-import {
-	getApiCustomerLicense,
-	licenseProductInternalIds,
-} from "./getApiCustomerLicense.js";
+import { getApiCustomerLicense } from "./getApiCustomerLicense.js";
 
 export const listLicenses = async ({
 	ctx,
@@ -23,18 +20,16 @@ export const listLicenses = async ({
 
 	const state = await reconcileLicenseStateForCustomer({
 		ctx,
-		customerId,
 		fullCustomer,
 	});
-	if (!state) return [];
+	if (!state || state.customerLicenses.length === 0) return [];
 
-	const internalProductIds = licenseProductInternalIds(state);
-	if (internalProductIds.length === 0) return [];
+	// Display needs the seat rows; reconcile itself only ever counts them.
+	const assignments =
+		await licenseAssignmentRepo.listAssignmentsWithEntityAndProductByCustomer({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+		});
 
-	const licenseProducts = await planLicenseRepo.listProductsByInternalIds({
-		db: ctx.db,
-		internalProductIds,
-	});
-
-	return getApiCustomerLicense({ state, licenseProducts, entityId });
+	return getApiCustomerLicense({ state, assignments, entityId });
 };

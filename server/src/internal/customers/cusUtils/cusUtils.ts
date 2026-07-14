@@ -192,6 +192,7 @@ export const newCusToFullCus = ({ newCus }: { newCus: Customer }) => {
 	const fullCus: FullCustomer = {
 		...newCus,
 		customer_products: [],
+		customer_licenses: [],
 		extra_customer_entitlements: [],
 		entities: [],
 	};

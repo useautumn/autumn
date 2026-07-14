@@ -22,6 +22,7 @@ const create = ({
 	metadata: {},
 	config: {},
 	customer_products: customerProducts,
+	customer_licenses: [],
 	entities: [],
 	extra_customer_entitlements: [],
 	send_email_receipts: false,

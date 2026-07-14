@@ -10,6 +10,7 @@ import { sqlNow } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
 import { customerProducts } from "../cusProductModels/cusProductTable.js";
 import { products } from "../productModels/productTable.js";
+import { planLicenses } from "./planLicenseTable.js";
 
 /** Assignment balance for one parent customer product and license. */
 export const customerLicenses = pgTable(
@@ -19,6 +20,9 @@ export const customerLicenses = pgTable(
 		internal_customer_id: text("internal_customer_id").notNull(),
 		parent_customer_product_id: text("parent_customer_product_id").notNull(),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
+		// The link this pool instantiates — its FullProduct definition source.
+		// NULL means the link was removed; reconcile owns cleanup/repointing.
+		plan_license_id: text("plan_license_id"),
 		granted: numeric("granted", { mode: "number" }).notNull().default(0),
 		remaining: numeric("remaining", { mode: "number" }).notNull().default(0),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -40,6 +44,14 @@ export const customerLicenses = pgTable(
 			foreignColumns: [products.internal_id],
 			name: "customer_licenses_license_product_fkey",
 		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.plan_license_id],
+			foreignColumns: [planLicenses.id],
+			name: "customer_licenses_plan_license_fkey",
+		}).onDelete("set null"),
+		index("idx_customer_licenses_plan_license")
+			.on(table.plan_license_id)
+			.concurrently(),
 		uniqueIndex("unique_customer_license")
 			.on(table.parent_customer_product_id, table.license_internal_product_id)
 			.concurrently(),

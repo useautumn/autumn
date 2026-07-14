@@ -26,6 +26,9 @@ export const planLicenses = pgTable(
 		license_internal_product_id: text("license_internal_product_id").notNull(),
 		included: integer("included").notNull().default(0),
 		prepaid_only: boolean("prepaid_only").notNull().default(true),
+		// True when license_entitlements/license_prices carry this link's item
+		// set; false means items come from the license product's base rows.
+		customized: boolean("customized").notNull().default(false),
 		metadata: jsonb().$type<Record<string, unknown>>().default({}),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),

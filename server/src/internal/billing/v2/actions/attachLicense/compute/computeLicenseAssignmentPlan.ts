@@ -34,8 +34,10 @@ export const computeLicenseAssignmentPlan = ({
 				internalCustomerId: fullCustomer.internal_id,
 				parentCustomerProductId: parent.id,
 				licenseInternalProductId: licenseDefinition.license_internal_product_id,
+				planLicenseId: licenseDefinition.id,
 				granted: licenseDefinition.included,
 				entityId: entity.id ?? entity.internal_id,
+				customerProductId: provisioned.id,
 			},
 		],
 	};

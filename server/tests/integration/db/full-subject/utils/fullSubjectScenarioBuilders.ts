@@ -291,6 +291,7 @@ const buildCustomerProduct = ({
 	previous_customer_product_id: null,
 	on_trial_end: null,
 	license_parent_customer_product_id: null,
+	customer_license_id: null,
 });
 
 const buildCustomerPrice = ({

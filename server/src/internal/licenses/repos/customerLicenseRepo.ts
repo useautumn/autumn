@@ -1,4 +1,8 @@
-import { customerLicenses, type DbCustomerLicense } from "@autumn/shared";
+import {
+	customerLicenses,
+	type DbCustomerLicense,
+	type InsertCustomerLicense,
+} from "@autumn/shared";
 import { and, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -22,6 +26,50 @@ const getByParentAndLicense = async ({
 		),
 	});
 
+/** All of a customer's pools, including ones whose parent is no longer live —
+ * those are exactly the rows transitions operate on. */
+const listByInternalCustomerId = async ({
+	db,
+	internalCustomerId,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+}): Promise<DbCustomerLicense[]> =>
+	await db.query.customerLicenses.findMany({
+		where: eq(customerLicenses.internal_customer_id, internalCustomerId),
+	});
+
+const update = async ({
+	db,
+	customerLicenseId,
+	updates,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	updates: Partial<
+		Pick<
+			DbCustomerLicense,
+			| "parent_customer_product_id"
+			| "license_internal_product_id"
+			| "plan_license_id"
+			| "granted"
+			| "remaining"
+		>
+	>;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({ ...updates, updated_at: Date.now() })
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
+const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
+	if (ids.length === 0) return;
+	await db.delete(customerLicenses).where(inArray(customerLicenses.id, ids));
+};
+
 const listByParentCustomerProductIds = async ({
 	db,
 	parentCustomerProductIds,
@@ -38,18 +86,21 @@ const listByParentCustomerProductIds = async ({
 	});
 };
 
-/** Idempotent ensure + granted sync for a (parent, license) balance row. */
+/** Idempotent ensure + granted sync for a (parent, license) balance row.
+ * Stamps plan_license_id when provided so stale links converge too. */
 const upsertGranted = async ({
 	db,
 	internalCustomerId,
 	parentCustomerProductId,
 	licenseInternalProductId,
+	planLicenseId,
 	granted,
 }: {
 	db: DrizzleCli;
 	internalCustomerId: string;
 	parentCustomerProductId: string;
 	licenseInternalProductId: string;
+	planLicenseId?: string;
 	granted: number;
 }): Promise<DbCustomerLicense> => {
 	const [row] = await db
@@ -59,6 +110,7 @@ const upsertGranted = async ({
 			internal_customer_id: internalCustomerId,
 			parent_customer_product_id: parentCustomerProductId,
 			license_internal_product_id: licenseInternalProductId,
+			plan_license_id: planLicenseId ?? null,
 			granted,
 			remaining: granted,
 		})
@@ -72,11 +124,25 @@ const upsertGranted = async ({
 				// assignments stay accounted for.
 				remaining: sql`${customerLicenses.remaining} + (${granted} - ${customerLicenses.granted})`,
 				granted,
+				...(planLicenseId ? { plan_license_id: planLicenseId } : {}),
 				updated_at: Date.now(),
 			},
 		})
 		.returning();
 	return row;
+};
+
+/** Insert-time pool creation (initFullCustomerProduct). Conflicts are left to
+ * upsertGranted/reconcile — a concurrent take may have created the row. */
+const insertMany = async ({
+	db,
+	rows,
+}: {
+	db: DrizzleCli;
+	rows: InsertCustomerLicense[];
+}) => {
+	if (rows.length === 0) return;
+	await db.insert(customerLicenses).values(rows).onConflictDoNothing();
 };
 
 /** Atomically takes one assignment; rejected (returns undefined) when no
@@ -137,6 +203,26 @@ const releaseAssignments = async ({
 	return row;
 };
 
+const releaseAssignmentsById = async ({
+	db,
+	customerLicenseId,
+	count,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	count: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			remaining: sql`LEAST(${customerLicenses.remaining} + ${count}, ${customerLicenses.granted})`,
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
 /** Self-heal: remaining = granted - live assignment count. */
 const setRemaining = async ({
 	db,
@@ -181,10 +267,15 @@ const deleteByParentIdsExcept = async ({
 
 export const customerLicenseRepo = {
 	getByParentAndLicense,
+	listByInternalCustomerId,
 	listByParentCustomerProductIds,
+	update,
+	deleteByIds,
 	upsertGranted,
+	insertMany,
 	takeAssignment,
 	releaseAssignments,
+	releaseAssignmentsById,
 	setRemaining,
 	deleteByParentIdsExcept,
 } as const;
