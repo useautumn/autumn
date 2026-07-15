@@ -18,6 +18,10 @@ export interface FormCustomLineItem {
 export const AttachFormSchema = z.object({
 	productId: z.string(),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
+	licenseIncludedQuantities: z.record(
+		z.string(),
+		z.number().nonnegative().optional(),
+	),
 	items: z.custom<ProductItem[]>().nullable(),
 	addLicenses: z.custom<CustomizePlanLicense[]>().nullable(),
 	isCustom: z.boolean(),

@@ -13,7 +13,6 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
-import { CreateLicenseButton } from "@/views/products/plan/components/plan-licenses/CreateLicenseButton";
 import {
 	collectLicensePatchAdds,
 	LicenseCustomizeCollectorProvider,
@@ -40,6 +39,9 @@ interface InlinePlanEditorProps {
 	/** Render the plan's license cards and collect edits into onSave's
 	 * `addLicenses` — only for flows whose payload supports a license patch. */
 	enableLicenseEditing?: boolean;
+	/** The flow's current license patch; re-seeds cards on reopen so earlier
+	 * edits aren't lost. */
+	initialAddLicenses?: CustomizePlanLicense[] | null;
 }
 
 export function InlinePlanEditor({
@@ -48,6 +50,7 @@ export function InlinePlanEditor({
 	onCancel,
 	isOpen,
 	enableLicenseEditing = false,
+	initialAddLicenses,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -69,7 +72,9 @@ export function InlinePlanEditor({
 		<AnimatePresence>
 			{isOpen && (
 				<InlineEditorProvider initialProduct={product}>
-					<LicenseCustomizeCollectorProvider>
+					<LicenseCustomizeCollectorProvider
+						initialPatches={initialAddLicenses}
+					>
 						<PendingLicenseLinksProvider>
 							<InlinePlanEditorContent
 								onSave={onSave}
@@ -144,7 +149,6 @@ function InlinePlanEditorContent({
 								<>
 									<LicensePlanCards />
 									<LinkLicenseButton />
-									<CreateLicenseButton />
 								</>
 							)}
 						</div>

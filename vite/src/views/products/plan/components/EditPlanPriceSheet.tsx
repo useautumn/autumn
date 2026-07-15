@@ -6,6 +6,7 @@ import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { PlanSheetFooterContainer } from "@/components/v2/sheets/PlanSheetFooterContainer";
 import { BasePriceSection } from "./edit-plan-details/BasePriceSection";
 import { PlanTypeSection } from "./edit-plan-details/PlanTypeSection";
+import { IncludedQuantitySection } from "./plan-licenses/IncludedQuantitySection";
 
 export function EditPlanPriceSheet({
 	isOnboarding,
@@ -28,6 +29,7 @@ export function EditPlanPriceSheet({
 						description="Set whether this plan is free or paid, and configure a base price"
 					/>
 				)}
+				<IncludedQuantitySection />
 				<PlanTypeSection />
 				<BasePriceSection withSeparator={false} />
 			</div>

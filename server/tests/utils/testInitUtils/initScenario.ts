@@ -1772,17 +1772,20 @@ export async function initScenario({
 					`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
 				);
 			}
-			const response = (await autumnV2_2.post("/licenses.attach", {
+			const entityId = generatedEntities[action.entityIndex].id;
+			const licensePlanId = `${action.licenseProductId}_${productPrefix}`;
+			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: generatedEntities[action.entityIndex].id,
-				plan_id: `${action.licenseProductId}_${productPrefix}`,
-				...(action.parentProductId
-					? {
-							parent_plan_id: `${action.parentProductId}_${productPrefix}`,
-						}
-					: {}),
-			})) as { assignment: GeneratedLicenseAssignment };
-			licenseAssignments.push(response.assignment);
+				plan_id: licensePlanId,
+				entities: [{ entity_id: entityId }],
+			});
+			const { list } = (await autumnV2_2.post("/licenses.list_assignments", {
+				customer_id: customerId,
+				entity_id: entityId,
+				plan_id: licensePlanId,
+				active: true,
+			})) as { list: GeneratedLicenseAssignment[] };
+			if (list[0]) licenseAssignments.push(list[0]);
 		} else if (action.type === "createReferralCode") {
 			if (!customerId) {
 				throw new Error("Cannot create referral code: customerId is required");

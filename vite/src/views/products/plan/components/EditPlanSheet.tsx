@@ -9,11 +9,11 @@ import { PlanSheetFooterContainer } from "@/components/v2/sheets/PlanSheetFooter
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
 import { MoreSettingsSection } from "./edit-plan-details/MoreSettingsSection";
-import { IncludedQuantitySection } from "./plan-licenses/IncludedQuantitySection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product } = useProduct();
 	const { sheetType } = useSheet();
+	const isLicenseEditor = useIsLicenseEditor();
 
 	if (!product) return null;
 
@@ -24,7 +24,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 		product.basePriceType !== "usage";
 	// Auto-enable/add-on and the advanced settings are plan concepts; the
 	// backend rejects them on license products.
-	const showPlanOnlySettings = !useIsLicenseEditor();
+	const showPlanOnlySettings = !isLicenseEditor;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -37,7 +37,6 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 					/>
 				)}
 				<MainDetailsSection />
-				<IncludedQuantitySection />
 				{showPlanOnlySettings && <AdditionalOptions />}
 
 				{showPlanOnlySettings && !showAdvanced && <MoreSettingsSection />}
