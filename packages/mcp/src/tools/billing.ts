@@ -61,6 +61,11 @@ const { billingPreview, confirmedWrite } = createDomainTools({
 	schemas,
 });
 
+const planItemExpand = [
+	"incoming.plan.items.feature",
+	"outgoing.plan.items.feature",
+];
+
 const domain = {
 	billingPreviews: [
 		billingPreview({
@@ -69,6 +74,7 @@ const domain = {
 - Preview attaching a plan before attach.
 - Follow the Billing resource.
 `.trim(),
+			expand: planItemExpand,
 			writeToolName: "attach",
 		}),
 		billingPreview({
@@ -77,6 +83,7 @@ const domain = {
 - Preview updating a subscription before updateSubscription.
 - Follow the Billing resource.
 `.trim(),
+			expand: planItemExpand,
 			writeToolName: "updateSubscription",
 		}),
 		billingPreview({
@@ -85,6 +92,7 @@ const domain = {
 - Preview billing impact of a multi-phase schedule or multi-year order form before createSchedule.
 - Follow the Billing resource.
 `.trim(),
+			expand: planItemExpand,
 			writeToolName: "createSchedule",
 		}),
 	],

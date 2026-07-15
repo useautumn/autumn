@@ -27,6 +27,7 @@ export type OperationToolConfig = {
 	description: string;
 	schema: z.ZodType;
 	endpoint: string;
+	expand?: string[];
 	destructive?: boolean;
 	idempotent?: boolean;
 };
@@ -37,6 +38,7 @@ export type BillingPreviewToolConfig = {
 	description: string;
 	schema: z.ZodType;
 	previewEndpoint: string;
+	expand?: string[];
 	writeToolName: ConfirmedWriteToolName;
 };
 

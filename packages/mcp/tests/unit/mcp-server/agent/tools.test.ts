@@ -688,6 +688,7 @@ describe("Autumn operation tools", () => {
 				customer_id: "cus_1",
 				plan_id: "pro",
 				redirect_mode: "if_required",
+				expand: ["incoming.plan.items.feature", "outgoing.plan.items.feature"],
 			});
 			return Response.json({ total: 50 });
 		}) as typeof fetch;
@@ -758,6 +759,7 @@ describe("Autumn operation tools", () => {
 				customer_id: "cus_1",
 				plan_id: "pro",
 				redirect_mode: "if_required",
+				expand: ["incoming.plan.items.feature", "outgoing.plan.items.feature"],
 			});
 			return Response.json({ total: 50 });
 		}) as typeof fetch;
@@ -778,13 +780,12 @@ describe("Autumn operation tools", () => {
 				} as never),
 			).resolves.toMatchObject({ pending: true, preview: { total: 50 } });
 
-			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
-				toolName: "attach",
-				request: {
-					customer_id: "cus_1",
-					plan_id: "pro",
-					redirect_mode: "if_required",
-				},
+			const pending = await claimLatestPendingAction(auth);
+			expect(pending.toolName).toBe("attach");
+			expect(pending.request).toEqual({
+				customer_id: "cus_1",
+				plan_id: "pro",
+				redirect_mode: "if_required",
 			});
 		} finally {
 			globalThis.fetch = originalFetch;

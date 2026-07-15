@@ -78,6 +78,11 @@ const bold = (value: string) => `**${value}**`;
 
 const mention = (userId?: string) => (userId ? `<@${userId}>` : null);
 
+const compactCustomerLabel = (customerId: string) =>
+	/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(customerId)
+		? `${customerId.slice(0, 8)}…${customerId.slice(-5)}`
+		: customerId;
+
 const autumnDashboardBase = () =>
 	process.env.AUTUMN_DASHBOARD_URL ?? "https://app.useautumn.com";
 
@@ -137,20 +142,32 @@ type ActionPhrases = {
 // action, so they render as a sentence — never as label/value fields.
 const actionPhrases = ({
 	env,
+	preview,
 	toolArgs,
 	toolName,
 }: {
 	env?: AppEnv;
+	preview?: unknown;
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }): ActionPhrases => {
 	const request = getRequest(toolArgs) ?? {};
 	const customer = getString(request.customer_id);
-	const plan = getString(request.plan_id);
+	const previewPlan = BILLING_ACTION_TOOLS.has(normalizeToolName(toolName))
+		? buildBillingPreviewDisplay({
+				params: request,
+				preview: parsePreviewPayload(preview),
+			}).changes.incoming[0]?.name
+		: null;
+	const plan = previewPlan ?? getString(request.plan_id);
 	const entity = getString(request.entity_id);
 	const customerUrl = autumnCustomerLink({ customerId: customer, env });
 	const customerLabel = customer
-		? bold(customerUrl ? `<${customerUrl}|${customer}>` : customer)
+		? bold(
+				customerUrl
+					? `<${customerUrl}|${compactCustomerLabel(customer)}>`
+					: compactCustomerLabel(customer),
+			)
 		: "the customer";
 	const planLabel = plan ? bold(plan) : "the plan";
 	const entitySuffix = entity ? ` (entity ${bold(entity)})` : "";
@@ -669,39 +686,64 @@ const approvalPreviewBlocks = ({
 	if (display.intentLabel) {
 		blocks.push(CardText(display.intentLabel));
 	}
-	if (display.changes.summaryText) {
+	const repeatsAttach =
+		normalizeToolName(toolName) === "attach" &&
+		display.changes.incoming.length > 0 &&
+		display.changes.outgoing.length === 0;
+	if (display.changes.summaryText && !repeatsAttach) {
 		blocks.push(CardText(display.changes.summaryText));
 	}
-	const planId =
-		display.changes.incoming[0]?.planId ?? getString(request?.plan_id);
-	if (display.customize?.priceText && planId) {
+	if (display.customize?.priceText) {
 		blocks.push(
 			CardText(
-				`${bold(planId)} — ${display.customize.priceText}${
+				`${bold("Recurring price")}  ${display.customize.priceText}${
 					display.customize.freeTrialText
 						? ` · ${display.customize.freeTrialText}`
 						: ""
-				}  \`custom\``,
+				}`,
 			),
 		);
 	}
-	const customizeLines = [
-		...(display.customize?.replacedItems.map(
-			(item) => `• ${item} (replaces plan items)`,
-		) ?? []),
-		...(display.customize?.addedItems.map((item) => `＋ ${item}`) ?? []),
-		...(display.customize?.removedItems.map((item) => `− ${item}`) ?? []),
-		...(display.customize?.updatedItems.map((item) => `~ ${item}`) ?? []),
-	];
+	const changeGroup = ({
+		heading,
+		items,
+	}: {
+		heading: string;
+		items: string[];
+	}) =>
+		items.length
+			? [bold(heading), ...items.map((item) => `• ${item}`)].join("\n")
+			: null;
+	const customizeLines = display.customize
+		? [
+				changeGroup({
+					heading: "Updated plan items",
+					items: [
+						...display.customize.replacedItems.map(
+							(item) => `${item} (replaces plan items)`,
+						),
+						...display.customize.updatedItems,
+					],
+				}),
+				changeGroup({
+					heading: "Added to plan",
+					items: display.customize.addedItems,
+				}),
+				changeGroup({
+					heading: "Removed from plan",
+					items: display.customize.removedItems,
+				}),
+			].filter((group): group is string => group !== null)
+		: [];
 	if (customizeLines.length) {
-		blocks.push(CardText([bold("Plan changes"), ...customizeLines].join("\n")));
+		blocks.push(CardText(customizeLines.join("\n\n")));
 	}
 	// Prepaid quantities are silent money decisions — an omitted quantity
 	// defaults to 0 server-side, so the approver must see it either way.
 	const prepaidLines = display.prepaid.map((entry) =>
 		entry.quantity !== null
-			? `${entry.featureId} — ${formatCount(entry.quantity)} prepaid`
-			: `⚠️ ${entry.featureId} — prepaid quantity not set (defaults to 0${
+			? `${entry.featureName} — ${formatCount(entry.quantity)} prepaid`
+			: `⚠️ ${entry.featureName} — prepaid quantity not set (defaults to 0${
 					entry.includedDefault
 						? `; plan includes ${formatCount(entry.includedDefault)}`
 						: ""
@@ -744,7 +786,7 @@ const approvalPreviewBlocks = ({
 	if (moneyLines.length) {
 		blocks.push(CardText(moneyLines.join("\n")));
 	} else if (zeroNoCharge) {
-		blocks.push(CardText("No charge now", { style: "muted" }));
+		blocks.push(CardText(bold("No charge today")));
 	} else {
 		pushMoney();
 	}
@@ -767,9 +809,9 @@ const approvalPreviewBlocks = ({
 	const startsAt = getNumber(request?.starts_at);
 	const mutedLine = contextLine([
 		display.nextCycle
-			? `Next cycle${
+			? `Next charge${
 					display.nextCycle.startsAtText
-						? ` · ${display.nextCycle.startsAtText}`
+						? ` on ${display.nextCycle.startsAtText}`
 						: ""
 				} — ${display.nextCycle.text}`
 			: null,
@@ -809,7 +851,7 @@ const settledStatusCard = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	return Card({
 		title: toolLabel(toolName),
 		subtitle: envLine(env) || undefined,
@@ -839,7 +881,7 @@ export const approvalCard = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const requester = mention(requesterId);
 	const live = env === "live";
 	const summaryText = summary?.trim() ? formatSummary(summary) : null;
@@ -870,7 +912,7 @@ export const approvalCard = ({
 				Button({
 					actionType: "modal",
 					id: "view_approval_payload",
-					label: "{} Payload",
+					label: "View Payload",
 					value: id,
 				}),
 			]),
@@ -931,7 +973,7 @@ export const approvalStatusCard = ({
 	toolArgs?: Record<string, unknown>;
 	toolName: string;
 }) => {
-	const phrases = actionPhrases({ env, toolArgs, toolName });
+	const phrases = actionPhrases({ env, preview, toolArgs, toolName });
 	const actor = mention(actorId);
 	const where = envLine(env);
 	const mutedContext = (parts: Array<string | null | undefined>) => {
