@@ -1,10 +1,15 @@
-import type { Feature, FullProduct, ProductItem } from "@autumn/shared";
 import {
+	entitlements,
+	type Feature,
+	type FullProduct,
 	findSimilarItem,
 	itemsAreSame,
 	mapToProductItems,
+	type ProductItem,
+	prices,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
+import { inArray } from "drizzle-orm";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -24,6 +29,38 @@ const currentItemsOf = ({
 		entitlements: currentFullProduct.entitlements,
 		features,
 	});
+
+/** Locks sorted parent rows so FK inserts and concurrent catalog writes serialize. */
+export const lockProductItemsForUpdate = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}) => {
+	const entitlementIds = currentFullProduct.entitlements
+		.map((entitlement) => entitlement.id)
+		.sort();
+	const priceIds = currentFullProduct.prices.map((price) => price.id).sort();
+
+	if (entitlementIds.length > 0) {
+		await db
+			.select({ id: entitlements.id })
+			.from(entitlements)
+			.where(inArray(entitlements.id, entitlementIds))
+			.orderBy(entitlements.id)
+			.for("update");
+	}
+
+	if (priceIds.length > 0) {
+		await db
+			.select({ id: prices.id })
+			.from(prices)
+			.where(inArray(prices.id, priceIds))
+			.orderBy(prices.id)
+			.for("update");
+	}
+};
 
 export const productItemsHaveCustomerReferences = async ({
 	db,

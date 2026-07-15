@@ -7,6 +7,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import {
+	lockProductItemsForUpdate,
 	productItemsHaveCustomerReferences,
 	resolveInPlaceEdit,
 } from "../inPlaceUpdateUtils.js";
@@ -26,30 +27,34 @@ export const updateProductItems = async ({
 	features: AutumnContext["features"];
 	useInPlaceEdit: boolean;
 }) => {
-	const shouldUseInPlaceEdit =
-		useInPlaceEdit ||
-		(await productItemsHaveCustomerReferences({
-			db,
-			currentFullProduct: fullProduct,
-		}));
-
-	if (!shouldUseInPlaceEdit) {
-		await handleNewProductItems({
-			db,
-			curPrices: fullProduct.prices,
-			curEnts: fullProduct.entitlements,
-			newItems,
-			features,
-			product: fullProduct,
-			logger: ctx.logger,
-			isCustom: false,
-			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
-		});
-		return;
-	}
-
 	await db.transaction(async (transaction) => {
 		const tx = transaction as unknown as DrizzleCli;
+		await lockProductItemsForUpdate({
+			db: tx,
+			currentFullProduct: fullProduct,
+		});
+		const shouldUseInPlaceEdit =
+			useInPlaceEdit ||
+			(await productItemsHaveCustomerReferences({
+				db: tx,
+				currentFullProduct: fullProduct,
+			}));
+
+		if (!shouldUseInPlaceEdit) {
+			await handleNewProductItems({
+				db: tx,
+				curPrices: fullProduct.prices,
+				curEnts: fullProduct.entitlements,
+				newItems,
+				features,
+				product: fullProduct,
+				logger: ctx.logger,
+				isCustom: false,
+				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+			});
+			return;
+		}
+
 		const inPlace = await resolveInPlaceEdit({
 			db: tx,
 			items: newItems,

@@ -21,6 +21,7 @@ import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/util
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
@@ -85,22 +86,49 @@ test.concurrent(
 			);
 		expect(customerProduct?.product.version).toBe(1);
 		expect(customerMessagesEntitlement).toBeDefined();
-		await ctx.db
-			.update(customerEntitlements)
-			.set({ entitlement_id: v2MessagesEntitlement!.id })
-			.where(eq(customerEntitlements.id, customerMessagesEntitlement!.id));
-
-		await autumnV2_3.catalog.update({
-			features: [],
-			plans: [
-				{
-					plan_id: plan.id,
-					items: [messagesItem(300)],
-					all_versions: true,
-				},
-			],
-			skip_deletions: true,
+		let markReferenceWritten = () => {};
+		const referenceWritten = new Promise<void>((resolve) => {
+			markReferenceWritten = resolve;
 		});
+		let releaseReferenceTransaction = () => {};
+		const holdReferenceTransaction = new Promise<void>((resolve) => {
+			releaseReferenceTransaction = resolve;
+		});
+		const referenceTransaction = ctx.db.transaction(async (transaction) => {
+			await transaction
+				.update(customerEntitlements)
+				.set({ entitlement_id: v2MessagesEntitlement!.id })
+				.where(eq(customerEntitlements.id, customerMessagesEntitlement!.id));
+			markReferenceWritten();
+			await holdReferenceTransaction;
+		});
+		await Promise.race([referenceWritten, referenceTransaction]);
+
+		let catalogUpdateSettled = false;
+		const catalogUpdate = autumnV2_3.catalog
+			.update({
+				features: [],
+				plans: [
+					{
+						plan_id: plan.id,
+						items: [messagesItem(300)],
+						all_versions: true,
+					},
+				],
+				skip_deletions: true,
+			})
+			.finally(() => {
+				catalogUpdateSettled = true;
+			});
+
+		try {
+			await timeout(250);
+			expect(catalogUpdateSettled).toBe(false);
+		} finally {
+			releaseReferenceTransaction();
+		}
+		await referenceTransaction;
+		await catalogUpdate;
 
 		const latestAfter = await ProductService.getFull({
 			db: ctx.db,
