@@ -2,7 +2,7 @@ import { formatAmount, formatInterval, isPriceItem } from "@autumn/shared";
 import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { SectionTitle } from "./SectionTitle";
 
@@ -23,12 +23,25 @@ export function EditPlanSection() {
 	const { prepaidOptions } = formValues;
 	const hasCustomizations = formValues.items !== null || isVersionReady;
 
-	const { org } = useOrg();
-	const currency = org?.default_currency ?? "USD";
+	const {
+		displayCurrency: currency,
+		itemsForDisplay,
+		productForDisplay,
+	} = useCustomerDisplayCurrency();
+
+	const displayProduct = useMemo(
+		() => product && productForDisplay(product),
+		[product, productForDisplay],
+	);
+
+	const displayOriginalItems = useMemo(
+		() => originalItems && itemsForDisplay(originalItems),
+		[originalItems, itemsForDisplay],
+	);
 
 	const priceChange = useMemo(() => {
-		const originalPriceItem = originalItems?.find((i) => isPriceItem(i));
-		const currentPriceItem = product?.items?.find((i) => isPriceItem(i));
+		const originalPriceItem = displayOriginalItems?.find((i) => isPriceItem(i));
+		const currentPriceItem = displayProduct?.items?.find((i) => isPriceItem(i));
 
 		const originalPrice = originalPriceItem?.price ?? 0;
 		const currentPrice = currentPriceItem?.price ?? 0;
@@ -85,7 +98,7 @@ export function EditPlanSection() {
 			newIntervalText,
 			isUpgrade: currentPrice > originalPrice,
 		};
-	}, [originalItems, product?.items, currency]);
+	}, [displayOriginalItems, displayProduct?.items, currency]);
 
 	return (
 		<SheetSection
@@ -93,8 +106,8 @@ export function EditPlanSection() {
 			withSeparator
 		>
 			<PlanItemsSection
-				product={product}
-				originalItems={originalItems}
+				product={displayProduct}
+				originalItems={displayOriginalItems}
 				features={features}
 				prepaidOptions={prepaidOptions}
 				initialPrepaidOptions={initialPrepaidOptions}

@@ -65,16 +65,21 @@ export const assertPlanOffersCurrency = ({
 	prices,
 	planName,
 	currency,
+	customerConfigured = false,
 }: {
 	ctx: AutumnContext;
 	prices: Price[];
 	planName: string;
 	currency: string;
+	customerConfigured?: boolean;
 }) => {
 	if (!planOffersCurrency({ ctx, prices, currency })) {
+		const code = currency.toUpperCase();
 		throw new RecaseError({
 			code: ErrCode.CurrencyMismatch,
-			message: `Plan '${planName}' does not offer a price in ${currency.toUpperCase()}`,
+			message: customerConfigured
+				? `This customer pays in ${code}, but plan '${planName}' has no ${code} price. Add ${code} pricing to the plan or pick a plan that offers it.`
+				: `Plan '${planName}' does not offer a price in ${code}. Add ${code} pricing to the plan or bill in a currency it supports.`,
 			statusCode: 400,
 		});
 	}
@@ -136,5 +141,6 @@ export const handleCurrencyMismatchErrors = ({
 		prices,
 		planName: attachProduct.name,
 		currency: resolved,
+		customerConfigured: !!locked && resolved === locked,
 	});
 };

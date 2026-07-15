@@ -80,6 +80,7 @@ export function PlanItemRow({
 	form,
 	showDiff,
 	readOnly,
+	currency,
 }: {
 	item: ProductItem;
 	index: number;
@@ -92,6 +93,7 @@ export function PlanItemRow({
 	form?: UseUpdateSubscriptionForm | UseAttachForm;
 	showDiff: boolean;
 	readOnly?: boolean;
+	currency?: string;
 }) {
 	if (!item.feature_id) return null;
 
@@ -125,6 +127,7 @@ export function PlanItemRow({
 				featureId={featureId}
 				isCreated={isCreated}
 				readOnly={readOnly}
+				currency={currency}
 			/>
 		</motion.div>
 	);

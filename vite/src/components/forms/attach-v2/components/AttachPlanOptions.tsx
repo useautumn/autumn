@@ -1,16 +1,18 @@
-import { Button, Switch } from "@autumn/ui";
-import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { ConfigRow } from "@/components/forms/shared/ConfigRow";
-import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import {
+	Button,
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
+	Switch,
 } from "@autumn/ui";
+import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { ConfigRow } from "@/components/forms/shared/ConfigRow";
+import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import { AttachCurrencyRow } from "./AttachCurrencyRow";
 
 export function AttachPlanOptions() {
 	const {
@@ -20,6 +22,7 @@ export function AttachPlanOptions() {
 		product,
 		handleGrantFreeToggle,
 		hasActiveSubscription,
+		attachCurrency,
 	} = useAttachFormContext();
 	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
@@ -87,6 +90,8 @@ export function AttachPlanOptions() {
 					}
 				/>
 			)}
+
+			{attachCurrency.showCurrencySelector && <AttachCurrencyRow />}
 
 			<FreeTrialConfigRow
 				form={form}

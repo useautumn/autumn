@@ -19,11 +19,14 @@ export const BasePriceDisplay = ({
 	product,
 	readOnly = false,
 	adminIds,
+	currency,
 }: {
 	isOnboarding?: boolean;
 	product: FrontendProduct;
 	readOnly?: boolean;
 	adminIds?: AdminPlanIds;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }) => {
 	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
@@ -39,7 +42,7 @@ export const BasePriceDisplay = ({
 	const renderPriceContent = () => {
 		const priceDisplay = getBasePriceDisplay({
 			product,
-			currency: org?.default_currency,
+			currency: currency ?? org?.default_currency,
 			showPlaceholder: true,
 		});
 
