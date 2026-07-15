@@ -169,8 +169,7 @@ const waitForReadySnapshot = async (
 
 // ---- modal path --------------------------------------------------------------
 /**
- * Modal refresh: exact-published-image check via the provider's own lookup
- * (TW_MODAL_NO_STALE keeps stale `:latest` hits from masquerading as fresh),
+ * Modal refresh: exact-published-image check via the provider's own lookup,
  * then the normal warm flow — snapshotAndStop publishes `tw-warm:<sha12>`.
  */
 const refreshModalWarm = async ({
@@ -184,8 +183,6 @@ const refreshModalWarm = async ({
 	warmName: string;
 	totalStartedAt: number;
 }): Promise<number> => {
-	// Must be set BEFORE setProvider dynamically imports modal.ts (module-load read).
-	process.env.TW_MODAL_NO_STALE = "1";
 	await setProvider(provider);
 
 	const existing = await timed("check for an exact published warm image", () =>

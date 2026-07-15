@@ -19,9 +19,10 @@
  *     clone a git source the way Vercel's SDK does).
  *   - **snapshotAndStop** — `sb.snapshotFilesystem()` → an `Image`, PUBLISHED as
  *     `tw-warm:<sha12>` + `tw-warm:latest` (account-wide cross-run/teammate warm
- *     cache). Exact-sha lookups skip the whole warm build; a stale `:latest` hit
- *     serves immediately (workers fast-forward checkout at fork) while a detached
- *     refresh converges the cache. The warm parent is terminated after snapshot.
+ *     cache). Exact-sha lookups skip the whole warm build; otherwise the warm
+ *     builds ON TOP of `:latest` (checkout + inline warmup.sh: install delta +
+ *     migrate + seed), so forks always get a migrated PGDATA. The warm parent is
+ *     terminated after snapshot.
  *   - **forkWorker** — create from the stored warm snapshot, `encryptedPorts:
  *     [SERVER_PORT]` for the tunnel. V1 paces creates (120 burst + ~4.5/s, ≤100
  *     concurrent cap); V2 has no pacing.
@@ -209,11 +210,6 @@ const warmImageByName = new Map<string, Image>();
 const WARM_IMAGE_REPO = "tw-warm";
 /** Warm image retention — long enough for a week of stale fast-forwards. */
 const WARM_IMAGE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
-/** Warm names served from the STALE `:latest` image — their workers fast-forward. */
-const staleWarmNames = new Set<string>();
-/** Opt-out: force exact-sha warm builds (no stale `:latest` serving). */
-const STALE_WARM_DISABLED = process.env.TW_MODAL_NO_STALE === "1";
-
 /** `tw-warm-<sha12>` → `<sha12>`, or undefined for non-warm sandbox names. */
 const warmShaFromName = (name: string): string | undefined =>
 	name.startsWith(`${WARM_SANDBOX_PREFIX}-`)
@@ -416,8 +412,8 @@ const cloneRepo = async (
 };
 
 /**
- * Fetch + force-checkout `rev` in /repo. Used by the warm fast-forward and the
- * stale-worker checkout (a 12-char sha can't be fetched directly → fetch --all).
+ * Fetch + force-checkout `rev` in /repo. Used by the warm fast-forward
+ * (a 12-char sha can't be fetched directly → fetch --all).
  */
 const fastForwardCheckout = async (
 	sandbox: Sandbox,
@@ -512,101 +508,6 @@ const createFromImage = async (
 };
 
 const makeModalProvider = (v2: boolean): ProviderImpl => {
-	/** Minimal env warmup.sh needs beyond what it sets itself (seed secrets). */
-	const warmupExecEnv = (): Record<string, string> => {
-		const env: Record<string, string> = { NODE_ENV: "development" };
-		for (const name of [
-			"ENCRYPTION_IV",
-			"ENCRYPTION_PASSWORD",
-			"BETTER_AUTH_SECRET",
-		]) {
-			const value = process.env[name];
-			if (!value) {
-				throw new Error(`modal: missing secret ${name} in orchestrator env`);
-			}
-			env[name] = value;
-		}
-		env.BETTER_AUTH_URL = `http://localhost:${SERVER_PORT}`;
-		return env;
-	};
-
-	/**
-	 * One refresh at a time; detached so no run ever waits on it. Converges the
-	 * published warm cache to the target sha after a stale `:latest` hit.
-	 */
-	let refreshInFlight = false;
-	const refreshWarmImageInBackground = (
-		warmName: string,
-		targetSha12: string,
-		latestImage: Image,
-	): void => {
-		if (refreshInFlight) {
-			return;
-		}
-		refreshInFlight = true;
-		void (async () => {
-			const done = stage(
-				`background warm refresh → ${warmName} (nothing waits on this)`,
-				60_000,
-			);
-			let sandbox: Sandbox | undefined;
-			try {
-				sandbox = await createFromImage(
-					latestImage,
-					{
-						name: `${warmName}-refresh`,
-						env: {},
-						tags: { kind: "bun-tw-warm-refresh" },
-						// Fat CPU: the refresh is install+migrate+seed bound and short-lived.
-						cpu: 4,
-						memoryMiB: 8192,
-						timeout: 30 * 60 * 1000,
-					},
-					v2,
-				);
-				await fastForwardCheckout(sandbox, targetSha12, "warm-refresh");
-				const proc = await withExecRetry("warm-refresh warmup", () =>
-					(sandbox as Sandbox).exec(
-						["bash", "scripts/tw/image/warmup.sh", targetSha12],
-						{
-							stdout: "pipe",
-							stderr: "pipe",
-							workdir: MODAL_REPO_ROOT,
-							env: warmupExecEnv(),
-						},
-					),
-				);
-				await Promise.all([
-					pumpStream(proc.stdout, (text) => sink(text)),
-					pumpStream(proc.stderr, (text) => sink(text)),
-				]);
-				const exitCode = await proc.wait();
-				if (exitCode !== 0) {
-					throw new Error(`warmup.sh exited ${exitCode}`);
-				}
-				const image = await (sandbox as Sandbox).snapshotFilesystem({
-					timeoutMs: SNAPSHOT_TIMEOUT_MS,
-					ttlMs: WARM_IMAGE_TTL_MS,
-				});
-				await publishWarmImage(image, targetSha12);
-				// Keep warmName in staleWarmNames: forks in this run still hold the stale
-				// :latest image, so dropping it here would silently skip their fast-forward.
-			} catch (error) {
-				narrate(
-					chalk.yellow(
-						`[modal] background warm refresh failed (${(error as Error).message?.slice(0, 120)}) — workers keep fast-forwarding`,
-					),
-				);
-			} finally {
-				await sandbox?.terminate().catch(() => {
-					/* best-effort */
-				});
-				refreshInFlight = false;
-				done();
-			}
-		})();
-	};
-
 	return {
 		async createWarmSandbox(
 			opts: CreateSandboxOptions,
@@ -727,15 +628,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				},
 				v2,
 			);
-			// Stale warm image: the source is `tw-warm:latest`, not the exact sha —
-			// check the exact commit out before boot so tests run the code under test.
-			if (staleWarmNames.has(opts.sourceSandbox)) {
-				const targetSha = opts.env.TW_TARGET_SHA;
-				if (!targetSha) {
-					throw new Error("modal: stale worker needs TW_TARGET_SHA in env");
-				}
-				await fastForwardCheckout(sandbox, targetSha, `worker-ff ${opts.name}`);
-			}
 			return wrap(opts.name, sandbox);
 		},
 
@@ -756,7 +648,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				const sha12 = warmShaFromName(sandbox.name);
 				if (sha12) {
 					await publishWarmImage(image, sha12);
-					staleWarmNames.delete(sandbox.name);
 				}
 				// The warm parent is no longer needed (forks use the Image) — free it.
 				await sb.terminate().catch(() => {
@@ -796,7 +687,6 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 				const exact = await lookupPublishedWarmImage(sha12);
 				if (exact) {
 					warmImageByName.set(name, exact);
-					staleWarmNames.delete(name);
 					narrate(
 						chalk.magenta(
 							`[modal] warm cache HIT (${WARM_IMAGE_REPO}:${sha12}) — skipping the entire warm build`,
@@ -804,20 +694,8 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					);
 					return { name, handle: undefined, warmHit: "exact" };
 				}
-				if (!STALE_WARM_DISABLED) {
-					const latest = await lookupPublishedWarmImage("latest");
-					if (latest) {
-						warmImageByName.set(name, latest);
-						staleWarmNames.add(name);
-						narrate(
-							chalk.magenta(
-								`[modal] stale warm hit (${WARM_IMAGE_REPO}:latest → ${name}) — workers fast-forward at boot; background refresh kicked`,
-							),
-						);
-						refreshWarmImageInBackground(name, sha12, latest);
-						return { name, handle: undefined, warmHit: "stale" };
-					}
-				}
+				// No exact snapshot → fall through to createWarmSandbox, which
+				// fast-forwards from `:latest` and runs warmup.sh (migrations) inline.
 			}
 			// V2 has no fromName at all → undefined makes run.ts build fresh.
 			if (v2) {
