@@ -22,8 +22,8 @@ import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { prepareProductLicenseSync } from "@/internal/products/handlers/handleUpdatePlan/prepareProductLicenseSync.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
-import { validateProductLicenseLinks } from "@/internal/products/handlers/handleUpdatePlan/validateProductLicenseLinks.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
@@ -107,10 +107,14 @@ export const updateProduct = async ({
 	const { version, disable_version, force_version, all_versions } = query;
 	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
-	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
+	const {
+		base_plan_id: basePlanId,
+		licenses,
+		...productUpdates
+	} = rawProductUpdates;
 	validatePlanLicenseUpdate({
 		allVersions: all_versions,
-		licenses: productUpdates.licenses,
+		licenses,
 	});
 
 	if (force_version && disable_version) {
@@ -231,11 +235,9 @@ export const updateProduct = async ({
 			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
 			: (curProductV2.free_trial ?? undefined);
 
-	const productFields = { ...productUpdates };
-	delete productFields.licenses;
 	const newProductV2: ProductV2 = {
 		...curProductV2,
-		...productFields,
+		...productUpdates,
 		group: productUpdates.group || curProductV2.group || "",
 		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
@@ -245,7 +247,7 @@ export const updateProduct = async ({
 		),
 	};
 
-	if (Object.keys(productUpdates).length === 0) {
+	if (Object.keys(productUpdates).length === 0 && licenses === undefined) {
 		await applyBasePlanLink();
 		const latestProduct = basePlanIdProvided
 			? await ProductService.getFull({
@@ -299,29 +301,26 @@ export const updateProduct = async ({
 	const productWillVersion = productVersioningEligible && productChanged;
 	const willVersion =
 		force_version || billingControlsWillVersion || productWillVersion;
-	const preparedLicenses = await validateProductLicenseLinks({
+	const preparedLicenseSync = await prepareProductLicenseSync({
 		ctx,
 		fromInternalProductId: fullProduct.internal_id,
 		newProductV2,
 		baseProduct: fullProduct,
 		org,
 		features,
-		licenses: productUpdates.licenses,
+		licenses,
 		newParentVersion: willVersion,
 	});
-	const createVersion = () =>
-		handleVersionProductV2({
+	const createVersion = async () => {
+		const newProduct = await handleVersionProductV2({
 			ctx,
 			newProductV2,
 			latestProduct: fullProduct,
 			org,
 			env,
 			baseInternalProductId: nextBaseInternalProductId,
-			preparedPlanLicenseSync: preparedLicenses,
+			preparedPlanLicenseSync: preparedLicenseSync,
 		});
-
-	if (billingControlsWillVersion) {
-		const newProduct = await createVersion();
 		const latestBase = await ProductService.getFull({
 			db,
 			idOrInternalId: newProduct.id,
@@ -330,6 +329,10 @@ export const updateProduct = async ({
 		});
 		await applyVariantUpdates({ latestBase });
 		return newProduct;
+	};
+
+	if (billingControlsWillVersion) {
+		return createVersion();
 	}
 
 	await handleUpdateProductDetails({
@@ -342,8 +345,11 @@ export const updateProduct = async ({
 		rewardPrograms,
 		logger: ctx.logger,
 	});
-	if (preparedLicenses && !willVersion) {
-		await applyPreparedPlanLicenseSync({ ctx, prepared: preparedLicenses });
+	if (preparedLicenseSync && !willVersion) {
+		await applyPreparedPlanLicenseSync({
+			ctx,
+			prepared: preparedLicenseSync,
+		});
 	}
 
 	if (notNullish(productUpdates.metadata)) {
@@ -359,30 +365,12 @@ export const updateProduct = async ({
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	if (force_version) {
-		const newProduct = await createVersion();
-		const latestBase = await ProductService.getFull({
-			db,
-			idOrInternalId: newProduct.id,
-			orgId: org.id,
-			env,
-		});
-		await applyVariantUpdates({ latestBase });
-		return newProduct;
+		return createVersion();
 	}
 
 	if (productVersioningEligible) {
 		if (productWillVersion) {
-			const newProduct = await createVersion();
-
-			const latestBase = await ProductService.getFull({
-				db,
-				idOrInternalId: newProduct.id,
-				orgId: org.id,
-				env,
-			});
-			await applyVariantUpdates({ latestBase });
-
-			return newProduct;
+			return createVersion();
 		}
 
 		await applyHistoricalVersions({ latestProduct: fullProduct });
@@ -407,7 +395,6 @@ export const updateProduct = async ({
 	const latestProductId = productUpdates.id || fullProduct.id;
 	await applyBasePlanLink();
 
-	// New full product
 	let newFullProduct = await ProductService.getFull({
 		db,
 		idOrInternalId: latestProductId,
@@ -437,8 +424,6 @@ export const updateProduct = async ({
 			version: fullProduct.version,
 		});
 	}
-
-	// New full product
 
 	await applyHistoricalVersions({ latestProduct: newFullProduct });
 	await applyVariantUpdates({ latestBase: newFullProduct });

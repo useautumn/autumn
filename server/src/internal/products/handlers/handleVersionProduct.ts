@@ -24,7 +24,7 @@ import {
 	applyPreparedPlanLicenseSync,
 	type PreparedPlanLicenseSync,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
-import { validateProductLicenseLinks } from "./handleUpdatePlan/validateProductLicenseLinks.js";
+import { prepareProductLicenseSync } from "./handleUpdatePlan/prepareProductLicenseSync.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
@@ -122,9 +122,9 @@ export const handleVersionProductV2 = async ({
 	// License links must satisfy the link rules against the NEW version before
 	// anything is persisted — otherwise a rejected link leaves a half-created
 	// version behind.
-	const preparedLicenses =
+	const preparedLicenseSync =
 		preparedPlanLicenseSync ??
-		(await validateProductLicenseLinks({
+		(await prepareProductLicenseSync({
 			ctx,
 			fromInternalProductId: latestProduct.internal_id,
 			newProductV2,
@@ -163,10 +163,10 @@ export const handleVersionProductV2 = async ({
 		data: customPrices,
 	});
 
-	if (preparedLicenses) {
+	if (preparedLicenseSync) {
 		await applyPreparedPlanLicenseSync({
 			ctx,
-			prepared: preparedLicenses,
+			prepared: preparedLicenseSync,
 			parentInternalProductId: newProduct.internal_id,
 		});
 	} else {

@@ -16,7 +16,7 @@ import { buildFullProductFromV2 } from "@/internal/products/productUtils/product
  * an interval change silently invalidates a link. Runs for both versioning and
  * in-place edits.
  */
-export const validateProductLicenseLinks = async ({
+export const prepareProductLicenseSync = async ({
 	ctx,
 	fromInternalProductId,
 	newProductV2,
