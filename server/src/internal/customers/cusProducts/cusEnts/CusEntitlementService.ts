@@ -41,6 +41,23 @@ import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
+	/** Whether any customer entitlement references one of these catalog rows. */
+	static async hasAnyEntitlementReferences({
+		db,
+		entitlementIds,
+	}: {
+		db: DrizzleCli;
+		entitlementIds: string[];
+	}): Promise<boolean> {
+		if (entitlementIds.length === 0) return false;
+		const row = await db
+			.select({ id: customerEntitlements.id })
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.entitlement_id, entitlementIds))
+			.limit(1);
+		return row.length > 0;
+	}
+
 	/**
 	 * Which of these catalog entitlements are referenced by any
 	 * customer_entitlements row — across every status, including loose,
