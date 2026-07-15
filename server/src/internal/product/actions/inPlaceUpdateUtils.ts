@@ -7,9 +7,10 @@ import {
 	mapToProductItems,
 	type ProductItem,
 	prices,
+	products,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -30,7 +31,22 @@ const currentItemsOf = ({
 		features,
 	});
 
-/** Locks sorted parent rows so FK inserts and concurrent catalog writes serialize. */
+/** Serializes item writers before they reload the current catalog rows. */
+export const lockProductForItemUpdate = async ({
+	db,
+	internalProductId,
+}: {
+	db: DrizzleCli;
+	internalProductId: string;
+}) => {
+	await db
+		.select({ internalId: products.internal_id })
+		.from(products)
+		.where(eq(products.internal_id, internalProductId))
+		.for("no key update");
+};
+
+/** Locks sorted item rows so customer references cannot race item retirement. */
 export const lockProductItemsForUpdate = async ({
 	db,
 	currentFullProduct,

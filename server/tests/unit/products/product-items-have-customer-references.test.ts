@@ -6,6 +6,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { productItemsHaveCustomerReferences } from "@/internal/product/actions/inPlaceUpdateUtils.js";
 import { updateProductItems } from "@/internal/product/actions/updateProduct/updateProductItems.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 afterEach(() => {
 	mock.restore();
@@ -67,52 +68,77 @@ test("product item references: leaves unreferenced product items on the fast pat
 	).toBe(false);
 });
 
-test("product item references: locks rows before checking the fast path", async () => {
+test("product item references: reloads current rows under the product lock", async () => {
 	const callOrder: string[] = [];
-	const lockQuery = {
-		from: () => ({
-			where: () => ({
-				orderBy: () => ({
-					for: async () => {
-						callOrder.push("lock");
-					},
+	let selectCount = 0;
+	const transactionDb = {
+		select: () => {
+			selectCount += 1;
+			const lockName =
+				selectCount === 1
+					? "product-lock"
+					: selectCount === 2
+						? "entitlement-lock"
+						: "price-lock";
+			const lock = async (strength: string) => {
+				callOrder.push(`${lockName}:${strength}`);
+			};
+			return {
+				from: () => ({
+					where: () => ({
+						for: lock,
+						orderBy: () => ({ for: lock }),
+					}),
 				}),
-			}),
-		}),
-	};
+			};
+		},
+		delete: () => ({ where: async () => undefined }),
+		query: { prices: { findMany: async () => [] } },
+	} as unknown as DrizzleCli;
 	const db = {
 		transaction: async (
 			callback: (transaction: DrizzleCli) => Promise<void>,
 		) => {
 			callOrder.push("transaction");
-			await callback(db as unknown as DrizzleCli);
+			await callback(transactionDb);
 		},
-		select: () => lockQuery,
-		delete: () => ({ where: async () => undefined }),
-		query: { prices: { findMany: async () => [] } },
 	} as unknown as DrizzleCli;
 	const currentFullProduct = {
 		id: "plan",
 		internal_id: "plan_internal",
 		org_id: "org",
 		env: "sandbox",
-		entitlements: [{ id: "entitlement" }],
-		prices: [{ id: "price" }],
+		version: 1,
+		entitlements: [{ id: "stale-entitlement" }],
+		prices: [{ id: "stale-price" }],
+	} as FullProduct;
+	const refreshedFullProduct = {
+		...currentFullProduct,
+		entitlements: [{ id: "current-entitlement" }],
+		prices: [{ id: "current-price" }],
 	} as FullProduct;
 	const ctx = { org: { config: {} } } as AutumnContext;
+	const reloadSpy = spyOn(ProductService, "getFull").mockImplementation(
+		async () => {
+			callOrder.push("reload");
+			return refreshedFullProduct;
+		},
+	);
 
-	spyOn(CusEntService, "hasAnyEntitlementReferences").mockImplementation(
-		async () => {
-			callOrder.push("entitlement-check");
-			return false;
-		},
-	);
-	spyOn(CusPriceService, "hasAnyPriceReferences").mockImplementation(
-		async () => {
-			callOrder.push("price-check");
-			return false;
-		},
-	);
+	const entitlementReferenceSpy = spyOn(
+		CusEntService,
+		"hasAnyEntitlementReferences",
+	).mockImplementation(async () => {
+		callOrder.push("entitlement-check");
+		return false;
+	});
+	const priceReferenceSpy = spyOn(
+		CusPriceService,
+		"hasAnyPriceReferences",
+	).mockImplementation(async () => {
+		callOrder.push("price-check");
+		return false;
+	});
 
 	await updateProductItems({
 		ctx,
@@ -123,11 +149,28 @@ test("product item references: locks rows before checking the fast path", async 
 		useInPlaceEdit: false,
 	});
 
-	expect(callOrder.slice(0, 5)).toEqual([
+	expect(callOrder.slice(0, 7)).toEqual([
 		"transaction",
-		"lock",
-		"lock",
+		"product-lock:no key update",
+		"reload",
+		"entitlement-lock:update",
+		"price-lock:update",
 		"entitlement-check",
 		"price-check",
 	]);
+	expect(reloadSpy).toHaveBeenCalledWith({
+		db: transactionDb,
+		idOrInternalId: "plan_internal",
+		orgId: "org",
+		env: "sandbox",
+		version: 1,
+	});
+	expect(entitlementReferenceSpy).toHaveBeenCalledWith({
+		db: transactionDb,
+		entitlementIds: ["current-entitlement"],
+	});
+	expect(priceReferenceSpy).toHaveBeenCalledWith({
+		db: transactionDb,
+		priceIds: ["current-price"],
+	});
 });
