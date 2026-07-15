@@ -14,6 +14,25 @@ export interface ValidationResult {
 	errors: ValidationError[];
 }
 
+const hasPlanLicenseCycle = (plans: Plan[]): boolean => {
+	const byId = new Map(plans.map((plan) => [plan.id, plan]));
+	const visiting = new Set<string>();
+	const visited = new Set<string>();
+	const visit = (plan: Plan): boolean => {
+		if (visiting.has(plan.id)) return true;
+		if (visited.has(plan.id)) return false;
+		visiting.add(plan.id);
+		for (const license of plan.licenses ?? []) {
+			const dependency = byId.get(license.licensePlanId);
+			if (dependency !== plan && dependency && visit(dependency)) return true;
+		}
+		visiting.delete(plan.id);
+		visited.add(plan.id);
+		return false;
+	};
+	return plans.some(visit);
+};
+
 /**
  * Get the price.interval from a PlanItem (handling the discriminated union)
  */
@@ -379,6 +398,33 @@ export function validateConfig(
 	// Validate plans (passing features for feature type lookups)
 	for (const plan of plans) {
 		errors.push(...validatePlan(plan, features));
+	}
+
+	const localPlanIds = new Set(plans.map((plan) => plan.id));
+	for (const plan of plans) {
+		const seen = new Set<string>();
+		for (const [index, license] of (plan.licenses ?? []).entries()) {
+			const path = `plan "${plan.id}" → licenses[${index}]`;
+			if (seen.has(license.licensePlanId)) {
+				errors.push({
+					path,
+					message: `Duplicate license link "${license.licensePlanId}".`,
+				});
+			}
+			seen.add(license.licensePlanId);
+			if (!localPlanIds.has(license.licensePlanId)) {
+				errors.push({
+					path,
+					message: `License plan "${license.licensePlanId}" is not exported from your config.`,
+				});
+			}
+			if (license.licensePlanId === plan.id) {
+				errors.push({ path, message: "A plan cannot license itself." });
+			}
+		}
+	}
+	if (hasPlanLicenseCycle(plans)) {
+		errors.push({ path: "plans", message: "Plan dependency cycle detected" });
 	}
 
 	return {

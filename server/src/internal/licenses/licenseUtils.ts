@@ -1,6 +1,21 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import {
+	type ApiPlanLicenseV1,
+	ErrCode,
+	type FullProduct,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+
+export const toApiPlanLicenses = (
+	licenses: NonNullable<FullProduct["licenses"]>,
+): ApiPlanLicenseV1[] =>
+	licenses.map((license) => ({
+		license_plan_id: license.product.id,
+		version: license.product.version,
+		included: license.included,
+		prepaid_only: license.prepaid_only,
+	}));
 
 export const getFullLicenseProduct = async ({
 	ctx,

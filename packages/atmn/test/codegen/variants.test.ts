@@ -26,7 +26,34 @@ const baseApiPlan = (overrides: Partial<ApiPlan>): ApiPlan =>
 		...overrides,
 	}) as ApiPlan;
 
-describe("variant config generation", () => {
+describe("config generation", () => {
+	test("license pull and codegen preserve pins", () => {
+		const plans = transformApiPlans([
+			baseApiPlan({
+				id: "pro",
+				name: "Pro",
+				licenses: [
+					{
+						license_plan_id: "seats",
+						version: 2,
+						included: 5,
+						prepaid_only: true,
+					},
+				],
+			}),
+			baseApiPlan({ id: "seats", name: "Seats", version: 2 }),
+		]);
+		const code = buildConfigFile([], plans);
+
+		expect(code).toContain("licensePlanId: 'seats'");
+		expect(code).toContain("version: 2");
+		expect(plans[0]?.licenses?.[0]).toEqual({
+			licensePlanId: "seats",
+			version: 2,
+			included: 5,
+		});
+	});
+
 	test("transformApiPlans nests variants under their base plan", () => {
 		const plans = transformApiPlans([
 			baseApiPlan({

@@ -21,7 +21,11 @@ import { addTaskToQueue } from "@server/queue/queueUtils.js";
 import { and, eq, ne } from "drizzle-orm";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { copyPlanLicensesToNewVersion } from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
-import { validateProductLicenseLinks } from "./handleUpdatePlan/validateProductLicenseLinks.js";
+import {
+	applyPreparedPlanLicenseSync,
+	type PreparedPlanLicenseSync,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { prepareProductLicenseSync } from "./handleUpdatePlan/prepareProductLicenseSync.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
@@ -52,6 +56,7 @@ export const handleVersionProductV2 = async ({
 	env,
 	skipStripeInit = false,
 	baseInternalProductId,
+	preparedPlanLicenseSync,
 }: {
 	ctx: AutumnContext;
 	newProductV2: ProductV2;
@@ -60,6 +65,7 @@ export const handleVersionProductV2 = async ({
 	env: AppEnv;
 	skipStripeInit?: boolean;
 	baseInternalProductId?: string | null;
+	preparedPlanLicenseSync?: PreparedPlanLicenseSync;
 }) => {
 	const { db, features } = ctx;
 
@@ -97,6 +103,7 @@ export const handleVersionProductV2 = async ({
 			...latestProduct,
 			...newProductV2,
 			config: mergedConfig,
+			licenses: undefined,
 		}),
 		version: newVersion,
 		orgId: org.id,
@@ -117,14 +124,17 @@ export const handleVersionProductV2 = async ({
 	// License links must satisfy the link rules against the NEW version before
 	// anything is persisted — otherwise a rejected link leaves a half-created
 	// version behind.
-	await validateProductLicenseLinks({
-		ctx,
-		fromInternalProductId: latestProduct.internal_id,
-		newProductV2,
-		baseProduct: newProduct,
-		org,
-		features,
-	});
+	const preparedLicenseSync =
+		preparedPlanLicenseSync ??
+		(await prepareProductLicenseSync({
+			ctx,
+			fromInternalProductId: latestProduct.internal_id,
+			newProductV2,
+			baseProduct: newProduct,
+			org,
+			features,
+			newParentVersion: true,
+		}));
 
 	await ProductService.insert({ db, product: newProduct });
 
@@ -156,11 +166,19 @@ export const handleVersionProductV2 = async ({
 		data: customPrices,
 	});
 
-	await copyPlanLicensesToNewVersion({
-		ctx,
-		fromInternalProductId: latestProduct.internal_id,
-		toInternalProductId: newProduct.internal_id,
-	});
+	if (preparedLicenseSync) {
+		await applyPreparedPlanLicenseSync({
+			ctx,
+			prepared: preparedLicenseSync,
+			parentInternalProductId: newProduct.internal_id,
+		});
+	} else {
+		await copyPlanLicensesToNewVersion({
+			ctx,
+			fromInternalProductId: latestProduct.internal_id,
+			toInternalProductId: newProduct.internal_id,
+		});
+	}
 
 	// Handle new free trial (create new)
 	// newProductV2.free_trial can be:

@@ -17,6 +17,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { toApiPlanLicenses } from "@/internal/licenses/licenseUtils.js";
 
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
@@ -137,11 +138,7 @@ export const getPlanResponse = async ({
 		price: basePrice,
 		items: planItems ?? [],
 		licenses: product.licenses?.length
-			? product.licenses.map((license) => ({
-					license_plan_id: license.product.id,
-					included: license.included,
-					prepaid_only: license.prepaid_only,
-				}))
+			? toApiPlanLicenses(product.licenses)
 			: undefined,
 		free_trial: freeTrial,
 
