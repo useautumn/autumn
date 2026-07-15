@@ -59,6 +59,11 @@ const BILLING_TOGGLES = [
 		label: "Automatic tax",
 		description: "Enable Stripe Tax for automatic tax calculation",
 	},
+	{
+		key: "multi_currency",
+		label: "Multi-currency",
+		description: "Enable prices and billing in multiple currencies",
+	},
 ] as const satisfies readonly {
 	key: keyof OrgConfig;
 	label: string;
@@ -133,6 +138,7 @@ export const BillingSettingsSection = () => {
 							</span>
 						</div>
 						<Switch
+							aria-label={label}
 							checked={!!displayConfig[key]}
 							onCheckedChange={(val) => handleToggle(key, val)}
 							disabled={isPending}

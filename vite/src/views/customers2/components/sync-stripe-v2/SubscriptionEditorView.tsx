@@ -329,6 +329,7 @@ export function SubscriptionEditorView({
 		const customizedV2 = applyCustomizeToProduct({
 			product: productV2,
 			customize,
+			features: features ?? [],
 		});
 
 		return getProductWithSupportedPlanFormValues({
@@ -342,7 +343,7 @@ export function SubscriptionEditorView({
 				trialCardRequired: false,
 			},
 		});
-	}, [editing, draftPlansByPhase, products]);
+	}, [editing, draftPlansByPhase, products, features]);
 
 	const handleCustomizeSave = (draftProduct: FrontendProduct) => {
 		if (editing === null || !products) {

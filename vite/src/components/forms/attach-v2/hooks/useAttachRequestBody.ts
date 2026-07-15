@@ -51,6 +51,7 @@ export interface BuildAttachRequestBodyParams {
 	carryOverUsageFeatureIds: string[];
 	customLineItems: FormCustomLineItem[];
 	disableProration: boolean;
+	currency: string | null;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -84,6 +85,7 @@ export function buildAttachRequestBody({
 	carryOverUsageFeatureIds = [],
 	customLineItems,
 	disableProration,
+	currency,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -102,6 +104,10 @@ export function buildAttachRequestBody({
 
 	if (entityId) {
 		body.entity_id = entityId;
+	}
+
+	if (currency) {
+		body.currency = currency.toLowerCase();
 	}
 
 	if (options && options.length > 0) {
@@ -243,6 +249,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		carryOverUsageFeatureIds,
 		customLineItems,
 		disableProration,
+		currency,
 	} = params;
 
 	const requestBody = useMemo(
@@ -277,6 +284,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				carryOverUsageFeatureIds,
 				customLineItems,
 				disableProration,
+				currency,
 			}),
 		[
 			customerId,
@@ -308,6 +316,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			carryOverUsageFeatureIds,
 			customLineItems,
 			disableProration,
+			currency,
 		],
 	);
 

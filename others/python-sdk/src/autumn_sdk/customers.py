@@ -21,6 +21,7 @@ class Customers(BaseSDK):
         create_in_stripe: Optional[bool] = None,
         auto_enable_plan_id: Optional[str] = None,
         send_email_receipts: Optional[bool] = None,
+        currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
                 models.GetOrCreateCustomerBillingControls,
@@ -52,6 +53,7 @@ class Customers(BaseSDK):
         :param create_in_stripe: Whether to create the customer in Stripe
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
         :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
@@ -80,6 +82,7 @@ class Customers(BaseSDK):
             create_in_stripe=create_in_stripe,
             auto_enable_plan_id=auto_enable_plan_id,
             send_email_receipts=send_email_receipts,
+            currency=currency,
             billing_controls=utils.get_pydantic_model(
                 billing_controls, Optional[models.GetOrCreateCustomerBillingControls]
             ),
@@ -160,6 +163,7 @@ class Customers(BaseSDK):
         create_in_stripe: Optional[bool] = None,
         auto_enable_plan_id: Optional[str] = None,
         send_email_receipts: Optional[bool] = None,
+        currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
                 models.GetOrCreateCustomerBillingControls,
@@ -191,6 +195,7 @@ class Customers(BaseSDK):
         :param create_in_stripe: Whether to create the customer in Stripe
         :param auto_enable_plan_id: The ID of the free plan to auto-enable for the customer
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
         :param expand: Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
@@ -219,6 +224,7 @@ class Customers(BaseSDK):
             create_in_stripe=create_in_stripe,
             auto_enable_plan_id=auto_enable_plan_id,
             send_email_receipts=send_email_receipts,
+            currency=currency,
             billing_controls=utils.get_pydantic_model(
                 billing_controls, Optional[models.GetOrCreateCustomerBillingControls]
             ),
@@ -709,6 +715,7 @@ class Customers(BaseSDK):
         metadata: OptionalNullable[Dict[str, Any]] = UNSET,
         stripe_id: OptionalNullable[str] = UNSET,
         send_email_receipts: Optional[bool] = None,
+        currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
                 models.UpdateCustomerBillingControlsRequest,
@@ -736,6 +743,7 @@ class Customers(BaseSDK):
         :param metadata: Additional metadata for the customer
         :param stripe_id: Stripe customer ID if you already have one
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
         :param new_customer_id: Your unique identifier for the customer
@@ -762,6 +770,7 @@ class Customers(BaseSDK):
             metadata=metadata,
             stripe_id=stripe_id,
             send_email_receipts=send_email_receipts,
+            currency=currency,
             billing_controls=utils.get_pydantic_model(
                 billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
             ),
@@ -840,6 +849,7 @@ class Customers(BaseSDK):
         metadata: OptionalNullable[Dict[str, Any]] = UNSET,
         stripe_id: OptionalNullable[str] = UNSET,
         send_email_receipts: Optional[bool] = None,
+        currency: OptionalNullable[str] = UNSET,
         billing_controls: Optional[
             Union[
                 models.UpdateCustomerBillingControlsRequest,
@@ -867,6 +877,7 @@ class Customers(BaseSDK):
         :param metadata: Additional metadata for the customer
         :param stripe_id: Stripe customer ID if you already have one
         :param send_email_receipts: Whether to send email receipts to this customer
+        :param currency: Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency.
         :param billing_controls: Billing controls for the customer (auto top-ups, etc.)
         :param config: Miscellaneous configurations for the customer.
         :param new_customer_id: Your unique identifier for the customer
@@ -893,6 +904,7 @@ class Customers(BaseSDK):
             metadata=metadata,
             stripe_id=stripe_id,
             send_email_receipts=send_email_receipts,
+            currency=currency,
             billing_controls=utils.get_pydantic_model(
                 billing_controls, Optional[models.UpdateCustomerBillingControlsRequest]
             ),

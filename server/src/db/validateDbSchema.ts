@@ -4,7 +4,8 @@ import { PgTable } from "drizzle-orm/pg-core";
 import { logger } from "../external/logtail/logtailUtils";
 import type { DrizzleCli } from "./initDrizzle";
 
-const SKIP_TABLES = ["migrationErrors"];
+// eventsNeon lives on the Neon DB — validated by the dedicated neon-events pass, not the main one.
+const SKIP_TABLES = ["migrationErrors", "eventsNeon"];
 
 type TableEntry = {
 	name: string;
@@ -66,13 +67,18 @@ const validateTablesWithConcurrency = async ({
 export const validateDbSchema = async ({
 	db,
 	concurrency = 5,
+	schemaExports = schema,
+	label,
 }: {
 	db: DrizzleCli;
 	concurrency?: number;
+	schemaExports?: Record<string, unknown>;
+	label?: string;
 }) => {
 	// Dynamically get all tables from schema (exclude relations)
+	const logPrefix = label ? `[${label}] ` : "";
 
-	const tableEntries = Object.entries(schema)
+	const tableEntries = Object.entries(schemaExports)
 		.filter(([name, table]) => {
 			// Filter out relations and non-table exports
 			if (name.includes("Relations")) return false;
@@ -102,15 +108,15 @@ export const validateDbSchema = async ({
 			.map((f) => `Table '${f.name}': ${f.error}`)
 			.join("; ");
 		logger.error(
-			`Health check failed - DB schema validation error: ${failureDetails}`,
+			`${logPrefix}Health check failed - DB schema validation error: ${failureDetails}`,
 		);
 		throw new Error(
-			`Health check failed - DB schema validation error: ${failureDetails}`,
+			`${logPrefix}Health check failed - DB schema validation error: ${failureDetails}`,
 		);
 	}
 
 	logger.info(
-		`Health check passed - DB schema validated for ${tableEntries.length} tables in ${elapsed}ms (concurrency=${validatedConcurrency})`,
+		`${logPrefix}Health check passed - DB schema validated for ${tableEntries.length} tables in ${elapsed}ms (concurrency=${validatedConcurrency})`,
 	);
 	return true;
 };

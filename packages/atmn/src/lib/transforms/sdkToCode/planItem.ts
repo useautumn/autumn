@@ -109,6 +109,12 @@ export function buildPlanItemCode({
 			lines.push(`${nestedIndent}tiers: ${tiersCode},`);
 		}
 
+		if (planItem.price.additionalCurrencies) {
+			lines.push(
+				`${nestedIndent}additionalCurrencies: ${formatValue(planItem.price.additionalCurrencies)},`,
+			);
+		}
+
 		const priceWithBilling = planItem.price as {
 			billingUnits?: number;
 			billingMethod?: string;

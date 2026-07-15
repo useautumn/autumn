@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { existsSync } from "node:fs";
 import { chromium } from "playwright-core";
 
 // ============================================================================
@@ -12,14 +13,18 @@ export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
 /** Run browsers in headless mode (set false to watch the browser) */
 export const HEADLESS = true;
 
-/** Path to local Chromium/Chrome executable (env → playwright-core → fallback) */
+/** Path to local Chromium/Chrome executable (env → playwright-core → fallback).
+ * The env path is machine-specific (shared Infisical) — honored only if it exists. */
 const resolveChromiumPath = (): string => {
-	if (process.env.TESTS_CHROMIUM_PATH) return process.env.TESTS_CHROMIUM_PATH;
+	const fromEnv = process.env.TESTS_CHROMIUM_PATH;
+	if (fromEnv && existsSync(fromEnv)) return fromEnv;
 	try {
-		return chromium.executablePath();
+		const resolved = chromium.executablePath();
+		if (existsSync(resolved)) return resolved;
 	} catch {
-		return "/opt/homebrew/bin/chromium";
+		// fall through
 	}
+	return fromEnv || "/opt/homebrew/bin/chromium";
 };
 export const CHROMIUM_PATH = resolveChromiumPath();
 

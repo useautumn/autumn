@@ -8,6 +8,7 @@ import {
 	CustomizePlanV1BaseSchema,
 	refineCustomizePlanV1Schema,
 } from "../billing/common/customizePlan/customizePlanV1.js";
+import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
 import { DisplaySchema } from "./components/display.js";
@@ -110,6 +111,12 @@ export const ApiPlanV1Schema = z.object({
 			amount: z.number().meta({
 				description: "Base price amount for the plan.",
 			}),
+			additional_currencies: AdditionalCurrencyPriceArraySchema.optional().meta(
+				{
+					description:
+						"Base price amounts in additional currencies. The base 'amount' is in the org's default currency.",
+				},
+			),
 			interval: z.enum(BillingInterval).meta({
 				description: "Billing interval (e.g. 'month', 'year').",
 			}),

@@ -1,9 +1,10 @@
 import {
 	BillingVersion,
+	type ExistingUsagesConfig,
 	type FullCusProduct,
 	type FullCustomer,
-	secondsToMs,
 	type SyncProductContext,
+	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeSubscriptionToAutumnStatus } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
@@ -28,12 +29,14 @@ export const initImmediateSyncCustomerProduct = ({
 	productContext,
 	stripeSubscription,
 	currentEpochMs,
+	existingUsagesConfig,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	productContext: SyncProductContext;
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
+	existingUsagesConfig?: ExistingUsagesConfig;
 }): FullCusProduct => {
 	const { plan, fullProduct, featureQuantities, entity } = productContext;
 
@@ -41,7 +44,9 @@ export const initImmediateSyncCustomerProduct = ({
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({
 		stripeSubscription,
 	});
-	const resetCycleAnchorMs = secondsToMs(stripeSubscription.billing_cycle_anchor);
+	const resetCycleAnchorMs = secondsToMs(
+		stripeSubscription.billing_cycle_anchor,
+	);
 
 	return initFullCustomerProduct({
 		ctx,
@@ -55,6 +60,7 @@ export const initImmediateSyncCustomerProduct = ({
 			freeTrial: null,
 			trialEndsAt,
 			billingVersion: BillingVersion.V2,
+			existingUsagesConfig,
 		},
 		initOptions: {
 			subscriptionId: stripeSubscription.id,
@@ -72,4 +78,3 @@ export const initImmediateSyncCustomerProduct = ({
 		},
 	});
 };
-

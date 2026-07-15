@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	atmnToStripeAmount,
-	orgToCurrency,
+	billingContextToCurrency,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -83,7 +83,7 @@ export const computeAttachTaxRateIdPreview = async ({
 	const immediateLines = allLineItems.filter((line) => line.chargeImmediately);
 	if (immediateLines.length === 0) return undefined;
 
-	const currency = orgToCurrency({ org: ctx.org });
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const taxableMinorUnits = immediateLines.map((lineItem) =>
 		lineItemToTaxableMinorUnits({ lineItem, currency }),
 	);
@@ -107,7 +107,7 @@ export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
 }): PreviewTax | undefined => {
 	if (!billingContext.taxRateId) return undefined;
 
-	const currency = orgToCurrency({ org: ctx.org });
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const totalTaxableMinorUnits = taxableMinorUnits.reduce(
 		(sum, amount) => sum + amount,
 		0,

@@ -4,6 +4,7 @@ import {
 	type Entity,
 	findFeatureById,
 } from "@autumn/shared";
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { getApiEntity } from "../entityUtils/apiEntityUtils/getApiEntity";
@@ -12,19 +13,21 @@ import { createEntityForCusProduct } from "../handlers/handleCreateEntity/create
 import { validateAndGetInputEntities } from "../handlers/handleCreateEntity/getInputEntities";
 import { attachDefaultProductsToEntities } from "./batchCreateEntities/attachDefaultProductsToEntities";
 
-export const batchCreateEntities = async ({
-	ctx,
-	customerId,
-	customerData,
-	createEntityData,
-	withAutumnId = false,
-}: {
+type BatchCreateEntitiesParams = {
 	ctx: AutumnContext;
 	customerData?: CustomerData;
 	customerId: string;
 	createEntityData: CreateEntityParams[] | CreateEntityParams;
 	withAutumnId?: boolean;
-}) => {
+};
+
+const createEntities = async ({
+	ctx,
+	customerId,
+	customerData,
+	createEntityData,
+	withAutumnId = false,
+}: BatchCreateEntitiesParams) => {
 	const { db, org, env, features } = ctx;
 
 	// 1. Get data
@@ -117,4 +120,18 @@ export const batchCreateEntities = async ({
 	}
 
 	return apiEntities;
+};
+
+export const batchCreateEntities = async (
+	params: BatchCreateEntitiesParams,
+) => {
+	const { ctx, customerId } = params;
+	const { org, env } = ctx;
+
+	return withLock({
+		lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
+		errorMessage:
+			"Entity creation already in progress for this customer, try again in a few seconds",
+		fn: () => createEntities(params),
+	});
 };

@@ -5,6 +5,7 @@
 import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
+	billingContextToCurrency,
 	cusPriceToCusEnt,
 	customerProductToEntity,
 	type FullCusProduct,
@@ -14,7 +15,6 @@ import {
 	isOneOffPrice,
 	type LineItem,
 	type LineItemContext,
-	orgToCurrency,
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -118,7 +118,7 @@ export const customerProductToLineItems = ({
 			direction,
 			billingTiming: "in_advance",
 			now: effectiveNow,
-			currency: orgToCurrency({ org: ctx.org }),
+			currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 			entity,
 			customerProduct,
 			customerPrice: cusPrice,

@@ -8,6 +8,7 @@ import { ms } from "@shared/utils/common/unixUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
+import { handleCurrencyMismatchErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
@@ -16,6 +17,7 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
@@ -40,6 +42,14 @@ export async function attach({
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
+	params = {
+		...params,
+		carry_over_usages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: params.carry_over_usages,
+		}),
+	};
+
 	// 1. Setup
 	const billingContext = await setupAttachBillingContext({
 		ctx,
@@ -49,6 +59,11 @@ export async function attach({
 	});
 
 	logAttachContext({ ctx, billingContext });
+
+	// Currency guard runs here (not in handleAttachV2Errors) because
+	// evaluateStripeBillingPlan below creates Stripe prices, so the block must
+	// fire before it. Covers preview too.
+	handleCurrencyMismatchErrors({ ctx, billingContext, params });
 
 	// 2. Compute
 	const autumnBillingPlan = computeAttachPlan({

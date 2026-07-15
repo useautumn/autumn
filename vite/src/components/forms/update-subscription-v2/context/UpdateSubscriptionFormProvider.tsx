@@ -6,7 +6,10 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productV2ToFrontendProduct } from "@autumn/shared";
+import {
+	ProductItemFeatureType,
+	productV2ToFrontendProduct,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 
 import {
@@ -247,8 +250,10 @@ export function UpdateSubscriptionFormProvider({
 				(it) => it.feature_id === featureId,
 			);
 			const initialQuantity = initialPrepaidOptions[featureId];
-			const isOneOff = item?.interval == null;
-			const changedQuantity = isOneOff
+			const isOneOffTopUp =
+				item?.interval == null &&
+				item?.feature_type !== ProductItemFeatureType.ContinuousUse;
+			const changedQuantity = isOneOffTopUp
 				? quantity > (initialQuantity ?? 0)
 				: quantity !== initialQuantity;
 			if (changedQuantity) {

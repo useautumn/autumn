@@ -5,7 +5,6 @@ type InlinePriceLike = {
 	product?: string;
 	currency?: string;
 	billing_scheme?: string;
-	tax_behavior?: string | null;
 	recurring?: {
 		interval?: string;
 		interval_count?: number;
@@ -30,7 +29,6 @@ export type StripePriceShape = {
 	product?: string;
 	currency?: string;
 	billingScheme?: string;
-	taxBehavior?: string | null;
 	interval?: string;
 	intervalCount?: number;
 	recurringUsageType?: string | null;
@@ -49,7 +47,9 @@ type StripeItemSnapshotLike = {
 		| {
 				up_to: number | null;
 				unit_amount: number | null;
+				unit_amount_decimal?: string | null;
 				flat_amount: number | null;
+				flat_amount_decimal?: string | null;
 		  }[]
 		| null;
 	recurring_interval: Stripe.Price.Recurring.Interval | null;
@@ -71,7 +71,8 @@ export const stripeShapeDecimalAmount = (
 	return new Decimal(amount).toString();
 };
 
-const taxBehavior = (value?: string | null) => value ?? "unspecified";
+// Stripe returns lowercase codes; org.default_currency may be uppercase.
+const currencyCode = (value?: string) => value?.toLowerCase();
 
 const transformQuantityKey = (
 	transformQuantity?: {
@@ -127,9 +128,8 @@ export const stripePriceToShape = ({
 	price: Stripe.Price;
 }): StripePriceShape => ({
 	product: stripeProductId(price.product),
-	currency: price.currency,
+	currency: currencyCode(price.currency),
 	billingScheme: price.billing_scheme ?? "per_unit",
-	taxBehavior: taxBehavior(price.tax_behavior),
 	interval: price.recurring?.interval,
 	intervalCount: price.recurring?.interval_count,
 	recurringUsageType: recurringUsageType(price.recurring?.usage_type),
@@ -152,9 +152,8 @@ export const inlinePriceToShape = ({
 	price: InlinePriceLike;
 }): StripePriceShape => ({
 	product: price.product,
-	currency: price.currency,
+	currency: currencyCode(price.currency),
 	billingScheme: price.billing_scheme ?? "per_unit",
-	taxBehavior: taxBehavior(price.tax_behavior),
 	interval: price.recurring?.interval,
 	intervalCount: price.recurring?.interval_count,
 	recurringUsageType: recurringUsageType(price.recurring?.usage_type),
@@ -190,9 +189,11 @@ export const stripeItemSnapshotToShape = ({
 						tiers: item.tiers?.map((tier) => ({
 							upTo: stripeTierUpTo(tier.up_to),
 							unitAmountDecimal: stripeTierAmountDecimal({
+								decimal: tier.unit_amount_decimal,
 								amount: tier.unit_amount,
 							}),
 							flatAmountDecimal: stripeTierAmountDecimal({
+								decimal: tier.flat_amount_decimal,
 								amount: tier.flat_amount,
 							}),
 						})),
@@ -223,6 +224,7 @@ const tiersEqual = ({
 	});
 };
 
+// Tax behavior is intentionally not compared: Autumn doesn't model tax on prices.
 export const stripePriceShapesEqual = (
 	left: StripePriceShape,
 	right: StripePriceShape,
@@ -230,7 +232,6 @@ export const stripePriceShapesEqual = (
 	left.product === right.product &&
 	left.currency === right.currency &&
 	left.billingScheme === right.billingScheme &&
-	left.taxBehavior === right.taxBehavior &&
 	left.interval === right.interval &&
 	left.intervalCount === right.intervalCount &&
 	left.recurringUsageType === right.recurringUsageType &&

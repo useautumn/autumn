@@ -78,6 +78,7 @@ export const initCustomerV3 = async ({
 		stripe_id: stripeCus.id,
 		send_email_receipts: sendEmailReceipts,
 		config: customerData?.config,
+		currency: customerData?.currency,
 		internalOptions: {
 			disable_defaults: !withDefault,
 			...(withDefault && { default_group: defaultGroup }),

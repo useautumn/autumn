@@ -9,6 +9,7 @@ import {
 	type MultiAttachParamsV0,
 	type MultiAttachProductContext,
 	orgToReturnUrl,
+	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { FreeTrialParamsV1 } from "@shared/api/common/freeTrial/freeTrialParamsV1";
 import type Stripe from "stripe";
@@ -257,6 +258,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 		fullCustomer,
 		fullProducts,
 		productContexts,
+		currency: resolveCustomerCurrency({
+			customer: fullCustomer,
+			org: ctx.org,
+			requested: params.currency,
+			stripeCurrency: stripeCustomer?.currency,
+		}),
 		featureQuantities: productContexts.flatMap(
 			(productContext) => productContext.featureQuantities,
 		),

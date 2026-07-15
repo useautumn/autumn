@@ -1,10 +1,16 @@
-import type { Feature, FullProduct, ProductItem } from "@autumn/shared";
 import {
+	entitlements,
+	type Feature,
+	type FullProduct,
 	findSimilarItem,
 	itemsAreSame,
 	mapToProductItems,
+	type ProductItem,
+	prices,
+	products,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle";
+import { eq, inArray } from "drizzle-orm";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -24,6 +30,76 @@ const currentItemsOf = ({
 		entitlements: currentFullProduct.entitlements,
 		features,
 	});
+
+/** Serializes item writers before they reload the current catalog rows. */
+export const lockProductForItemUpdate = async ({
+	db,
+	internalProductId,
+}: {
+	db: DrizzleCli;
+	internalProductId: string;
+}) => {
+	await db
+		.select({ internalId: products.internal_id })
+		.from(products)
+		.where(eq(products.internal_id, internalProductId))
+		.for("no key update");
+};
+
+/** Locks sorted item rows so customer references cannot race item retirement. */
+export const lockProductItemsForUpdate = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}) => {
+	const entitlementIds = currentFullProduct.entitlements
+		.map((entitlement) => entitlement.id)
+		.sort();
+	const priceIds = currentFullProduct.prices.map((price) => price.id).sort();
+
+	if (entitlementIds.length > 0) {
+		await db
+			.select({ id: entitlements.id })
+			.from(entitlements)
+			.where(inArray(entitlements.id, entitlementIds))
+			.orderBy(entitlements.id)
+			.for("update");
+	}
+
+	if (priceIds.length > 0) {
+		await db
+			.select({ id: prices.id })
+			.from(prices)
+			.where(inArray(prices.id, priceIds))
+			.orderBy(prices.id)
+			.for("update");
+	}
+};
+
+export const productItemsHaveCustomerReferences = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}): Promise<boolean> => {
+	const [hasEntitlementReferences, hasPriceReferences] = await Promise.all([
+		CusEntService.hasAnyEntitlementReferences({
+			db,
+			entitlementIds: currentFullProduct.entitlements.map(
+				(entitlement) => entitlement.id,
+			),
+		}),
+		CusPriceService.hasAnyPriceReferences({
+			db,
+			priceIds: currentFullProduct.prices.map((price) => price.id),
+		}),
+	]);
+
+	return hasEntitlementReferences || hasPriceReferences;
+};
 
 /**
  * Callers rarely echo back entitlement_id / price_id, so without this match the

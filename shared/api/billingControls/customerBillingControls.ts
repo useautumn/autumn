@@ -1,10 +1,8 @@
 import { z } from "zod/v4";
-import {
-	AutoTopupResponseSchema,
-	DbOverageAllowedSchema,
-	DbUsageAlertSchema,
-} from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { ApiAutoTopupSchema } from "./autoTopup.js";
+import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
+import { ApiUsageAlertSchema } from "./usageAlert.js";
 import { ApiUsageLimitSchema } from "./usageLimit.js";
 
 /**
@@ -14,7 +12,7 @@ import { ApiUsageLimitSchema } from "./usageLimit.js";
  * `CustomerBillingControlsParamsSchema` (models), which remains strict.
  */
 export const CustomerBillingControlsResponseSchema = z.object({
-	auto_topups: z.array(AutoTopupResponseSchema).optional().meta({
+	auto_topups: z.array(ApiAutoTopupSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
 	spend_limits: z.array(ApiSpendLimitSchema).optional().meta({
@@ -25,10 +23,10 @@ export const CustomerBillingControlsResponseSchema = z.object({
 		description:
 			"List of hard usage caps per feature, with current interval usage.",
 	}),
-	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
+	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
 	}),
-	overage_allowed: z.array(DbOverageAllowedSchema).optional().meta({
+	overage_allowed: z.array(ApiOverageAllowedSchema).optional().meta({
 		description:
 			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
 	}),

@@ -300,6 +300,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Base price amount for the plan.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="additional_currencies" type="object[]">
+                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="currency" type="string">
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="amount" type="number">
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                   Billing interval (e.g. 'month', 'year').
                 </DynamicResponseField>
@@ -411,6 +425,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="additional_currencies" type="object[]">
+                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
+                      <Expandable title="properties">
+                        <DynamicResponseField name="currency" type="string">
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="amount" type="number">
+                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="tiers" type="object[]">
                       Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                       <Expandable title="properties">
@@ -419,6 +447,23 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="amount" type="number" />
 
                         <DynamicResponseField name="flat_amount" type="number" />
+
+                        <DynamicResponseField name="additional_currencies" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="currency" type="string">
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="amount" type="number">
+                              Per-unit amount for this tier in this currency.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="flat_amount" type="number">
+                              Flat amount for this tier in this currency, if the tier uses one.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
 
                       </Expandable>
                     </DynamicResponseField>
@@ -550,6 +595,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Number of intervals per billing cycle. Defaults to 1.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="additional_currencies" type="object[]">
+                          Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="currency" type="string">
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="amount" type="number">
+                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -589,6 +648,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="additional_currencies" type="object[]">
+                              Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="currency" type="string">
+                                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="amount" type="number">
+                                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="tiers" type="object[]">
                               Tiered pricing. Either 'amount' or 'tiers' is required.
                               <Expandable title="properties">
@@ -597,6 +670,23 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="amount" type="number" />
 
                                 <DynamicResponseField name="flat_amount" type="number" />
+
+                                <DynamicResponseField name="additional_currencies" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="amount" type="number">
+                                      Per-unit amount for this tier in this currency.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="flat_amount" type="number">
+                                      Flat amount for this tier in this currency, if the tier uses one.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
 
                               </Expandable>
                             </DynamicResponseField>
@@ -1123,6 +1213,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   Base price amount for the plan.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="additional_currencies" type="object[]">
+                  Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                  <Expandable title="properties">
+                    <DynamicResponseField name="currency" type="string">
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicResponseField>
+
+                    <DynamicResponseField name="amount" type="number">
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicResponseField>
+
+                  </Expandable>
+                </DynamicResponseField>
+
                 <DynamicResponseField name="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
                   Billing interval (e.g. 'month', 'year').
                 </DynamicResponseField>
@@ -1234,6 +1338,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                       Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
                     </DynamicResponseField>
 
+                    <DynamicResponseField name="additional_currencies" type="object[]">
+                      Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
+                      <Expandable title="properties">
+                        <DynamicResponseField name="currency" type="string">
+                          Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                        </DynamicResponseField>
+
+                        <DynamicResponseField name="amount" type="number">
+                          Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                        </DynamicResponseField>
+
+                      </Expandable>
+                    </DynamicResponseField>
+
                     <DynamicResponseField name="tiers" type="object[]">
                       Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
                       <Expandable title="properties">
@@ -1242,6 +1360,23 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                         <DynamicResponseField name="amount" type="number" />
 
                         <DynamicResponseField name="flat_amount" type="number" />
+
+                        <DynamicResponseField name="additional_currencies" type="object[]">
+                          <Expandable title="properties">
+                            <DynamicResponseField name="currency" type="string">
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="amount" type="number">
+                              Per-unit amount for this tier in this currency.
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="flat_amount" type="number">
+                              Flat amount for this tier in this currency, if the tier uses one.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
 
                       </Expandable>
                     </DynamicResponseField>
@@ -1373,6 +1508,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                           Number of intervals per billing cycle. Defaults to 1.
                         </DynamicResponseField>
 
+                        <DynamicResponseField name="additional_currencies" type="object[]">
+                          Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+                          <Expandable title="properties">
+                            <DynamicResponseField name="currency" type="string">
+                              Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            </DynamicResponseField>
+
+                            <DynamicResponseField name="amount" type="number">
+                              Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                            </DynamicResponseField>
+
+                          </Expandable>
+                        </DynamicResponseField>
+
                       </Expandable>
                     </DynamicResponseField>
 
@@ -1412,6 +1561,20 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                               Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
                             </DynamicResponseField>
 
+                            <DynamicResponseField name="additional_currencies" type="object[]">
+                              Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                              <Expandable title="properties">
+                                <DynamicResponseField name="currency" type="string">
+                                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="amount" type="number">
+                                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                                </DynamicResponseField>
+
+                              </Expandable>
+                            </DynamicResponseField>
+
                             <DynamicResponseField name="tiers" type="object[]">
                               Tiered pricing. Either 'amount' or 'tiers' is required.
                               <Expandable title="properties">
@@ -1420,6 +1583,23 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                                 <DynamicResponseField name="amount" type="number" />
 
                                 <DynamicResponseField name="flat_amount" type="number" />
+
+                                <DynamicResponseField name="additional_currencies" type="object[]">
+                                  <Expandable title="properties">
+                                    <DynamicResponseField name="currency" type="string">
+                                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="amount" type="number">
+                                      Per-unit amount for this tier in this currency.
+                                    </DynamicResponseField>
+
+                                    <DynamicResponseField name="flat_amount" type="number">
+                                      Flat amount for this tier in this currency, if the tier uses one.
+                                    </DynamicResponseField>
+
+                                  </Expandable>
+                                </DynamicResponseField>
 
                               </Expandable>
                             </DynamicResponseField>

@@ -5,12 +5,31 @@ export const multiAttachGlobalsSchema = z.object({
 	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const multiAttachAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
+export const multiAttachItemAdditionalCurrencySchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const multiAttachToSchema = z.union([z.number(), z.string()]);
+
+export const multiAttachTierAdditionalCurrencySchema = z.object({
+	currency: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
+	flatAmount: z.union([z.any(), z.undefined()]).optional(),
+});
 
 export const multiAttachTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(multiAttachTierAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const multiAttachFeatureQuantitySchema = z.object({
@@ -58,10 +77,21 @@ export const multiAttachInvoiceSchema = z.object({
 	hostedInvoiceUrl: z.string().nullable(),
 });
 
+export const multiAttachAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const multiAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(multiAttachAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const multiAttachResetOutboundSchema = z.object({
@@ -69,16 +99,39 @@ export const multiAttachResetOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachItemAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.string(),
+	amount: z.number(),
+});
+
 export const multiAttachToOutboundSchema = z.union([z.number(), z.string()]);
+
+export const multiAttachTierAdditionalCurrencyOutboundSchema = z.object({
+	currency: z.union([z.any(), z.undefined()]).optional(),
+	amount: z.union([z.any(), z.undefined()]).optional(),
+	flat_amount: z.union([z.any(), z.undefined()]).optional(),
+});
 
 export const multiAttachTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(multiAttachTierAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const multiAttachPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additional_currencies: z
+		.union([
+			z.array(multiAttachItemAdditionalCurrencyOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 	tiers: z
 		.union([z.array(multiAttachTierOutboundSchema), z.undefined()])
 		.optional(),
@@ -243,6 +296,9 @@ export const multiAttachBasePriceSchema = z.object({
 	amount: z.number(),
 	interval: multiAttachPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(multiAttachAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 });
 
 export const multiAttachResetIntervalSchema = closedEnumSchema;
@@ -260,6 +316,9 @@ export const multiAttachBillingMethodSchema = closedEnumSchema;
 
 export const multiAttachPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
+	additionalCurrencies: z
+		.union([z.array(multiAttachItemAdditionalCurrencySchema), z.undefined()])
+		.optional(),
 	tiers: z.union([z.array(multiAttachTierSchema), z.undefined()]).optional(),
 	tierBehavior: z
 		.union([multiAttachTierBehaviorSchema, z.undefined()])

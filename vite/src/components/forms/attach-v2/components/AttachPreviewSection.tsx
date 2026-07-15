@@ -10,7 +10,8 @@ import {
 } from "../utils/buildAttachPreviewTotals";
 
 export function AttachPreviewSection() {
-	const { previewQuery, formValues } = useAttachFormContext();
+	const { previewQuery, formValues, isAutoSelectingImmediateSchedule } =
+		useAttachFormContext();
 
 	const hasProductSelected = !!formValues.productId;
 
@@ -30,7 +31,7 @@ export function AttachPreviewSection() {
 
 	if (!hasProductSelected) return null;
 
-	if (error) {
+	if (error && !isLoading && !isAutoSelectingImmediateSchedule) {
 		return (
 			<SheetSection title="Pricing Preview" withSeparator>
 				<PreviewErrorDisplay error={error} />
@@ -41,7 +42,7 @@ export function AttachPreviewSection() {
 	return (
 		<LineItemsPreview
 			title="Pricing Preview"
-			isLoading={isLoading}
+			isLoading={isLoading || isAutoSelectingImmediateSchedule}
 			lineItems={lineItems}
 			currency={previewData?.currency}
 			totals={totals}

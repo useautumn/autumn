@@ -4,7 +4,7 @@ import {
 	mapToProductV2,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 
 export const CustomerProductPrice = ({
@@ -12,7 +12,7 @@ export const CustomerProductPrice = ({
 }: {
 	cusProduct: FullCusProduct;
 }) => {
-	const { org } = useOrg();
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	// Convert FullCusProduct to FullProduct, then to ProductV2, then to FrontendProduct
 	const fullProduct = cusProductToProduct({ cusProduct });
@@ -24,10 +24,9 @@ export const CustomerProductPrice = ({
 		return <div className="text-tertiary-foreground">-</div>;
 	}
 
-	// Get the base price display information
 	const priceDisplay = getBasePriceDisplay({
-		product: frontendProduct,
-		currency: org?.default_currency,
+		product: productForDisplay(frontendProduct),
+		currency: displayCurrency,
 	});
 
 	// Render based on the display type

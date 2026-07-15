@@ -3,6 +3,7 @@ import {
 	CreateProductV2ParamsSchema,
 	type FullProduct,
 	type Organization,
+	orgMultiCurrencyEnabled,
 	type ProductV2,
 	products,
 } from "@autumn/shared";
@@ -110,6 +111,7 @@ export const handleVersionProductV2 = async ({
 		features,
 		orgId: org.id,
 		env,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
 	// License links must satisfy the link rules against the NEW version before
@@ -141,6 +143,7 @@ export const handleVersionProductV2 = async ({
 		logger: ctx.logger,
 		isCustom: false,
 		newVersion: true,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
 	await EntitlementService.insert({

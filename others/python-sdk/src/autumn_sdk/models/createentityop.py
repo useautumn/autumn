@@ -863,6 +863,16 @@ CreateEntityLimitTypeResponse = Union[
 r"""How overage_limit is interpreted: an absolute overage cap (default) or a percentage of the main-plan allowance."""
 
 
+CreateEntitySpendLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class CreateEntitySpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
@@ -874,6 +884,8 @@ class CreateEntitySpendLimitResponseTypedDict(TypedDict):
     r"""Overage cap for the feature: absolute units, or a percent (e.g. 120) when limit_type is usage_percentage."""
     skip_overage_billing: NotRequired[bool]
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
+    source: NotRequired[CreateEntitySpendLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntitySpendLimitResponse(BaseModel):
@@ -892,6 +904,9 @@ class CreateEntitySpendLimitResponse(BaseModel):
     skip_overage_billing: Optional[bool] = None
     r"""When true, overage for this feature is not posted to Stripe. Usage tracking and balance resets still behave normally."""
 
+    source: Optional[CreateEntitySpendLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -901,6 +916,7 @@ class CreateEntitySpendLimitResponse(BaseModel):
                 "limit_type",
                 "overage_limit",
                 "skip_overage_billing",
+                "source",
             ]
         )
         serialized = handler(self)
@@ -941,6 +957,16 @@ class CreateEntityFilterResponse(BaseModel):
     properties: Dict[str, Any]
 
 
+CreateEntityUsageLimitSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class CreateEntityUsageLimitResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature this usage limit applies to."""
@@ -954,6 +980,8 @@ class CreateEntityUsageLimitResponseTypedDict(TypedDict):
     r"""When set, only usage from events whose properties match counts toward this cap. Omit to count all usage of the feature."""
     usage: NotRequired[float]
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+    source: NotRequired[CreateEntityUsageLimitSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntityUsageLimitResponse(BaseModel):
@@ -977,9 +1005,12 @@ class CreateEntityUsageLimitResponse(BaseModel):
     usage: Optional[float] = None
     r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
 
+    source: Optional[CreateEntityUsageLimitSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "filter", "usage"])
+        optional_fields = set(["enabled", "filter", "usage", "source"])
         serialized = handler(self)
         m = {}
 
@@ -1006,6 +1037,16 @@ CreateEntityThresholdTypeResponse = Union[
 r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
+CreateEntityUsageAlertSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class CreateEntityUsageAlertResponseTypedDict(TypedDict):
     threshold: float
     r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
@@ -1017,6 +1058,8 @@ class CreateEntityUsageAlertResponseTypedDict(TypedDict):
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+    source: NotRequired[CreateEntityUsageAlertSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntityUsageAlertResponse(BaseModel):
@@ -1035,9 +1078,12 @@ class CreateEntityUsageAlertResponse(BaseModel):
     name: Optional[str] = None
     r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
 
+    source: Optional[CreateEntityUsageAlertSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "enabled", "name"])
+        optional_fields = set(["feature_id", "enabled", "name", "source"])
         serialized = handler(self)
         m = {}
 
@@ -1052,11 +1098,23 @@ class CreateEntityUsageAlertResponse(BaseModel):
         return m
 
 
+CreateEntityOverageAllowedSource = Union[
+    Literal[
+        "customer",
+        "plan",
+    ],
+    UnrecognizedStr,
+]
+r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
+
 class CreateEntityOverageAllowedResponseTypedDict(TypedDict):
     feature_id: str
     r"""The feature ID this overage allowed control applies to."""
     enabled: NotRequired[bool]
     r"""Whether overage is allowed for this feature."""
+    source: NotRequired[CreateEntityOverageAllowedSource]
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
 
 
 class CreateEntityOverageAllowedResponse(BaseModel):
@@ -1066,9 +1124,12 @@ class CreateEntityOverageAllowedResponse(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether overage is allowed for this feature."""
 
+    source: Optional[CreateEntityOverageAllowedSource] = None
+    r"""Response-only: whether the entry is a customer-level override or inherited from an attached plan's defaults."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled"])
+        optional_fields = set(["enabled", "source"])
         serialized = handler(self)
         m = {}
 

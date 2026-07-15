@@ -3,7 +3,10 @@ import type {
 	BillingPlan,
 	FullCusProduct,
 } from "@autumn/shared";
-import { type BillingPreviewResponse, orgToCurrency } from "@autumn/shared";
+import {
+	type BillingPreviewResponse,
+	billingContextToCurrency,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeNextCycleTaxPreview } from "./billingPlan/preview/tax/computeNextCycleTaxPreview";
@@ -88,7 +91,7 @@ export const billingPlanToPreviewResponse = async ({
 
 	const autumnBillingPlan = billingPlan.autumn;
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
-	const currency = orgToCurrency({ org: ctx.org });
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 
 	const {
 		immediateLineItems,

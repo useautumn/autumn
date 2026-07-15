@@ -4,7 +4,10 @@ import {
 	buildCombinedVariantMigrationDraft,
 	diffPlanV1,
 	type FullProduct,
+	type Operations,
+	type PlanFilter,
 	planDiffHasBillingChanges,
+	toBasePriceParams,
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -37,6 +40,65 @@ const hasVersionableUsage = ({
 	);
 
 const unique = (ids: string[]) => [...new Set(ids)];
+
+type PreviousBasePrice = ReturnType<typeof toBasePriceParams> | null;
+
+const matchedPlanIds = (matcher: PlanFilter["plan_id"]): string[] => {
+	if (typeof matcher === "string") return [matcher];
+	if (matcher && typeof matcher === "object" && matcher.$in) return matcher.$in;
+	return [];
+};
+
+const previousPriceKey = (price: PreviousBasePrice) => JSON.stringify(price);
+
+// Stamped onto price-change ops so the migration UI can show per-currency
+// diffs after the catalog has already been updated in place. An op covering
+// plans with differing previous prices is left unstamped rather than showing
+// the base plan's history for a variant.
+const withPreviousPrice = <T extends { operations: Operations }>({
+	draft,
+	previousPriceByPlanId,
+}: {
+	draft: T;
+	previousPriceByPlanId: Map<string, PreviousBasePrice>;
+}): T => ({
+	...draft,
+	operations: {
+		...draft.operations,
+		customer: draft.operations.customer?.map((op) => {
+			if (op.type !== "update_plan" || op.customize?.price === undefined) {
+				return op;
+			}
+			const prices = matchedPlanIds(op.plan_filter.plan_id).map(
+				(id) => previousPriceByPlanId.get(id) ?? null,
+			);
+			if (prices.length === 0) return op;
+			const keys = new Set(prices.map(previousPriceKey));
+			if (keys.size > 1) return op;
+			return {
+				...op,
+				customize: { ...op.customize, previous_price: prices[0] },
+			};
+		}),
+	},
+});
+
+const buildPreviousPriceMap = ({
+	planId,
+	fromPlan,
+	variantsBefore,
+}: {
+	planId: string;
+	fromPlan: ApiPlanV1;
+	variantsBefore: VariantMigrationSnapshot[];
+}): Map<string, PreviousBasePrice> =>
+	new Map([
+		[planId, fromPlan.price ? toBasePriceParams(fromPlan.price) : null],
+		...variantsBefore.map((before): [string, PreviousBasePrice] => [
+			before.product.id,
+			before.plan.price ? toBasePriceParams(before.plan.price) : null,
+		]),
+	]);
 
 export const getVariantMigrationSnapshots = async ({
 	ctx,
@@ -147,7 +209,17 @@ export const createPlanMigrationDraft = async ({
 		});
 		if (!draft) return;
 
-		const migration = await migrationRepo.insert({ ctx, insert: draft });
+		const migration = await migrationRepo.insert({
+			ctx,
+			insert: withPreviousPrice({
+				draft,
+				previousPriceByPlanId: buildPreviousPriceMap({
+					planId,
+					fromPlan,
+					variantsBefore: selectedVariantsBefore,
+				}),
+			}),
+		});
 		return migration.id;
 	}
 
@@ -179,6 +251,16 @@ export const createPlanMigrationDraft = async ({
 	});
 	if (!draft) return;
 
-	const migration = await migrationRepo.insert({ ctx, insert: draft });
+	const migration = await migrationRepo.insert({
+		ctx,
+		insert: withPreviousPrice({
+			draft,
+			previousPriceByPlanId: buildPreviousPriceMap({
+				planId,
+				fromPlan,
+				variantsBefore: selectedVariantsBefore,
+			}),
+		}),
+	});
 	return migration.id;
 };

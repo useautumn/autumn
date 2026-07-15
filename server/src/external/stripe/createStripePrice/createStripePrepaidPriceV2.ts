@@ -1,10 +1,12 @@
 import {
 	ErrCode,
 	type FullProduct,
+	getPriceCurrencyStripeId,
 	type Price,
 	priceToEnt,
 	priceUtils,
 	RecaseError,
+	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { PriceService } from "@server/internal/products/prices/PriceService";
@@ -17,13 +19,23 @@ export const createStripePrepaidPriceV2 = async ({
 	price,
 	product,
 	currentStripeProduct,
+	currency: targetCurrency,
 }: {
 	ctx: AutumnContext;
 	price: Price;
 	product: FullProduct;
 	currentStripeProduct?: Stripe.Product;
+	currency?: string;
 }) => {
 	const { org, db, env } = ctx;
+
+	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
 
 	const entitlement = priceToEnt({
 		price,
@@ -32,20 +44,24 @@ export const createStripePrepaidPriceV2 = async ({
 
 	// No allowance → V2 price is identical to V1. Reuse the same Stripe price.
 	if (!entitlement?.allowance) {
-		price.config = {
-			...(price.config as UsagePriceConfig),
-			stripe_prepaid_price_v2_id: price.config.stripe_price_id,
-		};
+		setPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_prepaid_price_v2_id",
+			id: getPriceCurrencyStripeId({
+				config,
+				currency,
+				orgDefault,
+				slot: "stripe_price_id",
+			}),
+		});
+		price.config = config;
 
 		await PriceService.update({
 			db,
 			id: price.id!,
-			update: {
-				config: {
-					...(price.config as UsagePriceConfig),
-					stripe_prepaid_price_v2_id: price.config.stripe_price_id,
-				},
-			},
+			update: { config },
 		});
 
 		return;
@@ -64,27 +80,25 @@ export const createStripePrepaidPriceV2 = async ({
 		product,
 		org,
 		currentStripeProduct,
+		currency,
 	});
 
 	const stripeCli = createStripeCli({ org, env });
 
 	const stripePrice = await stripeCli.prices.create(stripeCreatePriceParams);
 
-	price.config = {
-		...(price.config as UsagePriceConfig),
-		stripe_prepaid_price_v2_id: stripePrice.id,
-		// stripe_product_id: stripePrice.product as string,
-	};
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_prepaid_price_v2_id",
+		id: stripePrice.id,
+	});
+	price.config = config;
 
 	await PriceService.update({
 		db,
 		id: price.id!,
-		update: {
-			config: {
-				...(price.config as UsagePriceConfig),
-				stripe_prepaid_price_v2_id: stripePrice.id,
-				// stripe_product_id: stripePrice.product as string,
-			},
-		},
+		update: { config },
 	});
 };

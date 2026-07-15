@@ -1,4 +1,5 @@
 import { ErrCode, RecaseError, type SyncBillingContext } from "@autumn/shared";
+import { assertSyncCurrencyMatchesCustomer } from "./assertSyncCurrencyMatchesCustomer";
 
 /**
  * Validate sync inputs against the detection result. Throws RecaseError on
@@ -15,6 +16,8 @@ export const handleSyncErrors = ({
 }: {
 	syncContext: SyncBillingContext;
 }): void => {
+	assertSyncCurrencyMatchesCustomer({ syncContext });
+
 	const immediateEnabledPlans =
 		syncContext.immediatePhase?.productContexts.filter(
 			(productContext) => productContext.plan.enable_plan_immediately,

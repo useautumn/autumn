@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan, SyncBillingContext } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
+import { syncContextToCurrencyLock } from "../utils/syncContextUtils";
 import {
 	type ComputedSchedulePhase,
 	computeSyncFuturePhases,
@@ -64,6 +65,7 @@ export const computeSyncPlan = ({
 			...immediate.customEntitlements,
 			...future.customEntitlements,
 		],
+		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
 		upsertSubscription,
 	};
 

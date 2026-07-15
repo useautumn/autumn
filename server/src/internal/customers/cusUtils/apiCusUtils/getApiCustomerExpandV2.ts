@@ -34,9 +34,12 @@ export type ApiCustomerExpandResult = ApiCusExpand & {
 export const getApiCustomerExpandV2 = async ({
 	ctx,
 	fullSubject,
+	autoTopupsConfig,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
+	/** Overrides the raw customer-level auto_topups (e.g. plan-merged list). */
+	autoTopupsConfig?: AutoTopupResponse[];
 }): Promise<ApiCustomerExpandResult> => {
 	const { expand } = ctx;
 
@@ -111,7 +114,7 @@ export const getApiCustomerExpandV2 = async ({
 		getCusAutoTopupPurchaseLimits({
 			ctx,
 			internalCustomerId: fullCus.internal_id,
-			autoTopupsConfig: fullCus.auto_topups,
+			autoTopupsConfig: autoTopupsConfig ?? fullCus.auto_topups,
 			expand: cusExpand,
 		}),
 	]);

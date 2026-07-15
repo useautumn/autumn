@@ -1,5 +1,6 @@
 import {
 	type BillingContext,
+	billingContextToCurrency,
 	cusPriceToCusEntWithCusProduct,
 	type FixedPriceConfig,
 	type FullCusProduct,
@@ -8,6 +9,7 @@ import {
 	isConsumablePrice,
 	isFixedPrice,
 	isPrepaidPrice,
+	orgToCurrency,
 	type StripeItemSpec,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -35,6 +37,11 @@ export const cusPriceToStripeItemSpec = ({
 }): StripeItemSpec | null => {
 	const price = cusPrice.price;
 
+	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
+	const currency = billingContext
+		? billingContextToCurrency({ org: ctx.org, billingContext })
+		: orgDefault;
+
 	let spec: StripeItemSpec | null = null;
 
 	// 1. Fixed / one-off price (no entitlement needed)
@@ -42,7 +49,12 @@ export const cusPriceToStripeItemSpec = ({
 		const config = price.config as FixedPriceConfig;
 		if ((config.amount ?? 0) <= 0) return null;
 
-		spec = fixedPriceToStripeItemSpec({ cusPrice, cusProduct });
+		spec = fixedPriceToStripeItemSpec({
+			cusPrice,
+			cusProduct,
+			currency,
+			orgDefault,
+		});
 	} else {
 		// Resolve cusEntWithCusProduct for usage-based prices
 		const cusEntWithCusProduct = cusPriceToCusEntWithCusProduct({
@@ -60,6 +72,8 @@ export const cusPriceToStripeItemSpec = ({
 			spec = prepaidToStripeItemSpec({
 				ctx,
 				cusEntWithCusProduct,
+				currency,
+				orgDefault,
 				options: {
 					...options,
 					billingVersion: billingContext?.billingVersion,
@@ -71,12 +85,18 @@ export const cusPriceToStripeItemSpec = ({
 		if (isConsumablePrice(price)) {
 			spec = consumableToStripeItemSpec({
 				cusEntWithCusProduct,
+				currency,
+				orgDefault,
 			});
 		}
 
 		// 4. Allocated (in-arrear prorated)
 		if (isAllocatedPrice(price)) {
-			spec = allocatedToStripeItemSpec({ cusEntWithCusProduct });
+			spec = allocatedToStripeItemSpec({
+				cusEntWithCusProduct,
+				currency,
+				orgDefault,
+			});
 		}
 	}
 

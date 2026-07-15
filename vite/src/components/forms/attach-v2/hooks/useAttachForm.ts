@@ -38,6 +38,7 @@ export function useAttachForm({
 			resetBillingCycle: false,
 			discounts: [],
 			grantFree: false,
+			currency: null,
 			noBillingChanges: false,
 			enablePlanImmediately: false,
 			longLivedCheckout: false,

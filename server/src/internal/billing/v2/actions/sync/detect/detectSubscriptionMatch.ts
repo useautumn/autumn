@@ -23,12 +23,14 @@ export const detectSubscriptionMatch = async ({
 	ctx,
 	subscription,
 	schedule,
+	billingCurrency,
 	nowSec,
 	fullProducts: preloadedFullProducts,
 }: {
 	ctx: AutumnContext;
 	subscription?: Stripe.Subscription;
 	schedule?: Stripe.SubscriptionSchedule;
+	billingCurrency?: string | null;
 	nowSec?: number;
 	/** Optional pre-fetched catalog (callers matching many subscriptions pass
 	 * this to avoid a per-call fetch). */
@@ -43,6 +45,7 @@ export const detectSubscriptionMatch = async ({
 	const phaseSnapshots = normalizeSubscriptionPhases({
 		subscription,
 		schedule,
+		billingCurrency,
 		nowSec,
 	});
 

@@ -2,6 +2,7 @@ import { isFeaturePriceItem } from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
@@ -19,6 +20,7 @@ import { useProductCountsQuery } from "../../product/hooks/queries/useProductCou
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
+import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
@@ -35,6 +37,7 @@ export const SaveChangesBar = ({
 	isOnboarding = false,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
+	const { org } = useOrg();
 	const { setShowNewVersionDialog } = useProductContext();
 
 	// Get product state from store
@@ -72,15 +75,9 @@ export const SaveChangesBar = ({
 	);
 
 	const handleSaveClicked = async () => {
-		// if (
-		// 	product.planType === "paid" &&
-		// 	product.basePriceType !== "usage" &&
-		// 	!basePrice?.price
-		// ) {
-		// 	toast.error("Please add a plan price greater than 0, or remove it.");
-		// 	setSaving(false);
-		// 	return;
-		// }
+		for (const item of product.items) {
+			if (!checkItemCurrenciesValid(item)) return;
+		}
 
 		if (!isOnboarding && planHasChanges) {
 			if (isCountsLoading) {
@@ -134,6 +131,7 @@ export const SaveChangesBar = ({
 						productId: product.id,
 						product,
 						version: product.version,
+						orgCurrency: org?.default_currency,
 						onSuccess: async () => {
 							await queryRefetch();
 							await Promise.all([invalidateProduct(), invalidateProducts()]);

@@ -15,6 +15,21 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
+class AdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class AdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 PlanPriceInterval = Union[
     Literal[
         "one_off",
@@ -69,6 +84,8 @@ class PlanPriceTypedDict(TypedDict):
     r"""Base price amount for the plan."""
     interval: PlanPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
+    additional_currencies: NotRequired[List[AdditionalCurrencyTypedDict]]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     display: NotRequired[PlanPriceDisplayTypedDict]
@@ -82,6 +99,9 @@ class PlanPrice(BaseModel):
     interval: PlanPriceInterval
     r"""Billing interval (e.g. 'month', 'year')."""
 
+    additional_currencies: Optional[List[AdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
@@ -90,7 +110,7 @@ class PlanPrice(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count", "display"])
+        optional_fields = set(["additional_currencies", "interval_count", "display"])
         serialized = handler(self)
         m = {}
 
@@ -261,16 +281,68 @@ class PlanItemReset(BaseModel):
         return m
 
 
+class ItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class ItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 PlanItemToTypedDict = TypeAliasType("PlanItemToTypedDict", Union[float, str])
 
 
 PlanItemTo = TypeAliasType("PlanItemTo", Union[float, str])
 
 
+class ItemTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class ItemTierAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PlanItemTierTypedDict(TypedDict):
     to: PlanItemToTypedDict
     amount: float
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[List[ItemTierAdditionalCurrencyTypedDict]]
 
 
 class PlanItemTier(BaseModel):
@@ -280,9 +352,11 @@ class PlanItemTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[List[ItemTierAdditionalCurrency]] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
+        optional_fields = set(["flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -341,6 +415,8 @@ class PlanItemPriceTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
+    additional_currencies: NotRequired[List[ItemAdditionalCurrencyTypedDict]]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
     tiers: NotRequired[List[PlanItemTierTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[PlanItemTierBehavior]
@@ -364,6 +440,9 @@ class PlanItemPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
+    additional_currencies: Optional[List[ItemAdditionalCurrency]] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier)."""
+
     tiers: Optional[List[PlanItemTier]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
@@ -374,7 +453,15 @@ class PlanItemPrice(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["amount", "tiers", "tier_behavior", "interval_count"])
+        optional_fields = set(
+            [
+                "amount",
+                "additional_currencies",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+            ]
+        )
         nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
@@ -665,6 +752,21 @@ PlanPriceVariantDetailsInterval = Union[
 r"""Billing interval (e.g. 'month', 'year')."""
 
 
+class VariantDetailsAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class VariantDetailsAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 class BasePriceTypedDict(TypedDict):
     r"""Base price configuration for a plan."""
 
@@ -674,6 +776,8 @@ class BasePriceTypedDict(TypedDict):
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
+    additional_currencies: NotRequired[List[VariantDetailsAdditionalCurrencyTypedDict]]
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
 
 
 class BasePrice(BaseModel):
@@ -688,9 +792,12 @@ class BasePrice(BaseModel):
     interval_count: Optional[float] = None
     r"""Number of intervals per billing cycle. Defaults to 1."""
 
+    additional_currencies: Optional[List[VariantDetailsAdditionalCurrency]] = None
+    r"""Base price amounts in additional currencies. The base 'amount' is in the org's default currency."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -757,6 +864,21 @@ class PlanVariantDetailsReset(BaseModel):
         return m
 
 
+class AddItemAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
+class AddItemAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: float
+    r"""Price amount in this currency. Set explicitly per currency, not converted from the base amount."""
+
+
 PlanVariantDetailsToTypedDict = TypeAliasType(
     "PlanVariantDetailsToTypedDict", Union[float, str]
 )
@@ -765,10 +887,49 @@ PlanVariantDetailsToTypedDict = TypeAliasType(
 PlanVariantDetailsTo = TypeAliasType("PlanVariantDetailsTo", Union[float, str])
 
 
+class VariantDetailsTierAdditionalCurrencyTypedDict(TypedDict):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+    amount: NotRequired[float]
+    r"""Per-unit amount for this tier in this currency."""
+    flat_amount: NotRequired[float]
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+
+class VariantDetailsTierAdditionalCurrency(BaseModel):
+    currency: str
+    r"""Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp')."""
+
+    amount: Optional[float] = None
+    r"""Per-unit amount for this tier in this currency."""
+
+    flat_amount: Optional[float] = None
+    r"""Flat amount for this tier in this currency, if the tier uses one."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class PlanVariantDetailsTierTypedDict(TypedDict):
     to: PlanVariantDetailsToTypedDict
     amount: float
     flat_amount: NotRequired[float]
+    additional_currencies: NotRequired[
+        List[VariantDetailsTierAdditionalCurrencyTypedDict]
+    ]
 
 
 class PlanVariantDetailsTier(BaseModel):
@@ -778,9 +939,11 @@ class PlanVariantDetailsTier(BaseModel):
 
     flat_amount: Optional[float] = None
 
+    additional_currencies: Optional[List[VariantDetailsTierAdditionalCurrency]] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["flat_amount"])
+        optional_fields = set(["flat_amount", "additional_currencies"])
         serialized = handler(self)
         m = {}
 
@@ -837,6 +1000,8 @@ class PlanVariantDetailsPriceTypedDict(TypedDict):
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    additional_currencies: NotRequired[List[AddItemAdditionalCurrencyTypedDict]]
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
     tiers: NotRequired[List[PlanVariantDetailsTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
     tier_behavior: NotRequired[PlanVariantDetailsTierBehavior]
@@ -860,6 +1025,9 @@ class PlanVariantDetailsPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
+    additional_currencies: Optional[List[AddItemAdditionalCurrency]] = None
+    r"""Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'."""
+
     tiers: Optional[List[PlanVariantDetailsTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
@@ -879,6 +1047,7 @@ class PlanVariantDetailsPrice(BaseModel):
         optional_fields = set(
             [
                 "amount",
+                "additional_currencies",
                 "tiers",
                 "tier_behavior",
                 "interval_count",

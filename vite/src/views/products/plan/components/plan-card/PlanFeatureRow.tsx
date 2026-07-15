@@ -24,6 +24,8 @@ interface PlanFeatureRowProps {
 	index: number;
 	readOnly?: boolean;
 	prepaidQuantity?: number | null;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }
 
 export const PlanFeatureRow = ({
@@ -32,6 +34,7 @@ export const PlanFeatureRow = ({
 	index,
 	readOnly = false,
 	prepaidQuantity,
+	currency,
 }: PlanFeatureRowProps) => {
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
@@ -173,6 +176,7 @@ export const PlanFeatureRow = ({
 				<PlanItemLabel
 					compact={isLicenseEditor}
 					item={item}
+					currency={currency}
 					wrapIcons={(icons) => (
 						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>
 					)}

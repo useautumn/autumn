@@ -28,10 +28,16 @@ const appliesNow = ({
 }: {
 	customerProduct: FullCusProduct;
 	now: number;
-}) =>
-	(customerProduct.starts_at ?? 0) <= now &&
-	(customerProduct.access_starts_at ?? customerProduct.starts_at ?? 0) <= now &&
-	(customerProduct.ended_at == null || customerProduct.ended_at > now);
+}) => {
+	// Active statuses are authoritative when Stripe test clocks run ahead.
+	const statusAwareNow = Math.max(now, customerProduct.starts_at ?? now);
+	return (
+		(customerProduct.access_starts_at ?? customerProduct.starts_at ?? 0) <=
+			statusAwareNow &&
+		(customerProduct.ended_at == null ||
+			customerProduct.ended_at > statusAwareNow)
+	);
+};
 
 export const getPlanBillingControlProducts = ({
 	customerProducts,

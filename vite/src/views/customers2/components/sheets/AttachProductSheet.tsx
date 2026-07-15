@@ -111,7 +111,7 @@ function ReviewPreviewBlock() {
 		isLoading: previewLoading,
 	} = previewQuery;
 
-	const showSkeleton = previewLoading || (!previewData && !queryError);
+	const showSkeleton = !queryError && (previewLoading || !previewData);
 	const hasShownSkeleton = useRef(false);
 	if (showSkeleton) hasShownSkeleton.current = true;
 	const animateIn = hasShownSkeleton.current && !showSkeleton;

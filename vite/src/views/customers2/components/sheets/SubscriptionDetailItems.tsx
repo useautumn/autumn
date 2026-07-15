@@ -18,11 +18,13 @@ export function SubscriptionDetailItems({
 	product,
 	prepaidDisplayQuantities = {},
 	adminIds,
+	currency,
 }: {
 	items: ProductItem[];
 	product: FrontendProduct;
 	prepaidDisplayQuantities?: Record<string, number>;
 	adminIds?: AdminPlanIds;
+	currency?: string;
 }) {
 	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
 	const { visibleItems, collapsedBooleanItems } = useMemo(
@@ -44,6 +46,7 @@ export function SubscriptionDetailItems({
 				index={index}
 				readOnly={true}
 				prepaidQuantity={prepaidQuantity}
+				currency={currency}
 			/>
 		);
 	};
@@ -55,6 +58,7 @@ export function SubscriptionDetailItems({
 					product={product}
 					readOnly={true}
 					adminIds={adminIds}
+					currency={currency}
 				/>
 			</div>
 

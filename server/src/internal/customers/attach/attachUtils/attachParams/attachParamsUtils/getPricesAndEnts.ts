@@ -6,6 +6,7 @@ import {
 	type Entitlement,
 	type FullCustomer,
 	type FullProduct,
+	orgMultiCurrencyEnabled,
 	type Price,
 } from "@autumn/shared";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
@@ -100,6 +101,7 @@ export const getPricesAndEnts = async ({
 		product,
 		logger,
 		isCustom: true,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
 	const freeTrial = await handleNewFreeTrial({

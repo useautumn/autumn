@@ -91,6 +91,9 @@ export const logAutumnBillingPlan = ({
 							)
 							.join(", ") || "no-op"
 					: "none",
+
+				oneOffPurchaseRebalance:
+					plan.oneOffPurchaseRebalance?.purchases ?? "none",
 			},
 		},
 	});

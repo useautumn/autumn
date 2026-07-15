@@ -1,11 +1,19 @@
-import { Activity, FileText, Server } from "lucide-react";
+import {
+	Activity,
+	AlertTriangle,
+	ChartColumn,
+	FileText,
+	Server,
+} from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useSwarmSocket } from "./useSwarmSocket";
+import { Errors } from "./views/Errors";
 import { Overall } from "./views/Overall";
 import { PerFile } from "./views/PerFile";
 import { PerWorker } from "./views/PerWorker";
+import { Timings } from "./views/Timings";
 
 const WS_STORAGE_KEY = "testbench-ws-url";
 
@@ -97,6 +105,17 @@ export function App() {
 								<TabsTrigger value="worker">
 									<Server className="mr-1.5 size-3.5" /> Per-worker
 								</TabsTrigger>
+								<TabsTrigger value="timings">
+									<ChartColumn className="mr-1.5 size-3.5" /> Timings
+								</TabsTrigger>
+								<TabsTrigger value="errors">
+									<AlertTriangle className="mr-1.5 size-3.5" /> Errors
+									{snap.run.failed > 0 ? (
+										<span className="ml-1.5 rounded-full bg-red-500/15 px-1.5 font-mono text-[10px] text-red-500 tabular-nums">
+											{snap.run.failed}
+										</span>
+									) : null}
+								</TabsTrigger>
 							</TabsList>
 						</div>
 						{/* Single scroll owner per view lives INSIDE each view; this region
@@ -118,6 +137,18 @@ export function App() {
 							value="worker"
 						>
 							<PerWorker onOpenFile={openFile} snap={snap} socket={socket} />
+						</TabsContent>
+						<TabsContent
+							className="mt-0 mb-0 min-h-0 flex-1 overflow-hidden p-3"
+							value="timings"
+						>
+							<Timings snap={snap} />
+						</TabsContent>
+						<TabsContent
+							className="mt-0 mb-0 min-h-0 flex-1 overflow-hidden p-3"
+							value="errors"
+						>
+							<Errors snap={snap} socket={socket} />
 						</TabsContent>
 					</Tabs>
 				) : (

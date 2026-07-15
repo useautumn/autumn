@@ -90,6 +90,7 @@ export const ErrCode = {
 	CustomerEntitlementNotFound: "customer_entitlement_not_found",
 	MultipleCustomersFound: "multiple_customers_found",
 	InvalidUpdateCustomerParams: "invalid_update_customer_params",
+	CurrencyMismatch: "currency_mismatch",
 
 	// Stripe errors...?
 	CreateStripeProductFailed: "create_stripe_product_failed",
@@ -105,7 +106,6 @@ export const ErrCode = {
 	CreateEntitlementFailed: "create_entitlement_failed",
 	DeleteEntitlementFailed: "delete_entitlement_failed",
 	InsufficientBalance: "insufficient_balance",
-	SetUsageNotAllowedWithUsageLimit: "set_usage_not_allowed_with_usage_limit",
 
 	// Invoice
 	CreateInvoiceFailed: "create_invoice_failed",

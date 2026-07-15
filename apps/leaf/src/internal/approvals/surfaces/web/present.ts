@@ -1,13 +1,15 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatProvider } from "@autumn/shared";
-import { normalizeToolName } from "../../../../agent/tools/toolPolicy.js";
 import type { AgentHarnessName } from "../../../../lib/chatAgentConfig.js";
 import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
-import { fetchApprovalPreview } from "../../utils/fetchApprovalPreview.js";
+import {
+	fetchApprovalPreview,
+	shouldRefreshApprovalPreview,
+} from "../../utils/fetchApprovalPreview.js";
 
 const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
@@ -62,19 +64,22 @@ export const presentWebApproval = async ({
 	}
 
 	if (
-		!approval.preview ||
-		normalizeToolName(approval.toolName) === "updatePlan"
+		shouldRefreshApprovalPreview({
+			preview: approval.preview,
+			toolName: approval.toolName,
+		})
 	) {
 		try {
 			const request = getRequest(publicToolArgs(approval.toolArgs));
 			if (request) {
-				approval.preview = await fetchApprovalPreview({
+				const preview = await fetchApprovalPreview({
 					env: approval.env,
 					logger,
 					request,
 					token,
 					toolName: approval.toolName,
 				});
+				if (preview) approval.preview = preview;
 			}
 		} catch (error) {
 			logger.warn("Could not backfill web approval preview", {

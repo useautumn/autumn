@@ -63,6 +63,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -98,6 +99,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -154,6 +156,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -269,6 +272,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -304,6 +308,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -360,6 +365,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(
@@ -1064,6 +1070,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1099,6 +1106,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1156,6 +1164,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -1278,6 +1287,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1313,6 +1323,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1370,6 +1381,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(
@@ -3112,6 +3124,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3140,6 +3153,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3189,6 +3203,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request(
@@ -3301,6 +3316,7 @@ class Billing(BaseSDK):
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
         tax_rate_id: Optional[str] = None,
+        currency: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -3329,6 +3345,7 @@ class Billing(BaseSDK):
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+        :param currency: Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -3378,6 +3395,7 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
             tax_rate_id=tax_rate_id,
+            currency=currency,
         )
 
         req = self._build_request_async(

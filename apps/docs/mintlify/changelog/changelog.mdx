@@ -4,6 +4,83 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 10th 2026">
+  ## Multi-update billing endpoint
+
+  Cancel or uncancel multiple plans for a customer in a **single atomic request** with the new [`billing.multi_update`](/api-reference/billing/multiUpdate) endpoint. Updates are grouped per Stripe subscription and executed as one merged plan, so proration and invoicing land as a single combined result. Preview it first with [`billing.preview_multi_update`](/api-reference/billing/previewMultiUpdate) to see per-subscription and combined totals.
+
+  ## Plan-inherited billing controls on customer reads
+
+  API v2.3 customer and entity reads now include **plan-inherited** [billing controls](/documentation/customers/billing-controls) — `usage_limits`, `spend_limits`, `overage_allowed`, `auto_topups`, and `usage_alerts` — alongside customer-level overrides, with each entry tagged `source: "customer" | "plan"`. Inherited usage limits also return the current-window usage. Older clients keep the previous response shape.
+
+  ## Eve: new default AI agent for Slack and dashboard chat
+
+  Eve is now the default agent harness for Slack and the dashboard streaming chat, with in-thread approvals, follow-up questions, richer status updates, and interactive **catalog decision cards** for versioning and variant changes. Rejecting an approval in Slack or the web app now also clears the underlying suspension cleanly.
+
+  ## Auto top-up failure webhook
+
+  Subscribe to the new [`billing.auto_topup.failed`](/api-reference/webhooks/billingAutoTopupFailed) webhook to react to auto top-up charges that don't go through — pause features, notify the customer, or fall back to manual top-up.
+
+  ## Expiring free recurring balances
+
+  Free recurring balances can now carry an **`expires_at`** timestamp, and the [`balances.update`](/api-reference/balances/updateBalance) endpoint accepts `expires_at` so you can extend or shorten grants after the fact. The dashboard has matching controls in the balance sheet.
+
+  ## Licenses (early)
+
+  Foundational support for **licenses** has landed: a new licenses model, API schema, and a `licenses` field on the [`plans.list`](/api-reference/plans/listPlans) response. Reach out if you'd like to try it early.
+
+  ## RevenueCat: email and fingerprint identifiers
+
+  The [RevenueCat integration](/documentation/external-providers/revenuecat) now recognizes `autumn_customer_email` and `autumn_customer_fingerprint` subscriber attributes on incoming webhooks, so you can match RevenueCat purchases to Autumn customers by email or fingerprint instead of only by ID.
+
+  ## Any-shape customer import
+
+  [`billing.import`](/api-reference/billing/import) can now ingest customers from **any billing processor in any shape** — the processor and per-item `billable.processor` are configurable, and identity updates honor `dry_run`. Email-only `customer_data` payloads are validated before import runs.
+
+  ## Property filters on usage limits
+
+  [Usage limits](/documentation/modelling-pricing/spend-limits) now support **property filters**, so a single limit can target a subset of events (for example, only requests to a specific model or region) instead of the whole feature. `balances.limit_reached` also now fires for plan-level and percentage-based spend and usage limits.
+
+  ## Copyable sandboxes
+
+  Spin up a new sandbox as a **copy** of an existing one, so you can branch off staging or QA without rebuilding your catalog from scratch.
+
+  ## billing.updated on manual sync
+
+  Manual sync operations now emit the [`billing.updated`](/api-reference/webhooks/billingUpdated) webhook, so downstream consumers stay in sync when you re-pull state from Stripe by hand.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `set_usage` now composes with usage windows: setting a balance no longer errors when a feature has an active window, and window caps still hold after the reset — [#2205](https://github.com/useautumn/autumn/pull/2205)
+      - Auto top-up expand path returns `purchase_limit` for plan-inherited entries too — [#2205](https://github.com/useautumn/autumn/pull/2205)
+      - Refund-last-payment is now exposed on the API — [#2179](https://github.com/useautumn/autumn/pull/2179)
+      - Slack app: additional options for matching a Slack user to an Autumn user — [#2100](https://github.com/useautumn/autumn/pull/2100)
+      - Archived plans now include an `archived` flag when pulled via the CLI — [#2152](https://github.com/useautumn/autumn/pull/2152)
+      - Webhook tags: customer and entity IDs are sanitized to the Svix charset so deliveries don't fail on unusual characters — [#2150](https://github.com/useautumn/autumn/pull/2150)
+      - Free first schedule phase is now supported in plan schedules — [#2137](https://github.com/useautumn/autumn/pull/2137)
+      - Refreshed checkout favicon — [#2162](https://github.com/useautumn/autumn/pull/2162), [#2161](https://github.com/useautumn/autumn/pull/2161)
+      - Cleaner subscription sheet tooltips, coupon error messages, and plan ID chip in mappings — [#2157](https://github.com/useautumn/autumn/pull/2157)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Renewal edge case that could mis-schedule the next cycle is fixed — [#2200](https://github.com/useautumn/autumn/pull/2200)
+      - Manual `tax_rate_id` is now applied to one-time and deferred charges, not just recurring items — [#2204](https://github.com/useautumn/autumn/pull/2204)
+      - `check` with a lock correctly returns `allowed: false` when the customer has no entitlement — [#2174](https://github.com/useautumn/autumn/pull/2174)
+      - Promo minimum validation is now consistent across all billing flows — [#2168](https://github.com/useautumn/autumn/pull/2168)
+      - ACH processing invoices are handled correctly through the past-due flow — [#2167](https://github.com/useautumn/autumn/pull/2167), [#2128](https://github.com/useautumn/autumn/pull/2128), [#2053](https://github.com/useautumn/autumn/pull/2053)
+      - Skip overage billing when no overage is due, avoiding empty invoice items — [#2190](https://github.com/useautumn/autumn/pull/2190), [#2182](https://github.com/useautumn/autumn/pull/2182)
+      - Cardinality gate no longer false-fires on legitimate usage — [#2184](https://github.com/useautumn/autumn/pull/2184)
+      - Scheduled customer products now resync `starts_at` when a Stripe schedule is updated — [#2177](https://github.com/useautumn/autumn/pull/2177)
+      - Filter button on the customers page is visible even when a customer only has expired products — [#2165](https://github.com/useautumn/autumn/pull/2165)
+      - Variant Stripe product renames now propagate correctly — [#2149](https://github.com/useautumn/autumn/pull/2149)
+      - Product cron trial expiry now paginates correctly at scale — [#2144](https://github.com/useautumn/autumn/pull/2144)
+      - Schedule phase billing anchors are reset when the phase changes; Stripe anchor reset day is clamped to valid values — [#2133](https://github.com/useautumn/autumn/pull/2133), [#2115](https://github.com/useautumn/autumn/pull/2115)
+      - Discount upgrades apply cleanly to the upgraded plan — [#1815](https://github.com/useautumn/autumn/pull/1815)
+      - `billing.import` correctly updates `customer_data` and filters one-off / usage-based balances — [#2154](https://github.com/useautumn/autumn/pull/2154), [#2156](https://github.com/useautumn/autumn/pull/2156)
+      - Assorted usage-window, coupon, and sync-back fixes — [#2159](https://github.com/useautumn/autumn/pull/2159), [#2186](https://github.com/useautumn/autumn/pull/2186)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="June 26th 2026">
   ## Multiple sandbox environments per org
 

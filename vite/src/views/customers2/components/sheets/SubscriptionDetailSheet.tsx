@@ -29,6 +29,7 @@ import {
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -54,6 +55,7 @@ function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
+	const { displayCurrency, itemsForDisplay } = useCustomerDisplayCurrency();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -73,6 +75,10 @@ export function SubscriptionDetailSheet() {
 	const featureNameById = useMemo(
 		() => new Map(features.map((feature) => [feature.id, feature.name])),
 		[features],
+	);
+	const displayItems = useMemo(
+		() => productV2?.items && itemsForDisplay(productV2.items),
+		[productV2?.items, itemsForDisplay],
 	);
 
 	if (!cusProduct) {
@@ -146,12 +152,13 @@ export function SubscriptionDetailSheet() {
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			{productV2?.items && productV2.items.length > 0 && (
+			{productV2 && displayItems && displayItems.length > 0 && (
 				<SubscriptionDetailItems
-					items={productV2.items}
-					product={productV2}
+					items={displayItems}
+					product={{ ...productV2, items: displayItems }}
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
 					adminIds={adminIds}
+					currency={displayCurrency}
 				/>
 			)}
 

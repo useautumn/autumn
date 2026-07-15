@@ -1,8 +1,18 @@
-import type { FullProduct, UpdateProductV2Params } from "@autumn/shared";
+import {
+	type FullProduct,
+	orgMultiCurrencyEnabled,
+	type UpdateProductV2Params,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { resolveInPlaceEdit } from "../inPlaceUpdateUtils.js";
+import {
+	lockProductForItemUpdate,
+	lockProductItemsForUpdate,
+	productItemsHaveCustomerReferences,
+	resolveInPlaceEdit,
+} from "../inPlaceUpdateUtils.js";
 
 export const updateProductItems = async ({
 	ctx,
@@ -19,26 +29,49 @@ export const updateProductItems = async ({
 	features: AutumnContext["features"];
 	useInPlaceEdit: boolean;
 }) => {
-	if (!useInPlaceEdit) {
-		await handleNewProductItems({
-			db,
-			curPrices: fullProduct.prices,
-			curEnts: fullProduct.entitlements,
-			newItems,
-			features,
-			product: fullProduct,
-			logger: ctx.logger,
-			isCustom: false,
-		});
-		return;
-	}
-
 	await db.transaction(async (transaction) => {
 		const tx = transaction as unknown as DrizzleCli;
+		await lockProductForItemUpdate({
+			db: tx,
+			internalProductId: fullProduct.internal_id,
+		});
+		const currentFullProduct = await ProductService.getFull({
+			db: tx,
+			idOrInternalId: fullProduct.internal_id,
+			orgId: fullProduct.org_id,
+			env: fullProduct.env,
+			version: fullProduct.version,
+		});
+		await lockProductItemsForUpdate({
+			db: tx,
+			currentFullProduct,
+		});
+		const shouldUseInPlaceEdit =
+			useInPlaceEdit ||
+			(await productItemsHaveCustomerReferences({
+				db: tx,
+				currentFullProduct,
+			}));
+
+		if (!shouldUseInPlaceEdit) {
+			await handleNewProductItems({
+				db: tx,
+				curPrices: currentFullProduct.prices,
+				curEnts: currentFullProduct.entitlements,
+				newItems,
+				features,
+				product: currentFullProduct,
+				logger: ctx.logger,
+				isCustom: false,
+				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+			});
+			return;
+		}
+
 		const inPlace = await resolveInPlaceEdit({
 			db: tx,
 			items: newItems,
-			currentFullProduct: fullProduct,
+			currentFullProduct,
 			features,
 		});
 		await handleNewProductItems({
@@ -47,9 +80,10 @@ export const updateProductItems = async ({
 			curEnts: inPlace.curEnts,
 			newItems: inPlace.items,
 			features,
-			product: fullProduct,
+			product: currentFullProduct,
 			logger: ctx.logger,
 			isCustom: false,
+			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
 		});
 	});
 };

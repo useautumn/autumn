@@ -4,7 +4,11 @@ import {
 	AttachScenario,
 	CusProductStatus,
 } from "@shared/index";
-import { getRevenueCatOverrideCustomerId } from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
+import {
+	getRevenueCatCustomerEmail,
+	getRevenueCatCustomerFingerprint,
+	getRevenueCatOverrideCustomerId,
+} from "@/external/revenueCat/misc/getRevenueCatOverrideCustomerId";
 import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
@@ -34,6 +38,8 @@ export const handleRenewal = async ({
 		customerId: app_user_id,
 		originalAppUserId: original_app_user_id,
 		overrideCustomerId: getRevenueCatOverrideCustomerId(event),
+		customerEmail: getRevenueCatCustomerEmail(event),
+		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

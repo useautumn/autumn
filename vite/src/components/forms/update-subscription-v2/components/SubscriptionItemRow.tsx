@@ -23,6 +23,7 @@ interface SubscriptionItemRowProps {
 	isDeleted?: boolean;
 	isCreated?: boolean;
 	readOnly?: boolean;
+	currency?: string;
 }
 
 function usePrepaidDisplayState({
@@ -173,6 +174,7 @@ export function SubscriptionItemRow({
 	isDeleted = false,
 	isCreated = false,
 	readOnly = false,
+	currency,
 }: SubscriptionItemRowProps) {
 	const [isEditingQuantity, setIsEditingQuantity] = useState(false);
 
@@ -210,7 +212,7 @@ export function SubscriptionItemRow({
 				)}
 			>
 				<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
-					<PlanItemLabel item={item} />
+					<PlanItemLabel currency={currency} item={item} />
 				</div>
 
 				<div className="flex items-center gap-2 shrink-0">

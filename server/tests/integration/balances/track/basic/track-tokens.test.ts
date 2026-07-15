@@ -4,10 +4,11 @@ import type {
 	ApiCustomerV3,
 	ApiCustomerV5,
 	ApiEventsListResponse,
+	Feature,
 	TrackResponseV2,
 	TrackResponseV3,
 } from "@autumn/shared";
-import { ErrCode, events } from "@autumn/shared";
+import { ApiVersion, ErrCode, events, FeatureType } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
@@ -19,9 +20,47 @@ import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
+import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing.js";
 
 const TINYBIRD_INGEST_WAIT_MS = 3000;
+
+const hasRate = (rate: number | undefined): rate is number =>
+	typeof rate === "number" && rate > 0;
+
+// Picks a random priced model through the same fetch+cache path the server
+// bills with, so the test survives models.dev catalog churn.
+const pickRandomModel = async ({
+	label,
+	requireCachePricing = false,
+}: {
+	label: string;
+	requireCachePricing?: boolean;
+}): Promise<string> => {
+	const pricingData = await getModelsDevPricing();
+	const candidates: string[] = [];
+	for (const [providerKey, provider] of Object.entries(pricingData)) {
+		if (providerKey === "custom") continue;
+		for (const [modelKey, model] of Object.entries(provider.models ?? {})) {
+			const cost = model.cost;
+			if (!(cost && hasRate(cost.input) && hasRate(cost.output))) continue;
+			if (
+				requireCachePricing &&
+				!(hasRate(cost.cache_read) && hasRate(cost.cache_write))
+			) {
+				continue;
+			}
+			candidates.push(`${providerKey}/${modelKey}`);
+		}
+	}
+	if (candidates.length === 0) {
+		throw new Error("No priced models found in models.dev catalog");
+	}
+	const modelId = candidates[Math.floor(Math.random() * candidates.length)];
+	console.log(`${label}: using models.dev model ${modelId}`);
+	return modelId;
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-1: Basic trackTokens with models.dev pricing
@@ -61,7 +100,7 @@ test.concurrent(
 
 		const inputTokens = 1000;
 		const outputTokens = 500;
-		const modelId = "anthropic/claude-sonnet-4-20250514";
+		const modelId = await pickRandomModel({ label: "track-tokens-1" });
 
 		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
@@ -69,6 +108,7 @@ test.concurrent(
 			input: inputTokens,
 			output: outputTokens,
 		});
+		expect(expectedCost).toBeGreaterThan(0);
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
@@ -102,6 +142,9 @@ test.concurrent(
 			items: [aiCreditsItem],
 		});
 
+		const timestampModelId = await pickRandomModel({
+			label: "track-tokens-timestamp",
+		});
 		const runId = Date.now();
 		const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId: `track-tokens-timestamp-${runId}`,
@@ -117,7 +160,7 @@ test.concurrent(
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCredits,
-			model_id: "anthropic/claude-sonnet-4-20250514",
+			model_id: timestampModelId,
 			input_tokens: 100,
 			output_tokens: 50,
 			properties: { marker: "backdated" },
@@ -127,7 +170,7 @@ test.concurrent(
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.AiCredits,
-			model_id: "anthropic/claude-sonnet-4-20250514",
+			model_id: timestampModelId,
 			input_tokens: 100,
 			output_tokens: 50,
 			properties: { marker: "default-now" },
@@ -135,12 +178,8 @@ test.concurrent(
 		});
 		const afterDefaultTrack = Date.now();
 
-		let publicBackdatedEvent:
-			| ApiEventsListResponse["list"][number]
-			| undefined;
-		let publicDefaultEvent:
-			| ApiEventsListResponse["list"][number]
-			| undefined;
+		let publicBackdatedEvent: ApiEventsListResponse["list"][number] | undefined;
+		let publicDefaultEvent: ApiEventsListResponse["list"][number] | undefined;
 		for (let attempt = 0; attempt < 5; attempt++) {
 			await timeout(TINYBIRD_INGEST_WAIT_MS);
 			const eventsList = (await autumnV1.events.list({
@@ -230,12 +269,14 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
+		const modelId = await pickRandomModel({ label: "track-tokens-2" });
+
 		// Without feature_id, should fail with disambiguation error
 		let error: any;
 		try {
 			await autumnV2.post("/track_tokens", {
 				customer_id: customerId,
-				model_id: "anthropic/claude-sonnet-4-20250514",
+				model_id: modelId,
 				input_tokens: 100,
 				output_tokens: 50,
 			});
@@ -255,7 +296,6 @@ test.concurrent(
 
 		const inputTokens = 2000;
 		const outputTokens = 1000;
-		const modelId = "anthropic/claude-sonnet-4-20250514";
 
 		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
@@ -263,6 +303,7 @@ test.concurrent(
 			input: inputTokens,
 			output: outputTokens,
 		});
+		expect(expectedCost).toBeGreaterThan(0);
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
@@ -367,8 +408,25 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("track-tokens-4: models.dev markup and non-AI feature_id error")}`,
 	async () => {
+		const modelId = await pickRandomModel({ label: "track-tokens-4" });
+		const markupPercent = 20;
+
+		// Throwaway feature so the shared AiCredits fixture stays untouched
+		const featureId = `ai_credits_markup_${Date.now()}_${Math.random()
+			.toString(36)
+			.slice(2, 8)}`;
+		const autumn = new AutumnInt({ version: ApiVersion.V2_2 });
+		await autumn.post("/features.create", {
+			feature_id: featureId,
+			name: "AI Credits Markup",
+			type: FeatureType.AiCreditSystem,
+			model_markups: {
+				[modelId]: { markup: markupPercent },
+			},
+		});
+
 		const aiCreditsItem = items.free({
-			featureId: TestFeature.AiCredits,
+			featureId,
 			includedUsage: 1000,
 		});
 		const creditsItem = items.free({
@@ -380,7 +438,7 @@ test.concurrent(
 			items: [aiCreditsItem, creditsItem],
 		});
 
-		const { customerId, autumnV1, autumnV2, ctx } = await initScenario({
+		const { customerId, autumnV1, autumnV2 } = await initScenario({
 			customerId: "track-tokens-4",
 			setup: [
 				s.customer({ testClock: false }),
@@ -389,28 +447,35 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		const aiCreditFeature = ctx.features.find(
-			(f) => f.id === TestFeature.AiCredits,
-		);
-		if (!aiCreditFeature) {
-			throw new Error(`${TestFeature.AiCredits} feature not found`);
-		}
-
-		// anthropic/claude-haiku-3.5 has 20% markup in test config
 		const inputTokens = 50000;
 		const outputTokens = 10000;
-		const modelId = "anthropic/claude-3-5-haiku-20241022";
+
+		// Mirrors the markup config created above; only markup fields are read.
+		const markupFeature = {
+			type: FeatureType.AiCreditSystem,
+			model_markups: { [modelId]: { markup: markupPercent } },
+		} as unknown as Feature;
 
 		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			creditSystem: aiCreditFeature,
+			creditSystem: markupFeature,
 			input: inputTokens,
 			output: outputTokens,
 		});
+		const markupFreeCost = await getModelCreditCost({
+			modelName: modelId,
+			creditSystem: { model_markups: {} } as unknown as Feature,
+			input: inputTokens,
+			output: outputTokens,
+		});
+		expect(expectedCost).toBeCloseTo(
+			new Decimal(markupFreeCost).mul(1.2).toNumber(),
+			10,
+		);
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
-			feature_id: TestFeature.AiCredits,
+			feature_id: featureId,
 			model_id: modelId,
 			input_tokens: inputTokens,
 			output_tokens: outputTokens,
@@ -419,7 +484,7 @@ test.concurrent(
 		expect(trackRes.value).toBeCloseTo(expectedCost, 10);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
+		expect(customer.features[featureId]).toMatchObject({
 			balance: new Decimal(1000).minus(expectedCost).toNumber(),
 			usage: expectedCost,
 		});
@@ -430,7 +495,7 @@ test.concurrent(
 			await autumnV2.post("/track_tokens", {
 				customer_id: customerId,
 				feature_id: TestFeature.Credits,
-				model_id: "anthropic/claude-sonnet-4-20250514",
+				model_id: modelId,
 				input_tokens: 100,
 				output_tokens: 50,
 			});
@@ -597,7 +662,10 @@ test.concurrent(
 		}
 
 		// Total input (input + cache pools) stays far below the 200k tier threshold
-		const modelId = "anthropic/claude-sonnet-4-20250514";
+		const modelId = await pickRandomModel({
+			label: "track-tokens-7",
+			requireCachePricing: true,
+		});
 		const pools = {
 			input: 10000,
 			output: 5000,

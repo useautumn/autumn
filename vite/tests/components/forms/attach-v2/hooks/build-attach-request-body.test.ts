@@ -50,6 +50,7 @@ const baseParams: Omit<
 	customLineItems: [],
 	disableProration: false,
 	enablePlanImmediately: false,
+	currency: null,
 };
 
 describe("buildAttachRequestBody — billing_units handling", () => {

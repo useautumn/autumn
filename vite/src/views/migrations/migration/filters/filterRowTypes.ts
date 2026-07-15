@@ -44,7 +44,7 @@ export const FILTER_FIELD_OPTIONS: {
 type OperatorOption = { value: FilterOperator; label: string };
 export type FieldConfig = {
 	operators: OperatorOption[];
-	valueType: "string" | "boolean" | "plan" | "none";
+	valueType: "string" | "boolean" | "plan" | "none" | "customer";
 };
 
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
@@ -75,7 +75,7 @@ const NULLABLE_ONLY: FieldConfig = {
 };
 
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
-	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
+	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "customer" },
 	plan_id: { operators: PLAN_OPERATORS, valueType: "plan" },
 	custom: BOOLEAN_ONLY,
 	paid: BOOLEAN_ONLY,

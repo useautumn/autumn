@@ -12,6 +12,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { AdditionalCurrenciesHint } from "./AdditionalCurrenciesHint";
 
 export const BasePriceDisplay = ({
 	isOnboarding,
@@ -19,6 +20,7 @@ export const BasePriceDisplay = ({
 	readOnly = false,
 	slim = false,
 	adminIds,
+	currency,
 }: {
 	isOnboarding?: boolean;
 	product: FrontendProduct;
@@ -26,6 +28,8 @@ export const BasePriceDisplay = ({
 	/** Compact sizing for the slim license card header. */
 	slim?: boolean;
 	adminIds?: AdminPlanIds;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }) => {
 	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
@@ -41,7 +45,7 @@ export const BasePriceDisplay = ({
 	const renderPriceContent = () => {
 		const priceDisplay = getBasePriceDisplay({
 			product,
-			currency: org?.default_currency,
+			currency: currency ?? org?.default_currency,
 			showPlaceholder: true,
 		});
 
@@ -55,7 +59,11 @@ export const BasePriceDisplay = ({
 					</span>
 				);
 
-			case "price":
+			case "price": {
+				const additionalCurrencies = org?.config?.multi_currency
+					? (priceDisplay.additionalCurrencies ?? [])
+					: [];
+
 				return (
 					<span
 						className={cn(
@@ -74,8 +82,12 @@ export const BasePriceDisplay = ({
 						<span className={cn("mt-0.5", slim && "mt-0")}>
 							{priceDisplay.intervalText}
 						</span>
+						{additionalCurrencies.length > 0 && (
+							<AdditionalCurrenciesHint currencies={additionalCurrencies} />
+						)}
 					</span>
 				);
+			}
 
 			case "variable":
 				return (

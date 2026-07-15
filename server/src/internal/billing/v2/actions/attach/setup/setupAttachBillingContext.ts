@@ -14,6 +14,7 @@ import {
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
+	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
@@ -285,6 +286,12 @@ export const setupAttachBillingContext = async ({
 		fullCustomer,
 		fullProducts: [attachProduct],
 		attachProduct,
+		currency: resolveCustomerCurrency({
+			customer: fullCustomer,
+			org: ctx.org,
+			requested: params.currency,
+			stripeCurrency: stripeCustomer?.currency,
+		}),
 		featureQuantities,
 		customerLicenseQuantities,
 		transitionConfig,

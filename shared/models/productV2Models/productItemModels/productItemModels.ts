@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 import { ApiFeatureV0Schema } from "../../../api/features/prevVersions/apiFeatureV0.js";
+import {
+	AdditionalCurrencyPriceArraySchema,
+	AdditionalCurrencyTierArraySchema,
+} from "../../../api/products/components/additionalCurrencies.js";
 import { RolloverExpiryDurationType } from "../../productModels/durationTypes/rolloverExpiryDurationType.js";
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
@@ -31,6 +35,10 @@ export const PriceTierSchema = z
 		flat_amount: z.number().optional().meta({
 			description:
 				"A flat fee charged for this tier, in addition to the per-unit amount.",
+		}),
+		additional_currencies: AdditionalCurrencyTierArraySchema.nullish().meta({
+			description:
+				"Per-currency amounts for this tier. Boundaries ('to') are shared across currencies.",
 		}),
 	})
 	.refine((val) => val.amount != null || val.flat_amount != null, {
@@ -132,6 +140,16 @@ export const ProductItemSchema = z.object({
 	tiers: z.array(PriceTierSchema).nullish().meta({
 		description:
 			"Tiered pricing for the product item. Not applicable for fixed price items.",
+	}),
+
+	// Multi-currency: the flat `price` above is in `base_currency`;
+	// `additional_currencies` holds the same flat price in other currencies.
+	base_currency: z.string().nullish().meta({
+		internal: true,
+	}),
+	additional_currencies: AdditionalCurrencyPriceArraySchema.nullish().meta({
+		description:
+			"Amounts in additional currencies for a flat-priced item. Tiered items carry per-currency amounts on each tier.",
 	}),
 
 	billing_units: z.number().nullish().meta({

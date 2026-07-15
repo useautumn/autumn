@@ -39,6 +39,28 @@ const BUN_VERSION = readFileSync(
 	"utf8",
 ).trim();
 
+/**
+ * Tiny image for the ingress sandbox: debian + git + bun, nothing else. The
+ * ingress server (scripts/tw/ingress/server.mjs) is a self-contained http server
+ * using only node built-ins, so it needs neither node_modules nor PG/Dragonfly/
+ * goaws/chromium — building the full base image for it just wastes ~2-3 min and
+ * couples ingress to a build that can fail independently of the ingress code.
+ */
+export const buildIngressImage = (
+	modal: ModalClient,
+	app: App,
+): Promise<Image> =>
+	// oven/bun:1 (same proven base as the nuke sandbox — pulls + builds reliably in
+	// Modal's builder, where debian:bookworm-slim's apt/bun bootstrap does not). Bun
+	// is already present; we only add git for cloneRepo.
+	modal.images
+		.fromRegistry("oven/bun:1")
+		.dockerfileCommands([
+			"RUN apt-get update && apt-get install -y --no-install-recommends " +
+				"git ca-certificates && rm -rf /var/lib/apt/lists/* && mkdir -p /repo",
+		])
+		.build(app);
+
 /** Inputs for baking node_modules into the base image (see buildBaseImage). */
 export type BaseImageDeps = {
 	/** Clone URL — anonymous for the public repo; only carries a token if

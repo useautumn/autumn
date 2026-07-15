@@ -34,6 +34,17 @@ export type CreatePlanPriceIntervalRequestBody = ClosedEnum<
   typeof CreatePlanPriceIntervalRequestBody
 >;
 
+export type CreatePlanAdditionalCurrencyRequestBody = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base recurring price for the plan. Omit for free or usage-only plans.
  */
@@ -50,6 +61,12 @@ export type CreatePlanPriceRequestBody = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanAdditionalCurrencyRequestBody>
+    | undefined;
 };
 
 /**
@@ -87,12 +104,44 @@ export type CreatePlanResetRequestBody = {
   intervalCount?: number | undefined;
 };
 
+export type CreatePlanItemAdditionalCurrencyRequestBody = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type CreatePlanToRequestBody = number | string;
+
+export type CreatePlanTierAdditionalCurrencyRequestBody = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type CreatePlanTierRequestBody = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanTierAdditionalCurrencyRequestBody>
+    | undefined;
 };
 
 export const CreatePlanTierBehaviorRequestBody = {
@@ -143,6 +192,12 @@ export type CreatePlanItemPriceRequestBody = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanItemAdditionalCurrencyRequestBody>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -620,6 +675,17 @@ export type CreatePlanParams = {
   createInStripe?: boolean | undefined;
 };
 
+export type CreatePlanAdditionalCurrencyResponse = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Billing interval (e.g. 'month', 'year').
  */
@@ -657,6 +723,12 @@ export type CreatePlanPriceResponse = {
    * Base price amount for the plan.
    */
   amount: number;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanAdditionalCurrencyResponse>
+    | undefined;
   /**
    * Billing interval (e.g. 'month', 'year').
    */
@@ -771,12 +843,41 @@ export type CreatePlanItemResetResponse = {
   intervalCount?: number | undefined;
 };
 
+export type CreatePlanItemAdditionalCurrencyResponse = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type CreatePlanItemToResponse = number | string;
+
+export type CreatePlanItemTierAdditionalCurrencyResponse = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type CreatePlanItemTierResponse = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
+  additionalCurrencies?:
+    | Array<CreatePlanItemTierAdditionalCurrencyResponse>
+    | undefined;
 };
 
 export const CreatePlanItemTierBehaviorResponse = {
@@ -824,6 +925,12 @@ export type CreatePlanItemPriceResponse = {
    * Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanItemAdditionalCurrencyResponse>
+    | undefined;
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
@@ -1009,6 +1116,17 @@ export type CreatePlanPriceVariantDetailsInterval = OpenEnum<
   typeof CreatePlanPriceVariantDetailsInterval
 >;
 
+export type CreatePlanVariantDetailsAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -1025,6 +1143,12 @@ export type CreatePlanBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?:
+    | Array<CreatePlanVariantDetailsAdditionalCurrency>
+    | undefined;
 };
 
 /**
@@ -1062,12 +1186,41 @@ export type CreatePlanVariantDetailsReset = {
   intervalCount?: number | undefined;
 };
 
+export type CreatePlanAddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type CreatePlanVariantDetailsTo = number | string;
+
+export type CreatePlanVariantDetailsTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type CreatePlanVariantDetailsTier = {
   to: number | string;
   amount: number;
   flatAmount?: number | undefined;
+  additionalCurrencies?:
+    | Array<CreatePlanVariantDetailsTierAdditionalCurrency>
+    | undefined;
 };
 
 export const CreatePlanVariantDetailsTierBehavior = {
@@ -1118,6 +1271,10 @@ export type CreatePlanVariantDetailsPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<CreatePlanAddItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -2011,10 +2168,40 @@ export const CreatePlanPriceIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreatePlanPriceIntervalRequestBody);
 
 /** @internal */
+export type CreatePlanAdditionalCurrencyRequestBody$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const CreatePlanAdditionalCurrencyRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreatePlanAdditionalCurrencyRequestBody$Outbound,
+    CreatePlanAdditionalCurrencyRequestBody
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function createPlanAdditionalCurrencyRequestBodyToJSON(
+  createPlanAdditionalCurrencyRequestBody:
+    CreatePlanAdditionalCurrencyRequestBody,
+): string {
+  return JSON.stringify(
+    CreatePlanAdditionalCurrencyRequestBody$outboundSchema.parse(
+      createPlanAdditionalCurrencyRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export type CreatePlanPriceRequestBody$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<CreatePlanAdditionalCurrencyRequestBody$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -2026,10 +2213,14 @@ export const CreatePlanPriceRequestBody$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: CreatePlanPriceIntervalRequestBody$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      CreatePlanAdditionalCurrencyRequestBody$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -2078,6 +2269,33 @@ export function createPlanResetRequestBodyToJSON(
 }
 
 /** @internal */
+export type CreatePlanItemAdditionalCurrencyRequestBody$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const CreatePlanItemAdditionalCurrencyRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreatePlanItemAdditionalCurrencyRequestBody$Outbound,
+    CreatePlanItemAdditionalCurrencyRequestBody
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function createPlanItemAdditionalCurrencyRequestBodyToJSON(
+  createPlanItemAdditionalCurrencyRequestBody:
+    CreatePlanItemAdditionalCurrencyRequestBody,
+): string {
+  return JSON.stringify(
+    CreatePlanItemAdditionalCurrencyRequestBody$outboundSchema.parse(
+      createPlanItemAdditionalCurrencyRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export type CreatePlanToRequestBody$Outbound = number | string;
 
 /** @internal */
@@ -2095,10 +2313,49 @@ export function createPlanToRequestBodyToJSON(
 }
 
 /** @internal */
+export type CreatePlanTierAdditionalCurrencyRequestBody$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const CreatePlanTierAdditionalCurrencyRequestBody$outboundSchema:
+  z.ZodMiniType<
+    CreatePlanTierAdditionalCurrencyRequestBody$Outbound,
+    CreatePlanTierAdditionalCurrencyRequestBody
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function createPlanTierAdditionalCurrencyRequestBodyToJSON(
+  createPlanTierAdditionalCurrencyRequestBody:
+    CreatePlanTierAdditionalCurrencyRequestBody,
+): string {
+  return JSON.stringify(
+    CreatePlanTierAdditionalCurrencyRequestBody$outboundSchema.parse(
+      createPlanTierAdditionalCurrencyRequestBody,
+    ),
+  );
+}
+
+/** @internal */
 export type CreatePlanTierRequestBody$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreatePlanTierAdditionalCurrencyRequestBody$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -2110,10 +2367,14 @@ export const CreatePlanTierRequestBody$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      CreatePlanTierAdditionalCurrencyRequestBody$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -2145,6 +2406,9 @@ export const CreatePlanBillingMethodRequestBody$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreatePlanItemPriceRequestBody$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreatePlanItemAdditionalCurrencyRequestBody$Outbound>
+    | undefined;
   tiers?: Array<CreatePlanTierRequestBody$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -2161,9 +2425,12 @@ export const CreatePlanItemPriceRequestBody$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => CreatePlanTierRequestBody$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      CreatePlanItemAdditionalCurrencyRequestBody$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      CreatePlanTierRequestBody$outboundSchema
+    ))),
     tierBehavior: z.optional(CreatePlanTierBehaviorRequestBody$outboundSchema),
     interval: CreatePlanItemPriceIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -2173,6 +2440,7 @@ export const CreatePlanItemPriceRequestBody$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -2802,6 +3070,26 @@ export function createPlanParamsToJSON(
 }
 
 /** @internal */
+export const CreatePlanAdditionalCurrencyResponse$inboundSchema: z.ZodMiniType<
+  CreatePlanAdditionalCurrencyResponse,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function createPlanAdditionalCurrencyResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanAdditionalCurrencyResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanAdditionalCurrencyResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanAdditionalCurrencyResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanPriceIntervalResponse$inboundSchema: z.ZodMiniType<
   CreatePlanPriceIntervalResponse,
   unknown
@@ -2841,12 +3129,16 @@ export const CreatePlanPriceResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.number(),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => CreatePlanAdditionalCurrencyResponse$inboundSchema)),
+    ),
     interval: CreatePlanPriceIntervalResponse$inboundSchema,
     interval_count: types.optional(types.number()),
     display: types.optional(z.lazy(() => CreatePlanPriceDisplay$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
       "interval_count": "intervalCount",
     });
   }),
@@ -2981,6 +3273,29 @@ export function createPlanItemResetResponseFromJSON(
 }
 
 /** @internal */
+export const CreatePlanItemAdditionalCurrencyResponse$inboundSchema:
+  z.ZodMiniType<CreatePlanItemAdditionalCurrencyResponse, unknown> = z.object({
+    currency: types.string(),
+    amount: types.number(),
+  });
+
+export function createPlanItemAdditionalCurrencyResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanItemAdditionalCurrencyResponse,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanItemAdditionalCurrencyResponse$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanItemAdditionalCurrencyResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanItemToResponse$inboundSchema: z.ZodMiniType<
   CreatePlanItemToResponse,
   unknown
@@ -2997,6 +3312,37 @@ export function createPlanItemToResponseFromJSON(
 }
 
 /** @internal */
+export const CreatePlanItemTierAdditionalCurrencyResponse$inboundSchema:
+  z.ZodMiniType<CreatePlanItemTierAdditionalCurrencyResponse, unknown> = z.pipe(
+    z.object({
+      currency: types.string(),
+      amount: types.optional(types.number()),
+      flat_amount: types.optional(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "flat_amount": "flatAmount",
+      });
+    }),
+  );
+
+export function createPlanItemTierAdditionalCurrencyResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanItemTierAdditionalCurrencyResponse,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanItemTierAdditionalCurrencyResponse$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanItemTierAdditionalCurrencyResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanItemTierResponse$inboundSchema: z.ZodMiniType<
   CreatePlanItemTierResponse,
   unknown
@@ -3005,10 +3351,14 @@ export const CreatePlanItemTierResponse$inboundSchema: z.ZodMiniType<
     to: smartUnion([types.number(), types.string()]),
     amount: types.number(),
     flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      CreatePlanItemTierAdditionalCurrencyResponse$inboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       "flat_amount": "flatAmount",
+      "additional_currencies": "additionalCurrencies",
     });
   }),
 );
@@ -3048,9 +3398,12 @@ export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    tiers: types.optional(
-      z.array(z.lazy(() => CreatePlanItemTierResponse$inboundSchema)),
-    ),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      CreatePlanItemAdditionalCurrencyResponse$inboundSchema
+    ))),
+    tiers: types.optional(z.array(z.lazy(() =>
+      CreatePlanItemTierResponse$inboundSchema
+    ))),
     tier_behavior: types.optional(
       CreatePlanItemTierBehaviorResponse$inboundSchema,
     ),
@@ -3062,6 +3415,7 @@ export const CreatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
       "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",
@@ -3238,6 +3592,31 @@ export const CreatePlanPriceVariantDetailsInterval$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreatePlanPriceVariantDetailsInterval);
 
 /** @internal */
+export const CreatePlanVariantDetailsAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<CreatePlanVariantDetailsAdditionalCurrency, unknown> = z.object(
+    {
+      currency: types.string(),
+      amount: types.number(),
+    },
+  );
+
+export function createPlanVariantDetailsAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanVariantDetailsAdditionalCurrency,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanVariantDetailsAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanVariantDetailsAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanBasePrice$inboundSchema: z.ZodMiniType<
   CreatePlanBasePrice,
   unknown
@@ -3246,10 +3625,14 @@ export const CreatePlanBasePrice$inboundSchema: z.ZodMiniType<
     amount: types.number(),
     interval: CreatePlanPriceVariantDetailsInterval$inboundSchema,
     interval_count: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      CreatePlanVariantDetailsAdditionalCurrency$inboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       "interval_count": "intervalCount",
+      "additional_currencies": "additionalCurrencies",
     });
   }),
 );
@@ -3297,6 +3680,26 @@ export function createPlanVariantDetailsResetFromJSON(
 }
 
 /** @internal */
+export const CreatePlanAddItemAdditionalCurrency$inboundSchema: z.ZodMiniType<
+  CreatePlanAddItemAdditionalCurrency,
+  unknown
+> = z.object({
+  currency: types.string(),
+  amount: types.number(),
+});
+
+export function createPlanAddItemAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanAddItemAdditionalCurrency, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanAddItemAdditionalCurrency$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanAddItemAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanVariantDetailsTo$inboundSchema: z.ZodMiniType<
   CreatePlanVariantDetailsTo,
   unknown
@@ -3313,6 +3716,38 @@ export function createPlanVariantDetailsToFromJSON(
 }
 
 /** @internal */
+export const CreatePlanVariantDetailsTierAdditionalCurrency$inboundSchema:
+  z.ZodMiniType<CreatePlanVariantDetailsTierAdditionalCurrency, unknown> = z
+    .pipe(
+      z.object({
+        currency: types.string(),
+        amount: types.optional(types.number()),
+        flat_amount: types.optional(types.number()),
+      }),
+      z.transform((v) => {
+        return remap$(v, {
+          "flat_amount": "flatAmount",
+        });
+      }),
+    );
+
+export function createPlanVariantDetailsTierAdditionalCurrencyFromJSON(
+  jsonString: string,
+): SafeParseResult<
+  CreatePlanVariantDetailsTierAdditionalCurrency,
+  SDKValidationError
+> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreatePlanVariantDetailsTierAdditionalCurrency$inboundSchema.parse(
+        JSON.parse(x),
+      ),
+    `Failed to parse 'CreatePlanVariantDetailsTierAdditionalCurrency' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanVariantDetailsTier$inboundSchema: z.ZodMiniType<
   CreatePlanVariantDetailsTier,
   unknown
@@ -3321,10 +3756,14 @@ export const CreatePlanVariantDetailsTier$inboundSchema: z.ZodMiniType<
     to: smartUnion([types.number(), types.string()]),
     amount: types.number(),
     flat_amount: types.optional(types.number()),
+    additional_currencies: types.optional(z.array(z.lazy(() =>
+      CreatePlanVariantDetailsTierAdditionalCurrency$inboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       "flat_amount": "flatAmount",
+      "additional_currencies": "additionalCurrencies",
     });
   }),
 );
@@ -3364,6 +3803,9 @@ export const CreatePlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
+    additional_currencies: types.optional(
+      z.array(z.lazy(() => CreatePlanAddItemAdditionalCurrency$inboundSchema)),
+    ),
     tiers: types.optional(
       z.array(z.lazy(() => CreatePlanVariantDetailsTier$inboundSchema)),
     ),
@@ -3378,6 +3820,7 @@ export const CreatePlanVariantDetailsPrice$inboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      "additional_currencies": "additionalCurrencies",
       "tier_behavior": "tierBehavior",
       "interval_count": "intervalCount",
       "billing_units": "billingUnits",

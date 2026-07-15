@@ -136,18 +136,22 @@ export const waitForCustomerProducts = async ({
 	customerId,
 	active,
 	notPresent = [],
+	label,
 }: {
 	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
 	customerId: string;
 	active: string[];
 	notPresent?: string[];
+	label?: string;
 }) => {
 	const deadline = Date.now() + 60_000;
 	let lastError: unknown;
+	let lastCustomer: ApiCustomerV3 | undefined;
 
 	while (Date.now() < deadline) {
 		try {
 			const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			lastCustomer = customer;
 			await expectCustomerProducts({ customer, active, notPresent });
 			return customer;
 		} catch (error) {
@@ -156,7 +160,14 @@ export const waitForCustomerProducts = async ({
 		}
 	}
 
-	throw lastError ?? new Error("Timed out waiting for customer products");
+	const actualProducts = (lastCustomer?.products ?? [])
+		.map((product) => `${product.id}:${product.status}`)
+		.join(", ");
+	const message =
+		lastError instanceof Error ? lastError.message : String(lastError);
+	throw new Error(
+		`waitForCustomerProducts${label ? ` [${label}]` : ""} timed out for ${customerId}: ${message} — actual products: [${actualProducts}]`,
+	);
 };
 
 export const trackCustomerUsage = async ({

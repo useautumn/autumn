@@ -5,6 +5,7 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	findCustomerProductById,
+	getPriceCurrencyStripeId,
 	InternalError,
 	isPrepaidPrice,
 	isPreviewStripeId,
@@ -14,6 +15,7 @@ import {
 	type Price,
 	ProcessorType,
 	type Product,
+	setPriceCurrencyStripeId,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import {
@@ -94,9 +96,13 @@ const previewStripePriceIdForPrice = ({
 export const applyPreviewStripeResourcesToProduct = ({
 	product,
 	internalEntityId,
+	currency,
+	orgDefault,
 }: {
 	product: FullProduct;
 	internalEntityId?: string;
+	currency: string;
+	orgDefault: string;
 }) => {
 	const productProcessorId =
 		product.processor?.id ?? previewStripeProductIdForProduct({ product });
@@ -109,11 +115,28 @@ export const applyPreviewStripeResourcesToProduct = ({
 	for (const price of product.prices) {
 		const config = price.config as Partial<UsagePriceConfig>;
 
-		config.stripe_price_id ??= previewStripePriceIdForPrice({
-			price,
-			product,
-			fieldName: "stripe_price_id",
-		});
+		// Stub the id for the resolved currency's slot (base or currencies[ccy]),
+		// so preview of a not-yet-created A-prime price doesn't fail item-spec build.
+		if (
+			!getPriceCurrencyStripeId({
+				config: price.config,
+				currency,
+				orgDefault,
+				slot: "stripe_price_id",
+			})
+		) {
+			setPriceCurrencyStripeId({
+				config: price.config,
+				currency,
+				orgDefault,
+				slot: "stripe_price_id",
+				id: previewStripePriceIdForPrice({
+					price,
+					product,
+					fieldName: "stripe_price_id",
+				}),
+			});
+		}
 
 		if (isUsagePrice({ price })) {
 			config.stripe_product_id ??= previewStripeProductIdForPrice({
@@ -123,11 +146,25 @@ export const applyPreviewStripeResourcesToProduct = ({
 			});
 		}
 
-		if (isPrepaidPrice(price)) {
-			config.stripe_prepaid_price_v2_id ??= previewStripePriceIdForPrice({
-				price,
-				product,
-				fieldName: "stripe_prepaid_price_v2_id",
+		if (
+			isPrepaidPrice(price) &&
+			!getPriceCurrencyStripeId({
+				config: price.config,
+				currency,
+				orgDefault,
+				slot: "stripe_prepaid_price_v2_id",
+			})
+		) {
+			setPriceCurrencyStripeId({
+				config: price.config,
+				currency,
+				orgDefault,
+				slot: "stripe_prepaid_price_v2_id",
+				id: previewStripePriceIdForPrice({
+					price,
+					product,
+					fieldName: "stripe_prepaid_price_v2_id",
+				}),
 			});
 		}
 	}
@@ -136,12 +173,21 @@ export const applyPreviewStripeResourcesToProduct = ({
 const applyPreviewStripeResourcesToCustomerProduct = ({
 	customerProduct,
 	internalEntityId,
+	currency,
+	orgDefault,
 }: {
 	customerProduct: FullCusProduct;
 	internalEntityId?: string;
+	currency: string;
+	orgDefault: string;
 }) => {
 	const product = cusProductToProduct({ cusProduct: customerProduct });
-	applyPreviewStripeResourcesToProduct({ product, internalEntityId });
+	applyPreviewStripeResourcesToProduct({
+		product,
+		internalEntityId,
+		currency,
+		orgDefault,
+	});
 	customerProduct.product.processor = product.processor ?? null;
 };
 
@@ -149,9 +195,13 @@ const applyPreviewStripeResourcesToCustomerProduct = ({
 export const applyPreviewStripeResourcesToBillingPlan = ({
 	autumnBillingPlan,
 	billingContext,
+	currency,
+	orgDefault,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
+	currency: string;
+	orgDefault: string;
 }) => {
 	const { fullCustomer } = billingContext;
 	const internalEntityId = fullCustomer.entity?.internal_id;
@@ -166,6 +216,8 @@ export const applyPreviewStripeResourcesToBillingPlan = ({
 		applyPreviewStripeResourcesToCustomerProduct({
 			customerProduct,
 			internalEntityId,
+			currency,
+			orgDefault,
 		});
 	}
 
@@ -183,6 +235,8 @@ export const applyPreviewStripeResourcesToBillingPlan = ({
 		applyPreviewStripeResourcesToCustomerProduct({
 			customerProduct: patchedCustomerProduct,
 			internalEntityId,
+			currency,
+			orgDefault,
 		});
 
 		if (matchingCustomerProduct === patchCustomerProduct.customerProduct) {
@@ -195,6 +249,8 @@ export const applyPreviewStripeResourcesToBillingPlan = ({
 				patch: patchCustomerProduct,
 			}),
 			internalEntityId,
+			currency,
+			orgDefault,
 		});
 	}
 
@@ -204,6 +260,8 @@ export const applyPreviewStripeResourcesToBillingPlan = ({
 		applyPreviewStripeResourcesToCustomerProduct({
 			customerProduct,
 			internalEntityId,
+			currency,
+			orgDefault,
 		});
 	}
 };
