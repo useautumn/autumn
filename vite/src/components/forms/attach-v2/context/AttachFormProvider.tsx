@@ -41,7 +41,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
-import { mergeLicenseIncludedQuantities } from "@/utils/billing/licenseQuantityUtils";
+import { clampLicenseQuantitiesToIncluded } from "@/utils/billing/licenseQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
 import {
@@ -74,8 +74,6 @@ interface AttachFormContextValue {
 	prepaidItems: PrepaidItemWithFeature[];
 	originalItems: ProductItem[] | undefined;
 	productWithFormItems: FrontendProduct | undefined;
-	/** addLicenses patch with staged included-quantity row edits merged in. */
-	effectiveAddLicenses: CustomizePlanLicense[] | null;
 	hasCustomizations: boolean;
 	numVersions: number;
 	initialPrepaidOptions: Record<string, number>;
@@ -186,7 +184,7 @@ export function AttachFormProvider({
 	const {
 		productId,
 		prepaidOptions,
-		licenseIncludedQuantities,
+		licenseQuantities,
 		items,
 		addLicenses,
 		version,
@@ -332,7 +330,7 @@ export function AttachFormProvider({
 		previousVersionRef.current = version;
 		form.setFieldValue("items", null);
 		form.setFieldValue("addLicenses", null);
-		form.setFieldValue("licenseIncludedQuantities", {});
+		form.setFieldValue("licenseQuantities", {});
 	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
@@ -352,7 +350,7 @@ export function AttachFormProvider({
 		if (isProductChange) {
 			form.setFieldValue("items", null);
 			form.setFieldValue("addLicenses", null);
-			form.setFieldValue("licenseIncludedQuantities", {});
+			form.setFieldValue("licenseQuantities", {});
 			form.setFieldValue("version", undefined);
 			form.setFieldValue("trialEnabled", false);
 			form.setFieldValue("trialLength", null);
@@ -397,17 +395,8 @@ export function AttachFormProvider({
 
 	const originalItems = effectiveProduct?.items as ProductItem[] | undefined;
 
-	const effectiveAddLicenses = useMemo(
-		() =>
-			mergeLicenseIncludedQuantities({
-				addLicenses,
-				licenseIncludedQuantities,
-			}),
-		[addLicenses, licenseIncludedQuantities],
-	);
-
 	const hasCustomizations =
-		(items !== null && items.length > 0) || effectiveAddLicenses !== null;
+		(items !== null && items.length > 0) || addLicenses !== null;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!effectiveProduct) return undefined;
@@ -442,8 +431,9 @@ export function AttachFormProvider({
 		entityId,
 		product: effectiveProduct,
 		prepaidOptions,
+		licenseQuantities,
 		items,
-		addLicenses: effectiveAddLicenses,
+		addLicenses,
 		grantFree,
 		version,
 		trialLength,
@@ -562,9 +552,15 @@ export function AttachFormProvider({
 
 			if (editedAddLicenses) {
 				form.setFieldValue("addLicenses", editedAddLicenses);
-				// Row edits were seeded into the editor via effectiveAddLicenses, so
-				// its output already carries them — clear to avoid double-application.
-				form.setFieldValue("licenseIncludedQuantities", {});
+				// Seat totals are inclusive of included, so a customized included
+				// amount raises any staged total that fell below it.
+				form.setFieldValue(
+					"licenseQuantities",
+					clampLicenseQuantitiesToIncluded({
+						licenseQuantities: form.store.state.values.licenseQuantities,
+						upsertLicenses: editedAddLicenses,
+					}),
+				);
 			}
 
 			setShowPlanEditor(false);
@@ -590,7 +586,6 @@ export function AttachFormProvider({
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
-			effectiveAddLicenses,
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
@@ -622,7 +617,6 @@ export function AttachFormProvider({
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
-			effectiveAddLicenses,
 			hasCustomizations,
 			numVersions,
 			previewPrepaidOptions,

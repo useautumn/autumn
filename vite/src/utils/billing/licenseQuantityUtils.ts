@@ -1,32 +1,50 @@
-import type { CustomizePlanLicense } from "@autumn/shared";
+import type {
+	CustomizePlanLicense,
+	LicenseQuantityParams,
+} from "@autumn/shared";
 
 /**
- * Overlays included-quantity edits staged from the attach summary rows onto
- * the upsert_licenses patch, so both stay a single source of truth.
+ * Converts staged license seat totals into license_quantities params.
+ * Unset quantities are omitted so the backend defaults to included seats.
  */
-export function mergeLicenseIncludedQuantities({
-	addLicenses,
-	licenseIncludedQuantities,
+export function convertLicenseQuantitiesToParams({
+	licenseQuantities,
 }: {
-	addLicenses: CustomizePlanLicense[] | null;
-	licenseIncludedQuantities: Record<string, number | undefined>;
-}): CustomizePlanLicense[] | null {
-	const overrides = Object.entries(licenseIncludedQuantities).filter(
-		([, included]) => included !== undefined,
-	);
-	if (overrides.length === 0) return addLicenses;
+	licenseQuantities: Record<string, number | undefined>;
+}): LicenseQuantityParams[] | undefined {
+	const params: LicenseQuantityParams[] = [];
 
-	const merged = (addLicenses ?? []).map((license) => {
-		const included = licenseIncludedQuantities[license.license_plan_id];
-		return included === undefined ? license : { ...license, included };
-	});
+	for (const [licensePlanId, quantity] of Object.entries(licenseQuantities)) {
+		if (quantity === undefined) continue;
+		params.push({ license_plan_id: licensePlanId, quantity });
+	}
 
-	const patchedIds = new Set(merged.map((license) => license.license_plan_id));
-	for (const [licensePlanId, included] of overrides) {
-		if (included !== undefined && !patchedIds.has(licensePlanId)) {
-			merged.push({ license_plan_id: licensePlanId, included });
+	return params.length > 0 ? params : undefined;
+}
+
+/**
+ * Raises staged seat totals that fell below a customized included amount,
+ * since total seats are always inclusive of included.
+ */
+export function clampLicenseQuantitiesToIncluded({
+	licenseQuantities,
+	upsertLicenses,
+}: {
+	licenseQuantities: Record<string, number | undefined>;
+	upsertLicenses: CustomizePlanLicense[];
+}): Record<string, number | undefined> {
+	const clamped = { ...licenseQuantities };
+
+	for (const license of upsertLicenses) {
+		const quantity = clamped[license.license_plan_id];
+		if (
+			license.included !== undefined &&
+			quantity !== undefined &&
+			quantity < license.included
+		) {
+			clamped[license.license_plan_id] = license.included;
 		}
 	}
 
-	return merged;
+	return clamped;
 }

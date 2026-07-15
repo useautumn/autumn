@@ -18,7 +18,6 @@ export function AttachPlanSection({
 		features,
 		originalItems: productTemplateItems,
 		productWithFormItems: product,
-		effectiveAddLicenses,
 		hasCustomizations,
 		initialPrepaidOptions,
 		previewPrepaidOptions,
@@ -28,11 +27,11 @@ export function AttachPlanSection({
 	} = useAttachFormContext();
 
 	const hideEditButton = readOnly || formValues.grantFree;
-	const { prepaidOptions, licenseIncludedQuantities } = formValues;
+	const { prepaidOptions, licenseQuantities } = formValues;
 
 	const licenseQuantityEditor = hideEditButton
 		? undefined
-		: { form, includedQuantities: licenseIncludedQuantities };
+		: { form, quantities: licenseQuantities };
 
 	const effectiveInitialPrepaidOptions = readOnly
 		? previewPrepaidOptions
@@ -89,7 +88,7 @@ export function AttachPlanSection({
 		form,
 		showDiff: shouldShowDiff,
 		currency,
-		addLicenses: effectiveAddLicenses,
+		addLicenses: formValues.addLicenses,
 		licenseQuantityEditor,
 		onEditPlan: handleEditPlan,
 		gateDeletedItemsByDiff: true,
