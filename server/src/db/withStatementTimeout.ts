@@ -14,6 +14,8 @@ export const withStatementTimeout = async <T>(
 	timeoutMs: number = CRON_STATEMENT_TIMEOUT_MS,
 ): Promise<T> =>
 	db.transaction(async (tx) => {
-		await tx.execute(sql.raw(`SET LOCAL statement_timeout = ${timeoutMs}`));
+		await tx.execute(
+			sql.raw(`SET LOCAL statement_timeout = ${Math.floor(timeoutMs)}`),
+		);
 		return fn(tx as unknown as DrizzleCli);
 	});

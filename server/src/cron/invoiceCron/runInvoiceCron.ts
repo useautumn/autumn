@@ -203,6 +203,11 @@ export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 			if (invoices.length < pageSize) break;
 		}
 
+		if (total >= pageSize * maxIterations) {
+			console.warn(
+				`INVOICE CRON: hit maxIterations (${maxIterations}); backlog likely exceeds ${pageSize * maxIterations}, more runs needed — processed ${total}`,
+			);
+		}
 		console.log(`FINISHED INVOICE CRON: processed ${total}`);
 	} catch (error) {
 		console.error("Error running invoice cron:", error);
