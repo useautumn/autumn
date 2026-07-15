@@ -257,8 +257,12 @@ export function generateItemChanges({
 			const updated = updatedPriceItems[i];
 
 			if (original && updated) {
+				const currenciesChanged =
+					JSON.stringify(sortAndNormalize(original.additional_currencies)) !==
+					JSON.stringify(sortAndNormalize(updated.additional_currencies));
 				const hasChanged =
 					original.price !== updated.price ||
+					currenciesChanged ||
 					itemToBillingInterval({ item: original }) !==
 						itemToBillingInterval({ item: updated }) ||
 					itemToBillingIntervalCount({ item: original }) !==
