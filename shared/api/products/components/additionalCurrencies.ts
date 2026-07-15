@@ -2,7 +2,7 @@ import { Infinite } from "@models/productModels/productEnums.js";
 import { isValidCurrencyCode } from "@utils/currencyUtils/stripeCurrencies.js";
 import { z } from "zod/v4";
 
-const currencyCodeSchema = z
+export const CurrencyCodeSchema = z
 	.string()
 	.refine(isValidCurrencyCode, "must be a Stripe-supported currency code")
 	.meta({
@@ -11,7 +11,7 @@ const currencyCodeSchema = z
 	});
 
 export const AdditionalCurrencyPriceSchema = z.object({
-	currency: currencyCodeSchema,
+	currency: CurrencyCodeSchema,
 	amount: z.number().meta({
 		description:
 			"Price amount in this currency. Set explicitly per currency, not converted from the base amount.",
@@ -24,7 +24,7 @@ export type AdditionalCurrencyPrice = z.infer<
 
 export const AdditionalCurrencyTierSchema = z
 	.object({
-		currency: currencyCodeSchema,
+		currency: CurrencyCodeSchema,
 		amount: z.number().optional().meta({
 			description: "Per-unit amount for this tier in this currency.",
 		}),

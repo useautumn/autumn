@@ -3,6 +3,17 @@ import { useMemo } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { itemCurrencyCodes } from "@/views/products/plan/utils/currencyUtils";
 
+// Options must survive the backend's every-charging-price-offers-currency
+// guard, so only currencies present on all charging items are selectable.
+const itemCharges = (item: ProductItem): boolean => {
+	if (item.tiers?.length) {
+		return item.tiers.some(
+			(tier) => (tier.amount ?? 0) + (tier.flat_amount ?? 0) > 0,
+		);
+	}
+	return (item.price ?? 0) > 0;
+};
+
 export interface UseAttachCurrencyReturn {
 	orgDefaultCurrency: string;
 	currencyOptions: string[];
@@ -24,14 +35,19 @@ export function useAttachCurrency({
 	const orgDefaultCurrency = org?.default_currency ?? "USD";
 
 	const planCurrencyCodes = useMemo(() => {
-		const codes = new Set<string>();
-		for (const item of items) {
-			for (const code of itemCurrencyCodes(item)) {
-				codes.add(code);
-			}
+		const chargingItems = items.filter(itemCharges);
+		if (chargingItems.length === 0) return [];
+
+		let codes: Set<string> | null = null;
+		for (const item of chargingItems) {
+			const itemCodes = new Set(itemCurrencyCodes(item));
+			codes =
+				codes === null
+					? itemCodes
+					: new Set([...codes].filter((code) => itemCodes.has(code)));
 		}
-		codes.delete(orgDefaultCurrency.toLowerCase());
-		return [...codes];
+		codes?.delete(orgDefaultCurrency.toLowerCase());
+		return [...(codes ?? [])];
 	}, [items, orgDefaultCurrency]);
 
 	const showCurrencySelector =

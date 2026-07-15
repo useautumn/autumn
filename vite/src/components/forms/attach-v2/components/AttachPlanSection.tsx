@@ -50,8 +50,13 @@ export function AttachPlanSection({
 
 	const outgoingItems = showDiff ? previewDiff.outgoingItems : [];
 
-	const originalItemsForDiff =
-		outgoingItems.length > 0 ? outgoingItems : productTemplateItems;
+	const originalItemsForDiff = useMemo(
+		() =>
+			showDiff && previewDiff.outgoingItems.length > 0
+				? previewDiff.outgoingItems
+				: productTemplateItems,
+		[showDiff, previewDiff.outgoingItems, productTemplateItems],
+	);
 
 	const displayOriginalItems = useMemo(
 		() =>
