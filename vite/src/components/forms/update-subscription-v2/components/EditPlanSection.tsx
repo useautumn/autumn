@@ -21,7 +21,9 @@ export function EditPlanSection() {
 
 	const { customerProduct } = formContext;
 	const { prepaidOptions } = formValues;
-	const hasCustomizations = formValues.items !== null || isVersionReady;
+	const isCustomized =
+		formValues.items !== null || formValues.addLicenses !== null;
+	const hasCustomizations = isCustomized || isVersionReady;
 
 	const {
 		displayCurrency: currency,
@@ -102,7 +104,7 @@ export function EditPlanSection() {
 
 	return (
 		<SheetSection
-			title={<SectionTitle hasCustomizations={formValues.items !== null} />}
+			title={<SectionTitle hasCustomizations={isCustomized} />}
 			withSeparator
 		>
 			<PlanItemsSection
@@ -114,6 +116,7 @@ export function EditPlanSection() {
 				existingOptions={customerProduct?.options}
 				form={form}
 				showDiff={hasCustomizations}
+				addLicenses={formValues.addLicenses}
 				currency={currency}
 				onEditPlan={handleEditPlan}
 				priceChange={priceChange}

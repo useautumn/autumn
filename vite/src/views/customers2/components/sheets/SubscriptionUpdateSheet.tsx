@@ -123,6 +123,7 @@ function EditContent() {
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
+						enableLicenseEditing
 					/>
 				)}
 			</div>

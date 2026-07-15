@@ -129,7 +129,6 @@ const processSyncMapping = async ({
 		idOrInternalId: mapping.plan_id,
 		orgId: org.id,
 		env,
-		logger: ctx.logger,
 	});
 
 	// 3. Apply custom items if provided

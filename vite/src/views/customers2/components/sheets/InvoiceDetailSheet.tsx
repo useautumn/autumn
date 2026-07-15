@@ -182,10 +182,7 @@ export function InvoiceDetailSheet({
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded;
 	const stripeConnectViewAsInvoiceLink =
-		invoiceIsStripe &&
-		isAdmin &&
-		masterStripeAccount?.id &&
-		stripeAccount?.id
+		invoiceIsStripe && isAdmin && masterStripeAccount?.id && stripeAccount?.id
 			? getStripeConnectViewAsLink({
 					masterAccountId: masterStripeAccount.id,
 					connectedAccountId: stripeAccount.id,

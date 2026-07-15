@@ -17,6 +17,7 @@ import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
@@ -49,6 +50,7 @@ export const DeletePlanDialog = ({
 	const [loading, setLoading] = useState(false);
 	const [deleteAllVersions, setDeleteAllVersions] = useState(false);
 	const { products, invalidate: invalidateProducts } = useProductsQuery();
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { invalidate: invalidateProduct } = useProductQuery();
 
 	// A base variant is a plan that other variants point to via base_id.
@@ -79,7 +81,11 @@ export const DeletePlanDialog = ({
 			toast.success("Plan deleted successfully");
 
 			// Invalidate in background (don't await - let table update async)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			// Call onDeleteSuccess callback if provided (for navigation)
 			if (onDeleteSuccess) {
@@ -104,7 +110,11 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} archived successfully`);
 
 			// Invalidate in background (don't await)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();
@@ -128,7 +138,11 @@ export const DeletePlanDialog = ({
 			toast.success(`${product.name} unarchived successfully`);
 
 			// Invalidate in background (don't await)
-			Promise.all([invalidateProducts(), invalidateProduct()]);
+			Promise.all([
+				invalidateProducts(),
+				invalidateProduct(),
+				invalidateLicenseProducts(),
+			]);
 
 			if (onDeleteSuccess) {
 				await onDeleteSuccess();

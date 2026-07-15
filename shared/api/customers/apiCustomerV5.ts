@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiCustomerLicenseV0Schema } from "../licenses/apiCustomerLicense";
 import { ApiCusExpandSchema } from "./apiCustomer";
 import { BaseApiCustomerSchema } from "./baseApiCustomer";
 import { ApiBalanceV1Schema } from "./cusFeatures/apiBalanceV1";
@@ -42,6 +43,7 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 		},
 	],
 	purchases: [],
+	licenses: [],
 	balances: {
 		messages: {
 			featureId: "messages",
@@ -93,6 +95,10 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	}),
 	purchases: z.array(ApiPurchaseV0Schema).meta({
 		description: "One-time purchases made by the customer.",
+	}),
+	licenses: z.array(ApiCustomerLicenseV0Schema).meta({
+		description:
+			"License seat pools granted by the customer's plans, with seat counts.",
 	}),
 	balances: z.record(z.string(), ApiBalanceV1Schema).meta({
 		description:

@@ -79,6 +79,9 @@ export function buildPlanCode(
 		}
 	}
 	lines.push(`\t],`);
+	if (plan.licenses?.length) {
+		lines.push(`\tlicenses: ${formatValue(plan.licenses)},`);
+	}
 
 	// Add freeTrial
 	if (plan.freeTrial) {

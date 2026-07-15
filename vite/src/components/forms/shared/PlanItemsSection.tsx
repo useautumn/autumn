@@ -1,4 +1,5 @@
 import type {
+	CustomizePlanLicense,
 	Feature,
 	FeatureOptions,
 	FrontendProduct,
@@ -21,6 +22,7 @@ import {
 	hasItemChanged,
 	PlanItemRow,
 } from "./plan-items/PlanItemRow";
+import { PlanLicensesSummary } from "./plan-items/PlanLicensesSummary";
 import { PlanPriceHeader } from "./plan-items/PlanPriceHeader";
 import {
 	PlanTrialEditor,
@@ -60,6 +62,9 @@ export interface PlanItemsSectionProps {
 	priceChange?: PriceChange | null;
 	versionChange?: VersionChange | null;
 	trialConfig?: TrialConfig;
+	/** add_licenses patch entries staged by the editor; null = unchanged,
+	 * undefined = the flow does not support license editing. */
+	addLicenses?: CustomizePlanLicense[] | null;
 
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
@@ -152,6 +157,7 @@ export function PlanItemsSection({
 	priceChange,
 	versionChange,
 	trialConfig,
+	addLicenses,
 	gateDeletedItemsByDiff = false,
 	changesOnly = false,
 	readOnly = false,
@@ -190,10 +196,18 @@ export function PlanItemsSection({
 
 	if (!hasItems) {
 		return (
-			<Button variant="secondary" onClick={onEditPlan} className="w-full">
-				<PencilSimpleIcon size={14} className="mr-1" />
-				Create Custom Plan
-			</Button>
+			<div className="flex flex-col gap-2">
+				<Button variant="secondary" onClick={onEditPlan} className="w-full">
+					<PencilSimpleIcon size={14} className="mr-1" />
+					Create Custom Plan
+				</Button>
+				<PlanLicensesSummary
+					planId={product?.id}
+					addLicenses={addLicenses}
+					showDiff={showDiff}
+					changesOnly={changesOnly}
+				/>
+			</div>
 		);
 	}
 
@@ -259,6 +273,12 @@ export function PlanItemsSection({
 							currency={currency}
 						/>
 					))}
+					<PlanLicensesSummary
+						planId={product?.id}
+						addLicenses={addLicenses}
+						showDiff={showDiff}
+						changesOnly={changesOnly}
+					/>
 					<PlanVersionChangeRow versionChange={versionChange} />
 					<PlanTrialEditor trialConfig={trialConfig} form={form} />
 					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} />}

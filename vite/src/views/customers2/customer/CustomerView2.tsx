@@ -28,6 +28,8 @@ import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
 import { CustomerBillingControlsSection } from "../components/CustomerBillingControlsSection";
 import { CustomerPlansSection } from "../components/CustomerPlansSection";
+import { CustomerLicensePoolsSection } from "../components/customer-licenses/CustomerLicensePoolsSection";
+import { CustomerLicensesSection } from "../components/customer-licenses/CustomerLicensesSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
@@ -201,6 +203,8 @@ export default function CustomerView2() {
 							</div>
 							<div className="flex flex-col gap-16 w-full">
 								<CustomerPlansSection />
+								<CustomerLicensePoolsSection />
+								<CustomerLicensesSection />
 								<CustomerFeatureUsageTable />
 								{!entityId && <CustomerUsageAnalyticsTable />}
 								<CustomerBillingControlsSection />

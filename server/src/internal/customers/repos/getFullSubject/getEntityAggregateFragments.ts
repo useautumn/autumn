@@ -78,6 +78,7 @@ export const getEntityAggregateFragments = ({
 			FROM customer_products cp
 			WHERE cp.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
 				AND cp.internal_entity_id IS NOT NULL
+				AND cp.customer_license_link_id IS NULL
 				${statusFilter}
 		),
 

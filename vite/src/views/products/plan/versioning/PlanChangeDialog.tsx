@@ -41,6 +41,7 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { saveAllLicenses } from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
 	buildInPlaceUpdatePlanParams,
 	buildPreviewUpdatePlanParams,
@@ -395,6 +396,13 @@ export default function PlanChangeDialog({
 				axiosInstance,
 				updateParams,
 			);
+			// The save bar early-returns into this dialog, so dirty licenses are
+			// persisted here too (failures toast their own error).
+			const licensesSaved = await saveAllLicenses();
+			if (!licensesSaved) {
+				toast.error("Some license changes failed to save");
+				return;
+			}
 			markSaved();
 			toast.success(
 				versionChoice === "new"

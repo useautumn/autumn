@@ -18,8 +18,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFinalizeFirstInvoice";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
@@ -67,6 +69,7 @@ export const setupAttachBillingContext = async ({
 		fullProduct: attachProduct,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
 	} = await setupAttachProductContext({
 		ctx,
 		params,
@@ -162,6 +165,10 @@ export const setupAttachBillingContext = async ({
 		currentCustomerProduct: currentCustomerProduct,
 		initializeUndefinedQuantities: true,
 		contextOverride,
+	});
+
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
@@ -272,6 +279,9 @@ export const setupAttachBillingContext = async ({
 			outgoingCusProductIds,
 		});
 
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
+
 	return {
 		fullCustomer,
 		fullProducts: [attachProduct],
@@ -283,6 +293,7 @@ export const setupAttachBillingContext = async ({
 			stripeCurrency: stripeCustomer?.currency,
 		}),
 		featureQuantities,
+		customerLicenseQuantities,
 		transitionConfig,
 
 		currentCustomerProduct,
@@ -336,12 +347,14 @@ export const setupAttachBillingContext = async ({
 		taxRateId: params.tax_rate_id,
 
 		externalId: params.subscription_id,
+		insertPlanLicenses,
 
 		skipBillingChanges,
 		dryRunStripe: preview,
 
 		storedChargeLineItems,
 		storedRefundLineItems,
+		customerLicenseBillingContext,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

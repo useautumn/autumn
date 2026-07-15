@@ -116,6 +116,7 @@
 		"dw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts",
 		"dw:teardown": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts teardown",
 		"dw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts list",
+		"dw:cleanup": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts cleanup",
 		"dw:reset": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts reset",
 		"dw:identify": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts identify",
 		"dw:setup": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts setup",

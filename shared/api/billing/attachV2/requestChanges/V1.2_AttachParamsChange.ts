@@ -35,6 +35,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 			items: input.items,
 			freeTrial: input.free_trial,
 			billingControls: input.billing_controls,
+			upsertLicenses: input.upsert_licenses,
 		});
 
 		const newPlanId = input.product_id ?? undefined;

@@ -174,6 +174,30 @@ test("buildCatalogUpdateParams maps plan billing controls", () => {
 	});
 });
 
+test("buildCatalogUpdateParams maps authoritative plan licenses", () => {
+	const params = buildCatalogUpdateParams({
+		features: [],
+		plans: [
+			{
+				id: "pro",
+				name: "Pro",
+				licenses: [{ licensePlanId: "seats", version: 2, included: 5 }],
+			},
+			{ id: "seats", name: "Seats" },
+		],
+	});
+
+	expect(params.plans.map((plan) => plan.plan_id)).toEqual(["pro", "seats"]);
+	expect(params.plans[0]?.licenses).toEqual([
+		{
+			license_plan_id: "seats",
+			version: 2,
+			included: 5,
+		},
+	]);
+	expect(params.plans[1]?.licenses).toEqual([]);
+});
+
 test("buildCatalogUpdateParams maps direct variant update-current migration controls", () => {
 	const params = buildCatalogUpdateParams({
 		features: [],

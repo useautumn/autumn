@@ -1,7 +1,7 @@
 import {
 	apiPlan,
-	expandPathIncludes,
 	type CatalogPlanParams,
+	expandPathIncludes,
 	type FullProduct,
 	type PlanUpdatePreview,
 	PlanUpdatePreviewSchema,
@@ -92,7 +92,6 @@ export const previewCatalogPlanUpdate = async ({
 	customerCount: number;
 	currency: string;
 }): Promise<PlanUpdatePreview> => {
-	const { plan_id } = planParams;
 	const { variants, ...basePlanParams } = planParams;
 
 	if (!current) {
@@ -121,13 +120,23 @@ export const previewCatalogPlanUpdate = async ({
 						(variants?.length ?? 0) > 0)),
 		),
 	};
-	const incoming = buildIncomingProductV2({ ctx, base: current, data });
+	// Catalog licenses are resolved together against the virtual post-update
+	// catalog after ordinary plan previews are built.
+	const previewData = {
+		...data,
+		licenses: undefined,
+	};
+	const incoming = buildIncomingProductV2({
+		ctx,
+		base: current,
+		data: previewData,
+	});
 
 	return buildPlanUpdatePreview({
 		ctx,
 		currentFullProduct: current,
 		incomingProductV2: incoming,
-		data,
+		data: previewData,
 		variantUpdates: variants,
 		hasCustomers,
 		customerCount,

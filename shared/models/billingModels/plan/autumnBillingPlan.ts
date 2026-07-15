@@ -7,6 +7,7 @@ import {
 	CusProductStatus,
 	EntitlementSchema,
 	EntityBalanceSchema,
+	EntitySchema,
 	FeatureOptionsSchema,
 	FreeTrialSchema,
 	FullCusProductSchema,
@@ -22,6 +23,11 @@ import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/repl
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
+import {
+	CustomerLicenseTransitionSchema,
+	CustomerLicenseUpdateSchema,
+	InsertPlanLicenseSpecSchema,
+} from "./customerLicensePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
@@ -47,6 +53,10 @@ export const CustomerProductUpdateSchema = z.object({
 	updates: z.object({
 		options: z.array(FeatureOptionsSchema).optional(),
 		status: z.enum(CusProductStatus).optional(),
+		// License seat release/reuse: entity unlink + pool-return timestamp.
+		internal_entity_id: z.string().nullish(),
+		entity_id: z.string().nullish(),
+		released_at: z.number().nullish(),
 		billing_cycle_anchor: z.number().nullish(),
 		billing_cycle_anchor_resets_at: z.number().nullish(),
 		free_trial_id: z.string().nullish(),
@@ -73,6 +83,8 @@ export const PatchCustomerProductSchema = z.object({
 
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
+	// Inserted before customer products — provisioned rows may reference them.
+	insertEntities: z.array(EntitySchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
@@ -102,6 +114,11 @@ export const AutumnBillingPlanSchema = z.object({
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
+	insertPlanLicenses: z.array(InsertPlanLicenseSpecSchema).optional(),
+	customerLicenseUpdates: z.array(CustomerLicenseUpdateSchema).optional(),
+	customerLicenseTransitions: z
+		.array(CustomerLicenseTransitionSchema)
+		.optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),
@@ -171,6 +188,7 @@ export const AutumnBillingPlanSchema = z.object({
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;
+export type CustomerProductUpdate = z.infer<typeof CustomerProductUpdateSchema>;
 
 export type UpdateCustomerEntitlement = z.infer<
 	typeof UpdateCustomerEntitlementSchema

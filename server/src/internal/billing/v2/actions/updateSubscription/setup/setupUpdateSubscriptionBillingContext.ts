@@ -1,7 +1,9 @@
 import {
 	BillingVersion,
+	ErrCode,
 	hasCustomItems,
 	orgDisableStripeWrites,
+	RecaseError,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -37,6 +39,21 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"billing_cycle_anchor",
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
+
+/** License customize is attach-only for now; fail loudly instead of ignoring. */
+const rejectLicenseCustomize = ({
+	params,
+}: {
+	params: UpdateSubscriptionV1Params;
+}) => {
+	if (params.customize?.upsert_licenses === undefined) return;
+	throw new RecaseError({
+		message:
+			"customize.upsert_licenses is not supported on subscription updates yet; use billing.attach.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
 
 /**
  * Fetch the context for updating a subscription
@@ -85,6 +102,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
+	rejectLicenseCustomize({ params });
 	const billingRelatedFields = Object.keys(params).filter((key) =>
 		FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],

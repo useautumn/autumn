@@ -22,8 +22,8 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
-import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 
 export const initStripeResourcesForProducts = async ({
 	ctx,
@@ -170,7 +170,30 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	const targetProducts = [...newProducts, ...patchProducts, ...existingProducts];
+	// License child products bill through their parents, so their prices need
+	// Stripe resources too. Price objects are shared refs — init mutates them.
+	const licenseProductsByInternalId = new Map<string, FullProduct>();
+	for (const customerProduct of [
+		...insertCustomerProducts,
+		...fullCustomer.customer_products,
+	]) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			const licenseProduct = customerLicense.planLicense?.product;
+			if (!licenseProduct) continue;
+			licenseProductsByInternalId.set(
+				licenseProduct.internal_id,
+				licenseProduct,
+			);
+		}
+	}
+	const licenseProducts = Array.from(licenseProductsByInternalId.values());
+
+	const targetProducts = [
+		...newProducts,
+		...patchProducts,
+		...existingProducts,
+		...licenseProducts,
+	];
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	await Promise.all(

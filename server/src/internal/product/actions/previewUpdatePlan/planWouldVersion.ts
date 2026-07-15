@@ -1,8 +1,8 @@
 import {
 	type FullProduct,
 	notNullish,
-	type ProductV2,
 	type PreviewUpdatePlanParamsV2,
+	type ProductV2,
 	productsAreSame,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

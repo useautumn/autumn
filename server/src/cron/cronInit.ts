@@ -18,6 +18,7 @@ import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
 import { runResetCron } from "./resetCron/runResetCron.js";
+import { runSeatSyncCron } from "./seatSyncCron/runSeatSyncCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
@@ -92,7 +93,7 @@ const oneOffCleanupTick = async () => {
 		db,
 		logger,
 	};
-	await runOneOffCleanup({ ctx });
+	await Promise.all([runOneOffCleanup({ ctx }), runSeatSyncCron({ ctx })]);
 };
 
 // DB health probes (long-txn / xmin pin, ...) — a separate tick so a heavy

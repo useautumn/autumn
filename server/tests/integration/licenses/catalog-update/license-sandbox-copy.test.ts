@@ -23,6 +23,8 @@ import {
 	constructCreditSystem,
 	constructMeteredFeature,
 } from "@/internal/features/utils/constructFeatureUtils.js";
+import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
@@ -50,6 +52,7 @@ const DASH_FEATURE = "copy_dashboard";
 const CREDIT_FEATURE = "copy_credits";
 const AI_CREDIT_FEATURE = "copy_ai_credits";
 const PRODUCT_ID = "copy_pro";
+const LICENSE_ID = "copy_license";
 
 const suffix = crypto.randomUUID().slice(0, 8);
 
@@ -168,6 +171,33 @@ const seedSourceSandbox = async (sourceOrg: Organization) => {
 		ctx: { ...seedCtx, features: allFeatures },
 		data: product as unknown as CreateProductV2Params,
 	});
+	await createProduct({
+		ctx: { ...seedCtx, features: allFeatures },
+		data: products.base({
+			id: LICENSE_ID,
+			items: [
+				constructFeatureItem({ featureId: MSG_FEATURE, includedUsage: 25 }),
+			],
+		}) as unknown as CreateProductV2Params,
+	});
+	const parentProduct = await ProductService.getFull({
+		db,
+		orgId: sourceOrg.id,
+		env: AppEnv.Sandbox,
+		idOrInternalId: PRODUCT_ID,
+	});
+	await syncPlanLicenses({
+		ctx: { ...seedCtx, features: allFeatures },
+		parentProduct,
+		licenses: [
+			{
+				license_plan_id: LICENSE_ID,
+				included: 3,
+				prepaid_only: true,
+				metadata: { source: "sandbox-copy" },
+			},
+		],
+	});
 };
 
 beforeAll(async () => {
@@ -250,6 +280,19 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 			.map((i) => i.feature_id)
 			.filter((id): id is string => Boolean(id));
 		expect(itemFeatureIds.sort()).toEqual([DASH_FEATURE, MSG_FEATURE].sort());
+
+		const links = copied!.licenses ?? [];
+		expect(links).toHaveLength(1);
+		expect(links[0]).toMatchObject({
+			license_plan_id: LICENSE_ID,
+			included: 3,
+		});
+		const [storedLink] =
+			await planLicenseRepo.listCatalogByParentInternalProductIds({
+				db,
+				parentInternalProductIds: [copied!.internal_id],
+			});
+		expect(storedLink.metadata).toEqual({ source: "sandbox-copy" });
 	}, 180_000);
 
 	test("rejects a non-owned source with a 404 (ownership masked)", async () => {

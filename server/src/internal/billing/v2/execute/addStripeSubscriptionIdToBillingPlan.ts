@@ -1,5 +1,6 @@
-import { cp } from "@autumn/shared";
 import type { AutumnBillingPlan } from "@autumn/shared";
+import { cp } from "@autumn/shared";
+import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
 /**
  * Adds a Stripe subscription ID to a billing plan.
@@ -16,7 +17,9 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
 
-		if (!isPaidRecurring) continue;
+		if (!isPaidRecurring && !customerProductHasPaidLicenses(customerProduct)) {
+			continue;
+		}
 
 		customerProduct.subscription_ids = [stripeSubscriptionId];
 	}

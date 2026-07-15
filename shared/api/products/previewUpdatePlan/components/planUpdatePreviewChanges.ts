@@ -1,6 +1,6 @@
+import { z } from "zod/v4";
 import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { ApiPlanItemV1Schema } from "../../items/apiPlanItemV1.js";
-import { z } from "zod/v4";
 
 export const PlanUpdatePreviewPriceChangeSchema = z.object({
 	previous: ApiPlanV1Schema.shape.price.meta({
@@ -21,6 +21,11 @@ export const PlanUpdatePreviewItemChangeSchema = z.object({
 	item: ApiPlanItemV1Schema.meta({
 		description: "The plan item snapshot that was added or removed.",
 	}),
+});
+
+export const PlanUpdatePreviewLicenseChangeSchema = z.object({
+	action: z.enum(["create", "update", "remove"]),
+	license_plan_id: z.string(),
 });
 
 export type PlanUpdatePreviewItemChange = z.infer<

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { handleListRevenueCatMappings } from "@/external/revenueCat/handlers/handleListRevenueCatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
+import { handleGetLicenseProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
 import { handleCreatePlan } from "./handlers/handleCreateProduct/handleCreatePlan.js";
 import { handleCreatePlanV2 } from "./handlers/handleCreateProduct/handleCreatePlanV2.js";
@@ -26,6 +27,7 @@ export const honoProductRouter = new Hono<HonoEnv>();
 // CRUD
 honoProductRouter.get("", ...handleListPlans);
 honoProductRouter.post("", ...handleCreatePlan);
+honoProductRouter.get("/license_products", ...handleGetLicenseProducts);
 honoProductRouter.get("/:product_id", ...handleGetPlanV1);
 honoProductRouter.post("/:product_id", ...handleUpdatePlanV1); // will be deprecated
 honoProductRouter.patch("/:product_id", ...handleUpdatePlanV1); // will be deprecated

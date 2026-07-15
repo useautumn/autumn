@@ -263,22 +263,30 @@ function PriceText({
 	item,
 	currency,
 	text,
+	compact = false,
 }: {
 	item: ProductItem;
 	currency: string;
 	text: string;
+	compact?: boolean;
 }) {
+	const secondaryClass = compact
+		? "text-xs text-subtle"
+		: "text-body-secondary";
+	const amountClass = compact ? "text-xs font-medium" : "text-body";
 	const content =
 		tieredPriceChip({ item, currency, text }) ??
 		highlightPrice({
 			item,
 			currency,
 			text,
-			renderPrice: (priceStr) => <span className="text-body">{priceStr}</span>,
+			renderPrice: (priceStr) => (
+				<span className={amountClass}>{priceStr}</span>
+			),
 		}) ??
 		text;
 
-	return <span className="text-body-secondary"> {content}</span>;
+	return <span className={secondaryClass}> {content}</span>;
 }
 
 interface PlanItemLabelProps {
@@ -287,6 +295,7 @@ interface PlanItemLabelProps {
 	wrapIcons?: (icons: ReactNode) => ReactNode;
 	/** Text shown when the feature has no name yet. */
 	unnamedText?: string;
+	compact?: boolean;
 	/** Display currency for amounts; defaults to the org default. */
 	currency?: string;
 }
@@ -297,6 +306,7 @@ export function PlanItemLabel({
 	item,
 	wrapIcons,
 	unnamedText = "Name your feature",
+	compact = false,
 	currency: currencyOverride,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
@@ -321,8 +331,18 @@ export function PlanItemLabel({
 	return (
 		<>
 			{wrapIcons ? wrapIcons(icons) : icons}
-			<p className="whitespace-nowrap truncate flex-1 min-w-0 text-body-secondary">
-				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
+			<p
+				className={cn(
+					"whitespace-nowrap truncate flex-1 min-w-0",
+					compact ? "text-xs text-subtle" : "text-body-secondary",
+				)}
+			>
+				<span
+					className={cn(
+						compact ? "text-xs font-medium" : "text-body",
+						!hasFeatureName && "text-subtle!",
+					)}
+				>
 					{hasFeatureName
 						? (tieredPriceChip({ item, currency, text: displayText }) ??
 							displayText)
@@ -330,6 +350,7 @@ export function PlanItemLabel({
 				</span>
 				{display.secondary_text && (
 					<PriceText
+						compact={compact}
 						currency={currency}
 						item={item}
 						text={display.secondary_text}

@@ -84,6 +84,7 @@ export function AttachPlanSection({
 		form,
 		showDiff: shouldShowDiff,
 		currency,
+		addLicenses: formValues.addLicenses,
 		onEditPlan: handleEditPlan,
 		gateDeletedItemsByDiff: true,
 		readOnly: hideEditButton,

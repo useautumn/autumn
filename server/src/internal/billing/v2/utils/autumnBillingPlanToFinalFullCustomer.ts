@@ -128,7 +128,8 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		}
 	}
 
-	// 5. Return final full customer
+	// 5. Return final full customer. Customer licenses need no merge — they
+	// ride each customer product (hydration-stitched or init-planned).
 	return {
 		...finalFullCustomer,
 		customer_products: customerProducts,

@@ -5,6 +5,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
+import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -41,6 +42,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 
 	tax_rate_id: z.string().optional(),
 
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional(),
 	currency: CurrencyCodeSchema.optional().meta({
 		description:
 			"Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
