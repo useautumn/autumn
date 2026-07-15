@@ -24,6 +24,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
@@ -273,6 +274,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		chargeExistingOverages: contextOverride.chargeExistingOverages,
 		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
-		carryOverUsages: params.carry_over_usages,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: params.carry_over_usages,
+		}),
 	};
 };

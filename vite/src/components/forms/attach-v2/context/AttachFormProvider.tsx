@@ -79,6 +79,7 @@ interface AttachFormContextValue {
 
 	isFreeToPaidTransition: boolean;
 	hasActiveSubscription: boolean;
+	isAutoSelectingImmediateSchedule: boolean;
 
 	attachCurrency: UseAttachCurrencyReturn;
 
@@ -448,6 +449,17 @@ export function AttachFormProvider({
 		requestBody,
 		enabled: disablePreview ? false : undefined,
 	});
+	const isAutoSelectingImmediateSchedule =
+		hasActiveSubscription &&
+		planSchedule === null &&
+		(previewQuery.data?.outgoing.length ?? 0) === 0 &&
+		previewQuery.isError &&
+		!previewQuery.isLoading;
+
+	useEffect(() => {
+		if (!isAutoSelectingImmediateSchedule) return;
+		form.setFieldValue("planSchedule", "immediate");
+	}, [form, isAutoSelectingImmediateSchedule]);
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -550,6 +562,7 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
 			attachCurrency,
 			previewQuery,
 			previewDiff,
@@ -579,6 +592,7 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
 			attachCurrency,
 			previewQuery,
 			previewDiff,

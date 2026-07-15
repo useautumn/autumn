@@ -1,6 +1,7 @@
 import { PageContainer, PageHeader } from "@autumn/ui";
 import { GearIcon } from "@phosphor-icons/react";
 import {
+	ArrowRightLeftIcon,
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
@@ -23,6 +24,7 @@ import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
+import { TransitionRulesSection } from "./sections/TransitionRulesSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
 
 type SettingsTab =
@@ -35,7 +37,8 @@ type SettingsTab =
 	| "custom-buttons"
 	| "billing"
 	| "invoices"
-	| "usage-alerts";
+	| "usage-alerts"
+	| "transition-rules";
 
 interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -107,6 +110,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				label: "Usage Alerts",
 				icon: <BellIcon className="size-4" />,
 			},
+			{
+				id: "transition-rules",
+				label: "Transition Rules",
+				icon: <ArrowRightLeftIcon className="size-4" />,
+			},
 		],
 	},
 ];
@@ -122,6 +130,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	billing: BillingSettingsSection,
 	invoices: InvoicesSection,
 	"usage-alerts": UsageAlertsSection,
+	"transition-rules": TransitionRulesSection,
 };
 
 export const SettingsView = () => {

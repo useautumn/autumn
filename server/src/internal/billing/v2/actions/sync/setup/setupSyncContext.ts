@@ -23,6 +23,7 @@ import {
 import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 
 const resolvePlanEntity = ({
@@ -261,5 +262,9 @@ export const setupSyncContext = async ({
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
 		carryOverUsage: params.carry_over_usage ?? true,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: undefined,
+		}),
 	};
 };

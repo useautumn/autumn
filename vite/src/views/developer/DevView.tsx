@@ -75,14 +75,24 @@ export default function DevScreen() {
 	);
 }
 
-const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
+const withNoGutters = (dashboardUrl: string) => {
+	const url = new URL(dashboardUrl);
+	url.searchParams.set("noGutters", "true");
+	return url.toString();
+};
+
+const ConfigureWebhookSection = ({
+	dashboardUrl,
+}: {
+	dashboardUrl: string;
+}) => {
 	const { isDark } = useTheme();
 
 	return (
 		<div className="h-full">
 			{dashboardUrl ? (
 				<AppPortal
-					url={dashboardUrl}
+					url={withNoGutters(dashboardUrl)}
 					darkMode={isDark}
 					style={{ height: "100%", borderRadius: "none" }}
 					fullSize

@@ -157,6 +157,8 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
+export * from "./models/orgModels/transitionRules/transitionRules";
+export * from "./models/orgModels/transitionRules/transitionRulesTable";
 // 1. Org Models
 export * from "./models/orgModels/customButton";
 export * from "./models/orgModels/frontendOrg";
