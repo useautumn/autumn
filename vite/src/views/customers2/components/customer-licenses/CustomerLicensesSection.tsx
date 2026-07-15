@@ -41,9 +41,13 @@ export function CustomerLicensesSection() {
 	const columns = useMemo(
 		() =>
 			createCustomerLicenseColumns({
-				onUnassign: (row) => cancelLicenseAssignment({ assignmentId: row.id }),
+				onUnassign: (row) =>
+					cancelLicenseAssignment({
+						entityId: publicEntityId ?? "",
+						licensePlanId: row.pool.license_plan_id,
+					}),
 			}),
-		[cancelLicenseAssignment],
+		[cancelLicenseAssignment, publicEntityId],
 	);
 
 	const table = useCustomerTable({ data: rows, columns });

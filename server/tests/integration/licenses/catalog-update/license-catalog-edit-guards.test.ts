@@ -72,10 +72,10 @@ test.concurrent(
 			customer_id: customerId,
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0].inventory).toMatchObject({
-			included: 2,
-			assigned: 2,
-			available: 0,
+		expect(pools.list[0]).toMatchObject({
+			granted: 2,
+			usage: 2,
+			remaining: 0,
 		});
 
 		const firstEntityCheck = await autumnV2_2.check<CheckResponseV3>({

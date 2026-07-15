@@ -3,9 +3,7 @@ import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 
 type LicenseLogAction =
 	| "attach"
-	| "preview_attach"
-	| "update"
-	| "preview_update"
+	| "release"
 	| "reconcile"
 	| "link"
 	| "edit_items";

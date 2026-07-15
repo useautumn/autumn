@@ -106,7 +106,7 @@ export const getLicenseDbState = async ({
 		db.query.customerProducts.findMany({
 			where: and(
 				eq(customerProducts.internal_customer_id, customer.internal_id),
-				isNotNull(customerProducts.license_parent_customer_product_id),
+				isNotNull(customerProducts.customer_license_link_id),
 			),
 		}),
 		db.query.customerLicenses.findMany({

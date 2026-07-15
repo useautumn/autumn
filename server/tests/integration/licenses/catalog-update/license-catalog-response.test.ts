@@ -90,10 +90,10 @@ test.concurrent(
 
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
 		const enterprisePool = pools[0];
-		expect(enterprisePool?.inventory).toMatchObject({
-			included: 3,
-			assigned: 1,
-			available: 2,
+		expect(enterprisePool).toMatchObject({
+			granted: 3,
+			usage: 1,
+			remaining: 2,
 		});
 	},
 );

@@ -59,10 +59,10 @@ test.concurrent(
 			customer_id: customerId,
 		})) as PoolsResponse;
 		expect(healthy.list).toHaveLength(1);
-		expect(healthy.list[0].inventory).toMatchObject({
-			included: 2,
-			assigned: 1,
-			available: 1,
+		expect(healthy.list[0]).toMatchObject({
+			granted: 2,
+			usage: 1,
+			remaining: 1,
 		});
 
 		// Grab the balance row from reconcile's mirrored state, then corrupt
@@ -102,10 +102,10 @@ test.concurrent(
 		const healedList = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
-		expect(healedList.list[0].inventory).toMatchObject({
-			included: 2,
-			assigned: 1,
-			available: 1,
+		expect(healedList.list[0]).toMatchObject({
+			granted: 2,
+			usage: 1,
+			remaining: 1,
 		});
 	},
 );
@@ -222,18 +222,16 @@ test.concurrent(
 
 		const firstPoolA = findPool(first, planA.id);
 		const firstPoolB = findPool(first, planB.id);
-		expect(firstPoolA?.inventory).toMatchObject({
-			included: 2,
-			assigned: 1,
-			available: 1,
+		expect(firstPoolA).toMatchObject({
+			granted: 2,
+			usage: 1,
+			remaining: 1,
 		});
-		expect(firstPoolB?.inventory).toMatchObject({
-			included: 2,
-			assigned: 0,
-			available: 2,
+		expect(firstPoolB).toMatchObject({
+			granted: 2,
+			usage: 0,
+			remaining: 2,
 		});
-		expect(firstPoolA?.assignments).toHaveLength(1);
-		expect(firstPoolB?.assignments).toHaveLength(0);
 
 		// Determinism: a repeat reconcile lands the assignment on the same parent.
 		await reconcileLicenseStateForCustomer({ ctx, idOrInternalId: customerId });
@@ -307,9 +305,10 @@ test.concurrent(
 		expect(pools.list[0]).toMatchObject({
 			parent_plan_id: successorQ.id,
 			license_plan_id: licenseX.id,
-			inventory: { included: 1, assigned: 1, available: 0 },
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
-		expect(pools.list[0].assignments).toHaveLength(1);
 
 		const xAssignments = (await autumnV2_2.post("/licenses.list_assignments", {
 			customer_id: customerId,
@@ -383,12 +382,11 @@ test.concurrent(
 			customer_id: customerId,
 		})) as PoolsResponse;
 		expect(tight.list).toHaveLength(1);
-		expect(tight.list[0].inventory).toMatchObject({
-			included: 2,
-			assigned: 2,
-			available: 0,
+		expect(tight.list[0]).toMatchObject({
+			granted: 2,
+			usage: 2,
+			remaining: 0,
 		});
-		expect(tight.list[0].assignments).toHaveLength(2);
 
 		const activeAssignments = (await autumnV2_2.post(
 			"/licenses.list_assignments",
@@ -412,10 +410,10 @@ test.concurrent(
 		const roomy = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as PoolsResponse;
-		expect(roomy.list[0].inventory).toMatchObject({
-			included: 4,
-			assigned: 2,
-			available: 2,
+		expect(roomy.list[0]).toMatchObject({
+			granted: 4,
+			usage: 2,
+			remaining: 2,
 		});
 	},
 );

@@ -210,6 +210,7 @@ const buildOptimizedCusProductsCTE = ({
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
+      AND cp.customer_license_link_id IS NULL
       ${withStatusFilter()}
       ORDER BY ${entityId ? sql`CASE WHEN cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} THEN 0 WHEN cp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``} ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
       LIMIT ${cusProductLimit}
@@ -745,6 +746,7 @@ export const getPaginatedFullCusQuery = ({
         SELECT *
         FROM customer_products cp
         WHERE cp.internal_customer_id = cr.internal_id
+        AND cp.customer_license_link_id IS NULL
         ${withStatusFilter()}
         ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
         LIMIT ${cusProductLimit}

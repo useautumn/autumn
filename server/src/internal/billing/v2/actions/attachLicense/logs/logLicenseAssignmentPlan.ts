@@ -6,17 +6,15 @@ export const logLicenseAssignmentPlan = ({
 	ctx,
 	context,
 	plan,
-	preview,
 }: {
 	ctx: AutumnContext;
 	context: AttachLicenseContext;
 	plan: AttachLicensePlan;
-	preview: boolean;
 }) => {
 	const { fullCustomer, parentCustomerProduct } = context;
 	logLicenseAction({
 		ctx,
-		action: preview ? "preview_attach" : "attach",
+		action: "attach",
 		details: {
 			customer: fullCustomer.id ?? fullCustomer.internal_id,
 			parent: parentCustomerProduct.product.id,

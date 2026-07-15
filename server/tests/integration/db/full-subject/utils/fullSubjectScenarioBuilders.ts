@@ -290,8 +290,8 @@ const buildCustomerProduct = ({
 	stripe_checkout_session_id: null,
 	previous_customer_product_id: null,
 	on_trial_end: null,
-	license_parent_customer_product_id: null,
 	customer_license_link_id: null,
+	released_at: null,
 });
 
 const buildCustomerPrice = ({

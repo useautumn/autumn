@@ -1,7 +1,7 @@
 import {
 	type CustomerLicenseTransition,
 	customerLicenseToGranted,
-	customerLicenseToUsed,
+	customerLicenseToUsage,
 } from "@autumn/shared";
 import { matchItemSuccessors } from "./matchItemSuccessors.js";
 import type { CustomerLicensePair } from "./pairCustomerLicensesByLicensePlan.js";
@@ -18,7 +18,7 @@ export const customerLicensePairToTransition = (
 	const { outgoingCustomerLicense, incomingCustomerLicense } = pair;
 
 	// 1. How many seats are used by the outgoing license...?
-	const used = customerLicenseToUsed({
+	const used = customerLicenseToUsage({
 		customerLicense: outgoingCustomerLicense,
 	});
 

@@ -82,9 +82,9 @@ test.concurrent(
 
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
 		expect(pools).toHaveLength(1);
-		expect(pools[0].inventory).toMatchObject({
-			assigned: 0,
-			available: 1,
+		expect(pools[0]).toMatchObject({
+			usage: 0,
+			remaining: 1,
 		});
 
 		const { assignment: reassigned } = (await autumnV2_2.post(

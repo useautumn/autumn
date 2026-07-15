@@ -16,7 +16,7 @@ export const initCustomerEntitlementUsageAllowed = ({
 	entitlement: EntitlementWithFeature;
 }) => {
 	// Assignments never bill — no overage regardless of price.
-	if (initOptions?.licenseParentCustomerProductId) return false;
+	if (initOptions?.customerLicenseLinkId) return false;
 
 	const price = entToPrice({
 		ent: entitlement,

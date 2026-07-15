@@ -176,14 +176,17 @@ test.concurrent(
 		expect(poolsAfterUpgrade).toHaveLength(1);
 		expect(poolsAfterUpgrade[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: {
-				included: 1,
-				assigned: 1,
-				available: 0,
-			},
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
-		expect(poolsAfterUpgrade[0].assignments).toHaveLength(1);
-		expect(poolsAfterUpgrade[0].assignments[0]).toMatchObject({
+		const assignmentsAfterUpgrade = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			active: true,
+		});
+		expect(assignmentsAfterUpgrade).toHaveLength(1);
+		expect(assignmentsAfterUpgrade[0]).toMatchObject({
 			entity_id: entities[0].id,
 			license_plan_id: license.id,
 		});

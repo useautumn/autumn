@@ -7,7 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { endLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/endLicenseAssignmentsForEntity.js";
+import { releaseLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/releaseLicenseAssignmentsForEntity.js";
 
 export const cancelSubsForEntity = async ({
 	ctx,
@@ -21,8 +21,8 @@ export const cancelSubsForEntity = async ({
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 
 	// Provisioned license products are free (skipped by the paid-recurring loop
-	// below) and the entity FK is SET NULL, so end them before the entity row goes.
-	await endLicenseAssignmentsForEntity({
+	// below); release their seats back to the pool before the entity row goes.
+	await releaseLicenseAssignmentsForEntity({
 		ctx,
 		internalEntityId: entity.internal_id,
 	});

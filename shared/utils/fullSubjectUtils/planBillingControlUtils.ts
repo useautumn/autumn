@@ -45,7 +45,7 @@ export const getPlanBillingControlProducts = ({
 	customerProducts
 		.filter(
 			(customerProduct) =>
-				(customerProduct.license_parent_customer_product_id == null ||
+				(customerProduct.customer_license_link_id == null ||
 					customerProduct.internal_entity_id == null) &&
 				inStatuses.includes(customerProduct.status) &&
 				appliesNow({ customerProduct, now }),
@@ -192,7 +192,7 @@ export const fullSubjectToPlanProducts = ({
 		...(fullSubject.aggregated_customer_products ?? []),
 	].filter(
 		(customerProduct) =>
-			customerProduct.license_parent_customer_product_id == null ||
+			customerProduct.customer_license_link_id == null ||
 			customerProduct.internal_entity_id == null,
 	);
 
@@ -203,6 +203,6 @@ export const fullCustomerToPlanProducts = ({
 }) =>
 	(fullCustomer.customer_products ?? []).filter(
 		(customerProduct) =>
-			customerProduct.license_parent_customer_product_id == null ||
+			customerProduct.customer_license_link_id == null ||
 			customerProduct.internal_entity_id == null,
 	);

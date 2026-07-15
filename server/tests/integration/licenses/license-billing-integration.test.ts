@@ -139,7 +139,7 @@ test.concurrent(
 		);
 		const fulfilled = results.filter(
 			(result): result is PromiseFulfilledResult<unknown> =>
-			result.status === "fulfilled",
+				result.status === "fulfilled",
 		);
 		expect(fulfilled).toHaveLength(1);
 

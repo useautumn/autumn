@@ -87,7 +87,8 @@ export type FullProduct = FullProductWithoutLicenses & {
 
 export const FullProductSchema: z.ZodType<FullProduct> =
 	FullProductWithoutLicensesSchema.extend({
-		licenses: z.array(FullPlanLicenseSchema).optional(),
+		// Lazy: breaks the init cycle with fullPlanLicenseModel (TDZ-safe).
+		licenses: z.array(z.lazy(() => FullPlanLicenseSchema)).optional(),
 	});
 
 export type ProductCounts = {

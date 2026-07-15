@@ -337,6 +337,20 @@
       "when": 1784052325057,
       "tag": "0047_many_fallen_one",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1784108621148,
+      "tag": "0048_gray_morlocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1784110926654,
+      "tag": "0049_handy_wendell_vaughn",
+      "breakpoints": true
     }
   ]
 }

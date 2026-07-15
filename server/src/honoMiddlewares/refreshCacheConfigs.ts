@@ -157,6 +157,16 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
+		url: "/licenses.attach",
+	}),
+
+	route({
+		method: "POST",
+		url: "/licenses.release",
+	}),
+
+	route({
+		method: "POST",
 		url: "/billing.import",
 	}),
 

@@ -28,7 +28,7 @@ const getAllCustomersOnProduct = async ({
 			data = await db.query.customerProducts.findMany({
 				where: and(
 					eq(customerProducts.internal_product_id, internalProductId),
-					isNull(customerProducts.license_parent_customer_product_id),
+					isNull(customerProducts.customer_license_link_id),
 					inArray(customerProducts.status, [
 						CusProductStatus.Active,
 						CusProductStatus.PastDue,

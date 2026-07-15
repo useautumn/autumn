@@ -23,7 +23,7 @@ export const initCustomerLicenses = ({
 }): FullCustomerLicense[] => {
 	const ownsLicenses =
 		nullish(customerProduct.internal_entity_id) &&
-		nullish(customerProduct.license_parent_customer_product_id) &&
+		nullish(customerProduct.customer_license_link_id) &&
 		customerProductHasRelevantStatus(customerProduct);
 	if (!ownsLicenses) return [];
 

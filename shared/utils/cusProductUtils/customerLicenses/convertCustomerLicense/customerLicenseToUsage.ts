@@ -1,7 +1,7 @@
 import type { DbCustomerLicense } from "../../../../models/licenseModels/customerLicenseTable.js";
 
 /** Live seat count from the maintained counters — never COUNT over seats. */
-export const customerLicenseToUsed = ({
+export const customerLicenseToUsage = ({
 	customerLicense,
 }: {
 	customerLicense: Pick<DbCustomerLicense, "granted" | "remaining">;

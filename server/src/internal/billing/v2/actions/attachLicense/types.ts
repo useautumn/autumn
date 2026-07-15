@@ -1,6 +1,7 @@
 import type {
 	AttachLicenseEntityParams,
 	AutumnBillingPlan,
+	DbCustomerProduct,
 	Entity,
 	FullCusProduct,
 	FullCustomer,
@@ -20,6 +21,9 @@ export type AttachLicenseContext = {
 	entityParams: AttachLicenseEntityParams[];
 	existingEntities: Entity[];
 	newEntityParams: AttachLicenseEntityParams[];
+	// Released seats waiting in the pool, re-pointed before any new seat is
+	// provisioned. Fetched bounded by the request size.
+	unusedAssignments: DbCustomerProduct[];
 };
 
 export type AttachLicensePlan = {

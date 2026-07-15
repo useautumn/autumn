@@ -157,10 +157,10 @@ test.concurrent(
 		expect(assignment.id).toBeTruthy();
 
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
-		expect(pools[0].inventory).toMatchObject({
-			included: 3,
-			assigned: 2,
-			available: 1,
+		expect(pools[0]).toMatchObject({
+			granted: 3,
+			usage: 2,
+			remaining: 1,
 		});
 	},
 );
@@ -333,12 +333,11 @@ test.concurrent(
 
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
 		expect(pools).toHaveLength(1);
-		expect(pools[0].inventory).toEqual({
-			included: 1,
-			assigned: 1,
-			available: 0,
+		expect(pools[0]).toMatchObject({
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
-		expect(pools[0].assignments).toHaveLength(1);
 
 		const checks = await Promise.all(
 			entities.map((entity) =>

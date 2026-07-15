@@ -12,6 +12,7 @@ import { setupStripeBillingContext } from "@/internal/billing/v2/providers/strip
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor.js";
+import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import type { AttachLicenseContext } from "../types.js";
 
 /** Exactly one assignable parent must hold a pool of the license plan: zero
@@ -112,13 +113,20 @@ export const setupAttachLicenseContext = async ({
 
 	// The assignment's cycles anchor to the parent's billing state — same
 	// derivation as attach, minus any billing changes.
-	const { stripeSubscription, testClockFrozenTime } =
-		await setupStripeBillingContext({
-			ctx,
-			fullCustomer,
-			targetCustomerProduct: target.parentCustomerProduct,
-			createStripeCustomerIfMissing: false,
-		});
+	const [{ stripeSubscription, testClockFrozenTime }, unusedAssignments] =
+		await Promise.all([
+			setupStripeBillingContext({
+				ctx,
+				fullCustomer,
+				targetCustomerProduct: target.parentCustomerProduct,
+				createStripeCustomerIfMissing: false,
+			}),
+			licenseAssignmentRepo.listUnusedAssignmentsByLinkId({
+				db: ctx.db,
+				customerLicenseLinkId: target.customerLicense.link_id,
+				limit: params.entities.length,
+			}),
+		]);
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
@@ -137,6 +145,7 @@ export const setupAttachLicenseContext = async ({
 		currentEpochMs,
 		resetCycleAnchorMs,
 		entityParams: params.entities,
+		unusedAssignments,
 		...splitRequestedEntities({ fullCustomer, entityParams: params.entities }),
 	};
 };

@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 import type { DbCustomerLicense } from "./customerLicenseTable";
-import type { FullPlanLicense } from "./fullPlanLicenseModel";
+import {
+	type FullPlanLicense,
+	FullPlanLicenseSchema,
+} from "./fullPlanLicenseModel";
 
 /** Customer license row hydrated with its effective plan license (customer
  * override when one exists, else the catalog link) and that license's
@@ -10,5 +13,20 @@ export type FullCustomerLicense = DbCustomerLicense & {
 	planLicense: FullPlanLicense | null;
 };
 
-/** Typed via z.custom: the row shape is drizzle-inferred (no zod source). */
-export const FullCustomerLicenseSchema = z.custom<FullCustomerLicense>();
+/** Schema mirror of the drizzle row + hydration, used by the cache sanitize
+ * walker — keep fields in sync with customerLicenseTable. */
+export const FullCustomerLicenseSchema: z.ZodType<FullCustomerLicense> =
+	z.object({
+		id: z.string(),
+		link_id: z.string(),
+		internal_customer_id: z.string(),
+		parent_customer_product_id: z.string(),
+		license_internal_product_id: z.string(),
+		plan_license_id: z.string().nullable(),
+		granted: z.number(),
+		remaining: z.number(),
+		paid_quantity: z.number(),
+		created_at: z.number(),
+		updated_at: z.number(),
+		planLicense: FullPlanLicenseSchema.nullable(),
+	});

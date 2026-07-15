@@ -92,10 +92,10 @@ export interface InitFullCustomerProductOptions {
 	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
 	keepSubscriptionIds?: boolean;
 
-	/** Marks the product as a license assignment under this parent: entitlements
-	 * are entity-stamped and prices are dropped — assignments never bill, and
-	 * usage_allowed must not derive from prices the product won't charge. */
-	licenseParentCustomerProductId?: string;
+	/** Anchors the product to a license pool as an assignment: entitlements are
+	 * entity-stamped and usage_allowed must not derive from prices —
+	 * assignments never bill. */
+	customerLicenseLinkId?: string;
 
 	/** Override the entity the customer product is bound to. Used by sync to honor `plan.internal_entity_id` instead of falling back to `fullCustomer.entity`. */
 	internalEntityId?: string;

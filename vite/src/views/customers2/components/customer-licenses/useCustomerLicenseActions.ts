@@ -33,15 +33,18 @@ export const useCustomerLicenseActions = ({
 	};
 
 	const cancelLicenseAssignment = ({
-		assignmentId,
+		entityId: assignmentEntityId,
+		licensePlanId,
 	}: {
-		assignmentId: string;
+		entityId: string;
+		licensePlanId: string;
 	}) =>
 		runWithErrorToast({
 			action: () =>
 				unassign.mutateAsync({
 					customer_id: customerId ?? "",
-					assignment_id: assignmentId,
+					entity_ids: [assignmentEntityId],
+					license_plan_id: licensePlanId,
 				}),
 			fallbackMessage: "Failed to unassign license",
 		});

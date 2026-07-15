@@ -72,10 +72,11 @@ export const CusProductSchema = z.object({
 	api_semver: z.enum(ApiVersion).nullable(),
 
 	is_custom: z.boolean().default(false),
-	license_parent_customer_product_id: z.string().nullish(),
 	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);
 	// successor pool rows copy the link, so transitions never touch seats.
 	customer_license_link_id: z.string().nullish(),
+	// When the seat was released back to its pool (entity unlinked).
+	released_at: z.number().nullish(),
 
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 

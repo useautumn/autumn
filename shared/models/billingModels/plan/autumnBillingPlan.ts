@@ -53,6 +53,10 @@ export const CustomerProductUpdateSchema = z.object({
 	updates: z.object({
 		options: z.array(FeatureOptionsSchema).optional(),
 		status: z.enum(CusProductStatus).optional(),
+		// License seat release/reuse: entity unlink + pool-return timestamp.
+		internal_entity_id: z.string().nullish(),
+		entity_id: z.string().nullish(),
+		released_at: z.number().nullish(),
 		billing_cycle_anchor: z.number().nullish(),
 		billing_cycle_anchor_resets_at: z.number().nullish(),
 		free_trial_id: z.string().nullish(),

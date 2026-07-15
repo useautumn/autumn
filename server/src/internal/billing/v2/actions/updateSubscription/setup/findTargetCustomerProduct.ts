@@ -166,7 +166,7 @@ export const findTargetCustomerProduct = async ({
 			fallback?.internal_customer_id === fullCustomer.internal_id;
 		if (fallback && belongsToCustomer) {
 			const isLicenseAssignment =
-				fallback.license_parent_customer_product_id != null &&
+				fallback.customer_license_link_id != null &&
 				fallback.internal_entity_id != null;
 			if (isLicenseAssignment && !params.cancel_action) {
 				throw new RecaseError({

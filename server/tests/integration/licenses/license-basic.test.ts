@@ -82,12 +82,9 @@ test.concurrent(
 		expect(poolsBeforeAssign[0]).toMatchObject({
 			license_plan_id: license.id,
 			license_plan_name: license.name,
-			inventory: {
-				included: 1,
-				assigned: 0,
-				available: 1,
-			},
-			assignments: [],
+			granted: 1,
+			usage: 0,
+			remaining: 1,
 		});
 
 		const customerBefore = await autumnV2_2.check<CheckResponseV3>({
@@ -119,22 +116,21 @@ test.concurrent(
 		});
 		expect(poolsAfterAssign[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: {
-				included: 1,
-				assigned: 1,
-				available: 0,
-			},
-			assignments: [
-				{
-					entity_id: entities[0].id,
-					license_plan_id: license.id,
-				},
-			],
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
-		expect(poolsAfterAssign[0].assignments[0].assignment_id).toBeTruthy();
-		expect(poolsAfterAssign[0].assignments[0].started_at).toBeGreaterThan(0);
-		const assignmentId = poolsAfterAssign[0].assignments[0].assignment_id;
-		expect(assignmentId).toBe(assignment.id);
+		const assignmentsAfterAssign = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[0].id,
+			licensePlanId: license.id,
+			active: true,
+		});
+		expect(assignmentsAfterAssign).toHaveLength(1);
+		expect(assignmentsAfterAssign[0].started_at).toBeGreaterThan(0);
+		const assignmentId = assignment.id;
+		expect(assignmentsAfterAssign[0].id).toBe(assignmentId);
 
 		const activeAssignments = await listLicenseAssignments({
 			autumn: autumnV2_2,
@@ -248,12 +244,9 @@ test.concurrent(
 			entityId: entities[0].id,
 		});
 		expect(poolsAfterUnassign[0]).toMatchObject({
-			inventory: {
-				included: 1,
-				assigned: 0,
-				available: 1,
-			},
-			assignments: [],
+			granted: 1,
+			usage: 0,
+			remaining: 1,
 		});
 
 		const unassignedEntity = await autumnV2_2.check<CheckResponseV3>({

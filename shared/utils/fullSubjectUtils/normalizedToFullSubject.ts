@@ -13,6 +13,7 @@ import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusE
 import type { Replaceable } from "../../models/cusProductModels/cusEntModels/replaceableTable.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
+import type { FullCustomerLicense } from "../../models/licenseModels/fullCustomerLicense.js";
 
 const getArrayEntries = <T>({ value }: { value: unknown }): T[] =>
 	Array.isArray(value) ? (value as T[]) : [];
@@ -260,6 +261,21 @@ export const normalizedToFullSubject = ({
 		),
 	);
 
+	const customerLicensesByParentId = new Map<string, FullCustomerLicense[]>();
+	for (const customerLicense of getArrayEntries<FullCustomerLicense>({
+		value: normalized.customer_licenses,
+	})) {
+		const existing =
+			customerLicensesByParentId.get(
+				customerLicense.parent_customer_product_id,
+			) ?? [];
+		existing.push(customerLicense);
+		customerLicensesByParentId.set(
+			customerLicense.parent_customer_product_id,
+			existing,
+		);
+	}
+
 	const booleanCesByCustomerProductId = new Map<
 		string,
 		FullCustomerEntitlement[]
@@ -312,6 +328,8 @@ export const normalizedToFullSubject = ({
 			customer_prices:
 				customerPricesByCustomerProductId.get(customerProduct.id) ?? [],
 			customer_entitlements: [...meteredCes, ...booleanCes],
+			customer_licenses:
+				customerLicensesByParentId.get(customerProduct.id) ?? [],
 		} as FullCusProduct);
 	}
 

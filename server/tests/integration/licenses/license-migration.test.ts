@@ -11,6 +11,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import {
 	assignLicense,
 	getLicenseDbState,
+	listLicenseAssignments,
 	listLicensePools,
 } from "./licenseTestUtils.js";
 
@@ -85,21 +86,17 @@ const expectUnsafeMigrationRejected = async ({
 
 	const after = await getLicenseDbState({ db: ctx.db, customerId });
 	expect(
-		after.assignments.map(
-			({ id, status, license_parent_customer_product_id }) => ({
-				id,
-				status,
-				parentId: license_parent_customer_product_id,
-			}),
-		),
+		after.assignments.map(({ id, status, customer_license_link_id }) => ({
+			id,
+			status,
+			linkId: customer_license_link_id,
+		})),
 	).toEqual(
-		before.assignments.map(
-			({ id, status, license_parent_customer_product_id }) => ({
-				id,
-				status,
-				parentId: license_parent_customer_product_id,
-			}),
-		),
+		before.assignments.map(({ id, status, customer_license_link_id }) => ({
+			id,
+			status,
+			linkId: customer_license_link_id,
+		})),
 	);
 	expect(
 		after.pools.map(
@@ -229,20 +226,29 @@ test.concurrent(
 				(customerProduct) =>
 					customerProduct.product_id === parent.id &&
 					customerProduct.status === "active" &&
-					customerProduct.license_parent_customer_product_id === null,
+					customerProduct.customer_license_link_id === null,
 			);
 			expect(activeParent).toHaveLength(1);
+			const activePoolLinkIds = new Set(
+				dbState.pools
+					.filter(
+						(pool) => pool.parent_customer_product_id === activeParent[0].id,
+					)
+					.map((pool) => pool.link_id),
+			);
 			expect(
 				dbState.assignments
 					.filter(({ status }) => status === "active")
-					.map(({ id, license_parent_customer_product_id }) => ({
+					.map(({ id, customer_license_link_id }) => ({
 						id,
-						parentId: license_parent_customer_product_id,
+						anchoredToActiveParent: activePoolLinkIds.has(
+							customer_license_link_id ?? "",
+						),
 					}))
 					.sort((a, b) => a.id.localeCompare(b.id)),
 			).toEqual(
 				assignmentIds
-					.map((id) => ({ id, parentId: activeParent[0].id }))
+					.map((id) => ({ id, anchoredToActiveParent: true }))
 					.sort((a, b) => a.id.localeCompare(b.id)),
 			);
 			expect(dbState.pools).toHaveLength(2);
@@ -265,11 +271,19 @@ test.concurrent(
 				);
 				expect(pool).toMatchObject({
 					parent_plan_id: parent.id,
-					inventory: { included: 2, assigned: 1, available: 1 },
+					granted: 2,
+					usage: 1,
+					remaining: 1,
 				});
-				expect(
-					pool?.assignments.map((assignment) => assignment.assignment_id),
-				).toEqual([assignmentIds[index]]);
+				const licenseAssignments = await listLicenseAssignments({
+					autumn: autumnV2_2,
+					customerId,
+					licensePlanId: license.id,
+					active: true,
+				});
+				expect(licenseAssignments.map((assignment) => assignment.id)).toEqual([
+					assignmentIds[index],
+				]);
 			}
 
 			for (const [index, featureId] of [
@@ -357,9 +371,9 @@ test.concurrent(
 			customerId,
 		});
 		expect(poolsBefore).toHaveLength(1);
-		expect(poolsBefore[0].inventory).toMatchObject({
-			included: 3,
-			assigned: 2,
+		expect(poolsBefore[0]).toMatchObject({
+			granted: 3,
+			usage: 2,
 		});
 
 		const parentV1 = await ProductService.getFull({
@@ -393,9 +407,9 @@ test.concurrent(
 			customerId,
 		});
 		expect(poolsAfter).toHaveLength(1);
-		expect(poolsAfter[0].inventory).toMatchObject({
-			included: 3,
-			assigned: 2,
+		expect(poolsAfter[0]).toMatchObject({
+			granted: 3,
+			usage: 2,
 		});
 	},
 );

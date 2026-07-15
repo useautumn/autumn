@@ -9,32 +9,19 @@ import { setupAttachLicenseContext } from "./setup/setupAttachLicenseContext.js"
 export const attachLicense = async ({
 	ctx,
 	params,
-	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: AttachLicenseParamsV0;
-	preview?: boolean;
 }) => {
 	// 1. Setup
 	const context = await setupAttachLicenseContext({ ctx, params });
-	const licensePlanId = context.customerLicense.planLicense.product.id;
 
 	// 2. Errors
 	handleAttachLicenseErrors({ context });
 
 	// 3. Compute
 	const plan = computeAttachLicensePlan({ ctx, context });
-	logLicenseAssignmentPlan({ ctx, context, plan, preview });
-
-	if (preview) {
-		return {
-			customer_id: params.customer_id,
-			intent: "assign" as const,
-			parent_plan_id: context.parentCustomerProduct.product.id,
-			license_plan_id: licensePlanId,
-			available: plan.available,
-		};
-	}
+	logLicenseAssignmentPlan({ ctx, context, plan });
 
 	// 4. Execute: entity upserts + capacity take + provision inserts +
 	// license lifecycle (converge + cache) all run inside the shared executor

@@ -17,7 +17,6 @@ export * from "./createSchedule/createScheduleResponse";
 // DFU (customer imaging / live migration)
 export * from "./dfu/dfuFlashParams";
 // Licenses
-export * from "./licenses/attachLicenseParamsV0";
 // Multi Update
 export * from "./multiUpdate/multiUpdateParamsV0";
 export * from "./multiUpdate/multiUpdatePreviewResponseV0";

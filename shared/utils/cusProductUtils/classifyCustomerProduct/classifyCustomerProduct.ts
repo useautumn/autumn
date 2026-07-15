@@ -150,20 +150,20 @@ export const customerProductHasActiveStatus = (cp?: FullCusProduct) => {
 export const isCustomerProductLicenseParent = (
 	customerProduct?: Pick<
 		FullCusProduct,
-		"internal_entity_id" | "license_parent_customer_product_id" | "status"
+		"internal_entity_id" | "customer_license_link_id" | "status"
 	>,
 ) => {
 	if (!customerProduct) return false;
 	return (
 		nullish(customerProduct.internal_entity_id) &&
-		nullish(customerProduct.license_parent_customer_product_id) &&
+		nullish(customerProduct.customer_license_link_id) &&
 		ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus)
 	);
 };
 
 type LicenseParentCandidate = Pick<
 	FullCusProduct,
-	"internal_entity_id" | "license_parent_customer_product_id" | "status"
+	"internal_entity_id" | "customer_license_link_id" | "status"
 >;
 
 export const isLicenseAssignableParentCustomerProduct = ({
@@ -172,8 +172,21 @@ export const isLicenseAssignableParentCustomerProduct = ({
 	customerProduct: LicenseParentCandidate;
 }) =>
 	nullish(customerProduct.internal_entity_id) &&
-	nullish(customerProduct.license_parent_customer_product_id) &&
+	nullish(customerProduct.customer_license_link_id) &&
 	ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus);
+
+/** An entity-held seat in a live status — the mirror of
+ * isCustomerProductLicenseParent. */
+export const isCustomerProductLicenseAssignment = (
+	customerProduct?: LicenseParentCandidate,
+) => {
+	if (!customerProduct) return false;
+	return (
+		notNullish(customerProduct.internal_entity_id) &&
+		notNullish(customerProduct.customer_license_link_id) &&
+		ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus)
+	);
+};
 
 // ============================================================================
 // ENTITY CHECKS

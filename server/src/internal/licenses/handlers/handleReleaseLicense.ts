@@ -1,17 +1,17 @@
-import { Scopes, UpdateLicenseParamsSchema } from "@autumn/shared";
+import { ReleaseLicenseParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 
-export const handleUpdateLicense = createRoute({
+export const handleReleaseLicense = createRoute({
 	scopes: [Scopes.Billing.Write],
-	body: UpdateLicenseParamsSchema,
+	body: ReleaseLicenseParamsV0Schema,
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
 					errorMessage:
-						"License update already in progress for this customer, try again in a few seconds",
+						"License release already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {
 						const ctx = c.get("ctx");
 						const body = c.req.valid("json");
@@ -26,11 +26,11 @@ export const handleUpdateLicense = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const body = c.req.valid("json");
-		const assignment = await billingActions.updateLicense({
+		const result = await billingActions.releaseLicense({
 			ctx,
 			params: body,
 		});
 
-		return c.json({ assignment });
+		return c.json(result);
 	},
 });

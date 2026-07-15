@@ -24,8 +24,8 @@ export const initFullCustomerProductFromCustomerLicense = ({
 	internalEntityId: string;
 	resetCycleAnchor: number | "now";
 	currentEpochMs: number;
-}): FullCusProduct => {
-	const assignment = initFullCustomerProduct({
+}): FullCusProduct =>
+	initFullCustomerProduct({
 		ctx,
 		initContext: {
 			fullCustomer,
@@ -38,10 +38,7 @@ export const initFullCustomerProductFromCustomerLicense = ({
 		initOptions: {
 			internalEntityId,
 			status: CusProductStatus.Active,
-			licenseParentCustomerProductId:
-				customerLicense.parent_customer_product_id,
+			// Anchors the assignment to its pool: seats key by link, never repoint.
+			customerLicenseLinkId: customerLicense.link_id,
 		},
 	});
-	assignment.customer_license_link_id = customerLicense.link_id;
-	return assignment;
-};

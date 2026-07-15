@@ -156,7 +156,9 @@ test.concurrent(
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: customLicense.id,
-			inventory: { included: 2, assigned: 0, available: 2 },
+			granted: 2,
+			usage: 0,
+			remaining: 2,
 		});
 	},
 );
@@ -297,7 +299,9 @@ test.concurrent(
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { included: 3, assigned: 1, available: 2 },
+			granted: 3,
+			usage: 1,
+			remaining: 2,
 		});
 
 		await autumnV2_2.post("/licenses.attach", {
@@ -310,7 +314,9 @@ test.concurrent(
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(poolsAfterSecondAssign.list[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { included: 3, assigned: 2, available: 1 },
+			granted: 3,
+			usage: 2,
+			remaining: 1,
 		});
 	},
 );
@@ -372,7 +378,9 @@ test.concurrent(
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { included: 1, assigned: 1, available: 0 },
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 			assignments: [{ entity_id: entities[0].id }],
 		});
 	},
@@ -475,7 +483,9 @@ test.concurrent(
 		expect(pools.list).toHaveLength(1);
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { included: 2, assigned: 0, available: 2 },
+			granted: 2,
+			usage: 0,
+			remaining: 2,
 		});
 	},
 );
@@ -761,7 +771,8 @@ test.concurrent(
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { assigned: 1, available: 0 },
+			usage: 1,
+			remaining: 0,
 		});
 	},
 );
@@ -986,12 +997,8 @@ test.concurrent(
 			customer_id: customerId,
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(poolsBefore.list).toHaveLength(2);
-		const poolA = poolsBefore.list.find(
-			(pool) => pool.inventory.included === 1,
-		);
-		const poolB = poolsBefore.list.find(
-			(pool) => pool.inventory.included === 2,
-		);
+		const poolA = poolsBefore.list.find((pool) => pool.granted === 1);
+		const poolB = poolsBefore.list.find((pool) => pool.granted === 2);
 		expect(poolA?.parent_plan_id).toBeTruthy();
 		expect(poolB?.parent_plan_id).toBeTruthy();
 		expect(poolA?.parent_plan_id).not.toBe(poolB?.parent_plan_id);
@@ -1037,13 +1044,13 @@ test.concurrent(
 		expect(
 			poolsAfter.list.find(
 				(pool) => pool.parent_plan_id === poolA?.parent_plan_id,
-			)?.inventory,
-		).toMatchObject({ included: 1, assigned: 1, available: 0 });
+			),
+		).toMatchObject({ granted: 1, usage: 1, remaining: 0 });
 		expect(
 			poolsAfter.list.find(
 				(pool) => pool.parent_plan_id === poolB?.parent_plan_id,
-			)?.inventory,
-		).toMatchObject({ included: 2, assigned: 1, available: 1 });
+			),
+		).toMatchObject({ granted: 2, usage: 1, remaining: 1 });
 	},
 );
 

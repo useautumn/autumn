@@ -1,7 +1,7 @@
 import type {
 	ApiCustomerLicenseV0,
 	AttachLicenseParamsV0,
-	UpdateLicenseParams,
+	ReleaseLicenseParamsV0,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -56,11 +56,8 @@ export const useLicenseBalancesQuery = ({
 	});
 
 	const unassign = useMutation({
-		mutationFn: async (params: Omit<UpdateLicenseParams, "cancel_action">) => {
-			const { data } = await axiosInstance.post("/v1/licenses.update", {
-				...params,
-				cancel_action: "cancel_immediately",
-			});
+		mutationFn: async (params: ReleaseLicenseParamsV0) => {
+			const { data } = await axiosInstance.post("/v1/licenses.release", params);
 			return data;
 		},
 		onSuccess: invalidate,

@@ -54,7 +54,7 @@ export const initCustomerEntitlement = ({
 	});
 
 	const { fullCustomer } = initContext;
-	const relatedPrice = initOptions?.licenseParentCustomerProductId
+	const relatedPrice = initOptions?.customerLicenseLinkId
 		? undefined
 		: entToPrice({
 				ent: entitlement,

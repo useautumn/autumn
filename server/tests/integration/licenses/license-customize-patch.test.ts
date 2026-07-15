@@ -76,11 +76,11 @@ test.concurrent(
 		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
 		expect(pools).toHaveLength(2);
 		expect(
-			pools.find((pool) => pool.license_plan_id === licenseA.id)?.inventory,
-		).toMatchObject({ included: 5, assigned: 0, available: 5 });
+			pools.find((pool) => pool.license_plan_id === licenseA.id),
+		).toMatchObject({ granted: 5, usage: 0, remaining: 5 });
 		expect(
-			pools.find((pool) => pool.license_plan_id === licenseB.id)?.inventory,
-		).toMatchObject({ included: 1, assigned: 0, available: 1 });
+			pools.find((pool) => pool.license_plan_id === licenseB.id),
+		).toMatchObject({ granted: 1, usage: 0, remaining: 1 });
 	},
 );
 
@@ -108,7 +108,9 @@ test.concurrent(
 		expect(pools).toHaveLength(1);
 		expect(pools[0]).toMatchObject({
 			license_plan_id: licenseB.id,
-			inventory: { included: 1, assigned: 0, available: 1 },
+			granted: 1,
+			usage: 0,
+			remaining: 1,
 		});
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
@@ -144,7 +146,7 @@ test.concurrent(
 			autumn: autumnV2_2,
 			customerId,
 		});
-		expect(overriddenPools[0]?.inventory).toMatchObject({ included: 5 });
+		expect(overriddenPools[0]).toMatchObject({ granted: 5 });
 
 		await autumnV2_2.billing.update({
 			customer_id: customerId,
@@ -158,10 +160,10 @@ test.concurrent(
 			autumn: autumnV2_2,
 			customerId,
 		});
-		expect(restoredPools[0]?.inventory).toMatchObject({
-			included: 2,
-			assigned: 0,
-			available: 2,
+		expect(restoredPools[0]).toMatchObject({
+			granted: 2,
+			usage: 0,
+			remaining: 2,
 		});
 
 		const overrideRows = await ctx.db.query.planLicenses.findMany({

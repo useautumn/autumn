@@ -1,0 +1,2 @@
+ALTER TABLE "customer_products" ADD COLUMN "released_at" numeric;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_products_unused_seats" ON "customer_products" USING btree ("customer_license_link_id","released_at") WHERE "customer_products"."customer_license_link_id" IS NOT NULL AND "customer_products"."internal_entity_id" IS NULL;

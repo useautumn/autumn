@@ -1,5 +1,5 @@
 import {
-	customerLicenseToUsed,
+	customerLicenseToUsage,
 	type FullCustomerLicense,
 	isFixedPrice,
 	type LicenseBillingPriceRow,
@@ -18,7 +18,7 @@ export const customerLicenseToUnusedPrepaidRows = ({
 	const { planLicense } = customerLicense;
 	if (!planLicense) return [];
 
-	const used = customerLicenseToUsed({ customerLicense });
+	const used = customerLicenseToUsage({ customerLicense });
 	const billableUsed = Math.max(0, used - planLicense.included);
 	const quantity = Math.max(0, customerLicense.paid_quantity - billableUsed);
 	if (quantity === 0) return [];

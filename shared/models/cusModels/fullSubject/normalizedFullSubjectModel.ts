@@ -19,6 +19,7 @@ import {
 	FeatureOptionsSchema,
 } from "../../cusProductModels/cusProductModels.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
+import type { FullCustomerLicense } from "../../licenseModels/fullCustomerLicense.js";
 import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
@@ -170,6 +171,9 @@ export type NormalizedFullSubject = {
 	customer_products: DbCustomerProduct[];
 	customer_entitlements: SubjectBalance[];
 	customer_prices: DbCustomerPrice[];
+	/** Self-contained rows (effective plan license + product pre-resolved);
+	 *  customer subjects only — entity subjects always carry []. */
+	customer_licenses: FullCustomerLicense[];
 
 	/** Windowed-cap counter rows for ALL scopes (customer + entity;
 	 *  internal_entity_id null = customer scope), live-read from the

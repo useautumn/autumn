@@ -9,6 +9,7 @@ import { updateQuantity } from "@/internal/billing/v2/actions/legacy/updateQuant
 import { migrate } from "@/internal/billing/v2/actions/migrate/migrate";
 import { multiAttach } from "@/internal/billing/v2/actions/multiAttach/multiAttach";
 import { multiUpdate } from "@/internal/billing/v2/actions/multiUpdate/multiUpdate";
+import { releaseLicense } from "@/internal/billing/v2/actions/releaseLicense/releaseLicense";
 import { previewRestore } from "@/internal/billing/v2/actions/restore/previewRestore";
 import { restore } from "@/internal/billing/v2/actions/restore/restore";
 import { setupPayment } from "@/internal/billing/v2/actions/setupPayment/setupPayment";
@@ -16,7 +17,6 @@ import { sync } from "@/internal/billing/v2/actions/sync/sync";
 import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
 import { syncV2 } from "@/internal/billing/v2/actions/sync/syncV2";
-import { updateLicense } from "@/internal/billing/v2/actions/updateLicense/updateLicense";
 import { updateSubscription } from "@/internal/billing/v2/actions/updateSubscription/updateSubscription";
 import { verify } from "@/internal/billing/v2/actions/verify/verify";
 
@@ -29,7 +29,7 @@ export const billingActions = {
 	multiUpdate: multiUpdate,
 	setupPayment: setupPayment,
 	updateSubscription: updateSubscription,
-	updateLicense: updateLicense,
+	releaseLicense: releaseLicense,
 	migrate: migrate,
 	restore: restore,
 	previewRestore: previewRestore,

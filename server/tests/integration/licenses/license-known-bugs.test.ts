@@ -216,7 +216,9 @@ test.concurrent(
 		expect(pools).toHaveLength(1);
 		expect(pools[0]).toMatchObject({
 			license_plan_id: license.id,
-			inventory: { included: 1, assigned: 0, available: 1 },
+			granted: 1,
+			usage: 0,
+			remaining: 1,
 		});
 
 		await autumnV2_2.post("/licenses.attach", {
@@ -230,10 +232,10 @@ test.concurrent(
 			customerId,
 			entityId: entities[0].id,
 		});
-		expect(poolsAfter[0].inventory).toMatchObject({
-			included: 1,
-			assigned: 1,
-			available: 0,
+		expect(poolsAfter[0]).toMatchObject({
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
 	},
 );

@@ -53,12 +53,12 @@ export const customerProducts = pgTable(
 		quantity: numeric({ mode: "number" }).default(1),
 
 		is_custom: boolean("is_custom").default(false).notNull(),
-		license_parent_customer_product_id: text(
-			"license_parent_customer_product_id",
-		),
 		// Anchors the seat to its pool's stable link identity — successor pool
 		// rows copy the link, so plan transitions never touch seats.
 		customer_license_link_id: text("customer_license_link_id"),
+		// When the seat was released back to its pool (entity unlinked);
+		// unused-seat reuse picks the longest-released first.
+		released_at: numeric({ mode: "number" }),
 
 		// Optional...
 		customer_id: text("customer_id"),
@@ -132,20 +132,6 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
-		index("idx_customer_products_license_parent")
-			.on(table.license_parent_customer_product_id)
-			.where(sql`${table.license_parent_customer_product_id} IS NOT NULL`)
-			.concurrently(),
-		uniqueIndex("unique_active_license_assignment")
-			.on(
-				table.license_parent_customer_product_id,
-				table.internal_entity_id,
-				table.internal_product_id,
-			)
-			.where(
-				sql`${table.license_parent_customer_product_id} IS NOT NULL AND ${table.internal_entity_id} IS NOT NULL AND ${table.status} IN ('active', 'past_due', 'trialing')`,
-			)
-			.concurrently(),
 		index("idx_customer_products_customer_license")
 			.on(table.customer_license_link_id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
@@ -154,6 +140,13 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_license_seat_order")
 			.on(table.customer_license_link_id, table.created_at, table.id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
+		// Released seats waiting for reuse, longest-released first.
+		index("idx_customer_products_unused_seats")
+			.on(table.customer_license_link_id, table.released_at)
+			.where(
+				sql`${table.customer_license_link_id} IS NOT NULL AND ${table.internal_entity_id} IS NULL`,
+			)
 			.concurrently(),
 		// One active seat per (pool link, entity); the link survives successor
 		// pool rows, so the guard holds across plan transitions.

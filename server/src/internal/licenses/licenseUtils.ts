@@ -33,15 +33,3 @@ export const validateLicenseBillingMode = ({
 		});
 	}
 };
-
-export const computeLicenseInventory = ({
-	included,
-	assigned,
-}: {
-	included: number;
-	assigned: number;
-}) => ({
-	included,
-	assigned,
-	available: Math.max(0, included - assigned),
-});

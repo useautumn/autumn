@@ -13,7 +13,10 @@ import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { getLicenseDbState } from "./licenseTestUtils.js";
+import {
+	getLicenseDbState,
+	listLicenseAssignments,
+} from "./licenseTestUtils.js";
 
 const advanceToNextCycle = async ({
 	stripeCli,
@@ -152,10 +155,10 @@ test.concurrent(
 			customer_id: customerId,
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0].inventory).toMatchObject({
-			included: 2,
-			assigned: 0,
-			available: 2,
+		expect(pools.list[0]).toMatchObject({
+			granted: 2,
+			usage: 0,
+			remaining: 2,
 		});
 	},
 );
@@ -184,7 +187,9 @@ test.concurrent(
 		expect(before.list).toHaveLength(1);
 		expect(before.list[0]).toMatchObject({
 			parent_plan_id: premium.id,
-			inventory: { included: 1, assigned: 1, available: 0 },
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
 
 		await advanceToNextCycle({
@@ -197,14 +202,17 @@ test.concurrent(
 			(customerProduct) =>
 				customerProduct.product_id === pro.id &&
 				customerProduct.status === "active" &&
-				customerProduct.license_parent_customer_product_id === null,
+				customerProduct.customer_license_link_id === null,
 		);
 		expect(activeParent).toBeDefined();
+		const activePool = dbState.pools.find(
+			(pool) => pool.parent_customer_product_id === activeParent?.id,
+		);
 		expect(
 			dbState.assignments.find(({ id }) => id === assignment.id),
 		).toMatchObject({
 			status: "active",
-			license_parent_customer_product_id: activeParent?.id,
+			customer_license_link_id: activePool?.link_id,
 		});
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({
@@ -219,11 +227,16 @@ test.concurrent(
 		expect(after.list).toHaveLength(1);
 		expect(after.list[0]).toMatchObject({
 			parent_plan_id: pro.id,
-			inventory: { included: 1, assigned: 1, available: 0 },
+			granted: 1,
+			usage: 1,
+			remaining: 0,
 		});
-		expect(after.list[0].assignments.map((item) => item.assignment_id)).toEqual(
-			[assignment.id],
-		);
+		const activeAssignments = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			active: true,
+		});
+		expect(activeAssignments.map((item) => item.id)).toEqual([assignment.id]);
 
 		const check = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,

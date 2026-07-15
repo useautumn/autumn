@@ -114,30 +114,39 @@ test.concurrent(
 			autumn: autumnV2_2,
 			customerId,
 		});
-		expect(poolsAfterAssign[0].inventory).toMatchObject({
-			included: 3,
-			assigned: 2,
-			available: 1,
+		expect(poolsAfterAssign[0]).toMatchObject({
+			granted: 3,
+			usage: 2,
+			remaining: 1,
 		});
-		expect(poolsAfterAssign[0].assignments).toHaveLength(2);
+		const assignmentsAfterAssign = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			active: true,
+		});
+		expect(assignmentsAfterAssign).toHaveLength(2);
 
-		const firstAssignmentId = poolsAfterAssign[0].assignments[0].assignment_id;
-		await autumnV2_2.post("/licenses.update", {
+		await autumnV2_2.post("/licenses.release", {
 			customer_id: customerId,
-			cancel_action: "cancel_immediately",
-			assignment_id: firstAssignmentId,
+			entity_ids: [entities[0].id],
+			license_plan_id: license.id,
 		});
 
 		const poolsAfterUnassign = await listLicensePools({
 			autumn: autumnV2_2,
 			customerId,
 		});
-		expect(poolsAfterUnassign[0].inventory).toMatchObject({
-			included: 3,
-			assigned: 1,
-			available: 2,
+		expect(poolsAfterUnassign[0]).toMatchObject({
+			granted: 3,
+			usage: 1,
+			remaining: 2,
 		});
-		expect(poolsAfterUnassign[0].assignments).toHaveLength(1);
+		const assignmentsAfterUnassign = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			active: true,
+		});
+		expect(assignmentsAfterUnassign).toHaveLength(1);
 	},
 );
 
@@ -312,21 +321,17 @@ test.concurrent(
 
 		const after = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(
-			after.assignments.map(
-				({ id, status, license_parent_customer_product_id }) => ({
-					id,
-					status,
-					parentId: license_parent_customer_product_id,
-				}),
-			),
+			after.assignments.map(({ id, status, customer_license_link_id }) => ({
+				id,
+				status,
+				linkId: customer_license_link_id,
+			})),
 		).toEqual(
-			before.assignments.map(
-				({ id, status, license_parent_customer_product_id }) => ({
-					id,
-					status,
-					parentId: license_parent_customer_product_id,
-				}),
-			),
+			before.assignments.map(({ id, status, customer_license_link_id }) => ({
+				id,
+				status,
+				linkId: customer_license_link_id,
+			})),
 		);
 		expect(after.pools).toEqual(before.pools);
 	},

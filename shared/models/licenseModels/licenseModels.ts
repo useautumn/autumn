@@ -78,19 +78,6 @@ export const licensePatchIssues = ({
 	return issues;
 };
 
-export const UpdateLicenseParamsSchema = z.object({
-	customer_id: z.string().meta({
-		description: "The customer that owns the assignment.",
-	}),
-	assignment_id: z.string().meta({
-		description: "The assignment to update, as returned by licenses.attach.",
-	}),
-	cancel_action: z.literal("cancel_immediately").meta({
-		description:
-			"Action to perform on the assignment. Only 'cancel_immediately' is currently available.",
-	}),
-});
-
 export const LicenseListAssignmentsParamsSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string().optional(),
@@ -111,7 +98,6 @@ export type LicensePatchParams = {
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
 export type CustomizePlanLicense = z.infer<typeof CustomizePlanLicenseSchema>;
-export type UpdateLicenseParams = z.infer<typeof UpdateLicenseParamsSchema>;
 export type LicenseListAssignmentsParams = z.infer<
 	typeof LicenseListAssignmentsParamsSchema
 >;

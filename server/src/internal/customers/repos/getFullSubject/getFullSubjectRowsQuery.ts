@@ -1,6 +1,7 @@
 import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
 export const CUSTOMER_PRODUCT_LIMIT = 200;
@@ -11,6 +12,7 @@ const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
 	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
 	{ cte: "cus_prices_agg", column: "customer_prices" },
+	{ cte: "customer_licenses_agg", column: "customer_licenses" },
 	{ cte: "extra_cus_entitlements_agg", column: "extra_customer_entitlements" },
 	{ cte: "replaceables_agg", column: "replaceables" },
 	{ cte: "rollovers_agg", column: "rollovers" },
@@ -268,7 +270,9 @@ export const getFullSubjectRowsQuery = ({
 			FROM customer_prices cpr
 			JOIN cus_products cp
 				ON cp.id = cpr.customer_product_id
-		)
+		),
+
+		${composeCustomerLicensesCtes()}
 
 		${invoicesCte}
 		${entityFragments.ctes}

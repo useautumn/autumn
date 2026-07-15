@@ -58,7 +58,7 @@ const setParentStatus = async ({
 	const state = await getLicenseDbState({ db: ctx.db, customerId });
 	const parent = state.products.find(
 		(customerProduct) =>
-			customerProduct.license_parent_customer_product_id === null &&
+			customerProduct.customer_license_link_id === null &&
 			customerProduct.internal_entity_id === null,
 	);
 	if (!parent) throw new Error("License parent not found");
