@@ -55,15 +55,16 @@ const updateLinkedCusEnt = async ({
 				adjustment: 0,
 			};
 		}
-
-		await CusEntService.update({
-			ctx,
-			id: linkedCusEnt.id,
-			updates: {
-				entities: newEntities,
-			},
-		});
 	}
+
+	await CusEntService.update({
+		ctx,
+		id: linkedCusEnt.id,
+		updates: { entities: newEntities },
+	});
+
+	// The create response is built from this request's customer snapshot.
+	linkedCusEnt.entities = newEntities;
 };
 
 export const createEntityForCusProduct = async ({
