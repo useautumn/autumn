@@ -1,5 +1,5 @@
 import type { BillingContext, PreviewTax } from "@autumn/shared";
-import { atmnToStripeAmount, orgToCurrency } from "@autumn/shared";
+import { atmnToStripeAmount, billingContextToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeStripeTaxPreviewForNetSubtotal } from "./computeAttachTaxPreview";
 import { computeTaxRateIdPreviewFromTaxableMinorUnits } from "./computeAttachTaxRateIdPreview";
@@ -18,7 +18,10 @@ export const computeNextCycleTaxPreview = async ({
 	netSubtotal: number;
 }): Promise<PreviewTax | undefined> => {
 	if (billingContext.taxRateId) {
-		const currency = orgToCurrency({ org: ctx.org });
+		const currency = billingContextToCurrency({
+			org: ctx.org,
+			billingContext,
+		});
 		return computeTaxRateIdPreviewFromTaxableMinorUnits({
 			ctx,
 			billingContext,

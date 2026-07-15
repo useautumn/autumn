@@ -1,6 +1,7 @@
-import type {
-	AutumnBillingPlan,
-	MultiAttachBillingContext,
+import {
+	type AutumnBillingPlan,
+	isFreeProduct,
+	type MultiAttachBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeImmediateMultiProductPlan } from "../../common/immediateMultiProduct/computeImmediateMultiProductPlan";
@@ -18,8 +19,29 @@ export const computeMultiAttachPlan = ({
 }: {
 	ctx: AutumnContext;
 	multiAttachBillingContext: MultiAttachBillingContext;
-}): AutumnBillingPlan =>
-	computeImmediateMultiProductPlan({
+}): AutumnBillingPlan => {
+	const plan = computeImmediateMultiProductPlan({
 		ctx,
 		billingContext: multiAttachBillingContext,
 	});
+
+	// Lock the customer's currency on the first paid multi-attach (only when they
+	// have none yet). Free attaches don't commit a currency. Applied conditionally at execute.
+	const {
+		fullCustomer,
+		fullProducts,
+		currency: resolvedCurrency,
+	} = multiAttachBillingContext;
+	const allPrices = fullProducts.flatMap((fullProduct) => fullProduct.prices);
+	const lockCustomerCurrency =
+		resolvedCurrency &&
+		!fullCustomer.currency &&
+		!isFreeProduct({ prices: allPrices })
+			? {
+					internalCustomerId: fullCustomer.internal_id,
+					currency: resolvedCurrency,
+				}
+			: undefined;
+
+	return { ...plan, lockCustomerCurrency };
+};

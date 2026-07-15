@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import {
 	atmnToStripeAmount,
-	orgToCurrency,
+	billingContextToCurrency,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -93,7 +93,7 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
 	if (!billingContext.stripeCustomer?.id) return undefined;
 
-	const currency = orgToCurrency({ org: ctx.org });
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	if (netSubtotal === 0) {
@@ -128,8 +128,7 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 			total:
 				stripeToAtmnAmount({
 					amount:
-						(calc.tax_amount_exclusive ?? 0) +
-						(calc.tax_amount_inclusive ?? 0),
+						(calc.tax_amount_exclusive ?? 0) + (calc.tax_amount_inclusive ?? 0),
 					currency,
 				}) * taxSign,
 			amount_inclusive:

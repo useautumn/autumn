@@ -207,6 +207,7 @@ export function PlanItemsSection({
 		form,
 		showDiff,
 		readOnly,
+		currency,
 	};
 
 	const itemKey = (item: ProductItem) =>
@@ -255,6 +256,7 @@ export function PlanItemsSection({
 							key={`deleted-${itemKey(item)}`}
 							item={item}
 							index={index}
+							currency={currency}
 						/>
 					))}
 					<PlanVersionChangeRow versionChange={versionChange} />

@@ -6,6 +6,53 @@ import {
 } from "@autumn/shared";
 import { toast } from "sonner";
 
+type ProductItemTier = NonNullable<ProductItem["tiers"]>[number];
+
+const findCurrencyEntry = <T extends { currency: string }>(
+	entries: T[] | null | undefined,
+	code: string,
+): T | undefined =>
+	entries?.find((entry) => entry.currency.toLowerCase() === code);
+
+const tierForCurrency = ({
+	tier,
+	code,
+}: {
+	tier: ProductItemTier;
+	code: string;
+}): ProductItemTier => {
+	const entry = findCurrencyEntry(tier.additional_currencies, code);
+	if (!entry) return tier;
+	return {
+		...tier,
+		amount: entry.amount ?? tier.amount,
+		flat_amount: entry.flat_amount ?? tier.flat_amount,
+	};
+};
+
+export const productItemsForCurrency = ({
+	items,
+	currency,
+	orgDefaultCurrency,
+}: {
+	items: ProductItem[];
+	currency: string | null | undefined;
+	orgDefaultCurrency: string;
+}): ProductItem[] => {
+	const code = currency?.toLowerCase();
+	if (!code || code === orgDefaultCurrency.toLowerCase()) return items;
+
+	return items.map((item) => {
+		const priceEntry = findCurrencyEntry(item.additional_currencies, code);
+		const tiers = item.tiers?.map((tier) => tierForCurrency({ tier, code }));
+		return {
+			...item,
+			price: priceEntry?.amount ?? item.price,
+			tiers: tiers ?? item.tiers,
+		};
+	});
+};
+
 export const unsetCurrencyCodes = (item: ProductItem): string[] => {
 	const codes = new Set<string>();
 	for (const entry of item.additional_currencies ?? []) {

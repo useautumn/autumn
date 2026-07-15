@@ -1,4 +1,5 @@
 import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase/billingParamsBaseV1";
+import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
@@ -94,7 +95,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			"Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.",
 	}),
 
-	currency: z.string().optional().meta({
+	currency: CurrencyCodeSchema.optional().meta({
 		description:
 			"Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
 	}),
