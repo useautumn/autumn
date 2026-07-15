@@ -23,23 +23,23 @@ export const updateProductItems = async ({
 	features: AutumnContext["features"];
 	useInPlaceEdit: boolean;
 }) => {
-	if (!useInPlaceEdit) {
-		await handleNewProductItems({
-			db,
-			curPrices: fullProduct.prices,
-			curEnts: fullProduct.entitlements,
-			newItems,
-			features,
-			product: fullProduct,
-			logger: ctx.logger,
-			isCustom: false,
-			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
-		});
-		return;
-	}
-
 	await db.transaction(async (transaction) => {
 		const tx = transaction as unknown as DrizzleCli;
+		if (!useInPlaceEdit) {
+			await handleNewProductItems({
+				db: tx,
+				curPrices: fullProduct.prices,
+				curEnts: fullProduct.entitlements,
+				newItems,
+				features,
+				product: fullProduct,
+				logger: ctx.logger,
+				isCustom: false,
+				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+			});
+			return;
+		}
+
 		const inPlace = await resolveInPlaceEdit({
 			db: tx,
 			items: newItems,
