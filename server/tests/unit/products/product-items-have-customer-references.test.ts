@@ -19,12 +19,12 @@ test.concurrent(
 		} as FullProduct;
 		const entitlementReferenceSpy = spyOn(
 			CusEntService,
-			"getReferencedEntitlementIds",
-		).mockResolvedValue(new Set(["ent_cross_version"]));
+			"hasAnyEntitlementReferences",
+		).mockResolvedValue(true);
 		const priceReferenceSpy = spyOn(
 			CusPriceService,
-			"getReferencedPriceIds",
-		).mockResolvedValue(new Set());
+			"hasAnyPriceReferences",
+		).mockResolvedValue(false);
 
 		expect(
 			await productItemsHaveCustomerReferences({ db, currentFullProduct }),
@@ -37,5 +37,43 @@ test.concurrent(
 			db,
 			priceIds: ["price_unreferenced"],
 		});
+	},
+);
+
+test.concurrent(
+	"product item references: detects customer prices without direct customer products",
+	async () => {
+		const db = {} as DrizzleCli;
+		const currentFullProduct = {
+			entitlements: [{ id: "ent_unreferenced" }],
+			prices: [{ id: "price_cross_version" }],
+		} as FullProduct;
+		spyOn(CusEntService, "hasAnyEntitlementReferences").mockResolvedValue(
+			false,
+		);
+		spyOn(CusPriceService, "hasAnyPriceReferences").mockResolvedValue(true);
+
+		expect(
+			await productItemsHaveCustomerReferences({ db, currentFullProduct }),
+		).toBe(true);
+	},
+);
+
+test.concurrent(
+	"product item references: leaves unreferenced product items on the fast path",
+	async () => {
+		const db = {} as DrizzleCli;
+		const currentFullProduct = {
+			entitlements: [{ id: "ent_unreferenced" }],
+			prices: [{ id: "price_unreferenced" }],
+		} as FullProduct;
+		spyOn(CusEntService, "hasAnyEntitlementReferences").mockResolvedValue(
+			false,
+		);
+		spyOn(CusPriceService, "hasAnyPriceReferences").mockResolvedValue(false);
+
+		expect(
+			await productItemsHaveCustomerReferences({ db, currentFullProduct }),
+		).toBe(false);
 	},
 );

@@ -32,20 +32,20 @@ export const productItemsHaveCustomerReferences = async ({
 	db: DrizzleCli;
 	currentFullProduct: FullProduct;
 }): Promise<boolean> => {
-	const [referencedEntitlementIds, referencedPriceIds] = await Promise.all([
-		CusEntService.getReferencedEntitlementIds({
+	const [hasEntitlementReferences, hasPriceReferences] = await Promise.all([
+		CusEntService.hasAnyEntitlementReferences({
 			db,
 			entitlementIds: currentFullProduct.entitlements.map(
 				(entitlement) => entitlement.id,
 			),
 		}),
-		CusPriceService.getReferencedPriceIds({
+		CusPriceService.hasAnyPriceReferences({
 			db,
 			priceIds: currentFullProduct.prices.map((price) => price.id),
 		}),
 	]);
 
-	return referencedEntitlementIds.size > 0 || referencedPriceIds.size > 0;
+	return hasEntitlementReferences || hasPriceReferences;
 };
 
 /**
@@ -101,12 +101,11 @@ const retireOrDeleteRows = async ({
 	});
 	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
 	const entitlementsReferencedByRetainedPrices = new Set(
-		priceRows
-			.flatMap((price) =>
-				referencedPrices.has(price.id) && price.entitlement_id
-					? [price.entitlement_id]
-					: [],
-			),
+		priceRows.flatMap((price) =>
+			referencedPrices.has(price.id) && price.entitlement_id
+				? [price.entitlement_id]
+				: [],
+		),
 	);
 
 	for (const priceId of priceIds) {
