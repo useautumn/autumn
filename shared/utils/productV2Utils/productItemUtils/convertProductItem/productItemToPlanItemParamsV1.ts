@@ -75,6 +75,7 @@ export const productItemToPlanItemParamsV1 = ({
 		price: planItemV1.price
 			? {
 					amount: planItemV1.price.amount,
+					additional_currencies: planItemV1.price.additional_currencies,
 					tiers: planItemV1.price.tiers,
 					interval: planItemV1.price.interval,
 					interval_count: planItemV1.price.interval_count,
@@ -86,8 +87,7 @@ export const productItemToPlanItemParamsV1 = ({
 			: undefined,
 		proration: proration
 			? {
-					on_increase:
-						proration.on_increase ?? OnIncrease.ProrateImmediately,
+					on_increase: proration.on_increase ?? OnIncrease.ProrateImmediately,
 					on_decrease: proration.on_decrease ?? OnDecrease.Prorate,
 				}
 			: undefined,
