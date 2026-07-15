@@ -155,6 +155,91 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("one-off add-on overage paydown: included and prepaid credits both pay overage")}`,
+	async () => {
+		const includedCredits = 1_000;
+		const totalCredits = 2_000;
+		const existingOverage = 1_500;
+		const recurringPlan = products.base({
+			id: "combined-balance-recurring",
+			items: [
+				items.annualPrice({ price: 200 }),
+				items.monthlyMessages({ includedUsage: includedCredits }),
+			],
+			billingControls: {
+				overage_allowed: [{ feature_id: TestFeature.Messages, enabled: true }],
+			},
+		});
+		const oneOffAddOn = products.oneOffAddOn({
+			id: "combined-balance-add-on",
+			items: [
+				items.oneOffMessages({
+					includedUsage: includedCredits,
+					billingUnits: includedCredits,
+					price: 10,
+				}),
+			],
+		});
+
+		const { customerId, autumnV2_2, ctx } = await initScenario({
+			customerId: "one-off-included-and-prepaid-paydown",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [recurringPlan, oneOffAddOn] }),
+			],
+			actions: [
+				s.billing.attach({ productId: recurringPlan.id }),
+				s.track({
+					featureId: TestFeature.Messages,
+					value: includedCredits + existingOverage,
+					timeout: 2000,
+				}),
+			],
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: oneOffAddOn.id,
+			feature_quantities: [
+				{ feature_id: TestFeature.Messages, quantity: totalCredits },
+			],
+			redirect_mode: "if_required",
+		});
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const recurring = findPlanBreakdown({
+			customer,
+			planId: recurringPlan.id,
+			interval: "month",
+		});
+		const addOn = findPlanBreakdown({
+			customer,
+			planId: oneOffAddOn.id,
+			interval: "one_off",
+		});
+
+		expect(recurring).toMatchObject({
+			remaining: 0,
+			usage: includedCredits,
+		});
+		expect(addOn).toMatchObject({
+			included_grant: includedCredits,
+			prepaid_grant: includedCredits,
+			remaining: totalCredits - existingOverage,
+			usage: existingOverage,
+		});
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			granted: includedCredits + totalCredits,
+			remaining: totalCredits - existingOverage,
+			usage: includedCredits + existingOverage,
+		});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("one-off add-on overage paydown: persisted overage remains separate")}`,
 	async () => {
 		const { recurringPlan, oneOffAddOn } = buildScenarioProducts();
