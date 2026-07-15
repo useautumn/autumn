@@ -278,12 +278,7 @@ function PriceText({
 		}) ??
 		text;
 
-	return (
-		<span className="text-body-secondary">
-			{" "}
-			{content}
-		</span>
-	);
+	return <span className="text-body-secondary"> {content}</span>;
 }
 
 interface PlanItemLabelProps {
@@ -292,6 +287,8 @@ interface PlanItemLabelProps {
 	wrapIcons?: (icons: ReactNode) => ReactNode;
 	/** Text shown when the feature has no name yet. */
 	unnamedText?: string;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }
 
 /** Feature icon cluster + label text + rollover indicator. Shared by the plan
@@ -300,10 +297,11 @@ export function PlanItemLabel({
 	item,
 	wrapIcons,
 	unnamedText = "Name your feature",
+	currency: currencyOverride,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
-	const currency = org?.default_currency || "USD";
+	const currency = currencyOverride || org?.default_currency || "USD";
 
 	const display = getProductItemDisplay({
 		item,

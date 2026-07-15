@@ -35,6 +35,7 @@ import {
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -46,6 +47,7 @@ import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
+import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
@@ -64,11 +66,13 @@ function SubscriptionDetailItems({
 	product,
 	prepaidDisplayQuantities,
 	adminIds,
+	currency,
 }: {
 	items: ProductItem[];
 	product: FrontendProduct;
 	prepaidDisplayQuantities: Record<string, number>;
 	adminIds?: import("@/components/forms/shared/admin/AdminPlanIdsTooltip").AdminPlanIds;
+	currency: string;
 }) {
 	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
 	const { visibleItems, collapsedBooleanItems } = useMemo(
@@ -90,6 +94,7 @@ function SubscriptionDetailItems({
 				index={index}
 				readOnly={true}
 				prepaidQuantity={prepaidQuantity}
+				currency={currency}
 			/>
 		);
 	};
@@ -101,6 +106,7 @@ function SubscriptionDetailItems({
 					product={product}
 					readOnly={true}
 					adminIds={adminIds}
+					currency={currency}
 				/>
 			</div>
 
@@ -122,6 +128,9 @@ function SubscriptionDetailItems({
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
+	const { displayCurrency, orgDefaultCurrency } = useCustomerDisplayCurrency({
+		customer,
+	});
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -141,6 +150,16 @@ export function SubscriptionDetailSheet() {
 	const featureNameById = useMemo(
 		() => new Map(features.map((feature) => [feature.id, feature.name])),
 		[features],
+	);
+	const displayItems = useMemo(
+		() =>
+			productV2?.items &&
+			productItemsForCurrency({
+				items: productV2.items,
+				currency: displayCurrency,
+				orgDefaultCurrency,
+			}),
+		[productV2?.items, displayCurrency, orgDefaultCurrency],
 	);
 
 	if (!cusProduct) {
@@ -214,12 +233,13 @@ export function SubscriptionDetailSheet() {
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			{productV2?.items && productV2.items.length > 0 && (
+			{productV2 && displayItems && displayItems.length > 0 && (
 				<SubscriptionDetailItems
-					items={productV2.items}
-					product={productV2}
+					items={displayItems}
+					product={{ ...productV2, items: displayItems }}
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
 					adminIds={adminIds}
+					currency={displayCurrency}
 				/>
 			)}
 

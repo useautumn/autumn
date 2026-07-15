@@ -1,8 +1,5 @@
-import type {
-	BillingContext,
-	PreviewInvoiceCredits,
-} from "@autumn/shared";
-import { orgToCurrency, stripeToAtmnAmount } from "@autumn/shared";
+import type { BillingContext, PreviewInvoiceCredits } from "@autumn/shared";
+import { billingContextToCurrency, stripeToAtmnAmount } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 /**
@@ -20,7 +17,7 @@ export const computeAttachInvoiceCreditPreview = ({
 	if (!billingContext.stripeCustomer) return undefined;
 
 	const stripeBalance = billingContext.stripeCustomer.balance ?? 0;
-	const currency = orgToCurrency({ org: ctx.org });
+	const currency = billingContextToCurrency({ org: ctx.org, billingContext });
 
 	// Flip sign: Stripe stores credit as negative; we surface as positive.
 	return {

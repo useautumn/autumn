@@ -39,6 +39,11 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	no_billing_changes: z.boolean().optional(),
 
 	tax_rate_id: z.string().optional(),
+
+	currency: z.string().optional().meta({
+		description:
+			"Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
+	}),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
