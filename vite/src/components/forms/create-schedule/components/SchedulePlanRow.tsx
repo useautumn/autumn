@@ -9,8 +9,6 @@ import {
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
 
@@ -44,10 +42,7 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
-	const { customer } = useCusQuery();
-	const { displayCurrency, orgDefaultCurrency } = useCustomerDisplayCurrency({
-		customer,
-	});
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -62,14 +57,7 @@ export function SchedulePlanRow({
 				customItems: plan.items,
 			})
 		: null;
-	const priceProduct = basePriceProduct && {
-		...basePriceProduct,
-		items: productItemsForCurrency({
-			items: basePriceProduct.items,
-			currency: displayCurrency,
-			orgDefaultCurrency,
-		}),
-	};
+	const priceProduct = basePriceProduct && productForDisplay(basePriceProduct);
 
 	const selectedProductIdsInPhase = new Set(
 		formValues.phases[phaseIndex]?.plans

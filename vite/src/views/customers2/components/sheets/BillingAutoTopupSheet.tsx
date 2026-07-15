@@ -62,7 +62,7 @@ export function BillingAutoTopupSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
-	const { displayCurrency } = useCustomerDisplayCurrency({ customer });
+	const { displayCurrency } = useCustomerDisplayCurrency();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 

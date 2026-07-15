@@ -12,8 +12,6 @@ import { useState } from "react";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
 export type DraftPlan = SyncPlanInstance & { _key: string };
@@ -126,11 +124,8 @@ export function SyncPlanRow({
 	onRemove: () => void;
 	onCustomize: () => void;
 }) {
-	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
-	const { displayCurrency, orgDefaultCurrency } = useCustomerDisplayCurrency({
-		customer,
-	});
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
@@ -167,15 +162,6 @@ export function SyncPlanRow({
 				features: features ?? [],
 			})
 		: null;
-
-	const productForDisplay = (product: ProductV2): ProductV2 => ({
-		...product,
-		items: productItemsForCurrency({
-			items: product.items,
-			currency: displayCurrency,
-			orgDefaultCurrency,
-		}),
-	});
 
 	const originalPriceLabel = selectedProduct
 		? getBasePriceLabel({

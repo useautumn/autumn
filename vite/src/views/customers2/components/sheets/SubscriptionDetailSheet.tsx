@@ -47,7 +47,6 @@ import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
-import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
@@ -128,9 +127,7 @@ function SubscriptionDetailItems({
 
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
-	const { displayCurrency, orgDefaultCurrency } = useCustomerDisplayCurrency({
-		customer,
-	});
+	const { displayCurrency, itemsForDisplay } = useCustomerDisplayCurrency();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -152,14 +149,8 @@ export function SubscriptionDetailSheet() {
 		[features],
 	);
 	const displayItems = useMemo(
-		() =>
-			productV2?.items &&
-			productItemsForCurrency({
-				items: productV2.items,
-				currency: displayCurrency,
-				orgDefaultCurrency,
-			}),
-		[productV2?.items, displayCurrency, orgDefaultCurrency],
+		() => productV2?.items && itemsForDisplay(productV2.items),
+		[productV2?.items, itemsForDisplay],
 	);
 
 	if (!cusProduct) {

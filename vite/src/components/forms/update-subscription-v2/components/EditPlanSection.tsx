@@ -3,8 +3,6 @@ import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { SectionTitle } from "./SectionTitle";
 
@@ -25,32 +23,20 @@ export function EditPlanSection() {
 	const { prepaidOptions } = formValues;
 	const hasCustomizations = formValues.items !== null || isVersionReady;
 
-	const { customer } = useCusQuery();
-	const { displayCurrency: currency, orgDefaultCurrency } =
-		useCustomerDisplayCurrency({ customer });
+	const {
+		displayCurrency: currency,
+		itemsForDisplay,
+		productForDisplay,
+	} = useCustomerDisplayCurrency();
 
 	const displayProduct = useMemo(
-		() =>
-			product && {
-				...product,
-				items: productItemsForCurrency({
-					items: product.items,
-					currency,
-					orgDefaultCurrency,
-				}),
-			},
-		[product, currency, orgDefaultCurrency],
+		() => product && productForDisplay(product),
+		[product, productForDisplay],
 	);
 
 	const displayOriginalItems = useMemo(
-		() =>
-			originalItems &&
-			productItemsForCurrency({
-				items: originalItems,
-				currency,
-				orgDefaultCurrency,
-			}),
-		[originalItems, currency, orgDefaultCurrency],
+		() => originalItems && itemsForDisplay(originalItems),
+		[originalItems, itemsForDisplay],
 	);
 
 	const priceChange = useMemo(() => {
