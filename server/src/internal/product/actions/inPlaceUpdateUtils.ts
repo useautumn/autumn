@@ -25,6 +25,29 @@ const currentItemsOf = ({
 		features,
 	});
 
+export const productItemsHaveCustomerReferences = async ({
+	db,
+	currentFullProduct,
+}: {
+	db: DrizzleCli;
+	currentFullProduct: FullProduct;
+}): Promise<boolean> => {
+	const [referencedEntitlementIds, referencedPriceIds] = await Promise.all([
+		CusEntService.getReferencedEntitlementIds({
+			db,
+			entitlementIds: currentFullProduct.entitlements.map(
+				(entitlement) => entitlement.id,
+			),
+		}),
+		CusPriceService.getReferencedPriceIds({
+			db,
+			priceIds: currentFullProduct.prices.map((price) => price.id),
+		}),
+	]);
+
+	return referencedEntitlementIds.size > 0 || referencedPriceIds.size > 0;
+};
+
 /**
  * Callers rarely echo back entitlement_id / price_id, so without this match the
  * unchanged items look new and the old rows get deleted (cascading the

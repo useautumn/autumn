@@ -6,7 +6,10 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { resolveInPlaceEdit } from "../inPlaceUpdateUtils.js";
+import {
+	productItemsHaveCustomerReferences,
+	resolveInPlaceEdit,
+} from "../inPlaceUpdateUtils.js";
 
 export const updateProductItems = async ({
 	ctx,
@@ -23,7 +26,14 @@ export const updateProductItems = async ({
 	features: AutumnContext["features"];
 	useInPlaceEdit: boolean;
 }) => {
-	if (!useInPlaceEdit) {
+	const shouldUseInPlaceEdit =
+		useInPlaceEdit ||
+		(await productItemsHaveCustomerReferences({
+			db,
+			currentFullProduct: fullProduct,
+		}));
+
+	if (!shouldUseInPlaceEdit) {
 		await handleNewProductItems({
 			db,
 			curPrices: fullProduct.prices,
