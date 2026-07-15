@@ -9,7 +9,8 @@ import {
 } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
 import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
@@ -123,8 +124,8 @@ export function SyncPlanRow({
 	onRemove: () => void;
 	onCustomize: () => void;
 }) {
-	const { org } = useOrg();
-	const currency = org?.default_currency ?? "USD";
+	const { features } = useFeaturesQuery();
+	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
@@ -158,14 +159,21 @@ export function SyncPlanRow({
 		? applyCustomizeToProduct({
 				product: selectedProduct,
 				customize: plan.customize,
+				features: features ?? [],
 			})
 		: null;
 
 	const originalPriceLabel = selectedProduct
-		? getBasePriceLabel({ product: selectedProduct, currency })
+		? getBasePriceLabel({
+				product: productForDisplay(selectedProduct),
+				currency: displayCurrency,
+			})
 		: null;
 	const currentPriceLabel = customizedProduct
-		? getBasePriceLabel({ product: customizedProduct, currency })
+		? getBasePriceLabel({
+				product: productForDisplay(customizedProduct),
+				currency: displayCurrency,
+			})
 		: null;
 	const isPriceCustom =
 		hasCustomize &&

@@ -75,6 +75,7 @@ export const productItemToPlanItemParamsV1 = ({
 		price: planItemV1.price
 			? {
 					amount: planItemV1.price.amount,
+					additional_currencies: planItemV1.price.additional_currencies,
 					tiers: planItemV1.price.tiers,
 					interval: planItemV1.price.interval,
 					interval_count: planItemV1.price.interval_count,

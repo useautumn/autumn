@@ -1,12 +1,17 @@
 import crypto from "node:crypto";
+import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID as SHARED_ADMIN_OAUTH_CLIENT_ID,
+	SLACK_MCP_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
 import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import { encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { upsertChatOAuthCredential } from "../repos/chatOAuthCredentialsRepo.js";
 
-export const AUTUMN_SLACK_OAUTH_CLIENT_ID = "autumn_mcp_slack";
-export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
-export const AUTUMN_WEB_OAUTH_CLIENT_ID = "autumn_mcp_web";
+export const AUTUMN_SLACK_OAUTH_CLIENT_ID = SLACK_MCP_OAUTH_CLIENT_ID;
+export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = SHARED_ADMIN_OAUTH_CLIENT_ID;
+export const AUTUMN_WEB_OAUTH_CLIENT_ID = WEB_MCP_OAUTH_CLIENT_ID;
 
 export const upsertInstallationOAuthCredential = async ({
 	installation,

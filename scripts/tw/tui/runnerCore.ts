@@ -14,6 +14,11 @@ import {
 	type TestExecutor,
 	WorkerDeathError,
 } from "../../testScripts/testExecutor.ts";
+import {
+	appendErrorsOutput,
+	getFileOutput,
+	isSkipRequested,
+} from "../dashboard/hub.ts";
 import { setRunTotal, type TuiTestFile, upsertTestFile } from "./store.ts";
 import {
 	extractCurrentTest,
@@ -29,7 +34,8 @@ type InternalStatus =
 	| "passed"
 	| "failed"
 	| "retry_queued"
-	| "retrying";
+	| "retrying"
+	| "skipped";
 
 type InternalResult = {
 	file: string;
@@ -50,6 +56,58 @@ const toFailedTests = (tests: ParsedTest[]): TuiTestFile["failedTests"] =>
 			location: test.error?.location,
 			message: test.error?.message,
 		}));
+
+/** Feed the dashboard's live errors tab, mirroring the terminal failure report. */
+const emitFailureFeed = (result: InternalResult, willRetry: boolean): void => {
+	const failures = toFailedTests(result.tests);
+	const parts: string[] = [
+		`\n\x1b[31m✗ ${result.file}\x1b[0m${willRetry ? " \x1b[33m(retrying)\x1b[0m" : ""}\n`,
+	];
+	if (result.crashError) {
+		const crashLines = result.crashError
+			.split("\n")
+			.filter((line) => line.trim())
+			.slice(0, 6);
+		parts.push(`    \x1b[31mCRASH:\x1b[0m ${crashLines.shift() ?? ""}\n`);
+		for (const line of crashLines) {
+			parts.push(`        ${line}\n`);
+		}
+	}
+	for (const t of failures) {
+		parts.push(`    \x1b[31m✗\x1b[0m ${t.name}\n`);
+		if (t.location) {
+			parts.push(`        ${t.location}\n`);
+		}
+		if (t.message) {
+			parts.push(`        ${t.message}\n`);
+		}
+	}
+	if (failures.length === 0 && !result.crashError) {
+		// No parsed verdicts and no crash detail — the last output lines are the
+		// only evidence of what happened (e.g. the run died mid-file).
+		const tail = getFileOutput(result.file)
+			.trimEnd()
+			.split("\n")
+			.slice(-12)
+			.join("\n")
+			.trim();
+		parts.push(
+			tail
+				? `${tail}\n`
+				: "    (no test output captured — exec/transport failure before any verdict)\n",
+		);
+	}
+	appendErrorsOutput(parts.join(""));
+};
+
+/** Note a retry recovery in the errors feed so earlier failure entries resolve. */
+const emitRetryOutcomeFeed = (result: InternalResult): void => {
+	if (result.passedOnRetry) {
+		appendErrorsOutput(
+			`\n\x1b[32m✓ ${result.file} recovered on retry\x1b[0m\n`,
+		);
+	}
+};
 
 /** Project an internal result into the store's display shape. */
 const emit = (result: InternalResult, willRetry: boolean): void => {
@@ -83,6 +141,17 @@ const runOneFile = async (params: {
 	executor: TestExecutor;
 }): Promise<InternalResult> => {
 	const { file, attempt, failedTestNames, executor } = params;
+	// Dashboard-requested skip: honored when the slot opens and the file hasn't
+	// started yet (first attempt only — a retry is already half-run work).
+	if (attempt === 1 && isSkipRequested(file)) {
+		return {
+			file,
+			status: "skipped",
+			tests: [],
+			attempt,
+			passedOnRetry: false,
+		};
+	}
 	const running: InternalResult = {
 		file,
 		status: "running",
@@ -121,8 +190,9 @@ const runOneFile = async (params: {
 			tests,
 			attempt,
 			passedOnRetry: false,
+			// Zero tests + exit 0 is an empty/skipped file, not a crash.
 			crashError:
-				tests.length === 0 && stderr.trim()
+				tests.length === 0 && exitCode !== 0 && stderr.trim()
 					? stderr.trim().slice(0, 1000)
 					: undefined,
 		};
@@ -165,7 +235,11 @@ const runWithReschedule = async (params: {
 					executor: params.executor,
 				}),
 			);
-			emit(result, params.willRetry && result.status === "failed");
+			const willRetry = params.willRetry && result.status === "failed";
+			emit(result, willRetry);
+			if (result.status === "failed") {
+				emitFailureFeed(result, willRetry);
+			}
 			return result;
 		} catch (error) {
 			if (!(error instanceof WorkerDeathError)) {
@@ -186,6 +260,7 @@ const runWithReschedule = async (params: {
 		}`,
 	};
 	emit(capped, false);
+	emitFailureFeed(capped, params.willRetry);
 	return capped;
 };
 
@@ -222,26 +297,23 @@ export const runSwarmTests = async (
 		const firstAttemptFailures = first.tests.filter(
 			(test) => test.status === "failed",
 		);
-		const hasUnnamed = firstAttemptFailures.some((test) =>
-			test.name.includes("(unnamed)"),
-		);
-		const failedTestNames = hasUnnamed
-			? []
-			: firstAttemptFailures.map((test) => test.name);
 
 		emit({ ...first, status: "retrying", firstAttemptFailures }, false);
 
+		// Whole-file retry (no --test-name-pattern): files are stateful sequences,
+		// so a filtered retry of a later test lacks earlier tests' state and can't pass.
 		const retryResult = await runWithReschedule({
 			limit,
 			file,
 			attempt: 2,
-			failedTestNames,
+			failedTestNames: [],
 			executor,
 			willRetry: false,
 		});
 		retryResult.passedOnRetry = retryResult.status === "passed";
 		retryResult.firstAttemptFailures = firstAttemptFailures;
 		emit(retryResult, false);
+		emitRetryOutcomeFeed(retryResult);
 	};
 
 	await Promise.all(files.map(runFileWithRetry));

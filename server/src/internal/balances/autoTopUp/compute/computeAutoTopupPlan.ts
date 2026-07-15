@@ -1,9 +1,9 @@
 import {
 	type AutumnBillingPlan,
+	billingContextToCurrency,
 	cusEntToCusPrice,
 	InternalError,
 	type LineItemContext,
-	orgToCurrency,
 	type StripeBillingPlan,
 	type StripeInvoiceAction,
 	type UsagePriceConfig,
@@ -56,7 +56,10 @@ export const computeAutoTopupPlan = ({
 			price: cusPrice.price,
 			product: cusProduct.product,
 			feature,
-			currency: orgToCurrency({ org }),
+			currency: billingContextToCurrency({
+				org,
+				billingContext: autoTopupContext,
+			}),
 			direction: "charge",
 			now: Date.now(),
 			billingTiming: "in_advance",

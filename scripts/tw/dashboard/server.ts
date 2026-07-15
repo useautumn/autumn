@@ -23,14 +23,18 @@ import { getTuiState, runTallies } from "../tui/store.ts";
 import {
 	enableHub,
 	getCompletions,
+	getDurationMs,
+	getErrorsOutput,
 	getFileOutput,
+	getRunStartedAt,
 	getWorkerOf,
 	getWorkerOutput,
 	getWorkers,
 	onHubEvent,
+	requestSkip,
 } from "./hub.ts";
 
-type ClientData = { subFile?: string; subWorker?: string };
+type ClientData = { subFile?: string; subWorker?: string; subErrors?: boolean };
 
 const basename = (path: string): string => path.split("/").pop() ?? path;
 
@@ -45,6 +49,7 @@ const snapshot = () => {
 		warmActivity: s.warmActivity,
 		warmBuilding: s.warmBuilding,
 		warmStage: s.warmStage,
+		warmHit: s.warmHit,
 		phaseStartedAt: s.phaseStartedAt,
 		activity: s.lastLine,
 		fanout: {
@@ -52,6 +57,7 @@ const snapshot = () => {
 			stripeTotal: s.stripeTotal,
 			workersReady: s.workersReady,
 			workersTotal: s.workersTotal,
+			workersFailed: s.workersFailed,
 		},
 		teardown: {
 			sandboxesDone: s.sandboxesDone,
@@ -66,6 +72,7 @@ const snapshot = () => {
 			failed: t.failed,
 			running: t.running,
 			retrying: t.retrying,
+			skipped: t.skipped,
 		},
 		files: Array.from(s.files.values()).map((f) => ({
 			file: f.file,
@@ -74,6 +81,7 @@ const snapshot = () => {
 			passed: f.passed,
 			failed: f.failed,
 			worker: getWorkerOf(f.file),
+			durationMs: getDurationMs(f.file),
 			currentTest: f.currentTest,
 			willRetry: f.willRetry,
 			failedTests: f.failedTests,
@@ -81,10 +89,12 @@ const snapshot = () => {
 		workers: getWorkers().map((w) => ({
 			name: w.name,
 			status: w.status,
+			reason: w.reason,
 			fileCount: w.files.length,
 			files: w.files.map((file) => ({ file, name: basename(file) })),
 		})),
 		completions: getCompletions(),
+		runStartedAt: getRunStartedAt(),
 		summary: s.summary ?? null,
 		now: Date.now(),
 	};
@@ -168,9 +178,18 @@ export const startDashboardServer = (): DashboardServer => {
 							output: getWorkerOutput(msg.worker),
 						}),
 					);
+				} else if (msg.type === "subscribeErrors") {
+					// Independent of the file/worker sub — the errors feed is its own pane.
+					ws.data.subErrors = true;
+					ws.send(
+						JSON.stringify({ type: "errorsBuffer", output: getErrorsOutput() }),
+					);
+				} else if (msg.type === "skipFile" && msg.file) {
+					requestSkip(msg.file);
 				} else if (msg.type === "unsubscribe") {
 					ws.data.subFile = undefined;
 					ws.data.subWorker = undefined;
+					ws.data.subErrors = undefined;
 				}
 			},
 		},
@@ -189,6 +208,13 @@ export const startDashboardServer = (): DashboardServer => {
 			const payload = JSON.stringify(event);
 			for (const ws of clients) {
 				if (ws.data.subWorker === event.worker) {
+					ws.send(payload);
+				}
+			}
+		} else if (event.type === "errorsOutput") {
+			const payload = JSON.stringify(event);
+			for (const ws of clients) {
+				if (ws.data.subErrors) {
 					ws.send(payload);
 				}
 			}

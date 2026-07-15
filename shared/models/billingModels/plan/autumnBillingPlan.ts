@@ -133,6 +133,27 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
+	oneOffPurchaseRebalance: z
+		.object({
+			purchases: z.array(
+				z.object({
+					customerEntitlementId: z.string(),
+					featureId: z.string(),
+					quantity: z.number(),
+				}),
+			),
+		})
+		.optional(),
+
+	// Lock the customer to a currency on the first paid attach (only set when the
+	// customer has none yet). Applied as a conditional, race-safe DB update.
+	lockCustomerCurrency: z
+		.object({
+			internalCustomerId: z.string(),
+			currency: z.string(),
+		})
+		.optional(),
+
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),

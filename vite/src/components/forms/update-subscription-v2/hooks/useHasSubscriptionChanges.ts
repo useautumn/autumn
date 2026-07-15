@@ -7,10 +7,41 @@ import {
 	generateTrialChanges,
 	generateVersionChanges,
 	type ProductItem,
+	ProductItemFeatureType,
+	type ProductItemInterval,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
+
+type PrepaidChangeItem = {
+	interval?: ProductItemInterval | null;
+	feature_type?: ProductItemFeatureType | null;
+};
+
+/** Whether a prepaid quantity change counts as a subscription change. Extracted for testability. */
+export function shouldCountPrepaidChange({
+	item,
+	newlyAdded,
+	initialQuantity,
+	updatedQuantity,
+}: {
+	item?: PrepaidChangeItem;
+	newlyAdded: boolean;
+	initialQuantity: number;
+	updatedQuantity: number;
+}): boolean {
+	if (newlyAdded) return false;
+	// Consumable one-off top-ups only count when increasing; non-consumables
+	// (continuous use) count on any delta, including a decrease.
+	const isConsumableOneOff =
+		item?.interval == null &&
+		item?.feature_type !== ProductItemFeatureType.ContinuousUse;
+	if (isConsumableOneOff) {
+		return updatedQuantity > initialQuantity;
+	}
+	return true;
+}
 
 export function useHasSubscriptionChanges({
 	formValues,
@@ -77,13 +108,13 @@ export function useHasSubscriptionChanges({
 			originalOptions: initialPrepaidOptions,
 		}).filter((change) => {
 			const featureId = change.id.replace("prepaid-", "");
-			if (newlyAddedFeatureIds.has(featureId)) return false;
 			const item = prepaidItems.find((it) => it.feature_id === featureId);
-			if (item?.interval == null) {
-				const initial = initialPrepaidOptions[featureId] ?? 0;
-				return (formValues.prepaidOptions[featureId] ?? 0) > initial;
-			}
-			return true;
+			return shouldCountPrepaidChange({
+				item,
+				newlyAdded: newlyAddedFeatureIds.has(featureId),
+				initialQuantity: initialPrepaidOptions[featureId] ?? 0,
+				updatedQuantity: formValues.prepaidOptions[featureId] ?? 0,
+			});
 		});
 
 		return prepaidChanges.length > 0;

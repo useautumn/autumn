@@ -12,17 +12,21 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { getBasePriceDisplay } from "@/utils/product/basePriceDisplayUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
+import { AdditionalCurrenciesHint } from "./AdditionalCurrenciesHint";
 
 export const BasePriceDisplay = ({
 	isOnboarding,
 	product,
 	readOnly = false,
 	adminIds,
+	currency,
 }: {
 	isOnboarding?: boolean;
 	product: FrontendProduct;
 	readOnly?: boolean;
 	adminIds?: AdminPlanIds;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }) => {
 	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
@@ -38,7 +42,7 @@ export const BasePriceDisplay = ({
 	const renderPriceContent = () => {
 		const priceDisplay = getBasePriceDisplay({
 			product,
-			currency: org?.default_currency,
+			currency: currency ?? org?.default_currency,
 			showPlaceholder: true,
 		});
 
@@ -50,15 +54,23 @@ export const BasePriceDisplay = ({
 					</span>
 				);
 
-			case "price":
+			case "price": {
+				const additionalCurrencies = org?.config?.multi_currency
+					? (priceDisplay.additionalCurrencies ?? [])
+					: [];
+
 				return (
 					<span className="text-body-secondary flex items-center gap-1">
 						<span className="text-main-sec text-muted-foreground! font-semibold!">
 							{priceDisplay.formattedAmount}
 						</span>{" "}
 						<span className="mt-0.5">{priceDisplay.intervalText}</span>
+						{additionalCurrencies.length > 0 && (
+							<AdditionalCurrenciesHint currencies={additionalCurrencies} />
+						)}
 					</span>
 				);
+			}
 
 			case "variable":
 				return (

@@ -2,6 +2,7 @@ import {
 	type Customer,
 	type DeferredSetupPaymentData,
 	MetadataType,
+	resolveCustomerCurrency,
 	type SetupPaymentParamsV1,
 } from "@autumn/shared";
 import { addDays } from "date-fns";
@@ -74,7 +75,7 @@ export const createSetupCheckoutSession = async ({
 		checkoutSessionParams: params.checkout_session_params as
 			| Partial<Stripe.Checkout.SessionCreateParams>
 			| undefined,
-		currency: org.default_currency || "usd",
+		currency: resolveCustomerCurrency({ customer, org }),
 		autumnMetadataId: metadata?.id,
 	});
 

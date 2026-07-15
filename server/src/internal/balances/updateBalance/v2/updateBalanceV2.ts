@@ -2,6 +2,7 @@ import { notNullish, type UpdateBalanceParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
+import { updateExpiresAtV2 } from "./updateExpiresAtV2.js";
 import { updateIncludedGrantV2 } from "./updateIncludedGrantV2.js";
 import { updateNextResetAtV2 } from "./updateNextResetAtV2.js";
 import { updateRemainingV2 } from "./updateRemainingV2.js";
@@ -60,6 +61,20 @@ export const updateBalanceV2 = async ({
 			fullSubject,
 			featureId: params.feature_id,
 			nextResetAt: params.next_reset_at,
+			customerEntitlementFilters,
+		});
+	}
+
+	if (notNullish(params.expires_at)) {
+		const customerEntitlementFilters = buildCustomerEntitlementFilters({
+			params,
+		});
+
+		await updateExpiresAtV2({
+			ctx,
+			fullSubject,
+			featureId: params.feature_id,
+			expiresAt: params.expires_at,
 			customerEntitlementFilters,
 		});
 	}

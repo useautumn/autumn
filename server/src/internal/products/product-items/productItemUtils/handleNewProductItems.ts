@@ -167,6 +167,7 @@ export const handleNewProductItems = async ({
 	isCustom,
 	newVersion,
 	saveToDb = true,
+	multiCurrencyEnabled,
 }: {
 	db: DrizzleCli;
 	curPrices: Price[];
@@ -178,6 +179,7 @@ export const handleNewProductItems = async ({
 	isCustom: boolean;
 	newVersion?: boolean;
 	saveToDb?: boolean;
+	multiCurrencyEnabled: boolean;
 }) => {
 	// Create features if not exist...
 	if (!newItems) {
@@ -196,6 +198,7 @@ export const handleNewProductItems = async ({
 		features,
 		orgId: product.org_id!,
 		env: product.env as AppEnv,
+		multiCurrencyEnabled,
 	});
 
 	features = allFeatures;

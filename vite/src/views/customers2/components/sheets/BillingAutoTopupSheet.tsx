@@ -41,7 +41,7 @@ import {
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { CusService } from "@/services/customers/CusService";
@@ -62,8 +62,8 @@ export function BillingAutoTopupSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
+	const { displayCurrency } = useCustomerDisplayCurrency();
 	const { features } = useFeaturesQuery();
-	const { org } = useOrg();
 	const axiosInstance = useAxiosInstance();
 
 	const isEdit = sheetType === "billing-auto-topup-edit";
@@ -301,7 +301,7 @@ export function BillingAutoTopupSheet() {
 							<InfoBox variant="note">
 								{topupPriceInfo.isTiered
 									? "Pricing for this feature is tiered — the charge per top-up depends on current usage."
-									: `Customer will be charged ${formatAmount({ org, amount: topupPriceInfo.unitAmount })} per ${topupPriceInfo.billingUnits === 1 ? "unit" : `${topupPriceInfo.billingUnits} units`}.`}
+									: `Customer will be charged ${formatAmount({ currency: displayCurrency, amount: topupPriceInfo.unitAmount })} per ${topupPriceInfo.billingUnits === 1 ? "unit" : `${topupPriceInfo.billingUnits} units`}.`}
 							</InfoBox>
 						) : (
 							<InfoBox variant="warning">

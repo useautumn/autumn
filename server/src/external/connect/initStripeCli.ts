@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
 	AppEnv,
 	InternalError,
@@ -16,6 +17,23 @@ import {
 import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { getConnectWebhookSecret } from "./connectUtils.js";
 
+// tw-swarm seam: a forked worker can't change its snapshotted process env, so
+// its per-worker pool key is read from a file written at fork-bind time.
+const TW_WORKER_STRIPE_KEY_FILE = "/opt/autumn-tw/worker-stripe-key";
+const twWorkerStripeKey = (): string | undefined => {
+	if (
+		process.env.TW_WORKER_MODE !== "1" ||
+		process.env.NODE_ENV === "production"
+	) {
+		return undefined;
+	}
+	try {
+		return readFileSync(TW_WORKER_STRIPE_KEY_FILE, "utf8").trim() || undefined;
+	} catch {
+		return undefined;
+	}
+};
+
 export const initMasterStripe = (params?: {
 	accountId?: string;
 	legacyVersion?: boolean;
@@ -32,12 +50,14 @@ export const initMasterStripe = (params?: {
 		}
 		secretKey = process.env.STRIPE_LIVE_SECRET_KEY;
 	} else {
-		if (!process.env.STRIPE_SANDBOX_SECRET_KEY) {
+		const sandboxKey =
+			twWorkerStripeKey() ?? process.env.STRIPE_SANDBOX_SECRET_KEY;
+		if (!sandboxKey) {
 			throw new InternalError({
 				message: "STRIPE_SANDBOX_SECRET_KEY env variable is not set",
 			});
 		}
-		secretKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
+		secretKey = sandboxKey;
 	}
 
 	const cacheKey = buildMasterCacheKey({

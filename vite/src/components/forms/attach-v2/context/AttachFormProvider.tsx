@@ -42,6 +42,10 @@ import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
+import {
+	type UseAttachCurrencyReturn,
+	useAttachCurrency,
+} from "../hooks/useAttachCurrency";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import {
@@ -75,6 +79,9 @@ interface AttachFormContextValue {
 
 	isFreeToPaidTransition: boolean;
 	hasActiveSubscription: boolean;
+	isAutoSelectingImmediateSchedule: boolean;
+
+	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
 	previewDiff: UsePreviewDiffReturn;
@@ -188,6 +195,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		grantFree,
+		currency,
 		noBillingChanges,
 		enablePlanImmediately,
 		carryOverBalances,
@@ -292,6 +300,12 @@ export function AttachFormProvider({
 
 	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
+	const attachCurrency = useAttachCurrency({
+		items: items ?? (effectiveProduct?.items as ProductItem[] | null) ?? [],
+		customerCurrency: fullCustomer?.currency,
+		selectedCurrency: currency,
+	});
+
 	const resolveCurrentItems = useCallback(
 		() => items ?? (effectiveProduct?.items as ProductItem[]) ?? [],
 		[items, effectiveProduct?.items],
@@ -333,6 +347,7 @@ export function AttachFormProvider({
 			form.setFieldValue("trialCardRequired", true);
 			form.setFieldValue("trialOnEnd", "bill");
 			form.setFieldValue("grantFree", false);
+			form.setFieldValue("currency", null);
 			resetGrantFree();
 		}
 
@@ -428,11 +443,23 @@ export function AttachFormProvider({
 		carryOverUsageFeatureIds,
 		customLineItems,
 		disableProration,
+		currency: attachCurrency.requestCurrency,
 	});
 	const previewQuery = useAttachPreview({
 		requestBody,
 		enabled: disablePreview ? false : undefined,
 	});
+	const isAutoSelectingImmediateSchedule =
+		hasActiveSubscription &&
+		planSchedule === null &&
+		(previewQuery.data?.outgoing.length ?? 0) === 0 &&
+		previewQuery.isError &&
+		!previewQuery.isLoading;
+
+	useEffect(() => {
+		if (!isAutoSelectingImmediateSchedule) return;
+		form.setFieldValue("planSchedule", "immediate");
+	}, [form, isAutoSelectingImmediateSchedule]);
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -535,6 +562,8 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
+			attachCurrency,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,
@@ -563,6 +592,8 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
+			attachCurrency,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,

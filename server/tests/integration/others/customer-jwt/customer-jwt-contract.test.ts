@@ -44,7 +44,9 @@ const startsWithJwt = (token: unknown) =>
 	typeof token === "string" && token.startsWith("am_jwt_");
 
 test(`${chalk.yellowBright("customer-jwt: mint/scope/allowlist/refresh/revoke contract")}`, async () => {
-	const customerId = "cjwt-main";
+	// Run-unique id: step 9a reads events back from the shared Tinybird
+	// workspace, so a fixed id could false-green on stale prior-run events.
+	const customerId = `cjwt-main-${crypto.randomUUID().slice(0, 8)}`;
 	const otherId = "cjwt-other";
 
 	const prod = products.base({

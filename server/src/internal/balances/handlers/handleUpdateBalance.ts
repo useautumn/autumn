@@ -1,4 +1,10 @@
-import { findFeatureById, UpdateBalanceParamsV0Schema, Scopes } from "@autumn/shared";
+import {
+	findFeatureById,
+	notNullish,
+	RecaseError,
+	Scopes,
+	UpdateBalanceParamsV0Schema,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateBalanceV1 } from "@/internal/balances/updateBalance/updateBalanceV1.js";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
@@ -17,6 +23,13 @@ export const handleUpdateBalance = createRoute({
 				features: ctx.features,
 				featureId: params.feature_id,
 				errorOnNotFound: true,
+			});
+		}
+
+		if (notNullish(params.expires_at) && params.expires_at <= Date.now()) {
+			throw new RecaseError({
+				message: "expires_at must be in the future",
+				statusCode: 400,
 			});
 		}
 

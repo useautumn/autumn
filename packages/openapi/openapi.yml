@@ -53,6 +53,12 @@ components:
         send_email_receipts:
           type: boolean
           description: Whether to send email receipts to this customer
+        currency:
+          anyOf:
+            - type: string
+            - type: "null"
+          description: Currency to bill this customer in (e.g. usd, eur). Defaults to the
+            organization's default currency.
         billing_controls:
           type: object
           properties:
@@ -345,28 +351,6 @@ components:
                       - type: object
                         properties:
                           interval:
-                            enum:
-                              - hour
-                              - day
-                              - week
-                              - month
-                            type: string
-                            description: The time interval for the purchase limit window.
-                          interval_count:
-                            type: number
-                            minimum: 1
-                            default: 1
-                            description: Number of intervals in the purchase limit window.
-                          limit:
-                            type: number
-                            minimum: 1
-                            description: Maximum number of auto top-ups allowed within the interval.
-                        required:
-                          - interval
-                          - limit
-                      - type: object
-                        properties:
-                          interval:
                             anyOf:
                               - enum:
                                   - hour
@@ -404,6 +388,28 @@ components:
                           - limit
                           - count
                           - next_reset_at
+                      - type: object
+                        properties:
+                          interval:
+                            enum:
+                              - hour
+                              - day
+                              - week
+                              - month
+                            type: string
+                            description: The time interval for the purchase limit window.
+                          interval_count:
+                            type: number
+                            minimum: 1
+                            default: 1
+                            description: Number of intervals in the purchase limit window.
+                          limit:
+                            type: number
+                            minimum: 1
+                            description: Maximum number of auto top-ups allowed within the interval.
+                        required:
+                          - interval
+                          - limit
                     description: Optional rate limit to cap how often auto top-ups occur. Expand
                       billing_controls.auto_topups.purchase_limit for a count of
                       top ups and the next_reset_at.
@@ -411,6 +417,13 @@ components:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
                       auto-charging.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
                   - threshold
@@ -444,6 +457,13 @@ components:
                     type: boolean
                     description: When true, overage for this feature is not posted to Stripe. Usage
                       tracking and balance resets still behave normally.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
               description: List of overage spend limits per feature (caps overage spend).
             usage_limits:
               type: array
@@ -488,6 +508,13 @@ components:
                     minimum: 0
                     description: Current usage already consumed in the active interval.
                       Response-only; not stored on billing controls.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
                   - limit
@@ -524,6 +551,13 @@ components:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
                       same feature.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - threshold
                   - threshold_type
@@ -540,6 +574,13 @@ components:
                     type: boolean
                     default: false
                     description: Whether overage is allowed for this feature.
+                  source:
+                    enum:
+                      - customer
+                      - plan
+                    type: string
+                    description: "Response-only: whether the entry is a customer-level override or
+                      inherited from an attached plan's defaults."
                 required:
                   - feature_id
               description: List of overage allowed controls per feature. When enabled, usage
@@ -1204,6 +1245,23 @@ components:
                 amount:
                   type: number
                   description: Base price amount for the plan.
+                additional_currencies:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      currency:
+                        type: string
+                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                      amount:
+                        type: number
+                        description: Price amount in this currency. Set explicitly per currency, not
+                          converted from the base amount.
+                    required:
+                      - currency
+                      - amount
+                  description: Base price amounts in additional currencies. The base 'amount' is
+                    in the org's default currency.
                 interval:
                   enum:
                     - one_off
@@ -1349,6 +1407,25 @@ components:
                         type: number
                         description: Price per billing_units after included usage is consumed. Mutually
                           exclusive with tiers.
+                      additional_currencies:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            currency:
+                              type: string
+                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                            amount:
+                              type: number
+                              description: Price amount in this currency. Set explicitly per currency, not
+                                converted from the base amount.
+                          required:
+                            - currency
+                            - amount
+                        description: Amounts in additional currencies for this flat price. The base
+                          'amount' is in the org's default currency. Only valid
+                          with 'amount', not 'tiers' (tiered prices carry
+                          per-currency amounts on each tier).
                       tiers:
                         type: array
                         items:
@@ -1362,6 +1439,22 @@ components:
                               type: number
                             flat_amount:
                               type: number
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Per-unit amount for this tier in this currency.
+                                  flat_amount:
+                                    type: number
+                                    description: Flat amount for this tier in this currency, if the tier uses one.
+                                required:
+                                  - currency
                           required:
                             - to
                             - amount
@@ -1544,6 +1637,23 @@ components:
                         interval_count:
                           type: number
                           description: Number of intervals per billing cycle. Defaults to 1.
+                        additional_currencies:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              currency:
+                                type: string
+                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                              amount:
+                                type: number
+                                description: Price amount in this currency. Set explicitly per currency, not
+                                  converted from the base amount.
+                            required:
+                              - currency
+                              - amount
+                          description: Base price amounts in additional currencies. The base 'amount' is
+                            in the org's default currency.
                       required:
                         - amount
                         - interval
@@ -1598,6 +1708,24 @@ components:
                             type: number
                             description: Price per billing_units after included usage. Either 'amount' or
                               'tiers' is required.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Amounts in additional currencies for this flat price. The base
+                              'amount' is in the org's default currency. Only
+                              valid with 'amount', not 'tiers'.
                           tiers:
                             type: array
                             items:
@@ -1611,6 +1739,22 @@ components:
                                   type: number
                                 flat_amount:
                                   type: number
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Per-unit amount for this tier in this currency.
+                                      flat_amount:
+                                        type: number
+                                        description: Flat amount for this tier in this currency, if the tier uses one.
+                                    required:
+                                      - currency
                               required:
                                 - to
                                 - amount
@@ -2609,6 +2753,9 @@ paths:
         @param sendEmailReceipts - Whether to send email receipts to this
         customer (optional)
 
+        @param currency - Currency to bill this customer in (e.g. usd, eur).
+        Defaults to the organization's default currency. (optional)
+
         @param billingControls - Billing controls for the customer (auto
         top-ups, etc.) (optional)
 
@@ -2670,6 +2817,12 @@ paths:
                 send_email_receipts:
                   type: boolean
                   description: Whether to send email receipts to this customer
+                currency:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Currency to bill this customer in (e.g. usd, eur). Defaults to the
+                    organization's default currency.
                 billing_controls:
                   type: object
                   properties:
@@ -3053,28 +3206,6 @@ paths:
                                 - type: object
                                   properties:
                                     interval:
-                                      enum:
-                                        - hour
-                                        - day
-                                        - week
-                                        - month
-                                      type: string
-                                      description: The time interval for the purchase limit window.
-                                    interval_count:
-                                      type: number
-                                      minimum: 1
-                                      default: 1
-                                      description: Number of intervals in the purchase limit window.
-                                    limit:
-                                      type: number
-                                      minimum: 1
-                                      description: Maximum number of auto top-ups allowed within the interval.
-                                  required:
-                                    - interval
-                                    - limit
-                                - type: object
-                                  properties:
-                                    interval:
                                       anyOf:
                                         - enum:
                                             - hour
@@ -3112,6 +3243,28 @@ paths:
                                     - limit
                                     - count
                                     - next_reset_at
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
                               description: Optional rate limit to cap how often auto top-ups occur. Expand
                                 billing_controls.auto_topups.purchase_limit for
                                 a count of top ups and the next_reset_at.
@@ -3119,6 +3272,13 @@ paths:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
                                 auto-charging.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - threshold
@@ -3154,6 +3314,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -3199,6 +3366,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -3236,6 +3410,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -3252,6 +3433,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -4033,28 +4221,6 @@ paths:
                                       - type: object
                                         properties:
                                           interval:
-                                            enum:
-                                              - hour
-                                              - day
-                                              - week
-                                              - month
-                                            type: string
-                                            description: The time interval for the purchase limit window.
-                                          interval_count:
-                                            type: number
-                                            minimum: 1
-                                            default: 1
-                                            description: Number of intervals in the purchase limit window.
-                                          limit:
-                                            type: number
-                                            minimum: 1
-                                            description: Maximum number of auto top-ups allowed within the interval.
-                                        required:
-                                          - interval
-                                          - limit
-                                      - type: object
-                                        properties:
-                                          interval:
                                             anyOf:
                                               - enum:
                                                   - hour
@@ -4093,6 +4259,28 @@ paths:
                                           - limit
                                           - count
                                           - next_reset_at
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            enum:
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                            type: string
+                                            description: The time interval for the purchase limit window.
+                                          interval_count:
+                                            type: number
+                                            minimum: 1
+                                            default: 1
+                                            description: Number of intervals in the purchase limit window.
+                                          limit:
+                                            type: number
+                                            minimum: 1
+                                            description: Maximum number of auto top-ups allowed within the interval.
+                                        required:
+                                          - interval
+                                          - limit
                                     description: Optional rate limit to cap how often auto top-ups occur. Expand
                                       billing_controls.auto_topups.purchase_limit
                                       for a count of top ups and the
@@ -4101,6 +4289,14 @@ paths:
                                     type: boolean
                                     description: When true, auto top-up creates a send_invoice invoice instead of
                                       auto-charging.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - threshold
@@ -4136,6 +4332,14 @@ paths:
                                     description: When true, overage for this feature is not posted to Stripe. Usage
                                       tracking and balance resets still behave
                                       normally.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                               description: List of overage spend limits per feature (caps overage spend).
                             usage_limits:
                               type: array
@@ -4182,6 +4386,14 @@ paths:
                                     description: Current usage already consumed in the active interval.
                                       Response-only; not stored on billing
                                       controls.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - limit
@@ -4219,6 +4431,14 @@ paths:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
                                       same feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - threshold
                                   - threshold_type
@@ -4235,6 +4455,14 @@ paths:
                                     type: boolean
                                     default: false
                                     description: Whether overage is allowed for this feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                               description: List of overage allowed controls per feature. When enabled, usage
@@ -4775,6 +5003,12 @@ paths:
                 send_email_receipts:
                   type: boolean
                   description: Whether to send email receipts to this customer
+                currency:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Currency to bill this customer in (e.g. usd, eur). Defaults to the
+                    organization's default currency.
                 billing_controls:
                   type: object
                   properties:
@@ -5068,28 +5302,6 @@ paths:
                                 - type: object
                                   properties:
                                     interval:
-                                      enum:
-                                        - hour
-                                        - day
-                                        - week
-                                        - month
-                                      type: string
-                                      description: The time interval for the purchase limit window.
-                                    interval_count:
-                                      type: number
-                                      minimum: 1
-                                      default: 1
-                                      description: Number of intervals in the purchase limit window.
-                                    limit:
-                                      type: number
-                                      minimum: 1
-                                      description: Maximum number of auto top-ups allowed within the interval.
-                                  required:
-                                    - interval
-                                    - limit
-                                - type: object
-                                  properties:
-                                    interval:
                                       anyOf:
                                         - enum:
                                             - hour
@@ -5127,6 +5339,28 @@ paths:
                                     - limit
                                     - count
                                     - next_reset_at
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
                               description: Optional rate limit to cap how often auto top-ups occur. Expand
                                 billing_controls.auto_topups.purchase_limit for
                                 a count of top ups and the next_reset_at.
@@ -5134,6 +5368,13 @@ paths:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
                                 auto-charging.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - threshold
@@ -5169,6 +5410,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of overage spend limits per feature (caps overage spend).
                       usage_limits:
                         type: array
@@ -5214,6 +5462,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -5251,6 +5506,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -5267,6 +5529,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -5867,6 +6136,23 @@ paths:
                     interval_count:
                       type: number
                       description: Number of intervals per billing cycle. Defaults to 1.
+                    additional_currencies:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          currency:
+                            type: string
+                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                          amount:
+                            type: number
+                            description: Price amount in this currency. Set explicitly per currency, not
+                              converted from the base amount.
+                        required:
+                          - currency
+                          - amount
+                      description: Base price amounts in additional currencies. The base 'amount' is
+                        in the org's default currency.
                   required:
                     - amount
                     - interval
@@ -5918,6 +6204,24 @@ paths:
                             type: number
                             description: Price per billing_units after included usage. Either 'amount' or
                               'tiers' is required.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Amounts in additional currencies for this flat price. The base
+                              'amount' is in the org's default currency. Only
+                              valid with 'amount', not 'tiers'.
                           tiers:
                             type: array
                             items:
@@ -5931,6 +6235,24 @@ paths:
                                   type: number
                                 flat_amount:
                                   type: number
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Per-unit amount for this tier in this currency.
+                                      flat_amount:
+                                        type: number
+                                        description: Flat amount for this tier in this currency, if the tier uses one.
+                                    required:
+                                      - currency
+                                  description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                    shared across all currencies.
                               required:
                                 - to
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -6360,6 +6682,23 @@ paths:
                           amount:
                             type: number
                             description: Base price amount for the plan.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Base price amounts in additional currencies. The base 'amount' is
+                              in the org's default currency.
                           interval:
                             enum:
                               - one_off
@@ -6505,6 +6844,26 @@ paths:
                                   type: number
                                   description: Price per billing_units after included usage is consumed. Mutually
                                     exclusive with tiers.
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Price amount in this currency. Set explicitly per currency, not
+                                          converted from the base amount.
+                                    required:
+                                      - currency
+                                      - amount
+                                  description: Amounts in additional currencies for this flat price. The base
+                                    'amount' is in the org's default currency.
+                                    Only valid with 'amount', not 'tiers'
+                                    (tiered prices carry per-currency amounts on
+                                    each tier).
                                 tiers:
                                   type: array
                                   items:
@@ -6518,6 +6877,22 @@ paths:
                                         type: number
                                       flat_amount:
                                         type: number
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Per-unit amount for this tier in this currency.
+                                            flat_amount:
+                                              type: number
+                                              description: Flat amount for this tier in this currency, if the tier uses one.
+                                          required:
+                                            - currency
                                     required:
                                       - to
                                       - amount
@@ -6702,6 +7077,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -6756,6 +7148,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -6769,6 +7180,22 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency:
+                                                  type: string
+                                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                amount:
+                                                  type: number
+                                                  description: Per-unit amount for this tier in this currency.
+                                                flat_amount:
+                                                  type: number
+                                                  description: Flat amount for this tier in this currency, if the tier uses one.
+                                              required:
+                                                - currency
                                         required:
                                           - to
                                           - amount
@@ -7566,6 +7993,23 @@ paths:
                           amount:
                             type: number
                             description: Base price amount for the plan.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Base price amounts in additional currencies. The base 'amount' is
+                              in the org's default currency.
                           interval:
                             enum:
                               - one_off
@@ -7711,6 +8155,26 @@ paths:
                                   type: number
                                   description: Price per billing_units after included usage is consumed. Mutually
                                     exclusive with tiers.
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Price amount in this currency. Set explicitly per currency, not
+                                          converted from the base amount.
+                                    required:
+                                      - currency
+                                      - amount
+                                  description: Amounts in additional currencies for this flat price. The base
+                                    'amount' is in the org's default currency.
+                                    Only valid with 'amount', not 'tiers'
+                                    (tiered prices carry per-currency amounts on
+                                    each tier).
                                 tiers:
                                   type: array
                                   items:
@@ -7724,6 +8188,22 @@ paths:
                                         type: number
                                       flat_amount:
                                         type: number
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Per-unit amount for this tier in this currency.
+                                            flat_amount:
+                                              type: number
+                                              description: Flat amount for this tier in this currency, if the tier uses one.
+                                          required:
+                                            - currency
                                     required:
                                       - to
                                       - amount
@@ -7908,6 +8388,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -7962,6 +8459,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -7975,6 +8491,22 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency:
+                                                  type: string
+                                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                amount:
+                                                  type: number
+                                                  description: Per-unit amount for this tier in this currency.
+                                                flat_amount:
+                                                  type: number
+                                                  description: Flat amount for this tier in this currency, if the tier uses one.
+                                              required:
+                                                - currency
                                         required:
                                           - to
                                           - amount
@@ -8753,6 +9285,23 @@ paths:
                                 amount:
                                   type: number
                                   description: Base price amount for the plan.
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Price amount in this currency. Set explicitly per currency, not
+                                          converted from the base amount.
+                                    required:
+                                      - currency
+                                      - amount
+                                  description: Base price amounts in additional currencies. The base 'amount' is
+                                    in the org's default currency.
                                 interval:
                                   enum:
                                     - one_off
@@ -8899,6 +9448,26 @@ paths:
                                         type: number
                                         description: Price per billing_units after included usage is consumed. Mutually
                                           exclusive with tiers.
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Price amount in this currency. Set explicitly per currency, not
+                                                converted from the base amount.
+                                          required:
+                                            - currency
+                                            - amount
+                                        description: Amounts in additional currencies for this flat price. The base
+                                          'amount' is in the org's default
+                                          currency. Only valid with 'amount',
+                                          not 'tiers' (tiered prices carry
+                                          per-currency amounts on each tier).
                                       tiers:
                                         type: array
                                         items:
@@ -8912,6 +9481,22 @@ paths:
                                               type: number
                                             flat_amount:
                                               type: number
+                                            additional_currencies:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  currency:
+                                                    type: string
+                                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                  amount:
+                                                    type: number
+                                                    description: Per-unit amount for this tier in this currency.
+                                                  flat_amount:
+                                                    type: number
+                                                    description: Flat amount for this tier in this currency, if the tier uses one.
+                                                required:
+                                                  - currency
                                           required:
                                             - to
                                             - amount
@@ -9099,6 +9684,24 @@ paths:
                                         interval_count:
                                           type: number
                                           description: Number of intervals per billing cycle. Defaults to 1.
+                                        additional_currencies:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              currency:
+                                                type: string
+                                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                              amount:
+                                                type: number
+                                                description: Price amount in this currency. Set explicitly per currency, not
+                                                  converted from the base
+                                                  amount.
+                                            required:
+                                              - currency
+                                              - amount
+                                          description: Base price amounts in additional currencies. The base 'amount' is
+                                            in the org's default currency.
                                       required:
                                         - amount
                                         - interval
@@ -9153,6 +9756,26 @@ paths:
                                             type: number
                                             description: Price per billing_units after included usage. Either 'amount' or
                                               'tiers' is required.
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency:
+                                                  type: string
+                                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                amount:
+                                                  type: number
+                                                  description: Price amount in this currency. Set explicitly per currency, not
+                                                    converted from the base
+                                                    amount.
+                                              required:
+                                                - currency
+                                                - amount
+                                            description: Amounts in additional currencies for this flat price. The base
+                                              'amount' is in the org's default
+                                              currency. Only valid with
+                                              'amount', not 'tiers'.
                                           tiers:
                                             type: array
                                             items:
@@ -9166,6 +9789,12 @@ paths:
                                                   type: number
                                                 flat_amount:
                                                   type: number
+                                                additional_currencies:
+                                                  type: array
+                                                  items:
+                                                    anyOf:
+                                                      - {}
+                                                      - type: "null"
                                               required:
                                                 - amount
                                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -9966,6 +10595,23 @@ paths:
                         interval_count:
                           type: number
                           description: Number of intervals per billing cycle. Defaults to 1.
+                        additional_currencies:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              currency:
+                                type: string
+                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                              amount:
+                                type: number
+                                description: Price amount in this currency. Set explicitly per currency, not
+                                  converted from the base amount.
+                            required:
+                              - currency
+                              - amount
+                          description: Base price amounts in additional currencies. The base 'amount' is
+                            in the org's default currency.
                       required:
                         - amount
                         - interval
@@ -10019,6 +10665,24 @@ paths:
                             type: number
                             description: Price per billing_units after included usage. Either 'amount' or
                               'tiers' is required.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Amounts in additional currencies for this flat price. The base
+                              'amount' is in the org's default currency. Only
+                              valid with 'amount', not 'tiers'.
                           tiers:
                             type: array
                             items:
@@ -10032,6 +10696,24 @@ paths:
                                   type: number
                                 flat_amount:
                                   type: number
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Per-unit amount for this tier in this currency.
+                                      flat_amount:
+                                        type: number
+                                        description: Flat amount for this tier in this currency, if the tier uses one.
+                                    required:
+                                      - currency
+                                  description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                    shared across all currencies.
                               required:
                                 - to
                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -10459,6 +11141,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -10513,6 +11212,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -10526,6 +11244,16 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency: {}
+                                                amount: {}
+                                                flat_amount: {}
+                                            description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                              shared across all currencies.
                                         required:
                                           - to
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -10993,6 +11721,23 @@ paths:
                           amount:
                             type: number
                             description: Base price amount for the plan.
+                          additional_currencies:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                currency:
+                                  type: string
+                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                amount:
+                                  type: number
+                                  description: Price amount in this currency. Set explicitly per currency, not
+                                    converted from the base amount.
+                              required:
+                                - currency
+                                - amount
+                            description: Base price amounts in additional currencies. The base 'amount' is
+                              in the org's default currency.
                           interval:
                             enum:
                               - one_off
@@ -11138,6 +11883,26 @@ paths:
                                   type: number
                                   description: Price per billing_units after included usage is consumed. Mutually
                                     exclusive with tiers.
+                                additional_currencies:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      currency:
+                                        type: string
+                                        description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                      amount:
+                                        type: number
+                                        description: Price amount in this currency. Set explicitly per currency, not
+                                          converted from the base amount.
+                                    required:
+                                      - currency
+                                      - amount
+                                  description: Amounts in additional currencies for this flat price. The base
+                                    'amount' is in the org's default currency.
+                                    Only valid with 'amount', not 'tiers'
+                                    (tiered prices carry per-currency amounts on
+                                    each tier).
                                 tiers:
                                   type: array
                                   items:
@@ -11151,6 +11916,22 @@ paths:
                                         type: number
                                       flat_amount:
                                         type: number
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Per-unit amount for this tier in this currency.
+                                            flat_amount:
+                                              type: number
+                                              description: Flat amount for this tier in this currency, if the tier uses one.
+                                          required:
+                                            - currency
                                     required:
                                       - to
                                       - amount
@@ -11335,6 +12116,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -11389,6 +12187,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -11402,6 +12219,22 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency:
+                                                  type: string
+                                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                amount:
+                                                  type: number
+                                                  description: Per-unit amount for this tier in this currency.
+                                                flat_amount:
+                                                  type: number
+                                                  description: Flat amount for this tier in this currency, if the tier uses one.
+                                              required:
+                                                - currency
                                         required:
                                           - to
                                           - amount
@@ -13358,6 +14191,11 @@ paths:
         tax rate on the created subscription, invoice, or checkout session line
         items. (optional)
 
+        @param currency - Currency to bill this attach in (e.g. usd, eur). Must
+        match the customer's currency if they are already locked to one, and the
+        plan must offer a paid price in it. Defaults to the customer's currency,
+        then the org default. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -13428,6 +14266,23 @@ paths:
                             interval_count:
                               type: number
                               description: Number of intervals per billing cycle. Defaults to 1.
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Price amount in this currency. Set explicitly per currency, not
+                                      converted from the base amount.
+                                required:
+                                  - currency
+                                  - amount
+                              description: Base price amounts in additional currencies. The base 'amount' is
+                                in the org's default currency.
                           required:
                             - amount
                             - interval
@@ -13482,6 +14337,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -13495,6 +14368,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -13643,6 +14534,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -13656,6 +14565,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -14226,6 +15153,12 @@ paths:
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
                     the created subscription, invoice, or checkout session line
                     items.
+                currency:
+                  type: string
+                  description: Currency to bill this attach in (e.g. usd, eur). Must match the
+                    customer's currency if they are already locked to one, and
+                    the plan must offer a paid price in it. Defaults to the
+                    customer's currency, then the org default.
               required:
                 - customer_id
                 - plan_id
@@ -14323,7 +15256,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783589620893,"plans":[{"planId":"trial_plan"}]},{"startsAt":1784799220893,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783959811498,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785169411498,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -14526,6 +15459,24 @@ paths:
                                           interval_count:
                                             type: number
                                             description: Number of intervals per billing cycle. Defaults to 1.
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency:
+                                                  type: string
+                                                  description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                amount:
+                                                  type: number
+                                                  description: Price amount in this currency. Set explicitly per currency, not
+                                                    converted from the base
+                                                    amount.
+                                              required:
+                                                - currency
+                                                - amount
+                                            description: Base price amounts in additional currencies. The base 'amount' is
+                                              in the org's default currency.
                                         required:
                                           - amount
                                           - interval
@@ -14580,6 +15531,17 @@ paths:
                                               type: number
                                               description: Price per billing_units after included usage. Either 'amount' or
                                                 'tiers' is required.
+                                            additional_currencies:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  currency: {}
+                                                  amount: {}
+                                              description: Amounts in additional currencies for this flat price. The base
+                                                'amount' is in the org's default
+                                                currency. Only valid with
+                                                'amount', not 'tiers'.
                                             tiers:
                                               type: array
                                               items:
@@ -14588,6 +15550,7 @@ paths:
                                                   to: {}
                                                   amount: {}
                                                   flat_amount: {}
+                                                  additional_currencies: {}
                                               description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                             tier_behavior:
                                               enum:
@@ -14736,6 +15699,17 @@ paths:
                                               type: number
                                               description: Price per billing_units after included usage. Either 'amount' or
                                                 'tiers' is required.
+                                            additional_currencies:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  currency: {}
+                                                  amount: {}
+                                              description: Amounts in additional currencies for this flat price. The base
+                                                'amount' is in the org's default
+                                                currency. Only valid with
+                                                'amount', not 'tiers'.
                                             tiers:
                                               type: array
                                               items:
@@ -14744,6 +15718,7 @@ paths:
                                                   to: {}
                                                   amount: {}
                                                   flat_amount: {}
+                                                  additional_currencies: {}
                                               description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                             tier_behavior:
                                               enum:
@@ -15186,6 +16161,24 @@ paths:
                                         interval_count:
                                           type: number
                                           description: Number of intervals per billing cycle. Defaults to 1.
+                                        additional_currencies:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              currency:
+                                                type: string
+                                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                              amount:
+                                                type: number
+                                                description: Price amount in this currency. Set explicitly per currency, not
+                                                  converted from the base
+                                                  amount.
+                                            required:
+                                              - currency
+                                              - amount
+                                          description: Base price amounts in additional currencies. The base 'amount' is
+                                            in the org's default currency.
                                       required:
                                         - amount
                                         - interval
@@ -15240,6 +16233,17 @@ paths:
                                             type: number
                                             description: Price per billing_units after included usage. Either 'amount' or
                                               'tiers' is required.
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency: {}
+                                                amount: {}
+                                            description: Amounts in additional currencies for this flat price. The base
+                                              'amount' is in the org's default
+                                              currency. Only valid with
+                                              'amount', not 'tiers'.
                                           tiers:
                                             type: array
                                             items:
@@ -15248,6 +16252,7 @@ paths:
                                                 to: {}
                                                 amount: {}
                                                 flat_amount: {}
+                                                additional_currencies: {}
                                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                           tier_behavior:
                                             enum:
@@ -15396,6 +16401,17 @@ paths:
                                             type: number
                                             description: Price per billing_units after included usage. Either 'amount' or
                                               'tiers' is required.
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency: {}
+                                                amount: {}
+                                            description: Amounts in additional currencies for this flat price. The base
+                                              'amount' is in the org's default
+                                              currency. Only valid with
+                                              'amount', not 'tiers'.
                                           tiers:
                                             type: array
                                             items:
@@ -15404,6 +16420,7 @@ paths:
                                                 to: {}
                                                 amount: {}
                                                 flat_amount: {}
+                                                additional_currencies: {}
                                             description: Tiered pricing.  Either 'amount' or 'tiers' is required.
                                           tier_behavior:
                                             enum:
@@ -15993,6 +17010,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -16047,6 +17081,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -16060,6 +17113,16 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency: {}
+                                                amount: {}
+                                                flat_amount: {}
+                                            description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                              shared across all currencies.
                                         required:
                                           - to
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -16674,6 +17737,11 @@ paths:
         tax rate on the created subscription, invoice, or checkout session line
         items. (optional)
 
+        @param currency - Currency to bill this attach in (e.g. usd, eur). Must
+        match the customer's currency if they are already locked to one, and the
+        plan must offer a paid price in it. Defaults to the customer's currency,
+        then the org default. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -16744,6 +17812,23 @@ paths:
                             interval_count:
                               type: number
                               description: Number of intervals per billing cycle. Defaults to 1.
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Price amount in this currency. Set explicitly per currency, not
+                                      converted from the base amount.
+                                required:
+                                  - currency
+                                  - amount
+                              description: Base price amounts in additional currencies. The base 'amount' is
+                                in the org's default currency.
                           required:
                             - amount
                             - interval
@@ -16798,6 +17883,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -16811,6 +17914,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -16959,6 +18080,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -16972,6 +18111,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -17542,6 +18699,12 @@ paths:
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
                     the created subscription, invoice, or checkout session line
                     items.
+                currency:
+                  type: string
+                  description: Currency to bill this attach in (e.g. usd, eur). Must match the
+                    customer's currency if they are already locked to one, and
+                    the plan must offer a paid price in it. Defaults to the
+                    customer's currency, then the org default.
               required:
                 - customer_id
                 - plan_id
@@ -18031,6 +19194,23 @@ paths:
                                   interval_count:
                                     type: number
                                     description: Number of intervals per billing cycle. Defaults to 1.
+                                  additional_currencies:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        currency:
+                                          type: string
+                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                        amount:
+                                          type: number
+                                          description: Price amount in this currency. Set explicitly per currency, not
+                                            converted from the base amount.
+                                      required:
+                                        - currency
+                                        - amount
+                                    description: Base price amounts in additional currencies. The base 'amount' is
+                                      in the org's default currency.
                                 required:
                                   - amount
                                   - interval
@@ -18085,6 +19265,25 @@ paths:
                                       type: number
                                       description: Price per billing_units after included usage. Either 'amount' or
                                         'tiers' is required.
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Price amount in this currency. Set explicitly per currency, not
+                                              converted from the base amount.
+                                        required:
+                                          - currency
+                                          - amount
+                                      description: Amounts in additional currencies for this flat price. The base
+                                        'amount' is in the org's default
+                                        currency. Only valid with 'amount', not
+                                        'tiers'.
                                     tiers:
                                       type: array
                                       items:
@@ -18098,6 +19297,16 @@ paths:
                                             type: number
                                           flat_amount:
                                             type: number
+                                          additional_currencies:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                currency: {}
+                                                amount: {}
+                                                flat_amount: {}
+                                            description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                              shared across all currencies.
                                         required:
                                           - to
                                       description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -19094,6 +20303,23 @@ paths:
                             interval_count:
                               type: number
                               description: Number of intervals per billing cycle. Defaults to 1.
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Price amount in this currency. Set explicitly per currency, not
+                                      converted from the base amount.
+                                required:
+                                  - currency
+                                  - amount
+                              description: Base price amounts in additional currencies. The base 'amount' is
+                                in the org's default currency.
                           required:
                             - amount
                             - interval
@@ -19148,6 +20374,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -19161,6 +20405,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -19309,6 +20571,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -19322,6 +20602,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -20073,6 +21371,23 @@ paths:
                             interval_count:
                               type: number
                               description: Number of intervals per billing cycle. Defaults to 1.
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Price amount in this currency. Set explicitly per currency, not
+                                      converted from the base amount.
+                                required:
+                                  - currency
+                                  - amount
+                              description: Base price amounts in additional currencies. The base 'amount' is
+                                in the org's default currency.
                           required:
                             - amount
                             - interval
@@ -20127,6 +21442,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -20140,6 +21473,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -20288,6 +21639,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -20301,6 +21670,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -22003,6 +23390,23 @@ paths:
                             interval_count:
                               type: number
                               description: Number of intervals per billing cycle. Defaults to 1.
+                            additional_currencies:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  currency:
+                                    type: string
+                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                  amount:
+                                    type: number
+                                    description: Price amount in this currency. Set explicitly per currency, not
+                                      converted from the base amount.
+                                required:
+                                  - currency
+                                  - amount
+                              description: Base price amounts in additional currencies. The base 'amount' is
+                                in the org's default currency.
                           required:
                             - amount
                             - interval
@@ -22057,6 +23461,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -22070,6 +23492,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -22218,6 +23658,24 @@ paths:
                                 type: number
                                 description: Price per billing_units after included usage. Either 'amount' or
                                   'tiers' is required.
+                              additional_currencies:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    currency:
+                                      type: string
+                                      description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                    amount:
+                                      type: number
+                                      description: Price amount in this currency. Set explicitly per currency, not
+                                        converted from the base amount.
+                                  required:
+                                    - currency
+                                    - amount
+                                description: Amounts in additional currencies for this flat price. The base
+                                  'amount' is in the org's default currency.
+                                  Only valid with 'amount', not 'tiers'.
                               tiers:
                                 type: array
                                 items:
@@ -22231,6 +23689,24 @@ paths:
                                       type: number
                                     flat_amount:
                                       type: number
+                                    additional_currencies:
+                                      type: array
+                                      items:
+                                        type: object
+                                        properties:
+                                          currency:
+                                            type: string
+                                            description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                          amount:
+                                            type: number
+                                            description: Per-unit amount for this tier in this currency.
+                                          flat_amount:
+                                            type: number
+                                            description: Flat amount for this tier in this currency, if the tier uses one.
+                                        required:
+                                          - currency
+                                      description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                        shared across all currencies.
                                   required:
                                     - to
                                 description: Tiered pricing.  Either 'amount' or 'tiers' is required.
@@ -22739,6 +24215,12 @@ paths:
                   description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
                     the created subscription, invoice, or checkout session line
                     items.
+                currency:
+                  type: string
+                  description: Currency to bill this attach in (e.g. usd, eur). Must match the
+                    customer's currency if they are already locked to one, and
+                    the plan must offer a paid price in it. Defaults to the
+                    customer's currency, then the org default.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -22799,6 +24281,7 @@ paths:
                       description: Display name for the customer.
                     email:
                       type: string
+                      format: email
                       description: Email address for the customer.
                     fingerprint:
                       type: string
@@ -23292,6 +24775,11 @@ paths:
                   description: The next reset time for the balance. If there are multiple
                     breakdowns, this will update the breakdown with the next
                     reset time.
+                expires_at:
+                  type: number
+                  description: Unix timestamp (milliseconds) when the balance expires. Targets a
+                    specific balance via balance_id / interval when the customer
+                    has multiple balances for the same feature.
               required:
                 - customer_id
                 - feature_id
@@ -27124,6 +28612,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -27171,6 +28666,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -27209,6 +28711,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -27225,6 +28734,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -27737,6 +29253,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -27784,6 +29307,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -27822,6 +29352,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -27838,6 +29375,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -28421,6 +29965,14 @@ paths:
                                     description: When true, overage for this feature is not posted to Stripe. Usage
                                       tracking and balance resets still behave
                                       normally.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                               description: List of spend limits per feature. Each entry caps overage
                                 (overage_limit) and/or per-interval usage
                                 (usage_limit).
@@ -28469,6 +30021,14 @@ paths:
                                     description: Current usage already consumed in the active interval.
                                       Response-only; not stored on billing
                                       controls.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                                   - limit
@@ -28507,6 +30067,14 @@ paths:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
                                       same feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - threshold
                                   - threshold_type
@@ -28523,6 +30091,14 @@ paths:
                                     type: boolean
                                     default: false
                                     description: Whether overage is allowed for this feature.
+                                  source:
+                                    enum:
+                                      - customer
+                                      - plan
+                                    type: string
+                                    description: "Response-only: whether the entry is a customer-level override or
+                                      inherited from an attached plan's
+                                      defaults."
                                 required:
                                   - feature_id
                               description: List of overage allowed controls per feature. When enabled, usage
@@ -29167,6 +30743,13 @@ paths:
                               description: When true, overage for this feature is not posted to Stripe. Usage
                                 tracking and balance resets still behave
                                 normally.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                         description: List of spend limits per feature. Each entry caps overage
                           (overage_limit) and/or per-interval usage
                           (usage_limit).
@@ -29214,6 +30797,13 @@ paths:
                               minimum: 0
                               description: Current usage already consumed in the active interval.
                                 Response-only; not stored on billing controls.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                             - limit
@@ -29252,6 +30842,13 @@ paths:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
                                 same feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - threshold
                             - threshold_type
@@ -29268,6 +30865,13 @@ paths:
                               type: boolean
                               default: false
                               description: Whether overage is allowed for this feature.
+                            source:
+                              enum:
+                                - customer
+                                - plan
+                              type: string
+                              description: "Response-only: whether the entry is a customer-level override or
+                                inherited from an attached plan's defaults."
                           required:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage
@@ -31016,6 +32620,29 @@ webhooks:
                                               description: Price per billing_units after included usage is consumed. Mutually
                                                 exclusive with tiers.
                                               type: number
+                                            additional_currencies:
+                                              description: Amounts in additional currencies for this flat price. The base
+                                                'amount' is in the org's default
+                                                currency. Only valid with
+                                                'amount', not 'tiers' (tiered
+                                                prices carry per-currency
+                                                amounts on each tier).
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  currency:
+                                                    description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                    type: string
+                                                  amount:
+                                                    description: Price amount in this currency. Set explicitly per currency, not
+                                                      converted from the base
+                                                      amount.
+                                                    type: number
+                                                required:
+                                                  - currency
+                                                  - amount
+                                                additionalProperties: false
                                             tiers:
                                               description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                                 included amount. Either 'tiers'
@@ -31033,6 +32660,23 @@ webhooks:
                                                     type: number
                                                   flat_amount:
                                                     type: number
+                                                  additional_currencies:
+                                                    type: array
+                                                    items:
+                                                      type: object
+                                                      properties:
+                                                        currency:
+                                                          description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                                          type: string
+                                                        amount:
+                                                          description: Per-unit amount for this tier in this currency.
+                                                          type: number
+                                                        flat_amount:
+                                                          description: Flat amount for this tier in this currency, if the tier uses one.
+                                                          type: number
+                                                      required:
+                                                        - currency
+                                                      additionalProperties: false
                                                 required:
                                                   - to
                                                   - amount

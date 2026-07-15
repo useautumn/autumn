@@ -176,16 +176,19 @@ export default function PlanChangeDialog({
 	);
 
 	// Preview the in-place update so versioning, customer impact, item changes
-	// and variant conflicts come from the backend.
-	const previewParams = useMemo(
-		() =>
-			buildPreviewUpdatePlanParams({
+	// and variant conflicts come from the backend. A malformed draft (e.g. a
+	// half-entered price) must degrade to "no preview", never throw during render.
+	const previewParams = useMemo(() => {
+		try {
+			return buildPreviewUpdatePlanParams({
 				baseProduct,
 				editedProduct: product,
 				features,
-			}),
-		[baseProduct, product, features],
-	);
+			});
+		} catch {
+			return null;
+		}
+	}, [baseProduct, product, features]);
 
 	const { data: preview } = usePlanUpdatePreview({
 		planId: product.id,
@@ -600,7 +603,14 @@ export default function PlanChangeDialog({
 												</span>
 											</div>
 											{isMetadataOnly ? (
-												<div className="rounded-lg bg-secondary/40 px-3 py-2.5">
+												<div className="rounded-lg bg-secondary/40 px-3 py-2.5 flex flex-col gap-2">
+													{priceChange && (
+														<PlanPriceHeader
+															priceChange={priceChange}
+															product={product}
+															currency={currency}
+														/>
+													)}
 													<PlanSettingsChanges changes={settingsChanges} />
 												</div>
 											) : (

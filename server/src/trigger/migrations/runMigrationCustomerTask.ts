@@ -1,7 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
@@ -20,6 +22,88 @@ const PayloadSchema = z.object({
 
 export type RunMigrationCustomerPayload = z.infer<typeof PayloadSchema>;
 
+/** Shared workload for the trigger.dev task and the local inline fallback. */
+export const executeRunMigrationCustomer = async ({
+	ctx,
+	logger,
+	payload,
+}: {
+	ctx: AutumnContext;
+	logger: Logger;
+	payload: RunMigrationCustomerPayload;
+}) => {
+	const { migrationInternalId, migrationRunId, customerInternalId, customerId } =
+		payload;
+
+	await warmupRegionalRedis().catch((error) => {
+		logger.warn("run-migration-customer: redis warmup failed (continuing)", {
+			data: {
+				error: error instanceof Error ? error.message : String(error),
+			},
+		});
+	});
+
+	logger.info("run-migration-customer: starting", {
+		data: { migrationInternalId, migrationRunId, customerInternalId },
+	});
+
+	if (await isMigrationCancelRequested({ migrationRunId })) {
+		logger.info("run-migration-customer: skipping, cancel requested", {
+			data: { migrationInternalId, migrationRunId, customerInternalId },
+		});
+		return;
+	}
+
+	const migration = await migrationRepo.find({
+		ctx,
+		internalId: migrationInternalId,
+	});
+
+	await withMigrationItemTracking({
+		ctx,
+		migrationInternalId,
+		migrationRunId,
+		item: {
+			kind: "customer",
+			internal_id: customerInternalId,
+			id: customerId,
+		},
+		dryRun: false,
+		claimItemRun: true,
+		run: async () => {
+			// Bust the customer cache as soon as we own the claim so in-flight
+			// reads load fresh state and see the `running` item_run.
+			// `deleteCachedFullCustomer` also invalidates the FullSubject cache.
+			const cacheKey = customerId ?? customerInternalId;
+			await deleteCachedFullCustomer({
+				ctx,
+				customerId: cacheKey,
+				source: "runMigrationCustomerTask",
+			});
+
+			const result = await migrateCustomer({
+				ctx,
+				customerId: cacheKey,
+				migration,
+			});
+
+			return {
+				itemPreview: {
+					id: customerId,
+					name: null,
+					email: null,
+				},
+				status: result.status,
+				response: result.response,
+			};
+		},
+	});
+
+	logger.info("run-migration-customer: done", {
+		data: { migrationInternalId, customerInternalId },
+	});
+};
+
 /**
  * Per-customer lazy migration task. Enqueued by `checkPendingMigrationsForCustomer`
  * on the customer-fetch path. Claims the `migration_item_runs` row, busts the
@@ -33,88 +117,15 @@ export const runMigrationCustomerTask = task({
 	id: "run-migration-customer",
 	maxDuration: 600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const {
-			orgId,
-			env,
-			migrationInternalId,
-			migrationRunId,
-			customerInternalId,
-			customerId,
-		} = PayloadSchema.parse(rawPayload);
+		const payload = PayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
-			orgId,
-			env,
+			orgId: payload.orgId,
+			env: payload.env,
 			triggerCtx,
-			customerId: customerId ?? customerInternalId,
+			customerId: payload.customerId ?? payload.customerInternalId,
 		});
 
-		await warmupRegionalRedis().catch((error) => {
-			logger.warn("run-migration-customer: redis warmup failed (continuing)", {
-				data: {
-					error: error instanceof Error ? error.message : String(error),
-				},
-			});
-		});
-
-		logger.info("run-migration-customer: starting", {
-			data: { migrationInternalId, migrationRunId, customerInternalId },
-		});
-
-		if (await isMigrationCancelRequested({ migrationRunId })) {
-			logger.info("run-migration-customer: skipping, cancel requested", {
-				data: { migrationInternalId, migrationRunId, customerInternalId },
-			});
-			return;
-		}
-
-		const migration = await migrationRepo.find({
-			ctx,
-			internalId: migrationInternalId,
-		});
-
-		await withMigrationItemTracking({
-			ctx,
-			migrationInternalId,
-			migrationRunId,
-			item: {
-				kind: "customer",
-				internal_id: customerInternalId,
-				id: customerId,
-			},
-			dryRun: false,
-			claimItemRun: true,
-			run: async () => {
-				// Bust the customer cache as soon as we own the claim so in-flight
-				// reads load fresh state and see the `running` item_run.
-				// `deleteCachedFullCustomer` also invalidates the FullSubject cache.
-				const cacheKey = customerId ?? customerInternalId;
-				await deleteCachedFullCustomer({
-					ctx,
-					customerId: cacheKey,
-					source: "runMigrationCustomerTask",
-				});
-
-				const result = await migrateCustomer({
-					ctx,
-					customerId: cacheKey,
-					migration,
-				});
-
-				return {
-					itemPreview: {
-						id: customerId,
-						name: null,
-						email: null,
-					},
-					status: result.status,
-					response: result.response,
-				};
-			},
-		});
-
-		logger.info("run-migration-customer: done", {
-			data: { migrationInternalId, customerInternalId },
-		});
+		await executeRunMigrationCustomer({ ctx, logger, payload });
 	},
 });

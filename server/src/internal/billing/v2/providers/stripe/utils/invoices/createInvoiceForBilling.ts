@@ -1,6 +1,6 @@
 import {
 	type BillingContext,
-	orgToCurrency,
+	billingContextToCurrency,
 	type StripeDiscountWithCoupon,
 	type StripeInvoiceAction,
 } from "@autumn/shared";
@@ -25,9 +25,8 @@ const stripeDiscountsToInvoiceParams = ({
 	stripeDiscounts: StripeDiscountWithCoupon[];
 }): Stripe.InvoiceCreateParams["discounts"] => {
 	return stripeDiscounts
-		.filter(
-			(discount): discount is StripeDiscountWithCoupon & { id: string } =>
-				Boolean(discount.id),
+		.filter((discount): discount is StripeDiscountWithCoupon & { id: string } =>
+			Boolean(discount.id),
 		)
 		.map((discount) => ({ discount: discount.id }));
 };
@@ -100,7 +99,9 @@ export const createInvoiceForBilling = async ({
 		stripeSubId,
 		// Subscription-linked invoices inherit currency from the subscription;
 		// standalone invoices default to the account currency, not the org's.
-		currency: stripeSubId ? undefined : orgToCurrency({ org: ctx.org }),
+		currency: stripeSubId
+			? undefined
+			: billingContextToCurrency({ org: ctx.org, billingContext }),
 		collectionMethod,
 		daysUntilDue: invoiceMode?.daysUntilDue,
 		footer: invoiceMode?.footer,
@@ -108,6 +109,9 @@ export const createInvoiceForBilling = async ({
 		metadata: invoiceMetadata,
 		discounts: invoiceDiscounts,
 		automaticTax: wantsAutoTax,
+		defaultTaxRates: billingContext.taxRateId
+			? [billingContext.taxRateId]
+			: undefined,
 	});
 
 	const invoiceWithLines = await addStripeInvoiceLines({

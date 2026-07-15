@@ -24,12 +24,14 @@ import { crud } from "./domains/crud";
 import { misc } from "./domains/misc";
 import { webhooks } from "./domains/webhooks";
 import { suites } from "./suites";
+import { all } from "./all";
 import { temp } from "./temp";
 import type { TestGroup, TestSuite } from "./types";
 
 export type { TestGroup, TestSuite, TestTier } from "./types";
 
 const allGroups: TestGroup[] = [
+	all,
 	core,
 	coreBilling,
 	coreAttach,

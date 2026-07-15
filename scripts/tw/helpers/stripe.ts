@@ -170,11 +170,14 @@ export const createSandboxSubAccount = async ({
 	runId,
 	orgId,
 	secretKey,
+	extraMetadata,
 }: {
 	orgName: string;
 	ownerEmail: string;
 	orgId: string;
 	secretKey: string;
+	/** Additional metadata merged over the owner tag (e.g. pool state tags). */
+	extraMetadata?: Record<string, string>;
 } & OwnerTag): Promise<string> => {
 	const stripe = stripeClientForKey(secretKey);
 
@@ -187,7 +190,7 @@ export const createSandboxSubAccount = async ({
 				contact_email: ownerEmail,
 				display_name: orgName,
 				dashboard: "full",
-				metadata: stripeMetadata(owner, runId, orgId),
+				metadata: { ...stripeMetadata(owner, runId, orgId), ...extraMetadata },
 				identity: { country: "us" },
 				configuration: { merchant: {} },
 				defaults: {
@@ -370,6 +373,11 @@ export const sweepOrphans = async ({
 		})) {
 			const metadata = account.metadata as Record<string, string> | null;
 			if (metadata?.autumn_tw_owner !== owner) {
+				continue;
+			}
+			// Pool accounts are persistent by design — never sweep them. A crashed
+			// run leaves them dirty; the next run's teardown nuke reclaims them.
+			if (metadata?.autumn_tw_pool === "1") {
 				continue;
 			}
 

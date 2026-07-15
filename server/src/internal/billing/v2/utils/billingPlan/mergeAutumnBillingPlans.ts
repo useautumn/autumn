@@ -86,6 +86,17 @@ export const mergeAutumnBillingPlans = ({
 						}) ?? [],
 				}
 			: undefined,
+	oneOffPurchaseRebalance:
+		base.oneOffPurchaseRebalance || incoming.oneOffPurchaseRebalance
+			? {
+					purchases:
+						mergeByKey({
+							base: base.oneOffPurchaseRebalance?.purchases,
+							incoming: incoming.oneOffPurchaseRebalance?.purchases,
+							getKey: (purchase) => purchase.customerEntitlementId,
+						}) ?? [],
+				}
+			: undefined,
 	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,

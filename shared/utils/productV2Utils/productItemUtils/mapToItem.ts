@@ -3,6 +3,10 @@ import {
 	AllowanceType,
 	type EntitlementWithFeature,
 } from "../../../models/productModels/entModels/entModels.js";
+import {
+	fixedCurrenciesToApi,
+	usageCurrenciesToTiers,
+} from "../../../models/productModels/priceModels/priceConfig/buildPriceCurrencies.js";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import {
 	BillWhen,
@@ -82,13 +86,18 @@ export const toFeaturePriceItem = ({
 	price: Price;
 }) => {
 	const config = price.config as UsagePriceConfig;
-	const tiers = config.usage_tiers.map((tier) => {
-		return {
-			amount: tier.amount,
-			to: tier.to === -1 ? TierInfinite : tier.to,
-			flat_amount: tier.flat_amount,
-		};
-	});
+	const tierCurrencies = usageCurrenciesToTiers(
+		config.currencies,
+		config.usage_tiers.length,
+	);
+	const tiers = config.usage_tiers.map((tier, index) => ({
+		amount: tier.amount,
+		to: tier.to === -1 ? TierInfinite : tier.to,
+		flat_amount: tier.flat_amount,
+		...(tierCurrencies?.[index]?.length
+			? { additional_currencies: tierCurrencies[index] }
+			: {}),
+	}));
 
 	let itemConfig: ProductItemConfig = {};
 	if (price.proration_config) {
@@ -122,6 +131,7 @@ export const toFeaturePriceItem = ({
 
 		price: null,
 		tiers,
+		base_currency: config.base_currency ?? undefined,
 		billing_units: config.billing_units,
 		tier_behavior: price.tier_behavior ?? null,
 
@@ -154,6 +164,8 @@ export const toPriceItem = ({ price }: { price: Price }) => {
 		interval: billingToItemInterval({ billingInterval: config.interval }),
 		interval_count: config.interval_count ?? 1,
 		price: config.amount,
+		additional_currencies: fixedCurrenciesToApi(config.currencies) ?? undefined,
+		base_currency: config.base_currency ?? undefined,
 
 		price_id: price.id,
 		created_at: price.created_at,

@@ -9,6 +9,7 @@ import type { ApiPlan } from "@api/products/previousVersions/apiPlanV0";
 import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels";
 import type { SharedContext } from "../../../types";
 import type { CreatePlanItemParamsV1 } from "../items/crud/createPlanItemParamsV1";
+import { attachItemCurrencies } from "./attachItemCurrencies";
 
 // Required.
 export const planV1ToProductItems = ({
@@ -25,7 +26,8 @@ export const planV1ToProductItems = ({
 	const featureItems =
 		plan.items?.map((planItem) => {
 			const planV0 = planItemV1ToV0({ ctx, item: planItem });
-			return planItemV0ToProductItem({ ctx, planItem: planV0 });
+			const productItem = planItemV0ToProductItem({ ctx, planItem: planV0 });
+			return attachItemCurrencies({ ctx, productItem, planItem });
 		}) ?? [];
 
 	const basePriceItem = plan.price

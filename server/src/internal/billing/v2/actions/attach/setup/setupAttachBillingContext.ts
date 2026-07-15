@@ -14,9 +14,11 @@ import {
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
+	resolveCustomerCurrency,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFinalizeFirstInvoice";
@@ -25,7 +27,6 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
-import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -275,6 +276,12 @@ export const setupAttachBillingContext = async ({
 		fullCustomer,
 		fullProducts: [attachProduct],
 		attachProduct,
+		currency: resolveCustomerCurrency({
+			customer: fullCustomer,
+			org: ctx.org,
+			requested: params.currency,
+			stripeCurrency: stripeCustomer?.currency,
+		}),
 		featureQuantities,
 		transitionConfig,
 

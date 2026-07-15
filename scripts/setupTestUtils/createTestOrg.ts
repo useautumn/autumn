@@ -149,7 +149,7 @@ export async function createTestOrg({
 		created_at: TEST_ORG_CONFIG.created_at,
 		stripe_connected: false,
 		default_currency: "usd",
-		config: {} as OrgConfig,
+		config: { multi_currency: true } as OrgConfig,
 		onboarded: true,
 	};
 

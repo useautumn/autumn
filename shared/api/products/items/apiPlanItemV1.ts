@@ -1,13 +1,15 @@
 import { ApiFeatureV0Schema } from "@api/features/prevVersions/apiFeatureV0.js";
+import {
+	AdditionalCurrencyPriceArraySchema,
+	ApiUsageTierWithCurrenciesSchema,
+	additionalCurrencyPlanItemIssues,
+} from "@api/products/components/additionalCurrencies.js";
 import { BillingMethod } from "@api/products/components/billingMethod.js";
 import { DisplaySchema } from "@api/products/components/display.js";
 import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/rolloverExpiryDurationType.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
-import {
-	TierBehavior,
-	UsageTierSchema,
-} from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
+import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -90,7 +92,12 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"Price per billing_units after included usage is consumed. Mutually exclusive with tiers.",
 				}),
-				tiers: z.array(UsageTierSchema).optional().meta({
+				additional_currencies:
+					AdditionalCurrencyPriceArraySchema.optional().meta({
+						description:
+							"Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers' (tiered prices carry per-currency amounts on each tier).",
+					}),
+				tiers: z.array(ApiUsageTierWithCurrenciesSchema).optional().meta({
 					description:
 						"Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.",
 				}),
@@ -206,6 +213,14 @@ export const ApiPlanItemV1Schema = z
 					code: "custom",
 					message: "Price amount and tiers are mutually exclusive.",
 					input: ctx.value,
+				});
+			}
+
+			for (const message of additionalCurrencyPlanItemIssues(ctx.value.price)) {
+				ctx.issues.push({
+					code: "custom",
+					message,
+					input: ctx.value.price,
 				});
 			}
 		}

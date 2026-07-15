@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -9,6 +10,7 @@ import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
@@ -98,6 +100,17 @@ export const executeAutumnBillingPlan = async ({
 		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
 	});
 
+	// Lock the customer's currency on the first paid attach (conditional: no-op if
+	// already set). Runs on commit only — never in preview.
+	if (autumnBillingPlan.lockCustomerCurrency) {
+		await CusService.lockCurrencyIfUnset({
+			ctx,
+			internalCustomerId:
+				autumnBillingPlan.lockCustomerCurrency.internalCustomerId,
+			currency: autumnBillingPlan.lockCustomerCurrency.currency,
+		});
+	}
+
 	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {
 		// Skip empty updates — drizzle throws "No values to set" on empty SET.
@@ -130,6 +143,14 @@ export const executeAutumnBillingPlan = async ({
 		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	if (autumnBillingPlan.oneOffPurchaseRebalance) {
+		await executeOneOffPurchaseRebalance({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			rebalance: autumnBillingPlan.oneOffPurchaseRebalance,
+		});
+	}
 
 	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
 	// atomic SQL `balance + delta` increments.

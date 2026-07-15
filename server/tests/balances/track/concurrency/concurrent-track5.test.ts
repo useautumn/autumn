@@ -11,7 +11,7 @@ import {
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { timeout } from "../../../utils/genUtils.js";
+import { pollUntil } from "../../../utils/genUtils.js";
 
 const testCase = "concurrentTrack5";
 const customerId = testCase;
@@ -185,18 +185,18 @@ describe(`${chalk.yellowBright(`${testCase}: Testing per-entity track with concu
 		}
 	});
 
-	test("should reflect concurrent per-entity deductions in non-cached customer after 2s", async () => {
+	test("should reflect concurrent per-entity deductions in non-cached customer after sync", async () => {
 		const entityId = "seat1";
 
 		// Expected: 3 successful requests × 200 units each = 600 units used
 		// Starting balance: 500, usage: 600, final balance: 500 - 600 = -100
 
-		// Wait 2 seconds for DB sync
-		await timeout(2000);
-
-		// Fetch entity with skip_cache=true
-		const finalEntityRes = await autumnV1.entities.get(customerId, entityId, {
-			skip_cache: "true",
+		// The Redis→Postgres sync is batched + queued; poll instead of a fixed wait.
+		const finalEntityRes = await pollUntil({
+			fetch: () =>
+				autumnV1.entities.get(customerId, entityId, { skip_cache: "true" }),
+			until: (result) =>
+				result.features?.[TestFeature.Messages]?.balance === -100,
 		});
 
 		expect(finalEntityRes.features![TestFeature.Messages].balance).toBe(-100);

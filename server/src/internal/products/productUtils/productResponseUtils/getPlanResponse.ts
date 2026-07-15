@@ -82,6 +82,9 @@ export const getPlanResponse = async ({
 	const basePrice: ApiPlanV1["price"] | null = basePriceItem
 		? {
 				amount: basePriceItem.price,
+				...(basePriceItem.additional_currencies?.length
+					? { additional_currencies: basePriceItem.additional_currencies }
+					: {}),
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
 					itemToBillingIntervalCount({ item: basePriceItem }) !== 1

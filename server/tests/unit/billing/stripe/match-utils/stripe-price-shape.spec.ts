@@ -123,7 +123,6 @@ describe("autumnConsumablePriceToStripePriceShape", () => {
 			product: "prod_messages",
 			currency: "usd",
 			billingScheme: "tiered",
-			taxBehavior: "unspecified",
 			interval: "month",
 			intervalCount: 1,
 			recurringUsageType: "metered",
@@ -340,5 +339,26 @@ describe("autumnBasePriceToStripePriceShape", () => {
 			billingScheme: "per_unit",
 			unitAmountDecimal: "2000",
 		});
+	});
+
+	test("matches a Stripe price when the org currency is uppercase", () => {
+		const autumnShape = autumnBasePriceToStripePriceShape({
+			price: fixedPrice(),
+			stripeProductId: "prod_base",
+			currency: "EUR",
+		});
+		const stripeShape = stripePriceToShape({
+			price: stripePrice({
+				product: "prod_base",
+				currency: "eur",
+				billingScheme: "per_unit",
+				tiersMode: null,
+				usageType: "licensed",
+				unitAmountDecimal: "2000",
+			}),
+		});
+
+		expect(autumnShape).not.toBeNull();
+		expect(stripePriceShapesEqual(autumnShape!, stripeShape)).toBe(true);
 	});
 });

@@ -14,6 +14,7 @@ import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
+import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
 import {
 	cleanTiersForMode,
 	type VolumePricingMode,
@@ -58,6 +59,10 @@ export function EditPlanFeatureSheet({
 				newItem.tiers = newItem.tiers.map((tier) => ({
 					...tier,
 					flat_amount: undefined,
+					additional_currencies: migrateTierCurrenciesForMode({
+						entries: tier.additional_currencies,
+						mode: "per_unit",
+					}),
 				}));
 			}
 		}
@@ -69,17 +74,23 @@ export function EditPlanFeatureSheet({
 		if (!item?.tiers) return;
 
 		const migratedTiers = item.tiers.map((tier) => {
+			const additionalCurrencies = migrateTierCurrenciesForMode({
+				entries: tier.additional_currencies,
+				mode,
+			});
 			if (mode === "flat") {
 				return {
 					...tier,
 					flat_amount: tier.flat_amount ?? tier.amount,
 					amount: 0,
+					additional_currencies: additionalCurrencies,
 				};
 			}
 			return {
 				...tier,
 				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
 				flat_amount: undefined,
+				additional_currencies: additionalCurrencies,
 			};
 		});
 

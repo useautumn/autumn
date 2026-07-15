@@ -14,12 +14,19 @@ export const priceToStripeCreatePriceParams = ({
 	product,
 	org,
 	currentStripeProduct,
+	currency: targetCurrency,
 }: {
 	price: Price;
 	product: FullProduct;
 	org: Organization;
 	currentStripeProduct?: Stripe.Product;
+	currency?: string;
 }): Stripe.PriceCreateParams => {
+	const currency = (
+		targetCurrency ??
+		price.config.base_currency ??
+		orgToCurrency({ org })
+	).toLowerCase();
 	const entitlement = priceToEnt({
 		price,
 		entitlements: product.entitlements,
@@ -40,7 +47,12 @@ export const priceToStripeCreatePriceParams = ({
 				},
 			};
 
-	const tiers = priceToStripePrepaidV2Tiers({ price, entitlement, org });
+	const tiers = priceToStripePrepaidV2Tiers({
+		price,
+		entitlement,
+		org,
+		currency,
+	});
 	const tiersMode = priceToStripeTiersMode({ price });
 
 	let priceAmountData = {};
@@ -62,7 +74,7 @@ export const priceToStripeCreatePriceParams = ({
 		...productData,
 		...priceAmountData,
 		recurring: recurringData,
-		currency: orgToCurrency({ org }),
+		currency,
 		nickname: `Autumn Price (${entitlement.feature.name})`,
 	};
 };

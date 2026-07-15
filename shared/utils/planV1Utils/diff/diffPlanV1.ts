@@ -26,19 +26,47 @@ type PlanItemInput = ApiPlanItem | CreatePlanItemParamsV1;
 type PlanItemPrice = NonNullable<PlanItemInput["price"]>;
 type PlanItemRollover = NonNullable<PlanItemInput["rollover"]>;
 type PlanItemProration = NonNullable<PlanItemInput["proration"]>;
+type AdditionalCurrencyInput = {
+	currency: string;
+	amount?: number | null;
+	flat_amount?: number | null;
+};
+
 type BasePriceInput = {
 	amount: number;
 	interval?: string | null;
 	interval_count?: number | null;
+	additional_currencies?: AdditionalCurrencyInput[] | null;
 };
 
-const toBasePriceParams = (
+// Adding or removing a catalog currency doesn't change what existing
+// customers pay (their prices are snapshots), so neither forces a version or
+// migration; only changed amounts for a currency present on both sides do.
+const additionalCurrenciesCompatible = (
+	from: AdditionalCurrencyInput[] | null | undefined,
+	to: AdditionalCurrencyInput[] | null | undefined,
+): boolean =>
+	(from ?? []).every((entry) => {
+		const match = (to ?? []).find(
+			(other) => other.currency.toLowerCase() === entry.currency.toLowerCase(),
+		);
+		return (
+			!match ||
+			((entry.amount ?? null) === (match.amount ?? null) &&
+				(entry.flat_amount ?? null) === (match.flat_amount ?? null))
+		);
+	});
+
+export const toBasePriceParams = (
 	price: NonNullable<ApiPlanV1["price"]>,
 ): BasePriceParams => ({
 	amount: price.amount,
 	interval: price.interval,
 	...(price.interval_count !== undefined
 		? { interval_count: price.interval_count }
+		: {}),
+	...(price.additional_currencies?.length
+		? { additional_currencies: price.additional_currencies }
 		: {}),
 });
 
@@ -140,7 +168,11 @@ const pricesEqual = (
 	return (
 		a.amount === b.amount &&
 		a.interval === b.interval &&
-		(a.interval_count ?? 1) === (b.interval_count ?? 1)
+		(a.interval_count ?? 1) === (b.interval_count ?? 1) &&
+		additionalCurrenciesCompatible(
+			a.additional_currencies,
+			b.additional_currencies,
+		)
 	);
 };
 
@@ -172,7 +204,11 @@ const tiersEqual = (
 		return (
 			tier.to === other.to &&
 			(tier.amount ?? 0) === (other.amount ?? 0) &&
-			(tier.flat_amount ?? null) === (other.flat_amount ?? null)
+			(tier.flat_amount ?? null) === (other.flat_amount ?? null) &&
+			additionalCurrenciesCompatible(
+				tier.additional_currencies,
+				other.additional_currencies,
+			)
 		);
 	});
 };
@@ -192,6 +228,10 @@ const itemPricesEqual = (
 
 	return (
 		(a.amount ?? null) === (b.amount ?? null) &&
+		additionalCurrenciesCompatible(
+			a.additional_currencies,
+			b.additional_currencies,
+		) &&
 		tiersEqual(a.tiers, b.tiers) &&
 		aTierBehavior === bTierBehavior &&
 		a.interval === b.interval &&

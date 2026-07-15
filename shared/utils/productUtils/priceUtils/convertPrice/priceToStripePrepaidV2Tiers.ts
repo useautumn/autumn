@@ -1,5 +1,6 @@
 import type { Organization } from "@models/orgModels/orgTable";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
+import { priceConfigForCurrency } from "@models/productModels/priceModels/priceConfig/priceCurrencyView";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
 import {
@@ -28,10 +29,12 @@ export const priceToStripePrepaidV2Tiers = ({
 	price,
 	entitlement,
 	org,
+	currency: targetCurrency,
 }: {
 	price: Price;
 	entitlement: Entitlement;
 	org: Organization;
+	currency?: string;
 }): Stripe.PriceCreateParams.Tier[] => {
 	if (!isPrepaidPrice(price)) {
 		throw new Error(
@@ -39,6 +42,15 @@ export const priceToStripePrepaidV2Tiers = ({
 		);
 	}
 	const config = price.config;
+	const orgDefault = orgToCurrency({ org }).toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
+	const usageTiers =
+		priceConfigForCurrency({ config, currency, orgDefault }).usage_tiers ??
+		config.usage_tiers;
 
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 
@@ -51,14 +63,14 @@ export const priceToStripePrepaidV2Tiers = ({
 		});
 	}
 
-	for (const tier of config.usage_tiers) {
+	for (const tier of usageTiers) {
 		const atmnUnitAmount = new Decimal(tier.amount ?? 0).div(
 			config.billing_units ?? 1,
 		);
 
 		const stripeUnitAmountDecimal = atmnToStripeAmountDecimal({
 			amount: atmnUnitAmount,
-			currency: orgToCurrency({ org }),
+			currency,
 		});
 
 		let upTo: Stripe.PriceCreateParams.Tier["up_to"] = "inf";
@@ -74,7 +86,7 @@ export const priceToStripePrepaidV2Tiers = ({
 		if (tier.flat_amount) {
 			stripeTier.flat_amount_decimal = atmnToStripeAmountDecimal({
 				amount: tier.flat_amount,
-				currency: orgToCurrency({ org }),
+				currency,
 			});
 		}
 

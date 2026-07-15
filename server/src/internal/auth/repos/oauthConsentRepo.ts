@@ -1,7 +1,15 @@
-import { AUTUMN_ADMIN_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
+import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+} from "@autumn/auth/oauth";
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+
+export const HIDDEN_OAUTH_CONSENT_CLIENT_IDS = [
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
+	WEB_MCP_OAUTH_CLIENT_ID,
+] as const;
 
 export type OAuthConsentApiKeyRecord = {
 	id: string;
@@ -46,7 +54,9 @@ export const listOAuthConsentsByReferenceId = async ({
 				includeInternal
 					? undefined
 					: and(
-							ne(oauthConsent.clientId, AUTUMN_ADMIN_OAUTH_CLIENT_ID),
+							notInArray(oauthConsent.clientId, [
+								...HIDDEN_OAUTH_CONSENT_CLIENT_IDS,
+							]),
 							internalMcpClientId
 								? ne(oauthConsent.clientId, internalMcpClientId)
 								: undefined,

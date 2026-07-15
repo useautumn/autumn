@@ -18,6 +18,9 @@ export const productItemToBasePriceParams = ({
 		interval: itemToBillingInterval({ item }),
 		interval_count: itemToBillingIntervalCount({ item }) ?? undefined,
 
+		additional_currencies: item.additional_currencies ?? undefined,
+		base_currency: item.base_currency ?? undefined,
+
 		entitlement_id: item.entitlement_id ?? undefined,
 		price_id: item.price_id ?? undefined,
 	};

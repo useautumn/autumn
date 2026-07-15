@@ -34,6 +34,7 @@ export const AttachFormSchema = z.object({
 	resetBillingCycle: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 	grantFree: z.boolean(),
+	currency: z.string().nullable(),
 
 	noBillingChanges: z.boolean(),
 	enablePlanImmediately: z.boolean(),

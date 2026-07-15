@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages";
 import type {
 	SyncParamsV1,
 	SyncPlanInstance,
@@ -40,6 +41,8 @@ export interface SyncBillingContext {
 
 	stripeSubscription: Stripe.Subscription | null;
 	stripeSchedule: Stripe.SubscriptionSchedule | null;
+	/** Effective billing currency used by every normalized Stripe item. */
+	currency: string;
 
 	/** First phase if its `starts_at` was `"now"`, else null. */
 	immediatePhase: SyncPhaseContext | null;
@@ -52,4 +55,7 @@ export interface SyncBillingContext {
 	/** Carry an expired plan's consumed usage onto the replacement plan's
 	 * balances for shared features on the same subject. Defaults to true. */
 	carryOverUsage: boolean;
+
+	/** Inherited org transition-rule carry config; undefined = carry all consumables. */
+	carryOverUsages?: CarryOverUsages;
 }

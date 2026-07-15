@@ -57,5 +57,6 @@ jobs:
         if: needs.changes.outputs.schema == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_READ_ONLY_URL }}
+          NEON_EVENTS_READ_ONLY_URL: ${{ secrets.NEON_EVENTS_READ_ONLY_URL }}
           DB_MAX_CONNECTIONS: 1
         run: bun scripts/migrations/validate-schema.ts

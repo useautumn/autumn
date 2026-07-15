@@ -57,6 +57,15 @@ function hasValue<T>(value: T | null | undefined): value is T {
 	return value !== null && value !== undefined;
 }
 
+function currencySignature(
+	entries: ProductItem["additional_currencies"],
+): string {
+	const sorted = [...(entries ?? [])].sort((a, b) =>
+		a.currency.localeCompare(b.currency),
+	);
+	return JSON.stringify(sortAndNormalize(sorted));
+}
+
 function formatPriceWithUnits(price: number, billingUnits: number): string {
 	return billingUnits > 1
 		? `$${price} per ${billingUnits}`
@@ -257,8 +266,12 @@ export function generateItemChanges({
 			const updated = updatedPriceItems[i];
 
 			if (original && updated) {
+				const currenciesChanged =
+					currencySignature(original.additional_currencies) !==
+					currencySignature(updated.additional_currencies);
 				const hasChanged =
 					original.price !== updated.price ||
+					currenciesChanged ||
 					itemToBillingInterval({ item: original }) !==
 						itemToBillingInterval({ item: updated }) ||
 					itemToBillingIntervalCount({ item: original }) !==

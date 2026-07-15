@@ -37,7 +37,10 @@ export const stripePriceMatchesFixedPrice = ({
 	});
 	if (!autumnShape) return false;
 
-	return stripePriceShapesEqual(stripePriceToShape({ price: stripePrice }), autumnShape);
+	return stripePriceShapesEqual(
+		stripePriceToShape({ price: stripePrice }),
+		autumnShape,
+	);
 };
 
 export const findMatchingStripePriceForFixedPrice = ({
@@ -65,10 +68,13 @@ const stripeMeterId = ({
 }: {
 	recurring: Stripe.Price.Recurring | null;
 }) => {
-	const meter = (recurring as (Stripe.Price.Recurring & { meter?: unknown }) | null)
-		?.meter;
+	const meter = (
+		recurring as (Stripe.Price.Recurring & { meter?: unknown }) | null
+	)?.meter;
 	if (!meter) return null;
-	return typeof meter === "string" ? meter : ((meter as { id?: string }).id ?? null);
+	return typeof meter === "string"
+		? meter
+		: ((meter as { id?: string }).id ?? null);
 };
 
 export const stripePriceMatchesConsumablePrice = ({
@@ -103,7 +109,10 @@ export const stripePriceMatchesConsumablePrice = ({
 	});
 	if (!autumnShape) return false;
 
-	return stripePriceShapesEqual(stripePriceToShape({ price: stripePrice }), autumnShape);
+	return stripePriceShapesEqual(
+		stripePriceToShape({ price: stripePrice }),
+		autumnShape,
+	);
 };
 
 export const findMatchingStripePriceForConsumablePrice = ({
@@ -135,7 +144,9 @@ export const findMatchingStripePriceForConsumablePrice = ({
 	return matchedStripePrice
 		? {
 				stripePriceId: matchedStripePrice.id,
-				stripeMeterId: stripeMeterId({ recurring: matchedStripePrice.recurring }),
+				stripeMeterId: stripeMeterId({
+					recurring: matchedStripePrice.recurring,
+				}),
 			}
 		: null;
 };
