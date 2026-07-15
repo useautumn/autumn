@@ -15,6 +15,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	InternalError,
+	inheritParentCustomerProductProperties,
 	type ListCustomerProductsParams,
 	type ListCustomersV2Params,
 	type Organization,
@@ -258,6 +259,13 @@ export class CusService {
 				await hydrateFullCustomerLicenses({
 					ctx,
 					fullCustomer: fullCus,
+				});
+
+				// Seats (hydrated only on entityId fetches, with their pool +
+				// parent snapshot from the query) mirror the parent's lifecycle
+				// before the lazy reset below gates on status.
+				inheritParentCustomerProductProperties({
+					customerProducts: fullCus.customer_products ?? [],
 				});
 
 				if (!usedReplica && !skipReset) {

@@ -6,6 +6,7 @@ import {
 	type Customer,
 	type CustomerEntitlement,
 	customerEntitlements,
+	customerLicenses,
 	customerPrices,
 	customerProducts,
 	customers,
@@ -30,7 +31,7 @@ import {
 	or,
 	sql,
 } from "drizzle-orm";
-import { unionAll } from "drizzle-orm/pg-core";
+import { alias, unionAll } from "drizzle-orm/pg-core";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -208,15 +209,44 @@ export class CusEntService {
 	}) {
 		// Sort keys are projected as top-level output columns because Postgres
 		// only allows ORDER BY on a set operation via output column names.
-		const baseSelect = {
+		// Seat rows (license assignments) inherit lifecycle from their pool's
+		// parent — one lateral probe per seat row; a NULL link matches nothing
+		// so non-seat rows pay an empty index lookup.
+		const makeParentLateral = () => {
+			const pcl = alias(customerLicenses, "pcl");
+			const pcp = alias(customerProducts, "pcp");
+			return db
+				.select({
+					parent_status: pcp.status,
+					parent_subscription_ids: pcp.subscription_ids,
+				})
+				.from(pcl)
+				.innerJoin(pcp, eq(pcp.id, pcl.parent_customer_product_id))
+				.where(
+					sql`${pcl.link_id} = ${customerProducts.customer_license_link_id}`,
+				)
+				.limit(1)
+				.as("parent_cp");
+		};
+
+		const makeBaseSelect = (
+			parentLateral: ReturnType<typeof makeParentLateral>,
+		) => ({
 			customer_entitlements: customerEntitlements,
 			entitlements: entitlements,
 			features: features,
 			customers: customers,
 			customer_products: customerProducts,
+			parent_status: parentLateral.parent_status,
+			parent_subscription_ids: parentLateral.parent_subscription_ids,
 			sort_reset: sql`${customerEntitlements.next_reset_at}`.as("sort_reset"),
 			sort_id: sql`${customerEntitlements.id} COLLATE "C"`.as("sort_id"),
-		};
+		});
+
+		const effectiveStatus = (
+			parentLateral: ReturnType<typeof makeParentLateral>,
+		) =>
+			sql`COALESCE(${parentLateral.parent_status}, ${customerProducts.status})`;
 
 		const commonResetPredicates = () =>
 			and(
@@ -260,8 +290,9 @@ export class CusEntService {
 		// Branch 1: cusEnts with no customer_product. Left-join to
 		// customer_products on a false predicate so the row shape matches
 		// the other branches (customer_products columns come back NULL).
+		const parentLateral1 = makeParentLateral();
 		const branch1 = db
-			.select(baseSelect)
+			.select(makeBaseSelect(parentLateral1))
 			.from(customerEntitlements)
 			.innerJoin(
 				entitlements,
@@ -276,6 +307,7 @@ export class CusEntService {
 				eq(customerEntitlements.internal_customer_id, customers.internal_id),
 			)
 			.leftJoin(customerProducts, sql`false`)
+			.leftJoinLateral(parentLateral1, sql`true`)
 			.where(
 				and(
 					isNull(customerEntitlements.customer_product_id),
@@ -285,8 +317,9 @@ export class CusEntService {
 			);
 
 		// Branch 2: cusEnts on active customer_products.
+		const parentLateral2 = makeParentLateral();
 		const branch2 = db
-			.select(baseSelect)
+			.select(makeBaseSelect(parentLateral2))
 			.from(customerEntitlements)
 			.innerJoin(
 				entitlements,
@@ -304,9 +337,10 @@ export class CusEntService {
 				customerProducts,
 				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
 			)
+			.leftJoinLateral(parentLateral2, sql`true`)
 			.where(
 				and(
-					eq(customerProducts.status, CusProductStatus.Active),
+					sql`${effectiveStatus(parentLateral2)} = ${CusProductStatus.Active}`,
 					commonResetPredicates(),
 					resetOwnedByAutumn(),
 					afterCursor(),
@@ -315,8 +349,9 @@ export class CusEntService {
 
 		// Branch 3: cusEnts on past_due customer_products whose product
 		// opted into ignore_past_due via products.config.
+		const parentLateral3 = makeParentLateral();
 		const branch3 = db
-			.select(baseSelect)
+			.select(makeBaseSelect(parentLateral3))
 			.from(customerEntitlements)
 			.innerJoin(
 				entitlements,
@@ -338,9 +373,10 @@ export class CusEntService {
 				products,
 				eq(customerProducts.internal_product_id, products.internal_id),
 			)
+			.leftJoinLateral(parentLateral3, sql`true`)
 			.where(
 				and(
-					eq(customerProducts.status, CusProductStatus.PastDue),
+					sql`${effectiveStatus(parentLateral3)} = ${CusProductStatus.PastDue}`,
 					sql`(${products.config}->>'ignore_past_due')::boolean = true`,
 					commonResetPredicates(),
 					resetOwnedByAutumn(),
@@ -401,7 +437,19 @@ export class CusEntService {
 					...item.entitlements,
 					feature: item.features,
 				},
-				customer_product: item.customer_products,
+				// Seats inherit the parent's lifecycle so downstream reset logic
+				// (resetsViaInvoice, Stripe anchor) behaves like the parent's.
+				customer_product: item.customer_products
+					? {
+							...item.customer_products,
+							status:
+								(item.parent_status as CusProductStatus | null) ??
+								item.customer_products.status,
+							subscription_ids:
+								(item.parent_subscription_ids as string[] | null) ??
+								item.customer_products.subscription_ids,
+						}
+					: item.customer_products,
 				customer: item.customers,
 				replaceables: [],
 				rollovers: [],

@@ -372,6 +372,18 @@ export const getFullSubjectRowsQuery = ({
 						- 'has_customer_prices'
 						- 'product_is_add_on'
 						- 'subject_rank'
+						-- Seat rows carry their pool + the parent's lifecycle snapshot
+						-- (fetched unfiltered: an expired parent is not in cus_products).
+						|| jsonb_build_object(
+							'parent_customer_license',
+							CASE WHEN pcl.id IS NULL THEN NULL ELSE to_jsonb(pcl) END,
+							'parent_customer_product',
+							CASE WHEN pcp_lifecycle.id IS NULL THEN NULL ELSE jsonb_build_object(
+								'status', pcp_lifecycle.status,
+								'subscription_ids', to_jsonb(pcp_lifecycle.subscription_ids),
+								'canceled_at', pcp_lifecycle.canceled_at
+							) END
+						)
 					)::json
 					ORDER BY
 						cp.subject_entity_priority ASC,
@@ -381,6 +393,11 @@ export const getFullSubjectRowsQuery = ({
 						cp.created_at DESC
 				) AS items
 			FROM cus_products cp
+			LEFT JOIN customer_licenses pcl
+				ON cp.customer_license_link_id IS NOT NULL
+				AND pcl.link_id = cp.customer_license_link_id
+			LEFT JOIN customer_products pcp_lifecycle
+				ON pcp_lifecycle.id = pcl.parent_customer_product_id
 			GROUP BY cp.subject_key
 		),
 

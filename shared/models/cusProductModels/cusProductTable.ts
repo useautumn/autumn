@@ -141,6 +141,11 @@ export const customerProducts = pgTable(
 			.on(table.customer_license_link_id, table.created_at, table.id)
 			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
 			.concurrently(),
+		// Seat-sync cron keyset walk: all seats ordered by id.
+		index("idx_customer_products_seat_sync")
+			.on(table.id)
+			.where(sql`${table.customer_license_link_id} IS NOT NULL`)
+			.concurrently(),
 		// Released seats waiting for reuse, longest-released first.
 		index("idx_customer_products_unused_seats")
 			.on(table.customer_license_link_id, table.released_at)

@@ -19,6 +19,7 @@ import {
 	FeatureOptionsSchema,
 } from "../../cusProductModels/cusProductModels.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
+import type { DbCustomerLicense } from "../../licenseModels/customerLicenseTable.js";
 import type { FullCustomerLicense } from "../../licenseModels/fullCustomerLicense.js";
 import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
@@ -168,7 +169,13 @@ export type NormalizedFullSubject = {
 	customer: Customer;
 	entity?: Entity;
 
-	customer_products: DbCustomerProduct[];
+	customer_products: (DbCustomerProduct & {
+		parent_customer_license?: DbCustomerLicense | null;
+		parent_customer_product?: Pick<
+			DbCustomerProduct,
+			"status" | "subscription_ids" | "canceled_at"
+		> | null;
+	})[];
 	customer_entitlements: SubjectBalance[];
 	customer_prices: DbCustomerPrice[];
 	/** Self-contained rows (effective plan license + product pre-resolved);

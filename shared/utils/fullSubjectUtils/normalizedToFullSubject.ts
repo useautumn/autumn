@@ -14,6 +14,7 @@ import type { Replaceable } from "../../models/cusProductModels/cusEntModels/rep
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import type { FullCustomerLicense } from "../../models/licenseModels/fullCustomerLicense.js";
+import { inheritParentCustomerProductProperties } from "../cusProductUtils/customerLicenses/inheritParentCustomerProductProperties.js";
 
 const getArrayEntries = <T>({ value }: { value: unknown }): T[] =>
 	Array.isArray(value) ? (value as T[]) : [];
@@ -332,6 +333,10 @@ export const normalizedToFullSubject = ({
 				customerLicensesByParentId.get(customerProduct.id) ?? [],
 		} as FullCusProduct);
 	}
+
+	// Seats mirror their parent's lifecycle (resolved via the pool row) so
+	// every downstream status/date gate reads the effective values.
+	inheritParentCustomerProductProperties({ customerProducts });
 
 	const extraCustomerEntitlements = [...extraMeteredCes, ...extraBooleanCes];
 

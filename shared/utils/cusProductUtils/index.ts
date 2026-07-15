@@ -12,6 +12,7 @@ export * from "./cusProductUtils";
 export * from "./customerLicenses/convertCustomerLicense/customerLicenseToGranted";
 export * from "./customerLicenses/convertCustomerLicense/customerLicenseToUsage";
 export * from "./customerLicenses/findCustomerLicense/findCustomerLicenseByLinkId";
+export * from "./customerLicenses/inheritParentCustomerProductProperties";
 export * from "./featureOptionUtils/findFeatureOptions";
 export * from "./featureOptionUtils/index";
 export * from "./filterCusProductUtils";

@@ -3,7 +3,10 @@ import { BillingVersion } from "@models/billingModels/context/billingContext.js"
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
 import { CustomerSchema } from "../cusModels/cusModels.js";
-import { FullCustomerLicenseSchema } from "../licenseModels/fullCustomerLicense.js";
+import {
+	DbCustomerLicenseSchema,
+	FullCustomerLicenseSchema,
+} from "../licenseModels/fullCustomerLicense.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { FullCustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
@@ -75,6 +78,16 @@ export const CusProductSchema = z.object({
 	// Seat rows anchor to their pool's stable link (customer_licenses.link_id);
 	// successor pool rows copy the link, so transitions never touch seats.
 	customer_license_link_id: z.string().nullish(),
+	// Seat rows only: the pool row this seat is anchored to, plus the pool
+	// parent's lifecycle snapshot (fetched status-filter-free at subject read).
+	parent_customer_license: DbCustomerLicenseSchema.nullish(),
+	parent_customer_product: z
+		.object({
+			status: z.enum(CusProductStatus),
+			subscription_ids: z.array(z.string()).nullable(),
+			canceled_at: z.number().nullable(),
+		})
+		.nullish(),
 	// When the seat was released back to its pool (entity unlinked).
 	released_at: z.number().nullish(),
 

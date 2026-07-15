@@ -32,10 +32,23 @@ export type SubjectCustomerLicenseRow = {
 	product: FullProductWithoutLicenses;
 };
 
+/** Parent lifecycle fields a seat inherits, fetched status-filter-free. */
+export type ParentCustomerProductLifecycle = Pick<
+	DbCustomerProduct,
+	"status" | "subscription_ids" | "canceled_at"
+>;
+
+/** Seat rows carry their anchoring pool row + the parent's lifecycle
+ * snapshot; null on non-seat rows. */
+export type CustomerProductRow = DbCustomerProduct & {
+	parent_customer_license?: DbCustomerLicense | null;
+	parent_customer_product?: ParentCustomerProductLifecycle | null;
+};
+
 /** Raw row shape returned by the getFullSubjectQuery SQL query. */
 export type SubjectQueryRow = {
 	customer: DbCustomer;
-	customer_products: DbCustomerProduct[];
+	customer_products: CustomerProductRow[];
 	customer_entitlements: DbCustomerEntitlement[];
 	customer_prices: DbCustomerPrice[];
 	customer_licenses: SubjectCustomerLicenseRow[];
