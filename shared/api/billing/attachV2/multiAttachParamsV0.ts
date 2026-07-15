@@ -64,6 +64,11 @@ export const MultiAttachParamsV0Schema = z.object({
 			"Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.",
 	}),
 
+	currency: z.string().optional().meta({
+		description:
+			"Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
+	}),
+
 	invoice_mode: InvoiceModeParamsSchema.optional().meta({
 		description:
 			"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.",

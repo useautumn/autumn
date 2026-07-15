@@ -48,7 +48,7 @@ export async function multiAttach({
 		redirectMode: params.redirect_mode,
 	});
 
-	handleMultiAttachCurrencyErrors({ ctx, billingContext });
+	handleMultiAttachCurrencyErrors({ ctx, billingContext, params });
 
 	// 2b. Log context
 	logMultiAttachContext({ ctx, billingContext });
