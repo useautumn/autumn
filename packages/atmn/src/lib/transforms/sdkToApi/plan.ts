@@ -1,5 +1,11 @@
 import type { Plan, PlanItem } from "../../../compose/models/index.js";
 
+export interface ApiPlanLicenseParams {
+	license_plan_id: string;
+	version?: number;
+	included: number;
+}
+
 /**
  * API plan format expected by the server's CreatePlanParams schema
  */
@@ -21,6 +27,7 @@ export interface ApiPlanParams {
 		card_required: boolean;
 	};
 	billing_controls?: Plan["billingControls"];
+	licenses: ApiPlanLicenseParams[];
 }
 
 export interface ApiPlanItemParams {
@@ -165,6 +172,11 @@ export function transformPlanToApi(plan: Plan): ApiPlanParams {
 	const result: ApiPlanParams = {
 		id: plan.id,
 		name: plan.name,
+		licenses: (plan.licenses ?? []).map((license) => ({
+			license_plan_id: license.licensePlanId,
+			...(license.version !== undefined ? { version: license.version } : {}),
+			included: license.included ?? 0,
+		})),
 	};
 
 	if (plan.description !== undefined) {

@@ -7,7 +7,10 @@ import type {
 } from "@autumn/shared";
 import { ProductAlreadyExistsError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import {
+	applyPreparedPlanLicenseSync,
+	preparePlanLicenseSync,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
 	handleNewFreeTrial,
@@ -16,6 +19,7 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
+import { buildFullProductFromV2 } from "@/internal/products/productUtils/productV2Utils/buildFullProductFromV2.js";
 import {
 	constructProduct,
 	initProductInStripe,
@@ -48,15 +52,23 @@ export const createProduct = async ({
 		body: data,
 	});
 
-	const product = await ProductService.insert({
-		db,
-		product: constructProduct({
-			productData: data,
-			orgId: org.id,
-			env,
-			baseInternalProductId: data.base_internal_product_id,
-		}),
+	const product = constructProduct({
+		productData: data,
+		orgId: org.id,
+		env,
+		baseInternalProductId: data.base_internal_product_id,
 	});
+	const preparedLicenses = await preparePlanLicenseSync({
+		ctx,
+		parentProduct: buildFullProductFromV2({
+			product: { ...product, items: data.items ?? [] },
+			base: product,
+			org,
+			features,
+		}),
+		licenses: data.licenses,
+	});
+	await ProductService.insert({ db, product });
 
 	const { items, free_trial } = data;
 
@@ -107,11 +119,13 @@ export const createProduct = async ({
 		free_trial: newFreeTrial,
 	};
 
-	await syncPlanLicenses({
-		ctx,
-		parentProduct: newFullProduct,
-		licenses: data.licenses,
-	});
+	if (preparedLicenses) {
+		await applyPreparedPlanLicenseSync({
+			ctx,
+			prepared: preparedLicenses,
+			parentInternalProductId: newFullProduct.internal_id,
+		});
+	}
 
 	if (data.create_in_stripe !== false) {
 		await initProductInStripe({

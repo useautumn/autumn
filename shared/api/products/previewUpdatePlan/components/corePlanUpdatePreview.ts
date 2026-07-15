@@ -1,8 +1,9 @@
-import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import { DiffedCustomizePlanV1Schema } from "@utils/planV1Utils/diff/diffPlanV1.js";
 import { z } from "zod/v4";
+import { ApiPlanV1Schema } from "../../apiPlanV1.js";
 import {
 	PlanUpdatePreviewItemChangeSchema,
+	PlanUpdatePreviewLicenseChangeSchema,
 	PlanUpdatePreviewPriceChangeSchema,
 } from "./planUpdatePreviewChanges.js";
 
@@ -41,8 +42,12 @@ export const CorePlanUpdatePreviewSchema = z.object({
 	item_changes: z.array(PlanUpdatePreviewItemChangeSchema).default([]).meta({
 		description: "Items that would be added to or removed from this plan.",
 	}),
+	license_changes: z
+		.array(PlanUpdatePreviewLicenseChangeSchema)
+		.default([])
+		.meta({
+			description: "License links that would be created, updated, or removed.",
+		}),
 });
 
-export type CorePlanUpdatePreview = z.infer<
-	typeof CorePlanUpdatePreviewSchema
->;
+export type CorePlanUpdatePreview = z.infer<typeof CorePlanUpdatePreviewSchema>;

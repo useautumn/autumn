@@ -8,6 +8,10 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	previewPlanLicenseSync,
+	validatePlanLicenseUpdate,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
 import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
 import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
@@ -66,6 +70,13 @@ export const buildPlanUpdatePreview = async ({
 		updates: data,
 		hasCustomers,
 	});
+	const licensePreview = await previewPlanLicenseSync({
+		ctx,
+		parentProduct: incomingFullProduct,
+		licenses: data.licenses,
+		newParentVersion: versionable,
+	});
+	previewPlan.licenses = licensePreview.licenses;
 	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
 	const settingsPatch = getVariantSettingsPatch({
 		from: currentPlan,
@@ -114,6 +125,7 @@ export const buildPlanUpdatePreview = async ({
 			customerCount,
 			versionable,
 		}),
+		license_changes: licensePreview.changes,
 		variants,
 		other_versions: otherVersions,
 	});
@@ -126,6 +138,10 @@ export const previewUpdatePlan = async ({
 	ctx: AutumnContext;
 	data: PreviewUpdatePlanParamsV2;
 }): Promise<PlanUpdatePreview> => {
+	validatePlanLicenseUpdate({
+		allVersions: data.all_versions,
+		licenses: data.licenses,
+	});
 	const baseFullProduct = await getPreviewTargetProduct({
 		ctx,
 		planId: data.plan_id,

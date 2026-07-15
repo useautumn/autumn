@@ -13,7 +13,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
-import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import {
+	applyPreparedPlanLicenseSync,
+	validatePlanLicenseUpdate,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
@@ -105,6 +108,10 @@ export const updateProduct = async ({
 	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
 	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
+	validatePlanLicenseUpdate({
+		allVersions: all_versions,
+		licenses: productUpdates.licenses,
+	});
 
 	if (force_version && disable_version) {
 		throw new RecaseError({
@@ -224,9 +231,11 @@ export const updateProduct = async ({
 			? ((productUpdates.free_trial as FreeTrial | undefined) ?? undefined)
 			: (curProductV2.free_trial ?? undefined);
 
+	const productFields = { ...productUpdates };
+	delete productFields.licenses;
 	const newProductV2: ProductV2 = {
 		...curProductV2,
-		...productUpdates,
+		...productFields,
 		group: productUpdates.group || curProductV2.group || "",
 		items: productUpdates.items ?? curProductV2.items,
 		free_trial: newFreeTrial,
@@ -260,26 +269,6 @@ export const updateProduct = async ({
 		curProduct: fullProduct,
 	});
 
-	// Guard license links against the new item state before any write, so an
-	// in-place interval change can't silently invalidate a link (the versioning
-	// path validates the same way inside handleVersionProductV2).
-	await validateProductLicenseLinks({
-		ctx,
-		fromInternalProductId: fullProduct.internal_id,
-		newProductV2,
-		baseProduct: fullProduct,
-		org,
-		features,
-	});
-
-	// Sync the plan's catalog license links before any versioning branch, so a
-	// new version carries the updated links forward via copyPlanLicensesToNewVersion.
-	await syncPlanLicenses({
-		ctx,
-		parentProduct: fullProduct,
-		licenses: productUpdates.licenses,
-	});
-
 	const itemsExist = notNullish(productUpdates.items);
 	const customerProductExists = customerUsage.hasAnyCustomerProducts;
 	const versionableCustomerProductExists =
@@ -287,37 +276,52 @@ export const updateProduct = async ({
 	const freeTrialProvided = "free_trial" in productUpdates;
 	const billingControlsProvided = "billing_controls" in productUpdates;
 
-	// Billing controls are a global setting: changing only them versions the
-	// product without going through the item/detail update paths. Returns false
-	// if anything else changed so those paths still run.
-	const isBillingControlsOnlyChange = () => {
-		const same = productsAreSame({ newProductV2, curProductV2, features });
-		return (
-			!same.billingControlsSame &&
-			same.itemsSame &&
-			same.freeTrialsSame &&
-			same.detailsSame &&
-			same.configSame &&
-			same.optionsSame &&
-			same.metadataSame
-		);
-	};
-
-	if (
+	const same = productsAreSame({ newProductV2, curProductV2, features });
+	const billingControlsOnlyChanged =
+		billingControlsProvided &&
+		!same.billingControlsSame &&
+		same.itemsSame &&
+		same.freeTrialsSame &&
+		same.detailsSame &&
+		same.configSame &&
+		same.optionsSame &&
+		same.metadataSame;
+	const productVersioningEligible =
 		versionableCustomerProductExists &&
 		!effectiveDisableVersion &&
+		(itemsExist || freeTrialProvided);
+	const productChanged = !same.itemsSame || !same.freeTrialsSame;
+	const billingControlsWillVersion =
 		!force_version &&
-		billingControlsProvided &&
-		isBillingControlsOnlyChange()
-	) {
-		const newProduct = await handleVersionProductV2({
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		billingControlsOnlyChanged;
+	const productWillVersion = productVersioningEligible && productChanged;
+	const willVersion =
+		force_version || billingControlsWillVersion || productWillVersion;
+	const preparedLicenses = await validateProductLicenseLinks({
+		ctx,
+		fromInternalProductId: fullProduct.internal_id,
+		newProductV2,
+		baseProduct: fullProduct,
+		org,
+		features,
+		licenses: productUpdates.licenses,
+		newParentVersion: willVersion,
+	});
+	const createVersion = () =>
+		handleVersionProductV2({
 			ctx,
-			newProductV2: newProductV2,
+			newProductV2,
 			latestProduct: fullProduct,
 			org,
 			env,
 			baseInternalProductId: nextBaseInternalProductId,
+			preparedPlanLicenseSync: preparedLicenses,
 		});
+
+	if (billingControlsWillVersion) {
+		const newProduct = await createVersion();
 		const latestBase = await ProductService.getFull({
 			db,
 			idOrInternalId: newProduct.id,
@@ -338,6 +342,9 @@ export const updateProduct = async ({
 		rewardPrograms,
 		logger: ctx.logger,
 	});
+	if (preparedLicenses && !willVersion) {
+		await applyPreparedPlanLicenseSync({ ctx, prepared: preparedLicenses });
+	}
 
 	if (notNullish(productUpdates.metadata)) {
 		await productRepo.updateMetadataByExternalId({
@@ -352,14 +359,7 @@ export const updateProduct = async ({
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	if (force_version) {
-		const newProduct = await handleVersionProductV2({
-			ctx,
-			newProductV2: newProductV2,
-			latestProduct: fullProduct,
-			org,
-			env,
-			baseInternalProductId: nextBaseInternalProductId,
-		});
+		const newProduct = await createVersion();
 		const latestBase = await ProductService.getFull({
 			db,
 			idOrInternalId: newProduct.id,
@@ -370,28 +370,9 @@ export const updateProduct = async ({
 		return newProduct;
 	}
 
-	if (
-		versionableCustomerProductExists &&
-		!effectiveDisableVersion &&
-		(itemsExist || freeTrialProvided)
-	) {
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: newProductV2,
-			curProductV1: fullProduct,
-			features,
-		});
-
-		const productSame = itemsSame && freeTrialsSame;
-
-		if (!productSame) {
-			const newProduct = await handleVersionProductV2({
-				ctx,
-				newProductV2: newProductV2,
-				latestProduct: fullProduct,
-				org,
-				env,
-				baseInternalProductId: nextBaseInternalProductId,
-			});
+	if (productVersioningEligible) {
+		if (productWillVersion) {
+			const newProduct = await createVersion();
 
 			const latestBase = await ProductService.getFull({
 				db,

@@ -66,6 +66,13 @@ export const planTransformer = createTransformer<ApiPlan, BasePlan>({
 			hasBillingControls(api.billing_controls)
 				? api.billing_controls
 				: undefined,
+
+		licenses: (api) =>
+			api.licenses?.map((license) => ({
+				licensePlanId: license.license_plan_id,
+				version: license.version,
+				included: license.included,
+			})),
 	},
 });
 

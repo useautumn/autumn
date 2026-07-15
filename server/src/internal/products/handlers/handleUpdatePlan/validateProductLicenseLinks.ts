@@ -1,43 +1,14 @@
 import type {
 	Feature,
-	FullProduct,
 	Organization,
+	PlanLicenseParams,
 	Product,
 	ProductV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validateCopiedPlanLicenses } from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
-import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
-import { convertProductV2ToV1 } from "@/internal/products/productUtils/productV2Utils/convertProductV2ToV1.js";
-
-/** The product's post-edit item state as an in-memory FullProduct, so link
- * rules can be checked before anything is persisted. */
-export const buildFullProductFromV2 = ({
-	newProductV2,
-	baseProduct,
-	org,
-	features,
-}: {
-	newProductV2: ProductV2;
-	baseProduct: Product;
-	org: Organization;
-	features: Feature[];
-}): FullProduct => {
-	const { prices, entitlements } = convertProductV2ToV1({
-		productV2: newProductV2,
-		orgId: org.id,
-		features,
-	});
-	return {
-		...baseProduct,
-		prices,
-		entitlements: getEntsWithFeature({
-			ents: Object.values(entitlements),
-			features,
-		}),
-		free_trial: null,
-	};
-};
+import { preparePlanLicenseSync } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { buildFullProductFromV2 } from "@/internal/products/productUtils/productV2Utils/buildFullProductFromV2.js";
 
 /**
  * Parent-side link guard: the plan's outgoing license links must still satisfy
@@ -52,6 +23,8 @@ export const validateProductLicenseLinks = async ({
 	baseProduct,
 	org,
 	features,
+	licenses,
+	newParentVersion = false,
 }: {
 	ctx: AutumnContext;
 	fromInternalProductId: string;
@@ -59,17 +32,30 @@ export const validateProductLicenseLinks = async ({
 	baseProduct: Product;
 	org: Organization;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
+	newParentVersion?: boolean;
 }) => {
 	const newFullProduct = buildFullProductFromV2({
-		newProductV2,
-		baseProduct,
+		product: newProductV2,
+		base: baseProduct,
 		org,
 		features,
 	});
+
+	if (licenses !== undefined) {
+		return preparePlanLicenseSync({
+			ctx,
+			parentProduct: newFullProduct,
+			licenses,
+			fromInternalProductId,
+			newParentVersion,
+		});
+	}
 
 	await validateCopiedPlanLicenses({
 		ctx,
 		fromInternalProductId,
 		newParentProduct: newFullProduct,
 	});
+	return undefined;
 };

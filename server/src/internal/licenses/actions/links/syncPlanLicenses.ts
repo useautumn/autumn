@@ -1,12 +1,16 @@
 import {
 	ErrCode,
 	type FullProduct,
+	findDuplicate,
 	type PlanLicenseParams,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getFullLicenseProduct } from "../../licenseUtils.js";
+import {
+	getFullLicenseProduct,
+	toApiPlanLicenses,
+} from "../../licenseUtils.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
@@ -19,31 +23,99 @@ type ResolvedLink = {
 	prepaidOnly: boolean;
 };
 
-/** Resolves one incoming link entry against the license product and validates
- * it — a pure read step before the writes. */
+export type PreparedPlanLicenseSync = {
+	parentProduct: FullProduct;
+	resolved: ResolvedLink[];
+	removed: Awaited<
+		ReturnType<typeof planLicenseRepo.listCatalogByParentInternalProductIds>
+	>;
+};
+
+export const validatePlanLicenseUpdate = ({
+	allVersions,
+	licenses,
+}: {
+	allVersions?: boolean;
+	licenses?: PlanLicenseParams[];
+}) => {
+	if (allVersions && licenses !== undefined) {
+		throw new RecaseError({
+			message: "Updating licenses across all plan versions is not supported.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
+export const previewPlanLicenseSync = async (
+	args: Parameters<typeof preparePlanLicenseSync>[0],
+) => {
+	const previous = toApiPlanLicenses(args.parentProduct.licenses ?? []);
+	const prepared = await preparePlanLicenseSync(args);
+	const current = prepared
+		? prepared.resolved.map((license) => ({
+				license_plan_id: license.licenseProduct.id,
+				version: license.licenseProduct.version,
+				included: license.included,
+				prepaid_only: license.prepaidOnly,
+			}))
+		: previous;
+	const before = new Map(
+		previous.map((license) => [license.license_plan_id, license]),
+	);
+	const after = new Map(
+		current.map((license) => [license.license_plan_id, license]),
+	);
+	const changes = [...new Set([...before.keys(), ...after.keys()])].flatMap(
+		(licensePlanId) => {
+			const oldLicense = before.get(licensePlanId) ?? null;
+			const newLicense = after.get(licensePlanId) ?? null;
+			if (JSON.stringify(oldLicense) === JSON.stringify(newLicense)) return [];
+			return [
+				{
+					action: oldLicense ? (newLicense ? "update" : "remove") : "create",
+					license_plan_id: licensePlanId,
+				} as const,
+			];
+		},
+	);
+	return { licenses: current, changes };
+};
+
+/** Resolves and validates one link without writing it. */
 const resolveLink = async ({
 	ctx,
 	parentProduct,
 	entry,
+	licenseProducts,
 	pinnedInternalIdByPublicId,
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
 	entry: PlanLicenseParams;
+	licenseProducts?: FullProduct[];
 	pinnedInternalIdByPublicId: Map<string, string>;
 }): Promise<ResolvedLink> => {
-	// An explicit entry.version pins the link to that version of the license
-	// plan (the manual re-link after versioning it). Otherwise existing links
-	// keep their pinned version and only new links resolve to latest.
-	const licenseProduct = await getFullLicenseProduct({
-		ctx,
-		idOrInternalId:
-			entry.version !== undefined
-				? entry.license_plan_id
-				: (pinnedInternalIdByPublicId.get(entry.license_plan_id) ??
-					entry.license_plan_id),
-		version: entry.version,
-	});
+	const pinnedInternalId =
+		entry.version === undefined
+			? pinnedInternalIdByPublicId.get(entry.license_plan_id)
+			: undefined;
+	const virtualCandidates = licenseProducts
+		?.filter(
+			(product) =>
+				product.id === entry.license_plan_id &&
+				(entry.version === undefined || product.version === entry.version),
+		)
+		.sort((a, b) => b.version - a.version);
+	const licenseProduct =
+		(pinnedInternalId
+			? await getFullLicenseProduct({ ctx, idOrInternalId: pinnedInternalId })
+			: virtualCandidates?.[0]) ??
+		(await getFullLicenseProduct({
+			ctx,
+			idOrInternalId: entry.license_plan_id,
+			version: entry.version,
+		}));
 
 	validateLicenseLink({
 		parentProduct,
@@ -60,8 +132,7 @@ const resolveLink = async ({
 	};
 };
 
-/** One-to-one ownership guard: a license plan may be offered by only one
- * parent plan lineage. Links held by any version of another plan block it. */
+/** A license plan may be offered by only one parent plan lineage. */
 const assertLicenseNotOwnedElsewhere = async ({
 	ctx,
 	parentProduct,
@@ -88,8 +159,7 @@ const assertLicenseNotOwnedElsewhere = async ({
 	}
 };
 
-/** Guards a link removal or capacity reduction against active assignments —
- * a plan cannot drop below what customers are already using. */
+/** A plan cannot drop below what customers are already using. */
 const assertCapacityAllowed = async ({
 	ctx,
 	parentInternalProductId,
@@ -117,42 +187,57 @@ const assertCapacityAllowed = async ({
 	}
 };
 
-/**
- * Declaratively syncs a plan's catalog `licenses`: the array is the complete
- * set — links absent from it are removed (guarded against active
- * assignments), present ones are upserted, and entries carrying `items` have
- * them applied to the license plan itself. No-op when `licenses` is undefined
- * (the field was not part of the update).
- */
-export const syncPlanLicenses = async ({
+/** Resolves and validates the complete desired license list without writing. */
+export const preparePlanLicenseSync = async ({
 	ctx,
 	parentProduct,
 	licenses,
+	fromInternalProductId = parentProduct.internal_id,
+	newParentVersion = false,
+	licenseProducts,
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
 	licenses?: PlanLicenseParams[];
-}) => {
-	if (licenses === undefined) return;
+	fromInternalProductId?: string;
+	newParentVersion?: boolean;
+	licenseProducts?: FullProduct[];
+}): Promise<PreparedPlanLicenseSync | undefined> => {
+	if (licenses === undefined) return undefined;
+	const duplicate = findDuplicate(
+		licenses.map((license) => license.license_plan_id),
+	);
+	if (duplicate) {
+		throw new RecaseError({
+			message: `Duplicate license ${duplicate} in licenses`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
-	const existingLinks =
+	const sourceLinks =
 		await planLicenseRepo.listCatalogByParentInternalProductIds({
 			db: ctx.db,
-			parentInternalProductIds: [parentProduct.internal_id],
+			parentInternalProductIds: [fromInternalProductId],
 		});
 	const existingLinkProducts = await planLicenseRepo.listProductsByInternalIds({
 		db: ctx.db,
-		internalProductIds: existingLinks.map(
+		internalProductIds: sourceLinks.map(
 			(link) => link.license_internal_product_id,
 		),
 	});
 	const pinnedInternalIdByPublicId = new Map(
 		existingLinkProducts.map((product) => [product.id, product.internal_id]),
 	);
-
 	const resolved = await Promise.all(
 		licenses.map((entry) =>
-			resolveLink({ ctx, parentProduct, entry, pinnedInternalIdByPublicId }),
+			resolveLink({
+				ctx,
+				parentProduct,
+				entry,
+				licenseProducts,
+				pinnedInternalIdByPublicId,
+			}),
 		),
 	);
 	const newLinks = resolved.filter(
@@ -172,6 +257,7 @@ export const syncPlanLicenses = async ({
 	);
 
 	// Removals + capacity reductions must clear the active-assignment guard.
+	const existingLinks = newParentVersion ? [] : sourceLinks;
 	const removed = existingLinks.filter(
 		(link) => !keepInternalIds.has(link.license_internal_product_id),
 	);
@@ -209,6 +295,20 @@ export const syncPlanLicenses = async ({
 		),
 	);
 
+	return { parentProduct, resolved, removed };
+};
+
+export const applyPreparedPlanLicenseSync = async ({
+	ctx,
+	prepared,
+	parentInternalProductId = prepared.parentProduct.internal_id,
+}: {
+	ctx: AutumnContext;
+	prepared: PreparedPlanLicenseSync;
+	parentInternalProductId?: string;
+}) => {
+	const { parentProduct, resolved, removed } = prepared;
+
 	logLicenseAction({
 		ctx,
 		action: "link",
@@ -224,7 +324,7 @@ export const syncPlanLicenses = async ({
 		for (const link of resolved) {
 			await planLicenseRepo.upsert({
 				db: txDb,
-				parentInternalProductId: parentProduct.internal_id,
+				parentInternalProductId,
 				licenseInternalProductId: link.licenseProduct.internal_id,
 				included: link.included,
 				prepaidOnly: link.prepaidOnly,
@@ -238,4 +338,13 @@ export const syncPlanLicenses = async ({
 			});
 		}
 	});
+};
+
+export const syncPlanLicenses = async (args: {
+	ctx: AutumnContext;
+	parentProduct: FullProduct;
+	licenses?: PlanLicenseParams[];
+}) => {
+	const prepared = await preparePlanLicenseSync(args);
+	if (prepared) await applyPreparedPlanLicenseSync({ ctx: args.ctx, prepared });
 };

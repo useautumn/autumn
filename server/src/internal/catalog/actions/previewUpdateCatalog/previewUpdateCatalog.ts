@@ -1,7 +1,7 @@
 import type {
 	CatalogMigrationPreview,
-	CatalogPreviewUpdateResponse,
 	CatalogPlanPreview,
+	CatalogPreviewUpdateResponse,
 	CatalogUpdateParams,
 	FullProduct,
 	PlanUpdatePreview,
@@ -10,29 +10,30 @@ import {
 	buildAllVersionsUpdateMigrationDraft,
 	buildCombinedVariantMigrationDraft,
 	PlanUpdatePreviewSchema,
-	planUpdatePreviewHasDiff,
 	planDiffHasBillingChanges,
+	planUpdatePreviewHasDiff,
+	scopeExpandForCtx,
 } from "@autumn/shared";
-import { scopeExpandForCtx } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { preflightCatalogPlans } from "../catalogPlanPreflight.js";
 import {
 	deriveReplaceFeatureIds,
 	deriveReplacePlanIds,
 } from "../deriveReplaceRemovals.js";
 import { sortRemoveFeatureIds } from "../featureRemovalOrder.js";
 import {
+	validateCatalogVariantUpdates,
+	validateCatalogVariantVersionTargets,
+} from "../validateCatalogVariantUpdates.js";
+import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
+import {
 	previewFeature,
 	previewRemoveFeature,
 	previewSkippedFeature,
 } from "./previewFeature.js";
-import { previewCatalogPlanUpdate } from "./previewCatalogPlanUpdate.js";
 import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
-import {
-	validateCatalogVariantUpdates,
-	validateCatalogVariantVersionTargets,
-} from "../validateCatalogVariantUpdates.js";
 
 const productUsesFeature = ({
 	product,
@@ -203,7 +204,13 @@ const previewMigrationForInPlaceUpdate = async ({
 
 	const targets = [
 		...(preview.versionable
-			? [{ id: current.id, version: current.version, customize: preview.customize }]
+			? [
+					{
+						id: current.id,
+						version: current.version,
+						customize: preview.customize,
+					},
+				]
 			: []),
 		...preview.variants
 			.filter((variant) => variant.will_apply && variant.has_customers)
@@ -262,11 +269,10 @@ export const previewUpdateCatalog = async ({
 		customerCountByInternalId,
 		proposedFeatures,
 		planCtx,
-	} =
-		await setupPreviewCatalogContext({
-			ctx,
-			params: { ...params, plans: activePlans, features: activeFeatures },
-		});
+	} = await setupPreviewCatalogContext({
+		ctx,
+		params: { ...params, plans: activePlans, features: activeFeatures },
+	});
 	validateCatalogVariantVersionTargets({
 		params: { ...params, plans: activePlans },
 		products,
@@ -342,6 +348,11 @@ export const previewUpdateCatalog = async ({
 			),
 		),
 	]);
+	await preflightCatalogPlans({
+		ctx: planChangesCtx,
+		plans: activePlans,
+		previews: planResults,
+	});
 	const removePlanResults = missingProducts.map((product) =>
 		previewRemovePlan({
 			product,
