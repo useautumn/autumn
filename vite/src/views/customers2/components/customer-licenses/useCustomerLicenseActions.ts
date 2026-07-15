@@ -4,7 +4,7 @@ import { runWithErrorToast } from "@/views/products/plan/components/plan-license
 
 /**
  * Wraps the pools query with entity-scoped assign/unassign handlers, toasting
- * backend errors. `parent_plan_id` targets the exact pool the user acted on.
+ * backend errors.
  */
 export const useCustomerLicenseActions = ({
 	customerId,
@@ -25,9 +25,8 @@ export const useCustomerLicenseActions = ({
 			action: () =>
 				assign.mutateAsync({
 					customer_id: customerId,
-					entity_id: entityId,
 					plan_id: pool.license_plan_id,
-					parent_plan_id: pool.parent_plan_id,
+					entities: [{ entity_id: entityId }],
 				}),
 			fallbackMessage: "Failed to assign license",
 		});

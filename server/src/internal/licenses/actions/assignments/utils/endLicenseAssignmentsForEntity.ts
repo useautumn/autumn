@@ -32,17 +32,16 @@ export const endLicenseAssignmentsForEntity = async ({
 		customerProduct: assignment as unknown as FullCusProduct,
 		updates: { status: CusProductStatus.Expired, ended_at: endedAt },
 	}));
-	const releaseOps = assignments
-		.filter((assignment) => assignment.license_parent_customer_product_id)
-		.map((assignment) => ({
-			op: "release" as const,
-			internalCustomerId: assignment.internal_customer_id,
-			parentCustomerProductId:
-				assignment.license_parent_customer_product_id as string,
-			licenseInternalProductId: assignment.internal_product_id,
-			granted: 0,
-			customerLicenseLinkId: assignment.customer_license_link_id,
-		}));
+	const customerLicenseUpdates = assignments.flatMap((assignment) =>
+		assignment.customer_license_link_id
+			? [
+					{
+						customerLicenseLinkId: assignment.customer_license_link_id,
+						remainingChange: 1,
+					},
+				]
+			: [],
+	);
 
 	await executeAutumnBillingPlan({
 		ctx,
@@ -50,7 +49,7 @@ export const endLicenseAssignmentsForEntity = async ({
 			customerId: customer?.id ?? assignments[0].internal_customer_id,
 			insertCustomerProducts: [],
 			updateCustomerProducts: endAssignments,
-			licenseOps: releaseOps,
+			customerLicenseUpdates,
 		},
 	});
 };

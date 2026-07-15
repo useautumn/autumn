@@ -1,10 +1,10 @@
-import type { LicenseAttachParams } from "@autumn/shared";
+import type { AttachLicenseParamsV0 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { serializeLicenseAssignment } from "@/internal/licenses/licenseResponseUtils.js";
-import { computeLicenseAssignmentPlan } from "./compute/computeLicenseAssignmentPlan.js";
+import { computeAttachLicensePlan } from "./compute/computeAttachLicensePlan.js";
+import { handleAttachLicenseErrors } from "./errors/handleAttachLicenseErrors.js";
 import { logLicenseAssignmentPlan } from "./logs/logLicenseAssignmentPlan.js";
-import { setupLicenseAssignmentContext } from "./setup/setupLicenseAssignmentContext.js";
+import { setupAttachLicenseContext } from "./setup/setupAttachLicenseContext.js";
 
 export const attachLicense = async ({
 	ctx,
@@ -12,43 +12,34 @@ export const attachLicense = async ({
 	preview = false,
 }: {
 	ctx: AutumnContext;
-	params: LicenseAttachParams;
+	params: AttachLicenseParamsV0;
 	preview?: boolean;
 }) => {
 	// 1. Setup
-	const context = await setupLicenseAssignmentContext({ ctx, params });
+	const context = await setupAttachLicenseContext({ ctx, params });
+	const licensePlanId = context.customerLicense.planLicense.product.id;
 
-	// 2. Compute
-	const plan = computeLicenseAssignmentPlan({ context });
+	// 2. Errors
+	handleAttachLicenseErrors({ context });
+
+	// 3. Compute
+	const plan = computeAttachLicensePlan({ ctx, context });
 	logLicenseAssignmentPlan({ ctx, context, plan, preview });
 
-	if (plan.existing) {
-		const assignment = serializeLicenseAssignment({
-			assignment: plan.existing,
-			entityId: context.entity.id ?? context.entity.internal_id,
-			licenseProductId: context.licenseProduct.id,
-		});
-		return preview
-			? { customer_id: params.customer_id, intent: "none" as const, assignment }
-			: assignment;
-	}
 	if (preview) {
 		return {
 			customer_id: params.customer_id,
 			intent: "assign" as const,
-			parent_plan_id: plan.parent.product.id,
-			license_plan_id: params.plan_id,
+			parent_plan_id: context.parentCustomerProduct.product.id,
+			license_plan_id: licensePlanId,
 			available: plan.available,
 		};
 	}
 
-	// 3. Execute: capacity take + provision insert + license lifecycle
-	// (converge + cache) all run inside the shared billing plan executor
+	// 4. Execute: entity upserts + capacity take + provision inserts +
+	// license lifecycle (converge + cache) all run inside the shared executor
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
-	return serializeLicenseAssignment({
-		assignment: plan.provisioned,
-		entityId: context.entity.id ?? context.entity.internal_id,
-		licenseProductId: context.licenseProduct.id,
-	});
+	// Response shape is undecided; callers only get an acknowledgement.
+	return { success: true as const };
 };

@@ -1,9 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { logLicenseAction } from "@/internal/licenses/actions/logs/logLicenseAction.js";
-import type {
-	LicenseAssignmentContext,
-	LicenseAssignmentPlan,
-} from "../types.js";
+import type { AttachLicenseContext, AttachLicensePlan } from "../types.js";
 
 export const logLicenseAssignmentPlan = ({
 	ctx,
@@ -12,23 +9,20 @@ export const logLicenseAssignmentPlan = ({
 	preview,
 }: {
 	ctx: AutumnContext;
-	context: LicenseAssignmentContext;
-	plan: LicenseAssignmentPlan;
+	context: AttachLicenseContext;
+	plan: AttachLicensePlan;
 	preview: boolean;
 }) => {
-	const base = {
-		customer: context.fullCustomer.id ?? context.fullCustomer.internal_id,
-		entity: context.entity.id ?? context.entity.internal_id,
-	};
+	const { fullCustomer, parentCustomerProduct } = context;
 	logLicenseAction({
 		ctx,
 		action: preview ? "preview_attach" : "attach",
-		details: plan.existing
-			? { ...base, existing: plan.existing.id }
-			: {
-					...base,
-					parent: plan.parent.product.id,
-					available: plan.available,
-				},
+		details: {
+			customer: fullCustomer.id ?? fullCustomer.internal_id,
+			parent: parentCustomerProduct.product.id,
+			entities: context.entityParams.length,
+			creating: context.newEntityParams.length,
+			available: plan.available,
+		},
 	});
 };

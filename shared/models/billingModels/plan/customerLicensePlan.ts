@@ -28,19 +28,12 @@ export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema
 >;
 
-export const LicenseOpSchema = z.object({
-	op: z.enum(["take", "release"]),
-	internalCustomerId: z.string(),
-	parentCustomerProductId: z.string(),
-	licenseInternalProductId: z.string(),
-	// The plan_license the pool instantiates, stamped when the pool is upserted.
-	planLicenseId: z.string().optional(),
-	granted: z.number(),
-	entityId: z.string().optional(),
-	// take: the provisioned seat row to stamp with the pool link at execute time.
-	customerProductId: z.string().optional(),
-	// release: the seat's link anchor — survives plan transitions, the parent
-	// pair does not.
+/** An atomic capacity move on a pool: negative consumes (guarded at zero),
+ * positive releases (capped at granted). Takes key the pool row; releases key
+ * the seat's link anchor, which survives plan transitions. */
+export const CustomerLicenseUpdateSchema = z.object({
+	customerLicenseId: z.string().optional(),
 	customerLicenseLinkId: z.string().nullish(),
+	remainingChange: z.number(),
 });
-export type LicenseOp = z.infer<typeof LicenseOpSchema>;
+export type CustomerLicenseUpdate = z.infer<typeof CustomerLicenseUpdateSchema>;

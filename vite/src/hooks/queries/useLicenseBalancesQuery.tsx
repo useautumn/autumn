@@ -1,6 +1,6 @@
 import type {
 	ApiCustomerLicenseV0,
-	LicenseAttachParams,
+	AttachLicenseParamsV0,
 	UpdateLicenseParams,
 } from "@autumn/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -48,7 +48,7 @@ export const useLicenseBalancesQuery = ({
 		]);
 
 	const assign = useMutation({
-		mutationFn: async (params: LicenseAttachParams) => {
+		mutationFn: async (params: AttachLicenseParamsV0) => {
 			const { data } = await axiosInstance.post("/v1/licenses.attach", params);
 			return data;
 		},

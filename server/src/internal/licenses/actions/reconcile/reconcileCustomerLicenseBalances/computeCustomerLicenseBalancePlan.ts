@@ -25,7 +25,8 @@ export const computeCustomerLicenseBalancePlan = ({
 		const { planLicense } = customerLicense;
 		if (!planLicense) return [];
 
-		const granted = planLicense.included;
+		// granted = included + paid; paid_quantity is billing-owned input here.
+		const granted = planLicense.included + customerLicense.paid_quantity;
 		const remaining =
 			granted -
 			(context.seatCountByCustomerLicenseId.get(customerLicense.id) ?? 0);

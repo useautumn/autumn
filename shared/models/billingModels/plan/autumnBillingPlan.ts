@@ -7,6 +7,7 @@ import {
 	CusProductStatus,
 	EntitlementSchema,
 	EntityBalanceSchema,
+	EntitySchema,
 	FeatureOptionsSchema,
 	FreeTrialSchema,
 	FullCusProductSchema,
@@ -25,7 +26,7 @@ import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
 import {
 	CustomerLicenseTransitionSchema,
-	LicenseOpSchema,
+	CustomerLicenseUpdateSchema,
 } from "./customerLicensePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
@@ -78,6 +79,8 @@ export const PatchCustomerProductSchema = z.object({
 
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
+	// Inserted before customer products — provisioned rows may reference them.
+	insertEntities: z.array(EntitySchema).optional(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
 	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
@@ -108,7 +111,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
 	customLicenses: z.array(CustomLicenseChangeSchema).optional(),
-	licenseOps: z.array(LicenseOpSchema).optional(),
+	customerLicenseUpdates: z.array(CustomerLicenseUpdateSchema).optional(),
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)
 		.optional(),

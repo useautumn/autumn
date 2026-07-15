@@ -23,13 +23,6 @@ export const PlanLicenseSchema = z.object({
 	updated_at: z.number(),
 });
 
-export const LicenseAttachParamsSchema = z.object({
-	customer_id: z.string(),
-	entity_id: z.string(),
-	plan_id: z.string(),
-	parent_plan_id: z.string().optional(),
-});
-
 export const CustomizePlanLicenseSchema = z.object({
 	license_plan_id: z.string(),
 	included: z.number().int().min(0).optional(),
@@ -117,7 +110,6 @@ export type LicensePatchParams = {
 
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;
-export type LicenseAttachParams = z.infer<typeof LicenseAttachParamsSchema>;
 export type CustomizePlanLicense = z.infer<typeof CustomizePlanLicenseSchema>;
 export type UpdateLicenseParams = z.infer<typeof UpdateLicenseParamsSchema>;
 export type LicenseListAssignmentsParams = z.infer<

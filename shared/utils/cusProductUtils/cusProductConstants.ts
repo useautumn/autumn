@@ -25,5 +25,3 @@ export const ALL_STATUSES = [
 	CusProductStatus.Paused,
 	CusProductStatus.Expired,
 ];
-
-export const LICENSE_ASSIGNABLE_STATUSES = [CusProductStatus.Active];

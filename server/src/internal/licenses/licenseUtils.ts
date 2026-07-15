@@ -1,13 +1,6 @@
-import {
-	type CusProductStatus,
-	ErrCode,
-	type FullCusProduct,
-	LICENSE_ASSIGNABLE_STATUSES,
-	RecaseError,
-} from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { nullish } from "@/utils/genUtils.js";
 
 export const getFullLicenseProduct = async ({
 	ctx,
@@ -40,28 +33,6 @@ export const validateLicenseBillingMode = ({
 		});
 	}
 };
-
-type LicenseParentCandidate = Pick<
-	FullCusProduct,
-	"internal_entity_id" | "license_parent_customer_product_id" | "status"
->;
-
-const licenseAssignableStatuses = LICENSE_ASSIGNABLE_STATUSES;
-
-export const isLicenseAssignableStatus = ({
-	status,
-}: {
-	status: string | null;
-}) => licenseAssignableStatuses.includes(status as CusProductStatus);
-
-export const isLicenseAssignableParentCustomerProduct = ({
-	customerProduct,
-}: {
-	customerProduct: LicenseParentCandidate;
-}) =>
-	nullish(customerProduct.internal_entity_id) &&
-	nullish(customerProduct.license_parent_customer_product_id) &&
-	isLicenseAssignableStatus({ status: customerProduct.status });
 
 export const computeLicenseInventory = ({
 	included,

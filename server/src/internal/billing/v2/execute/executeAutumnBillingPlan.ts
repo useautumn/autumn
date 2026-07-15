@@ -1,11 +1,9 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
-import {
-	executeLicenseReleases,
-	executeLicenseTakes,
-} from "@/internal/billing/v2/execute/executeAutumnActions/executeLicenseOps";
+import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -89,11 +87,17 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	await executeLicenseTakes({
+	await executeCustomerLicenseUpdates({
 		ctx,
-		licenseOps: autumnBillingPlan.licenseOps,
-		insertCustomerProducts,
+		customerLicenseUpdates: autumnBillingPlan.customerLicenseUpdates,
 	});
+
+	if (autumnBillingPlan.insertEntities?.length) {
+		await EntityService.insert({
+			db,
+			data: autumnBillingPlan.insertEntities,
+		});
+	}
 
 	// 2. Insert new customer products
 	await insertNewCusProducts({
@@ -125,11 +129,6 @@ export const executeAutumnBillingPlan = async ({
 			updates: updates,
 		});
 	}
-
-	await executeLicenseReleases({
-		ctx,
-		licenseOps: autumnBillingPlan.licenseOps,
-	});
 
 	// 4. Delete scheduled customer product (e.g., when updating while canceling)
 	for (const deleteCustomerProduct of deleteCustomerProducts) {

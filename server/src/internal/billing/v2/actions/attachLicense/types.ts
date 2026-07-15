@@ -1,45 +1,29 @@
 import type {
+	AttachLicenseEntityParams,
 	AutumnBillingPlan,
-	DbCustomerProduct,
-	DbPlanLicense,
 	Entity,
 	FullCusProduct,
 	FullCustomer,
-	FullProduct,
+	FullCustomerLicense,
+	FullPlanLicense,
 } from "@autumn/shared";
-import type { DbLicenseAssignment } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 
-/** Everything the assignment resolves to — computed in setup so compute is a
- * pure plan assembly. Either an existing active assignment (idempotent), or a
- * fully resolved new assignment. */
-export type LicenseAssignmentResolution =
-	| { existing: DbLicenseAssignment }
-	| {
-			existing?: undefined;
-			parent: FullCusProduct;
-			licenseDefinition: DbPlanLicense;
-			effectiveProduct: FullProduct;
-			available: number;
-			provisioned: FullCusProduct;
-	  };
-
-export type LicenseAssignmentContext = {
+export type AttachLicenseContext = {
 	fullCustomer: FullCustomer;
-	entity: Entity;
-	licenseProduct: FullProduct;
-	customerLevelProduct?: DbCustomerProduct;
-	planId: string;
-	parentPlanId?: string;
-	resolution: LicenseAssignmentResolution;
+	parentCustomerProduct: FullCusProduct;
+	// Matched by the effective link's public product id, so planLicense is set.
+	customerLicense: FullCustomerLicense & { planLicense: FullPlanLicense };
+	currentEpochMs: number;
+	resetCycleAnchorMs: number | "now";
+	// The requested entities, split against the customer's existing ones —
+	// unmatched ones are created by the plan.
+	entityParams: AttachLicenseEntityParams[];
+	existingEntities: Entity[];
+	newEntityParams: AttachLicenseEntityParams[];
 };
 
-export type LicenseAssignmentPlan =
-	| { existing: DbLicenseAssignment }
-	| {
-			existing?: undefined;
-			parent: FullCusProduct;
-			licenseDefinition: DbPlanLicense;
-			available: number;
-			provisioned: FullCusProduct;
-			billingPlan: AutumnBillingPlan;
-	  };
+export type AttachLicensePlan = {
+	available: number;
+	assignments: { entity: Entity; customerProduct: FullCusProduct }[];
+	billingPlan: AutumnBillingPlan;
+};

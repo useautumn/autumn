@@ -161,6 +161,20 @@ export const isCustomerProductLicenseParent = (
 	);
 };
 
+type LicenseParentCandidate = Pick<
+	FullCusProduct,
+	"internal_entity_id" | "license_parent_customer_product_id" | "status"
+>;
+
+export const isLicenseAssignableParentCustomerProduct = ({
+	customerProduct,
+}: {
+	customerProduct: LicenseParentCandidate;
+}) =>
+	nullish(customerProduct.internal_entity_id) &&
+	nullish(customerProduct.license_parent_customer_product_id) &&
+	ACTIVE_STATUSES.includes(customerProduct.status as CusProductStatus);
+
 // ============================================================================
 // ENTITY CHECKS
 // ============================================================================

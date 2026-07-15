@@ -3,7 +3,7 @@ import {
 	type DbCustomerLicense,
 	type InsertCustomerLicense,
 } from "@autumn/shared";
-import { and, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, notInArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { listBillingPriceRows } from "./customerLicenseRepo/listBillingPriceRows.js";
@@ -148,25 +148,27 @@ const insertMany = async ({
 	await db.insert(customerLicenses).values(rows).onConflictDoNothing();
 };
 
-/** Atomically takes one assignment; rejected (returns undefined) when no
- * capacity remains. */
+/** Atomically takes `count` assignments; rejected (returns undefined) when
+ * capacity is insufficient. */
 const takeAssignment = async ({
 	db,
 	customerLicenseId,
+	count = 1,
 }: {
 	db: DrizzleCli;
 	customerLicenseId: string;
+	count?: number;
 }): Promise<DbCustomerLicense | undefined> => {
 	const [row] = await db
 		.update(customerLicenses)
 		.set({
-			remaining: sql`${customerLicenses.remaining} - 1`,
+			remaining: sql`${customerLicenses.remaining} - ${count}`,
 			updated_at: Date.now(),
 		})
 		.where(
 			and(
 				eq(customerLicenses.id, customerLicenseId),
-				gt(customerLicenses.remaining, 0),
+				gte(customerLicenses.remaining, count),
 			),
 		)
 		.returning();
