@@ -10,6 +10,7 @@ import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/uti
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
+import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
@@ -44,6 +45,10 @@ export const computeAttachPlan = ({
 		ctx,
 		attachBillingContext,
 		params,
+	});
+	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
+		ctx,
+		newCustomerProduct,
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
@@ -125,6 +130,7 @@ export const computeAttachPlan = ({
 			...oneOffPrepaidCarryOvers.customerEntitlements,
 		],
 		updateCustomerEntitlements,
+		oneOffPurchaseRebalance,
 	};
 
 	plan = finalizeAttachPlan({
