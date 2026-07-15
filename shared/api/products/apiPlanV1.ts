@@ -55,8 +55,7 @@ export const API_PLAN_V1_EXAMPLE = {
 const VariantCustomizeSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
-		add_licenses: true,
-		remove_licenses: true,
+		upsert_licenses: true,
 	}).strict(),
 	{ includeItems: false, includeLicenses: false },
 );

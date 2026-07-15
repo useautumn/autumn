@@ -47,20 +47,8 @@ export const getFullCustomerLicenses = async ({
 		JOIN customer_products cp ON cp.id = cl.parent_customer_product_id
 		JOIN products license_product
 			ON license_product.internal_id = cl.license_internal_product_id
-		LEFT JOIN LATERAL (
-			SELECT *
-			FROM plan_license
-			WHERE plan_license.license_internal_product_id = cl.license_internal_product_id
-				AND (
-					plan_license.parent_customer_product_id = cl.parent_customer_product_id
-					OR (
-						plan_license.parent_customer_product_id IS NULL
-						AND plan_license.parent_internal_product_id = cp.internal_product_id
-					)
-				)
-			ORDER BY plan_license.parent_customer_product_id NULLS LAST
-			LIMIT 1
-		) pl ON true
+		LEFT JOIN plan_license pl
+			ON pl.id = cl.plan_license_id
 		WHERE c.id = ${customerId}
 			AND c.org_id = ${orgId}
 			AND c.env = ${env}

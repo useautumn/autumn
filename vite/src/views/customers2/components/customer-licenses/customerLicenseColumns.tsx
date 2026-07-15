@@ -38,11 +38,10 @@ export const createCustomerLicenseColumns = ({
 		accessorKey: "availability",
 		size: 150,
 		cell: ({ row }: { row: Row<LicenseAssignmentRow> }) => {
-			const { inventory } = row.original.pool;
-			const total = inventory.included;
+			const { remaining, granted } = row.original.pool;
 			return (
 				<span className="text-tertiary-foreground">
-					{inventory.available} of {total} available
+					{remaining} of {granted} available
 				</span>
 			);
 		},

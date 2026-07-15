@@ -20,8 +20,7 @@ export enum StartingAfterDuration {
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		free_trial: true,
-		add_licenses: true,
-		remove_licenses: true,
+		upsert_licenses: true,
 		update_items: true,
 	}).strict(),
 	{

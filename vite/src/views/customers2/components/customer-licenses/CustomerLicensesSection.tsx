@@ -14,6 +14,7 @@ export function CustomerLicensesSection() {
 	const {
 		publicEntityId,
 		pools,
+		assignments,
 		isLoading,
 		attachLicense,
 		cancelLicenseAssignment,
@@ -23,20 +24,31 @@ export function CustomerLicensesSection() {
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
-	const rows = useMemo<LicenseAssignmentRow[]>(
+	const entityAssignments = useMemo(
 		() =>
-			pools.flatMap((pool) =>
-				pool.assignments
-					.filter((assignment) => assignment.entity_id === publicEntityId)
-					.map((assignment) => ({
-						id: assignment.assignment_id,
-						name: pool.license_plan_name,
-						started_at: assignment.started_at,
-						pool,
-					})),
+			assignments.filter(
+				(assignment) => assignment.entity_id === publicEntityId,
 			),
-		[pools, publicEntityId],
+		[assignments, publicEntityId],
 	);
+
+	const rows = useMemo<LicenseAssignmentRow[]>(() => {
+		const poolByLicensePlanId = new Map(
+			pools.map((pool) => [pool.license_plan_id, pool]),
+		);
+		return entityAssignments.flatMap((assignment) => {
+			const pool = poolByLicensePlanId.get(assignment.license_plan_id);
+			if (!pool) return [];
+			return [
+				{
+					id: assignment.id,
+					name: pool.license_plan_name,
+					started_at: assignment.started_at,
+					pool,
+				},
+			];
+		});
+	}, [pools, entityAssignments]);
 
 	const columns = useMemo(
 		() =>
@@ -78,7 +90,7 @@ export function CustomerLicensesSection() {
 					<Table.Actions>
 						<AssignLicenseButton
 							pools={pools}
-							entityId={publicEntityId}
+							entityAssignments={entityAssignments}
 							onAssign={attachLicense}
 							isAssigning={isAssigning}
 						/>

@@ -123,7 +123,7 @@ export function buildAttachRequestBody({
 	}
 
 	if (addLicenses !== null) {
-		body.add_licenses = addLicenses;
+		body.upsert_licenses = addLicenses;
 	}
 
 	if (version !== undefined) {

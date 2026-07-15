@@ -12,6 +12,7 @@ import {
 } from "@autumn/ui";
 import { CaretDownIcon, PlusIcon } from "@phosphor-icons/react";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import type { LicenseAssignment } from "@/hooks/queries/useLicenseBalancesQuery";
 
 /**
  * "Assign License" header action, mirroring Attach Plan: a dropdown of the
@@ -21,20 +22,23 @@ import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
  */
 export function AssignLicenseButton({
 	pools,
-	entityId,
+	entityAssignments,
 	onAssign,
 	isAssigning,
 }: {
 	pools: ApiCustomerLicenseV0[];
-	entityId: string;
+	/** The selected entity's active assignments. */
+	entityAssignments: LicenseAssignment[];
 	onAssign: (pool: ApiCustomerLicenseV0) => void;
 	isAssigning: boolean;
 }) {
 	const isAssignedToEntity = (pool: ApiCustomerLicenseV0) =>
-		pool.assignments.some((assignment) => assignment.entity_id === entityId);
+		entityAssignments.some(
+			(assignment) => assignment.license_plan_id === pool.license_plan_id,
+		);
 
 	const assignablePools = pools.filter(
-		(pool) => pool.inventory.available > 0 && !isAssignedToEntity(pool),
+		(pool) => pool.remaining > 0 && !isAssignedToEntity(pool),
 	);
 
 	// Swap only the plus icon for the spinner so the label keeps its width and
@@ -100,7 +104,7 @@ export function AssignLicenseButton({
 							{pool.license_plan_name}
 						</span>
 						<span className="text-xs text-tertiary-foreground">
-							{pool.inventory.available} available
+							{pool.remaining} available
 						</span>
 					</DropdownMenuItem>
 				))}

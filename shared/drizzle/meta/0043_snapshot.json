@@ -1,5 +1,5 @@
 {
-  "id": "bc546621-fccd-4fd8-94f3-2fe909ca5b6a",
+  "id": "30c32b6d-6523-4f2a-822a-23c1860486de",
   "prevId": "6e6a74d9-e762-4ea2-b733-58cb0c56aab1",
   "version": "7",
   "dialect": "postgresql",
@@ -2024,6 +2024,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "link_id": {
+          "name": "link_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "internal_customer_id": {
           "name": "internal_customer_id",
           "type": "text",
@@ -2042,6 +2048,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "plan_license_id": {
+          "name": "plan_license_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "granted": {
           "name": "granted",
           "type": "numeric",
@@ -2051,6 +2063,13 @@
         },
         "remaining": {
           "name": "remaining",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "paid_quantity": {
+          "name": "paid_quantity",
           "type": "numeric",
           "primaryKey": false,
           "notNull": true,
@@ -2072,6 +2091,21 @@
         }
       },
       "indexes": {
+        "idx_customer_licenses_plan_license": {
+          "name": "idx_customer_licenses_plan_license",
+          "columns": [
+            {
+              "expression": "plan_license_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
         "unique_customer_license": {
           "name": "unique_customer_license",
           "columns": [
@@ -2098,6 +2132,21 @@
           "columns": [
             {
               "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_licenses_link": {
+          "name": "idx_customer_licenses_link",
+          "columns": [
+            {
+              "expression": "link_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2147,6 +2196,19 @@
             "internal_id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "customer_licenses_plan_license_fkey": {
+          "name": "customer_licenses_plan_license_fkey",
+          "tableFrom": "customer_licenses",
+          "tableTo": "plan_license",
+          "columnsFrom": [
+            "plan_license_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2459,9 +2521,15 @@
           "notNull": true,
           "default": false
         },
-        "license_parent_customer_product_id": {
-          "name": "license_parent_customer_product_id",
+        "customer_license_link_id": {
+          "name": "customer_license_link_id",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "released_at": {
+          "name": "released_at",
+          "type": "numeric",
           "primaryKey": false,
           "notNull": false
         },
@@ -2665,27 +2733,77 @@
           "method": "btree",
           "with": {}
         },
-        "idx_customer_products_license_parent": {
-          "name": "idx_customer_products_license_parent",
+        "idx_customer_products_customer_license": {
+          "name": "idx_customer_products_customer_license",
           "columns": [
             {
-              "expression": "license_parent_customer_product_id",
+              "expression": "customer_license_link_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
-          "where": "\"customer_products\".\"license_parent_customer_product_id\" IS NOT NULL",
+          "where": "\"customer_products\".\"customer_license_link_id\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}
         },
-        "unique_active_license_assignment": {
-          "name": "unique_active_license_assignment",
+        "idx_customer_products_license_seat_order": {
+          "name": "idx_customer_products_license_seat_order",
           "columns": [
             {
-              "expression": "license_parent_customer_product_id",
+              "expression": "customer_license_link_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_products\".\"customer_license_link_id\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_products_unused_seats": {
+          "name": "idx_customer_products_unused_seats",
+          "columns": [
+            {
+              "expression": "customer_license_link_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "released_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_products\".\"customer_license_link_id\" IS NOT NULL AND \"customer_products\".\"internal_entity_id\" IS NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "unique_active_pool_assignment": {
+          "name": "unique_active_pool_assignment",
+          "columns": [
+            {
+              "expression": "customer_license_link_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2695,16 +2813,10 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "internal_product_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
           "isUnique": true,
-          "where": "\"customer_products\".\"license_parent_customer_product_id\" IS NOT NULL AND \"customer_products\".\"internal_entity_id\" IS NOT NULL AND \"customer_products\".\"status\" IN ('active', 'past_due', 'trialing')",
+          "where": "\"customer_products\".\"customer_license_link_id\" IS NOT NULL AND \"customer_products\".\"internal_entity_id\" IS NOT NULL AND \"customer_products\".\"status\" IN ('active', 'past_due')",
           "concurrently": true,
           "method": "btree",
           "with": {}
@@ -7233,17 +7345,18 @@
           "primaryKey": false,
           "notNull": true
         },
-        "parent_customer_product_id": {
-          "name": "parent_customer_product_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "license_internal_product_id": {
           "name": "license_internal_product_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_custom": {
+          "name": "is_custom",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "included": {
           "name": "included",
@@ -7258,6 +7371,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "customized": {
+          "name": "customized",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "metadata": {
           "name": "metadata",
@@ -7282,26 +7402,33 @@
         }
       },
       "indexes": {
-        "idx_plan_license_parent_product": {
-          "name": "idx_plan_license_parent_product",
+        "unique_plan_license": {
+          "name": "unique_plan_license",
           "columns": [
             {
               "expression": "parent_internal_product_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "license_internal_product_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
+          "where": "\"plan_license\".\"is_custom\" = false",
           "concurrently": true,
           "method": "btree",
           "with": {}
         },
-        "idx_plan_license_parent_customer_product": {
-          "name": "idx_plan_license_parent_customer_product",
+        "idx_plan_license_parent_product": {
+          "name": "idx_plan_license_parent_product",
           "columns": [
             {
-              "expression": "parent_customer_product_id",
+              "expression": "parent_internal_product_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7342,19 +7469,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "plan_license_parent_customer_product_fkey": {
-          "name": "plan_license_parent_customer_product_fkey",
-          "tableFrom": "plan_license",
-          "tableTo": "customer_products",
-          "columnsFrom": [
-            "parent_customer_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "plan_license_license_product_fkey": {
           "name": "plan_license_license_product_fkey",
           "tableFrom": "plan_license",
@@ -7370,17 +7484,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "unique_plan_license": {
-          "name": "unique_plan_license",
-          "nullsNotDistinct": true,
-          "columns": [
-            "parent_internal_product_id",
-            "parent_customer_product_id",
-            "license_internal_product_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

@@ -8,7 +8,7 @@ import {
 	planLicenses,
 	prices,
 } from "@autumn/shared";
-import { eq, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 const composeProductItems = ({ excludeEnts = false } = {}) => ({
 	entitlements: excludeEnts
@@ -28,7 +28,7 @@ export const composeFullProductQuery = ({
 } = {}) => ({
 	...composeProductItems({ excludeEnts }),
 	licenses: {
-		where: isNull(planLicenses.parent_customer_product_id),
+		where: eq(planLicenses.is_custom, false),
 		with: {
 			product: {
 				with: composeProductItems(),

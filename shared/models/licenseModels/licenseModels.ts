@@ -1,10 +1,16 @@
 import type { DiffedCustomizePlanV1 } from "@utils/planV1Utils/diff/diffPlanV1";
 import { findDuplicate } from "@utils/utils";
 import { z } from "zod/v4";
+import { BasePriceParamsSchema } from "../../api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "../../api/products/items/crud/createPlanItemParamsV1";
+import { PlanItemFilterSchema } from "../../api/products/items/filter/planItemFilter";
 
+/** Diff-style customize applied on top of the license plan's own items —
+ * the same shape diffPlanV1 emits. */
 export const LicenseCustomizeSchema = z.object({
-	items: z.array(CreatePlanItemParamsV1Schema),
+	price: BasePriceParamsSchema.nullable().optional(),
+	add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
+	remove_items: z.array(PlanItemFilterSchema).optional(),
 });
 
 /** Typed via z.custom: the diffed zod schema is built from customizePlan
@@ -31,51 +37,22 @@ export const CustomizePlanLicenseSchema = z.object({
 	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
-export const CustomLicenseChangeSchema = z.object({
-	parentCustomerProductId: z.string(),
-	previousParentCustomerProductId: z.string().optional(),
-	// Optional for deserialization of plans persisted before it existed.
-	parentInternalProductId: z.string().optional(),
-	adds: z.array(CustomizePlanLicenseSchema),
-	removes: z.array(z.string()),
-});
-
-export type CustomLicenseChange = z.infer<typeof CustomLicenseChangeSchema>;
-
-/** Structural issues in a license patch: duplicate ids, add/remove overlap. */
+/** Structural issues in a license patch: duplicate license_plan_ids. */
 export const licensePatchIssues = ({
-	addLicenses = [],
-	removeLicenses = [],
+	upsertLicenses = [],
 }: {
-	addLicenses?: { license_plan_id: string }[];
-	removeLicenses?: string[];
+	upsertLicenses?: { license_plan_id: string }[];
 }): { message: string; path: string[] }[] => {
-	const issues: { message: string; path: string[] }[] = [];
-	const addIds = addLicenses.map((license) => license.license_plan_id);
-
-	const duplicateAdd = findDuplicate(addIds);
-	if (duplicateAdd !== undefined) {
-		issues.push({
-			message: `Duplicate license ${duplicateAdd} in add_licenses`,
-			path: ["add_licenses"],
-		});
-	}
-	const duplicateRemove = findDuplicate(removeLicenses);
-	if (duplicateRemove !== undefined) {
-		issues.push({
-			message: `Duplicate license ${duplicateRemove} in remove_licenses`,
-			path: ["remove_licenses"],
-		});
-	}
-	const addIdSet = new Set(addIds);
-	const overlapping = removeLicenses.find((id) => addIdSet.has(id));
-	if (overlapping !== undefined) {
-		issues.push({
-			message: `License ${overlapping} cannot appear in both add_licenses and remove_licenses`,
-			path: ["remove_licenses"],
-		});
-	}
-	return issues;
+	const duplicate = findDuplicate(
+		upsertLicenses.map((license) => license.license_plan_id),
+	);
+	if (duplicate === undefined) return [];
+	return [
+		{
+			message: `Duplicate license ${duplicate} in upsert_licenses`,
+			path: ["upsert_licenses"],
+		},
+	];
 };
 
 export const LicenseListAssignmentsParamsSchema = z.object({
@@ -89,11 +66,6 @@ export const LicenseListParamsSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.string().optional(),
 });
-
-export type LicensePatchParams = {
-	add_licenses?: z.infer<typeof CustomizePlanLicenseSchema>[];
-	remove_licenses?: string[];
-};
 
 export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 export type LicenseCustomize = z.infer<typeof LicenseCustomizeSchema>;

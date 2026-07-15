@@ -170,7 +170,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 				currentCustomerProduct,
 				scheduledCustomerProduct,
 				externalId: plan.subscription_id,
-				licensePatch: plan.customize,
 			};
 		}),
 	);

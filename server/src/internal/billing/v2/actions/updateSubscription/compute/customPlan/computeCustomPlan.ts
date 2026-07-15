@@ -8,7 +8,6 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/computeDeleteCustomerProduct";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
@@ -83,12 +82,6 @@ export const computeCustomPlan = async ({
 		customerProduct,
 	});
 
-	const customLicenses = buildCustomLicenseChanges({
-		parentCustomerProduct: newFullCustomerProduct,
-		previousParentCustomerProduct: customerProduct,
-		licensePatch: params.customize,
-	});
-
 	return {
 		customerId: fullCustomer?.id ?? "",
 		insertCustomerProducts: [newFullCustomerProduct],
@@ -113,7 +106,6 @@ export const computeCustomPlan = async ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
-		customLicenses,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	} satisfies AutumnBillingPlan;

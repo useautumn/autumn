@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
+import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
@@ -15,7 +16,6 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
-import { syncCustomLicenseChanges } from "@/internal/licenses/actions/customize/syncCustomLicenseChanges";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
@@ -71,6 +71,11 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	await executeInsertPlanLicenses({
+		ctx,
+		insertPlanLicenses: autumnBillingPlan.insertPlanLicenses,
+	});
+
 	if (insertCustomerEntitlements) {
 		await CusEntService.insert({
 			ctx,
@@ -103,11 +108,6 @@ export const executeAutumnBillingPlan = async ({
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
-	});
-
-	await syncCustomLicenseChanges({
-		ctx,
-		customLicenses: autumnBillingPlan.customLicenses,
 	});
 
 	await replaceScheduledPhaseCustomerProductIds({

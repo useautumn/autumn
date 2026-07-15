@@ -249,11 +249,11 @@ test.concurrent(
 			errMessage:
 				"Custom license changes conflict with active license assignments",
 			func: () =>
-				autumnV2_2.billing.update({
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
 					plan_id: parent.id,
 					customize: {
-						add_licenses: [
+						upsert_licenses: [
 							{
 								license_plan_id: license.id,
 								included: 1,

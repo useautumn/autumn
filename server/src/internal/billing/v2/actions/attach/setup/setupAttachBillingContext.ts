@@ -68,6 +68,7 @@ export const setupAttachBillingContext = async ({
 		fullProduct: attachProduct,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
 	} = await setupAttachProductContext({
 		ctx,
 		params,
@@ -339,7 +340,7 @@ export const setupAttachBillingContext = async ({
 		taxRateId: params.tax_rate_id,
 
 		externalId: params.subscription_id,
-		licensePatch: params.customize ?? undefined,
+		insertPlanLicenses,
 
 		skipBillingChanges,
 		dryRunStripe: preview,

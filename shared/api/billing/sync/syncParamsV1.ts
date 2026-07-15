@@ -7,8 +7,7 @@ import {
 
 const SyncCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
-		add_licenses: true,
-		remove_licenses: true,
+		upsert_licenses: true,
 	}).strict(),
 	{ includeLicenses: false },
 );

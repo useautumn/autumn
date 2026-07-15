@@ -10,7 +10,6 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
-import { validateCustomLicenseChanges } from "@/internal/licenses/actions/customize/validateCustomLicenseChanges";
 import { computeMultiAttachPlan } from "./compute/computeMultiAttachPlan";
 import {
 	handleMultiAttachBillingPlanErrors,
@@ -75,10 +74,6 @@ export async function multiAttach({
 	};
 
 	handleMultiAttachBillingPlanErrors({ ctx, billingContext, billingPlan });
-	await validateCustomLicenseChanges({
-		ctx,
-		customLicenses: billingPlan.autumn.customLicenses,
-	});
 
 	if (preview) {
 		return {

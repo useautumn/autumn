@@ -21,9 +21,8 @@ export const BillingParamsBaseV0Schema = z.object({
 	version: z.number().optional(),
 	free_trial: FreeTrialParamsV0Schema.nullable().optional(),
 	items: z.array(ProductItemSchema).optional(),
-	// Patches the plan's license set for this subscription
-	add_licenses: z.array(CustomizePlanLicenseSchema).optional(),
-	remove_licenses: z.array(z.string()).optional(),
+	// Upserts license links for this subscription, keyed by license_plan_id
+	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional(),
 	billing_controls: CustomerBillingControlsParamsSchema.optional(),
 
 	transition_rules: TransitionRulesSchema.optional(),

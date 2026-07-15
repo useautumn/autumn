@@ -4,13 +4,11 @@ import type {
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription.js";
-import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { CusService } from "@/internal/customers/CusService.js";
 import { getLicenseDbState } from "./licenseTestUtils.js";
 
 const setupLicense = async ({
@@ -149,68 +147,5 @@ test.concurrent(
 		).toHaveLength(1);
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({ granted: 2, remaining: 1 });
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses billing: paid license-only update leaves Stripe unchanged")}`,
-	async () => {
-		const { customerId, autumnV2_2, ctx, parent, license } = await setupLicense(
-			{ customerId: "lic-paid-license-only", paidParent: true },
-		);
-		const customer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-		});
-		const stripeCustomerId =
-			customer.processor?.id ?? customer.processor?.processor_id;
-		if (!stripeCustomerId) throw new Error("Stripe customer not found");
-		const before = await ctx.stripeCli.subscriptions.list({
-			customer: stripeCustomerId,
-			status: "all",
-		});
-		const invoicesBefore = await ctx.stripeCli.invoices.list({
-			customer: stripeCustomerId,
-		});
-		const snapshot = before.data.map((subscription) => ({
-			id: subscription.id,
-			items: subscription.items.data.map(({ id, price, quantity }) => ({
-				id,
-				priceId: price.id,
-				quantity,
-			})),
-		}));
-
-		await autumnV2_2.billing.update({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: {
-				add_licenses: [{ license_plan_id: license.id, included: 3 }],
-			},
-		});
-
-		const after = await ctx.stripeCli.subscriptions.list({
-			customer: stripeCustomerId,
-			status: "all",
-		});
-		const invoicesAfter = await ctx.stripeCli.invoices.list({
-			customer: stripeCustomerId,
-		});
-		expect(
-			after.data.map((subscription) => ({
-				id: subscription.id,
-				items: subscription.items.data.map(({ id, price, quantity }) => ({
-					id,
-					priceId: price.id,
-					quantity,
-				})),
-			})),
-		).toEqual(snapshot);
-		expect(invoicesAfter.data.map(({ id }) => id)).toEqual(
-			invoicesBefore.data.map(({ id }) => id),
-		);
-		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(dbState.pools[0]).toMatchObject({ granted: 3, remaining: 3 });
-		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

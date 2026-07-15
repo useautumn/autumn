@@ -12,15 +12,13 @@ export const billingParamsV0ToCustomizeV1 = ({
 	items,
 	freeTrial,
 	billingControls,
-	addLicenses,
-	removeLicenses,
+	upsertLicenses,
 }: {
 	ctx: SharedContext;
 	items?: ProductItem[];
 	freeTrial?: FreeTrialParamsV0 | null;
 	billingControls?: CustomizePlanV1["billing_controls"];
-	addLicenses?: CustomizePlanLicense[];
-	removeLicenses?: string[];
+	upsertLicenses?: CustomizePlanLicense[];
 }): CustomizePlanV1 | undefined => {
 	const itemsCustomize = items
 		? productItemsToCustomizePlanV1({ ctx, items })
@@ -31,8 +29,7 @@ export const billingParamsV0ToCustomizeV1 = ({
 		itemsCustomize !== undefined ||
 		freeTrialV1 !== undefined ||
 		billingControls !== undefined ||
-		addLicenses !== undefined ||
-		removeLicenses !== undefined;
+		upsertLicenses !== undefined;
 
 	if (!hasCustomization) return undefined;
 
@@ -40,7 +37,6 @@ export const billingParamsV0ToCustomizeV1 = ({
 		...itemsCustomize,
 		free_trial: freeTrialV1,
 		billing_controls: billingControls,
-		add_licenses: addLicenses,
-		remove_licenses: removeLicenses,
+		upsert_licenses: upsertLicenses,
 	};
 };

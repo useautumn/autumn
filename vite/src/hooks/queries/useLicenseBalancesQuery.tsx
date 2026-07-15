@@ -7,12 +7,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+export type LicenseAssignment = {
+	id: string;
+	entity_id: string;
+	license_plan_id: string;
+	started_at: number;
+	ended_at: number | null;
+};
+
 const EMPTY_POOLS: ApiCustomerLicenseV0[] = [];
+const EMPTY_ASSIGNMENTS: LicenseAssignment[] = [];
 
 /**
- * Loads the customer's license pools (inventory + active assignments) and
- * exposes assign/unassign mutations. Both invalidate the pools and the customer
- * query so provisioned entitlements refresh.
+ * Loads the customer's license pools and active assignments, and exposes
+ * assign/unassign mutations. Mutations invalidate pools, assignments, and the
+ * customer query so provisioned entitlements refresh.
  */
 export const useLicenseBalancesQuery = ({
 	customerId,
@@ -41,9 +50,29 @@ export const useLicenseBalancesQuery = ({
 		enabled: enabled && Boolean(customerId),
 	});
 
+	// All active assignments for the customer; consumers scope by entity so a
+	// single cache entry serves the section, button, and detail sheet.
+	const { data: assignmentsData, isLoading: assignmentsLoading } = useQuery<{
+		list: LicenseAssignment[];
+	}>({
+		queryKey: buildKey(["license_assignments", customerId ?? null]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post(
+				"/v1/licenses.list_assignments",
+				{
+					customer_id: customerId,
+					active: true,
+				},
+			);
+			return data;
+		},
+		enabled: enabled && Boolean(customerId),
+	});
+
 	const invalidate = () =>
 		Promise.all([
 			queryClient.invalidateQueries({ queryKey: ["license_pools"] }),
+			queryClient.invalidateQueries({ queryKey: ["license_assignments"] }),
 			queryClient.invalidateQueries({ queryKey: ["customer"] }),
 		]);
 
@@ -65,7 +94,8 @@ export const useLicenseBalancesQuery = ({
 
 	return {
 		pools: data?.list ?? EMPTY_POOLS,
-		isLoading,
+		assignments: assignmentsData?.list ?? EMPTY_ASSIGNMENTS,
+		isLoading: isLoading || assignmentsLoading,
 		error,
 		refetch,
 		invalidate,

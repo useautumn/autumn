@@ -13,11 +13,12 @@ export const useCustomerLicenseActions = ({
 	customerId?: string;
 	entityId?: string;
 }) => {
-	const { pools, isLoading, assign, unassign } = useLicenseBalancesQuery({
-		customerId,
-		entityId,
-		enabled: Boolean(entityId),
-	});
+	const { pools, assignments, isLoading, assign, unassign } =
+		useLicenseBalancesQuery({
+			customerId,
+			entityId,
+			enabled: Boolean(entityId),
+		});
 
 	const attachLicense = (pool: ApiCustomerLicenseV0) => {
 		if (!(customerId && entityId)) return Promise.resolve(false);
@@ -51,6 +52,7 @@ export const useCustomerLicenseActions = ({
 
 	return {
 		pools,
+		assignments,
 		isLoading,
 		attachLicense,
 		cancelLicenseAssignment,

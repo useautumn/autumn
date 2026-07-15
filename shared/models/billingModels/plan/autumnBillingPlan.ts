@@ -20,13 +20,13 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
-import { CustomLicenseChangeSchema } from "../../licenseModels/licenseModels";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
 import {
 	CustomerLicenseTransitionSchema,
 	CustomerLicenseUpdateSchema,
+	InsertPlanLicenseSpecSchema,
 } from "./customerLicensePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
@@ -114,7 +114,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
-	customLicenses: z.array(CustomLicenseChangeSchema).optional(),
+	insertPlanLicenses: z.array(InsertPlanLicenseSpecSchema).optional(),
 	customerLicenseUpdates: z.array(CustomerLicenseUpdateSchema).optional(),
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)

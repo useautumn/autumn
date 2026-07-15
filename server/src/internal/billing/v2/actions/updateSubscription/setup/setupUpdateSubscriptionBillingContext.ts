@@ -1,7 +1,9 @@
 import {
 	BillingVersion,
+	ErrCode,
 	hasCustomItems,
 	orgDisableStripeWrites,
+	RecaseError,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -37,30 +39,19 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
-const LICENSE_CUSTOMIZE_KEYS = [
-	"add_licenses",
-	"remove_licenses",
-] as const satisfies (keyof NonNullable<
-	UpdateSubscriptionV1Params["customize"]
->)[];
-
-const hasOnlyLicenseCustomize = ({
+/** License customize is attach-only for now; fail loudly instead of ignoring. */
+const rejectLicenseCustomize = ({
 	params,
 }: {
 	params: UpdateSubscriptionV1Params;
 }) => {
-	const customize = params.customize;
-	const hasLicenseKeys =
-		customize !== undefined &&
-		(customize.add_licenses !== undefined ||
-			customize.remove_licenses !== undefined);
-	if (!hasLicenseKeys) return false;
-
-	return Object.keys(customize).every((key) =>
-		LICENSE_CUSTOMIZE_KEYS.includes(
-			key as (typeof LICENSE_CUSTOMIZE_KEYS)[number],
-		),
-	);
+	if (params.customize?.upsert_licenses === undefined) return;
+	throw new RecaseError({
+		message:
+			"customize.upsert_licenses is not supported on subscription updates yet; use billing.attach.",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
 };
 
 /**
@@ -110,13 +101,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
-	const licenseOnlyCustomize = hasOnlyLicenseCustomize({ params });
-	const billingRelatedFields = Object.keys(params).filter((key) => {
-		if (key === "customize" && licenseOnlyCustomize) return false;
-		return FIELDS_WITH_BILLING_CHANGES.includes(
+	rejectLicenseCustomize({ params });
+	const billingRelatedFields = Object.keys(params).filter((key) =>
+		FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
-		);
-	});
+		),
+	);
 
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) ||

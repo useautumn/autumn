@@ -7,7 +7,6 @@ import {
 } from "@autumn/shared";
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { MigrationService } from "../MigrationService.js";
 
@@ -103,20 +102,8 @@ export const getMigrationCustomers = async ({
 		(cusProd) => cusProd.canceled_at !== null,
 	).length;
 
-	// Customized license sets can't be reproduced on the new version's inherited
-	// links, so those customers are skipped alongside custom plans.
-	const customizedLicenseParentIds = new Set(
-		(
-			await planLicenseRepo.listCustomerByParentCustomerProductIds({
-				db,
-				parentCustomerProductIds: cusProducts.map(
-					(cusProd: { id: string }) => cusProd.id,
-				),
-			})
-		).map((row) => row.parent_customer_product_id),
-	);
-	const isCustomized = (cusProd: { id: string; is_custom: boolean | null }) =>
-		cusProd.is_custom || customizedLicenseParentIds.has(cusProd.id);
+	const isCustomized = (cusProd: { is_custom: boolean | null }) =>
+		cusProd.is_custom;
 	const customCount = cusProducts.filter(isCustomized).length;
 	const filteredCusProducts = cusProducts.filter((cp) => !isCustomized(cp));
 	const customers = filteredCusProducts.map((cusProd) => cusProd.customer);

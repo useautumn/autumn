@@ -2,7 +2,6 @@ import type {
 	Entitlement,
 	FeatureOptions,
 	FullCusProduct,
-	LicensePatchParams,
 	Price,
 } from "@autumn/shared";
 import type { FullProduct } from "../../productModels/productModels";
@@ -20,7 +19,6 @@ export interface MultiAttachProductContext {
 	scheduledCustomerProduct?: FullCusProduct;
 	/** User-provided subscription ID for this product. */
 	externalId?: string;
-	licensePatch?: LicensePatchParams;
 }
 
 export interface MultiAttachBillingContext extends BillingContext {

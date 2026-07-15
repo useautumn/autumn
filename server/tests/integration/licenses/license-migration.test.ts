@@ -348,7 +348,7 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: parent.id,
 			customize: {
-				add_licenses: [
+				upsert_licenses: [
 					{
 						license_plan_id: license.id,
 						included: 3,

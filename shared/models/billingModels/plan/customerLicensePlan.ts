@@ -1,5 +1,25 @@
 import { z } from "zod/v4";
 import { FullCustomerLicenseSchema } from "../../licenseModels/fullCustomerLicense.js";
+import type { DbPlanLicense } from "../../licenseModels/planLicenseTable.js";
+import { EntitlementSchema } from "../../productModels/entModels/entModels.js";
+import { PriceSchema } from "../../productModels/priceModels/priceModels.js";
+
+/** Everything one custom plan_license definition needs written. */
+export const InsertPlanLicenseSpecSchema = z.object({
+	row: z.custom<DbPlanLicense>(),
+	// Only the rows the customize changed; unchanged items reuse stock rows.
+	customPrices: z.array(PriceSchema),
+	customEntitlements: z.array(EntitlementSchema),
+	// Becomes the license_prices/license_entitlements junction rows: the row's
+	// COMPLETE item set (stock refs included), non-empty only when customized.
+	items: z.array(
+		z.object({
+			priceId: z.string().optional(),
+			entitlementId: z.string().optional(),
+		}),
+	),
+});
+export type InsertPlanLicenseSpec = z.infer<typeof InsertPlanLicenseSpecSchema>;
 
 /**
  * Everything a customer product transition means for one customer license:

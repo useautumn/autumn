@@ -20,17 +20,18 @@ const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 export function LicenseDetailSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const { pools, isLoading, cancelLicenseAssignment, isUnassigning } =
-		useCustomerLicenseBalances();
+	const {
+		pools,
+		assignments,
+		isLoading,
+		cancelLicenseAssignment,
+		isUnassigning,
+	} = useCustomerLicenseBalances();
 	const { licenseProducts } = useLicenseProductsQuery();
 
-	const pool = pools.find((candidate) =>
-		candidate.assignments.some(
-			(assignment) => assignment.assignment_id === itemId,
-		),
-	);
-	const assignment = pool?.assignments.find(
-		(candidate) => candidate.assignment_id === itemId,
+	const assignment = assignments.find((candidate) => candidate.id === itemId);
+	const pool = pools.find(
+		(candidate) => candidate.license_plan_id === assignment?.license_plan_id,
 	);
 	const license = licenseProducts.find(
 		(candidate) => candidate.id === pool?.license_plan_id,
@@ -51,7 +52,7 @@ export function LicenseDetailSheet() {
 		);
 	}
 
-	const total = pool.inventory.included;
+	const total = pool.granted;
 
 	const handleUnassign = async () => {
 		const success = await cancelLicenseAssignment({
@@ -97,7 +98,7 @@ export function LicenseDetailSheet() {
 					<InfoRow
 						icon={<ChartBarIcon size={16} weight="duotone" />}
 						label="Availability"
-						value={`${pool.inventory.available} of ${total} available`}
+						value={`${pool.remaining} of ${total} available`}
 					/>
 					<InfoRow
 						icon={<CalendarBlankIcon size={16} weight="duotone" />}

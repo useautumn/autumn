@@ -12,7 +12,7 @@ export type FullPlanLicense = DbPlanLicense & {
 export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
 	id: z.string(),
 	parent_internal_product_id: z.string(),
-	parent_customer_product_id: z.string().nullable(),
+	is_custom: z.boolean(),
 	license_internal_product_id: z.string(),
 	included: z.number(),
 	prepaid_only: z.boolean(),

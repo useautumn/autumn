@@ -8,7 +8,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("licenses overflow blocked: attach add_licenses with prepaid_only false rejects")}`,
+	`${chalk.yellowBright("licenses overflow blocked: attach upsert_licenses with prepaid_only false rejects")}`,
 	async () => {
 		const parent = products.base({
 			id: "ovf-block-attach-parent",
@@ -36,7 +36,7 @@ test.concurrent(
 					customer_id: customerId,
 					plan_id: parent.id,
 					customize: {
-						add_licenses: [
+						upsert_licenses: [
 							{
 								license_plan_id: license.id,
 								included: 1,

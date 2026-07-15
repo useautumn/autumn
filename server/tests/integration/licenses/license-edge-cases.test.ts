@@ -2,13 +2,11 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerLicenseV0,
 	type ApiEntityV2,
-	type ApiPlanV1,
 	type AttachParamsV1Input,
 	type CheckResponseV3,
 	ErrCode,
 	fullCustomerToFullSubject,
 	fullSubjectToApiCustomerProducts,
-	type ProductV2,
 	planLicenses,
 	type TrackResponseV3,
 	type UpdateSubscriptionV1ParamsInput,
@@ -21,7 +19,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 
 const makeParentProduct = ({
@@ -110,7 +108,7 @@ const getBalanceBreakdown = (
 ) => response.balance?.breakdown?.find((item) => item.plan_id === planId);
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-custom: attach license patch swaps out an inherited license")}`,
+	`${chalk.yellowBright("licenses-custom: attach upsert_licenses adds a license alongside the catalog")}`,
 	async () => {
 		const parent = makeParentProduct({ id: "lic-custom-attach-parent" });
 		const baseLicense = makeLicenseProduct({ id: "lic-custom-attach-base" });
@@ -140,77 +138,30 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: parent.id,
 			customize: {
-				add_licenses: [
+				upsert_licenses: [
 					{
 						license_plan_id: customLicense.id,
 						included: 2,
 					},
 				],
-				remove_licenses: [baseLicense.id],
 			},
 		});
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0]).toMatchObject({
-			license_plan_id: customLicense.id,
-			granted: 2,
-			usage: 0,
-			remaining: 2,
-		});
+		expect(pools.list).toHaveLength(2);
+		expect(
+			pools.list.find((pool) => pool.license_plan_id === customLicense.id),
+		).toMatchObject({ granted: 2, usage: 0, remaining: 2 });
+		expect(
+			pools.list.find((pool) => pool.license_plan_id === baseLicense.id),
+		).toMatchObject({ granted: 1, usage: 0, remaining: 1 });
 	},
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-custom: remove_licenses suppresses an inherited license")}`,
-	async () => {
-		const parent = makeParentProduct({ id: "lic-custom-empty-parent" });
-		const license = makeLicenseProduct({ id: "lic-custom-empty-seat" });
-		const { customerId, entities, autumnV2_2 } = await initScenario({
-			customerId: "lic-custom-empty",
-			setup: [
-				s.customer({ testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
-				s.products({ list: [parent, license] }),
-			],
-			actions: [],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [
-				{
-					license_plan_id: license.id,
-					included: 1,
-				},
-			],
-		});
-		await autumnV2_2.billing.attach({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: { remove_licenses: [license.id] },
-		});
-
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toEqual([]);
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.post("/licenses.attach", {
-					customer_id: customerId,
-					entity_id: entities[0].id,
-					plan_id: license.id,
-				}),
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-custom: preview validates but does not persist license override")}`,
+	`${chalk.yellowBright("licenses-custom: updateSubscription rejects upsert_licenses")}`,
 	async () => {
 		const { customerId, autumnV2_2, ctx, parent, license } =
 			await setupAssignedLicense({
@@ -218,6 +169,9 @@ test.concurrent(
 				included: 1,
 			});
 
+		const upsertCustomize = {
+			upsert_licenses: [{ license_plan_id: license.id, included: 3 }],
+		};
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
@@ -225,99 +179,27 @@ test.concurrent(
 					{
 						customer_id: customerId,
 						plan_id: parent.id,
-						customize: { remove_licenses: [license.id] },
+						customize: upsertCustomize,
 					},
 				),
 		});
-
-		await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
-			{
-				customer_id: customerId,
-				plan_id: parent.id,
-				customize: {
-					add_licenses: [
-						{
-							license_plan_id: license.id,
-							included: 1,
-						},
-					],
-				},
-			},
-		);
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: () =>
+				autumnV2_2.billing.update({
+					customer_id: customerId,
+					plan_id: parent.id,
+					customize: upsertCustomize,
+				}),
+		});
 
 		const customRows = await ctx.db.query.planLicenses.findMany({
 			where: and(
 				eq(planLicenses.license_internal_product_id, license.internal_id!),
-				isNotNull(planLicenses.parent_customer_product_id),
+				eq(planLicenses.is_custom, true),
 			),
 		});
 		expect(customRows).toHaveLength(0);
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-custom: billing.update syncs license override onto existing parent")}`,
-	async () => {
-		const { customerId, entities, autumnV2_2, ctx, parent, license } =
-			await setupAssignedLicense({
-				customerId: "lic-custom-update-existing",
-				included: 2,
-				entityCount: 2,
-			});
-
-		await autumnV2_2.billing.update({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: {
-				add_licenses: [
-					{
-						license_plan_id: license.id,
-						included: 3,
-					},
-				],
-			},
-		});
-
-		const fullCustomer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customerId,
-		});
-		const parentCustomerProduct = fullCustomer.customer_products.find(
-			(customerProduct) => customerProduct.product.id === parent.id,
-		);
-		const customRows = await ctx.db.query.planLicenses.findMany({
-			where: eq(
-				planLicenses.parent_customer_product_id,
-				parentCustomerProduct!.id,
-			),
-		});
-		expect(customRows).toHaveLength(1);
-		expect(customRows[0].included).toBe(3);
-
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list[0]).toMatchObject({
-			license_plan_id: license.id,
-			granted: 3,
-			usage: 1,
-			remaining: 2,
-		});
-
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			plan_id: license.id,
-		});
-		const poolsAfterSecondAssign = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(poolsAfterSecondAssign.list[0]).toMatchObject({
-			license_plan_id: license.id,
-			granted: 3,
-			usage: 2,
-			remaining: 1,
-		});
 	},
 );
 
@@ -363,7 +245,7 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: secondParent.id,
 			customize: {
-				add_licenses: [
+				upsert_licenses: [
 					{
 						license_plan_id: license.id,
 						included: 1,
@@ -387,111 +269,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-custom: attach transition blocks unsafe license removal")}`,
-	async () => {
-		const group = "lic-custom-switch-reduce-group";
-		const firstParent = makeParentProduct({
-			id: "lic-custom-switch-reduce-first",
-			group,
-		});
-		const secondParent = makeParentProduct({
-			id: "lic-custom-switch-reduce-second",
-			group,
-		});
-		const license = makeLicenseProduct({ id: "lic-custom-switch-reduce-seat" });
-		const { customerId, entities, autumnV2_2 } = await initScenario({
-			customerId: "lic-custom-switch-reduce",
-			setup: [
-				s.customer({ testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
-				s.products({ list: [firstParent, secondParent, license] }),
-			],
-			actions: [s.billing.attach({ productId: firstParent.id })],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: firstParent.id,
-			licenses: [
-				{
-					license_plan_id: license.id,
-					included: 1,
-				},
-			],
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			plan_id: license.id,
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.billing.attach<AttachParamsV1Input>({
-					customer_id: customerId,
-					plan_id: secondParent.id,
-					customize: { remove_licenses: [license.id] },
-				}),
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-custom: multi_attach provisions custom license pool")}`,
-	async () => {
-		const parent = makeParentProduct({ id: "lic-custom-multi-parent" });
-		const license = makeLicenseProduct({ id: "lic-custom-multi-seat" });
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "lic-custom-multi",
-			setup: [
-				s.customer({ testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
-				s.products({ list: [parent, license] }),
-			],
-			actions: [],
-		});
-
-		await autumnV2_2.post("/plans.update", {
-			plan_id: parent.id,
-			licenses: [
-				{
-					license_plan_id: license.id,
-					included: 1,
-				},
-			],
-		});
-		await autumnV2_2.billing.multiAttach({
-			customer_id: customerId,
-			plans: [
-				{
-					plan_id: parent.id,
-					customize: {
-						add_licenses: [
-							{
-								license_plan_id: license.id,
-								included: 2,
-							},
-						],
-					},
-				},
-			],
-		});
-
-		const pools = (await autumnV2_2.post("/licenses.list", {
-			customer_id: customerId,
-		})) as { list: ApiCustomerLicenseV0[] };
-		expect(pools.list).toHaveLength(1);
-		expect(pools.list[0]).toMatchObject({
-			license_plan_id: license.id,
-			granted: 2,
-			usage: 0,
-			remaining: 2,
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-custom: active assignments block unsafe custom reductions")}`,
+	`${chalk.yellowBright("licenses-custom: active assignments block unsafe upsert reductions")}`,
 	async () => {
 		const { customerId, autumnV2_2, parent, license } =
 			await setupAssignedLicense({
@@ -502,21 +280,11 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			func: () =>
-				autumnV2_2.billing.update({
-					customer_id: customerId,
-					plan_id: parent.id,
-					customize: { remove_licenses: [license.id] },
-				}),
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.billing.update({
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
 					plan_id: parent.id,
 					customize: {
-						add_licenses: [
+						upsert_licenses: [
 							{
 								license_plan_id: license.id,
 								included: 0,
@@ -525,52 +293,6 @@ test.concurrent(
 					},
 				}),
 		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-custom: custom license edits affect future assignments only")}`,
-	async () => {
-		const { customerId, entities, autumnV2_2, parent, license } =
-			await setupAssignedLicense({
-				customerId: "lic-custom-future-only",
-				included: 2,
-				entityCount: 2,
-			});
-
-		await autumnV2_2.billing.update({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: {
-				add_licenses: [
-					{
-						license_plan_id: license.id,
-						included: 2,
-						customize: {
-							items: [itemsV2.monthlyMessages({ included: 50 })],
-						},
-					},
-				],
-			},
-		});
-		await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			plan_id: license.id,
-		});
-
-		const firstEntity = await autumnV2_2.check<CheckResponseV3>({
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			feature_id: TestFeature.Messages,
-		});
-		const secondEntity = await autumnV2_2.check<CheckResponseV3>({
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			feature_id: TestFeature.Messages,
-		});
-		expect(firstEntity.balance?.granted).toBe(25);
-		expect(secondEntity.balance?.granted).toBe(50);
 	},
 );
 

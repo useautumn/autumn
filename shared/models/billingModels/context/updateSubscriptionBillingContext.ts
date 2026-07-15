@@ -6,7 +6,6 @@ import type {
 	FullCustomerEntitlement,
 	FullCustomerPrice,
 	FullProduct,
-	LicensePatchParams,
 	Price,
 	StripeBillingContextOverride,
 } from "@autumn/shared";
@@ -37,7 +36,6 @@ export type PatchContext = {
 		fromCustomerEntitlementId: string;
 		toEntitlementId: string;
 	}[];
-	licensePatch?: LicensePatchParams;
 };
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

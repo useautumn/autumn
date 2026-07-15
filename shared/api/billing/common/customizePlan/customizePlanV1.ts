@@ -45,8 +45,7 @@ type CustomizePlanRefinementData = {
 	update_items?: unknown;
 	free_trial?: unknown;
 	billing_controls?: unknown;
-	add_licenses?: { license_plan_id: string }[];
-	remove_licenses?: string[];
+	upsert_licenses?: { license_plan_id: string }[];
 };
 
 export const refineCustomizePlanV1Schema = <
@@ -73,8 +72,7 @@ export const refineCustomizePlanV1Schema = <
 		includeUpdateItems && "update_items",
 		includeFreeTrial && "free_trial",
 		"billing_controls",
-		includeLicenses && "add_licenses",
-		includeLicenses && "remove_licenses",
+		includeLicenses && "upsert_licenses",
 	].filter(Boolean) as (keyof CustomizePlanRefinementData)[];
 	const keyLabel = (key: string) =>
 		key === "update_items" ? "deprecated update_items" : key;
@@ -88,8 +86,7 @@ export const refineCustomizePlanV1Schema = <
 		.superRefine((data, refinementCtx) => {
 			if (!includeLicenses) return;
 			for (const issue of licensePatchIssues({
-				addLicenses: data.add_licenses,
-				removeLicenses: data.remove_licenses,
+				upsertLicenses: data.upsert_licenses,
 			})) {
 				refinementCtx.addIssue({ code: "custom", ...issue });
 			}
@@ -143,13 +140,9 @@ export const CustomizePlanV1BaseSchema = z.object({
 		description:
 			"Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.",
 	}),
-	add_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
+	upsert_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
 		description:
-			"License links to add or override for this customer. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.",
-	}),
-	remove_licenses: z.array(z.string()).optional().meta({
-		description:
-			"License plan IDs to remove from this customer's effective license set.",
+			"License links to add or override for this customer, keyed by license_plan_id. Omitted fields inherit the plan catalog link (included defaults to 1 when the license is not in the catalog). A bare entry restores the license to pure catalog inheritance.",
 	}),
 });
 

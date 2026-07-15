@@ -1,11 +1,10 @@
 import {
 	type AppEnv,
-	customerProducts,
 	type DbPlanLicense,
 	planLicenses,
 	products,
 } from "@autumn/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -17,7 +16,6 @@ const upsert = async ({
 	db,
 	id = generateId("plan_lic"),
 	parentInternalProductId,
-	parentCustomerProductId = null,
 	licenseInternalProductId,
 	included,
 	prepaidOnly,
@@ -26,7 +24,6 @@ const upsert = async ({
 	db: DrizzleCli;
 	id?: string;
 	parentInternalProductId: string;
-	parentCustomerProductId?: string | null;
 	licenseInternalProductId: string;
 	included: number;
 	prepaidOnly: boolean;
@@ -37,8 +34,8 @@ const upsert = async ({
 		.values({
 			id,
 			parent_internal_product_id: parentInternalProductId,
-			parent_customer_product_id: parentCustomerProductId,
 			license_internal_product_id: licenseInternalProductId,
+			is_custom: false,
 			included,
 			prepaid_only: prepaidOnly,
 			metadata: metadata ?? {},
@@ -48,9 +45,9 @@ const upsert = async ({
 		.onConflictDoUpdate({
 			target: [
 				planLicenses.parent_internal_product_id,
-				planLicenses.parent_customer_product_id,
 				planLicenses.license_internal_product_id,
 			],
+			targetWhere: sql`${planLicenses.is_custom} = false`,
 			set: {
 				included,
 				prepaid_only: prepaidOnly,
@@ -76,7 +73,7 @@ const getCatalogByParentAndLicense = async ({
 		where: and(
 			eq(planLicenses.parent_internal_product_id, parentInternalProductId),
 			eq(planLicenses.license_internal_product_id, licenseInternalProductId),
-			isNull(planLicenses.parent_customer_product_id),
+			eq(planLicenses.is_custom, false),
 		),
 	});
 
@@ -93,7 +90,7 @@ const listCatalogByLicenseInternalProductIds = async ({
 				planLicenses.license_internal_product_id,
 				licenseInternalProductIds,
 			),
-			isNull(planLicenses.parent_customer_product_id),
+			eq(planLicenses.is_custom, false),
 		),
 	});
 
@@ -110,21 +107,7 @@ const listCatalogByParentInternalProductIds = async ({
 				planLicenses.parent_internal_product_id,
 				parentInternalProductIds,
 			),
-			isNull(planLicenses.parent_customer_product_id),
-		),
-	});
-
-const listCustomerByParentCustomerProductIds = async ({
-	db,
-	parentCustomerProductIds,
-}: {
-	db: DrizzleCli;
-	parentCustomerProductIds: string[];
-}) =>
-	await db.query.planLicenses.findMany({
-		where: inArray(
-			planLicenses.parent_customer_product_id,
-			parentCustomerProductIds,
+			eq(planLicenses.is_custom, false),
 		),
 	});
 
@@ -151,7 +134,7 @@ const listWithLicensePlanIdByParents = async ({
 					planLicenses.parent_internal_product_id,
 					parentInternalProductIds,
 				),
-				isNull(planLicenses.parent_customer_product_id),
+				eq(planLicenses.is_custom, false),
 			),
 		);
 
@@ -175,7 +158,7 @@ const listCatalogByOrgEnv = async ({
 			and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
-				isNull(planLicenses.parent_customer_product_id),
+				eq(planLicenses.is_custom, false),
 			),
 		);
 	return rows.map(({ row }) => row);
@@ -210,10 +193,21 @@ const listCatalogParentPlanIdsByLicensePlanId = async ({
 				eq(licenseProducts.id, licensePlanId),
 				eq(licenseProducts.org_id, orgId),
 				eq(licenseProducts.env, env),
-				isNull(planLicenses.parent_customer_product_id),
+				eq(planLicenses.is_custom, false),
 			),
 		);
 	return rows.map((row) => row.parentPlanId);
+};
+
+const insertMany = async ({
+	db,
+	rows,
+}: {
+	db: DrizzleCli;
+	rows: DbPlanLicense[];
+}): Promise<void> => {
+	if (rows.length === 0) return;
+	await db.insert(planLicenses).values(rows);
 };
 
 const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
@@ -231,27 +225,15 @@ const listProductsByInternalIds = async ({
 		where: inArray(products.internal_id, internalProductIds),
 	});
 
-const getParentCustomerProductById = async ({
-	db,
-	customerProductId,
-}: {
-	db: DrizzleCli;
-	customerProductId: string;
-}) =>
-	await db.query.customerProducts.findFirst({
-		where: eq(customerProducts.id, customerProductId),
-	});
-
 export const planLicenseRepo = {
 	upsert,
 	getCatalogByParentAndLicense,
 	listCatalogByParentInternalProductIds,
 	listCatalogByLicenseInternalProductIds,
-	listCustomerByParentCustomerProductIds,
 	listWithLicensePlanIdByParents,
 	listCatalogParentPlanIdsByLicensePlanId,
 	listCatalogByOrgEnv,
+	insertMany,
 	deleteByIds,
 	listProductsByInternalIds,
-	getParentCustomerProductById,
 } as const;

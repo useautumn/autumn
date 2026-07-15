@@ -2,7 +2,6 @@ import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuanti
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
-import { CustomizePlanLicenseSchema } from "@models/licenseModels/licenseModels";
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
@@ -19,14 +18,6 @@ const MultiAttachCustomizePlanSchema = z
 		}),
 		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 			description: "Override the items in the plan.",
-		}),
-		add_licenses: z.array(CustomizePlanLicenseSchema).optional().meta({
-			description:
-				"License links to add or override on the plan. Omitted licenses inherit the plan catalog.",
-		}),
-		remove_licenses: z.array(z.string()).optional().meta({
-			description:
-				"License plan IDs to remove from the customer's effective license set.",
 		}),
 	})
 	.optional();

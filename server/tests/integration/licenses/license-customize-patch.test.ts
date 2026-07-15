@@ -1,12 +1,10 @@
 import { expect, test } from "bun:test";
-import { ErrCode, planLicenses } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { and, eq, isNotNull } from "drizzle-orm";
 import { listLicensePools } from "./licenseTestUtils.js";
 
 const makeParentProduct = (id: string) =>
@@ -52,7 +50,7 @@ const setupCatalogParent = async ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-patch: add_licenses overrides one inherited license and keeps the rest")}`,
+	`${chalk.yellowBright("licenses-patch: upsert_licenses overrides one inherited license and keeps the rest")}`,
 	async () => {
 		const { customerId, autumnV2_2, parent, licenses } =
 			await setupCatalogParent({
@@ -69,7 +67,7 @@ test.concurrent(
 			customer_id: customerId,
 			plan_id: parent.id,
 			customize: {
-				add_licenses: [{ license_plan_id: licenseA.id, included: 5 }],
+				upsert_licenses: [{ license_plan_id: licenseA.id, included: 5 }],
 			},
 		});
 
@@ -85,153 +83,28 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-patch: remove_licenses tombstones an inherited license")}`,
-	async () => {
-		const { customerId, entities, autumnV2_2, parent, licenses } =
-			await setupCatalogParent({
-				customerId: "lic-patch-remove",
-				idPrefix: "lic-patch-remove",
-				catalog: [
-					{ licenseSuffix: "seat-a", included: 2 },
-					{ licenseSuffix: "seat-b", included: 1 },
-				],
-			});
-		const [licenseA, licenseB] = licenses;
-
-		await autumnV2_2.billing.attach({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: { remove_licenses: [licenseA.id] },
-		});
-
-		const pools = await listLicensePools({ autumn: autumnV2_2, customerId });
-		expect(pools).toHaveLength(1);
-		expect(pools[0]).toMatchObject({
-			license_plan_id: licenseB.id,
-			granted: 1,
-			usage: 0,
-			remaining: 1,
-		});
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.post("/licenses.attach", {
-					customer_id: customerId,
-					entity_id: entities[0].id,
-					plan_id: licenseA.id,
-				}),
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-patch: bare add_licenses entry restores an overridden license to inheritance")}`,
-	async () => {
-		const { customerId, autumnV2_2, ctx, parent, licenses } =
-			await setupCatalogParent({
-				customerId: "lic-patch-restore",
-				idPrefix: "lic-patch-restore",
-				catalog: [{ licenseSuffix: "seat", included: 2 }],
-			});
-		const [license] = licenses;
-
-		await autumnV2_2.billing.attach({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: {
-				add_licenses: [{ license_plan_id: license.id, included: 5 }],
-			},
-		});
-		const overriddenPools = await listLicensePools({
-			autumn: autumnV2_2,
-			customerId,
-		});
-		expect(overriddenPools[0]).toMatchObject({ granted: 5 });
-
-		await autumnV2_2.billing.update({
-			customer_id: customerId,
-			plan_id: parent.id,
-			customize: {
-				add_licenses: [{ license_plan_id: license.id }],
-			},
-		});
-
-		const restoredPools = await listLicensePools({
-			autumn: autumnV2_2,
-			customerId,
-		});
-		expect(restoredPools[0]).toMatchObject({
-			granted: 2,
-			usage: 0,
-			remaining: 2,
-		});
-
-		const overrideRows = await ctx.db.query.planLicenses.findMany({
-			where: and(
-				eq(planLicenses.license_internal_product_id, license.internal_id!),
-				isNotNull(planLicenses.parent_customer_product_id),
-			),
-		});
-		expect(overrideRows).toHaveLength(0);
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-patch: same license in add_licenses and remove_licenses rejects")}`,
+	`${chalk.yellowBright("licenses-patch: duplicate license in upsert_licenses rejects")}`,
 	async () => {
 		const { customerId, autumnV2_2, parent, licenses } =
 			await setupCatalogParent({
-				customerId: "lic-patch-overlap",
-				idPrefix: "lic-patch-overlap",
-				catalog: [{ licenseSuffix: "seat", included: 1 }],
+				customerId: "lic-patch-dup-upsert",
+				idPrefix: "lic-patch-dup-upsert",
+				catalog: [{ licenseSuffix: "seat-a", included: 1 }],
 			});
 		const [license] = licenses;
 
 		await expectAutumnError({
-			errMessage: "cannot appear in both add_licenses and remove_licenses",
+			errMessage: "Duplicate license",
 			func: () =>
 				autumnV2_2.billing.attach({
 					customer_id: customerId,
 					plan_id: parent.id,
 					customize: {
-						add_licenses: [{ license_plan_id: license.id, included: 2 }],
-						remove_licenses: [license.id],
+						upsert_licenses: [
+							{ license_plan_id: license.id, included: 2 },
+							{ license_plan_id: license.id, included: 3 },
+						],
 					},
-				}),
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("licenses-patch: remove of a license outside the plan rejects")}`,
-	async () => {
-		const parent = makeParentProduct("lic-patch-unknown-parent");
-		const linked = makeLicenseProduct("lic-patch-unknown-seat");
-		const unlinked = makeLicenseProduct("lic-patch-unknown-unlinked");
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "lic-patch-unknown",
-			setup: [
-				s.customer({ testClock: false }),
-				s.entities({ count: 1, featureId: TestFeature.Users }),
-				s.products({ list: [parent, linked, unlinked] }),
-			],
-			actions: [
-				s.licenses.link({
-					parentProductId: parent.id,
-					licenseProductId: linked.id,
-					included: 1,
-				}),
-			],
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "cannot be removed",
-			func: () =>
-				autumnV2_2.billing.attach({
-					customer_id: customerId,
-					plan_id: parent.id,
-					customize: { remove_licenses: [unlinked.id] },
 				}),
 		});
 	},

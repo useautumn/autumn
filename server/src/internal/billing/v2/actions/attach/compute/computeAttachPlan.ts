@@ -5,7 +5,6 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import { buildCustomLicenseChanges } from "@/internal/billing/v2/compute/computeAutumnUtils/buildCustomLicenseChanges";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -114,11 +113,7 @@ export const computeAttachPlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
-		customLicenses: buildCustomLicenseChanges({
-			parentCustomerProduct: newCustomerProduct,
-			previousParentCustomerProduct: currentCustomerProduct,
-			licensePatch: attachBillingContext.licensePatch,
-		}),
+		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
 		customerLicenseTransitions,
 		lineItems,
 		insertCustomerEntitlements: [

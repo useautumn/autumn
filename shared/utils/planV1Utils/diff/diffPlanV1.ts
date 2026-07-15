@@ -13,8 +13,7 @@ import type { z } from "zod/v4";
 export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
 	CustomizePlanV1BaseSchema.omit({
 		items: true,
-		add_licenses: true,
-		remove_licenses: true,
+		upsert_licenses: true,
 	}).strict(),
 	{ includeItems: false, includeLicenses: false },
 );

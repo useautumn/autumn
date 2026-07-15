@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -7,11 +8,9 @@ import {
 	numeric,
 	pgTable,
 	text,
-	unique,
 	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
-import { customerProducts } from "../cusProductModels/cusProductTable.js";
 import { entitlements } from "../productModels/entModels/entTable.js";
 import { prices } from "../productModels/priceModels/priceTable.js";
 import { products } from "../productModels/productTable.js";
@@ -22,12 +21,17 @@ export const planLicenses = pgTable(
 	{
 		id: text().primaryKey().notNull(),
 		parent_internal_product_id: text("parent_internal_product_id").notNull(),
-		parent_customer_product_id: text("parent_customer_product_id"),
 		license_internal_product_id: text("license_internal_product_id").notNull(),
+		// WHO owns the row: false = catalog link shared by every customer of the
+		// parent plan; true = one customer's definition, reachable only via its
+		// pool's customer_licenses.plan_license_id.
+		is_custom: boolean("is_custom").notNull().default(false),
 		included: integer("included").notNull().default(0),
 		prepaid_only: boolean("prepaid_only").notNull().default(true),
-		// True when license_entitlements/license_prices carry this link's item
-		// set; false means items come from the license product's base rows.
+		// WHAT the items are: true = license_entitlements/license_prices carry
+		// this row's item set; false = items come from the license product's base
+		// rows. An is_custom row with only included/price-free field changes stays
+		// customized=false.
 		customized: boolean("customized").notNull().default(false),
 		metadata: jsonb().$type<Record<string, unknown>>().default({}),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
@@ -40,27 +44,18 @@ export const planLicenses = pgTable(
 			name: "plan_license_parent_product_fkey",
 		}).onDelete("cascade"),
 		foreignKey({
-			columns: [table.parent_customer_product_id],
-			foreignColumns: [customerProducts.id],
-			name: "plan_license_parent_customer_product_fkey",
-		}).onDelete("cascade"),
-		foreignKey({
 			columns: [table.license_internal_product_id],
 			foreignColumns: [products.internal_id],
 			name: "plan_license_license_product_fkey",
 		}).onDelete("cascade"),
-		unique("unique_plan_license")
-			.on(
-				table.parent_internal_product_id,
-				table.parent_customer_product_id,
-				table.license_internal_product_id,
-			)
-			.nullsNotDistinct(),
+		// Custom rows are unconstrained: many customers may customize the
+		// same (parent, license) pair.
+		uniqueIndex("unique_plan_license")
+			.on(table.parent_internal_product_id, table.license_internal_product_id)
+			.where(sql`${table.is_custom} = false`)
+			.concurrently(),
 		index("idx_plan_license_parent_product")
 			.on(table.parent_internal_product_id)
-			.concurrently(),
-		index("idx_plan_license_parent_customer_product")
-			.on(table.parent_customer_product_id)
 			.concurrently(),
 		index("idx_plan_license_license")
 			.on(table.license_internal_product_id)

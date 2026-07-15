@@ -1,5 +1,6 @@
 import {
 	type CustomizePlanLicense,
+	diffPlanV1,
 	type Feature,
 	type FrontendProduct,
 	type LicenseCustomize,
@@ -9,7 +10,6 @@ import {
 	type ProductV2,
 	productV2ToApiPlanV1,
 	productV2ToFeatureItems,
-	toCreatePlanItemParams,
 } from "@autumn/shared";
 import { useLicenseDraftStore } from "./useLicenseDraftStore";
 
@@ -54,24 +54,34 @@ export const buildPlanLicenseParams = ({
 };
 
 /**
- * Convert an edited license product into a customer-level `customize` payload.
+ * Diff the edited license product against the stock license plan — the
+ * customize payload carries only what changed.
  */
 const productToLicenseCustomize = ({
 	product,
+	license,
 	features,
 	currency,
 }: {
 	product: FrontendProduct;
+	license: ProductV2;
 	features: Feature[];
 	currency?: string;
 }): LicenseCustomize => {
-	const apiPlan = productV2ToApiPlanV1({
+	const base = productV2ToApiPlanV1({ product: license, features, currency });
+	const edited = productV2ToApiPlanV1({
 		product: product as unknown as ProductV2,
 		features,
 		currency,
 	});
-
-	return { items: apiPlan.items.map(toCreatePlanItemParams) };
+	const diff = diffPlanV1({ from: base, to: edited });
+	return {
+		...(diff.price !== undefined ? { price: diff.price } : {}),
+		...(diff.add_items !== undefined ? { add_items: diff.add_items } : {}),
+		...(diff.remove_items !== undefined
+			? { remove_items: diff.remove_items }
+			: {}),
+	};
 };
 
 /**
@@ -104,7 +114,12 @@ export const buildCustomizePlanLicense = ({
 		prepaid_only: planLicense.prepaid_only,
 		...(itemsChanged
 			? {
-					customize: productToLicenseCustomize({ product, features, currency }),
+					customize: productToLicenseCustomize({
+						product,
+						license,
+						features,
+						currency,
+					}),
 				}
 			: {}),
 	};
