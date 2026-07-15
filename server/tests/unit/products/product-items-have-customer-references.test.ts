@@ -4,6 +4,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { productItemsHaveCustomerReferences } from "@/internal/product/actions/inPlaceUpdateUtils.js";
 import { updateProductItems } from "@/internal/product/actions/updateProduct/updateProductItems.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -132,6 +133,12 @@ test("product item references: reloads current rows under the product lock", asy
 		callOrder.push("entitlement-check");
 		return false;
 	});
+	spyOn(licenseItemRepo, "listRefsByEntitlementIds").mockResolvedValue([]);
+	spyOn(licenseItemRepo, "listRefsByPriceIds").mockResolvedValue([]);
+	spyOn(licenseItemRepo, "listReferencedPriceIds").mockResolvedValue(new Set());
+	spyOn(licenseItemRepo, "listReferencedEntitlementIds").mockResolvedValue(
+		new Set(),
+	);
 	const priceReferenceSpy = spyOn(
 		CusPriceService,
 		"hasAnyPriceReferences",
