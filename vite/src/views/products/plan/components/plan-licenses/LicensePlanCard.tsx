@@ -2,7 +2,6 @@ import type { PlanLicense, ProductV2 } from "@autumn/shared";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { LicenseEditorProvider } from "./LicenseEditorProvider";
 import { LicensePlanCardEditor } from "./LicensePlanCardEditor";
-import { planLicenseItems } from "./licenseCustomizeUtils";
 import { useLicenseCardEditor } from "./useLicenseCardEditor";
 
 export function LicensePlanCard({
@@ -17,13 +16,11 @@ export function LicensePlanCard({
 	isLast?: boolean;
 }) {
 	const { features, isLoading: isFeaturesLoading } = useFeaturesQuery();
-	const items = planLicenseItems({ license });
 
 	const { seededProduct, buildEntry, saveItems, buildCustomize } =
 		useLicenseCardEditor({
 			planLicense,
 			license,
-			items,
 			features,
 		});
 

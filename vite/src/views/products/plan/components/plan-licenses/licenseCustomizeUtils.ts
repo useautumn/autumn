@@ -1,4 +1,6 @@
 import {
+	applyDiff,
+	BillingInterval,
 	type CustomizePlanLicense,
 	diffPlanV1,
 	type Feature,
@@ -7,10 +9,12 @@ import {
 	type PlanLicense,
 	type PlanLicenseParams,
 	type ProductItem,
+	type ProductItemInterval,
 	type ProductV2,
 	productV2ToApiPlanV1,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
+import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
 import { useLicenseDraftStore } from "./useLicenseDraftStore";
 
 /** Snapshot of a license card's edited state at save/collect time. */
@@ -30,6 +34,39 @@ export const planLicenseItems = ({
 		items: license.items,
 		withBasePrice: true,
 	});
+
+/** Card seed for a flow that already holds a customize patch: the stock
+ * license items with the saved diff applied. */
+export const licenseItemsWithCustomize = ({
+	license,
+	customize,
+	features,
+	currency,
+}: {
+	license: ProductV2;
+	customize: LicenseCustomize;
+	features: Feature[];
+	currency?: string;
+}): ProductItem[] => {
+	const base = productV2ToApiPlanV1({ product: license, features, currency });
+	const applied = applyDiff({ base, diff: customize });
+	const featureItems = applied.items
+		.map((item) => planItemV1ToProductItem({ item, features }))
+		.filter((item): item is ProductItem => item !== null);
+	if (!applied.price) return featureItems;
+	const { amount, interval, interval_count, additional_currencies } =
+		applied.price;
+	const priceItem: ProductItem = {
+		price: amount,
+		interval:
+			interval === BillingInterval.OneOff
+				? null
+				: (interval as string as ProductItemInterval),
+		interval_count: interval_count ?? 1,
+		additional_currencies,
+	};
+	return [priceItem, ...featureItems];
+};
 
 /**
  * Build the catalog `licenses[]` entry for a card from its drafted link

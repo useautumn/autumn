@@ -430,6 +430,7 @@ function SheetContent() {
 		showPlanEditor,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
+		effectiveAddLicenses,
 	} = useAttachFormContext();
 
 	const StageContent =
@@ -455,6 +456,7 @@ function SheetContent() {
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
 						enableLicenseEditing
+						initialAddLicenses={effectiveAddLicenses}
 					/>
 				)}
 			</div>

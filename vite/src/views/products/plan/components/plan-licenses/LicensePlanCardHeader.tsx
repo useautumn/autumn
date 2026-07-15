@@ -2,6 +2,10 @@ import type { PlanLicense, ProductV2 } from "@autumn/shared";
 import {
 	Button,
 	CardHeader,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	IconButton,
 	Tooltip,
 	TooltipContent,
@@ -12,6 +16,8 @@ import {
 	PencilSimpleIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
+import { EllipsisVerticalIcon } from "lucide-react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
 	useCurrentItem,
@@ -42,19 +48,24 @@ export function LicensePlanCardHeader({
 }) {
 	const navigate = useNavigate();
 	const { product } = useProduct();
-	const { sheetType, setSheet } = useSheet();
+	const { setSheet } = useSheet();
 	const item = useCurrentItem();
 	const patchDraft = useLicenseDraftStore((s) => s.patch);
 	const { removePendingLink } = usePendingLicenseLinks();
+	const [menuOpen, setMenuOpen] = useState(false);
 
 	const draft = useLicenseDraft(license.id);
 	const included = draft?.included ?? planLicense.included;
 	const removed = draft?.removed ?? false;
-	const isEditingSettings = sheetType === "edit-plan";
 
 	const openSettings = () => {
 		if (item && !checkItemIsValid(item)) return;
 		setSheet({ type: "edit-plan", itemId: product.id });
+	};
+
+	const openPricing = () => {
+		if (item && !checkItemIsValid(item)) return;
+		setSheet({ type: "edit-plan-price", itemId: product.id });
 	};
 
 	const removeCard = () => {
@@ -97,7 +108,7 @@ export function LicensePlanCardHeader({
 				<div className="flex items-center gap-2 text-xs min-w-0">
 					<Tooltip>
 						<TooltipTrigger
-							onClick={openSettings}
+							onClick={openPricing}
 							className="shrink-0 flex h-5 min-w-5 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-1 font-medium tabular-nums transition-colors hover:bg-accent hover:text-foreground"
 						>
 							{included}
@@ -110,37 +121,59 @@ export function LicensePlanCardHeader({
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
 					<BasePriceDisplay product={product} slim />
-					<IconButton
-						aria-label="License Settings"
-						icon={<PencilSimpleIcon />}
-						iconOrientation="center"
-						onClick={openSettings}
-						size="mini"
-						variant="secondary"
-						className={cn(isEditingSettings && "btn-secondary-active")}
-					/>
-					<IconButton
-						aria-label={`Remove ${license.name ?? license.id} from this plan`}
-						icon={<TrashIcon size={14} />}
-						iconOrientation="center"
-						onClick={removeCard}
-						size="mini"
-						variant="secondary"
-					/>
-					<IconButton
-						aria-label={`Go to ${license.name ?? license.id}`}
-						icon={<ArrowRightIcon size={14} />}
-						iconOrientation="center"
-						onClick={() =>
-							pushPage({
-								navigate,
-								path: `/products/${license.id}`,
-								queryParams: { fromPlan: planLicense.parent_plan_id },
-							})
-						}
-						size="mini"
-						variant="secondary"
-					/>
+					<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+						<DropdownMenuTrigger asChild>
+							<IconButton
+								aria-label={`${license.name ?? license.id} actions`}
+								icon={<EllipsisVerticalIcon />}
+								iconOrientation="center"
+								size="mini"
+								variant="secondary"
+								className={cn(menuOpen && "btn-secondary-active")}
+							/>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem
+								className="flex items-center text-xs"
+								onClick={() => openSettings()}
+							>
+								<div className="flex items-center gap-2">
+									<PencilSimpleIcon
+										size={12}
+										className="text-tertiary-foreground"
+									/>
+									License Settings
+								</div>
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="flex items-center text-xs"
+								onClick={() =>
+									pushPage({
+										navigate,
+										path: `/products/${license.id}`,
+										queryParams: { fromPlan: planLicense.parent_plan_id },
+									})
+								}
+							>
+								<div className="flex items-center gap-2">
+									<ArrowRightIcon
+										size={12}
+										className="text-tertiary-foreground"
+									/>
+									Go to License
+								</div>
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								className="flex items-center text-xs"
+								onClick={() => removeCard()}
+							>
+								<div className="flex items-center gap-2">
+									<TrashIcon size={12} className="text-tertiary-foreground" />
+									Remove
+								</div>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 		</CardHeader>
