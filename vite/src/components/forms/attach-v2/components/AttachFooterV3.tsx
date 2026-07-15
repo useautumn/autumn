@@ -41,8 +41,13 @@ export function getConfirmLabel({
 }
 
 export function AttachFooterV3() {
-	const { isPending, previewQuery, handleConfirm, handleInvoiceAttach, formValues } =
-		useAttachFormContext();
+	const {
+		isPending,
+		previewQuery,
+		handleConfirm,
+		handleInvoiceAttach,
+		formValues,
+	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
@@ -50,6 +55,7 @@ export function AttachFooterV3() {
 		useAttachBillingOptionsState();
 
 	const previewData = previewQuery.data;
+	const previewFailed = !!previewQuery.error;
 	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
 	const confirmLabel = getConfirmLabel({
 		previewData,
@@ -112,7 +118,9 @@ export function AttachFooterV3() {
 									"w-full",
 									invoiceDisabledReason && "pointer-events-none opacity-50",
 								)}
-								disabled={!invoiceDisabledReason && isPending}
+								disabled={
+									previewFailed || (!invoiceDisabledReason && isPending)
+								}
 								isLoading={isInvoiceOnlyStart && isPending}
 								onClick={handleInvoiceButtonClick}
 							>
@@ -129,6 +137,7 @@ export function AttachFooterV3() {
 				<Button
 					variant="primary"
 					className="w-full"
+					disabled={previewFailed}
 					onClick={() => {
 						if (hasFutureStartDate) {
 							setSheet({ type: "attach-schedule-plan", itemId });
