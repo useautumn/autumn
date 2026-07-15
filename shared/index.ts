@@ -113,6 +113,7 @@ export * from "./models/devModels/customerJwtFamilyTable";
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";
 export * from "./models/eventModels/eventTable";
+export * from "./models/eventModels/eventTableNeon";
 export * from "./models/eventModels/eventTypes";
 export * from "./models/featureModels/featureConfig/creditConfig";
 export * from "./models/featureModels/featureConfig/meteredConfig";
@@ -187,6 +188,8 @@ export * from "./models/productModels/intervals/productItemInterval";
 export * from "./models/productModels/intervals/productItemInterval";
 export * from "./models/productModels/intervals/resetInterval";
 export * from "./models/productModels/intervals/resetInterval";
+export * from "./models/productModels/priceModels/priceConfig/buildPriceCurrencies";
+export * from "./models/productModels/priceModels/priceConfig/priceCurrencyView";
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";
 // Price Models
 export * from "./models/productModels/priceModels/priceConfig/fixedPriceConfig";

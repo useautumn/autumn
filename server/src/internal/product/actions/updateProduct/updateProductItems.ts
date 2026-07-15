@@ -1,4 +1,8 @@
-import type { FullProduct, UpdateProductV2Params } from "@autumn/shared";
+import {
+	type FullProduct,
+	orgMultiCurrencyEnabled,
+	type UpdateProductV2Params,
+} from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
@@ -29,6 +33,7 @@ export const updateProductItems = async ({
 			product: fullProduct,
 			logger: ctx.logger,
 			isCustom: false,
+			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
 		});
 		return;
 	}
@@ -50,6 +55,7 @@ export const updateProductItems = async ({
 			product: fullProduct,
 			logger: ctx.logger,
 			isCustom: false,
+			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
 		});
 	});
 };

@@ -88,10 +88,40 @@ export const findSimilarItem = ({
 	return null;
 };
 
+type CurrencyEntryLike = {
+	currency: string;
+	amount?: number | null;
+	flat_amount?: number | null;
+};
+
 type TierLike = {
 	to: number | "inf";
 	amount: number;
 	flat_amount?: number | null;
+	additional_currencies?: CurrencyEntryLike[] | null;
+};
+
+const additionalCurrenciesAreSame = (
+	entries1: CurrencyEntryLike[] | null | undefined,
+	entries2: CurrencyEntryLike[] | null | undefined,
+) => {
+	const list1 = entries1 ?? [];
+	const list2 = entries2 ?? [];
+	if (list1.length !== list2.length) {
+		return false;
+	}
+
+	const byCurrency = (a: CurrencyEntryLike, b: CurrencyEntryLike) =>
+		a.currency.localeCompare(b.currency);
+	const sorted1 = [...list1].sort(byCurrency);
+	const sorted2 = [...list2].sort(byCurrency);
+
+	return sorted1.every(
+		(entry, index) =>
+			entry.currency === sorted2[index].currency &&
+			(entry.amount ?? null) === (sorted2[index].amount ?? null) &&
+			(entry.flat_amount ?? null) === (sorted2[index].flat_amount ?? null),
+	);
 };
 
 const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
@@ -111,7 +141,11 @@ const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
 		(tier, index) =>
 			tier.amount === tiers2[index].amount &&
 			tier.to === tiers2[index].to &&
-			tier.flat_amount === tiers2[index].flat_amount,
+			tier.flat_amount === tiers2[index].flat_amount &&
+			additionalCurrenciesAreSame(
+				tier.additional_currencies,
+				tiers2[index].additional_currencies,
+			),
 	);
 };
 
@@ -200,7 +234,11 @@ export const priceItemsAreSame = ({
 		itemToBillingInterval({ item: item1 }) ==
 			itemToBillingInterval({ item: item2 }) &&
 		itemToBillingIntervalCount({ item: item1 }) ==
-			itemToBillingIntervalCount({ item: item2 });
+			itemToBillingIntervalCount({ item: item2 }) &&
+		additionalCurrenciesAreSame(
+			item1.additional_currencies,
+			item2.additional_currencies,
+		);
 
 	if (!same && logDifferences) {
 		console.log(`Price items different: ${item1.price}`);

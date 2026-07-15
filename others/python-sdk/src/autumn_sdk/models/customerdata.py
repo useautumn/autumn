@@ -448,6 +448,8 @@ class CustomerDataTypedDict(TypedDict):
     r"""The ID of the free plan to auto-enable for the customer"""
     send_email_receipts: NotRequired[bool]
     r"""Whether to send email receipts to this customer"""
+    currency: NotRequired[Nullable[str]]
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
     billing_controls: NotRequired[CustomerDataBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
     config: NotRequired[CustomerDataConfigTypedDict]
@@ -481,6 +483,9 @@ class CustomerData(BaseModel):
     send_email_receipts: Optional[bool] = None
     r"""Whether to send email receipts to this customer"""
 
+    currency: OptionalNullable[str] = UNSET
+    r"""Currency to bill this customer in (e.g. usd, eur). Defaults to the organization's default currency."""
+
     billing_controls: Optional[CustomerDataBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -499,11 +504,14 @@ class CustomerData(BaseModel):
                 "create_in_stripe",
                 "auto_enable_plan_id",
                 "send_email_receipts",
+                "currency",
                 "billing_controls",
                 "config",
             ]
         )
-        nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
+        nullable_fields = set(
+            ["name", "email", "fingerprint", "metadata", "stripe_id", "currency"]
+        )
         serialized = handler(self)
         m = {}
 

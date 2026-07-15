@@ -96,10 +96,14 @@ export const usagePriceToLineItem = ({
 		price,
 		overage,
 		allowance: allowance,
+		currency: context.currency,
 	});
 
 	// 5. Get stripe price / product IDs
-	const { stripePriceId, stripeProductId } = cusEntToStripeIds({ cusEnt });
+	const { stripePriceId, stripeProductId } = cusEntToStripeIds({
+		cusEnt,
+		currency: context.currency,
+	});
 
 	// 6. Should prorate: don't if consumable price (unless override provided)
 	const shouldProrate =

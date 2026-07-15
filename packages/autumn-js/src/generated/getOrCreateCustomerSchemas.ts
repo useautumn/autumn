@@ -137,6 +137,7 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	create_in_stripe: z.union([z.boolean(), z.undefined()]).optional(),
 	auto_enable_plan_id: z.union([z.string(), z.undefined()]).optional(),
 	send_email_receipts: z.union([z.boolean(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional().nullable(),
 	billing_controls: z
 		.union([getOrCreateCustomerBillingControlsOutboundSchema, z.undefined()])
 		.optional(),
@@ -232,6 +233,7 @@ export const getOrCreateCustomerParamsSchema = z.object({
 	createInStripe: z.union([z.boolean(), z.undefined()]).optional(),
 	autoEnablePlanId: z.union([z.string(), z.undefined()]).optional(),
 	sendEmailReceipts: z.union([z.boolean(), z.undefined()]).optional(),
+	currency: z.union([z.string(), z.undefined()]).optional().nullable(),
 	billingControls: z
 		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
 		.optional(),

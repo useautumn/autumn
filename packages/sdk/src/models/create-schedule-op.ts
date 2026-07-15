@@ -154,6 +154,17 @@ export type CreateSchedulePriceInterval2 = ClosedEnum<
   typeof CreateSchedulePriceInterval2
 >;
 
+export type CreateScheduleAdditionalCurrency2 = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -170,6 +181,10 @@ export type CreateScheduleBasePrice2 = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<CreateScheduleAdditionalCurrency2> | undefined;
 };
 
 /**
@@ -207,10 +222,16 @@ export type CreateScheduleItemReset2 = {
   intervalCount?: number | undefined;
 };
 
+export type CreateScheduleItemAdditionalCurrency2 = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
 export type CreateScheduleItemTier2 = {
   to?: any | undefined;
   amount?: any | undefined;
   flatAmount?: any | undefined;
+  additionalCurrencies?: any | undefined;
 };
 
 export const CreateScheduleItemTierBehavior2 = {
@@ -261,6 +282,12 @@ export type CreateScheduleItemPrice2 = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreateScheduleItemAdditionalCurrency2>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -440,10 +467,16 @@ export type CreateScheduleAddItemReset2 = {
   intervalCount?: number | undefined;
 };
 
+export type CreateScheduleAddItemAdditionalCurrency2 = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
 export type CreateScheduleAddItemTier2 = {
   to?: any | undefined;
   amount?: any | undefined;
   flatAmount?: any | undefined;
+  additionalCurrencies?: any | undefined;
 };
 
 export const CreateScheduleAddItemTierBehavior2 = {
@@ -494,6 +527,12 @@ export type CreateScheduleAddItemPrice2 = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<CreateScheduleAddItemAdditionalCurrency2>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -1338,10 +1377,38 @@ export const CreateSchedulePriceInterval2$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreateSchedulePriceInterval2);
 
 /** @internal */
+export type CreateScheduleAdditionalCurrency2$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const CreateScheduleAdditionalCurrency2$outboundSchema: z.ZodMiniType<
+  CreateScheduleAdditionalCurrency2$Outbound,
+  CreateScheduleAdditionalCurrency2
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function createScheduleAdditionalCurrency2ToJSON(
+  createScheduleAdditionalCurrency2: CreateScheduleAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleAdditionalCurrency2$outboundSchema.parse(
+      createScheduleAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleBasePrice2$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleAdditionalCurrency2$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1353,10 +1420,14 @@ export const CreateScheduleBasePrice2$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: CreateSchedulePriceInterval2$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => CreateScheduleAdditionalCurrency2$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1405,10 +1476,37 @@ export function createScheduleItemReset2ToJSON(
 }
 
 /** @internal */
+export type CreateScheduleItemAdditionalCurrency2$Outbound = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
+/** @internal */
+export const CreateScheduleItemAdditionalCurrency2$outboundSchema:
+  z.ZodMiniType<
+    CreateScheduleItemAdditionalCurrency2$Outbound,
+    CreateScheduleItemAdditionalCurrency2
+  > = z.object({
+    currency: z.optional(z.any()),
+    amount: z.optional(z.any()),
+  });
+
+export function createScheduleItemAdditionalCurrency2ToJSON(
+  createScheduleItemAdditionalCurrency2: CreateScheduleItemAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleItemAdditionalCurrency2$outboundSchema.parse(
+      createScheduleItemAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleItemTier2$Outbound = {
   to?: any | undefined;
   amount?: any | undefined;
   flat_amount?: any | undefined;
+  additional_currencies?: any | undefined;
 };
 
 /** @internal */
@@ -1420,10 +1518,12 @@ export const CreateScheduleItemTier2$outboundSchema: z.ZodMiniType<
     to: z.optional(z.any()),
     amount: z.optional(z.any()),
     flatAmount: z.optional(z.any()),
+    additionalCurrencies: z.optional(z.any()),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1454,6 +1554,9 @@ export const CreateScheduleItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreateScheduleItemPrice2$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleItemAdditionalCurrency2$Outbound>
+    | undefined;
   tiers?: Array<CreateScheduleItemTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1470,6 +1573,11 @@ export const CreateScheduleItemPrice2$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(
+        z.lazy(() => CreateScheduleItemAdditionalCurrency2$outboundSchema),
+      ),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => CreateScheduleItemTier2$outboundSchema)),
     ),
@@ -1482,6 +1590,7 @@ export const CreateScheduleItemPrice2$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1670,10 +1779,38 @@ export function createScheduleAddItemReset2ToJSON(
 }
 
 /** @internal */
+export type CreateScheduleAddItemAdditionalCurrency2$Outbound = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+};
+
+/** @internal */
+export const CreateScheduleAddItemAdditionalCurrency2$outboundSchema:
+  z.ZodMiniType<
+    CreateScheduleAddItemAdditionalCurrency2$Outbound,
+    CreateScheduleAddItemAdditionalCurrency2
+  > = z.object({
+    currency: z.optional(z.any()),
+    amount: z.optional(z.any()),
+  });
+
+export function createScheduleAddItemAdditionalCurrency2ToJSON(
+  createScheduleAddItemAdditionalCurrency2:
+    CreateScheduleAddItemAdditionalCurrency2,
+): string {
+  return JSON.stringify(
+    CreateScheduleAddItemAdditionalCurrency2$outboundSchema.parse(
+      createScheduleAddItemAdditionalCurrency2,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateScheduleAddItemTier2$Outbound = {
   to?: any | undefined;
   amount?: any | undefined;
   flat_amount?: any | undefined;
+  additional_currencies?: any | undefined;
 };
 
 /** @internal */
@@ -1685,10 +1822,12 @@ export const CreateScheduleAddItemTier2$outboundSchema: z.ZodMiniType<
     to: z.optional(z.any()),
     amount: z.optional(z.any()),
     flatAmount: z.optional(z.any()),
+    additionalCurrencies: z.optional(z.any()),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1719,6 +1858,9 @@ export const CreateScheduleAddItemBillingMethod2$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type CreateScheduleAddItemPrice2$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<CreateScheduleAddItemAdditionalCurrency2$Outbound>
+    | undefined;
   tiers?: Array<CreateScheduleAddItemTier2$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1735,9 +1877,12 @@ export const CreateScheduleAddItemPrice2$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => CreateScheduleAddItemTier2$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      CreateScheduleAddItemAdditionalCurrency2$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      CreateScheduleAddItemTier2$outboundSchema
+    ))),
     tierBehavior: z.optional(CreateScheduleAddItemTierBehavior2$outboundSchema),
     interval: CreateScheduleAddItemPriceInterval2$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1747,6 +1892,7 @@ export const CreateScheduleAddItemPrice2$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",

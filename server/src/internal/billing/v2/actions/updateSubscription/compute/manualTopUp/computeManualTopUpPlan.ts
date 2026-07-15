@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	billingContextToCurrency,
 	cusEntToCusPrice,
 	type FullCusEntWithFullCusProduct,
 	fullCustomerToCustomerEntitlements,
@@ -9,7 +10,6 @@ import {
 	isVolumeBasedCusEnt,
 	type LineItem,
 	type LineItemContext,
-	orgToCurrency,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 	type UsagePriceConfig,
@@ -105,7 +105,7 @@ export const computeManualTopUpPlan = ({
 				price: cusPrice.price,
 				product: customerProduct.product,
 				feature,
-				currency: orgToCurrency({ org }),
+				currency: billingContextToCurrency({ org, billingContext }),
 				direction: "charge",
 				now: currentEpochMs ?? Date.now(),
 				billingTiming: "in_advance",

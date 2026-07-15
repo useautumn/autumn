@@ -6,6 +6,7 @@ import {
 	isPrepaidPrice,
 	type Organization,
 	type Price,
+	priceAmountsForCurrency,
 	priceToStripeTiersMode,
 	TierBehavior,
 	type UsagePriceConfig,
@@ -15,9 +16,9 @@ import { priceToStripeRecurringParams } from "@utils/productUtils/priceUtils/con
 import { priceToInArrearTiers } from "@/external/stripe/createStripePrice/createStripeInArrear";
 import {
 	inlinePriceToShape,
-	stripeShapeDecimalAmount,
 	type StripePriceShape,
 	type StripePriceShapeTier,
+	stripeShapeDecimalAmount,
 } from "./stripePriceShape";
 
 export const autumnBasePriceToStripePriceShape = ({
@@ -31,6 +32,11 @@ export const autumnBasePriceToStripePriceShape = ({
 }): StripePriceShape | null => {
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
+	const amount = priceAmountsForCurrency({
+		config: price.config,
+		currency,
+	}).amount;
+	if (amount == null) return null;
 
 	return inlinePriceToShape({
 		price: {
@@ -39,7 +45,7 @@ export const autumnBasePriceToStripePriceShape = ({
 			billing_scheme: "per_unit",
 			recurring,
 			unit_amount_decimal: atmnToStripeAmountDecimal({
-				amount: price.config.amount,
+				amount,
 				currency,
 			}),
 		},
@@ -91,7 +97,7 @@ export const autumnConsumablePriceToStripePriceShape = ({
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
 
-	const tiers = priceToInArrearTiers({ price, entitlement, org });
+	const tiers = priceToInArrearTiers({ price, entitlement, org, currency });
 	const recurringMetered = { ...recurring, usage_type: "metered" };
 
 	if (tiers.length === 1) {
@@ -146,7 +152,12 @@ export const autumnPrepaidPriceToStripePriceShape = ({
 	const recurring = priceToStripeRecurringParams({ price });
 	if (!recurring) return null;
 
-	const tiers = priceToStripePrepaidV2Tiers({ price, entitlement, org });
+	const tiers = priceToStripePrepaidV2Tiers({
+		price,
+		entitlement,
+		org,
+		currency,
+	});
 
 	if (tiers.length === 1) {
 		return inlinePriceToShape({

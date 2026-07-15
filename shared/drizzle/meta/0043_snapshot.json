@@ -1,5 +1,5 @@
 {
-  "id": "8adcaf5f-9026-4017-9553-2ad2117af28c",
+  "id": "afa0c3f8-2d8f-49b5-ab6b-a6a48e8f7980",
   "prevId": "6e6a74d9-e762-4ea2-b733-58cb0c56aab1",
   "version": "7",
   "dialect": "postgresql",
@@ -2735,6 +2735,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "auto_topups": {
           "name": "auto_topups",
@@ -8549,73 +8555,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.transition_rules": {
-      "name": "transition_rules",
-      "schema": "",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "carry_over_usages": {
-          "name": "carry_over_usages",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "transition_rules_org_id_fkey": {
-          "name": "transition_rules_org_id_fkey",
-          "tableFrom": "transition_rules",
-          "tableTo": "organizations",
-          "columnsFrom": [
-            "org_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "transition_rules_pkey": {
-          "name": "transition_rules_pkey",
-          "columns": [
-            "org_id",
-            "env"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

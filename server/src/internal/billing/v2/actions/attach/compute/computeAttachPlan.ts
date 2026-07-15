@@ -1,7 +1,8 @@
-import type {
-	AttachBillingContext,
-	AttachParamsV1,
-	AutumnBillingPlan,
+import {
+	type AttachBillingContext,
+	type AttachParamsV1,
+	type AutumnBillingPlan,
+	isFreeProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
@@ -9,6 +10,7 @@ import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/uti
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
+import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
@@ -43,6 +45,10 @@ export const computeAttachPlan = ({
 		ctx,
 		attachBillingContext,
 		params,
+	});
+	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
+		ctx,
+		newCustomerProduct,
 	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
@@ -88,9 +94,27 @@ export const computeAttachPlan = ({
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
+	// Lock the customer's currency on the first paid attach (only when they have
+	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
+	const {
+		fullCustomer,
+		attachProduct,
+		currency: resolvedCurrency,
+	} = attachBillingContext;
+	const lockCustomerCurrency =
+		resolvedCurrency &&
+		!fullCustomer.currency &&
+		!isFreeProduct({ prices: attachProduct.prices })
+			? {
+					internalCustomerId: fullCustomer.internal_id,
+					currency: resolvedCurrency,
+				}
+			: undefined;
+
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [newCustomerProduct],
+		lockCustomerCurrency,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices,
@@ -106,6 +130,7 @@ export const computeAttachPlan = ({
 			...oneOffPrepaidCarryOvers.customerEntitlements,
 		],
 		updateCustomerEntitlements,
+		oneOffPurchaseRebalance,
 	};
 
 	plan = finalizeAttachPlan({

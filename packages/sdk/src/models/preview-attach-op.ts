@@ -53,6 +53,17 @@ export type PreviewAttachPriceInterval = ClosedEnum<
   typeof PreviewAttachPriceInterval
 >;
 
+export type PreviewAttachAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 /**
  * Base price configuration for a plan.
  */
@@ -69,6 +80,10 @@ export type PreviewAttachBasePrice = {
    * Number of intervals per billing cycle. Defaults to 1.
    */
   intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<PreviewAttachAdditionalCurrency> | undefined;
 };
 
 /**
@@ -106,12 +121,44 @@ export type PreviewAttachItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewAttachItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewAttachItemTo = number | string;
+
+export type PreviewAttachItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewAttachItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewAttachItemTierBehavior = {
@@ -162,6 +209,10 @@ export type PreviewAttachItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?: Array<PreviewAttachItemAdditionalCurrency> | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -341,12 +392,44 @@ export type PreviewAttachAddItemReset = {
   intervalCount?: number | undefined;
 };
 
+export type PreviewAttachAddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
 export type PreviewAttachAddItemTo = number | string;
+
+export type PreviewAttachAddItemTierAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Per-unit amount for this tier in this currency.
+   */
+  amount?: number | undefined;
+  /**
+   * Flat amount for this tier in this currency, if the tier uses one.
+   */
+  flatAmount?: number | undefined;
+};
 
 export type PreviewAttachAddItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachAddItemTierAdditionalCurrency>
+    | undefined;
 };
 
 export const PreviewAttachAddItemTierBehavior = {
@@ -397,6 +480,12 @@ export type PreviewAttachAddItemPrice = {
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
   amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<PreviewAttachAddItemAdditionalCurrency>
+    | undefined;
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
@@ -1144,6 +1233,10 @@ export type PreviewAttachParams = {
    * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
    */
   taxRateId?: string | undefined;
+  /**
+   * Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -1550,10 +1643,38 @@ export const PreviewAttachPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachPriceInterval);
 
 /** @internal */
+export type PreviewAttachAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewAttachAdditionalCurrency$Outbound,
+  PreviewAttachAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewAttachAdditionalCurrencyToJSON(
+  previewAttachAdditionalCurrency: PreviewAttachAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAdditionalCurrency$outboundSchema.parse(
+      previewAttachAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachBasePrice$Outbound = {
   amount: number;
   interval: string;
   interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1565,10 +1686,14 @@ export const PreviewAttachBasePrice$outboundSchema: z.ZodMiniType<
     amount: z.number(),
     interval: PreviewAttachPriceInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewAttachAdditionalCurrency$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1617,6 +1742,31 @@ export function previewAttachItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewAttachItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachItemAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  PreviewAttachItemAdditionalCurrency$Outbound,
+  PreviewAttachItemAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function previewAttachItemAdditionalCurrencyToJSON(
+  previewAttachItemAdditionalCurrency: PreviewAttachItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachItemAdditionalCurrency$outboundSchema.parse(
+      previewAttachItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1634,10 +1784,49 @@ export function previewAttachItemToToJSON(
 }
 
 /** @internal */
+export type PreviewAttachItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachItemTierAdditionalCurrency$Outbound,
+    PreviewAttachItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewAttachItemTierAdditionalCurrencyToJSON(
+  previewAttachItemTierAdditionalCurrency:
+    PreviewAttachItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachItemTierAdditionalCurrency$outboundSchema.parse(
+      previewAttachItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1649,10 +1838,14 @@ export const PreviewAttachItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1683,6 +1876,9 @@ export const PreviewAttachItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewAttachItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1699,6 +1895,9 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => PreviewAttachItemAdditionalCurrency$outboundSchema)),
+    ),
     tiers: z.optional(
       z.array(z.lazy(() => PreviewAttachItemTier$outboundSchema)),
     ),
@@ -1711,6 +1910,7 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -1890,6 +2090,33 @@ export function previewAttachAddItemResetToJSON(
 }
 
 /** @internal */
+export type PreviewAttachAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const PreviewAttachAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachAddItemAdditionalCurrency$Outbound,
+    PreviewAttachAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function previewAttachAddItemAdditionalCurrencyToJSON(
+  previewAttachAddItemAdditionalCurrency:
+    PreviewAttachAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAddItemAdditionalCurrency$outboundSchema.parse(
+      previewAttachAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachAddItemTo$Outbound = number | string;
 
 /** @internal */
@@ -1907,10 +2134,49 @@ export function previewAttachAddItemToToJSON(
 }
 
 /** @internal */
+export type PreviewAttachAddItemTierAdditionalCurrency$Outbound = {
+  currency: string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewAttachAddItemTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    PreviewAttachAddItemTierAdditionalCurrency$Outbound,
+    PreviewAttachAddItemTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.string(),
+      amount: z.optional(z.number()),
+      flatAmount: z.optional(z.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function previewAttachAddItemTierAdditionalCurrencyToJSON(
+  previewAttachAddItemTierAdditionalCurrency:
+    PreviewAttachAddItemTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    PreviewAttachAddItemTierAdditionalCurrency$outboundSchema.parse(
+      previewAttachAddItemTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewAttachAddItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAddItemTierAdditionalCurrency$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1922,10 +2188,14 @@ export const PreviewAttachAddItemTier$outboundSchema: z.ZodMiniType<
     to: smartUnion([z.number(), z.string()]),
     amount: z.optional(z.number()),
     flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemTierAdditionalCurrency$outboundSchema
+    ))),
   }),
   z.transform((v) => {
     return remap$(v, {
       flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
     });
   }),
 );
@@ -1956,6 +2226,9 @@ export const PreviewAttachAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachAddItemPrice$Outbound = {
   amount?: number | undefined;
+  additional_currencies?:
+    | Array<PreviewAttachAddItemAdditionalCurrency$Outbound>
+    | undefined;
   tiers?: Array<PreviewAttachAddItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
@@ -1972,9 +2245,12 @@ export const PreviewAttachAddItemPrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(
-      z.array(z.lazy(() => PreviewAttachAddItemTier$outboundSchema)),
-    ),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      PreviewAttachAddItemTier$outboundSchema
+    ))),
     tierBehavior: z.optional(PreviewAttachAddItemTierBehavior$outboundSchema),
     interval: PreviewAttachAddItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
@@ -1984,6 +2260,7 @@ export const PreviewAttachAddItemPrice$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      additionalCurrencies: "additional_currencies",
       tierBehavior: "tier_behavior",
       intervalCount: "interval_count",
       billingUnits: "billing_units",
@@ -2853,6 +3130,7 @@ export type PreviewAttachParams$Outbound = {
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
   tax_rate_id?: string | undefined;
+  currency?: string | undefined;
 };
 
 /** @internal */
@@ -2905,6 +3183,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
     taxRateId: z.optional(z.string()),
+    currency: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {

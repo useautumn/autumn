@@ -12,38 +12,19 @@ import {
 	type SyncPlanInstance,
 	type SyncProductContext,
 } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
+import {
+	fetchStripeSyncSchedule,
+	fetchStripeSyncSubscription,
+} from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
+import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
-
-const fetchStripeSubscription = async ({
-	ctx,
-	stripeSubscriptionId,
-}: {
-	ctx: AutumnContext;
-	stripeSubscriptionId?: string;
-}): Promise<Stripe.Subscription | null> => {
-	if (!stripeSubscriptionId) return null;
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	return stripeCli.subscriptions.retrieve(stripeSubscriptionId);
-};
-
-const fetchStripeSchedule = async ({
-	ctx,
-	stripeScheduleId,
-}: {
-	ctx: AutumnContext;
-	stripeScheduleId?: string;
-}): Promise<Stripe.SubscriptionSchedule | null> => {
-	if (!stripeScheduleId) return null;
-	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	return stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
-};
+import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 
 const resolvePlanEntity = ({
 	plan,
@@ -138,11 +119,17 @@ const buildProductContext = async ({
 			currentCustomerProduct = transition.currentCustomerProduct;
 		}
 	}
+	const preparedCustomBase = prepareSyncedCustomBasePrice({
+		currentCustomerProduct,
+		fullProduct,
+		customPrices,
+		plan,
+	});
 
 	return {
 		plan,
-		fullProduct,
-		customPrices,
+		fullProduct: preparedCustomBase.fullProduct,
+		customPrices: preparedCustomBase.customPrices,
 		customEntitlements,
 		featureQuantities,
 		entity,
@@ -185,16 +172,22 @@ export const setupSyncContext = async ({
 		params: { customer_id: params.customer_id },
 	});
 
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const [stripeSubscription, stripeSchedule] = await Promise.all([
-		fetchStripeSubscription({
-			ctx,
-			stripeSubscriptionId: params.stripe_subscription_id,
+		fetchStripeSyncSubscription({
+			stripeCli,
+			subscriptionId: params.stripe_subscription_id,
 		}),
-		fetchStripeSchedule({
-			ctx,
-			stripeScheduleId: params.stripe_schedule_id,
+		fetchStripeSyncSchedule({
+			stripeCli,
+			scheduleId: params.stripe_schedule_id,
 		}),
 	]);
+	const currency = resolveStripeSyncCurrency({
+		subscription: stripeSubscription,
+		schedule: stripeSchedule,
+		customerCurrency: fullCustomer.currency,
+	});
 
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
@@ -263,6 +256,7 @@ export const setupSyncContext = async ({
 		fullCustomer,
 		stripeSubscription,
 		stripeSchedule,
+		currency,
 		immediatePhase,
 		futurePhases,
 		currentEpochMs,

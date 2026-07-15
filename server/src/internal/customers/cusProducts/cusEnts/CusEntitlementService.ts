@@ -176,53 +176,51 @@ export class CusEntService {
 		await db.insert(customerEntitlements).values(insertData);
 	}
 
-	static async getActiveResetPassed({
+	static buildActiveResetPassedPage({
 		db,
-		customDateUnix,
-		batchSize = 1000,
-		limit,
-		includeSeparateIntervalResets = true,
+		now,
+		batchSize,
+		cursor,
+		includeSeparateIntervalResets,
 	}: {
 		db: DrizzleCli;
-		customDateUnix?: number;
-		batchSize?: number;
-		limit?: number;
-		includeSeparateIntervalResets?: boolean;
+		now: number;
+		batchSize: number;
+		cursor: { nextResetAt: number; id: string } | null;
+		includeSeparateIntervalResets: boolean;
 	}) {
-		const allResults: FullCusEntWithProduct[] = [];
-		let offset = 0;
-		let hasMore = true;
-
-		// Shared projection across all three UNION ALL branches. Keeping the
-		// column list identical across branches is required for UNION ALL and
-		// lets the existing mapper below consume each row uniformly.
+		// Sort keys are projected as top-level output columns because Postgres
+		// only allows ORDER BY on a set operation via output column names.
 		const baseSelect = {
 			customer_entitlements: customerEntitlements,
 			entitlements: entitlements,
 			features: features,
 			customers: customers,
 			customer_products: customerProducts,
+			sort_reset: sql`${customerEntitlements.next_reset_at}`.as("sort_reset"),
+			sort_id: sql`${customerEntitlements.id} COLLATE "C"`.as("sort_id"),
 		};
 
-		// Common reset predicates applied in every branch: not marked expired
-		// (skips the backfilled terminal-product backlog via the partial index),
-		// next_reset_at has passed, and the entitlement has not expired.
 		const commonResetPredicates = () =>
 			and(
 				sql`${customerEntitlements.expired} IS NOT TRUE`,
-				lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
+				lt(customerEntitlements.next_reset_at, now),
 				or(
 					isNull(customerEntitlements.expires_at),
-					gt(customerEntitlements.expires_at, customDateUnix ?? Date.now()),
+					gt(customerEntitlements.expires_at, now),
 				),
 			);
 
+		// COLLATE "C" keeps the cursor comparison aligned with sort_id's ordering.
+		const afterCursor = () =>
+			cursor
+				? sql`(${customerEntitlements.next_reset_at}, ${customerEntitlements.id} COLLATE "C") > (${cursor.nextResetAt}, ${cursor.id})`
+				: undefined;
+
 		// Exclude normal price-backed cusEnts: their reset is owned by the Stripe
-		// invoice.created handler, not this cron. Split prepaid reset intervals
-		// are included by dedicated branches below. Must stay in sync with
-		// `cusEntToCusPrice` (shared/utils/cusEntUtils/.../cusEntToCusPrice.ts)
-		// and the in-memory `getResettableCustomerEntitlements` filter.
-		// Only applies to branches with `customer_product_id` set (i.e. 2 + 3).
+		// invoice.created handler, not this cron. Must stay in sync with
+		// `cusEntToCusPrice` and the in-memory `getResettableCustomerEntitlements`
+		// filter. Only applies to branches with `customer_product_id` set (2 + 3).
 		const notPriceBacked = () =>
 			notExists(
 				db
@@ -242,123 +240,169 @@ export class CusEntService {
 				? or(eq(customerEntitlements.separate_interval, true), notPriceBacked())
 				: notPriceBacked();
 
-		while (hasMore) {
-			// Branch 1: cusEnts with no customer_product. Left-join to
-			// customer_products on a false predicate so the row shape matches
-			// the other branches (customer_products columns come back NULL).
-			const branch1 = db
-				.select(baseSelect)
-				.from(customerEntitlements)
-				.innerJoin(
-					entitlements,
-					eq(customerEntitlements.entitlement_id, entitlements.id),
-				)
-				.innerJoin(
-					features,
-					eq(entitlements.internal_feature_id, features.internal_id),
-				)
-				.innerJoin(
-					customers,
-					eq(customerEntitlements.internal_customer_id, customers.internal_id),
-				)
-				.leftJoin(customerProducts, sql`false`)
-				.where(
-					and(
-						isNull(customerEntitlements.customer_product_id),
-						commonResetPredicates(),
-					),
-				);
+		// Branch 1: cusEnts with no customer_product. Left-join to
+		// customer_products on a false predicate so the row shape matches
+		// the other branches (customer_products columns come back NULL).
+		const branch1 = db
+			.select(baseSelect)
+			.from(customerEntitlements)
+			.innerJoin(
+				entitlements,
+				eq(customerEntitlements.entitlement_id, entitlements.id),
+			)
+			.innerJoin(
+				features,
+				eq(entitlements.internal_feature_id, features.internal_id),
+			)
+			.innerJoin(
+				customers,
+				eq(customerEntitlements.internal_customer_id, customers.internal_id),
+			)
+			.leftJoin(customerProducts, sql`false`)
+			.where(
+				and(
+					isNull(customerEntitlements.customer_product_id),
+					commonResetPredicates(),
+					afterCursor(),
+				),
+			);
 
-			// Branch 2: cusEnts on active customer_products.
-			const branch2 = db
-				.select(baseSelect)
-				.from(customerEntitlements)
-				.innerJoin(
-					entitlements,
-					eq(customerEntitlements.entitlement_id, entitlements.id),
-				)
-				.innerJoin(
-					features,
-					eq(entitlements.internal_feature_id, features.internal_id),
-				)
-				.innerJoin(
-					customers,
-					eq(customerEntitlements.internal_customer_id, customers.internal_id),
-				)
-				.innerJoin(
-					customerProducts,
-					sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
-				)
-				.where(
-					and(
-						eq(customerProducts.status, CusProductStatus.Active),
-						commonResetPredicates(),
-						resetOwnedByAutumn(),
-					),
-				);
+		// Branch 2: cusEnts on active customer_products.
+		const branch2 = db
+			.select(baseSelect)
+			.from(customerEntitlements)
+			.innerJoin(
+				entitlements,
+				eq(customerEntitlements.entitlement_id, entitlements.id),
+			)
+			.innerJoin(
+				features,
+				eq(entitlements.internal_feature_id, features.internal_id),
+			)
+			.innerJoin(
+				customers,
+				eq(customerEntitlements.internal_customer_id, customers.internal_id),
+			)
+			.innerJoin(
+				customerProducts,
+				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
+			)
+			.where(
+				and(
+					eq(customerProducts.status, CusProductStatus.Active),
+					commonResetPredicates(),
+					resetOwnedByAutumn(),
+					afterCursor(),
+				),
+			);
 
-			// Branch 3: cusEnts on past_due customer_products whose product
-			// opted into ignore_past_due via products.config.
-			const branch3 = db
-				.select(baseSelect)
-				.from(customerEntitlements)
-				.innerJoin(
-					entitlements,
-					eq(customerEntitlements.entitlement_id, entitlements.id),
-				)
-				.innerJoin(
-					features,
-					eq(entitlements.internal_feature_id, features.internal_id),
-				)
-				.innerJoin(
-					customers,
-					eq(customerEntitlements.internal_customer_id, customers.internal_id),
-				)
-				.innerJoin(
-					customerProducts,
-					sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
-				)
-				.innerJoin(
-					products,
-					eq(customerProducts.internal_product_id, products.internal_id),
-				)
-				.where(
-					and(
-						eq(customerProducts.status, CusProductStatus.PastDue),
-						sql`(${products.config}->>'ignore_past_due')::boolean = true`,
-						commonResetPredicates(),
-						resetOwnedByAutumn(),
-					),
-				);
+		// Branch 3: cusEnts on past_due customer_products whose product
+		// opted into ignore_past_due via products.config.
+		const branch3 = db
+			.select(baseSelect)
+			.from(customerEntitlements)
+			.innerJoin(
+				entitlements,
+				eq(customerEntitlements.entitlement_id, entitlements.id),
+			)
+			.innerJoin(
+				features,
+				eq(entitlements.internal_feature_id, features.internal_id),
+			)
+			.innerJoin(
+				customers,
+				eq(customerEntitlements.internal_customer_id, customers.internal_id),
+			)
+			.innerJoin(
+				customerProducts,
+				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
+			)
+			.innerJoin(
+				products,
+				eq(customerProducts.internal_product_id, products.internal_id),
+			)
+			.where(
+				and(
+					eq(customerProducts.status, CusProductStatus.PastDue),
+					sql`(${products.config}->>'ignore_past_due')::boolean = true`,
+					commonResetPredicates(),
+					resetOwnedByAutumn(),
+					afterCursor(),
+				),
+			);
 
-			const data = await unionAll(branch1, branch2, branch3)
-				.limit(batchSize)
-				.offset(offset);
+		// One statement, one snapshot: branch consistency without a
+		// multi-statement transaction, and statement_timeout caps the whole page.
+		return unionAll(branch1, branch2, branch3)
+			.orderBy(sql`"sort_reset"`, sql`"sort_id"`)
+			.limit(batchSize);
+	}
 
-			// Note: PlanetScale tag would be added here but Drizzle 0.43.1's unionAll
-			// doesn't support .comment() method. Tag will be added after Drizzle upgrade.
-			// Target tag: planetScaleTag({ query: "getActiveResetPassed" })
+	static async getActiveResetPassed({
+		db,
+		customDateUnix,
+		batchSize = 1000,
+		limit,
+		includeSeparateIntervalResets = true,
+		onPageFetched,
+	}: {
+		db: DrizzleCli;
+		customDateUnix?: number;
+		batchSize?: number;
+		limit?: number;
+		includeSeparateIntervalResets?: boolean;
+		/** Test seam: runs between pages to exercise mid-pagination mutations. */
+		onPageFetched?: (page: ResetCusEnt[]) => void | Promise<void>;
+	}) {
+		const allResults: FullCusEntWithProduct[] = [];
+		const now = customDateUnix ?? Date.now();
+		let cursor: { nextResetAt: number; id: string } | null = null;
+		const emittedIds = new Set<string>();
 
-			if (data.length === 0 || (limit && allResults.length >= limit)) {
-				hasMore = false;
-			} else {
-				const mappedData = data.map((item) => ({
-					...item.customer_entitlements,
-					entitlement: {
-						...item.entitlements,
-						feature: item.features,
-					},
-					customer_product: item.customer_products,
-					customer: item.customers,
-					replaceables: [],
-					rollovers: [],
-				})) as ResetCusEnt[];
+		while (true) {
+			const page = await CusEntService.buildActiveResetPassedPage({
+				db,
+				now,
+				batchSize,
+				cursor,
+				includeSeparateIntervalResets,
+			});
 
-				allResults.push(...mappedData);
-				offset += batchSize;
-				hasMore = data.length === batchSize;
-				console.log(`Fetched ${allResults.length} entitlements to reset`);
+			if (page.length === 0) break;
+
+			const freshRows: typeof page = [];
+			for (const item of page) {
+				const id = item.customer_entitlements.id;
+				if (emittedIds.has(id)) continue;
+				emittedIds.add(id);
+				freshRows.push(item);
 			}
+
+			const mappedData = freshRows.map((item) => ({
+				...item.customer_entitlements,
+				entitlement: {
+					...item.entitlements,
+					feature: item.features,
+				},
+				customer_product: item.customer_products,
+				customer: item.customers,
+				replaceables: [],
+				rollovers: [],
+			})) as ResetCusEnt[];
+
+			allResults.push(...mappedData);
+			console.log(`Fetched ${allResults.length} entitlements to reset`);
+
+			const lastRow = page[page.length - 1].customer_entitlements;
+			cursor = {
+				nextResetAt: Number(lastRow.next_reset_at),
+				id: lastRow.id,
+			};
+
+			if (onPageFetched) await onPageFetched(mappedData);
+
+			if (page.length < batchSize) break;
+			if (limit && allResults.length >= limit) break;
 		}
 
 		return allResults as ResetCusEnt[];

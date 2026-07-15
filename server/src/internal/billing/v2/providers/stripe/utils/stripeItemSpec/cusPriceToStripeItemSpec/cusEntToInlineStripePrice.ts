@@ -20,9 +20,11 @@ import { priceToStripeRecurringParams } from "@shared/utils/productUtils/priceUt
 export const cusEntToInlineStripePrice = ({
 	cusEnt,
 	org,
+	currency: targetCurrency,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	org: Organization;
+	currency?: string;
 }): StripeInlinePrice => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice) {
@@ -33,7 +35,11 @@ export const cusEntToInlineStripePrice = ({
 
 	const price = cusPrice.price;
 	const recurring = priceToStripeRecurringParams({ price });
-	const currency = orgToCurrency({ org });
+	const currency = (
+		targetCurrency ??
+		price.config.base_currency ??
+		orgToCurrency({ org })
+	).toLowerCase();
 
 	const productId = price.config.stripe_product_id;
 	if (!productId) {
@@ -55,6 +61,7 @@ export const cusEntToInlineStripePrice = ({
 		price,
 		overage,
 		allowance,
+		currency,
 	});
 
 	const totalStripeAmount = atmnToStripeAmountDecimal({

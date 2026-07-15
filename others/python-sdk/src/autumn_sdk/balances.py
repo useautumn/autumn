@@ -268,6 +268,7 @@ class Balances(BaseSDK):
         included_grant: Optional[float] = None,
         balance_id: Optional[str] = None,
         next_reset_at: Optional[float] = None,
+        expires_at: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -285,6 +286,7 @@ class Balances(BaseSDK):
         :param included_grant: Set the granted balance to this exact value.
         :param balance_id: Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
         :param next_reset_at: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
+        :param expires_at: Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -311,6 +313,7 @@ class Balances(BaseSDK):
             included_grant=included_grant,
             balance_id=balance_id,
             next_reset_at=next_reset_at,
+            expires_at=expires_at,
         )
 
         req = self._build_request(
@@ -385,6 +388,7 @@ class Balances(BaseSDK):
         included_grant: Optional[float] = None,
         balance_id: Optional[str] = None,
         next_reset_at: Optional[float] = None,
+        expires_at: Optional[float] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -402,6 +406,7 @@ class Balances(BaseSDK):
         :param included_grant: Set the granted balance to this exact value.
         :param balance_id: Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature.
         :param next_reset_at: The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time.
+        :param expires_at: Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -428,6 +433,7 @@ class Balances(BaseSDK):
             included_grant=included_grant,
             balance_id=balance_id,
             next_reset_at=next_reset_at,
+            expires_at=expires_at,
         )
 
         req = self._build_request_async(

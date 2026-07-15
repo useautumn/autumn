@@ -67,6 +67,16 @@ const itemToPlanFeaturePrice = ({
 	const price =
 		item.tiers && item.tiers.length === 1 ? item.tiers[0].amount : item.price;
 
+	// A single tier collapses to a flat price, so its currencies surface at the
+	// price level (mirroring `price` above); multi-tier currencies stay per-tier.
+	const additionalCurrencies =
+		item.tiers && item.tiers.length === 1
+			? item.tiers[0].additional_currencies?.map((c) => ({
+					currency: c.currency,
+					amount: c.amount ?? 0,
+				}))
+			: (item.additional_currencies ?? undefined);
+
 	// Internal: tier `to` does NOT include included usage.
 	// V1 API: tier `to` INCLUDES included usage.
 	const tiers =
@@ -78,7 +88,14 @@ const itemToPlanFeaturePrice = ({
 						flat_amount: tier.flat_amount ?? undefined,
 					})),
 					included: includedUsage,
-				})
+				}).map((tier, index) => ({
+					...tier,
+					...(item.tiers?.[index]?.additional_currencies?.length
+						? {
+								additional_currencies: item.tiers[index].additional_currencies,
+							}
+						: {}),
+				}))
 			: undefined;
 
 	// V1 schema uses billing_method, NOT usage_model
@@ -91,6 +108,7 @@ const itemToPlanFeaturePrice = ({
 
 	return {
 		amount: price ?? undefined,
+		additional_currencies: additionalCurrencies,
 		tiers: tiers,
 		tier_behavior: item.tier_behavior ?? undefined,
 

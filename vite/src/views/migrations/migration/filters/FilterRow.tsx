@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { BooleanPill } from "../shared/BooleanPill";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";
 import { RemoveButton } from "../shared/RemoveButton";
-import { ValuePicker } from "../shared/ValuePicker";
+import { CustomerValuePicker } from "./CustomerValuePicker";
 import {
 	FIELD_CONFIGS,
 	FILTER_FIELD_OPTIONS,
@@ -32,41 +32,15 @@ export function FilterRow({
 	connector,
 	onChange,
 	onRemove,
-	suggestions,
 	defaultOpenField = false,
 }: {
 	rule: FilterRule;
 	connector?: "And";
 	onChange: (rule: FilterRule) => void;
 	onRemove: () => void;
-	suggestions?: { value: string; label: string }[];
 	defaultOpenField?: boolean;
 }) {
 	const config = FIELD_CONFIGS[rule.field];
-	const fieldLabel =
-		FILTER_FIELD_OPTIONS.find((f) => f.value === rule.field)?.label ??
-		rule.field;
-
-	const handleToggle = (toggled: string) => {
-		const isSelected = rule.values.includes(toggled);
-		const next = isSelected
-			? rule.values.filter((v) => v !== toggled)
-			: [...rule.values, toggled];
-		onChange({
-			...rule,
-			operator: inferOperator(rule.operator, next.length),
-			values: next,
-		});
-	};
-
-	const handleChipRemove = (removed: string) => {
-		const next = rule.values.filter((v) => v !== removed);
-		onChange({
-			...rule,
-			operator: inferOperator(rule.operator, next.length),
-			values: next,
-		});
-	};
 
 	const handleValuesChange = (next: string[]) =>
 		onChange({
@@ -143,11 +117,7 @@ export function FilterRow({
 			<FilterValueInput
 				config={config}
 				rule={rule}
-				fieldLabel={fieldLabel}
-				suggestions={suggestions}
 				onChange={onChange}
-				onToggle={handleToggle}
-				onChipRemove={handleChipRemove}
 				onValuesChange={handleValuesChange}
 			/>
 
@@ -159,25 +129,26 @@ export function FilterRow({
 function FilterValueInput({
 	config,
 	rule,
-	fieldLabel,
-	suggestions,
 	onChange,
-	onToggle,
-	onChipRemove,
 	onValuesChange,
 }: {
 	config: FieldConfig;
 	rule: FilterRule;
-	fieldLabel: string;
-	suggestions?: { value: string; label: string }[];
 	onChange: (rule: FilterRule) => void;
-	onToggle: (value: string) => void;
-	onChipRemove: (value: string) => void;
 	onValuesChange: (values: string[]) => void;
 }) {
 	if (config.valueType === "none") return null;
 	// `none` (has no plans) takes no value.
 	if (rule.operator === "none") return null;
+
+	if (config.valueType === "customer")
+		return (
+			<CustomerValuePicker
+				className="flex-1"
+				selectedValues={rule.values}
+				onChange={onValuesChange}
+			/>
+		);
 
 	if (config.valueType === "plan")
 		return (
@@ -196,18 +167,6 @@ function FilterValueInput({
 					onChange={(val) => onChange({ ...rule, values: [String(val)] })}
 				/>
 			</div>
-		);
-
-	if (suggestions && suggestions.length > 0)
-		return (
-			<ValuePicker
-				className="flex-1"
-				suggestions={suggestions}
-				selectedValues={rule.values}
-				placeholder={`Select ${fieldLabel.toLowerCase()}...`}
-				onToggle={onToggle}
-				onRemove={onChipRemove}
-			/>
 		);
 
 	return (

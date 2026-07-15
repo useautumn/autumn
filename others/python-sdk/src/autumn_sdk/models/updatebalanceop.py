@@ -72,6 +72,8 @@ class UpdateBalanceParamsTypedDict(TypedDict):
     r"""Target a specific balance by its ID (set on create). Use when the customer has multiple balances for the same feature."""
     next_reset_at: NotRequired[float]
     r"""The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time."""
+    expires_at: NotRequired[float]
+    r"""Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature."""
 
 
 class UpdateBalanceParams(BaseModel):
@@ -105,6 +107,9 @@ class UpdateBalanceParams(BaseModel):
     next_reset_at: Optional[float] = None
     r"""The next reset time for the balance. If there are multiple breakdowns, this will update the breakdown with the next reset time."""
 
+    expires_at: Optional[float] = None
+    r"""Unix timestamp (milliseconds) when the balance expires. Targets a specific balance via balance_id / interval when the customer has multiple balances for the same feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -117,6 +122,7 @@ class UpdateBalanceParams(BaseModel):
                 "included_grant",
                 "balance_id",
                 "next_reset_at",
+                "expires_at",
             ]
         )
         serialized = handler(self)

@@ -1,3 +1,4 @@
+import { priceAmountsForCurrency } from "@models/productModels/priceModels/priceConfig/priceCurrencyView";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { volumeTiersToLineAmount } from "@utils/billingUtils/invoicingUtils/lineItemUtils/volumeTiersToLineAmount";
 import type { Price } from "../../../../models/productModels/priceModels/priceModels";
@@ -23,13 +24,17 @@ export const tiersToLineAmount = ({
 	overage,
 	allowance = 0,
 	billingUnits = 1,
+	currency,
 }: {
 	price: Price;
 	overage: number;
 	allowance?: number;
 	billingUnits?: number;
+	currency?: string;
 }): number => {
-	const tiers = price.config.usage_tiers;
+	const tiers =
+		priceAmountsForCurrency({ config: price.config, currency }).usage_tiers ??
+		price.config.usage_tiers;
 	const isVolume = price.tier_behavior === TierBehavior.VolumeBased;
 
 	if (nullish(tiers)) {

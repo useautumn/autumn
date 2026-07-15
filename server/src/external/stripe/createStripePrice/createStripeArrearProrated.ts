@@ -5,6 +5,7 @@ import {
 	type Organization,
 	type Price,
 	type Product,
+	setPriceCurrencyStripeId,
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -25,6 +26,7 @@ interface StripeMeteredPriceParams {
 	entitlements: EntitlementWithFeature[];
 	product: Product;
 	org: Organization;
+	currency?: string;
 }
 
 export const createStripeMeteredPrice = async ({
@@ -33,8 +35,15 @@ export const createStripeMeteredPrice = async ({
 	entitlements,
 	product,
 	org,
+	currency: targetCurrency,
 }: StripeMeteredPriceParams) => {
 	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
 	const ent = getPriceEntitlement(price, entitlements);
 	const feature = ent.feature;
 
@@ -62,6 +71,7 @@ export const createStripeMeteredPrice = async ({
 		price,
 		entitlement: ent,
 		org,
+		currency,
 	});
 
 	let priceAmountData = {};
@@ -93,7 +103,7 @@ export const createStripeMeteredPrice = async ({
 	const stripePrice = await stripeCli.prices.create({
 		...productData,
 		...priceAmountData,
-		currency: org.default_currency || "usd",
+		currency,
 		nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
 		recurring: {
 			...(billingIntervalToStripe({
@@ -152,6 +162,7 @@ export const createStripeArrearProrated = async ({
 	entitlements,
 	curStripeProd,
 	stripeCli,
+	currency: targetCurrency,
 }: {
 	db: DrizzleCli;
 	price: Price;
@@ -160,6 +171,7 @@ export const createStripeArrearProrated = async ({
 	entitlements: EntitlementWithFeature[];
 	curStripeProd: Stripe.Product | null;
 	stripeCli: Stripe;
+	currency?: string;
 }) => {
 	const relatedEnt = getPriceEntitlement(price, entitlements);
 
@@ -172,6 +184,12 @@ export const createStripeArrearProrated = async ({
 	}
 
 	const config = price.config as UsagePriceConfig;
+	const orgDefault = (org.default_currency || "usd").toLowerCase();
+	const currency = (
+		targetCurrency ??
+		config.base_currency ??
+		orgDefault
+	).toLowerCase();
 
 	// 1. Product name
 	const productName = `${product.name} - ${
@@ -191,6 +209,7 @@ export const createStripeArrearProrated = async ({
 		price,
 		entitlement: relatedEnt,
 		org,
+		currency,
 	});
 
 	let priceAmountData = {};
@@ -208,7 +227,7 @@ export const createStripeArrearProrated = async ({
 
 	const stripePrice = await stripeCli.prices.create({
 		...productData,
-		currency: org.default_currency || "usd",
+		currency,
 		...priceAmountData,
 		recurring: {
 			...(recurringData as any),
@@ -216,7 +235,13 @@ export const createStripeArrearProrated = async ({
 		nickname: `Autumn Price (${relatedEnt.feature.name})`,
 	});
 
-	config.stripe_price_id = stripePrice.id;
+	setPriceCurrencyStripeId({
+		config,
+		currency,
+		orgDefault,
+		slot: "stripe_price_id",
+		id: stripePrice.id,
+	});
 	config.stripe_product_id = stripePrice.product as string;
 	const billingType = getBillingType(price.config);
 
@@ -228,8 +253,15 @@ export const createStripeArrearProrated = async ({
 			entitlements,
 			product,
 			org,
+			currency,
 		});
-		config.stripe_placeholder_price_id = placeholderPrice.id;
+		setPriceCurrencyStripeId({
+			config,
+			currency,
+			orgDefault,
+			slot: "stripe_placeholder_price_id",
+			id: placeholderPrice.id,
+		});
 	}
 
 	price.config = config;

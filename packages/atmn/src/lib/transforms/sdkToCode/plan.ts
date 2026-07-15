@@ -58,6 +58,11 @@ export function buildPlanCode(
 		lines.push(`\tprice: {`);
 		lines.push(`\t\tamount: ${plan.price.amount},`);
 		lines.push(`\t\tinterval: '${plan.price.interval}',`);
+		if (plan.price.additionalCurrencies) {
+			lines.push(
+				`\t\tadditionalCurrencies: ${formatValue(plan.price.additionalCurrencies)},`,
+			);
+		}
 		lines.push(`\t},`);
 	}
 

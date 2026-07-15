@@ -5,7 +5,10 @@ import type {
 	FullProduct,
 	Price,
 } from "@autumn/shared";
-import { ProductAlreadyExistsError } from "@autumn/shared";
+import {
+	orgMultiCurrencyEnabled,
+	ProductAlreadyExistsError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
@@ -73,6 +76,7 @@ export const createProduct = async ({
 			logger,
 			isCustom: false,
 			newVersion: false,
+			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 		});
 		prices = res.prices;
 		entitlements = res.entitlements;

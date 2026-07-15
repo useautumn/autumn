@@ -1,4 +1,27 @@
-import { Infinite, type ProductItem } from "@autumn/shared";
+import { Infinite, type PriceTier, type ProductItem } from "@autumn/shared";
+import { migrateTierCurrenciesForMode } from "./currencyUtils";
+
+export const tierToDisplay = ({
+	tier,
+	includedUsage,
+}: {
+	tier: PriceTier | undefined;
+	includedUsage: number;
+}): string => {
+	if (!tier) return "0";
+	if (tier.to === Infinite) return "∞";
+	return (
+		(typeof tier.to === "number" ? tier.to : 0) + includedUsage
+	).toString();
+};
+
+const zeroedCurrencyEntries = (tier: PriceTier | undefined) =>
+	tier?.additional_currencies?.length
+		? tier.additional_currencies.map((entry) => ({
+				currency: entry.currency,
+				amount: 0,
+			}))
+		: undefined;
 
 export const addTier = ({
 	item,
@@ -18,8 +41,12 @@ export const addTier = ({
 		setItem({
 			...item,
 			tiers: [
-				{ to: 100, amount: firstTier.amount }, // First tier with default limit
-				{ to: Infinite, amount: 0 }, // Second tier is infinite
+				{ ...firstTier, to: 100 }, // First tier with default limit
+				{
+					to: Infinite,
+					amount: 0,
+					additional_currencies: zeroedCurrencyEntries(firstTier),
+				}, // Second tier is infinite
 			],
 		});
 	} else {
@@ -34,19 +61,13 @@ export const addTier = ({
 		}
 
 		// Add new infinite tier
-		newTiers.push({ to: Infinite, amount: 0 });
+		newTiers.push({
+			to: Infinite,
+			amount: 0,
+			additional_currencies: zeroedCurrencyEntries(lastTier),
+		});
 		setItem({ ...item, tiers: newTiers });
 	}
-};
-
-const removeTiers = ({
-	item,
-	setItem,
-}: {
-	item: ProductItem;
-	setItem: (item: ProductItem) => void;
-}) => {
-	setItem({ ...item, tiers: null });
 };
 
 export const removeTier = ({
@@ -142,12 +163,14 @@ export const cleanTiersForMode = ({
 }): ProductItem => {
 	if (!item.tiers) return item;
 
-	const cleanedTiers = item.tiers.map((tier) => {
-		if (mode === "flat") {
-			return { ...tier, amount: 0 };
-		}
-		return { ...tier, flat_amount: undefined };
-	});
+	const cleanedTiers = item.tiers.map((tier) => ({
+		...tier,
+		...(mode === "flat" ? { amount: 0 } : { flat_amount: undefined }),
+		additional_currencies: migrateTierCurrenciesForMode({
+			entries: tier.additional_currencies,
+			mode,
+		}),
+	}));
 
 	return { ...item, tiers: cleanedTiers };
 };
