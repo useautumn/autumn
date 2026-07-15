@@ -35,6 +35,7 @@ import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -377,13 +378,15 @@ export class CusEntService {
 		const emittedIds = new Set<string>();
 
 		while (true) {
-			const page = await CusEntService.buildActiveResetPassedPage({
-				db,
-				now,
-				batchSize,
-				cursor,
-				includeSeparateIntervalResets,
-			});
+			const page = await withStatementTimeout(db, async (tx) =>
+				CusEntService.buildActiveResetPassedPage({
+					db: tx,
+					now,
+					batchSize,
+					cursor,
+					includeSeparateIntervalResets,
+				}),
+			);
 
 			if (page.length === 0) break;
 

@@ -3,6 +3,7 @@ import { type Metadata, MetadataType, metadata } from "@autumn/shared";
 import { addDays } from "date-fns";
 import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
 import { stripeInvoiceToStripeSubscriptionId } from "../../external/stripe/invoices/utils/convertStripeInvoice";
@@ -142,26 +143,28 @@ export const getExpiredInvoiceMetadata = async ({
 }) => {
 	// Keyset over (expires_at, id) so each page is a bounded query: an
 	// unbounded SELECT * over a large expired backlog pins xmin while it ships.
-	return db
-		.select()
-		.from(metadata)
-		.where(
-			and(
-				or(
-					eq(metadata.type, MetadataType.InvoiceActionRequired),
-					eq(metadata.type, MetadataType.InvoiceCheckout),
-					eq(metadata.type, MetadataType.DeferredInvoice),
+	return withStatementTimeout(db, async (tx) =>
+		tx
+			.select()
+			.from(metadata)
+			.where(
+				and(
+					or(
+						eq(metadata.type, MetadataType.InvoiceActionRequired),
+						eq(metadata.type, MetadataType.InvoiceCheckout),
+						eq(metadata.type, MetadataType.DeferredInvoice),
+					),
+					isNotNull(metadata.expires_at),
+					lt(metadata.expires_at, now),
+					isNotNull(metadata.stripe_invoice_id),
+					cursor
+						? sql`(${metadata.expires_at}, ${metadata.id} COLLATE "C") > (${cursor.expiresAt}, ${cursor.id})`
+						: undefined,
 				),
-				isNotNull(metadata.expires_at),
-				lt(metadata.expires_at, now),
-				isNotNull(metadata.stripe_invoice_id),
-				cursor
-					? sql`(${metadata.expires_at}, ${metadata.id} COLLATE "C") > (${cursor.expiresAt}, ${cursor.id})`
-					: undefined,
-			),
-		)
-		.orderBy(asc(metadata.expires_at), sql`${metadata.id} COLLATE "C"`)
-		.limit(limit);
+			)
+			.orderBy(asc(metadata.expires_at), sql`${metadata.id} COLLATE "C"`)
+			.limit(limit),
+	);
 };
 
 export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
