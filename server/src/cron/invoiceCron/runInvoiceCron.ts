@@ -1,7 +1,7 @@
 import type { DeferredAutumnBillingPlanData } from "@autumn/shared";
 import { type Metadata, MetadataType, metadata } from "@autumn/shared";
 import { addDays } from "date-fns";
-import { and, eq, isNotNull, lt, or } from "drizzle-orm";
+import { and, asc, eq, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { Stripe } from "stripe";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { createStripeCli } from "../../external/connect/createStripeCli";
@@ -131,9 +131,17 @@ export const handleVoidInvoiceCron = async ({
 
 export const getExpiredInvoiceMetadata = async ({
 	db,
+	now,
+	limit,
+	cursor,
 }: {
 	db: CronContext["db"];
+	now: number;
+	limit: number;
+	cursor: { expiresAt: number; id: string } | null;
 }) => {
+	// Keyset over (expires_at, id) so each page is a bounded query: an
+	// unbounded SELECT * over a large expired backlog pins xmin while it ships.
 	return db
 		.select()
 		.from(metadata)
@@ -145,10 +153,15 @@ export const getExpiredInvoiceMetadata = async ({
 					eq(metadata.type, MetadataType.DeferredInvoice),
 				),
 				isNotNull(metadata.expires_at),
-				lt(metadata.expires_at, Date.now()),
+				lt(metadata.expires_at, now),
 				isNotNull(metadata.stripe_invoice_id),
+				cursor
+					? sql`(${metadata.expires_at}, ${metadata.id} COLLATE "C") > (${cursor.expiresAt}, ${cursor.id})`
+					: undefined,
 			),
-		);
+		)
+		.orderBy(asc(metadata.expires_at), sql`${metadata.id} COLLATE "C"`)
+		.limit(limit);
 };
 
 export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
@@ -156,21 +169,38 @@ export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 		console.log("Running invoice cron");
 		const { db } = ctx;
 
-		const invoices = await getExpiredInvoiceMetadata({ db });
+		const now = Date.now();
+		const pageSize = 500;
+		const maxIterations = 20;
+		const concurrency = 50;
 
-		const batchSize = 50;
-		for (let i = 0; i < invoices.length; i += batchSize) {
-			const batch = invoices.slice(i, i + batchSize);
+		let cursor: { expiresAt: number; id: string } | null = null;
+		let total = 0;
 
-			const promises = [];
-			for (const metadata of batch) {
-				promises.push(handleVoidInvoiceCron({ ctx, metadata }));
+		for (let iteration = 0; iteration < maxIterations; iteration++) {
+			const invoices = await getExpiredInvoiceMetadata({
+				db,
+				now,
+				limit: pageSize,
+				cursor,
+			});
+			if (invoices.length === 0) break;
+
+			for (let i = 0; i < invoices.length; i += concurrency) {
+				const batch = invoices.slice(i, i + concurrency);
+				await Promise.all(
+					batch.map((item) => handleVoidInvoiceCron({ ctx, metadata: item })),
+				);
 			}
-			await Promise.all(promises);
-			console.log(`Handled ${i + batch.length}/${invoices.length} invoices`);
-			console.log("----------------------------------\n");
+
+			total += invoices.length;
+			const last = invoices[invoices.length - 1];
+			cursor = { expiresAt: Number(last.expires_at), id: last.id };
+
+			if (invoices.length < pageSize) break;
 		}
-		console.log("FINISHED INVOICE CRON");
+
+		console.log(`FINISHED INVOICE CRON: processed ${total}`);
 	} catch (error) {
 		console.error("Error running invoice cron:", error);
 		return;
