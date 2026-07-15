@@ -6,7 +6,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { releaseLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/releaseLicenseAssignmentsForEntity.js";
 
 export const cancelSubsForEntity = async ({
 	ctx,
@@ -19,16 +20,33 @@ export const cancelSubsForEntity = async ({
 }) => {
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 
-	for (const customerProduct of fullCustomer.customer_products) {
-		if (customerProduct.internal_entity_id !== entity.internal_id) continue;
+	// Provisioned license products are free (skipped by the paid-recurring loop
+	// below); release their seats back to the pool before the entity row goes.
+	await releaseLicenseAssignmentsForEntity({
+		ctx,
+		internalEntityId: entity.internal_id,
+	});
 
-		if (customerProduct.status === CusProductStatus.Scheduled) {
-			await CusProductService.delete({
-				ctx,
-				cusProductId: customerProduct.id,
-			});
-			continue;
-		}
+	const entityProducts = fullCustomer.customer_products.filter(
+		(customerProduct) =>
+			customerProduct.internal_entity_id === entity.internal_id,
+	);
+	const scheduledProducts = entityProducts.filter(
+		(customerProduct) => customerProduct.status === CusProductStatus.Scheduled,
+	);
+	if (scheduledProducts.length > 0) {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: {
+				customerId,
+				insertCustomerProducts: [],
+				deleteCustomerProducts: scheduledProducts,
+			},
+		});
+	}
+
+	for (const customerProduct of entityProducts) {
+		if (customerProduct.status === CusProductStatus.Scheduled) continue;
 
 		if (!isCustomerProductPaidRecurring(customerProduct)) continue;
 		if (

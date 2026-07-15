@@ -26,7 +26,6 @@ import {
 	sql,
 } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
-import type { Logger } from "@/external/logtail/logtailUtils";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import {
 	buildAllVersionsProductsCacheKey,
@@ -35,6 +34,11 @@ import {
 } from "./productCacheUtils";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
+import {
+	composeFullProductQuery,
+	normalizeFullProductLicenses,
+	type ProductWithLicenseRelations,
+} from "./repos/utils/composeFullProductQuery";
 
 const parseFreeTrials = ({
 	products,
@@ -415,7 +419,7 @@ export class ProductService {
 						.as("latest_versions")
 				: undefined;
 
-		const data = (await db.query.products.findMany({
+		const rows = (await db.query.products.findMany({
 			where: and(
 				eq(products.org_id, orgId),
 				eq(products.env, env),
@@ -435,19 +439,12 @@ export class ProductService {
 						)
 					: undefined,
 			),
-			with: {
-				entitlements: excludeEnts
-					? undefined
-					: {
-							with: {
-								feature: true,
-							},
-							where: eq(entitlements.is_custom, false),
-						},
-				prices: { where: eq(prices.is_custom, false) },
-				free_trials: { where: eq(freeTrials.is_custom, false) },
-			},
-		})) as FullProduct[];
+			with: composeFullProductQuery({ excludeEnts }),
+		})) as ProductWithLicenseRelations[];
+
+		const data = rows.map((product) =>
+			normalizeFullProductLicenses({ product }),
+		);
 
 		parseFreeTrials({ products: data });
 
@@ -553,8 +550,6 @@ export class ProductService {
 		env,
 		version,
 		allowNotFound = false,
-		logResult = false,
-		logger,
 	}: {
 		db: DrizzleCli;
 		idOrInternalId: string;
@@ -562,8 +557,6 @@ export class ProductService {
 		env: AppEnv;
 		version?: number;
 		allowNotFound?: boolean;
-		logResult?: boolean;
-		logger?: Logger;
 	}) {
 		const data = (await db.query.products.findFirst({
 			where: and(
@@ -576,40 +569,16 @@ export class ProductService {
 				version ? eq(products.version, version) : undefined,
 			),
 			orderBy: [desc(products.version)],
-			with: {
-				entitlements: {
-					with: {
-						feature: true,
-					},
-					where: eq(entitlements.is_custom, false),
-				},
-				prices: { where: eq(prices.is_custom, false) },
-				free_trials: { where: eq(freeTrials.is_custom, false) },
-			},
-		})) as FullProduct;
-
-		parseFreeTrials({ product: data });
-
-		// if (logResult && logger) {
-		// 	logger.info("full product:", {
-		// 		data: {
-		// 			result: data,
-		// 			params: {
-		// 				idOrInternalId,
-		// 				orgId,
-		// 				env,
-		// 				version,
-		// 			},
-		// 		},
-		// 	});
-		// }
+			with: composeFullProductQuery(),
+		})) as ProductWithLicenseRelations | undefined;
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;
 			throw new ProductNotFoundError({ productId: idOrInternalId, version });
 		}
 
-		return data as FullProduct;
+		parseFreeTrials({ product: data as FullProduct });
+		return normalizeFullProductLicenses({ product: data });
 	}
 
 	static async getProductVersionCount({

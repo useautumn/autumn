@@ -14,6 +14,7 @@ import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
 import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
+import { getApiCustomerLicenses } from "../getApiCustomerV2/getApiCustomerLicense/getApiCustomerLicenses.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
@@ -71,6 +72,10 @@ export const getApiCustomerBase = async ({
 
 		subscriptions: apiSubscriptions,
 		purchases: apiPurchases,
+		licenses: getApiCustomerLicenses({
+			ctx,
+			customerProducts: fullCus.customer_products,
+		}),
 		balances: apiBalances,
 		flags: apiFlags,
 		send_email_receipts: fullCus.send_email_receipts ?? false,

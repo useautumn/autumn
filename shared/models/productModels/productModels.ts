@@ -5,6 +5,10 @@ import {
 } from "../cusModels/billingControls/customerBillingControls";
 import { FeatureSchema } from "../featureModels/featureModels";
 import { AppEnv } from "../genModels/genEnums";
+import {
+	type FullPlanLicense,
+	FullPlanLicenseSchema,
+} from "../licenseModels/fullPlanLicenseModel";
 import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
 import { PriceSchema } from "./priceModels/priceModels";
@@ -63,7 +67,8 @@ export const UpdateProductSchema = z.object({
 	billing_controls: CustomerBillingControlsSchema.optional(),
 });
 
-export const FullProductSchema = ProductSchema.extend({
+/** Full product data without nested license links, enforcing one-level license hydration. */
+export const FullProductWithoutLicensesSchema = ProductSchema.extend({
 	description: z.string().nullable().optional().default(null),
 	prices: z.array(PriceSchema),
 	entitlements: z.array(EntitlementSchema.extend({ feature: FeatureSchema })),
@@ -71,6 +76,20 @@ export const FullProductSchema = ProductSchema.extend({
 	free_trials: z.array(FreeTrialSchema).nullish(),
 	free_trial_ids: z.array(z.string()).nullish(),
 });
+
+export type FullProductWithoutLicenses = z.infer<
+	typeof FullProductWithoutLicensesSchema
+>;
+
+export type FullProduct = FullProductWithoutLicenses & {
+	licenses?: FullPlanLicense[];
+};
+
+export const FullProductSchema: z.ZodType<FullProduct> =
+	FullProductWithoutLicensesSchema.extend({
+		// Lazy: breaks the init cycle with fullPlanLicenseModel (TDZ-safe).
+		licenses: z.array(z.lazy(() => FullPlanLicenseSchema)).optional(),
+	});
 
 export type ProductCounts = {
 	active: number;
@@ -81,6 +100,5 @@ export type ProductCounts = {
 };
 
 export type Product = z.infer<typeof ProductSchema>;
-export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
 export type UpdateProduct = z.infer<typeof UpdateProductSchema>;

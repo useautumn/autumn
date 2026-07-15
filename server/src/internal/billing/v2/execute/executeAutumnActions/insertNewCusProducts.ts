@@ -2,6 +2,7 @@ import {
 	customerProductHasActiveStatus,
 	type FullCusProduct,
 } from "@autumn/shared";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { CusProductService } from "../../../../customers/cusProducts/CusProductService";
 import { CusEntService } from "../../../../customers/cusProducts/cusEnts/CusEntitlementService";
@@ -26,6 +27,17 @@ export const insertNewCusProducts = async ({
 	await CusProductService.insert({
 		db: ctx.db,
 		data: newCusProducts,
+	});
+
+	// License pools born with their parent (after it, for the FK). Conflicts
+	// defer to upsertGranted/reconcile.
+	await customerLicenseRepo.insertMany({
+		db: ctx.db,
+		rows: newCusProducts.flatMap((cusProduct) =>
+			(cusProduct.customer_licenses ?? []).map(
+				({ planLicense: _planLicense, ...row }) => row,
+			),
+		),
 	});
 
 	// 2. Insert cusEnts

@@ -21,6 +21,7 @@ export function useAttachForm({
 			productId: initialProductId || "",
 			prepaidOptions: initialPrepaidOptions ?? {},
 			items: initialItems ?? null,
+			addLicenses: null,
 			isCustom: initialIsCustom ?? false,
 			version: initialVersion ?? undefined,
 			trialLength: null,

@@ -180,7 +180,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			FROM cr
 			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
 			JOIN products prod ON prod.internal_id = cp.internal_product_id
-			WHERE TRUE ${cpStatusFilter}
+			WHERE cp.customer_license_link_id IS NULL ${cpStatusFilter}
 		),
 		cps_ranked AS MATERIALIZED (
 			SELECT

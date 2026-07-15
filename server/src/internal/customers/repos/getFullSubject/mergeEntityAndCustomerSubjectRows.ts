@@ -62,7 +62,9 @@ export const mergeEntityAndCustomerSubjectRows = ({
 	const customerEntitlements = [
 		...entityRow.customer_entitlements,
 		...customerRow.customer_entitlements,
-	].filter((entitlement) => keptProductIds.has(entitlement.customer_product_id));
+	].filter((entitlement) =>
+		keptProductIds.has(entitlement.customer_product_id),
+	);
 
 	const customerPrices = [
 		...entityRow.customer_prices,
@@ -98,6 +100,8 @@ export const mergeEntityAndCustomerSubjectRows = ({
 		customer_products: customerProducts,
 		customer_entitlements: customerEntitlements,
 		customer_prices: customerPrices,
+		// Customer licenses are customer-subject-only; entity flows never carry them.
+		customer_licenses: [],
 		extra_customer_entitlements: extraCustomerEntitlements,
 		rollovers: [...entityRow.rollovers, ...customerRow.rollovers].filter(
 			(rollover) => keptCusEntIds.has(rollover.cus_ent_id),
@@ -139,8 +143,7 @@ export const mergeEntityAndCustomerSubjectRows = ({
 			[...entityRow.subscriptions, ...customerRow.subscriptions],
 			(s) => s.stripe_id ?? "",
 		).filter(
-			(s) =>
-				s.stripe_id !== null && keptRefs.subscriptionIds.has(s.stripe_id),
+			(s) => s.stripe_id !== null && keptRefs.subscriptionIds.has(s.stripe_id),
 		),
 	};
 };

@@ -30,7 +30,7 @@ export const MultiAttachPlanSchema = z.object({
 	}),
 	customize: MultiAttachCustomizePlanSchema.meta({
 		description:
-			"Customize the plan to attach. Can override the price or items.",
+			"Customize the plan to attach. Can override the price, items, or licenses.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:

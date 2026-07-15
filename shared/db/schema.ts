@@ -48,6 +48,13 @@ import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
 import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
+import {
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
+	planLicenses,
+} from "../models/licenseModels/licenseTable.js";
+import { planLicenseRelations } from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -154,6 +161,9 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
 	// OAuth Provider
 	jwks,
 	member,
@@ -174,6 +184,8 @@ export {
 	transitionRules,
 	// Tables
 	organizations,
+	planLicenses,
+	planLicenseRelations,
 	passkey,
 	// Relations
 	organizationsRelations,

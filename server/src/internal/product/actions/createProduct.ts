@@ -10,6 +10,7 @@ import {
 	ProductAlreadyExistsError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import {
 	handleNewFreeTrial,
@@ -109,6 +110,12 @@ export const createProduct = async ({
 		}),
 		free_trial: newFreeTrial,
 	};
+
+	await syncPlanLicenses({
+		ctx,
+		parentProduct: newFullProduct,
+		licenses: data.licenses,
+	});
 
 	if (data.create_in_stripe !== false) {
 		await initProductInStripe({

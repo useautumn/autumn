@@ -15,6 +15,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	InternalError,
+	inheritParentCustomerProductProperties,
 	type ListCustomerProductsParams,
 	type ListCustomersV2Params,
 	type Organization,
@@ -38,6 +39,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import {
@@ -254,6 +256,18 @@ export class CusService {
 						fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 					}
 				}
+				await hydrateFullCustomerLicenses({
+					ctx,
+					fullCustomer: fullCus,
+				});
+
+				// Seats (hydrated only on entityId fetches, with their pool +
+				// parent snapshot from the query) mirror the parent's lifecycle
+				// before the lazy reset below gates on status.
+				inheritParentCustomerProductProperties({
+					customerProducts: fullCus.customer_products ?? [],
+				});
+
 				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.

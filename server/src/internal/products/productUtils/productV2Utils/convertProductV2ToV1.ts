@@ -8,8 +8,8 @@ import type {
 import { itemToPriceAndEnt } from "@/internal/products/product-items/productItemUtils/itemToPriceAndEnt.js";
 
 /**
- * V1 product format with entitlements as a record (used in tests)
- * Different from FullProduct which has entitlements as an array
+ * V1 product format with entitlements as a record.
+ * Different from FullProduct which has entitlements as an array.
  */
 type ProductV1 = {
 	id: string;
@@ -23,14 +23,10 @@ type ProductV1 = {
 };
 
 /**
- * Converts ProductV2 (items-based) to V1 format (entitlements + prices)
- *
- * Uses production conversion utilities to ensure test expectations match actual behavior.
- *
- * @param productV2 - V2 product with items array
- * @param orgId - Organization ID
- * @param features - Available features in the org
- * @returns V1-format product object with entitlements and prices
+ * Converts ProductV2 (items-based) to V1 format (entitlements + prices) via the
+ * production itemToPriceAndEnt converter, so the derived prices/entitlements
+ * match what gets persisted. Used in tests and in version-time license link
+ * validation (handleVersionProduct) to build the new version's prices in memory.
  */
 export const convertProductV2ToV1 = ({
 	productV2,

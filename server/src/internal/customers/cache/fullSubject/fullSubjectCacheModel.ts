@@ -6,6 +6,7 @@ import {
 	EntityAggregationsSchema,
 	EntitySchema,
 	FreeTrialSchema,
+	FullCustomerLicenseSchema,
 	InvoiceSchema,
 	MigrationItemRunSchema,
 	type NormalizedFullSubject,
@@ -85,6 +86,8 @@ export const CachedFullSubjectSchema = z.object({
 
 	customer_products: z.array(CusProductSchema),
 	customer_prices: z.array(CustomerPriceSchema),
+	// `.default([])`: entries written before licenses existed hole-fill empty.
+	customer_licenses: z.array(FullCustomerLicenseSchema).default([]),
 	flags: z.record(z.string(), SubjectFlagSchema),
 
 	products: z.array(ProductSchema),
@@ -156,6 +159,7 @@ export const normalizedToCachedFullSubject = ({
 		entity: normalized.entity,
 		customer_products: normalized.customer_products,
 		customer_prices: normalized.customer_prices,
+		customer_licenses: normalized.customer_licenses ?? [],
 		flags: normalized.flags,
 		products: normalized.products,
 		entitlements: normalized.entitlements,
@@ -191,6 +195,8 @@ export const cachedFullSubjectToNormalized = ({
 		entity: cached.entity,
 		customer_products: cached.customer_products,
 		customer_entitlements: customerEntitlements,
+		// Entries written before licenses existed lack the field entirely.
+		customer_licenses: cached.customer_licenses ?? [],
 		customer_prices: cached.customer_prices,
 		flags: cached.flags,
 		products: cached.products,

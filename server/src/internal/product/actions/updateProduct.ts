@@ -13,22 +13,24 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import { syncPlanLicenses } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { updateVariants } from "@/internal/product/actions/updateVariants/updateVariants.js";
 import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
+import { validateProductLicenseLinks } from "@/internal/products/handlers/handleUpdatePlan/validateProductLicenseLinks.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";
-import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
 import { validateVariantSettingsUpdate } from "./updateProduct/validateVariantSettingsUpdate.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
@@ -99,8 +101,7 @@ export const updateProduct = async ({
 	skipVariantUpdates = false,
 }: UpdateProductParams) => {
 	const { db, org, env, features } = ctx;
-	const { version, upsert, disable_version, force_version, all_versions } =
-		query;
+	const { version, disable_version, force_version, all_versions } = query;
 	const effectiveDisableVersion = disable_version || all_versions;
 	const basePlanIdProvided = "base_plan_id" in rawProductUpdates;
 	const { base_plan_id: basePlanId, ...productUpdates } = rawProductUpdates;
@@ -259,11 +260,73 @@ export const updateProduct = async ({
 		curProduct: fullProduct,
 	});
 
+	// Guard license links against the new item state before any write, so an
+	// in-place interval change can't silently invalidate a link (the versioning
+	// path validates the same way inside handleVersionProductV2).
+	await validateProductLicenseLinks({
+		ctx,
+		fromInternalProductId: fullProduct.internal_id,
+		newProductV2,
+		baseProduct: fullProduct,
+		org,
+		features,
+	});
+
+	// Sync the plan's catalog license links before any versioning branch, so a
+	// new version carries the updated links forward via copyPlanLicensesToNewVersion.
+	await syncPlanLicenses({
+		ctx,
+		parentProduct: fullProduct,
+		licenses: productUpdates.licenses,
+	});
+
 	const itemsExist = notNullish(productUpdates.items);
 	const customerProductExists = customerUsage.hasAnyCustomerProducts;
 	const versionableCustomerProductExists =
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
+	const billingControlsProvided = "billing_controls" in productUpdates;
+
+	// Billing controls are a global setting: changing only them versions the
+	// product without going through the item/detail update paths. Returns false
+	// if anything else changed so those paths still run.
+	const isBillingControlsOnlyChange = () => {
+		const same = productsAreSame({ newProductV2, curProductV2, features });
+		return (
+			!same.billingControlsSame &&
+			same.itemsSame &&
+			same.freeTrialsSame &&
+			same.detailsSame &&
+			same.configSame &&
+			same.optionsSame &&
+			same.metadataSame
+		);
+	};
+
+	if (
+		versionableCustomerProductExists &&
+		!effectiveDisableVersion &&
+		!force_version &&
+		billingControlsProvided &&
+		isBillingControlsOnlyChange()
+	) {
+		const newProduct = await handleVersionProductV2({
+			ctx,
+			newProductV2: newProductV2,
+			latestProduct: fullProduct,
+			org,
+			env,
+			baseInternalProductId: nextBaseInternalProductId,
+		});
+		const latestBase = await ProductService.getFull({
+			db,
+			idOrInternalId: newProduct.id,
+			orgId: org.id,
+			env,
+		});
+		await applyVariantUpdates({ latestBase });
+		return newProduct;
+	}
 
 	await handleUpdateProductDetails({
 		db,

@@ -4,12 +4,14 @@ import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
+import { LicenseListTable } from "./LicenseListTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 
@@ -46,6 +48,7 @@ function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
 
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
+	const { licenseProducts } = useLicenseProductsQuery();
 	const { queryStates } = useProductsQueryState();
 
 	// Shared sorting state for all tables
@@ -63,8 +66,14 @@ export function ProductListTable() {
 
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
-			const filtered = products?.filter((product) =>
-				queryStates.showArchivedProducts ? product.archived : !product.archived,
+			// Linked licenses render in their own section below, not as plans.
+			const licenseIds = new Set(licenseProducts.map((license) => license.id));
+			const filtered = products?.filter(
+				(product) =>
+					!licenseIds.has(product.id) &&
+					(queryStates.showArchivedProducts
+						? product.archived
+						: !product.archived),
 			);
 
 			// Deduplicate by ID, keeping the latest version
@@ -120,7 +129,7 @@ export function ProductListTable() {
 			const recurringAddOnPlans = recurringPlans.filter((p) => p.is_add_on);
 
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
-		}, [products, counts, queryStates.showArchivedProducts]);
+		}, [products, licenseProducts, counts, queryStates.showArchivedProducts]);
 
 	// Check if any product has a group
 	const hasAnyGroup = useMemo(
@@ -193,6 +202,7 @@ export function ProductListTable() {
 	const hasRecurringBasePlans = recurringBasePlans.length > 0;
 	const hasRecurringAddOns = recurringAddOnPlans.length > 0;
 	const hasOneTimePlans = oneTimePlans.length > 0;
+	const hasLicensePlans = licenseProducts.length > 0;
 
 	// For archived view, always show table structure even if empty
 	// For non-archived view, show EmptyState when no plans exist
@@ -200,7 +210,8 @@ export function ProductListTable() {
 		queryStates.showArchivedProducts ||
 		hasRecurringBasePlans ||
 		hasRecurringAddOns ||
-		hasOneTimePlans;
+		hasOneTimePlans ||
+		hasLicensePlans;
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -275,6 +286,10 @@ export function ProductListTable() {
 								</Table.Content>
 							</Table.Container>
 						</Table.Provider>
+
+						<LicenseListTable
+							showArchivedProducts={queryStates.showArchivedProducts}
+						/>
 					</div>
 				</>
 			) : (

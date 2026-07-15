@@ -1,7 +1,10 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
+import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
 import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
@@ -70,6 +73,11 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	await executeInsertPlanLicenses({
+		ctx,
+		insertPlanLicenses: autumnBillingPlan.insertPlanLicenses,
+	});
+
 	if (insertCustomerEntitlements) {
 		await CusEntService.insert({
 			ctx,
@@ -86,9 +94,18 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	// ctx.logger.debug(
-	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
-	// );
+	await executeCustomerLicenseUpdates({
+		ctx,
+		customerLicenseUpdates: autumnBillingPlan.customerLicenseUpdates,
+	});
+
+	if (autumnBillingPlan.insertEntities?.length) {
+		await EntityService.insert({
+			db,
+			data: autumnBillingPlan.insertEntities,
+		});
+	}
+
 	// 2. Insert new customer products
 	await insertNewCusProducts({
 		ctx,

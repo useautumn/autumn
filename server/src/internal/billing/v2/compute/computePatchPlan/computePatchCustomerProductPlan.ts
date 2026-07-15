@@ -30,12 +30,11 @@ export const computePatchCustomerProductPlan = ({
 		finalCustomerProduct,
 		customerProductUpdates,
 		oneOffPrepaidCarryOverCustomerEntitlements,
-	} =
-		initPatchCustomerProduct({
-			ctx,
-			billingContext: updateSubscriptionContext,
-			patchContext,
-		});
+	} = initPatchCustomerProduct({
+		ctx,
+		billingContext: updateSubscriptionContext,
+		patchContext,
+	});
 
 	const isUpdatingScheduledProduct =
 		patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
@@ -53,7 +52,6 @@ export const computePatchCustomerProductPlan = ({
 				includeArrearLineItems:
 					updateSubscriptionContext.chargeExistingOverages === true,
 			});
-
 	const basePlan = {
 		customerId: fullCustomer?.id ?? "",
 		customPrices: patchContext.customPrices,
@@ -124,14 +122,14 @@ const computeAnchorResetEntitlementUpdates = ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
 }): AutumnBillingPlan["updateCustomerEntitlements"] => {
-	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now") return [];
+	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now")
+		return [];
 
 	return finalCustomerProduct.customer_entitlements
 		.filter((customerEntitlement) => {
 			const { entitlement } = customerEntitlement;
 			return (
-				!isBooleanEntitlement({ entitlement }) &&
-				entitlement.allowance !== null
+				!isBooleanEntitlement({ entitlement }) && entitlement.allowance !== null
 			);
 		})
 		.map((customerEntitlement) => ({

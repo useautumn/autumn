@@ -8,7 +8,6 @@ import {
 	products,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv.js";
-import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { getEntsWithFeature } from "@server/internal/products/entitlements/entitlementUtils.js";
 import { handleNewFreeTrial } from "@server/internal/products/free-trials/freeTrialUtils.js";
@@ -16,12 +15,13 @@ import { ProductService } from "@server/internal/products/ProductService.js";
 import { PriceService } from "@server/internal/products/prices/PriceService.js";
 import { handleNewProductItems } from "@server/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { validateProductItems } from "@server/internal/products/product-items/validateProductItems.js";
-import {
-	constructProduct,
-} from "@server/internal/products/productUtils.js";
+import { constructProduct } from "@server/internal/products/productUtils.js";
 import { JobName } from "@server/queue/JobName.js";
 import { addTaskToQueue } from "@server/queue/queueUtils.js";
 import { and, eq, ne } from "drizzle-orm";
+import { initStripeResourcesForProducts } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts.js";
+import { copyPlanLicensesToNewVersion } from "@/internal/licenses/actions/links/copyPlanLicensesToNewVersion.js";
+import { validateProductLicenseLinks } from "./handleUpdatePlan/validateProductLicenseLinks.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,
@@ -114,6 +114,18 @@ export const handleVersionProductV2 = async ({
 		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org }),
 	});
 
+	// License links must satisfy the link rules against the NEW version before
+	// anything is persisted — otherwise a rejected link leaves a half-created
+	// version behind.
+	await validateProductLicenseLinks({
+		ctx,
+		fromInternalProductId: latestProduct.internal_id,
+		newProductV2,
+		baseProduct: newProduct,
+		org,
+		features,
+	});
+
 	await ProductService.insert({ db, product: newProduct });
 
 	await clearDefaultFlagFromOtherVersions({
@@ -144,6 +156,12 @@ export const handleVersionProductV2 = async ({
 		data: customPrices,
 	});
 
+	await copyPlanLicensesToNewVersion({
+		ctx,
+		fromInternalProductId: latestProduct.internal_id,
+		toInternalProductId: newProduct.internal_id,
+	});
+
 	// Handle new free trial (create new)
 	// newProductV2.free_trial can be:
 	// - undefined: not changed, use latestProduct.free_trial
@@ -169,11 +187,13 @@ export const handleVersionProductV2 = async ({
 
 	await initStripeResourcesForProducts({
 		ctx,
-		products: [{
-			...newProduct,
-			prices: customPrices,
-			entitlements: getEntsWithFeature({ ents: customEnts, features }),
-		} as FullProduct],
+		products: [
+			{
+				...newProduct,
+				prices: customPrices,
+				entitlements: getEntsWithFeature({ ents: customEnts, features }),
+			} as FullProduct,
+		],
 	});
 
 	await addTaskToQueue({

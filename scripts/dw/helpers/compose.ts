@@ -132,6 +132,8 @@ export function removeComposeStack(
 		composeFilePath,
 		"-p",
 		project,
+		"--profile",
+		"ngrok",
 		"down",
 		"-v",
 	]);
@@ -160,6 +162,8 @@ export function removeAllAutumnComposeStacks(): void {
 				composeFilePath,
 				"-p",
 				p.Name,
+				"--profile",
+				"ngrok",
 				"down",
 				"-v",
 			]);
@@ -174,4 +178,40 @@ export function removeAllAutumnComposeStacks(): void {
 	} catch {
 		/* JSON parse failed, ignore */
 	}
+}
+
+export function listAutumnComposeProjects(): string[] {
+	if (!dockerComposeAvailable()) return [];
+	const ls = sh("docker", ["compose", "ls", "--all", "--format", "json"]);
+	if (ls.code !== 0 || !ls.stdout) return [];
+	try {
+		return (JSON.parse(ls.stdout) as { Name: string }[])
+			.map((project) => project.Name)
+			.filter((name) => /^autumn-wt-\d+$/.test(name));
+	} catch {
+		return [];
+	}
+}
+
+export function removeComposeProject(project: string): boolean {
+	if (!/^autumn-wt-\d+$/.test(project)) return false;
+	const down = sh("docker", [
+		"compose",
+		"-f",
+		composeFilePath,
+		"-p",
+		project,
+		"--profile",
+		"ngrok",
+		"down",
+		"--remove-orphans",
+	]);
+	if (down.code === 0) {
+		log(`removed inactive compose stack ${project}`);
+		return true;
+	}
+	console.error(
+		`[dw] failed to remove compose stack ${project}: ${down.stderr}`,
+	);
+	return false;
 }

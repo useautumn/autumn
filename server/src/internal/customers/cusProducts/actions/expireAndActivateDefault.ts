@@ -1,12 +1,14 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
@@ -45,10 +47,20 @@ export const expireCustomerProductAndActivateDefault = async ({
 		...extraUpdates,
 	};
 
-	await CusProductService.update({
+	// Executing through the shared plan runs the license lifecycle when the
+	// expiring product carried license state.
+	await executeAutumnBillingPlan({
 		ctx,
-		cusProductId: customerProduct.id,
-		updates,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
+		},
 	});
 
 	ctx.logger.debug(

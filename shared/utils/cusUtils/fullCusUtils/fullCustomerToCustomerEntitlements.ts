@@ -60,14 +60,12 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	if (entity) {
-		cusEnts = cusEnts.filter((cusEnt) =>
-			cusEntMatchesEntity({
-				cusEnt: cusEnt,
-				entity,
-			}),
-		);
-	}
+	cusEnts = cusEnts.filter((cusEnt) =>
+		cusEntMatchesEntity({
+			cusEnt: cusEnt,
+			entity,
+		}),
+	);
 
 	// Filter out expired entitlements (applies to loose entitlements with expires_at)
 	// This is necessary because cached fullCustomer may contain entitlements that have since expired

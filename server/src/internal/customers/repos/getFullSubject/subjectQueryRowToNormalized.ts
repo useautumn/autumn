@@ -15,6 +15,7 @@ import {
 	type Entity,
 	type EntityAggregations,
 	FeatureType,
+	type FullCustomerLicense,
 	type FullCustomerPrice,
 	type FullSubject,
 	InternalError,
@@ -270,6 +271,14 @@ export const subjectQueryRowToNormalized = ({
 		};
 	}
 
+	// Same assembly as getFullCustomerLicenses: bundle → FullCustomerLicense.
+	const customerLicenses: FullCustomerLicense[] = (
+		row.customer_licenses ?? []
+	).map(({ customerLicense, planLicense, product }) => ({
+		...customerLicense,
+		planLicense: planLicense ? { ...planLicense, product } : null,
+	}));
+
 	return {
 		subjectType: (isEntitySubject ? "entity" : "customer") as SubjectType,
 		customerId: customer.id ?? customer.internal_id,
@@ -285,6 +294,7 @@ export const subjectQueryRowToNormalized = ({
 		customer_products: row.customer_products,
 		customer_entitlements: meteredCustomerEntitlements,
 		customer_prices: row.customer_prices,
+		customer_licenses: customerLicenses,
 		usage_windows: (row.usage_windows ?? []) as DbUsageWindow[],
 		flags,
 		products: row.products as DbProduct[],

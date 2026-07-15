@@ -9,7 +9,7 @@ import {
 	ProductsViewToggle,
 } from "./components/ProductsViewToggle";
 import { ProductListCreateButton } from "./components/product-list/ProductListCreateButton";
-import { ProductListMenuButton } from "./components/product-list/ProductListMenuButton";
+import { ProductListFilterButton } from "./components/product-list/ProductListFilterButton";
 import { ProductListTable } from "./components/product-list/ProductListTable";
 
 export const ProductsPage = () => {
@@ -30,8 +30,8 @@ export const ProductsPage = () => {
 		<div>
 			<ProductsPageHeader>
 				<ProductsViewToggle value={viewMode} onValueChange={setViewMode} />
+				<ProductListFilterButton />
 				<ProductListCreateButton />
-				<ProductListMenuButton />
 			</ProductsPageHeader>
 			{viewMode === "list" ? <ProductListTable /> : <ProductsAIChatView />}
 		</div>

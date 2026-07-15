@@ -2,16 +2,21 @@ import type { BasePriceParams } from "@api/products/components/basePrice/basePri
 import {
 	type ApiPlanV1,
 	type CreatePlanItemParamsV1,
-	CustomizePlanV1Schema,
+	CustomizePlanV1BaseSchema,
 	type PlanItemFilter,
+	refineCustomizePlanV1Schema,
 } from "@autumn/shared";
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { z } from "zod/v4";
 
-export const DiffedCustomizePlanV1Schema = CustomizePlanV1Schema.omit({
-	items: true,
-});
+export const DiffedCustomizePlanV1Schema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		upsert_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
 
 export type DiffedCustomizePlanV1 = z.infer<typeof DiffedCustomizePlanV1Schema>;
 
@@ -64,7 +69,9 @@ export const toBasePriceParams = (
 		: {}),
 });
 
-const toCreatePlanItemParams = (item: ApiPlanItem): CreatePlanItemParamsV1 => {
+export const toCreatePlanItemParams = (
+	item: ApiPlanItem,
+): CreatePlanItemParamsV1 => {
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;

@@ -9,6 +9,8 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
+import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { buildIncomingFullProduct } from "./buildIncomingFullProduct.js";
 import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
@@ -16,8 +18,6 @@ import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
-import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
-import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const buildPlanUpdatePreview = async ({
 	ctx,
@@ -71,7 +71,9 @@ export const buildPlanUpdatePreview = async ({
 		from: currentPlan,
 		to: previewPlan,
 	});
-	const shouldPreviewVersions = Boolean(data.include_versions || data.all_versions);
+	const shouldPreviewVersions = Boolean(
+		data.include_versions || data.all_versions,
+	);
 	const shouldPreviewVariants = Boolean(
 		data.include_variants ||
 			(data.update_variant_ids?.length ?? 0) > 0 ||

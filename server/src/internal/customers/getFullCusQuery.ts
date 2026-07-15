@@ -153,7 +153,13 @@ const buildOptimizedCusProductsCTE = ({
         row_to_json(prod) AS product,
         cpr_data.customer_prices,
         ce_data.customer_entitlements,
-        ft_data.free_trial
+        ft_data.free_trial,
+        CASE WHEN pcl.id IS NULL THEN NULL ELSE to_jsonb(pcl) END AS parent_customer_license,
+        CASE WHEN pcp.id IS NULL THEN NULL ELSE jsonb_build_object(
+          'status', pcp.status,
+          'subscription_ids', to_jsonb(pcp.subscription_ids),
+          'canceled_at', pcp.canceled_at
+        ) END AS parent_customer_product
 
       FROM customer_products cp
       JOIN products prod ON cp.internal_product_id = prod.internal_id
@@ -209,7 +215,21 @@ const buildOptimizedCusProductsCTE = ({
         FROM free_trials ft
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
+      LEFT JOIN customer_licenses pcl
+        ON cp.customer_license_link_id IS NOT NULL
+        AND pcl.link_id = cp.customer_license_link_id
+      LEFT JOIN customer_products pcp
+        ON pcp.id = pcl.parent_customer_product_id
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
+      -- Seat rows (license assignments) hydrate only for the selected entity.
+      AND ${
+				entityId
+					? sql`(
+        cp.customer_license_link_id IS NULL
+        OR cp.internal_entity_id = (SELECT internal_id FROM entity_record)
+      )`
+					: sql`cp.customer_license_link_id IS NULL`
+			}
       ${withStatusFilter()}
       ORDER BY ${entityId ? sql`CASE WHEN cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} THEN 0 WHEN cp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``} ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
       LIMIT ${cusProductLimit}
@@ -745,6 +765,7 @@ export const getPaginatedFullCusQuery = ({
         SELECT *
         FROM customer_products cp
         WHERE cp.internal_customer_id = cr.internal_id
+        AND cp.customer_license_link_id IS NULL
         ${withStatusFilter()}
         ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
         LIMIT ${cusProductLimit}

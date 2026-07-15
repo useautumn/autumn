@@ -4,7 +4,10 @@ import { BillingInterval } from "@models/productModels/intervals/billingInterval
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
-import { CustomizePlanV1Schema } from "../billing/common/customizePlan/customizePlanV1.js";
+import {
+	CustomizePlanV1BaseSchema,
+	refineCustomizePlanV1Schema,
+} from "../billing/common/customizePlan/customizePlanV1.js";
 import { AdditionalCurrencyPriceArraySchema } from "./components/additionalCurrencies.js";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
@@ -50,9 +53,30 @@ export const API_PLAN_V1_EXAMPLE = {
 	metadata: {},
 };
 
-const VariantCustomizeSchema = CustomizePlanV1Schema.omit({
-	items: true,
+const VariantCustomizeSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1BaseSchema.omit({
+		items: true,
+		upsert_licenses: true,
+	}).strict(),
+	{ includeItems: false, includeLicenses: false },
+);
+
+export const ApiPlanLicenseV1Schema = z.object({
+	license_plan_id: z.string().meta({
+		description: "The plan offered as a license under this plan.",
+	}),
+	included: z.number().meta({
+		description:
+			"Number of license assignments included with this plan for free.",
+	}),
+	prepaid_only: z.boolean().meta({
+		internal: true,
+		description:
+			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
+	}),
 });
+
+export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
 
 export const ApiPlanV1Schema = z.object({
 	id: z.string().meta({
@@ -112,6 +136,11 @@ export const ApiPlanV1Schema = z.object({
 	items: z.array(ApiPlanItemV1Schema).meta({
 		description:
 			"Feature configurations included in this plan. Each item defines included units, pricing, and reset behavior for a feature.",
+	}),
+	licenses: z.array(ApiPlanLicenseV1Schema).optional().meta({
+		internal: true,
+		description:
+			"Plans offered as assignable licenses under this plan. Omitted when the plan has none.",
 	}),
 	free_trial: ApiFreeTrialV2Schema.optional().meta({
 		description:
