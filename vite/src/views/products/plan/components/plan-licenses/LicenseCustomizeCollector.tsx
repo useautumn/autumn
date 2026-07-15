@@ -34,20 +34,34 @@ const createLicenseCollectorStore = () =>
 
 type LicenseCollectorStore = ReturnType<typeof createLicenseCollectorStore>;
 
-const LicenseCollectorContext = createContext<LicenseCollectorStore | null>(
-	null,
-);
+interface LicenseCollectorContextValue {
+	store: LicenseCollectorStore;
+	initialPatches: Record<string, CustomizePlanLicense>;
+}
+
+const LicenseCollectorContext =
+	createContext<LicenseCollectorContextValue | null>(null);
 
 const fallbackStore = createLicenseCollectorStore();
+const EMPTY_PATCHES: Record<string, CustomizePlanLicense> = {};
 
 export function LicenseCustomizeCollectorProvider({
 	children,
+	initialPatches,
 }: {
 	children: ReactNode;
+	/** Previously saved add_licenses patch — re-seeds cards so edits survive
+	 * closing and reopening the editor. */
+	initialPatches?: CustomizePlanLicense[] | null;
 }) {
-	const [store] = useState(createLicenseCollectorStore);
+	const [value] = useState<LicenseCollectorContextValue>(() => ({
+		store: createLicenseCollectorStore(),
+		initialPatches: Object.fromEntries(
+			(initialPatches ?? []).map((patch) => [patch.license_plan_id, patch]),
+		),
+	}));
 	return (
-		<LicenseCollectorContext.Provider value={store}>
+		<LicenseCollectorContext.Provider value={value}>
 			{children}
 		</LicenseCollectorContext.Provider>
 	);
@@ -55,7 +69,12 @@ export function LicenseCustomizeCollectorProvider({
 
 /** Non-null only inside a customize-mode editor. */
 export const useLicenseCollectorStore = () =>
-	useContext(LicenseCollectorContext);
+	useContext(LicenseCollectorContext)?.store ?? null;
+
+/** Saved add_licenses entries keyed by license plan id; empty outside a
+ * customize editor. */
+export const useInitialLicensePatches = () =>
+	useContext(LicenseCollectorContext)?.initialPatches ?? EMPTY_PATCHES;
 
 export const useHasCollectedLicenseChanges = () => {
 	const store = useLicenseCollectorStore();

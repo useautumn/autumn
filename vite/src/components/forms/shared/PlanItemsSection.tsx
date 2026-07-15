@@ -16,6 +16,7 @@ import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscr
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
+import type { LicenseQuantityEditor } from "./plan-items/LicenseQuantityControl";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
 import {
 	getItemMatchKey,
@@ -65,6 +66,8 @@ export interface PlanItemsSectionProps {
 	/** add_licenses patch entries staged by the editor; null = unchanged,
 	 * undefined = the flow does not support license editing. */
 	addLicenses?: CustomizePlanLicense[] | null;
+	/** Present only in flows that support buying extra license seats (attach). */
+	licenseQuantityEditor?: LicenseQuantityEditor;
 
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
@@ -158,6 +161,7 @@ export function PlanItemsSection({
 	versionChange,
 	trialConfig,
 	addLicenses,
+	licenseQuantityEditor,
 	gateDeletedItemsByDiff = false,
 	changesOnly = false,
 	readOnly = false,
@@ -206,6 +210,7 @@ export function PlanItemsSection({
 					addLicenses={addLicenses}
 					showDiff={showDiff}
 					changesOnly={changesOnly}
+					quantityEditor={licenseQuantityEditor}
 				/>
 			</div>
 		);
@@ -278,6 +283,7 @@ export function PlanItemsSection({
 						addLicenses={addLicenses}
 						showDiff={showDiff}
 						changesOnly={changesOnly}
+						quantityEditor={licenseQuantityEditor}
 					/>
 					<PlanVersionChangeRow versionChange={versionChange} />
 					<PlanTrialEditor trialConfig={trialConfig} form={form} />

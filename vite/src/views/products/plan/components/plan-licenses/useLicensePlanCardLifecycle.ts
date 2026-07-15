@@ -11,7 +11,10 @@ import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useLicenseCollectorStore } from "./LicenseCustomizeCollector";
+import {
+	useInitialLicensePatches,
+	useLicenseCollectorStore,
+} from "./LicenseCustomizeCollector";
 import type { LicenseEditSnapshot } from "./licenseCustomizeUtils";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
@@ -48,16 +51,21 @@ export const useLicensePlanCardLifecycle = ({
 	const register = useLicenseSaveRegistry((s) => s.register);
 	const unregister = useLicenseSaveRegistry((s) => s.unregister);
 	const collectorStore = useLicenseCollectorStore();
+	const initialPatch = useInitialLicensePatches()[license.id];
 	const { removePendingLink } = usePendingLicenseLinks();
 
 	const draft = useLicenseDraft(license.id);
-	const included = draft?.included ?? planLicense.included;
+	const seededIncluded = initialPatch?.included ?? planLicense.included;
+	const included = draft?.included ?? seededIncluded;
 	const removed = draft?.removed ?? false;
 	const itemsChanged = useHasPlanChanges();
+	// A card seeded from a saved patch stays dirty so re-saving re-collects it
+	// instead of silently dropping the earlier customization.
 	const hasChanges =
 		isPendingLink ||
 		removed ||
 		itemsChanged ||
+		Boolean(initialPatch) ||
 		included !== planLicense.included;
 
 	const editedProduct = () => ({
@@ -113,9 +121,9 @@ export const useLicensePlanCardLifecycle = ({
 	// their planLicense every render and an identity-keyed reseed would wipe
 	// in-progress edits (e.g. a typed included quantity).
 	useEffect(() => {
-		seed(license.id, { included: planLicense.included });
+		seed(license.id, { included: seededIncluded });
 		return () => clear(license.id);
-	}, [license.id, planLicense.included, seed, clear]);
+	}, [license.id, seededIncluded, seed, clear]);
 
 	useEffect(() => {
 		if (collectorStore) {

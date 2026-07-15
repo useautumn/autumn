@@ -7,6 +7,10 @@ import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { cn } from "@/lib/utils";
+import {
+	LicenseQuantityControl,
+	type LicenseQuantityEditor,
+} from "./LicenseQuantityControl";
 
 type LicenseRowStatus = "unchanged" | "added" | "removed" | "changed";
 
@@ -20,7 +24,7 @@ interface LicenseSummaryRow {
 const DOT_STATE: Record<LicenseRowStatus, ItemStatusState | null> = {
 	added: "new",
 	removed: "removed",
-	changed: null,
+	changed: "updated",
 	unchanged: null,
 };
 
@@ -93,11 +97,13 @@ export function PlanLicensesSummary({
 	addLicenses,
 	showDiff,
 	changesOnly = false,
+	quantityEditor,
 }: {
 	planId: string | undefined;
 	addLicenses: CustomizePlanLicense[] | null | undefined;
 	showDiff: boolean;
 	changesOnly?: boolean;
+	quantityEditor?: LicenseQuantityEditor;
 }) {
 	const { planLicenses } = usePlanLicensesQuery(
 		addLicenses === undefined ? undefined : planId,
@@ -125,6 +131,11 @@ export function PlanLicensesSummary({
 				const dotState = showDiff ? DOT_STATE[row.status] : null;
 				const showQuantityChange =
 					showDiff && row.previousIncludedQuantity !== undefined;
+				const includedLabel = showQuantityChange
+					? `${row.previousIncludedQuantity} → ${row.included} included`
+					: `${row.included} included`;
+				const showQuantityControl =
+					quantityEditor !== undefined && row.status !== "removed";
 				return (
 					<div
 						key={row.licenseId}
@@ -142,11 +153,17 @@ export function PlanLicensesSummary({
 							<LicenseIcon size={14} className="shrink-0" />
 							<span className="truncate">{licenseName(row.licenseId)}</span>
 						</div>
-						<span className="text-tertiary-foreground shrink-0">
-							{showQuantityChange
-								? `${row.previousIncludedQuantity} → ${row.included} included`
-								: `${row.included} included`}
-						</span>
+						{showQuantityControl ? (
+							<LicenseQuantityControl
+								editor={quantityEditor}
+								licensePlanId={row.licenseId}
+								includedQuantity={row.included}
+							/>
+						) : (
+							<span className="text-tertiary-foreground shrink-0">
+								{includedLabel}
+							</span>
+						)}
 					</div>
 				);
 			})}
