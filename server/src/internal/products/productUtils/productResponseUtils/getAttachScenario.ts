@@ -1,17 +1,17 @@
 import {
 	AttachScenario,
-	cusProductToProduct,
+	customerProductToEffectivePrices,
 	type FullCustomer,
 	type FullProduct,
 	isCustomerProductCanceling,
+	isCustomerProductFree,
+	isFreeProduct,
+	isOneOffProduct,
+	productToEffectivePrices,
 } from "@autumn/shared";
 
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import {
-	isFreeProduct,
-	isOneOff,
-	isProductUpgrade,
-} from "../../productUtils.js";
+import { isProductUpgrade } from "../../productUtils.js";
 
 export const getAttachScenario = ({
 	fullCus,
@@ -29,14 +29,14 @@ export const getAttachScenario = ({
 			internalEntityId: fullCus?.entity?.internal_id,
 		});
 
-	if (isOneOff(fullProduct.prices)) {
+	if (isOneOffProduct({ product: fullProduct })) {
 		return AttachScenario.New;
 	}
 
 	if (
 		fullProduct.is_add_on &&
-		!isFreeProduct(fullProduct.prices) &&
-		!isOneOff(fullProduct.prices)
+		!isFreeProduct({ product: fullProduct }) &&
+		!isOneOffProduct({ product: fullProduct })
 	) {
 		// 1. If current same product is add on, and it's canceled
 		if (
@@ -68,24 +68,24 @@ export const getAttachScenario = ({
 		return AttachScenario.Scheduled;
 	}
 
-	const curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
-
 	if (
-		isFreeProduct(curFullProduct.prices) &&
-		isFreeProduct(fullProduct.prices)
+		isCustomerProductFree(curMainProduct) &&
+		isFreeProduct({ product: fullProduct })
 	) {
 		return AttachScenario.New;
 	}
 
 	const isUpgrade = isProductUpgrade({
-		prices1: curFullProduct.prices,
-		prices2: fullProduct.prices,
+		prices1: customerProductToEffectivePrices({
+			customerProduct: curMainProduct,
+		}),
+		prices2: productToEffectivePrices({ product: fullProduct }),
 	});
 
 	if (
 		!isUpgrade &&
-		!isFreeProduct(curFullProduct.prices) &&
-		isFreeProduct(fullProduct.prices)
+		!isCustomerProductFree(curMainProduct) &&
+		isFreeProduct({ product: fullProduct })
 	) {
 		return AttachScenario.Cancel;
 	}

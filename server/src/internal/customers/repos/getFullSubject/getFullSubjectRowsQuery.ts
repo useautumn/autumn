@@ -1,6 +1,7 @@
 import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
@@ -89,15 +90,18 @@ export const getFullSubjectRowsQuery = ({
 				statusFilter,
 			})
 		: emptyEntityFragments;
+	const customerLevelProductPredicate = sql`
+		cp.internal_entity_id IS NULL
+		AND ${sql.raw(notLicenseAssignmentSql("cp"))}`;
 
 	const customerProductSubjectPredicate = entityScopedOnly
 		? sql`cp.internal_entity_id = sr.internal_entity_id`
 		: sql`cp.internal_customer_id = sr.internal_customer_id
 					AND (
-						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						(sr.internal_entity_id IS NULL AND ${customerLevelProductPredicate})
 						OR
 						(sr.internal_entity_id IS NOT NULL AND (
-							cp.internal_entity_id IS NULL
+							${customerLevelProductPredicate}
 							OR cp.internal_entity_id = sr.internal_entity_id
 						))
 					)`;

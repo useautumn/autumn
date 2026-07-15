@@ -43,6 +43,11 @@ type FeatureOption = {
 	quantity: number;
 };
 
+type LicenseQuantityOption = {
+	licenseProductId: string;
+	quantity: number;
+};
+
 type EntityConfig = {
 	count: number;
 	featureId: string;
@@ -171,6 +176,7 @@ type BillingAttachAction = {
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
 	billingControls?: CustomerBillingControlsParams;
+	licenseQuantities?: LicenseQuantityOption[];
 };
 
 type MultiAttachPlan = {
@@ -738,6 +744,7 @@ const billingAttach = ({
 	enableProductImmediately,
 	finalizeInvoice,
 	billingControls,
+	licenseQuantities,
 }: {
 	productId: string;
 	customerId?: string;
@@ -752,6 +759,7 @@ const billingAttach = ({
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
 	billingControls?: CustomerBillingControlsParams;
+	licenseQuantities?: LicenseQuantityOption[];
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
@@ -774,6 +782,7 @@ const billingAttach = ({
 				enableProductImmediately,
 				finalizeInvoice,
 				billingControls,
+				licenseQuantities,
 			},
 		],
 	});
@@ -1690,6 +1699,12 @@ export async function initScenario({
 					enable_product_immediately: action.enableProductImmediately,
 					finalize_invoice: action.finalizeInvoice,
 					billing_controls: action.billingControls,
+					license_quantities: action.licenseQuantities?.map(
+						({ licenseProductId, quantity }) => ({
+							license_plan_id: `${licenseProductId}_${productPrefix}`,
+							quantity,
+						}),
+					),
 				},
 				{ timeout: action.timeout },
 			);

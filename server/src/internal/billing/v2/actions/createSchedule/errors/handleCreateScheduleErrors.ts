@@ -36,7 +36,7 @@ export const handleCreateScheduleErrors = async ({
 	handleFirstPhaseStartDateErrors({ billingContext, preview });
 
 	const allImmediateProductsFree = billingContext.fullProducts.every(
-		(product) => isFreeProduct({ prices: product.prices }),
+		(product) => isFreeProduct({ product }),
 	);
 
 	if (allImmediateProductsFree && billingContext.stripeSubscription) {

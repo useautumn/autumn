@@ -4,6 +4,7 @@ import {
 	customerLicenseToUsage,
 	ErrCode,
 	type FullCustomerLicense,
+	isFreeProduct,
 	RecaseError,
 } from "@autumn/shared";
 
@@ -21,6 +22,37 @@ export const handleLicenseCapacityErrors = ({
 	billingContext: AttachBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
+	const { attachProduct, currentCustomerProduct } = billingContext;
+	if (
+		!currentCustomerProduct &&
+		isFreeProduct({ prices: attachProduct.prices })
+	) {
+		const hasPaidLicense = (attachProduct.licenses ?? []).some(
+			(planLicense) => !isFreeProduct({ product: planLicense.product }),
+		);
+		const purchasesPaidLicense = (
+			autumnBillingPlan.insertCustomerProducts ?? []
+		).some((customerProduct) =>
+			(customerProduct.customer_licenses ?? []).some(
+				(customerLicense) =>
+					customerLicense.paid_quantity > 0 &&
+					customerLicense.planLicense !== null &&
+					!isFreeProduct({
+						product: customerLicense.planLicense.product,
+					}),
+			),
+		);
+
+		if (hasPaidLicense && !purchasesPaidLicense) {
+			throw new RecaseError({
+				message:
+					"The first attach of a license-backed paid plan must request at least one license quantity above its included quantity.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+	}
+
 	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
 		if (transition.updates.remaining >= 0) continue;
 		const used = transition.updates.granted - transition.updates.remaining;
@@ -33,7 +65,7 @@ export const handleLicenseCapacityErrors = ({
 		});
 	}
 
-	const { currentCustomerProduct, planTiming } = billingContext;
+	const { planTiming } = billingContext;
 	if (planTiming !== "immediate" || !currentCustomerProduct) return;
 
 	const incomingLicensePlanIds = new Set(

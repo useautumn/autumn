@@ -1,7 +1,8 @@
 import {
-	cusProductToProduct,
 	type FullCusProduct,
 	type FullProduct,
+	isCustomerProductFree,
+	isCustomerProductOneOff,
 	isFreeProduct,
 	isOneOffProduct,
 } from "@autumn/shared";
@@ -23,8 +24,7 @@ export const setupResetCycleAnchor = ({
 	billingStartsAt?: number;
 }): number | "now" => {
 	const hasFutureBillingStart = billingStartsAt !== undefined;
-	const shouldAnchorToBillingStart =
-		hasFutureBillingStart && !customerProduct;
+	const shouldAnchorToBillingStart = hasFutureBillingStart && !customerProduct;
 
 	if (shouldAnchorToBillingStart) {
 		return billingStartsAt;
@@ -34,22 +34,16 @@ export const setupResetCycleAnchor = ({
 		return billingCycleAnchorMs;
 	}
 
-	const currentFullProduct = cusProductToProduct({
-		cusProduct: customerProduct,
-	});
-
-	const currentIsFree = isFreeProduct({ prices: currentFullProduct.prices });
-	const newIsFree = isFreeProduct({ prices: newFullProduct.prices });
+	const currentIsFree = isCustomerProductFree(customerProduct);
+	const newIsFree = isFreeProduct({ product: newFullProduct });
 
 	// Free -> Free: keep original anchor
 	if (currentIsFree && newIsFree) {
 		return customerProduct?.starts_at ?? "now";
 	}
 
-	const currentIsOneOff = isOneOffProduct({
-		prices: currentFullProduct.prices,
-	});
-	const newIsOneOff = isOneOffProduct({ prices: newFullProduct.prices });
+	const currentIsOneOff = isCustomerProductOneOff(customerProduct);
+	const newIsOneOff = isOneOffProduct({ product: newFullProduct });
 
 	// One-off -> One-off: keep original anchor
 	if (currentIsOneOff && newIsOneOff) {

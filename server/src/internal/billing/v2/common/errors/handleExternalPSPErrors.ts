@@ -1,12 +1,12 @@
 import {
-	cusProductToPrices,
 	cusProductToProcessorType,
 	type FullCusProduct,
 	type FullProduct,
+	isCustomerProductOneOff,
+	isOneOffProduct,
 	ProcessorType,
 	RecaseError,
 } from "@autumn/shared";
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 
 /**
  * Validates that we're not trying to modify (or attach alongside) a customer
@@ -62,7 +62,7 @@ export const handleExternalPSPErrors = ({
 	// processors. One-offs create a parallel cus_product and never spin up a
 	// recurring Stripe subscription, so a customer with an active RC sub can
 	// still buy a Stripe-billed top-up. Recurring add-ons take the strict path.
-	if (attachProduct && pricesOnlyOneOff(attachProduct.prices)) {
+	if (attachProduct && isOneOffProduct({ product: attachProduct })) {
 		return;
 	}
 
@@ -76,9 +76,7 @@ export const handleExternalPSPErrors = ({
 		// Skip external products that are pure one-offs — they have no
 		// recurring sub to conflict with. Prices live on customer_prices
 		// (FullCusProduct.product is the bare Product without prices).
-		const cpPrices = cusProductToPrices({ cusProduct: cp });
-		const cpIsOneOffOnly = pricesOnlyOneOff(cpPrices);
-		return !cpIsOneOffOnly;
+		return !isCustomerProductOneOff(cp);
 	});
 
 	if (conflictingExternalCusProduct) {

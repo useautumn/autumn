@@ -40,7 +40,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 			customEnts: productContext.customEnts,
 			isUpdatingFreeCustomerProduct:
 				isCustomerProductFree(productContext.customerProduct) ||
-				isFreeProduct({ prices: productContext.fullProduct.prices }),
+				isFreeProduct({ product: productContext.fullProduct }),
 		};
 	}
 
@@ -93,7 +93,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 
 	const isUpdatingFreeCustomerProduct =
 		isCustomerProductFree(targetCustomerProduct) &&
-		isFreeProduct({ prices: finalFullProduct.prices });
+		isFreeProduct({ product: finalFullProduct });
 
 	return {
 		customerProduct: targetCustomerProduct,
