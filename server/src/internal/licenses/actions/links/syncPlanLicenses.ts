@@ -180,7 +180,7 @@ const assertCapacityAllowed = async ({
 	});
 	if (maxAssigned > included) {
 		throw new RecaseError({
-			message: `Cannot set included to ${included}: a customer has ${maxAssigned} active assignments for ${licensePlanId}. Unassign licenses first.`,
+			message: `Cannot set ${licensePlanId} included to ${included}: a customer has ${maxAssigned} active assignment${maxAssigned === 1 ? "" : "s"}. Unassign ${maxAssigned === 1 ? "it" : "them"} first.`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
