@@ -14,6 +14,9 @@ import { runWithErrorToast } from "./runWithErrorToast";
  */
 interface LicenseSaveEntry {
 	dirty: boolean;
+	/** Item/price edits change the underlying license plan (vs link config). */
+	editsLicensePlan: boolean;
+	licenseName: string;
 	/** The card's licenses[] entry, or null when the card is staged for removal. */
 	getEntry: () => PlanLicenseParams | null;
 	/** Persist the card's item edits onto the license plan itself. */
@@ -46,6 +49,14 @@ export const useHasLicenseChanges = () =>
 	useLicenseSaveRegistry((s) =>
 		Object.values(s.entries).some((entry) => entry.dirty),
 	);
+
+/** Names of licenses whose underlying plan the pending save would edit. */
+export const useLicensePlanEditNames = () => {
+	const entries = useLicenseSaveRegistry((s) => s.entries);
+	return Object.values(entries)
+		.filter((entry) => entry.editsLicensePlan)
+		.map((entry) => entry.licenseName);
+};
 
 /** Compose the full licenses[] payload: every registered card's entry (removed
  * cards drop out), plus persisted links with no mounted card passed through

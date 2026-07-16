@@ -66,19 +66,14 @@ export const createCustomerLicensePoolColumns = ({
 		header: "Status",
 		accessorKey: "status",
 		size: 110,
-		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => {
-			const { remaining, granted } = row.original;
-			return (
-				<div className="flex items-baseline gap-1 truncate">
-					<span className="text-muted-foreground">
-						{formatNumber(granted - remaining)}
-					</span>
-					<span className="text-subtle">
-						/ {formatNumber(granted)} assigned
-					</span>
-				</div>
-			);
-		},
+		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
+			<div className="flex items-baseline gap-1 truncate">
+				<span className="text-muted-foreground">
+					{formatNumber(row.original.remaining)}
+				</span>
+				<span className="text-subtle">remaining</span>
+			</div>
+		),
 	},
 	{
 		...createDateTimeColumn<CustomerLicensePoolRow>({

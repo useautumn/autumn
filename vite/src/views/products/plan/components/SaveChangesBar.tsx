@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
@@ -27,6 +28,7 @@ import {
 	discardAllLicenses,
 	saveAllLicenses,
 	useHasLicenseChanges,
+	useLicensePlanEditNames,
 } from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
@@ -50,6 +52,7 @@ export const SaveChangesBar = ({
 	const hasChanges = planHasChanges || licenseHasChanges;
 	const { planLicenses, invalidate: invalidatePlanLicenses } =
 		usePlanLicensesQuery(product.id);
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { features = [] } = useFeaturesQuery();
 	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
@@ -67,7 +70,13 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
+	const hasLicensePlanEdits = useLicensePlanEditNames().length > 0;
+	let saveButtonText = "Save";
+	if (isCusPlanEditor) {
+		saveButtonText = "Save and Return";
+	} else if (hasLicensePlanEdits) {
+		saveButtonText = "Save & Update Licenses";
+	}
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
@@ -142,7 +151,14 @@ export const SaveChangesBar = ({
 				axiosInstance,
 				parentPlanId: product.id,
 				persistedLinks: planLicenses,
-				onSuccess: () => invalidatePlanLicenses(),
+				// License item edits update the license plan itself, so refresh the
+				// product caches the cards re-seed from — not just the links.
+				onSuccess: () =>
+					Promise.all([
+						invalidatePlanLicenses(),
+						invalidateLicenseProducts(),
+						invalidateProducts(),
+					]),
 			}),
 		]);
 
