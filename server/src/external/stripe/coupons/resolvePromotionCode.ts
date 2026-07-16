@@ -41,7 +41,7 @@ export const resolvePromotionCode = async ({
 			code,
 			active: true,
 			limit: 1,
-			expand: ["data.promotion.coupon"],
+			expand: ["data.promotion.coupon.applies_to"],
 		});
 
 		if (promos.data.length === 0) {
@@ -67,12 +67,9 @@ export const resolvePromotionCode = async ({
 		}
 
 		const minimumAmountsByCurrency = Object.fromEntries(
-			Object.entries(
-				promo.restrictions?.currency_options ?? {},
-			).map(([currency, option]) => [
-				currency.toLowerCase(),
-				option.minimum_amount,
-			]),
+			Object.entries(promo.restrictions?.currency_options ?? {}).map(
+				([currency, option]) => [currency.toLowerCase(), option.minimum_amount],
+			),
 		);
 
 		const hasCurrencyOptions = Object.keys(minimumAmountsByCurrency).length > 0;
