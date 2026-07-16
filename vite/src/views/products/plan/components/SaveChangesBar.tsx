@@ -28,6 +28,7 @@ import {
 	discardAllLicenses,
 	saveAllLicenses,
 	useHasLicenseChanges,
+	useLicensePlanEditNames,
 } from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
@@ -69,7 +70,13 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
+	const hasLicensePlanEdits = useLicensePlanEditNames().length > 0;
+	let saveButtonText = "Save";
+	if (isCusPlanEditor) {
+		saveButtonText = "Save and Return";
+	} else if (hasLicensePlanEdits) {
+		saveButtonText = "Save & Update Licenses";
+	}
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
