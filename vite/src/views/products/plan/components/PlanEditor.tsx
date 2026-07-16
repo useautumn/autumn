@@ -14,6 +14,7 @@ import { SHEET_ANIMATION } from "../planAnimations";
 import { EditPlanHeader } from "./EditPlanHeader";
 import PlanCard from "./plan-card/PlanCard";
 import { LicensePlanCards } from "./plan-licenses/LicensePlanCards";
+import { LicensePlanEditAlert } from "./plan-licenses/LicensePlanEditAlert";
 import { PendingLicenseLinksProvider } from "./plan-licenses/PendingLicenseLinksContext";
 import { useIsLicenseSheetOpen } from "./plan-licenses/useLicenseSheetStore";
 import { SaveChangesBar } from "./SaveChangesBar";
@@ -48,7 +49,10 @@ export const PlanEditor = () => {
 						</div>
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-4 sm:px-10 gap-4">
 							{isCusPlanEditor && <CustomerPlanInfoBox />}
-							<PlanCard />
+							<div className="relative w-full flex justify-center">
+								<LicensePlanEditAlert />
+								<PlanCard />
+							</div>
 							{/* Link License lives in the plan toolbar (top right); the
 								inline button is customize-editor-only. */}
 							{!isCusPlanEditor && <LicensePlanCards />}
