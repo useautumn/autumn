@@ -8,6 +8,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseAttachPreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -78,7 +79,10 @@ test.concurrent(
 
 		const preview =
 			await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(attachParams);
-		expect(preview.total).toBe(PAID_SEATS * DEV_SEAT_PRICE);
+		expectLicenseAttachPreviewCorrect({
+			preview,
+			total: PAID_SEATS * DEV_SEAT_PRICE,
+		});
 
 		const result =
 			await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);

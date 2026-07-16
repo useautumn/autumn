@@ -15,6 +15,7 @@ import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { resolveCustomerLicenseProduct } from "../customer-licenses/resolveCustomerLicenseProduct";
 import { useCustomerLicenseBalances } from "../customer-licenses/useCustomerLicenseBalances";
 import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
 
@@ -40,9 +41,17 @@ export function LicensePoolDetailSheet() {
 	const pool = pools.find(
 		(candidate) => candidate.license_plan_id === licensePlanId,
 	);
-	const license = licenseProducts.find(
+	const catalogProduct = licenseProducts.find(
 		(candidate) => candidate.id === licensePlanId,
 	);
+	const license = pool
+		? resolveCustomerLicenseProduct({
+				customer,
+				licensePlanId: pool.license_plan_id,
+				parentPlanId: pool.parent_plan_id,
+				catalogProduct,
+			})
+		: null;
 	const poolAssignments = assignments.filter(
 		(assignment) => assignment.license_plan_id === licensePlanId,
 	);

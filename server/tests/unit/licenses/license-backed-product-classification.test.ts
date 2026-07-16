@@ -4,6 +4,7 @@ import {
 	type AutumnBillingPlan,
 	cusProductHasSubscription,
 	customerProductHasSubscription,
+	customerProductsToEffectivePrices,
 	customerProductToEffectivePrices,
 	type FullCustomerLicense,
 	type FullPlanLicense,
@@ -145,6 +146,41 @@ describe("license-backed product classification", () => {
 		expect(cusProductHasSubscription({ cusProduct: customerProduct })).toBe(
 			true,
 		);
+	});
+
+	test("collects recurring effective prices across customer products", () => {
+		const recurringLicense = products.createFull({
+			id: "recurring_license",
+			prices: [prices.createFixed({ id: "license_monthly" })],
+		});
+		const oneOffLicense = products.createFull({
+			id: "one_off_license",
+			prices: [prices.createOneOff({ id: "license_one_off" })],
+		});
+		const licenseBackedCustomerProducts = [recurringLicense, oneOffLicense].map(
+			(licenseProduct) => ({
+				...customerProducts.create({
+					product: products.createFull({ id: `${licenseProduct.id}_parent` }),
+				}),
+				customer_licenses: [
+					customerLicense({
+						planLicense: withLicense({
+							parent: products.createFull({
+								id: `${licenseProduct.id}_parent`,
+							}),
+							licenseProduct,
+						}).licenses![0]!,
+					}),
+				],
+			}),
+		);
+
+		expect(
+			customerProductsToEffectivePrices({
+				customerProducts: licenseBackedCustomerProducts,
+				filters: { excludeOneOffPrices: true },
+			}),
+		).toEqual(recurringLicense.prices);
 	});
 
 	test("classifies a customer product with a one-off license as one-off", () => {

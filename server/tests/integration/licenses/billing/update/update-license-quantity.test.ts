@@ -19,6 +19,7 @@ import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/e
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseUpdatePreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import chalk from "chalk";
 
@@ -31,7 +32,7 @@ test.concurrent(
 	`${chalk.yellowBright("license-update-quantity: qty 3 -> 5 grows the pool and bills the delta")}`,
 	async () => {
 		const customerId = "license-update-quantity-inc";
-		const { ctx, autumnV1, autumnV2_3, parent, devSeat } =
+		const { ctx, autumnV1, autumnV2_3, parent, devSeat, advancedTo } =
 			await setupLicenseUpdateScenario({
 				customerId,
 				idPrefix: "lic-qty-inc",
@@ -40,11 +41,26 @@ test.concurrent(
 				attachedSeats: ATTACHED_SEATS,
 			});
 
-		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: parent.id,
 			license_quantities: [{ license_plan_id: devSeat.id, quantity: 5 }],
+		};
+		const preview =
+			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo,
+			oldRecurringTotal: ATTACHED_PAID_SEATS * DEV_SEAT_PRICE,
+			newRecurringTotal: 4 * DEV_SEAT_PRICE,
 		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({
@@ -77,7 +93,7 @@ test.concurrent(
 	`${chalk.yellowBright("license-update-quantity: qty 3 -> 2 shrinks the pool in place")}`,
 	async () => {
 		const customerId = "license-update-quantity-dec";
-		const { ctx, autumnV2_3, parent, devSeat } =
+		const { ctx, autumnV2_3, parent, devSeat, advancedTo } =
 			await setupLicenseUpdateScenario({
 				customerId,
 				idPrefix: "lic-qty-dec",
@@ -86,11 +102,26 @@ test.concurrent(
 				attachedSeats: ATTACHED_SEATS,
 			});
 
-		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: parent.id,
 			license_quantities: [{ license_plan_id: devSeat.id, quantity: 2 }],
+		};
+		const preview =
+			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo,
+			oldRecurringTotal: ATTACHED_PAID_SEATS * DEV_SEAT_PRICE,
+			newRecurringTotal: DEV_SEAT_PRICE,
 		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 		expectCustomerLicenses({

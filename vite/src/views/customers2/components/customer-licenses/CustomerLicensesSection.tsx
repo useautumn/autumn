@@ -10,6 +10,7 @@ import {
 	createCustomerLicenseColumns,
 	type LicenseAssignmentRow,
 } from "./customerLicenseColumns";
+import { resolveCustomerLicenseProduct } from "./resolveCustomerLicenseProduct";
 import { useCustomerLicenseBalances } from "./useCustomerLicenseBalances";
 
 export function CustomerLicensesSection() {
@@ -35,6 +36,7 @@ export function CustomerLicensesSection() {
 	);
 
 	const { licenseProducts } = useLicenseProductsQuery();
+	const { customer } = useCustomerContext();
 
 	const rows = useMemo<LicenseAssignmentRow[]>(() => {
 		const poolByLicensePlanId = new Map(
@@ -47,18 +49,21 @@ export function CustomerLicensesSection() {
 				{
 					id: assignment.id,
 					name: pool.license_plan_name,
-					product:
-						licenseProducts.find(
+					product: resolveCustomerLicenseProduct({
+						customer,
+						licensePlanId: pool.license_plan_id,
+						parentPlanId: pool.parent_plan_id,
+						catalogProduct: licenseProducts.find(
 							(license) => license.id === pool.license_plan_id,
-						) ?? null,
+						),
+					}),
 					started_at: assignment.started_at,
 					pool,
 				},
 			];
 		});
-	}, [pools, entityAssignments, licenseProducts]);
+	}, [pools, entityAssignments, licenseProducts, customer]);
 
-	const { customer } = useCustomerContext();
 	const entity = customer.entities?.find((e) => e.id === publicEntityId);
 
 	const columns = useMemo(

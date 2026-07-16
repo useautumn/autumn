@@ -38,6 +38,7 @@ import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils"
 import { expectAssignmentPricesCorrect } from "@tests/integration/licenses/utils/expectAssignmentPricesCorrect";
 import { expectAssignmentsAnchoredToParent } from "@tests/integration/licenses/utils/expectAssignmentsAnchoredToParent";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseUpdatePreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -198,7 +199,7 @@ test.concurrent(
 			idPrefix: "lic-patch-upsert",
 		});
 
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			customize: {
@@ -206,7 +207,22 @@ test.concurrent(
 					licensePlanId: scenario.devSeat.id,
 				}),
 			},
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		await expectPatchedLicenseStateCorrect({
 			scenario,
@@ -236,7 +252,7 @@ test.concurrent(
 			],
 		});
 
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			customize: {
@@ -245,7 +261,22 @@ test.concurrent(
 					licensePlanId: scenario.devSeat.id,
 				}),
 			},
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: BASE_PRICE + PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: UPDATED_BASE_PRICE + PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		await expectPatchedLicenseStateCorrect({
 			scenario,
@@ -276,7 +307,7 @@ test.concurrent(
 			],
 		});
 
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			customize: {
@@ -286,7 +317,22 @@ test.concurrent(
 					licensePlanId: scenario.devSeat.id,
 				}),
 			},
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		await expectPatchedLicenseStateCorrect({
 			scenario,
@@ -323,7 +369,7 @@ test.concurrent(
 		});
 
 		// Same price, bigger messages grant: entitlement-only transition.
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			customize: {
@@ -339,7 +385,22 @@ test.concurrent(
 					},
 				],
 			},
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		// ── DB: definition repointed; seat cusEnt refs converge via the
 		// trigger.dev task (asserted below by running the worker's runner) ──

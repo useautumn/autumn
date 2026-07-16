@@ -264,6 +264,36 @@ export const applyPreviewStripeResourcesToBillingPlan = ({
 			orgDefault,
 		});
 	}
+
+	const licenseProductsByDefinition = new Map<string, FullProduct>();
+	for (const customerProduct of [
+		...autumnBillingPlan.insertCustomerProducts,
+		...fullCustomer.customer_products,
+	]) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			const licenseProduct = customerLicense.planLicense?.product;
+			if (!licenseProduct) continue;
+			licenseProductsByDefinition.set(
+				customerLicense.plan_license_id ?? licenseProduct.internal_id,
+				licenseProduct,
+			);
+		}
+	}
+
+	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
+		const planLicense = transition.incomingCustomerLicense.planLicense;
+		if (!planLicense) continue;
+		licenseProductsByDefinition.set(planLicense.id, planLicense.product);
+	}
+
+	for (const licenseProduct of licenseProductsByDefinition.values()) {
+		applyPreviewStripeResourcesToProduct({
+			product: licenseProduct,
+			internalEntityId,
+			currency,
+			orgDefault,
+		});
+	}
 };
 
 export const assertNoPreviewStripeIdsOnProduct = ({

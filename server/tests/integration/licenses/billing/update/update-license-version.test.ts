@@ -30,6 +30,7 @@ import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/
 import { getLicenseDbState } from "@tests/integration/licenses/licenseTestUtils";
 import { expectAssignmentsAnchoredToParent } from "@tests/integration/licenses/utils/expectAssignmentsAnchoredToParent";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseUpdatePreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -134,7 +135,7 @@ test.concurrent(
 			idPrefix: "lic-ver-upsert",
 		});
 
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			version: 2,
@@ -151,7 +152,22 @@ test.concurrent(
 					},
 				],
 			},
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		await expectPoolReplantedCorrect({
 			scenario,
@@ -184,11 +200,26 @@ test.concurrent(
 			idPrefix: "lic-ver-only",
 		});
 
-		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+		const updateParams: UpdateSubscriptionV1ParamsInput = {
 			customer_id: customerId,
 			plan_id: scenario.parent.id,
 			version: 2,
+		};
+		const preview =
+			await scenario.autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				updateParams,
+			);
+		await expectLicenseUpdatePreviewCorrect({
+			preview,
+			customerId,
+			advancedTo: scenario.advancedTo,
+			oldRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
+			newRecurringTotal: PAID_SEATS * CATALOG_SEAT_PRICE,
 		});
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(
+			updateParams,
+		);
 
 		await expectPoolReplantedCorrect({
 			scenario,
