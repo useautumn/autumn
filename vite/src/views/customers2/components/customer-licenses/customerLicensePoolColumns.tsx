@@ -10,6 +10,7 @@ import { LicensePlanPrice } from "./LicensePlanPrice";
 
 export interface CustomerLicensePoolRow {
 	id: string;
+	licensePlanId: string | null;
 	name: string;
 	product: ProductV2 | null;
 	remaining: number;

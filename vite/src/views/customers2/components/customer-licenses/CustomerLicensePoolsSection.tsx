@@ -5,6 +5,7 @@ import {
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import {
@@ -16,6 +17,8 @@ import {
  * straight off the full customer's hydrated customer_licenses. */
 export function CustomerLicensePoolsSection() {
 	const { customer, entityId } = useCustomerContext();
+	const selectedItemId = useSheetStore((s) => s.itemId);
+	const setSheet = useSheetStore((s) => s.setSheet);
 
 	const rows = useMemo<CustomerLicensePoolRow[]>(
 		() =>
@@ -24,6 +27,7 @@ export function CustomerLicensePoolsSection() {
 			}).flatMap((customerProduct) =>
 				(customerProduct.customer_licenses ?? []).map((customerLicense) => ({
 					id: customerLicense.id,
+					licensePlanId: customerLicense.planLicense?.product.id ?? null,
 					name:
 						customerLicense.planLicense?.product.name ??
 						customerLicense.license_internal_product_id,
@@ -62,6 +66,11 @@ export function CustomerLicensePoolsSection() {
 				emptyStateChildren: "No licenses",
 				flexibleTableColumns: true,
 				mobileCards: true,
+				selectedItemId,
+				onRowClick: (row: CustomerLicensePoolRow) => {
+					if (!row.licensePlanId) return;
+					setSheet({ type: "license-pool-detail", itemId: row.licensePlanId });
+				},
 			}}
 		>
 			<Table.Container>
