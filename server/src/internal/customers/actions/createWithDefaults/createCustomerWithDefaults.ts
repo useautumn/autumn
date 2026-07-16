@@ -3,6 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import { computeCreateCustomerPlan } from "./compute/computeCreateCustomerPlan.js";
 import { executeAutumnCreateCustomerPlan } from "./execute/executeAutumnCreateCustomerPlan.js";
 import { finalizeCreateCustomer } from "./finalizeCreateCustomer.js";
@@ -62,6 +64,23 @@ export const createCustomerWithDefaults = async ({
 	// Early return if customer already existed or no paid products
 	if (autumnResult.type === "existing") return context.fullCustomer;
 
+	// Webhook consumers call customers.get on receipt, so emission must wait
+	// until the Stripe customer id (when one is created) is persisted.
+	const queueCreatedWebhooks = async () => {
+		await billingPlanToSendProductsUpdated({
+			ctx,
+			autumnBillingPlan,
+			billingContext: context,
+		});
+
+		// Fire-and-forget: don't block customer creation on svix delivery
+		void sendBillingUpdatedWebhook({
+			ctx,
+			autumnBillingPlan,
+			originalFullCustomer: context.fullCustomer,
+		});
+	};
+
 	// ============ Phase 2: Create stripe customer / attach paid defaults ============
 
 	// 4. Setup billing context (creates Stripe customer)
@@ -71,14 +90,20 @@ export const createCustomerWithDefaults = async ({
 
 	const shouldAttachPaidDefaults = context.hasPaidProducts;
 
-	if (!shouldCreateStripeCustomer) return context.fullCustomer;
+	if (!shouldCreateStripeCustomer) {
+		await queueCreatedWebhooks();
+		return context.fullCustomer;
+	}
 
 	const billingContext = await setupCreateCustomerBillingContext({
 		ctx,
 		context,
 	});
 
-	if (!shouldAttachPaidDefaults) return context.fullCustomer;
+	if (!shouldAttachPaidDefaults) {
+		await queueCreatedWebhooks();
+		return context.fullCustomer;
+	}
 
 	// 5. Evaluate Stripe billing plan
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
@@ -97,10 +122,14 @@ export const createCustomerWithDefaults = async ({
 	});
 
 	// 7. Finalize (link subscription back to Autumn)
-	return finalizeCreateCustomer({
+	const finalizedCustomer = await finalizeCreateCustomer({
 		ctx,
 		context,
 		autumnBillingPlan,
 		stripeSubscription,
 	});
+
+	await queueCreatedWebhooks();
+
+	return finalizedCustomer;
 };
