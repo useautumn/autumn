@@ -40,8 +40,6 @@ export * from "./list-entities-op.js";
 export * from "./list-events-op.js";
 export * from "./list-features-op.js";
 export * from "./list-invoices-op.js";
-export * from "./list-license-assignments-op.js";
-export * from "./list-licenses-op.js";
 export * from "./list-plans-op.js";
 export * from "./list-rewards-op.js";
 export * from "./mint-key-op.js";

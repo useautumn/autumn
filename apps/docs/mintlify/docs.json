@@ -216,9 +216,7 @@
 								"group": "Licenses",
 								"pages": [
 									"api-reference/licenses/attachLicense",
-									"api-reference/licenses/releaseLicense",
-									"api-reference/licenses/listLicenseAssignments",
-									"api-reference/licenses/listLicenses"
+									"api-reference/licenses/releaseLicense"
 								]
 							}
 						]

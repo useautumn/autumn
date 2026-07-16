@@ -3,8 +3,6 @@
  */
 
 import { licensesAttach } from "../funcs/licenses-attach.js";
-import { licensesListAssignments } from "../funcs/licenses-list-assignments.js";
-import { licensesList } from "../funcs/licenses-list.js";
 import { licensesRelease } from "../funcs/licenses-release.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -33,34 +31,6 @@ export class Licenses extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.ReleaseLicenseResponse> {
     return unwrapAsync(licensesRelease(
-      this,
-      request,
-      options,
-    ));
-  }
-
-  /**
-   * Lists license assignments for a customer.
-   */
-  async listAssignments(
-    request: models.ListLicenseAssignmentsParams,
-    options?: RequestOptions,
-  ): Promise<models.ListLicenseAssignmentsResponse> {
-    return unwrapAsync(licensesListAssignments(
-      this,
-      request,
-      options,
-    ));
-  }
-
-  /**
-   * Lists a customer's license pools and available seats.
-   */
-  async list(
-    request: models.ListLicensesParams,
-    options?: RequestOptions,
-  ): Promise<models.ListLicensesResponse> {
-    return unwrapAsync(licensesList(
       this,
       request,
       options,

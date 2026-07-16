@@ -30497,30 +30497,9 @@ paths:
                         ended_at: null
               example: *a77
       x-speakeasy-name-override: listAssignments
+      x-speakeasy-ignore: true
       parameters:
         - *a5
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from 'autumn-js'
-
-            const autumn = new Autumn()
-
-            const result = await autumn.licenses.listAssignments({
-              customerId: "cus_123",
-            });
-        - lang: python
-          label: Python (SDK)
-          source: |-
-            from autumn_sdk import Autumn
-
-            autumn = Autumn(secret_key="am_sk_test...")
-
-            res = autumn.licenses.list_assignments(
-                customer_id="cus_123",
-                active=True,
-            )
   /v1/licenses.list:
     post:
       operationId: listLicenses
@@ -30601,27 +30580,9 @@ paths:
                         paid_quantity: 5
               example: *a79
       x-speakeasy-name-override: list
+      x-speakeasy-ignore: true
       parameters:
         - *a5
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from 'autumn-js'
-
-            const autumn = new Autumn()
-
-            const result = await autumn.licenses.list({
-              customerId: "cus_123",
-            });
-        - lang: python
-          label: Python (SDK)
-          source: |-
-            from autumn_sdk import Autumn
-
-            autumn = Autumn(secret_key="am_sk_test...")
-
-            res = autumn.licenses.list(customer_id="cus_123")
   /v1/entities.create:
     post:
       operationId: createEntity

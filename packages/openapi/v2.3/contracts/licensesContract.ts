@@ -82,6 +82,7 @@ export const listLicenseAssignmentsContract = oc
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "listAssignments",
+			"x-speakeasy-ignore": true,
 		}),
 	})
 	.input(
@@ -121,6 +122,7 @@ export const listLicensesContract = oc
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "list",
+			"x-speakeasy-ignore": true,
 		}),
 	})
 	.input(

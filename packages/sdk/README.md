@@ -311,7 +311,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784220892454,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785430492454,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784221261121,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785430861121,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -803,8 +803,6 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 * [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
 * [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
-* [listAssignments](docs/sdks/licenses/README.md#listassignments) - Lists license assignments for a customer.
-* [list](docs/sdks/licenses/README.md#list) - Lists a customer's license pools and available seats.
 
 ### [Plans](docs/sdks/plans/README.md)
 
@@ -913,7 +911,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784220892454,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785430492454,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784221261121,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785430861121,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1415,8 +1413,6 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`keysRefresh`](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
 - [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
 - [`licensesAttach`](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
-- [`licensesList`](docs/sdks/licenses/README.md#list) - Lists a customer's license pools and available seats.
-- [`licensesListAssignments`](docs/sdks/licenses/README.md#listassignments) - Lists license assignments for a customer.
 - [`licensesRelease`](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
 - [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
 - [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan

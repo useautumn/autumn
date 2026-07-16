@@ -29297,6 +29297,7 @@ paths:
                         ended_at: null
               example: *a77
       x-speakeasy-name-override: listAssignments
+      x-speakeasy-ignore: true
       parameters:
         - *a5
   /v1/licenses.list:
@@ -29379,6 +29380,7 @@ paths:
                         paid_quantity: 5
               example: *a79
       x-speakeasy-name-override: list
+      x-speakeasy-ignore: true
       parameters:
         - *a5
   /v1/entities.create:

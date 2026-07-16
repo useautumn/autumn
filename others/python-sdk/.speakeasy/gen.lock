@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: d7fe4fa063797e5de6e9242dc4e21ce0
+  docChecksum: a1cb39b2fe916caf6f6f6b7ec9b9cd14
   docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.4.19
   configChecksum: b2caf9ea956e3c3c26e7f639fdd4ff2e
 persistentEdits:
-  generation_id: 934530d4-1241-43b5-9312-e22de8862d3c
-  pristine_commit_hash: 45f779159407682132821b1961be41358d0fcd3e
-  pristine_tree_hash: 4090e8d12a438e91f6006f04098b1080dae19598
+  generation_id: 801700c3-98e5-406f-a704-f53033e2dbb7
+  pristine_commit_hash: ecb8ed6c9071dffec63dbfac6705319e4e2303c3
+  pristine_tree_hash: f717ec680da53f5ba0d300a446a9e218cd7fbef9
 features:
   python:
     additionalDependencies: 1.0.0
@@ -28,6 +28,7 @@ features:
     globalServerURLs: 3.2.1
     globals: 3.0.0
     hiddenGlobals: 1.0.0
+    ignores: 3.0.1
     methodArguments: 1.0.2
     nameOverrides: 3.0.3
     nullables: 1.0.2
@@ -3948,38 +3949,6 @@ trackedFiles:
     id: c9922f715e9a
     last_write_checksum: sha1:d49463666c5ee15f824ba4fbb77dd31c3b583b31
     pristine_git_object: a03f3171bbe938a360930abfbb85f2c085ee79cc
-  docs/models/listlicenseassignmentsglobals.md:
-    id: de9ff18ec121
-    last_write_checksum: sha1:885ce2e69ba5f97602251f71c4e40cab89182802
-    pristine_git_object: ddfcfd6602a9eb3f3d9a309aa75e1014bb38db0b
-  docs/models/listlicenseassignmentslist.md:
-    id: 3be223c8eaec
-    last_write_checksum: sha1:b5fa13f71584308afd8d41dca118de42274398c9
-    pristine_git_object: 98e1c8832781c173ea1aef2e823c48e111420a41
-  docs/models/listlicenseassignmentsparams.md:
-    id: 6e4da4d0ae26
-    last_write_checksum: sha1:e3f32fe05671d8c64c1e27610746c93565f5b96f
-    pristine_git_object: d50807925204d57d66c46b21d820656db3b0fdca
-  docs/models/listlicenseassignmentsresponse.md:
-    id: a9f142a35873
-    last_write_checksum: sha1:538229bcc1dde9a89feefd20d551162aa4382b3e
-    pristine_git_object: 30399075d6e68f5be053562e682ab7d92fb68bbd
-  docs/models/listlicensesglobals.md:
-    id: c36a05623c73
-    last_write_checksum: sha1:36798fb3723fe9afd7165db9df3f6e7f7ab509bb
-    pristine_git_object: 25bcfe183cb61891538843c774e5946efd4312f8
-  docs/models/listlicenseslist.md:
-    id: f8acd834e000
-    last_write_checksum: sha1:15c6125695d597820c886ad99c9dc00498c95062
-    pristine_git_object: 7be487330053a6a57a73fb531a4a94b95dca17aa
-  docs/models/listlicensesparams.md:
-    id: f44cb0ded831
-    last_write_checksum: sha1:cbe4709866595b840c1b1695ae105da11be291ad
-    pristine_git_object: d8ee02aa814529c64f19322de32333f054c79bfa
-  docs/models/listlicensesresponse.md:
-    id: af4262cac846
-    last_write_checksum: sha1:757b5a8f8b119561159e0196daf7eddb5a6a1b28
-    pristine_git_object: aae9121e6ea88af2f609a9e4cc9036fc81343b42
   docs/models/listplansadditemadditionalcurrency.md:
     id: 6b40ef7aaa81
     last_write_checksum: sha1:b85b06d79235d3b1dedccf1604f6a169a65e30b4
@@ -7958,8 +7927,8 @@ trackedFiles:
     pristine_git_object: 16b796e06f88c6c13bcf09a5ad15801ae0b73c7d
   docs/sdks/licenses/README.md:
     id: 28ca188b6148
-    last_write_checksum: sha1:b1705674a48806cbbfa72cd151eeebb4b4f597d6
-    pristine_git_object: 9aa1e5848bc368cf512cc8dcc8b941fd0ac7dd9a
+    last_write_checksum: sha1:4369431e36aee4642679c66f19307ee85111ef41
+    pristine_git_object: 91a73d64b8b66030bf05508df0353b634584b6bc
   docs/sdks/plans/README.md:
     id: 2d8c741fff57
     last_write_checksum: sha1:f6e172676e159ba2c3c00f6d68333ee45ad975d2
@@ -8074,12 +8043,12 @@ trackedFiles:
     pristine_git_object: f59d417f8e3593ec6c17a465fef06389bd82b3a8
   src/autumn_sdk/licenses.py:
     id: ec73648a9c73
-    last_write_checksum: sha1:c50025fa6bf4c0bc4b5f2851a25e1897b916257f
-    pristine_git_object: 4412cb3b5d8822abeead3002963b4061ed9db768
+    last_write_checksum: sha1:9f2c316f8ce8a8443de2ff1ef8537a1b54aa2c4e
+    pristine_git_object: ab7599187acf4fbd6a77ff0288d4ed12ea3d55ba
   src/autumn_sdk/models/__init__.py:
     id: bcf3802243ff
-    last_write_checksum: sha1:93314c77d36bb394a4a17d278a8e9bec72e43d6a
-    pristine_git_object: 78f837ad342d3ec2746d3c13bc4239e69a9b182b
+    last_write_checksum: sha1:c9cb395e00cd29d2db22eb5bef0faba7bd0456de
+    pristine_git_object: 2d2aa9e58e19c962e905a83aa12fe4f2a306745f
   src/autumn_sdk/models/aggregateeventsop.py:
     id: 01321099f2a5
     last_write_checksum: sha1:acf521584ece8e3e217b02ec157d7ed43b783f21
@@ -8228,14 +8197,6 @@ trackedFiles:
     id: efd56888952f
     last_write_checksum: sha1:40d9b902025d9542a94c4ec0ac6abdf1a891ab63
     pristine_git_object: 66bfca14d664bd33afbeeb57ffe3f279e5a8ecba
-  src/autumn_sdk/models/listlicenseassignmentsop.py:
-    id: 5d58883b522e
-    last_write_checksum: sha1:d631594c686486e7fc746d7d9c7e7452d1dec04f
-    pristine_git_object: ccbb864048a65c61742ee4ecfe57cd45d808f9f4
-  src/autumn_sdk/models/listlicensesop.py:
-    id: a72085e378b8
-    last_write_checksum: sha1:5b6f5a61ca1f26ecf2c62b5a37b2be6e6b9ca9d4
-    pristine_git_object: 1d09587a5ac6b9dbf90e8b16b448b113fe794648
   src/autumn_sdk/models/listplansop.py:
     id: fdf892c403f4
     last_write_checksum: sha1:f93cf6a3c6dfb7f3d9e1f83d076c1e7d2d9e0164

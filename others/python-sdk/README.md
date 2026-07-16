@@ -312,8 +312,6 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 * [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
 * [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
-* [list_assignments](docs/sdks/licenses/README.md#list_assignments) - Lists license assignments for a customer.
-* [list](docs/sdks/licenses/README.md#list) - Lists a customer's license pools and available seats.
 
 ### [Plans](docs/sdks/plans/README.md)
 

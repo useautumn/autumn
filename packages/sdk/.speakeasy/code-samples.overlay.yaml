@@ -1096,50 +1096,6 @@ actions:
             }
 
             run();
-  - target: $["paths"]["/v1/licenses.list"]["post"]
-    update:
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from "@useautumn/sdk";
-
-            const autumn = new Autumn({
-              xApiVersion: "2.3.0",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-            });
-
-            async function run() {
-              const result = await autumn.licenses.list({
-                customerId: "cus_123",
-              });
-
-              console.log(result);
-            }
-
-            run();
-  - target: $["paths"]["/v1/licenses.list_assignments"]["post"]
-    update:
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from "@useautumn/sdk";
-
-            const autumn = new Autumn({
-              xApiVersion: "2.3.0",
-              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-            });
-
-            async function run() {
-              const result = await autumn.licenses.listAssignments({
-                customerId: "cus_123",
-              });
-
-              console.log(result);
-            }
-
-            run();
   - target: $["paths"]["/v1/licenses.release"]["post"]
     update:
       x-codeSamples:
