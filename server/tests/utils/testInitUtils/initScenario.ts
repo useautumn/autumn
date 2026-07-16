@@ -162,7 +162,6 @@ type BillingAttachAction = {
 	customerId?: string; // Override: use this customer instead of primary
 	entityIndex?: number;
 	options?: FeatureOption[];
-	/** Total seats per linked license (inclusive of included; extras billed). */
 	licenseQuantities?: { licenseProductId: string; quantity: number }[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
@@ -747,7 +746,6 @@ const billingAttach = ({
 	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
-	/** Total seats per linked license (inclusive of included; extras billed). */
 	licenseQuantities?: { licenseProductId: string; quantity: number }[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
@@ -858,7 +856,6 @@ const assignLicense =
 		parentProductId,
 	}: {
 		licenseProductId: string;
-		/** Single entity to assign; use entityIndexes to batch one attach call. */
 		entityIndex?: number;
 		entityIndexes?: number[];
 		parentProductId?: string;
