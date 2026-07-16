@@ -524,8 +524,9 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					const ffDone = stage(
 						`fast-forward warm ${opts.name} from ${WARM_IMAGE_REPO}:latest`,
 					);
+					let ffSandbox: Sandbox | undefined;
 					try {
-						const sandbox = await createFromImage(
+						ffSandbox = await createFromImage(
 							latest,
 							{
 								name: opts.name,
@@ -539,12 +540,12 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 							v2,
 						);
 						await fastForwardCheckout(
-							sandbox,
+							ffSandbox,
 							opts.source.revision,
 							"warm-fast-forward",
 						);
 						ffDone();
-						return wrap(opts.name, sandbox);
+						return wrap(opts.name, ffSandbox);
 					} catch (error) {
 						ffDone();
 						narrate(
@@ -552,6 +553,15 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 								`[modal] warm fast-forward failed (${(error as Error).message?.slice(0, 120)}) — falling back to full build`,
 							),
 						);
+						// The cold build below reuses opts.name — terminate the half-built
+						// sandbox so it doesn't linger untracked until its timeout.
+						if (ffSandbox) {
+							liveSandboxes.delete(opts.name);
+							liveSandboxes.delete(ffSandbox.sandboxId);
+							await ffSandbox.terminate().catch(() => {
+								/* best-effort */
+							});
+						}
 					}
 				}
 			}
@@ -694,8 +704,10 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 					);
 					return { name, handle: undefined, warmHit: "exact" };
 				}
-				// No exact snapshot → fall through to createWarmSandbox, which
-				// fast-forwards from `:latest` and runs warmup.sh (migrations) inline.
+				// No exact snapshot → undefined so run.ts builds via createWarmSandbox
+				// (fast-forward from `:latest` + inline warmup.sh). Never fall through to
+				// fromName: a live sandbox with this name has no image for forkWorker.
+				return undefined;
 			}
 			// V2 has no fromName at all → undefined makes run.ts build fresh.
 			if (v2) {
