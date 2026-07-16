@@ -189,6 +189,14 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
+	await billingActions.syncLicenseQuantities({
+		ctx,
+		params: {
+			customerId,
+			licenseQuantityDrifts: incremental.licenseQuantityDrifts,
+		},
+	});
+
 	await expireRemovedCustomerProducts({
 		ctx,
 		subscriptionUpdatedContext,
@@ -197,7 +205,7 @@ export const autoSyncUpdatedSubscription = async ({
 
 	if (!incremental.params) {
 		logger.info(
-			`sub.updated auto-sync applied ${stripeSubscription.id}: removed=${incremental.removedCustomerProducts.length}`,
+			`sub.updated auto-sync applied ${stripeSubscription.id}: removed=${incremental.removedCustomerProducts.length}, licensePools=${incremental.licenseQuantityDrifts.length}`,
 		);
 		return;
 	}

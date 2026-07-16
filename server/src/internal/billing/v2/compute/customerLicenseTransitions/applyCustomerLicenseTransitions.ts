@@ -3,6 +3,7 @@ import type {
 	CustomerLicenseTransition,
 	FullCusProduct,
 } from "@autumn/shared";
+import { isSameRowTransition } from "./isSameRowTransition.js";
 import { transitionLicenseBillingPriceRows } from "./transitionLicenseBillingPriceRows.js";
 
 /**
@@ -43,11 +44,14 @@ export const applyCustomerLicenseTransitions = ({
 	if (!customerLicenseBillingContext) return;
 
 	// Successor seat rows append; the outgoing rows stay untouched so refund
-	// paths keep reading pristine persisted state.
+	// paths keep reading pristine persisted state. Same-row transitions
+	// append nothing — their single row set projects per direction through
+	// resolveLicenseBillingRowsThroughDefinition instead.
 	const persistedRows = [
 		...customerLicenseBillingContext.licenseBillingPriceRows,
 	];
 	for (const customerLicenseTransition of customerLicenseTransitions) {
+		if (isSameRowTransition(customerLicenseTransition)) continue;
 		customerLicenseBillingContext.licenseBillingPriceRows.push(
 			...transitionLicenseBillingPriceRows({
 				licenseBillingPriceRows: persistedRows,

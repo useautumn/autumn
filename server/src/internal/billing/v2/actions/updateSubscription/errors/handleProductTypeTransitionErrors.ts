@@ -1,6 +1,8 @@
+import type {
+	AutumnBillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import { cusProductToPrices, ErrCode, RecaseError } from "@autumn/shared";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { isOneOff } from "@/internal/products/productUtils";
 
 export const handleProductTypeTransitionErrors = ({

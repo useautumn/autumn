@@ -32,6 +32,7 @@ export const baseCustomer = ({
 	flags: {},
 	metadata: {},
 	name,
+	licenses: [],
 	purchases: [],
 	send_email_receipts: false,
 	stripe_id: null,

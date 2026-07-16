@@ -117,7 +117,7 @@ export const computeAttachPlan = ({
 	const lockCustomerCurrency =
 		resolvedCurrency &&
 		!fullCustomer.currency &&
-		!isFreeProduct({ prices: attachProduct.prices })
+		!isFreeProduct({ product: attachProduct })
 			? {
 					internalCustomerId: fullCustomer.internal_id,
 					currency: resolvedCurrency,

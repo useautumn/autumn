@@ -1,6 +1,6 @@
 import {
-	CusProductStatus,
 	type AutumnBillingPlan,
+	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
 	type Price,

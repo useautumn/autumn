@@ -4,20 +4,14 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { customerTouchesLicenses } from "../../repos/customerLicenseRepo/customerTouchesLicenses.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
+import { expireUnusedAssignments } from "./expireUnusedAssignments.js";
 import { reconcileCustomerLicenseBalances } from "./reconcileCustomerLicenseBalances/reconcileCustomerLicenseBalances.js";
-import { reparentCustomerLicenses } from "./reparentCustomerLicenses/reparentCustomerLicenses.js";
 import { setupReconcileContext } from "./setupReconcileContext.js";
 import type { CustomerLicenseState } from "./types.js";
 
 /**
- * Whole-customer license convergence: setup gathers bounded reads, reparent
- * transitions stranded customer licenses, balances converge the numbers.
- * Idempotent; the returned state mirrors the database after the writes, or
- * null when the customer touches no licenses (gated before any full-customer
- * read). Pass fullCustomer only when it reflects post-mutation state.
- * deleteCache is for callers with no other cache invalidation (e.g. webhook
- * flows); the drop runs even when convergence fails, so reads never serve
- * pre-mutation state.
+ * Whole-customer license convergence: setup gathers bounded reads, balances
+ * converge the numbers. Idempotent; null when the customer touches no licenses.
  */
 export const reconcileLicenseStateForCustomer = async ({
 	ctx,
@@ -51,8 +45,8 @@ export const reconcileLicenseStateForCustomer = async ({
 			ctx,
 			fullCustomer: customer,
 		});
-		await reparentCustomerLicenses({ ctx, context });
 		await reconcileCustomerLicenseBalances({ ctx, context });
+		await expireUnusedAssignments({ ctx, context });
 
 		logLicenseAction({
 			ctx,

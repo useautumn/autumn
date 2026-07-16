@@ -3,11 +3,12 @@ import {
 	customerProducts,
 	migrationItemRuns,
 	migrations,
+	planLicenses,
 	products,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
-import { initDrizzle } from "@/db/initDrizzle.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
@@ -43,6 +44,13 @@ export const clearOrgDbOnly = async ({
 	await db
 		.delete(customerProducts)
 		.where(inArray(customerProducts.internal_product_id, orgProductIds));
+
+	// license_entitlements/license_prices RESTRICT their item rows; deleting
+	// plan_license first cascades the junctions so the product delete can
+	// cascade entitlements/prices freely.
+	await db
+		.delete(planLicenses)
+		.where(inArray(planLicenses.parent_internal_product_id, orgProductIds));
 
 	await ProductService.deleteByOrgId({ db, orgId, env });
 	await rewardRepo.deleteByOrgId({ db, orgId, env });

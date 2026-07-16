@@ -137,11 +137,22 @@ export const useLicensePlanCardLifecycle = ({
 
 		register(license.id, {
 			dirty: hasChanges,
+			editsLicensePlan: itemsChanged && !removed,
+			licenseName: license.name ?? license.id,
 			getEntry: () => entryRef.current(),
 			saveItems: () => saveItemsRef.current(),
 			commit: () => commitRef.current(),
 			discard: () => discardRef.current(),
 		});
 		return () => unregister(license.id);
-	}, [license.id, hasChanges, register, unregister, collectorStore]);
+	}, [
+		license.id,
+		license.name,
+		hasChanges,
+		itemsChanged,
+		removed,
+		register,
+		unregister,
+		collectorStore,
+	]);
 };

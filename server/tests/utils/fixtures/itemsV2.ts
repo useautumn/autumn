@@ -49,6 +49,14 @@ const monthlyWords = ({ included = 100 }: { included?: number } = {}) => ({
 	},
 });
 
+const monthlyCredits = ({ included = 100 }: { included?: number } = {}) => ({
+	feature_id: TestFeature.Credits,
+	included,
+	reset: {
+		interval: ResetInterval.Month,
+	},
+});
+
 const dashboard = () => ({
 	feature_id: TestFeature.Dashboard,
 });
@@ -258,6 +266,7 @@ export const itemsV2 = {
 	annualPrice,
 	monthlyMessages,
 	monthlyWords,
+	monthlyCredits,
 	dashboard,
 	prepaidMessages,
 	prepaidUsers,

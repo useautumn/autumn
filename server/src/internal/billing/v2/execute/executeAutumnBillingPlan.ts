@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
 import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
 import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
@@ -110,6 +111,12 @@ export const executeAutumnBillingPlan = async ({
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
+	});
+
+	// Successor pools now exist; adopted seats converge onto their definitions.
+	await executeCustomerLicenseTransitions({
+		ctx,
+		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
 	});
 
 	await replaceScheduledPhaseCustomerProductIds({

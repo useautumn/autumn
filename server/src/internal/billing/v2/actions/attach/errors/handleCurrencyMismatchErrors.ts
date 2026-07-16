@@ -9,6 +9,7 @@ import {
 	orgToCurrency,
 	type Price,
 	priceHasCurrencyAmounts,
+	productToEffectivePrices,
 	RecaseError,
 	resolveCustomerCurrency,
 } from "@autumn/shared";
@@ -99,7 +100,7 @@ export const handleCurrencyMismatchErrors = ({
 	params: AttachParamsV1;
 }) => {
 	const { fullCustomer, attachProduct } = billingContext;
-	const prices = attachProduct.prices;
+	const prices = productToEffectivePrices({ product: attachProduct });
 
 	if (params.currency && !orgMultiCurrencyEnabled({ org: ctx.org })) {
 		throw new RecaseError({
@@ -110,7 +111,7 @@ export const handleCurrencyMismatchErrors = ({
 	}
 
 	// Free / auto-enabled plans neither need nor lock a currency.
-	if (isFreeProduct({ prices })) return;
+	if (isFreeProduct({ product: attachProduct })) return;
 
 	const locked =
 		(

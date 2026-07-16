@@ -32,11 +32,11 @@ export const computeMultiAttachPlan = ({
 		fullProducts,
 		currency: resolvedCurrency,
 	} = multiAttachBillingContext;
-	const allPrices = fullProducts.flatMap((fullProduct) => fullProduct.prices);
+	const allProductsFree = fullProducts.every((product) =>
+		isFreeProduct({ product }),
+	);
 	const lockCustomerCurrency =
-		resolvedCurrency &&
-		!fullCustomer.currency &&
-		!isFreeProduct({ prices: allPrices })
+		resolvedCurrency && !fullCustomer.currency && !allProductsFree
 			? {
 					internalCustomerId: fullCustomer.internal_id,
 					currency: resolvedCurrency,

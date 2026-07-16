@@ -5,6 +5,7 @@ import {
 	type FullProduct,
 	type FullProductWithoutLicenses,
 	freeTrials,
+	type ParentPlanLicense,
 	planLicenses,
 	prices,
 } from "@autumn/shared";
@@ -35,29 +36,51 @@ export const composeFullProductQuery = ({
 			},
 		},
 	},
+	// Reverse direction: links where this product IS the license. Indexed by
+	// idx_plan_license_license — an empty probe for non-license products.
+	parent_plan_licenses: {
+		where: eq(planLicenses.is_custom, false),
+		with: {
+			parentProduct: {
+				with: composeProductItems(),
+			},
+		},
+	},
 });
 
 export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
-	licenses?: Array<
-		DbPlanLicense & {
-			product: FullProductWithoutLicenses;
-		}
+	licenses?: Array<DbPlanLicense & { product: FullProductWithoutLicenses }>;
+	parent_plan_licenses?: Array<
+		DbPlanLicense & { parentProduct: FullProductWithoutLicenses }
 	>;
 };
+
+/** Hydrated link row + its product, with free_trial resolved. */
+const normalizeLinkProduct = <T extends DbPlanLicense>(
+	link: T,
+	product: FullProductWithoutLicenses,
+): DbPlanLicense & { product: FullProductWithoutLicenses } => ({
+	...link,
+	product: {
+		...product,
+		free_trial: product.free_trials?.[0] ?? null,
+	},
+});
 
 export const normalizeFullProductLicenses = ({
 	product,
 }: {
 	product: ProductWithLicenseRelations;
-}): FullProduct => ({
-	...product,
-	licenses: product.licenses?.map(
-		(link): FullPlanLicense => ({
-			...link,
-			product: {
-				...link.product,
-				free_trial: link.product.free_trials?.[0] ?? null,
-			},
-		}),
-	),
-});
+}): FullProduct => {
+	const { parent_plan_licenses, ...rest } = product;
+	return {
+		...rest,
+		licenses: product.licenses?.map(
+			(link): FullPlanLicense => normalizeLinkProduct(link, link.product),
+		),
+		parent_plan_licenses: parent_plan_licenses?.map(
+			({ parentProduct, ...link }): ParentPlanLicense =>
+				normalizeLinkProduct(link, parentProduct),
+		),
+	};
+};

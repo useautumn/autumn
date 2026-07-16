@@ -48,7 +48,7 @@ const setupImmediateMultiProductCheckoutMode = ({
 		return null;
 	}
 
-	if (fullProducts.every(isFreeProduct)) {
+	if (fullProducts.every((product) => isFreeProduct({ product }))) {
 		return null;
 	}
 
@@ -79,7 +79,7 @@ const setupImmediateMultiProductTrialContext = async ({
 		isProductPaidAndRecurring(product),
 	);
 	const recurringProduct = fullProducts.find(
-		(product) => !isOneOffProduct({ prices: product.prices }),
+		(product) => !isOneOffProduct({ product }),
 	);
 	const targetProduct =
 		paidRecurringProduct ?? recurringProduct ?? fullProducts[0];
@@ -197,7 +197,9 @@ export const setupImmediateMultiProductBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: undefined,
 		params,
-		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
+		skipSubscriptionFetching: fullProducts.every((product) =>
+			isOneOffProduct({ product }),
+		),
 		newBillingSubscription: params.new_billing_subscription || undefined,
 		includeScheduledProductsForScheduleLookup,
 		createStripeCustomerIfMissing: !preview,

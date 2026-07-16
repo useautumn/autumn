@@ -6,20 +6,27 @@ import type { SharedContext } from "../../../../types/sharedContext";
 import type { FreeTrialParamsV0 } from "../../../common/freeTrial/freeTrialParamsV0";
 import type { CustomizePlanV1 } from "../customizePlan/customizePlanV1";
 
+type BillingParamsV0Customization = {
+	items?: ProductItem[];
+	free_trial?: FreeTrialParamsV0 | null;
+	billing_controls?: CustomizePlanV1["billing_controls"];
+	upsert_licenses?: CustomizePlanLicense[];
+};
+
 /** Maps the V0 top-level customization fields (items, free_trial, billing_controls, license patch) into a CustomizePlanV1. */
 export const billingParamsV0ToCustomizeV1 = ({
 	ctx,
-	items,
-	freeTrial,
-	billingControls,
-	upsertLicenses,
+	billingParams,
 }: {
 	ctx: SharedContext;
-	items?: ProductItem[];
-	freeTrial?: FreeTrialParamsV0 | null;
-	billingControls?: CustomizePlanV1["billing_controls"];
-	upsertLicenses?: CustomizePlanLicense[];
+	billingParams: BillingParamsV0Customization;
 }): CustomizePlanV1 | undefined => {
+	const {
+		items,
+		free_trial: freeTrial,
+		billing_controls: billingControls,
+		upsert_licenses: upsertLicenses,
+	} = billingParams;
 	const itemsCustomize = items
 		? productItemsToCustomizePlanV1({ ctx, items })
 		: undefined;

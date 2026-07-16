@@ -23,3 +23,11 @@ export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
 	// Defers module initialization only; the product shape cannot nest licenses.
 	product: z.lazy(() => FullProductWithoutLicensesSchema),
 });
+/** The same catalog link seen from the license side: product is the PARENT
+ * plan offering this license. */
+export type ParentPlanLicense = DbPlanLicense & {
+	product: FullProductWithoutLicenses;
+};
+
+export const ParentPlanLicenseSchema: z.ZodType<ParentPlanLicense> =
+	FullPlanLicenseSchema;

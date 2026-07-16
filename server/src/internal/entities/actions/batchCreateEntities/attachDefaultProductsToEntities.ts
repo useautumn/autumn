@@ -30,7 +30,7 @@ export const attachDefaultProductsToEntities = async ({
 	});
 
 	const freeDefaultProducts = defaultProducts.fullProducts.filter((product) =>
-		isFreeProduct({ prices: product.prices }),
+		isFreeProduct({ product }),
 	);
 
 	const currentEpochMs = Date.now();

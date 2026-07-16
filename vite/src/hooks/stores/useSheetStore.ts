@@ -16,6 +16,7 @@ export type SheetType =
 	| "attach-schedule-plan"
 	| "subscription-detail"
 	| "license-detail"
+	| "license-pool-detail"
 	| "subscription-update"
 	| "subscription-update-send-invoice"
 	| "subscription-cancel"

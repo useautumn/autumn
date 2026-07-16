@@ -1,6 +1,7 @@
 import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
 import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
@@ -89,15 +90,18 @@ export const getFullSubjectRowsQuery = ({
 				statusFilter,
 			})
 		: emptyEntityFragments;
+	const customerLevelProductPredicate = sql`
+		cp.internal_entity_id IS NULL
+		AND ${sql.raw(notLicenseAssignmentSql("cp"))}`;
 
 	const customerProductSubjectPredicate = entityScopedOnly
 		? sql`cp.internal_entity_id = sr.internal_entity_id`
 		: sql`cp.internal_customer_id = sr.internal_customer_id
 					AND (
-						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						(sr.internal_entity_id IS NULL AND ${customerLevelProductPredicate})
 						OR
 						(sr.internal_entity_id IS NOT NULL AND (
-							cp.internal_entity_id IS NULL
+							${customerLevelProductPredicate}
 							OR cp.internal_entity_id = sr.internal_entity_id
 						))
 					)`;
@@ -393,9 +397,19 @@ export const getFullSubjectRowsQuery = ({
 						cp.created_at DESC
 				) AS items
 			FROM cus_products cp
-			LEFT JOIN customer_licenses pcl
-				ON cp.customer_license_link_id IS NOT NULL
-				AND pcl.link_id = cp.customer_license_link_id
+			-- Links can match multiple pool rows (predecessors linger on expired
+			-- parents); seats inherit from the pool on the LIVE parent.
+			LEFT JOIN LATERAL (
+				SELECT pool.*
+				FROM customer_licenses pool
+				JOIN customer_products pool_parent
+					ON pool_parent.id = pool.parent_customer_product_id
+				WHERE cp.customer_license_link_id IS NOT NULL
+					AND pool.link_id = cp.customer_license_link_id
+				ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+					pool.created_at DESC
+				LIMIT 1
+			) pcl ON true
 			LEFT JOIN customer_products pcp_lifecycle
 				ON pcp_lifecycle.id = pcl.parent_customer_product_id
 			GROUP BY cp.subject_key

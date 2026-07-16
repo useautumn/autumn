@@ -6,7 +6,12 @@ import { useCustomerLicenseActions } from "./useCustomerLicenseActions";
  * the URL's entity_id (which may hold the internal id, e.g. via the plans
  * table's Scope column) to the public id the licenses API expects.
  */
-export const useCustomerLicenseBalances = () => {
+export const useCustomerLicenseBalances = ({
+	enabled,
+}: {
+	/** Defaults to fetching only when an entity is selected. */
+	enabled?: boolean;
+} = {}) => {
 	const { customer, entityId } = useCustomerContext();
 	const customerId = customer.id ?? customer.internal_id;
 
@@ -19,6 +24,10 @@ export const useCustomerLicenseBalances = () => {
 
 	return {
 		publicEntityId,
-		...useCustomerLicenseActions({ customerId, entityId: publicEntityId }),
+		...useCustomerLicenseActions({
+			customerId,
+			entityId: publicEntityId,
+			enabled,
+		}),
 	};
 };

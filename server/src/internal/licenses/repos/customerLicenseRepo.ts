@@ -208,6 +208,62 @@ const releaseAssignments = async ({
 	return row;
 };
 
+/** Converges the pool to an absolute paid-seat count: granted shifts by
+ * the same delta; remaining follows and may go NEGATIVE (over-allocated
+ * until enough seats release — reconcile owns the truthful arithmetic). */
+const setPaidQuantity = async ({
+	db,
+	customerLicenseId,
+	paidQuantity,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	paidQuantity: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			granted: sql`${customerLicenses.granted} - ${customerLicenses.paid_quantity} + ${paidQuantity}`,
+			remaining: sql`${customerLicenses.remaining} + (${paidQuantity} - ${customerLicenses.paid_quantity})`,
+			paid_quantity: paidQuantity,
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
+/** Repoints the pool onto a new definition in place: granted re-derives from
+ * the new included (+ optional new paid count); remaining shifts by the
+ * granted delta, floored at zero. Same row, same link — seats untouched. */
+const repointDefinition = async ({
+	db,
+	customerLicenseId,
+	planLicenseId,
+	included,
+	paidQuantity,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	planLicenseId: string;
+	included: number;
+	paidQuantity?: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const newGranted = sql`${included} + COALESCE(${paidQuantity ?? null}::numeric, ${customerLicenses.paid_quantity})`;
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			plan_license_id: planLicenseId,
+			granted: newGranted,
+			remaining: sql`GREATEST(${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted}), 0)`,
+			...(paidQuantity !== undefined ? { paid_quantity: paidQuantity } : {}),
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
 const releaseAssignmentsByLinkId = async ({
 	db,
 	customerLicenseLinkId,
@@ -282,6 +338,8 @@ export const customerLicenseRepo = {
 	takeAssignment,
 	releaseAssignments,
 	releaseAssignmentsByLinkId,
+	setPaidQuantity,
+	repointDefinition,
 	setRemaining,
 	deleteByParentIdsExcept,
 } as const;

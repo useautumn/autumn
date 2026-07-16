@@ -6,6 +6,7 @@ import {
 } from "../matchUtils/findProductLevelMatchForStripeItem";
 import { findStripeMatchForAutumnProduct } from "../matchUtils/findStripeMatchForAutumnProduct";
 import { getStripePriceIdsForAutumnPrice } from "../matchUtils/getStripePriceIdsForAutumnPrice";
+import { climbLicenseMatch } from "../matchUtils/licenseMatchUtils/climbLicenseMatch";
 import type { StripeItemSnapshot } from "../stripeItemSnapshot/types";
 
 /**
@@ -44,7 +45,7 @@ export const findAutumnMatchForStripeItem = ({
 			if (matchedPriceId) {
 				return {
 					stripe: item,
-					match: {
+					match: climbLicenseMatch({
 						kind: "autumn_price",
 						matched_on: {
 							type: "stripe_price_id",
@@ -52,7 +53,7 @@ export const findAutumnMatchForStripeItem = ({
 						},
 						price,
 						product,
-					},
+					}),
 				};
 			}
 		}
@@ -80,21 +81,21 @@ export const findAutumnMatchForStripeItem = ({
 	if (productMatch.priceMatch) {
 		return {
 			stripe: item,
-			match: {
+			match: climbLicenseMatch({
 				kind: "autumn_price",
 				matched_on: productMatch.priceMatch.matched_on,
 				price: productMatch.priceMatch.price,
 				product: productMatch.product,
-			},
+			}),
 		};
 	}
 
 	return {
 		stripe: item,
-		match: {
+		match: climbLicenseMatch({
 			kind: "autumn_product",
 			matched_on: productMatch.matched_on,
 			product: productMatch.product,
-		},
+		}),
 	};
 };
