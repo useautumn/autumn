@@ -1,4 +1,6 @@
+import { withWaitingLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
 import type { MigrationHooks } from "../../hooks/index.js";
 import type { MigrationRuntime } from "../../types/migrationDefinition.js";
@@ -23,6 +25,8 @@ export type MigrateCustomerResult = {
 	response: Record<string, unknown> | null;
 };
 
+const MIGRATION_CUSTOMER_LOCK_TTL_MS = 10 * 60 * 1000;
+
 /** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
 	ctx,
@@ -44,84 +48,101 @@ export const migrateCustomer = async ({
 		preview,
 	});
 
-	const context = await setupMigrateCustomerContext({
-		ctx: migrationCtx,
-		migration,
-		customerId,
-		preview,
-	});
-
-	const baseArgs = {
-		ctx: migrationCtx,
-		customerId,
-		context,
-		preview,
-	};
-
-	const run = async (): Promise<MigrateCustomerResult> => {
-		const {
-			plan: autumnPlan,
-			billingContexts,
-			matchedCustomerProducts,
-		} = await processOperations({
+	const migrate = async (): Promise<MigrateCustomerResult> => {
+		const context = await setupMigrateCustomerContext({
 			ctx: migrationCtx,
-			context,
-			plan: {
-				customerId: context.fullCustomer.id ?? context.fullCustomer.internal_id,
-				insertCustomerProducts: [],
-			},
+			migration,
+			customerId,
+			preview,
 		});
 
-		const billingPlan = await evaluateMigrateCustomerStripe({
-			ctx: migrationCtx,
-			context,
-			billingContexts,
-			autumnBillingPlan: autumnPlan,
-		});
-
-		if (!preview) {
-			await executeMigrateCustomerPlan({
+		const run = async (): Promise<MigrateCustomerResult> => {
+			const {
+				plan: autumnPlan,
+				billingContexts,
+				matchedCustomerProducts,
+			} = await processOperations({
 				ctx: migrationCtx,
 				context,
-				billingPlan,
-				billingContexts,
+				plan: {
+					customerId:
+						context.fullCustomer.id ?? context.fullCustomer.internal_id,
+					insertCustomerProducts: [],
+				},
 			});
-		}
 
-		const response = {
-			preview: await buildPreviewMigrateCustomer({
+			const billingPlan = await evaluateMigrateCustomerStripe({
 				ctx: migrationCtx,
-				originalFullCustomer: context.fullCustomer,
-				autumnBillingPlan: billingPlan.autumn,
-			}),
-			// Invoice line items this migration would generate (empty for
-			// charge-free ops) — surfaced so audit tooling can show what will
-			// actually be billed, not just the feature/plan diff.
-			line_items: (billingPlan.autumn.lineItems ?? []).map((item) => ({
-				description: item.description,
-				amount: item.amountAfterDiscounts ?? item.amount,
-			})),
+				context,
+				billingContexts,
+				autumnBillingPlan: autumnPlan,
+			});
+
+			if (!preview) {
+				await executeMigrateCustomerPlan({
+					ctx: migrationCtx,
+					context,
+					billingPlan,
+					billingContexts,
+				});
+			}
+
+			const response = {
+				preview: await buildPreviewMigrateCustomer({
+					ctx: migrationCtx,
+					originalFullCustomer: context.fullCustomer,
+					autumnBillingPlan: billingPlan.autumn,
+				}),
+				// Invoice line items this migration would generate (empty for
+				// charge-free ops) — surfaced so audit tooling can show what will
+				// actually be billed, not just the feature/plan diff.
+				line_items: (billingPlan.autumn.lineItems ?? []).map((item) => ({
+					description: item.description,
+					amount: item.amountAfterDiscounts ?? item.amount,
+				})),
+			};
+
+			logMigrateCustomerResult({
+				ctx: migrationCtx,
+				result: {
+					status: "success",
+				},
+			});
+
+			return {
+				itemPreview: {
+					id: context.fullCustomer.id ?? null,
+					name: context.fullCustomer.name ?? null,
+					email: context.fullCustomer.email ?? null,
+				},
+				status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
+				response,
+			};
 		};
 
-		logMigrateCustomerResult({
+		const baseArgs = {
 			ctx: migrationCtx,
-			result: {
-				status: "success",
-			},
-		});
-
-		return {
-			itemPreview: {
-				id: context.fullCustomer.id ?? null,
-				name: context.fullCustomer.name ?? null,
-				email: context.fullCustomer.email ?? null,
-			},
-			status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
-			response,
+			customerId,
+			context,
+			preview,
 		};
+
+		return hooks?.aroundMigrateCustomer
+			? hooks.aroundMigrateCustomer({ ...baseArgs, run })
+			: run();
 	};
 
-	return hooks?.aroundMigrateCustomer
-		? hooks.aroundMigrateCustomer({ ...baseArgs, run })
-		: run();
+	if (preview) return migrate();
+
+	return withWaitingLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+		}),
+		ttlMs: MIGRATION_CUSTOMER_LOCK_TTL_MS,
+		errorMessage:
+			"Customer billing migration already in progress, try again in a few seconds",
+		fn: migrate,
+	});
 };

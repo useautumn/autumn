@@ -132,7 +132,7 @@ export const createEntityForCusProduct = async ({
 		if (mainCusEntWithCusProduct) {
 			// Acquire lock to prevent race conditions on seat charging
 			const lockKey = `lock:create-entity:${org.id}:${env}:${customer.id}`;
-			await acquireLock({
+			const lockValue = await acquireLock({
 				lockKey,
 				ttlMs: 10000,
 				errorMessage:
@@ -184,7 +184,7 @@ export const createEntityForCusProduct = async ({
 					amount: inputEntities.length - deletedReplaceables.length,
 				});
 			} finally {
-				await clearLock({ lockKey });
+				await clearLock({ lockKey, lockValue });
 			}
 		}
 

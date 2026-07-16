@@ -62,10 +62,15 @@ export const setupUpdatePlanProductContext = async ({
 		...preparedOp.customize,
 		...(addItems ? { add_items: addItems } : {}),
 	};
+	const versionToApply =
+		preparedOp.version === customerProduct.product.version &&
+		!customerProduct.is_custom
+			? undefined
+			: preparedOp.version;
 	if (
-		preparedOp.version === undefined &&
+		versionToApply === undefined &&
 		customize.price === undefined &&
-		customize.add_items?.length === 0 &&
+		(customize.add_items === undefined || customize.add_items.length === 0) &&
 		customize.remove_items === undefined &&
 		(customize.update_items === undefined ||
 			customize.update_items.length === 0)
@@ -100,7 +105,7 @@ export const setupUpdatePlanProductContext = async ({
 		entity_id: customerProduct.entity_id ?? undefined,
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
-		version: preparedOp.version,
+		version: versionToApply,
 		...(preparedOp.customize ? { customize } : {}),
 		...(strategyFeatureQuantities.length > 0
 			? { feature_quantities: strategyFeatureQuantities }
@@ -124,7 +129,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
-		resetToCatalogVersion: typeof preparedOp.version === "number",
+		resetToCatalogVersion: typeof versionToApply === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({

@@ -292,10 +292,11 @@ export function createRoute<
 
 		// Acquire lock if lock config provided
 		let lockKey: string | null = null;
+		let lockValue: string | null = null;
 		if (opts.lock) {
 			lockKey = opts.lock.getKey(c);
 			if (lockKey) {
-				await acquireLock({
+				lockValue = await acquireLock({
 					lockKey,
 					ttlMs: opts.lock.ttlMs,
 					errorMessage: opts.lock.errorMessage,
@@ -320,7 +321,7 @@ export function createRoute<
 		} finally {
 			// Always release lock
 			if (lockKey) {
-				await clearLock({ lockKey });
+				await clearLock({ lockKey, lockValue });
 			}
 		}
 	};
