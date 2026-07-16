@@ -80,7 +80,7 @@ export function LicensePlanCardHeader({
 	if (removed) {
 		return (
 			<CardHeader className="px-3">
-				<div className="flex items-center justify-between w-full gap-2">
+				<div className="flex items-center justify-between w-full gap-2 min-w-0">
 					<div className="flex items-center gap-2 text-xs min-w-0">
 						<span className="font-medium truncate line-through text-tertiary-foreground">
 							{license.name ?? license.id}
@@ -104,7 +104,7 @@ export function LicensePlanCardHeader({
 
 	return (
 		<CardHeader className="px-3">
-			<div className="flex items-center justify-between w-full gap-2">
+			<div className="flex items-center justify-between w-full gap-2 min-w-0">
 				<div className="flex items-center gap-2 text-xs min-w-0">
 					<Tooltip>
 						<TooltipTrigger
