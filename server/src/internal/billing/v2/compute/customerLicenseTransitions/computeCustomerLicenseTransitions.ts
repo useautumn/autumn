@@ -12,10 +12,13 @@ import { pairCustomerLicensesByLicensePlan } from "./pairCustomerLicensesByLicen
  * updates) produces nothing to write — dropped so callers can wire
  * unconditionally. */
 const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
-	const { incomingCustomerLicense, updates } = transition;
+	const { outgoingCustomerLicense, incomingCustomerLicense, updates } =
+		transition;
 	return (
 		transition.priceTransitions.length === 0 &&
 		transition.entitlementTransitions.length === 0 &&
+		outgoingCustomerLicense.plan_license_id ===
+			incomingCustomerLicense.plan_license_id &&
 		updates.linkId === incomingCustomerLicense.link_id &&
 		updates.granted === incomingCustomerLicense.granted &&
 		updates.remaining === incomingCustomerLicense.remaining &&

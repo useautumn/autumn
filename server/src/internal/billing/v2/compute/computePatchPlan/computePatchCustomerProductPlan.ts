@@ -9,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
@@ -39,6 +40,15 @@ export const computePatchCustomerProductPlan = ({
 	const isUpdatingScheduledProduct =
 		patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
 
+	// Same-row license transitions: outgoing = the pristine original,
+	// incoming = the patched working copy (converged pools).
+	const customerLicenseTransitions = computeCustomerLicenseTransitions({
+		outgoingCustomerProducts: [patchContext.originalCustomerProduct],
+		incomingCustomerProducts: [finalCustomerProduct],
+		customerLicenseBillingContext:
+			updateSubscriptionContext.customerLicenseBillingContext,
+	});
+
 	// A scheduled cusProduct hasn't started billing yet, so there's nothing to
 	// prorate — its future phase item swap is applied wholesale via
 	// schedulePhaseCustomerProductReplacements, not an immediate invoice line.
@@ -57,6 +67,8 @@ export const computePatchCustomerProductPlan = ({
 		customPrices: patchContext.customPrices,
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
+		insertPlanLicenses: updateSubscriptionContext.insertPlanLicenses,
+		customerLicenseTransitions,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({

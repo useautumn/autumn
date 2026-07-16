@@ -3,6 +3,7 @@ import {
 	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
+	type InsertPlanLicenseSpec,
 	type Price,
 	type SyncBillingContext,
 } from "@autumn/shared";
@@ -19,6 +20,7 @@ export type ImmediatePhaseResult = {
 	updateCustomerProducts: CustomerProductUpdate[];
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
+	insertPlanLicenses: InsertPlanLicenseSpec[];
 };
 
 const expireCustomerProduct = ({
@@ -65,6 +67,7 @@ export const computeSyncImmediatePhase = ({
 			updateCustomerProducts: [],
 			customPrices: [],
 			customEntitlements: [],
+			insertPlanLicenses: [],
 		};
 	}
 
@@ -72,6 +75,7 @@ export const computeSyncImmediatePhase = ({
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const customPrices: Price[] = [];
 	const customEntitlements: Entitlement[] = [];
+	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const existingUsagesConfig =
@@ -95,6 +99,7 @@ export const computeSyncImmediatePhase = ({
 		insertCustomerProducts.push(insertedCustomerProduct);
 		customPrices.push(...productContext.customPrices);
 		customEntitlements.push(...productContext.customEntitlements);
+		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
 		if (productContext.currentCustomerProduct) {
 			updateCustomerProducts.push(
@@ -111,5 +116,6 @@ export const computeSyncImmediatePhase = ({
 		updateCustomerProducts,
 		customPrices,
 		customEntitlements,
+		insertPlanLicenses,
 	};
 };

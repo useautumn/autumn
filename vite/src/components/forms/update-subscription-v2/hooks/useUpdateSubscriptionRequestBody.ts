@@ -1,10 +1,11 @@
 import type {
+	CustomizePlanLicense,
 	ProductItem,
 	ProductItemInterval,
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { ProductItemFeatureType } from "@autumn/shared";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
@@ -105,6 +106,19 @@ export function buildUpdateSubscriptionOptions({
 		.filter((o): o is { feature_id: string; quantity: number } => o !== null);
 }
 
+export function buildUpdateSubscriptionCustomizationParams({
+	items,
+	addLicenses,
+}: {
+	items: ProductItem[] | null;
+	addLicenses: CustomizePlanLicense[] | null;
+}): Pick<UpdateSubscriptionV0Params, "items" | "upsert_licenses"> {
+	return {
+		items: normalizeBillingRequestItems({ items }),
+		upsert_licenses: addLicenses ?? undefined,
+	};
+}
+
 export function useUpdateSubscriptionRequestBody({
 	updateSubscriptionFormContext,
 	form,
@@ -117,16 +131,24 @@ export function useUpdateSubscriptionRequestBody({
 	const { customerId, product, entityId, customerProduct } =
 		updateSubscriptionFormContext;
 
-	const initialPrepaidOptions =
-		form.options.defaultValues?.prepaidOptions ?? {};
-	const initialBackendQuantities = customerProduct.options.reduce(
-		(acc, option) => {
-			acc[option.feature_id] = option.quantity;
-			return acc;
-		},
-		{} as Record<string, number>,
+	const initialPrepaidOptions = useMemo(
+		() => form.options.defaultValues?.prepaidOptions ?? {},
+		[form.options.defaultValues?.prepaidOptions],
+	);
+	const initialBackendQuantities = useMemo(
+		() =>
+			customerProduct.options.reduce(
+				(acc, option) => {
+					acc[option.feature_id] = option.quantity;
+					return acc;
+				},
+				{} as Record<string, number>,
+			),
+		[customerProduct.options],
 	);
 	const initialVersion = form.options.defaultValues?.version;
+	const customerProductId =
+		customerProduct.id ?? customerProduct.internal_product_id;
 
 	const buildRequestBody = useCallback((): UpdateSubscriptionV0Params => {
 		const formValues = form.store.state.values;
@@ -139,6 +161,7 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 			version,
 			items,
+			addLicenses,
 			cancelAction,
 			billingBehavior,
 			resetBillingCycle,
@@ -157,8 +180,7 @@ export function useUpdateSubscriptionRequestBody({
 			customer_id: customerId ?? "",
 			product_id: product?.id,
 			entity_id: entityId,
-			customer_product_id:
-				customerProduct.id ?? customerProduct.internal_product_id,
+			customer_product_id: customerProductId,
 		};
 
 		// For cancel actions, only include cancellation-related fields
@@ -198,7 +220,7 @@ export function useUpdateSubscriptionRequestBody({
 			...base,
 			options: options.length > 0 ? options : undefined,
 			free_trial: freeTrial,
-			items: normalizeBillingRequestItems({ items }),
+			...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
@@ -211,7 +233,7 @@ export function useUpdateSubscriptionRequestBody({
 		customerId,
 		product?.id,
 		entityId,
-		customerProduct,
+		customerProductId,
 		initialVersion,
 		currentPrepaidItems,
 		initialPrepaidOptions,

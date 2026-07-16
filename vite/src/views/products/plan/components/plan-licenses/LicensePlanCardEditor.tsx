@@ -52,12 +52,7 @@ export function LicensePlanCardEditor({
 	const isActiveEditor = sheetType !== null;
 
 	return (
-		<div
-			className={cn(
-				"relative w-full flex flex-col items-center",
-				isActiveEditor && LICENSE_CARD_ACTIVE_CLASS,
-			)}
-		>
+		<div className="relative w-full flex flex-col items-center">
 			<div className="relative w-full max-w-xl pl-12">
 				{!isLast && (
 					<div
@@ -73,6 +68,9 @@ export function LicensePlanCardEditor({
 					className={cn(
 						"isolate relative flex justify-center transition-[opacity,filter] duration-200 ease-out",
 						removed && "opacity-50 grayscale",
+						// Lift only the card above the page dim — the connector lines
+						// stay beneath it so they dim with the rest of the page.
+						isActiveEditor && LICENSE_CARD_ACTIVE_CLASS,
 					)}
 				>
 					<PlanCard

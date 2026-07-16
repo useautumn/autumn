@@ -8,6 +8,10 @@ import {
 } from "@autumn/shared";
 import type { MatchedPlan, SubscriptionMatch } from "../detect/types";
 import {
+	findLicenseQuantityDrifts,
+	type LicenseQuantityDrift,
+} from "./findLicenseQuantityDrifts";
+import {
 	linkedCustomerProductsToTargetGroupMap,
 	matchedPlanToTargetGroupLink,
 } from "./targetGroupLinks";
@@ -26,6 +30,9 @@ export type IncrementalSyncParamsResult =
 			params: SyncParamsV1 | null;
 			/** Linked add-on cusProducts whose Stripe items were removed. */
 			removedCustomerProducts: FullCusProduct[];
+			/** Pools whose seat quantities drifted — converged in place, never
+			 * via expire+replace (seats stay anchored to the pool's link). */
+			licenseQuantityDrifts: LicenseQuantityDrift[];
 	  }
 	| { shouldSync: false; reason: IncrementalSyncSkipReason };
 
@@ -170,6 +177,7 @@ export const buildIncrementalSyncParams = ({
 	}
 
 	const changedPlans: SyncPlanInstance[] = [];
+	const licenseQuantityDrifts: LicenseQuantityDrift[] = [];
 	for (const syncPlan of phase.plans) {
 		const matchedPlan = matchedPlanMap.plansByProductId.get(syncPlan.plan_id);
 		if (!matchedPlan) {
@@ -223,7 +231,17 @@ export const buildIncrementalSyncParams = ({
 		const linkedProduct = linkedTargets.targets.get(target.key);
 		if (!linkedProduct || linkedProduct.product.id !== target.productId) {
 			changedPlans.push(syncPlan);
+			continue;
 		}
+
+		// Same product still attached — seat quantity changes converge the
+		// pool in place instead of re-attaching the parent.
+		licenseQuantityDrifts.push(
+			...findLicenseQuantityDrifts({
+				linkedCustomerProduct: linkedProduct,
+				syncPlan,
+			}),
+		);
 	}
 
 	// Linked add-ons whose Stripe items disappeared from the sub get expired.
@@ -246,7 +264,11 @@ export const buildIncrementalSyncParams = ({
 					!matchedPlanIds.has(linkedProduct.product.id),
 			);
 
-	if (changedPlans.length === 0 && removedCustomerProducts.length === 0) {
+	if (
+		changedPlans.length === 0 &&
+		removedCustomerProducts.length === 0 &&
+		licenseQuantityDrifts.length === 0
+	) {
 		return {
 			shouldSync: false,
 			reason: "no_changed_targets",
@@ -260,5 +282,6 @@ export const buildIncrementalSyncParams = ({
 				? { ...params, phases: [{ ...phase, plans: changedPlans }] }
 				: null,
 		removedCustomerProducts,
+		licenseQuantityDrifts,
 	};
 };

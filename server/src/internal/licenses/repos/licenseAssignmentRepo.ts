@@ -18,6 +18,7 @@ import {
 	isNull,
 	notInArray,
 	or,
+	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -33,10 +34,10 @@ export const activeAssignmentConditions = () => [
 	inArray(customerProducts.status, ACTIVE_STATUSES),
 ];
 
-/** SQL predicate: the aliased customer_products row is not a license
- * assignment (seat rows are entity-scoped and anchored to a pool link). */
+/** SQL predicate excluding every seat row, including released seats whose
+ * entity link has been cleared while awaiting reuse. */
 export const notLicenseAssignmentSql = (alias: string) =>
-	`(${alias}.customer_license_link_id IS NULL OR ${alias}.internal_entity_id IS NULL)`;
+	`${alias}.customer_license_link_id IS NULL`;
 
 const listAssignmentsWithEntityAndProductByCustomer = async ({
 	db,
@@ -170,6 +171,33 @@ const expireOrphanAssignments = async ({
 		);
 };
 
+/** Ends released spare seats (entity-less rows awaiting reuse) on the given
+ * pool links — spares can never rebind while a pool is over capacity. */
+const expireUnusedAssignmentsByLinkIds = async ({
+	db,
+	customerLicenseLinkIds,
+	endedAt,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkIds: string[];
+	endedAt: number;
+}) => {
+	if (customerLicenseLinkIds.length === 0) return;
+	await db
+		.update(customerProducts)
+		.set({ status: CusProductStatus.Expired, ended_at: endedAt })
+		.where(
+			and(
+				inArray(
+					customerProducts.customer_license_link_id,
+					customerLicenseLinkIds,
+				),
+				isNull(customerProducts.internal_entity_id),
+				inArray(customerProducts.status, ACTIVE_STATUSES),
+			),
+		);
+};
+
 /** Seats are grouped through their customer license — the seat's own parent
  * column goes stale on reparent; the customer license's never does. */
 const maxActiveCountByCatalogLink = async ({
@@ -212,10 +240,78 @@ const maxActiveCountByCatalogLink = async ({
 	return row?.value ?? 0;
 };
 
+/** node-postgres exposes rowCount; postgres-js exposes count. */
+const affectedRows = (result: unknown): number => {
+	const shaped = result as { rowCount?: number; count?: number };
+	return shaped.rowCount ?? shaped.count ?? 0;
+};
+
+/** One set-based repoint of every live seat's customer_prices row on the
+ * link — never enumerates seats; expired seats keep historical refs. */
+const repointSeatPrices = async ({
+	db,
+	customerLicenseLinkId,
+	fromPriceId,
+	toPriceId,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkId: string;
+	fromPriceId: string;
+	toPriceId: string;
+}): Promise<number> => {
+	const result = await db.execute(sql`
+		UPDATE customer_prices cp
+		SET price_id = ${toPriceId}
+		FROM customer_products seat
+		WHERE cp.customer_product_id = seat.id
+			AND seat.customer_license_link_id = ${customerLicenseLinkId}
+			AND seat.internal_entity_id IS NOT NULL
+			AND seat.status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
+			AND cp.price_id = ${fromPriceId}
+	`);
+	return affectedRows(result);
+};
+
+/** customer_entitlements twin of repointSeatPrices. One statement per
+ * mapping — benchmarked FASTER than a VALUES-join single pass (the 3-way
+ * join plans badly on this fat table). Refs only — balance carry semantics
+ * are deliberately not decided here. */
+const repointSeatEntitlements = async ({
+	db,
+	customerLicenseLinkId,
+	entitlementTransitions,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkId: string;
+	entitlementTransitions: {
+		fromEntitlementId: string;
+		toEntitlementId: string;
+	}[];
+}): Promise<number> => {
+	let repointedRows = 0;
+	for (const transition of entitlementTransitions) {
+		const result = await db.execute(sql`
+			UPDATE customer_entitlements ce
+			SET entitlement_id = ${transition.toEntitlementId}
+			FROM customer_products seat
+			WHERE ce.customer_product_id = seat.id
+				AND seat.customer_license_link_id = ${customerLicenseLinkId}
+				AND seat.internal_entity_id IS NOT NULL
+				AND seat.status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
+				AND ce.entitlement_id = ${transition.fromEntitlementId}
+		`);
+		repointedRows += affectedRows(result);
+	}
+	return repointedRows;
+};
+
 export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
 	listUnusedAssignmentsByLinkId,
 	expireOrphanAssignments,
+	expireUnusedAssignmentsByLinkIds,
 	maxActiveCountByCatalogLink,
+	repointSeatPrices,
+	repointSeatEntitlements,
 } as const;

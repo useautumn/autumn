@@ -1,5 +1,5 @@
-import { CusProductStatus } from "@autumn/shared";
 import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 
 export interface CancelUpdates {
 	canceled: boolean;

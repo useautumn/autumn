@@ -17,5 +17,5 @@ export const getFreeDefaultProductByGroup = async ({
 		env,
 	});
 
-	return defaultProducts.find((p) => isFreeProduct({ prices: p.prices }));
+	return defaultProducts.find((product) => isFreeProduct({ product }));
 };

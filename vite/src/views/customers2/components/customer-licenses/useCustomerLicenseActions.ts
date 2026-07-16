@@ -9,15 +9,18 @@ import { runWithErrorToast } from "@/views/products/plan/components/plan-license
 export const useCustomerLicenseActions = ({
 	customerId,
 	entityId,
+	enabled,
 }: {
 	customerId?: string;
 	entityId?: string;
+	/** Defaults to fetching only when an entity is selected. */
+	enabled?: boolean;
 }) => {
 	const { pools, assignments, isLoading, assign, unassign } =
 		useLicenseBalancesQuery({
 			customerId,
 			entityId,
-			enabled: Boolean(entityId),
+			enabled: enabled ?? Boolean(entityId),
 		});
 
 	const attachLicense = (pool: ApiCustomerLicenseV0) => {

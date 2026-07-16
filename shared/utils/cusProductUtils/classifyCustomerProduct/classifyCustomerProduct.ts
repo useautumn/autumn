@@ -18,6 +18,7 @@ import {
 import { notNullish, nullish } from "../../utils";
 import { ACTIVE_STATUSES, RELEVANT_STATUSES } from "..";
 import { cusProductToPrices } from "../convertCusProduct";
+import { customerProductToEffectivePrices } from "../convertCusProduct/customerProductToEffectivePrices";
 
 // ============================================================================
 // PRODUCT TYPE CHECKS
@@ -37,7 +38,7 @@ export const isCustomerProductAddOn = (customerProduct?: FullCusProduct) => {
 
 export const isCustomerProductOneOff = (customerProduct?: FullCusProduct) => {
 	if (!customerProduct) return false;
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	const prices = customerProductToEffectivePrices({ customerProduct });
 	return isOneOffProduct({ prices });
 };
 
@@ -46,13 +47,15 @@ export const isCustomerProductRecurring = (
 	customerProduct?: FullCusProduct,
 ) => {
 	if (!customerProduct) return false;
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	const prices = customerProductToEffectivePrices({ customerProduct });
 	return !isOneOffProduct({ prices });
 };
 
 export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
-	const prices = cusProductToPrices({ cusProduct });
+	const prices = customerProductToEffectivePrices({
+		customerProduct: cusProduct,
+	});
 
 	return isFreeProduct({ prices });
 };
@@ -60,7 +63,7 @@ export const isCustomerProductFree = (cusProduct?: FullCusProduct) => {
 /** Customer product has at least one price that's not free */
 export const isCustomerProductPaid = (customerProduct?: FullCusProduct) => {
 	if (!customerProduct) return false;
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	const prices = customerProductToEffectivePrices({ customerProduct });
 	return !isFreeProduct({ prices });
 };
 
@@ -69,7 +72,7 @@ export const isCustomerProductPaidRecurring = (
 	customerProduct?: FullCusProduct,
 ) => {
 	if (!customerProduct) return false;
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	const prices = customerProductToEffectivePrices({ customerProduct });
 
 	const freeProduct = isFreeProduct({ prices });
 	const oneOffProduct = isOneOffProduct({ prices });
@@ -239,9 +242,7 @@ export const cusProductHasSubscription = ({
 }: {
 	cusProduct: FullCusProduct;
 }) => {
-	const prices = cusProductToPrices({ cusProduct });
-
-	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
+	if (!isCustomerProductPaidRecurring(cusProduct)) return false;
 
 	const subId = cusProduct.subscription_ids?.[0];
 
@@ -253,9 +254,7 @@ export const customerProductHasSubscriptionSchedule = ({
 }: {
 	cusProduct: FullCusProduct;
 }) => {
-	const prices = cusProductToPrices({ cusProduct });
-
-	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
+	if (!isCustomerProductPaidRecurring(cusProduct)) return false;
 
 	const subId = cusProduct.scheduled_ids?.[0];
 
@@ -264,8 +263,7 @@ export const customerProductHasSubscriptionSchedule = ({
 
 export const customerProductHasSubscription = (cusProduct?: FullCusProduct) => {
 	if (!cusProduct) return false;
-	const prices = cusProductToPrices({ cusProduct });
-	if (isFreeProduct({ prices }) || isOneOffProduct({ prices })) return false;
+	if (!isCustomerProductPaidRecurring(cusProduct)) return false;
 
 	const subId = cusProduct.subscription_ids?.[0];
 
@@ -359,7 +357,6 @@ export const hasActivePaidSubscription = ({
 		if (!hasActiveOrTrialingStatus) return false;
 		if (!customerProduct.subscription_ids?.length) return false;
 
-		const prices = cusProductToPrices({ cusProduct: customerProduct });
-		return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+		return isCustomerProductPaidRecurring(customerProduct);
 	});
 };

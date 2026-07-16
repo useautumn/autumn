@@ -36,6 +36,7 @@ import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
+import { withStatementTimeout } from "@/db/withStatementTimeout.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -215,18 +216,26 @@ export class CusEntService {
 		const makeParentLateral = () => {
 			const pcl = alias(customerLicenses, "pcl");
 			const pcp = alias(customerProducts, "pcp");
-			return db
-				.select({
-					parent_status: pcp.status,
-					parent_subscription_ids: pcp.subscription_ids,
-				})
-				.from(pcl)
-				.innerJoin(pcp, eq(pcp.id, pcl.parent_customer_product_id))
-				.where(
-					sql`${pcl.link_id} = ${customerProducts.customer_license_link_id}`,
-				)
-				.limit(1)
-				.as("parent_cp");
+			return (
+				db
+					.select({
+						parent_status: pcp.status,
+						parent_subscription_ids: pcp.subscription_ids,
+					})
+					.from(pcl)
+					.innerJoin(pcp, eq(pcp.id, pcl.parent_customer_product_id))
+					.where(
+						sql`${pcl.link_id} = ${customerProducts.customer_license_link_id}`,
+					)
+					// Links can match multiple pool rows (predecessors linger on
+					// expired parents); seats inherit from the LIVE parent's pool.
+					.orderBy(
+						sql`(${pcp.status} IN ('active', 'past_due', 'scheduled')) DESC`,
+						sql`${pcl.created_at} DESC`,
+					)
+					.limit(1)
+					.as("parent_cp")
+			);
 		};
 
 		const makeBaseSelect = (
@@ -413,13 +422,15 @@ export class CusEntService {
 		const emittedIds = new Set<string>();
 
 		while (true) {
-			const page = await CusEntService.buildActiveResetPassedPage({
-				db,
-				now,
-				batchSize,
-				cursor,
-				includeSeparateIntervalResets,
-			});
+			const page = await withStatementTimeout(db, async (tx) =>
+				CusEntService.buildActiveResetPassedPage({
+					db: tx,
+					now,
+					batchSize,
+					cursor,
+					includeSeparateIntervalResets,
+				}),
+			);
 
 			if (page.length === 0) break;
 

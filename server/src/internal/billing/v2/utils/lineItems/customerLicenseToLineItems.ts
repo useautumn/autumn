@@ -7,6 +7,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPrepaidRows";
 import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem";
+import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition";
 
 /**
  * Line items for one customer license: the context's seat rows keyed to THIS
@@ -26,15 +27,21 @@ export const customerLicenseToLineItems = ({
 	customerLicense: FullCustomerLicense;
 	direction: "charge" | "refund";
 }): LineItem[] => {
-	const licenseProduct = customerLicense.planLicense?.product;
-	if (!licenseProduct) return [];
+	const planLicense = customerLicense.planLicense;
+	const licenseProduct = planLicense?.product;
+	if (!planLicense || !licenseProduct) return [];
 
 	const seatRows = (
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
 
+	// Seats bill through THIS side's definition: refunds get the outgoing
+	// pool's terms, charges the incoming — mirroring the repoint executor.
 	const licenseBillingRows = [
-		...seatRows,
+		...resolveLicenseBillingRowsThroughDefinition({
+			licenseBillingRows: seatRows,
+			planLicense,
+		}),
 		...customerLicenseToUnusedPrepaidRows({ customerLicense }),
 	];
 

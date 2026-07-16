@@ -11,9 +11,12 @@ import {
 	type ReusePricesAndEntitlements,
 	setupPatchContext,
 } from "@/internal/billing/v2/setup/patch";
+import { handleCustomizeUpsertLicenses } from "@/internal/billing/v2/setup/patch/handleCustomizeUpsertLicenses";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
+import { setupCustomizeLicenses } from "../../../setup/setupCustomizeLicenses";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
+import { setupUpdateLicenseQuantities } from "./setupUpdateLicenseQuantities";
 
 export const setupUpdateSubscriptionProductContext = async ({
 	ctx,
@@ -40,7 +43,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 			customEnts: productContext.customEnts,
 			isUpdatingFreeCustomerProduct:
 				isCustomerProductFree(productContext.customerProduct) ||
-				isFreeProduct({ prices: productContext.fullProduct.prices }),
+				isFreeProduct({ product: productContext.fullProduct }),
 		};
 	}
 
@@ -76,31 +79,65 @@ export const setupUpdateSubscriptionProductContext = async ({
 		customerProduct: targetCustomerProduct,
 		fullProduct,
 		reusePricesAndEntitlements,
+		includeUpsertLicenses: true,
 	});
 
-	const {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	} = await setupCustomFullProduct({
+	// Both paths resolve licenses through the same core
+	// (setupCustomizeLicenses); they differ in where the result lands —
+	// patch converges the existing row's pools, replace plants fresh ones.
+	if (patchContext) {
+		const { insertPlanLicenses, customerLicenseQuantities } =
+			await handleCustomizeUpsertLicenses({
+				ctx,
+				params,
+				patchContext,
+				customerProduct: targetCustomerProduct,
+			});
+
+		return {
+			customerProduct: targetCustomerProduct,
+			fullProduct: patchContext.fullProduct,
+			patchContext,
+			customPrices: [],
+			customEnts: [],
+			insertPlanLicenses,
+			customerLicenseQuantities,
+			isUpdatingFreeCustomerProduct:
+				isCustomerProductFree(targetCustomerProduct) &&
+				isFreeProduct({ product: patchContext.fullProduct }),
+		};
+	}
+
+	const customProductContext = await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: fullProduct,
 		customizePlan: params.customize,
-		patchContext,
 	});
-
-	const finalFullProduct = patchContext?.fullProduct ?? customFullProduct;
-
-	const isUpdatingFreeCustomerProduct =
-		isCustomerProductFree(targetCustomerProduct) &&
-		isFreeProduct({ prices: finalFullProduct.prices });
+	const {
+		fullProduct: finalFullProduct,
+		customPrices,
+		customEnts,
+		insertPlanLicenses,
+	} = await setupCustomizeLicenses({
+		ctx,
+		customize: params.customize,
+		productContext: customProductContext,
+	});
 
 	return {
 		customerProduct: targetCustomerProduct,
 		fullProduct: finalFullProduct,
-		patchContext,
+		patchContext: undefined,
 		customPrices,
 		customEnts,
-		isUpdatingFreeCustomerProduct,
+		insertPlanLicenses,
+		customerLicenseQuantities: setupUpdateLicenseQuantities({
+			params,
+			fullProduct: finalFullProduct,
+			customerProduct: targetCustomerProduct,
+		}),
+		isUpdatingFreeCustomerProduct:
+			isCustomerProductFree(targetCustomerProduct) &&
+			isFreeProduct({ product: finalFullProduct }),
 	};
 };

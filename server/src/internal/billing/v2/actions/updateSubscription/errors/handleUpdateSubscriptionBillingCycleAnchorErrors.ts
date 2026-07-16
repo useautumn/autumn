@@ -1,7 +1,6 @@
 import {
-	cusProductToPrices,
 	ErrCode,
-	isOneOffProduct,
+	isCustomerProductOneOff,
 	RecaseError,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
@@ -18,21 +17,15 @@ export const handleUpdateSubscriptionBillingCycleAnchorErrors = ({
 
 	if (billingContext.trialContext?.trialEndsAt) {
 		throw new RecaseError({
-			message:
-				"billing_cycle_anchor cannot be used together with a free trial",
+			message: "billing_cycle_anchor cannot be used together with a free trial",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
-	const prices = cusProductToPrices({
-		cusProduct: billingContext.customerProduct,
-	});
-
-	if (isOneOffProduct({ prices })) {
+	if (isCustomerProductOneOff(billingContext.customerProduct)) {
 		throw new RecaseError({
-			message:
-				"billing_cycle_anchor is not supported for one-off products",
+			message: "billing_cycle_anchor is not supported for one-off products",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
