@@ -74,6 +74,15 @@ const buildRequestData = ({
 		case "/billing.attach":
 		case "/billing.setup_payment":
 		case "/billing.multi_attach":
+		case "/balances/update":
+		case "/balances.update":
+		case "/billing.create_schedule":
+		case "/billing.open_customer_portal":
+		case "/rewards.redeem":
+		case "/customers.update":
+		case "/billing.import":
+		case "/billing.sync":
+		case "/billing.sync_v2":
 			return {
 				path,
 				body: {
@@ -202,6 +211,16 @@ describeDb("refreshCacheMiddleware routes", () => {
 			entityIds: scenario.ids.entityIds,
 		});
 
+		// The epoch key is a single INCR counter shared by this describe block's
+		// customerId across every test.each iteration, so compare before/after
+		// rather than asserting a hardcoded value.
+		const epochKeyBefore = buildFullSubjectViewEpochKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: scenario.ids.customerId,
+		});
+		const epochBefore = Number((await ctx.redisV2.get(epochKeyBefore)) ?? "0");
+
 		const response = await app.request(`http://localhost/v1${path}`, {
 			method: config.method,
 			headers: {
@@ -242,7 +261,7 @@ describeDb("refreshCacheMiddleware routes", () => {
 
 		expect(await redis.exists(oldCacheKey)).toBe(0);
 		expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
-		expect(await ctx.redisV2.get(epochKey)).toBe("1");
+		expect(await ctx.redisV2.get(epochKey)).toBe(String(epochBefore + 1));
 
 		if (touchedEntityId) {
 			const touchedEntityKey = buildFullSubjectKey({

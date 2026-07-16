@@ -42,7 +42,7 @@ describe("buildRefreshEntityAggregateDedupId", () => {
 				orgId: "org-1",
 				env: AppEnv.Sandbox,
 				customerId: "cust-1",
-				nowMs: t0 + 4999,
+				nowMs: t0 + REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS - 1,
 			});
 			expect(a).toBe(b);
 		},
@@ -213,7 +213,10 @@ describe("RefreshEntityAggregateBatchingManager", () => {
 	test(
 		`${chalk.yellowBright("batch-5: settle buffer honored")}`,
 		() => {
-			expect(REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS).toBe(5000);
+			// Bucket is 1000ms under NODE_ENV=development, 5000ms otherwise.
+			expect(REFRESH_ENTITY_AGGREGATE_DEDUP_BUCKET_MS).toBe(
+				process.env.NODE_ENV === "development" ? 1000 : 5000,
+			);
 			expect(REFRESH_ENTITY_AGGREGATE_SETTLE_BUFFER_MS).toBe(1500);
 		},
 	);

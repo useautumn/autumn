@@ -2,7 +2,7 @@
  * Integration tests for add_plan — preview output.
  *
  * Contract under test:
- *   - add_plan preview emits a "created" plan_change with the plan_id.
+ *   - add_plan preview emits an "activated" plan_change with the plan_id.
  *   - add_plan with boolean features emits flag_changes.
  *   - add_plan with metered features emits balance_changes.
  */
@@ -21,7 +21,7 @@ type PreviewPlanChange = {
 	item_changes: Array<{ action: string; feature_id: string }>;
 };
 
-test(`${chalk.yellowBright("add_plan preview: emits created plan_change")}`, async () => {
+test(`${chalk.yellowBright("add_plan preview: emits activated plan_change")}`, async () => {
 	const suffix = Date.now();
 	const customerId = `add-plan-preview-created-${suffix}`;
 	const existing = products.base({
@@ -61,7 +61,7 @@ test(`${chalk.yellowBright("add_plan preview: emits created plan_change")}`, asy
 			? preview.plan_changes[0]
 			: JSON.stringify(preview.plan_changes[0]),
 	) as PreviewPlanChange;
-	expect(planChange.action).toBe("created");
+	expect(planChange.action).toBe("activated");
 	expect(planChange.plan_id).toBe(newPlan.id);
 
 	expect(preview.flag_changes.length).toBeGreaterThan(0);

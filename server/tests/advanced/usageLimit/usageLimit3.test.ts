@@ -14,7 +14,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 
 const messageItem = constructPrepaidItem({
 	featureId: TestFeature.Messages,
-	includedUsage: 50,
+	includedUsage: 0,
 	billingUnits: 100,
 	price: 8,
 	usageLimit: 500,

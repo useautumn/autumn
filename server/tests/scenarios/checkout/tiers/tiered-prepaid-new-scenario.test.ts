@@ -61,7 +61,7 @@ test(`${chalk.yellowBright("tiers: tiered prepaid (graduated) upgrade - starter 
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [starter, pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Messages }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
 		actions: [s.attach({ productId: starter.id, entityIndex: 0 })],
 	});
