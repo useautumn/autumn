@@ -42,7 +42,7 @@ import { Result } from "../types/fp.js";
  * @param planId - The ID of the plan.
  * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
  * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+ * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
  * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -60,6 +60,7 @@ import { Result } from "../types/fp.js";
  * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
  * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+ * @param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
  * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
  * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
  * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)

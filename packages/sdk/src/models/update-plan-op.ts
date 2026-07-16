@@ -342,6 +342,17 @@ export type UpdatePlanItemPlanItem = {
   rollover?: UpdatePlanItemRolloverRequestBody | undefined;
 };
 
+export type UpdatePlanLicense = {
+  licensePlanId: string;
+  included?: number | undefined;
+  prepaidOnly?: boolean | undefined;
+  metadata?: { [k: string]: any } | undefined;
+  /**
+   * Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
+   */
+  version?: number | undefined;
+};
+
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
@@ -1355,6 +1366,10 @@ export type UpdatePlanParams = {
    * Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
    */
   items?: Array<UpdatePlanItemPlanItem> | undefined;
+  /**
+   * Plans offered as assignable licenses under this plan. The full set replaces existing links.
+   */
+  licenses?: Array<UpdatePlanLicense> | undefined;
   /**
    * The free trial of the plan. Set to null to remove the free trial.
    */
@@ -3337,6 +3352,43 @@ export function updatePlanItemPlanItemToJSON(
 }
 
 /** @internal */
+export type UpdatePlanLicense$Outbound = {
+  license_plan_id: string;
+  included?: number | undefined;
+  prepaid_only?: boolean | undefined;
+  metadata?: { [k: string]: any } | undefined;
+  version?: number | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicense$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicense$Outbound,
+  UpdatePlanLicense
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    included: z.optional(z.int()),
+    prepaidOnly: z.optional(z.boolean()),
+    metadata: z.optional(z.record(z.string(), z.any())),
+    version: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+      prepaidOnly: "prepaid_only",
+    });
+  }),
+);
+
+export function updatePlanLicenseToJSON(
+  updatePlanLicense: UpdatePlanLicense,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicense$outboundSchema.parse(updatePlanLicense),
+  );
+}
+
+/** @internal */
 export const UpdatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
   typeof UpdatePlanDurationTypeRequest
 > = z.enum(UpdatePlanDurationTypeRequest);
@@ -4734,6 +4786,7 @@ export type UpdatePlanParams$Outbound = {
   auto_enable?: boolean | undefined;
   price?: UpdatePlanBasePriceRequest$Outbound | null | undefined;
   items?: Array<UpdatePlanItemPlanItem$Outbound> | undefined;
+  licenses?: Array<UpdatePlanLicense$Outbound> | undefined;
   free_trial?: UpdatePlanFreeTrialParamsRequest$Outbound | null | undefined;
   config?: UpdatePlanConfigRequest$Outbound | undefined;
   billing_controls?: UpdatePlanBillingControlsRequest$Outbound | undefined;
@@ -4769,6 +4822,9 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     ),
     items: z.optional(
       z.array(z.lazy(() => UpdatePlanItemPlanItem$outboundSchema)),
+    ),
+    licenses: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicense$outboundSchema)),
     ),
     freeTrial: z.optional(
       z.nullable(z.lazy(() => UpdatePlanFreeTrialParamsRequest$outboundSchema)),

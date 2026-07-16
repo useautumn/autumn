@@ -47,7 +47,7 @@ export class Billing extends ClientSDK {
    * @param planId - The ID of the plan.
    * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
    * @param version - The version of the plan to attach. (optional)
-   * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+   * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -65,6 +65,7 @@ export class Billing extends ClientSDK {
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
@@ -92,7 +93,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1783959811498,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785169411498,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784220892454,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785430492454,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
@@ -147,6 +148,7 @@ export class Billing extends ClientSDK {
    * @param entityId - The ID of the entity to attach the plans to. (optional)
    * @param plans - The list of plans to attach to the customer.
    * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+   * @param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
    * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
    * @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -184,7 +186,7 @@ export class Billing extends ClientSDK {
    * @param planId - The ID of the plan.
    * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
    * @param version - The version of the plan to attach. (optional)
-   * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+   * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -202,6 +204,7 @@ export class Billing extends ClientSDK {
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param licenseQuantities - Seat quantities for the plan's licenses, keyed by license plan. (optional)
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
@@ -236,6 +239,7 @@ export class Billing extends ClientSDK {
    * @param entityId - The ID of the entity to attach the plans to. (optional)
    * @param plans - The list of plans to attach to the customer.
    * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+   * @param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
    * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
    * @param successUrl - URL to redirect to after successful checkout. (optional)
@@ -285,7 +289,7 @@ export class Billing extends ClientSDK {
    * @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
    * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
    * @param version - The version of the plan to attach. (optional)
-   * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+   * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -297,6 +301,7 @@ export class Billing extends ClientSDK {
    * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
    */
@@ -327,7 +332,7 @@ export class Billing extends ClientSDK {
    * @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
    * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
    * @param version - The version of the plan to attach. (optional)
-   * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
+   * @param customize - Customize the plan to attach. Can override the price, items, licenses, free trial, or a combination. (optional)
    * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
    * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -339,6 +344,7 @@ export class Billing extends ClientSDK {
    * @param refundLastPayment - Controls how the last payment is refunded on immediate cancellation. 'prorated' refunds the unused portion, 'full' refunds the entire last payment. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param licenseQuantities - Total seat quantities (inclusive of the license's included count) per license plan offered by this plan. Licenses not listed keep their current paid quantity. (optional)
    *
    * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
    */

@@ -55,6 +55,12 @@ import {
 	keysRevokeContract,
 } from "./keysContract.js";
 import {
+	attachLicenseContract,
+	listLicenseAssignmentsContract,
+	listLicensesContract,
+	releaseLicenseContract,
+} from "./licensesContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -127,6 +133,12 @@ export const v2_3ContractRouter = oc.router({
 
 	// Invoices
 	invoicesList: listInvoicesContract,
+
+	// Licenses
+	licensesAttach: attachLicenseContract,
+	licensesRelease: releaseLicenseContract,
+	licensesListAssignments: listLicenseAssignmentsContract,
+	licensesList: listLicensesContract,
 
 	// Entities
 	entitiesCreate: createEntityContract,

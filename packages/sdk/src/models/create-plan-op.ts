@@ -342,6 +342,17 @@ export type CreatePlanItemPlanItem = {
   rollover?: CreatePlanRolloverRequestBody | undefined;
 };
 
+export type CreatePlanLicense = {
+  licensePlanId: string;
+  included?: number | undefined;
+  prepaidOnly?: boolean | undefined;
+  metadata?: { [k: string]: any } | undefined;
+  /**
+   * Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
+   */
+  version?: number | undefined;
+};
+
 /**
  * Unit of time for the trial ('day', 'month', 'year').
  */
@@ -656,6 +667,10 @@ export type CreatePlanParams = {
    * Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
    */
   items?: Array<CreatePlanItemPlanItem> | undefined;
+  /**
+   * Plans offered as assignable licenses under this plan. The full set replaces existing links.
+   */
+  licenses?: Array<CreatePlanLicense> | undefined;
   /**
    * Free trial configuration. Customers can try this plan before being charged.
    */
@@ -2590,6 +2605,43 @@ export function createPlanItemPlanItemToJSON(
 }
 
 /** @internal */
+export type CreatePlanLicense$Outbound = {
+  license_plan_id: string;
+  included?: number | undefined;
+  prepaid_only?: boolean | undefined;
+  metadata?: { [k: string]: any } | undefined;
+  version?: number | undefined;
+};
+
+/** @internal */
+export const CreatePlanLicense$outboundSchema: z.ZodMiniType<
+  CreatePlanLicense$Outbound,
+  CreatePlanLicense
+> = z.pipe(
+  z.object({
+    licensePlanId: z.string(),
+    included: z.optional(z.int()),
+    prepaidOnly: z.optional(z.boolean()),
+    metadata: z.optional(z.record(z.string(), z.any())),
+    version: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      licensePlanId: "license_plan_id",
+      prepaidOnly: "prepaid_only",
+    });
+  }),
+);
+
+export function createPlanLicenseToJSON(
+  createPlanLicense: CreatePlanLicense,
+): string {
+  return JSON.stringify(
+    CreatePlanLicense$outboundSchema.parse(createPlanLicense),
+  );
+}
+
+/** @internal */
 export const CreatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
   typeof CreatePlanDurationTypeRequest
 > = z.enum(CreatePlanDurationTypeRequest);
@@ -3018,6 +3070,7 @@ export type CreatePlanParams$Outbound = {
   auto_enable: boolean;
   price?: CreatePlanPriceRequestBody$Outbound | undefined;
   items?: Array<CreatePlanItemPlanItem$Outbound> | undefined;
+  licenses?: Array<CreatePlanLicense$Outbound> | undefined;
   free_trial?: FreeTrialRequest$Outbound | undefined;
   config?: CreatePlanConfigRequest$Outbound | undefined;
   billing_controls?: CreatePlanBillingControlsRequest$Outbound | undefined;
@@ -3040,6 +3093,9 @@ export const CreatePlanParams$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => CreatePlanPriceRequestBody$outboundSchema)),
     items: z.optional(
       z.array(z.lazy(() => CreatePlanItemPlanItem$outboundSchema)),
+    ),
+    licenses: z.optional(
+      z.array(z.lazy(() => CreatePlanLicense$outboundSchema)),
     ),
     freeTrial: z.optional(z.lazy(() => FreeTrialRequest$outboundSchema)),
     config: z.optional(z.lazy(() => CreatePlanConfigRequest$outboundSchema)),

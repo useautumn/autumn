@@ -533,6 +533,44 @@ class CreatePlanItemPlanItem(BaseModel):
         return m
 
 
+class CreatePlanLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    included: NotRequired[int]
+    prepaid_only: NotRequired[bool]
+    metadata: NotRequired[Dict[str, Any]]
+    version: NotRequired[int]
+    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
+
+
+class CreatePlanLicense(BaseModel):
+    license_plan_id: str
+
+    included: Optional[int] = None
+
+    prepaid_only: Optional[bool] = None
+
+    metadata: Optional[Dict[str, Any]] = None
+
+    version: Optional[int] = None
+    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["included", "prepaid_only", "metadata", "version"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 CreatePlanDurationTypeRequest = Literal[
     "day",
     "month",
@@ -1022,6 +1060,8 @@ class CreatePlanParamsTypedDict(TypedDict):
     r"""Base recurring price for the plan. Omit for free or usage-only plans."""
     items: NotRequired[List[CreatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
+    licenses: NotRequired[List[CreatePlanLicenseTypedDict]]
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
     free_trial: NotRequired[FreeTrialRequestTypedDict]
     r"""Free trial configuration. Customers can try this plan before being charged."""
     config: NotRequired[CreatePlanConfigRequestTypedDict]
@@ -1058,6 +1098,9 @@ class CreatePlanParams(BaseModel):
     items: Optional[List[CreatePlanItemPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
 
+    licenses: Optional[List[CreatePlanLicense]] = None
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
+
     free_trial: Optional[FreeTrialRequest] = None
     r"""Free trial configuration. Customers can try this plan before being charged."""
 
@@ -1082,6 +1125,7 @@ class CreatePlanParams(BaseModel):
                 "auto_enable",
                 "price",
                 "items",
+                "licenses",
                 "free_trial",
                 "config",
                 "billing_controls",
