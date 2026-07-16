@@ -29,6 +29,8 @@ const baseParams: Omit<
 	customerId: "cus_123",
 	entityId: undefined,
 	items: null,
+	licenseQuantities: {},
+	addLicenses: null,
 	grantFree: false,
 	version: undefined,
 	trialLength: null,
