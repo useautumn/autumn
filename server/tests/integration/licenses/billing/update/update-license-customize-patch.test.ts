@@ -48,7 +48,7 @@ import { inArray } from "drizzle-orm";
 import { runRepointSeatEntitlements } from "@/trigger/licenses/repointSeatEntitlementsTask";
 
 const CATALOG_SEAT_PRICE = 20;
-const CUSTOM_SEAT_PRICE = 30;
+const CUSTOM_SEAT_PRICE = 40;
 const SEAT_MESSAGES = 500;
 const INCLUDED_SEATS = 1;
 const ATTACHED_SEATS = 3;

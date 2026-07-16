@@ -167,7 +167,7 @@ type BillingAttachAction = {
 	customerId?: string; // Override: use this customer instead of primary
 	entityIndex?: number;
 	options?: FeatureOption[];
-	licenseQuantities?: { licenseProductId: string; quantity: number }[];
+	licenseQuantities?: LicenseQuantityOption[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
@@ -177,7 +177,6 @@ type BillingAttachAction = {
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
 	billingControls?: CustomerBillingControlsParams;
-	licenseQuantities?: LicenseQuantityOption[];
 };
 
 type MultiAttachPlan = {
@@ -747,13 +746,12 @@ const billingAttach = ({
 	enableProductImmediately,
 	finalizeInvoice,
 	billingControls,
-	licenseQuantities,
 }: {
 	productId: string;
 	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
-	licenseQuantities?: { licenseProductId: string; quantity: number }[];
+	licenseQuantities?: LicenseQuantityOption[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
@@ -763,7 +761,6 @@ const billingAttach = ({
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
 	billingControls?: CustomerBillingControlsParams;
-	licenseQuantities?: LicenseQuantityOption[];
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
@@ -787,7 +784,6 @@ const billingAttach = ({
 				enableProductImmediately,
 				finalizeInvoice,
 				billingControls,
-				licenseQuantities,
 			},
 		],
 	});
@@ -1713,12 +1709,6 @@ export async function initScenario({
 					enable_product_immediately: action.enableProductImmediately,
 					finalize_invoice: action.finalizeInvoice,
 					billing_controls: action.billingControls,
-					license_quantities: action.licenseQuantities?.map(
-						({ licenseProductId, quantity }) => ({
-							license_plan_id: `${licenseProductId}_${productPrefix}`,
-							quantity,
-						}),
-					),
 				},
 				{ timeout: action.timeout },
 			);

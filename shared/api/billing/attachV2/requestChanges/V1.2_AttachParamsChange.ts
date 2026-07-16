@@ -17,6 +17,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 	description: [
 		"Maps free_trial {length,duration} to {duration_length,duration_type}",
 		"Maps top-level items to customize.items",
+		"Maps top-level upsert_licenses to customize.upsert_licenses",
 	],
 	affectedResources: [AffectedResource.Attach],
 	newSchema: AttachParamsV1Schema,
@@ -32,10 +33,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 	}): z.infer<typeof AttachParamsV1Schema> => {
 		const customizeV1 = billingParamsV0ToCustomizeV1({
 			ctx,
-			items: input.items,
-			freeTrial: input.free_trial,
-			billingControls: input.billing_controls,
-			upsertLicenses: input.upsert_licenses,
+			billingParams: input,
 		});
 
 		const newPlanId = input.product_id ?? undefined;
