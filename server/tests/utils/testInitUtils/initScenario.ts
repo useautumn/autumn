@@ -167,6 +167,7 @@ type BillingAttachAction = {
 	customerId?: string; // Override: use this customer instead of primary
 	entityIndex?: number;
 	options?: FeatureOption[];
+	licenseQuantities?: { licenseProductId: string; quantity: number }[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
@@ -205,7 +206,8 @@ type LinkLicenseAction = {
 type AssignLicenseAction = {
 	type: "assignLicense";
 	licenseProductId: string;
-	entityIndex: number;
+	entityIndex?: number;
+	entityIndexes?: number[];
 	parentProductId?: string;
 };
 
@@ -735,6 +737,7 @@ const billingAttach = ({
 	customerId,
 	entityIndex,
 	options,
+	licenseQuantities,
 	newBillingSubscription,
 	planSchedule,
 	timeout,
@@ -750,6 +753,7 @@ const billingAttach = ({
 	customerId?: string;
 	entityIndex?: number;
 	options?: FeatureOption[];
+	licenseQuantities?: { licenseProductId: string; quantity: number }[];
 	newBillingSubscription?: boolean;
 	planSchedule?: PlanTiming;
 	timeout?: number;
@@ -773,6 +777,7 @@ const billingAttach = ({
 				customerId,
 				entityIndex,
 				options,
+				licenseQuantities,
 				newBillingSubscription,
 				planSchedule,
 				timeout: timeout ?? defaultTimeout,
@@ -856,10 +861,12 @@ const assignLicense =
 	({
 		licenseProductId,
 		entityIndex,
+		entityIndexes,
 		parentProductId,
 	}: {
 		licenseProductId: string;
-		entityIndex: number;
+		entityIndex?: number;
+		entityIndexes?: number[];
 		parentProductId?: string;
 	}): ConfigFn =>
 	(config) => ({
@@ -870,6 +877,7 @@ const assignLicense =
 				type: "assignLicense" as const,
 				licenseProductId,
 				entityIndex,
+				entityIndexes,
 				parentProductId,
 			},
 		],
@@ -1691,6 +1699,12 @@ export async function initScenario({
 					product_id: prefixedProductId,
 					entity_id: entityId,
 					options: action.options,
+					license_quantities: action.licenseQuantities?.map(
+						({ licenseProductId, quantity }) => ({
+							license_plan_id: `${licenseProductId}_${productPrefix}`,
+							quantity,
+						}),
+					),
 					new_billing_subscription: action.newBillingSubscription,
 					plan_schedule: action.planSchedule,
 					items: action.items,
@@ -1767,25 +1781,39 @@ export async function initScenario({
 					"Cannot assign license: customerId is required when using s.licenses.assign()",
 				);
 			}
-			if (action.entityIndex >= generatedEntities.length) {
+			const entityIndexes =
+				action.entityIndexes ??
+				(action.entityIndex !== undefined ? [action.entityIndex] : []);
+			if (entityIndexes.length === 0) {
 				throw new Error(
-					`entityIndex ${action.entityIndex} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					"s.licenses.assign() requires entityIndex or entityIndexes",
 				);
 			}
-			const entityId = generatedEntities[action.entityIndex].id;
+			for (const index of entityIndexes) {
+				if (index >= generatedEntities.length) {
+					throw new Error(
+						`entityIndex ${index} is out of bounds. Only ${generatedEntities.length} entities configured.`,
+					);
+				}
+			}
+			const entityIds = entityIndexes.map(
+				(index) => generatedEntities[index].id,
+			);
 			const licensePlanId = `${action.licenseProductId}_${productPrefix}`;
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
 				plan_id: licensePlanId,
-				entities: [{ entity_id: entityId }],
+				entities: entityIds.map((entityId) => ({ entity_id: entityId })),
 			});
 			const { list } = (await autumnV2_2.post("/licenses.list_assignments", {
 				customer_id: customerId,
-				entity_id: entityId,
 				plan_id: licensePlanId,
 				active: true,
 			})) as { list: GeneratedLicenseAssignment[] };
-			if (list[0]) licenseAssignments.push(list[0]);
+			const assignedIds = new Set(entityIds);
+			licenseAssignments.push(
+				...list.filter((assignment) => assignedIds.has(assignment.entity_id)),
+			);
 		} else if (action.type === "createReferralCode") {
 			if (!customerId) {
 				throw new Error("Cannot create referral code: customerId is required");

@@ -43,7 +43,7 @@ export function LicenseQuantityControl({
 			)}
 			<QuantityEditControl
 				readOnly={false}
-				displayText={`x${totalQuantity}`}
+				displayText={paidQuantity > 0 ? undefined : `x${totalQuantity}`}
 				isEditing={isEditing}
 				onEditingChange={handleEditingChange}
 			>

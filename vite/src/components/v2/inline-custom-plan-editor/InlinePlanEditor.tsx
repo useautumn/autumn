@@ -21,7 +21,10 @@ import {
 } from "@/views/products/plan/components/plan-licenses/LicenseCustomizeCollector";
 import { LicensePlanCards } from "@/views/products/plan/components/plan-licenses/LicensePlanCards";
 import { LinkLicenseButton } from "@/views/products/plan/components/plan-licenses/LinkLicenseButton";
-import { PendingLicenseLinksProvider } from "@/views/products/plan/components/plan-licenses/PendingLicenseLinksContext";
+import {
+	PendingLicenseLinksProvider,
+	usePendingLicenseLinks,
+} from "@/views/products/plan/components/plan-licenses/PendingLicenseLinksContext";
 import { SheetPanelHost } from "@/views/products/plan/components/SheetPanelHost";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
@@ -106,7 +109,11 @@ function InlinePlanEditorContent({
 	const { sheetType } = useSheet();
 	const hasPlanChanges = useHasPlanChanges();
 	const collectorStore = useLicenseCollectorStore();
-	const hasLicenseChanges = useHasCollectedLicenseChanges();
+	const { pendingLicenseIds } = usePendingLicenseLinks();
+	// Staged links are primary state — don't depend solely on each card's
+	// effect having registered with the collector.
+	const hasLicenseChanges =
+		useHasCollectedLicenseChanges() || pendingLicenseIds.length > 0;
 	const hasChanges = hasPlanChanges || hasLicenseChanges;
 
 	const handleSave = () => {
