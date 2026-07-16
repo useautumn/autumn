@@ -95,6 +95,8 @@ export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiInvoice/apiInvoiceItem.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
+export * from "./others/apiInvoice/apiListInvoiceV1.js";
+export * from "./others/apiInvoice/listInvoicesParams.js";
 // Models
 export * from "./platform/platformModels.js";
 // Utils
