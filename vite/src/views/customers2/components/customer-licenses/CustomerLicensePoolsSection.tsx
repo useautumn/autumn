@@ -1,4 +1,7 @@
-import { filterCustomerProductsByActiveStatuses } from "@autumn/shared";
+import {
+	filterCustomerProductsByActiveStatuses,
+	mapToProductV2,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
@@ -6,7 +9,7 @@ import { useCustomerContext } from "@/views/customers2/customer/CustomerContext"
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import {
 	type CustomerLicensePoolRow,
-	customerLicensePoolColumns,
+	createCustomerLicensePoolColumns,
 } from "./customerLicensePoolColumns";
 
 /** Customer-level license pools (used/granted seats per license), read
@@ -24,7 +27,9 @@ export function CustomerLicensePoolsSection() {
 					name:
 						customerLicense.planLicense?.product.name ??
 						customerLicense.license_internal_product_id,
-					parentPlanName: customerProduct.product.name,
+					product: customerLicense.planLicense
+						? mapToProductV2({ product: customerLicense.planLicense.product })
+						: null,
 					remaining: customerLicense.remaining,
 					granted: customerLicense.granted,
 					paidQuantity: customerLicense.paid_quantity,
@@ -34,10 +39,15 @@ export function CustomerLicensePoolsSection() {
 		[customer.customer_products],
 	);
 
-	const table = useCustomerTable({
-		data: rows,
-		columns: customerLicensePoolColumns,
-	});
+	const columns = useMemo(
+		() =>
+			createCustomerLicensePoolColumns({
+				hasEntities: customer.entities.length > 0,
+			}),
+		[customer.entities.length],
+	);
+
+	const table = useCustomerTable({ data: rows, columns });
 
 	// Entity view shows per-entity assignments via CustomerLicensesSection.
 	if (entityId || rows.length === 0) return null;
@@ -46,7 +56,7 @@ export function CustomerLicensePoolsSection() {
 		<Table.Provider
 			config={{
 				table,
-				numberOfColumns: customerLicensePoolColumns.length,
+				numberOfColumns: columns.length,
 				enableSorting: false,
 				isLoading: false,
 				emptyStateChildren: "No licenses",
