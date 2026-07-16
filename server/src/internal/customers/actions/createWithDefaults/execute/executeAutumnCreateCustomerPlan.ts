@@ -4,8 +4,6 @@ import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
-import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
-import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { CusService } from "../../../CusService.js";
@@ -19,6 +17,10 @@ export type ExecuteAutumnResult = { type: "created" } | { type: "existing" };
  * 2. Handle race conditions by returning existing customer
  *
  * Returns discriminated union to indicate if customer was created or already existed.
+ *
+ * Does NOT emit webhooks — the caller emits after the Stripe customer id is
+ * persisted, so webhook consumers calling customers.get see a non-null
+ * stripe_id (see createCustomerWithDefaults).
  */
 export const executeAutumnCreateCustomerPlan = async ({
 	ctx,
@@ -88,20 +90,6 @@ export const executeAutumnCreateCustomerPlan = async ({
 		context.fullCustomer = existingCustomer;
 		return { type: "existing" };
 	}
-
-	// Queue webhooks after transaction commits successfully
-	await billingPlanToSendProductsUpdated({
-		ctx,
-		autumnBillingPlan,
-		billingContext: context,
-	});
-
-	// Fire-and-forget: don't block customer creation on svix delivery
-	void sendBillingUpdatedWebhook({
-		ctx,
-		autumnBillingPlan,
-		originalFullCustomer: context.fullCustomer,
-	});
 
 	if (ctx.authType === AuthType.SecretKey) {
 		await captureOrgEvent({
