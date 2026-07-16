@@ -1,9 +1,7 @@
-import {
-	type CatalogPlanParams,
-	ErrCode,
-	type FullProduct,
-	type PlanUpdatePreview,
-	RecaseError,
+import type {
+	CatalogPlanParams,
+	FullProduct,
+	PlanUpdatePreview,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -80,23 +78,10 @@ const preflightCatalogLicenses = async ({
 		});
 	});
 	const licenseProducts = [...virtualParents, ...persistedProducts];
-	const ownerByLicenseId = new Map<string, string>();
-
 	for (const [index, plan] of plans.entries()) {
 		const preview = previews[index]!;
 		const current = currentForPlan(plan);
 		const parent = virtualParents[index]!;
-		for (const license of plan.licenses ?? []) {
-			const owner = ownerByLicenseId.get(license.license_plan_id);
-			if (owner && owner !== parent.id) {
-				throw new RecaseError({
-					message: `License plan ${license.license_plan_id} is already offered by plan ${owner}.`,
-					code: ErrCode.InvalidRequest,
-					statusCode: 400,
-				});
-			}
-			ownerByLicenseId.set(license.license_plan_id, parent.id);
-		}
 		const licensePreview = await previewPlanLicenseSync({
 			ctx,
 			parentProduct: { ...parent, licenses: current?.licenses ?? [] },

@@ -535,6 +535,44 @@ class UpdatePlanItemPlanItem(BaseModel):
         return m
 
 
+class UpdatePlanLicenseTypedDict(TypedDict):
+    license_plan_id: str
+    included: NotRequired[int]
+    prepaid_only: NotRequired[bool]
+    metadata: NotRequired[Dict[str, Any]]
+    version: NotRequired[int]
+    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
+
+
+class UpdatePlanLicense(BaseModel):
+    license_plan_id: str
+
+    included: Optional[int] = None
+
+    prepaid_only: Optional[bool] = None
+
+    metadata: Optional[Dict[str, Any]] = None
+
+    version: Optional[int] = None
+    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["included", "prepaid_only", "metadata", "version"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 UpdatePlanDurationTypeRequest = Literal[
     "day",
     "month",
@@ -2192,6 +2230,8 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""The price of the plan. Set to null to remove the base price."""
     items: NotRequired[List[UpdatePlanItemPlanItemTypedDict]]
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
+    licenses: NotRequired[List[UpdatePlanLicenseTypedDict]]
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
     free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsRequestTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
     config: NotRequired[UpdatePlanConfigRequestTypedDict]
@@ -2243,6 +2283,9 @@ class UpdatePlanParams(BaseModel):
 
     items: Optional[List[UpdatePlanItemPlanItem]] = None
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
+
+    licenses: Optional[List[UpdatePlanLicense]] = None
+    r"""Plans offered as assignable licenses under this plan. The full set replaces existing links."""
 
     free_trial: OptionalNullable[UpdatePlanFreeTrialParamsRequest] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
@@ -2298,6 +2341,7 @@ class UpdatePlanParams(BaseModel):
                 "auto_enable",
                 "price",
                 "items",
+                "licenses",
                 "free_trial",
                 "config",
                 "billing_controls",

@@ -90,9 +90,7 @@ export const setupStripeBillingContext = async ({
 		async stripeSubscription() {
 			// If no target customer product, skip subscription/schedule fetching
 			// Skip if product being attached is one off
-			const attachingOneOff = product
-				? isOneOffProduct({ prices: product.prices })
-				: false;
+			const attachingOneOff = product ? isOneOffProduct({ product }) : false;
 
 			return attachingOneOff || skipSubscriptionFetching
 				? undefined

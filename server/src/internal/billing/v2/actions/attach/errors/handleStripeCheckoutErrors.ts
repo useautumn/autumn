@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	RecaseError,
 } from "@autumn/shared";
+import { handleStripeCheckoutLicenseErrors } from "./handleLicenseErrors/handleStripeCheckoutLicenseErrors";
 
 /**
  * Gets unique recurring intervals from line items (excludes one-off prices).
@@ -49,6 +50,8 @@ export const handleStripeCheckoutErrors = ({
 }) => {
 	// Only check for stripe_checkout mode
 	if (billingContext.checkoutMode !== "stripe_checkout") return;
+
+	handleStripeCheckoutLicenseErrors({ billingContext, autumnBillingPlan });
 
 	const recurringIntervals = getRecurringIntervalsFromPaidLineItems({
 		autumnBillingPlan,

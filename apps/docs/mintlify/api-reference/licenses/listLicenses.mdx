@@ -1,0 +1,69 @@
+---
+title: "List Licenses"
+openapi: "openapi POST /v1/licenses.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required />
+
+<DynamicParamField body="entity_id" type="string" />
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="license_plan_id" type="string">
+      The plan offered as an assignable license.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="parent_plan_id" type="string">
+      The plan that offers this license.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="license_plan_name" type="string">
+      Display name of the license plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total seats the customer has for this license, included plus paid.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Seats currently assigned to entities.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Seats still available to assign.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="paid_quantity" type="number">
+      Paid seats purchased on top of the plan's included amount.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "license_plan_id": "seat_plan",
+      "parent_plan_id": "pro_plan",
+      "license_plan_name": "Seat",
+      "granted": 10,
+      "usage": 3,
+      "remaining": 7,
+      "paid_quantity": 5
+    }
+  ]
+}
+```
+</ResponseExample>

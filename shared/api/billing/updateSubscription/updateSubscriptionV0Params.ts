@@ -11,7 +11,7 @@ import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
-	BillingParamsBaseV0Schema.omit({ upsert_licenses: true }).extend({
+	BillingParamsBaseV0Schema.extend({
 		// Product identification (optional for update subscription - can target by customer_product_id)
 		product_id: z.string().nullish(),
 

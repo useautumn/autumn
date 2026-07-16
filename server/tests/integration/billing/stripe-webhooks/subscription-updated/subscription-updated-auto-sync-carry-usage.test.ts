@@ -28,6 +28,7 @@ import {
 	getFullProduct,
 	getFullProductFromMap,
 	setupSharedStripeFamilies,
+	trackCustomerUsage,
 	updateBaseSubscriptionItemToVariant,
 	waitForCustomerProducts,
 } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
@@ -39,37 +40,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
-
-const TRACK_SYNC_MS = 3000;
-
-const trackAndWait = async ({
-	autumnV1,
-	customerId,
-	featureId,
-	value,
-}: {
-	// biome-ignore lint/suspicious/noExplicitAny: test client
-	autumnV1: any;
-	customerId: string;
-	featureId: string;
-	value: number;
-}) => {
-	await autumnV1.track({
-		customer_id: customerId,
-		feature_id: featureId,
-		value,
-	});
-	await new Promise((resolve) => setTimeout(resolve, TRACK_SYNC_MS));
-	// The V2 track path flushes Redis deductions to Postgres lazily; the webhook
-	// sync reads Postgres, so force the flush before changing the subscription.
-	await invalidateCachedFullSubject({
-		ctx,
-		customerId,
-		source: "test-carry-flush",
-		flushBalances: true,
-	});
-};
 
 /** Base(consumable messages) + one variant, external sub on the base. */
 const setupConsumableFamilyOnBase = async ({
@@ -158,7 +128,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 1: upgrade carries consu
 		variantAmount: 35,
 	});
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Messages,
@@ -212,7 +182,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 2: upgrade offsets exist
 		variantAmount: 35,
 	});
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Messages,
@@ -266,7 +236,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 3: remaining overage per
 		variantAmount: 35,
 	});
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Messages,
@@ -320,7 +290,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 4: downgrade carries usa
 		variantAmount: 15,
 	});
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Messages,
@@ -409,7 +379,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 5: allocated usage never
 		notPresent: [planB.id],
 	});
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Users,
@@ -465,7 +435,7 @@ test(`${chalk.yellowBright("sub.updated auto-sync carry 6: org rule enabled=fals
 
 	const orgClient = new AutumnInt({ secretKey: testCtx.orgSecretKey });
 	try {
-		await trackAndWait({
+		await trackCustomerUsage({
 			autumnV1,
 			customerId,
 			featureId: TestFeature.Messages,
@@ -540,7 +510,7 @@ test(`${chalk.yellowBright("sub.created auto-sync carry 7: default free usage ca
 	// s.attach would re-prefix the raw (prefix: "") product id, so attach directly.
 	await autumnV1.attach({ customer_id: customerId, product_id: free.id });
 
-	await trackAndWait({
+	await trackCustomerUsage({
 		autumnV1,
 		customerId,
 		featureId: TestFeature.Messages,

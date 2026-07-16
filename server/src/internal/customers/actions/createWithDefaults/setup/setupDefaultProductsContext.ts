@@ -40,7 +40,7 @@ const getOverrideAutoEnableProduct = async ({
 		});
 
 	if (
-		!isFreeProduct({ prices: plan.prices }) &&
+		!isFreeProduct({ product: plan }) &&
 		!isDefaultTrialFullProduct({ product: plan, skipDefault: true })
 	) {
 		throw new RecaseError({
@@ -77,9 +77,7 @@ export const setupDefaultProductsContext = async ({
 	});
 
 	if (autoEnableProduct) {
-		const autoEnableIsPaid = !isFreeProduct({
-			prices: autoEnableProduct.prices,
-		});
+		const autoEnableIsPaid = !isFreeProduct({ product: autoEnableProduct });
 
 		return {
 			fullProducts: [autoEnableProduct],
@@ -104,7 +102,7 @@ export const setupDefaultProductsContext = async ({
 
 		defaultProdsInGroup.sort((a, _b) => {
 			if (isDefaultTrialFullProduct({ product: a })) return -1;
-			if (!isFreeProduct({ prices: a.prices })) return -1;
+			if (!isFreeProduct({ product: a })) return -1;
 			return 0;
 		});
 
@@ -126,7 +124,7 @@ export const setupDefaultProductsContext = async ({
 	// Get paid products (for billing context)
 	const paidProducts = selectedProducts.filter(
 		(p) =>
-			!isFreeProduct({ prices: p.prices }) &&
+			!isFreeProduct({ product: p }) &&
 			isDefaultTrialFullProduct({ product: p }),
 	);
 

@@ -27,6 +27,7 @@ import { BillingInterval } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseAttachPreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -75,7 +76,7 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+		const attachParams: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: pro.id,
 			redirect_mode: "if_required",
@@ -99,7 +100,16 @@ test.concurrent(
 					},
 				],
 			},
+		};
+
+		const preview =
+			await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(attachParams);
+		expectLicenseAttachPreviewCorrect({
+			preview,
+			total: PAID_SEATS * CUSTOM_SEAT_PRICE,
 		});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);
 
 		// ── Pool: counters inherit catalog included, custom def anchored ──
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);

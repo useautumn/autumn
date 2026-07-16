@@ -1,13 +1,16 @@
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AssignLicenseButton } from "./AssignLicenseButton";
 import {
 	createCustomerLicenseColumns,
 	type LicenseAssignmentRow,
 } from "./customerLicenseColumns";
+import { resolveCustomerLicenseProduct } from "./resolveCustomerLicenseProduct";
 import { useCustomerLicenseBalances } from "./useCustomerLicenseBalances";
 
 export function CustomerLicensesSection() {
@@ -32,6 +35,9 @@ export function CustomerLicensesSection() {
 		[assignments, publicEntityId],
 	);
 
+	const { licenseProducts } = useLicenseProductsQuery();
+	const { customer } = useCustomerContext();
+
 	const rows = useMemo<LicenseAssignmentRow[]>(() => {
 		const poolByLicensePlanId = new Map(
 			pools.map((pool) => [pool.license_plan_id, pool]),
@@ -43,12 +49,22 @@ export function CustomerLicensesSection() {
 				{
 					id: assignment.id,
 					name: pool.license_plan_name,
+					product: resolveCustomerLicenseProduct({
+						customer,
+						licensePlanId: pool.license_plan_id,
+						parentPlanId: pool.parent_plan_id,
+						catalogProduct: licenseProducts.find(
+							(license) => license.id === pool.license_plan_id,
+						),
+					}),
 					started_at: assignment.started_at,
 					pool,
 				},
 			];
 		});
-	}, [pools, entityAssignments]);
+	}, [pools, entityAssignments, licenseProducts, customer]);
+
+	const entity = customer.entities?.find((e) => e.id === publicEntityId);
 
 	const columns = useMemo(
 		() =>
@@ -58,8 +74,9 @@ export function CustomerLicensesSection() {
 						entityId: publicEntityId ?? "",
 						licensePlanId: row.pool.license_plan_id,
 					}),
+				entityName: entity?.name ?? entity?.id ?? publicEntityId ?? undefined,
 			}),
-		[cancelLicenseAssignment, publicEntityId],
+		[cancelLicenseAssignment, publicEntityId, entity],
 	);
 
 	const table = useCustomerTable({ data: rows, columns });

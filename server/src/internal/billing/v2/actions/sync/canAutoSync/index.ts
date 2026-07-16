@@ -6,9 +6,9 @@ import type {
 import { filterBlockingCustomFeaturePriceItems } from "./customFeaturePriceItems";
 import { filterMainPlans, findDuplicateMainPlanGroup } from "./planGroupUtils";
 import {
-	DEFAULT_ALLOWED_WARNINGS,
 	type AutoSyncEligibility,
 	type AutoSyncRejectionReason,
+	DEFAULT_ALLOWED_WARNINGS,
 } from "./types";
 
 export type { AutoSyncEligibility, AutoSyncRejectionReason };
@@ -64,9 +64,13 @@ export const canAutoSync = ({
 	}
 
 	// Add-ons may legitimately have no base price (feature-only billing,
-	// e.g. a prepaid add-on) — only non-add-on plans block on absent base.
+	// e.g. a prepaid add-on), and a parent present only via license seat
+	// items has no base of its own — neither blocks on absent base.
 	const absentBase = currentPhase.plans.find(
-		(plan) => plan.base.kind === "absent" && plan.product.is_add_on !== true,
+		(plan) =>
+			plan.base.kind === "absent" &&
+			plan.product.is_add_on !== true &&
+			!plan.licenses?.length,
 	);
 	if (absentBase) {
 		return {
@@ -97,9 +101,7 @@ export const canAutoSync = ({
 		return {
 			eligible: false,
 			reason: "plan_warnings",
-			details: blockingWarnings
-				.map((w) => `${w.planId}: ${w.type}`)
-				.join("; "),
+			details: blockingWarnings.map((w) => `${w.planId}: ${w.type}`).join("; "),
 		};
 	}
 

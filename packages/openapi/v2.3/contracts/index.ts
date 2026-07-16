@@ -22,7 +22,6 @@ import {
 	billingSetupPaymentContract,
 	billingUpdateContract,
 } from "./billingContract.js";
-import { dfuFlashContract } from "./dfuContract.js";
 import {
 	deleteCustomerContract,
 	getCustomerContract,
@@ -30,6 +29,7 @@ import {
 	listCustomersContract,
 	updateCustomerContract,
 } from "./customersContract.js";
+import { dfuFlashContract } from "./dfuContract.js";
 import {
 	createEntityContract,
 	deleteEntityContract,
@@ -48,11 +48,18 @@ import {
 	listFeaturesContract,
 	updateFeatureContract,
 } from "./featuresContract.js";
+import { listInvoicesContract } from "./invoicesContract.js";
 import {
 	keysMintContract,
 	keysRefreshContract,
 	keysRevokeContract,
 } from "./keysContract.js";
+import {
+	attachLicenseContract,
+	listLicenseAssignmentsContract,
+	listLicensesContract,
+	releaseLicenseContract,
+} from "./licensesContract.js";
 import {
 	createPlanContract,
 	deletePlanContract,
@@ -117,12 +124,21 @@ export const v2_3ContractRouter = oc.router({
 	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
-balancesTrackTokens: balancesTrackTokensContract,
+	balancesTrackTokens: balancesTrackTokensContract,
 	balancesBatchTrack: balancesBatchTrackContract,
 
 	// Events
 	eventsList: eventsListContract,
 	eventsAggregate: eventsAggregateContract,
+
+	// Invoices
+	invoicesList: listInvoicesContract,
+
+	// Licenses
+	licensesAttach: attachLicenseContract,
+	licensesRelease: releaseLicenseContract,
+	licensesListAssignments: listLicenseAssignmentsContract,
+	licensesList: listLicensesContract,
 
 	// Entities
 	entitiesCreate: createEntityContract,

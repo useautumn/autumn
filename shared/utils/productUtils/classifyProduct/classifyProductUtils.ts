@@ -4,10 +4,19 @@ import type { FixedPriceConfig } from "../../../models/productModels/priceModels
 import type { UsagePriceConfig } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { PriceType } from "../../../models/productModels/priceModels/priceEnums.js";
 import type { Price } from "../../../models/productModels/priceModels/priceModels.js";
+import { productToEffectivePrices } from "../convertProduct/productToEffectivePrices";
 
 // TODO: Write unit tests for these functions (?)
 
-export const isOneOffProduct = ({ prices }: { prices: Price[] }) => {
+type ProductPriceSource = { prices: Price[] } | { product: FullProduct };
+
+const sourceToPrices = (source: ProductPriceSource) =>
+	"product" in source
+		? productToEffectivePrices({ product: source.product })
+		: source.prices;
+
+export const isOneOffProduct = (source: ProductPriceSource) => {
+	const prices = sourceToPrices(source);
 	return (
 		prices.every((p) => p.config?.interval === BillingInterval.OneOff) &&
 		prices.some((p) => {
@@ -22,7 +31,8 @@ export const isOneOffProduct = ({ prices }: { prices: Price[] }) => {
 	);
 };
 
-export const isFreeProduct = ({ prices }: { prices: Price[] }) => {
+export const isFreeProduct = (source: ProductPriceSource) => {
+	const prices = sourceToPrices(source);
 	if (prices.length === 0) {
 		return true;
 	}
@@ -48,5 +58,5 @@ export const isOneOffOrAddOnProduct = ({
 }: {
 	product: FullProduct;
 }) => {
-	return isOneOffProduct({ prices: product.prices }) || product.is_add_on;
+	return isOneOffProduct({ product }) || product.is_add_on;
 };

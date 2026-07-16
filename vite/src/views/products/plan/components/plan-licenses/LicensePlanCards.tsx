@@ -6,6 +6,7 @@ import {
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useInitialLicensePatches } from "./LicenseCustomizeCollector";
 import { LicensePlanCard } from "./LicensePlanCard";
 import {
 	pendingPlanLicense,
@@ -22,6 +23,7 @@ export function LicensePlanCards() {
 	const { licenseProducts } = useLicenseProductsQuery();
 	const { products } = useProductsQuery();
 	const { pendingLicenseIds } = usePendingLicenseLinks();
+	const initialPatches = useInitialLicensePatches();
 
 	// Staged links can point at any plan, not just ones already linked
 	// elsewhere, so fall back to the full plans list.
@@ -42,11 +44,16 @@ export function LicensePlanCards() {
 	const persistedIds = new Set(
 		planLicenses.map((planLicense) => planLicense.license_plan_id),
 	);
-	const pendingPlanLicenses = pendingLicenseIds
-		.filter((licenseId) => !persistedIds.has(licenseId))
-		.map((licenseId) =>
-			pendingPlanLicense({ licenseId, parentPlanId: product.id }),
-		);
+	// Patch keys cover links staged in a previous customize session — they
+	// exist only in the saved patch, so resurface them as pending cards.
+	const stagedIds = new Set(
+		[...pendingLicenseIds, ...Object.keys(initialPatches)].filter(
+			(licenseId) => !persistedIds.has(licenseId),
+		),
+	);
+	const pendingPlanLicenses = [...stagedIds].map((licenseId) =>
+		pendingPlanLicense({ licenseId, parentPlanId: product.id }),
+	);
 
 	const allPlanLicenses = [...planLicenses, ...pendingPlanLicenses];
 

@@ -211,7 +211,14 @@
 							"api-reference/billing/previewMultiUpdate",
 							"api-reference/billing/multiUpdate",
 							"api-reference/billing/createSchedule",
-							"api-reference/billing/import"
+							"api-reference/billing/import",
+							{
+								"group": "Licenses",
+								"pages": [
+									"api-reference/licenses/attachLicense",
+									"api-reference/licenses/releaseLicense"
+								]
+							}
 						]
 					},
 					{
@@ -234,7 +241,8 @@
 							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
-							"api-reference/customers/deleteCustomer"
+							"api-reference/customers/deleteCustomer",
+							"api-reference/invoices/listInvoices"
 						]
 					},
 					{

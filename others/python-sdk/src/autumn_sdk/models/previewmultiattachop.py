@@ -528,7 +528,7 @@ class PreviewMultiAttachPlanItem(BaseModel):
 
 
 class PreviewMultiAttachCustomizeTypedDict(TypedDict):
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     price: NotRequired[Nullable[PreviewMultiAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -537,7 +537,7 @@ class PreviewMultiAttachCustomizeTypedDict(TypedDict):
 
 
 class PreviewMultiAttachCustomize(BaseModel):
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     price: OptionalNullable[PreviewMultiAttachBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -615,7 +615,7 @@ class PreviewMultiAttachPlanTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to attach."""
     customize: NotRequired[PreviewMultiAttachCustomizeTypedDict]
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
     feature_quantities: NotRequired[
         List[PreviewMultiAttachPlanFeatureQuantityTypedDict]
     ]
@@ -631,7 +631,7 @@ class PreviewMultiAttachPlan(BaseModel):
     r"""The ID of the plan to attach."""
 
     customize: Optional[PreviewMultiAttachCustomize] = None
-    r"""Customize the plan to attach. Can override the price or items."""
+    r"""Customize the plan to attach. Can override the price, items, or licenses."""
 
     feature_quantities: Optional[List[PreviewMultiAttachPlanFeatureQuantity]] = None
     r"""If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature."""
@@ -1139,6 +1139,8 @@ class PreviewMultiAttachParamsTypedDict(TypedDict):
     r"""The ID of the entity to attach the plans to."""
     free_trial: NotRequired[Nullable[PreviewMultiAttachFreeTrialParamsTypedDict]]
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+    currency: NotRequired[str]
+    r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
     invoice_mode: NotRequired[PreviewMultiAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
     discounts: NotRequired[List[PreviewMultiAttachAttachDiscountTypedDict]]
@@ -1170,6 +1172,9 @@ class PreviewMultiAttachParams(BaseModel):
 
     free_trial: OptionalNullable[PreviewMultiAttachFreeTrialParams] = UNSET
     r"""Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial."""
+
+    currency: Optional[str] = None
+    r"""Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default."""
 
     invoice_mode: Optional[PreviewMultiAttachInvoiceMode] = None
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately."""
@@ -1203,6 +1208,7 @@ class PreviewMultiAttachParams(BaseModel):
             [
                 "entity_id",
                 "free_trial",
+                "currency",
                 "invoice_mode",
                 "discounts",
                 "success_url",

@@ -19,6 +19,7 @@ import { handleProductTypeTransitionErrors } from "./handleProductTypeTransition
 import { handleUncancelErrors } from "./handleUncancelErrors";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
 import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
+import { handleUpdateSubscriptionLicenseErrors } from "./handleUpdateSubscriptionLicenseErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -54,6 +55,13 @@ export const handleUpdateSubscriptionErrors = async ({
 
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
+
+	// 4b. License errors (quantity converge + plan restructure guards)
+	handleUpdateSubscriptionLicenseErrors({
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
 
 	// 4b. Manual top-up strict-shape gate (must run before one-off check so it
 	// owns the "Update too complex" message for ManualTopUp requests).

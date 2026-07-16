@@ -2,6 +2,8 @@ import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
 import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
+import { toast } from "sonner";
 import {
 	useHasItemChanges,
 	useProduct,
@@ -15,6 +17,7 @@ import UpdateFeatureSheet from "@/views/products/features/components/UpdateFeatu
 import UpdateCreditSystemSheet from "@/views/products/features/credit-systems/components/UpdateCreditSystemSheet";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { migrateTierCurrenciesForMode } from "../../utils/currencyUtils";
+import { copyPlanItemToClipboard } from "../../utils/planItemClipboard";
 import {
 	cleanTiersForMode,
 	type VolumePricingMode,
@@ -121,11 +124,27 @@ export function EditPlanFeatureSheet({
 		}
 	};
 
+	const feature = getFeature(item?.feature_id ?? "", features);
+
+	const handleCopyItem = async () => {
+		if (!item) return;
+		try {
+			await copyPlanItemToClipboard({ item });
+		} catch {
+			toast.error("Failed to copy to clipboard");
+		}
+	};
+
+	// Copy the open item unless the user is copying selected text
+	useHotkeys("mod+c", () => {
+		if (window.getSelection()?.toString()) return;
+		handleCopyItem();
+	});
+
 	if (!item) {
 		return null;
 	}
 
-	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
 
 	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)

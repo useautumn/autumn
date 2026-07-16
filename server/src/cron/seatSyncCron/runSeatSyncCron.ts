@@ -1,10 +1,10 @@
 import type { AppEnv, Organization } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import type { RepoContext } from "@/db/repoContext";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
+import type { RepoContext } from "@/db/repoContext";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { CronContext } from "../utils/CronContext.js";
 
 const PAGE_SIZE = 500;
@@ -46,7 +46,18 @@ const getMismatchedSeatsPage = async ({
 			c.org_id AS org_id,
 			c.env AS env
 		FROM customer_products cp
-		JOIN customer_licenses pcl ON pcl.link_id = cp.customer_license_link_id
+		-- Links can match multiple pool rows (predecessors linger on expired
+		-- parents); seats converge onto the pool on the LIVE parent.
+		JOIN LATERAL (
+			SELECT pool.*
+			FROM customer_licenses pool
+			JOIN customer_products pool_parent
+				ON pool_parent.id = pool.parent_customer_product_id
+			WHERE pool.link_id = cp.customer_license_link_id
+			ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+				pool.created_at DESC
+			LIMIT 1
+		) pcl ON true
 		JOIN customer_products pcp ON pcp.id = pcl.parent_customer_product_id
 		JOIN customers c ON c.internal_id = cp.internal_customer_id
 		WHERE cp.customer_license_link_id IS NOT NULL
@@ -93,7 +104,18 @@ const syncSeats = async ({
 			seatIds.map((seatId) => sql`${seatId}`),
 			sql`, `,
 		)})
-			AND pcl.link_id = cp.customer_license_link_id
+			-- Best pool per link: LIVE parent first (predecessors linger on
+			-- expired parents), then newest.
+			AND pcl.id = (
+				SELECT pool.id
+				FROM customer_licenses pool
+				JOIN customer_products pool_parent
+					ON pool_parent.id = pool.parent_customer_product_id
+				WHERE pool.link_id = cp.customer_license_link_id
+				ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+					pool.created_at DESC
+				LIMIT 1
+			)
 			AND (
 				cp.status IS DISTINCT FROM pcp.status
 				OR cp.subscription_ids IS DISTINCT FROM pcp.subscription_ids
@@ -163,10 +185,7 @@ export const runSeatSyncCron = async ({ ctx }: { ctx: CronContext }) => {
 		let totalSynced = 0;
 		let cursor: string | null = null;
 
-		while (
-			iteration < MAX_ITERATIONS &&
-			Date.now() - startTime < TIMEOUT_MS
-		) {
+		while (iteration < MAX_ITERATIONS && Date.now() - startTime < TIMEOUT_MS) {
 			iteration++;
 
 			const page = await getMismatchedSeatsPage({

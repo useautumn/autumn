@@ -13,7 +13,6 @@ import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPl
 import { EditPlanHeader } from "@/views/products/plan/components/EditPlanHeader";
 import { PlanEditorBar } from "@/views/products/plan/components/PlanEditorBar";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
-import { CreateLicenseButton } from "@/views/products/plan/components/plan-licenses/CreateLicenseButton";
 import {
 	collectLicensePatchAdds,
 	LicenseCustomizeCollectorProvider,
@@ -22,7 +21,10 @@ import {
 } from "@/views/products/plan/components/plan-licenses/LicenseCustomizeCollector";
 import { LicensePlanCards } from "@/views/products/plan/components/plan-licenses/LicensePlanCards";
 import { LinkLicenseButton } from "@/views/products/plan/components/plan-licenses/LinkLicenseButton";
-import { PendingLicenseLinksProvider } from "@/views/products/plan/components/plan-licenses/PendingLicenseLinksContext";
+import {
+	PendingLicenseLinksProvider,
+	usePendingLicenseLinks,
+} from "@/views/products/plan/components/plan-licenses/PendingLicenseLinksContext";
 import { SheetPanelHost } from "@/views/products/plan/components/SheetPanelHost";
 import { ProductSheets } from "@/views/products/plan/ProductSheets";
 import { SHEET_ANIMATION } from "@/views/products/plan/planAnimations";
@@ -40,6 +42,9 @@ interface InlinePlanEditorProps {
 	/** Render the plan's license cards and collect edits into onSave's
 	 * `addLicenses` — only for flows whose payload supports a license patch. */
 	enableLicenseEditing?: boolean;
+	/** The flow's current license patch; re-seeds cards on reopen so earlier
+	 * edits aren't lost. */
+	initialAddLicenses?: CustomizePlanLicense[] | null;
 }
 
 export function InlinePlanEditor({
@@ -48,6 +53,7 @@ export function InlinePlanEditor({
 	onCancel,
 	isOpen,
 	enableLicenseEditing = false,
+	initialAddLicenses,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
 
@@ -69,7 +75,9 @@ export function InlinePlanEditor({
 		<AnimatePresence>
 			{isOpen && (
 				<InlineEditorProvider initialProduct={product}>
-					<LicenseCustomizeCollectorProvider>
+					<LicenseCustomizeCollectorProvider
+						initialPatches={initialAddLicenses}
+					>
 						<PendingLicenseLinksProvider>
 							<InlinePlanEditorContent
 								onSave={onSave}
@@ -101,7 +109,11 @@ function InlinePlanEditorContent({
 	const { sheetType } = useSheet();
 	const hasPlanChanges = useHasPlanChanges();
 	const collectorStore = useLicenseCollectorStore();
-	const hasLicenseChanges = useHasCollectedLicenseChanges();
+	const { pendingLicenseIds } = usePendingLicenseLinks();
+	// Staged links are primary state — don't depend solely on each card's
+	// effect having registered with the collector.
+	const hasLicenseChanges =
+		useHasCollectedLicenseChanges() || pendingLicenseIds.length > 0;
 	const hasChanges = hasPlanChanges || hasLicenseChanges;
 
 	const handleSave = () => {
@@ -144,7 +156,6 @@ function InlinePlanEditorContent({
 								<>
 									<LicensePlanCards />
 									<LinkLicenseButton />
-									<CreateLicenseButton />
 								</>
 							)}
 						</div>

@@ -1,3 +1,4 @@
+import type { InsertPlanLicenseSpec } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { CarryOverUsages } from "../../../api/billing/common/carryOverUsages";
 import type {
@@ -13,6 +14,7 @@ import type {
 import type { Entitlement } from "../../productModels/entModels/entModels";
 import type { Price } from "../../productModels/priceModels/priceModels";
 import type { FullProduct } from "../../productModels/productModels";
+import type { CustomerLicenseQuantity } from "../customerLicenseQuantity";
 
 export interface SyncProductContext {
 	plan: SyncPlanInstance;
@@ -20,6 +22,10 @@ export interface SyncProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	/** Requested total seat quantities per license plan (from license_quantities). */
+	customerLicenseQuantities?: CustomerLicenseQuantity[];
+	/** Custom license definitions (is_custom plan licenses) to persist. */
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 	/** Resolved per-plan entity scope (from plan.entity_id), if any. */
 	entity?: Entity;
 	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */

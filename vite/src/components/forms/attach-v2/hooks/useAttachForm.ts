@@ -20,6 +20,7 @@ export function useAttachForm({
 		defaultValues: {
 			productId: initialProductId || "",
 			prepaidOptions: initialPrepaidOptions ?? {},
+			licenseQuantities: {},
 			items: initialItems ?? null,
 			addLicenses: null,
 			isCustom: initialIsCustom ?? false,

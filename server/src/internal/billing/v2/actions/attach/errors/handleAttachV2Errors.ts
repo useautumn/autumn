@@ -17,11 +17,12 @@ import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
+import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
-import { handleLicenseCapacityErrors } from "./handleLicenseCapacityErrors";
+import { handleLicenseErrors } from "./handleLicenseErrors/handleLicenseErrors";
 import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
@@ -54,13 +55,18 @@ export const handleAttachV2Errors = async ({
 	// 1.2. Custom Payment Method errors (Vercel)
 	handleCustomPaymentMethodErrorsV2({ billingContext });
 
+	// 1.3. Seat-holding entities are managed through their license
+	handleEntityLicenseAssignmentErrors({
+		fullCustomer: billingContext.fullCustomer,
+	});
+
 	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
 
 	// 3. new_billing_subscription validation errors
 	handleNewBillingSubscriptionErrors({ billingContext, params });
 
-	// 4. Stripe checkout errors (multi-interval)
+	// 4. Stripe checkout errors
 	handleStripeCheckoutErrors({ billingContext, autumnBillingPlan });
 
 	// 5. Invoice mode errors (deferred + downgrade)
@@ -107,5 +113,5 @@ export const handleAttachV2Errors = async ({
 
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
 
-	handleLicenseCapacityErrors({ billingContext, autumnBillingPlan });
+	handleLicenseErrors({ billingContext, autumnBillingPlan });
 };

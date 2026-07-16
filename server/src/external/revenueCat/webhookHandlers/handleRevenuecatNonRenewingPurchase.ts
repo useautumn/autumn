@@ -35,7 +35,7 @@ export const handleNonRenewingPurchase = async ({
 		customerFingerprint: getRevenueCatCustomerFingerprint(event),
 	});
 
-	if (!oneOffOrAddOn({ product, prices: product.prices })) {
+	if (!oneOffOrAddOn({ product })) {
 		throw new RecaseError({
 			message: "Non-renewing purchase is not a one-off or add-on",
 			code: ErrCode.InvalidProductItem,

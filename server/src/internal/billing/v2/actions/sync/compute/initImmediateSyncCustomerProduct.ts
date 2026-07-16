@@ -38,7 +38,13 @@ export const initImmediateSyncCustomerProduct = ({
 	currentEpochMs: number;
 	existingUsagesConfig?: ExistingUsagesConfig;
 }): FullCusProduct => {
-	const { plan, fullProduct, featureQuantities, entity } = productContext;
+	const {
+		plan,
+		fullProduct,
+		featureQuantities,
+		customerLicenseQuantities,
+		entity,
+	} = productContext;
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({
@@ -54,6 +60,7 @@ export const initImmediateSyncCustomerProduct = ({
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
+			customerLicenseQuantities,
 			entity,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,

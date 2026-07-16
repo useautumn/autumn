@@ -13,6 +13,7 @@ import type {
 import { useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
+import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantityUtils";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
@@ -26,6 +27,7 @@ export interface BuildAttachRequestBodyParams {
 	entityId: string | undefined;
 	product: ProductV2 | undefined;
 	prepaidOptions: Record<string, number | undefined>;
+	licenseQuantities: Record<string, number | undefined>;
 	items: ProductItem[] | null;
 	addLicenses: CustomizePlanLicense[] | null;
 	grantFree: boolean;
@@ -60,6 +62,7 @@ export function buildAttachRequestBody({
 	entityId,
 	product,
 	prepaidOptions,
+	licenseQuantities,
 	items,
 	addLicenses,
 	grantFree,
@@ -112,6 +115,13 @@ export function buildAttachRequestBody({
 
 	if (options && options.length > 0) {
 		body.options = options;
+	}
+
+	const licenseQuantityParams = convertLicenseQuantitiesToParams({
+		licenseQuantities,
+	});
+	if (licenseQuantityParams) {
+		body.license_quantities = licenseQuantityParams;
 	}
 
 	if (items !== null) {
@@ -224,6 +234,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		entityId,
 		product,
 		prepaidOptions,
+		licenseQuantities,
 		items,
 		addLicenses,
 		grantFree,
@@ -259,6 +270,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				entityId,
 				product,
 				prepaidOptions,
+				licenseQuantities,
 				items,
 				addLicenses,
 				grantFree,
@@ -291,6 +303,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			entityId,
 			product,
 			prepaidOptions,
+			licenseQuantities,
 			items,
 			addLicenses,
 			grantFree,

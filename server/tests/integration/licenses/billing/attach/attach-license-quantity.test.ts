@@ -25,6 +25,7 @@ import type {
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { expectLicenseAttachPreviewCorrect } from "@tests/integration/licenses/utils/expectLicenseBillingPreviewCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -65,14 +66,22 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+		const attachParams: AttachParamsV1Input = {
 			customer_id: customerId,
 			plan_id: pro.id,
 			redirect_mode: "if_required",
 			license_quantities: [
 				{ license_plan_id: devSeat.id, quantity: REQUESTED_SEATS },
 			],
+		};
+		const preview =
+			await autumnV2_3.billing.previewAttach<AttachParamsV1Input>(attachParams);
+		expectLicenseAttachPreviewCorrect({
+			preview,
+			total: PAID_SEATS * DEV_SEAT_PRICE,
 		});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>(attachParams);
 
 		// ── Customer object: licenses field ──────────────────────────────
 		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);

@@ -177,7 +177,7 @@ export const handleCreateResource = createRoute({
 
 		try {
 			const requestedProduct = await loadProduct(billingPlanId);
-			const freeProduct = isFreeProduct({ prices: requestedProduct.prices })
+			const freeProduct = isFreeProduct({ product: requestedProduct })
 				? requestedProduct
 				: undefined;
 

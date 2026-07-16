@@ -1,9 +1,9 @@
 import { Card, CardContent, Separator } from "@autumn/ui";
 import type { ReactNode } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { useFeatureNavigation } from "../../hooks/useFeatureNavigation";
+import { usePastePlanItem } from "../../hooks/usePastePlanItem";
 import { PlanCardHeader } from "./PlanCardHeader";
 import { PlanFeatureList } from "./PlanFeatureList";
 
@@ -15,11 +15,8 @@ export default function PlanCard({
 	slim?: boolean;
 }) {
 	useFeatureNavigation();
+	usePastePlanItem();
 	const { sheetType } = useSheet();
-
-	useHotkeys("ctrl+s", () => {
-		console.log("Save");
-	});
 
 	return (
 		<Card

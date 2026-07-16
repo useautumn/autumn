@@ -172,7 +172,9 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	// License child products bill through their parents, so their prices need
 	// Stripe resources too. Price objects are shared refs — init mutates them.
-	const licenseProductsByInternalId = new Map<string, FullProduct>();
+	// Keyed per DEFINITION: a custom plan_license and the catalog link share a
+	// product internal_id but carry different price rows.
+	const licenseProductsByDefinition = new Map<string, FullProduct>();
 	for (const customerProduct of [
 		...insertCustomerProducts,
 		...fullCustomer.customer_products,
@@ -180,13 +182,19 @@ export const initStripeResourcesForBillingPlan = async ({
 		for (const customerLicense of customerProduct.customer_licenses ?? []) {
 			const licenseProduct = customerLicense.planLicense?.product;
 			if (!licenseProduct) continue;
-			licenseProductsByInternalId.set(
-				licenseProduct.internal_id,
+			licenseProductsByDefinition.set(
+				customerLicense.plan_license_id ?? licenseProduct.internal_id,
 				licenseProduct,
 			);
 		}
 	}
-	const licenseProducts = Array.from(licenseProductsByInternalId.values());
+	// Transitions carry incoming definitions no persisted row references yet.
+	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
+		const planLicense = transition.incomingCustomerLicense.planLicense;
+		if (!planLicense) continue;
+		licenseProductsByDefinition.set(planLicense.id, planLicense.product);
+	}
+	const licenseProducts = Array.from(licenseProductsByDefinition.values());
 
 	const targetProducts = [
 		...newProducts,

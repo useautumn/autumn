@@ -41,6 +41,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import { clampLicenseQuantitiesToIncluded } from "@/utils/billing/licenseQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
 import {
@@ -183,6 +184,7 @@ export function AttachFormProvider({
 	const {
 		productId,
 		prepaidOptions,
+		licenseQuantities,
 		items,
 		addLicenses,
 		version,
@@ -328,6 +330,7 @@ export function AttachFormProvider({
 		previousVersionRef.current = version;
 		form.setFieldValue("items", null);
 		form.setFieldValue("addLicenses", null);
+		form.setFieldValue("licenseQuantities", {});
 	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
@@ -347,6 +350,7 @@ export function AttachFormProvider({
 		if (isProductChange) {
 			form.setFieldValue("items", null);
 			form.setFieldValue("addLicenses", null);
+			form.setFieldValue("licenseQuantities", {});
 			form.setFieldValue("version", undefined);
 			form.setFieldValue("trialEnabled", false);
 			form.setFieldValue("trialLength", null);
@@ -427,6 +431,7 @@ export function AttachFormProvider({
 		entityId,
 		product: effectiveProduct,
 		prepaidOptions,
+		licenseQuantities,
 		items,
 		addLicenses,
 		grantFree,
@@ -547,6 +552,15 @@ export function AttachFormProvider({
 
 			if (editedAddLicenses) {
 				form.setFieldValue("addLicenses", editedAddLicenses);
+				// Seat totals are inclusive of included, so a customized included
+				// amount raises any staged total that fell below it.
+				form.setFieldValue(
+					"licenseQuantities",
+					clampLicenseQuantitiesToIncluded({
+						licenseQuantities: form.store.state.values.licenseQuantities,
+						upsertLicenses: editedAddLicenses,
+					}),
+				);
 			}
 
 			setShowPlanEditor(false);

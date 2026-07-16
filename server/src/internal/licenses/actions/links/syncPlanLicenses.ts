@@ -132,33 +132,6 @@ const resolveLink = async ({
 	};
 };
 
-/** A license plan may be offered by only one parent plan lineage. */
-const assertLicenseNotOwnedElsewhere = async ({
-	ctx,
-	parentProduct,
-	licensePlanId,
-}: {
-	ctx: AutumnContext;
-	parentProduct: FullProduct;
-	licensePlanId: string;
-}) => {
-	const parentPlanIds =
-		await planLicenseRepo.listCatalogParentPlanIdsByLicensePlanId({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			licensePlanId,
-		});
-	const otherParentId = parentPlanIds.find((id) => id !== parentProduct.id);
-	if (otherParentId) {
-		throw new RecaseError({
-			message: `License plan ${licensePlanId} is already offered by plan ${otherParentId}. A license can be offered by only one plan.`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-};
-
 /** A plan cannot drop below what customers are already using. */
 const assertCapacityAllowed = async ({
 	ctx,
@@ -237,18 +210,6 @@ export const preparePlanLicenseSync = async ({
 				entry,
 				licenseProducts,
 				pinnedInternalIdByPublicId,
-			}),
-		),
-	);
-	const newLinks = resolved.filter(
-		(link) => !pinnedInternalIdByPublicId.has(link.licenseProduct.id),
-	);
-	await Promise.all(
-		newLinks.map((link) =>
-			assertLicenseNotOwnedElsewhere({
-				ctx,
-				parentProduct,
-				licensePlanId: link.licenseProduct.id,
 			}),
 		),
 	);

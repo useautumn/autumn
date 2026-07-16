@@ -1,7 +1,6 @@
 import {
-	cusProductToPrices,
 	cusProductToProduct,
-	isFreeProduct,
+	isCustomerProductPaidRecurring,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -129,13 +128,7 @@ export const getCustomerSub = async ({
 	const targetProductId = attachParams.products[0].id;
 
 	const filteredCusProducts = cusProducts.filter((cp) => {
-		const prices = cusProductToPrices({ cusProduct: cp }) || [];
-
-		if (isOneOff(prices) || isFreeProduct({ prices })) {
-			return false;
-		}
-
-		return true;
+		return isCustomerProductPaidRecurring(cp);
 	});
 
 	filteredCusProducts.sort((a, b) => {

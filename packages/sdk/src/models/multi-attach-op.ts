@@ -329,7 +329,7 @@ export type MultiAttachPlanItem = {
 };
 
 /**
- * Customize the plan to attach. Can override the price or items.
+ * Customize the plan to attach. Can override the price, items, or licenses.
  */
 export type MultiAttachCustomize = {
   /**
@@ -366,7 +366,7 @@ export type MultiAttachPlan = {
    */
   planId: string;
   /**
-   * Customize the plan to attach. Can override the price or items.
+   * Customize the plan to attach. Can override the price, items, or licenses.
    */
   customize?: MultiAttachCustomize | undefined;
   /**
@@ -674,6 +674,10 @@ export type MultiAttachParams = {
    * Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.
    */
   freeTrial?: MultiAttachFreeTrialParams | null | undefined;
+  /**
+   * Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
+   */
+  currency?: string | undefined;
   /**
    * Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.
    */
@@ -1692,6 +1696,7 @@ export type MultiAttachParams$Outbound = {
   entity_id?: string | undefined;
   plans: Array<MultiAttachPlan$Outbound>;
   free_trial?: MultiAttachFreeTrialParams$Outbound | null | undefined;
+  currency?: string | undefined;
   invoice_mode?: MultiAttachInvoiceMode$Outbound | undefined;
   discounts?: Array<MultiAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
@@ -1715,6 +1720,7 @@ export const MultiAttachParams$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => MultiAttachFreeTrialParams$outboundSchema)),
     ),
+    currency: z.optional(z.string()),
     invoiceMode: z.optional(
       z.lazy(() => MultiAttachInvoiceMode$outboundSchema),
     ),

@@ -344,6 +344,24 @@ await autumn.plans.create({
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="licenses" type="object[]">
+  Plans offered as assignable licenses under this plan. The full set replaces existing links.
+  <Expandable title="properties">
+    <DynamicParamField body="license_plan_id" type="string" required />
+
+    <DynamicParamField body="included" type="integer" />
+
+    <DynamicParamField body="prepaid_only" type="boolean" />
+
+    <DynamicParamField body="metadata" type="object" />
+
+    <DynamicParamField body="version" type="integer">
+      Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="free_trial" type="object">
   Free trial configuration. Customers can try this plan before being charged.
   <Expandable title="properties">

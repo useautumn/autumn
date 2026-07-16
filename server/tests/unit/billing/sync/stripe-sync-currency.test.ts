@@ -8,7 +8,7 @@ import {
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { rollupMatchedPlans } from "@/internal/billing/v2/actions/sync/detect/rollupMatchedPlans";
+import { itemDiffsToMatchedPlans } from "@/internal/billing/v2/actions/sync/detect/itemDiffsToMatchedPlans/itemDiffsToMatchedPlans";
 import type { ItemDiff } from "@/internal/billing/v2/actions/sync/detect/types";
 import { syncContextHasPaidProduct } from "@/internal/billing/v2/actions/sync/utils/syncContextUtils";
 import { autumnBasePriceToStripePriceShape } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/autumnPriceShape";
@@ -183,7 +183,7 @@ const itemDiff = ({
 
 describe("Stripe sync base rollup", () => {
 	test("keeps an exact source Price ID as a catalog match", () => {
-		const [plan] = rollupMatchedPlans({
+		const [plan] = itemDiffsToMatchedPlans({
 			itemDiffs: [itemDiff({ exact: true })],
 		});
 
@@ -192,7 +192,7 @@ describe("Stripe sync base rollup", () => {
 	});
 
 	test("preserves a shape-matched source as a JPY quarterly custom base", () => {
-		const [plan] = rollupMatchedPlans({
+		const [plan] = itemDiffsToMatchedPlans({
 			itemDiffs: [itemDiff({ exact: false })],
 		});
 
@@ -207,7 +207,7 @@ describe("Stripe sync base rollup", () => {
 	});
 
 	test("does not coerce a missing Stripe amount to zero", () => {
-		const [plan] = rollupMatchedPlans({
+		const [plan] = itemDiffsToMatchedPlans({
 			itemDiffs: [
 				itemDiff({
 					exact: false,
