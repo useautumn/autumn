@@ -93,6 +93,9 @@
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
 		},
+		"packages/ui": {
+			"entry": [".design-sync/ds-table-entry.tsx"]
+		},
 		"packages/stripe-sync": {
 			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
