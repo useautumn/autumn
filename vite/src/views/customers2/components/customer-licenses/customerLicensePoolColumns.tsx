@@ -1,13 +1,18 @@
-import { Badge } from "@autumn/ui";
+import type { ProductV2 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
-import { nameWithIconSkeleton } from "@/components/general/table";
+import {
+	hiddenSkeleton,
+	nameWithIconSkeleton,
+} from "@/components/general/table";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
+import { LicensePlanPrice } from "./LicensePlanPrice";
 
 export interface CustomerLicensePoolRow {
 	id: string;
+	licensePlanId: string | null;
 	name: string;
-	parentPlanName: string;
+	product: ProductV2 | null;
 	remaining: number;
 	granted: number;
 	paidQuantity: number;
@@ -16,7 +21,19 @@ export interface CustomerLicensePoolRow {
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 
-export const customerLicensePoolColumns = [
+/** Mirrors the plans table's Scope column so both tables' flexible columns
+ * resolve to identical widths. License pools are always customer-scoped. */
+const scopeColumn = {
+	header: "Scope",
+	accessorKey: "scope",
+	cell: () => <span className="text-muted-foreground">Customer</span>,
+};
+
+export const createCustomerLicensePoolColumns = ({
+	hasEntities,
+}: {
+	hasEntities: boolean;
+}) => [
 	{
 		header: "Name",
 		accessorKey: "name",
@@ -29,33 +46,36 @@ export const customerLicensePoolColumns = [
 			</div>
 		),
 	},
+	...(hasEntities ? [scopeColumn] : []),
 	{
-		header: "Plan",
-		accessorKey: "parentPlanName",
-		size: 150,
-		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
-			<span className="text-tertiary-foreground">
-				{row.original.parentPlanName}
-			</span>
-		),
+		header: "Price",
+		accessorKey: "price",
+		size: 120,
+		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => {
+			const { product, granted, paidQuantity } = row.original;
+			return (
+				<LicensePlanPrice
+					product={product}
+					includedQuantity={granted - paidQuantity}
+					paidQuantity={paidQuantity}
+				/>
+			);
+		},
 	},
 	{
-		header: "Seats",
-		accessorKey: "remaining",
-		size: 180,
+		header: "Status",
+		accessorKey: "status",
+		size: 110,
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => {
-			const { remaining, granted, paidQuantity } = row.original;
+			const { remaining, granted } = row.original;
 			return (
-				<div className="flex items-baseline gap-2 truncate">
-					<div className="flex items-baseline gap-1">
-						<span className="text-foreground">{formatNumber(remaining)}</span>
-						<span className="text-subtle">/ {formatNumber(granted)} left</span>
-					</div>
-					{paidQuantity > 0 && (
-						<Badge variant="muted" size="sm" className="shrink-0">
-							{formatNumber(paidQuantity)} paid
-						</Badge>
-					)}
+				<div className="flex items-baseline gap-1 truncate">
+					<span className="text-muted-foreground">
+						{formatNumber(granted - remaining)}
+					</span>
+					<span className="text-subtle">
+						/ {formatNumber(granted)} assigned
+					</span>
 				</div>
 			);
 		},
@@ -67,5 +87,14 @@ export const customerLicensePoolColumns = [
 			withYear: true,
 		}),
 		size: 150,
+	},
+	{
+		id: "actions",
+		header: "",
+		size: 40,
+		meta: { skeleton: hiddenSkeleton },
+		// Spacer matching the plans table's actions column so both tables'
+		// flexible columns resolve to identical widths.
+		cell: () => null,
 	},
 ];

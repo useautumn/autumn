@@ -1,25 +1,33 @@
-import type { ApiCustomerLicenseV0 } from "@autumn/shared";
+import type { ApiCustomerLicenseV0, ProductV2 } from "@autumn/shared";
 import { DropdownMenuItem } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
+import { CheckIcon } from "lucide-react";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
+	statusSkeleton,
 	TableDropdownMenuCell,
 } from "@/components/general/table";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
+import { LicensePlanPrice } from "./LicensePlanPrice";
 
 export interface LicenseAssignmentRow {
 	id: string;
 	name: string;
+	product: ProductV2 | null;
 	started_at: number;
 	pool: ApiCustomerLicenseV0;
 }
 
 export const createCustomerLicenseColumns = ({
 	onUnassign,
+	entityName,
 }: {
 	onUnassign: (row: LicenseAssignmentRow) => void;
+	/** Shown in a Scope column mirroring the plans table's; omit when the
+	 * customer has no entities (the plans table drops Scope too). */
+	entityName?: string;
 }) => [
 	{
 		header: "Name",
@@ -33,18 +41,46 @@ export const createCustomerLicenseColumns = ({
 			</div>
 		),
 	},
+	...(entityName !== undefined
+		? [
+				{
+					header: "Scope",
+					accessorKey: "scope",
+					cell: () => (
+						<span className="text-muted-foreground truncate">{entityName}</span>
+					),
+				},
+			]
+		: []),
 	{
-		header: "Availability",
-		accessorKey: "availability",
-		size: 150,
+		header: "Price",
+		accessorKey: "price",
+		size: 120,
 		cell: ({ row }: { row: Row<LicenseAssignmentRow> }) => {
-			const { remaining, granted } = row.original.pool;
+			const { product, pool } = row.original;
 			return (
-				<span className="text-tertiary-foreground">
-					{remaining} of {granted} available
-				</span>
+				<LicensePlanPrice
+					product={product}
+					includedQuantity={pool.granted - pool.paid_quantity}
+					paidQuantity={pool.paid_quantity}
+				/>
 			);
 		},
+	},
+	{
+		header: "Status",
+		accessorKey: "status",
+		size: 110,
+		meta: { skeleton: statusSkeleton },
+		cell: () => (
+			<div className="flex items-center gap-1.5">
+				<CheckIcon
+					className="text-white rounded-full p-0.5 bg-green-500 dark:bg-green-600"
+					size={12}
+				/>
+				<span className="text-sm">Assigned</span>
+			</div>
+		),
 	},
 	{
 		...createDateTimeColumn<LicenseAssignmentRow>({
