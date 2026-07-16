@@ -1,10 +1,10 @@
 import type {
 	AutumnBillingPlan,
-	CustomerLicenseUpdate,
 	LineItem,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
 import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCustomerLicense";
 import { customerLicenseToLineItems } from "@/internal/billing/v2/utils/lineItems/customerLicenseToLineItems";
 
@@ -23,25 +23,13 @@ export const computeUpdateLicenseQuantityPlan = ({
 	const { customerProduct, customerLicenseQuantities } =
 		updateSubscriptionContext;
 
-	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
 	const lineItems: LineItem[] = [];
+	const changes = computeCustomerLicenseQuantityChanges({
+		customerProduct,
+		customerLicenseQuantities,
+	});
 
-	for (const quantity of customerLicenseQuantities ?? []) {
-		const customerLicense = customerProduct.customer_licenses?.find(
-			(pool) => pool.planLicense?.product.id === quantity.licensePlanId,
-		);
-		if (!customerLicense) continue;
-
-		const included = customerLicense.granted - customerLicense.paid_quantity;
-		const paidQuantity = Math.max(0, quantity.totalQuantity - included);
-		if (paidQuantity === customerLicense.paid_quantity) continue;
-
-		customerLicenseUpdates.push({
-			customerLicenseId: customerLicense.id,
-			remainingChange: 0,
-			paidQuantity,
-		});
-
+	for (const { customerLicense, paidQuantity } of changes) {
 		lineItems.push(
 			...customerLicenseToLineItems({
 				ctx,
@@ -68,7 +56,7 @@ export const computeUpdateLicenseQuantityPlan = ({
 		insertCustomerProducts: [],
 		customPrices: [],
 		customEntitlements: [],
-		customerLicenseUpdates,
+		customerLicenseUpdates: changes.map(({ update }) => update),
 		lineItems,
 	};
 };

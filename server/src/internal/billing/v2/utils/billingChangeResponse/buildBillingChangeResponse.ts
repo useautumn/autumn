@@ -24,10 +24,12 @@ export const buildBillingChangeResponse = ({
 
 	return BillingChangeResponseSchema.parse({
 		object: "billing.updated",
-		customer_id:
-			originalFullCustomer.id ?? originalFullCustomer.internal_id,
+		customer_id: originalFullCustomer.id ?? originalFullCustomer.internal_id,
 		...(entityId !== undefined ? { entity_id: entityId } : {}),
-		plan_changes: buildPlanChanges({ autumnBillingPlan }),
+		plan_changes: buildPlanChanges({
+			autumnBillingPlan,
+			originalFullCustomer,
+		}),
 		tags,
 	});
 };

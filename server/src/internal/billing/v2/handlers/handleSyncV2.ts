@@ -12,7 +12,7 @@ export const handleSyncV2 = createRoute({
 		const result = await billingActions.syncV2({
 			ctx,
 			params: body,
-			webhook: { tags: ["resync"] },
+			tags: ["resync"],
 		});
 
 		return c.json(result, 200);
