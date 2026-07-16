@@ -41,21 +41,26 @@ const emissions: Emission[] = [];
 const actualSvixHelpers = await import("@/external/svix/svixHelpers.js");
 
 // Intercept the Svix transport so we can observe DB state at emission time.
-// Everything upstream (webhook builder, ordering, payload) stays real.
+// Everything upstream (webhook builder, ordering, payload) stays real, and the
+// call is forwarded to the real transport — bun module mocks are process-global
+// with no restore, so swallowing the send would break any later test file in
+// the same process that emits svix events in-process (e.g. the product cron).
+//
+// The snapshot read starts after emission, so a regression that persists the
+// Stripe id within the read's ~10ms could in principle false-green — in
+// practice the buggy ordering emits a full Stripe API roundtrip (~100ms+)
+// before the id is written, so red stays reliably red.
 mock.module("@/external/svix/svixHelpers.js", () => ({
 	...actualSvixHelpers,
-	sendSvixEvent: async ({
-		ctx,
-		eventType,
-		data,
-	}: Parameters<typeof actualSvixHelpers.sendSvixEvent>[0]) => {
+	sendSvixEvent: async (
+		args: Parameters<typeof actualSvixHelpers.sendSvixEvent>[0],
+	) => {
+		const { ctx, eventType, data } = args;
 		const customerId = (data as { customer_id?: string })?.customer_id;
 
 		let stripeIdAtEmission: string | null = null;
 		try {
-			const { CusService } = await import(
-				"@/internal/customers/CusService.js"
-			);
+			const { CusService } = await import("@/internal/customers/CusService.js");
 			const row = await CusService.get({
 				db: ctx.db,
 				idOrInternalId: customerId ?? "",
@@ -68,6 +73,8 @@ mock.module("@/external/svix/svixHelpers.js", () => ({
 		}
 
 		emissions.push({ eventType, customerId, stripeIdAtEmission });
+
+		return actualSvixHelpers.sendSvixEvent(args);
 	},
 }));
 

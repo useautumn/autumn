@@ -64,9 +64,54 @@ export const createCustomerWithDefaults = async ({
 	// Early return if customer already existed or no paid products
 	if (autumnResult.type === "existing") return context.fullCustomer;
 
-	// Webhook consumers call customers.get on receipt, so emission must wait
-	// until the Stripe customer id (when one is created) is persisted.
-	const queueCreatedWebhooks = async () => {
+	// ============ Phase 2: Create stripe customer / attach paid defaults ============
+
+	// Webhook consumers call customers.get on receipt, so emission waits until
+	// the Stripe customer id (when one is created) is persisted. Emitted in the
+	// finally: phase 1 is committed either way, and a phase-2 throw must not
+	// drop the webhooks — a client retry lands on the "existing" path above and
+	// would never emit them.
+	try {
+		// 4. Setup billing context (creates Stripe customer)
+
+		const shouldCreateStripeCustomer =
+			customerData?.create_in_stripe || context.hasPaidProducts;
+
+		const shouldAttachPaidDefaults = context.hasPaidProducts;
+
+		if (!shouldCreateStripeCustomer) return context.fullCustomer;
+
+		const billingContext = await setupCreateCustomerBillingContext({
+			ctx,
+			context,
+		});
+
+		if (!shouldAttachPaidDefaults) return context.fullCustomer;
+
+		// 5. Evaluate Stripe billing plan
+		const stripeBillingPlan = await evaluateStripeBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+
+		logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
+
+		// 6. Execute Stripe billing plan
+		const { stripeSubscription } = await executeStripeBillingPlan({
+			ctx,
+			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
+			billingContext,
+		});
+
+		// 7. Finalize (link subscription back to Autumn)
+		return await finalizeCreateCustomer({
+			ctx,
+			context,
+			autumnBillingPlan,
+			stripeSubscription,
+		});
+	} finally {
 		await billingPlanToSendProductsUpdated({
 			ctx,
 			autumnBillingPlan,
@@ -79,57 +124,5 @@ export const createCustomerWithDefaults = async ({
 			autumnBillingPlan,
 			originalFullCustomer: context.fullCustomer,
 		});
-	};
-
-	// ============ Phase 2: Create stripe customer / attach paid defaults ============
-
-	// 4. Setup billing context (creates Stripe customer)
-
-	const shouldCreateStripeCustomer =
-		customerData?.create_in_stripe || context.hasPaidProducts;
-
-	const shouldAttachPaidDefaults = context.hasPaidProducts;
-
-	if (!shouldCreateStripeCustomer) {
-		await queueCreatedWebhooks();
-		return context.fullCustomer;
 	}
-
-	const billingContext = await setupCreateCustomerBillingContext({
-		ctx,
-		context,
-	});
-
-	if (!shouldAttachPaidDefaults) {
-		await queueCreatedWebhooks();
-		return context.fullCustomer;
-	}
-
-	// 5. Evaluate Stripe billing plan
-	const stripeBillingPlan = await evaluateStripeBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-	});
-
-	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
-
-	// 6. Execute Stripe billing plan
-	const { stripeSubscription } = await executeStripeBillingPlan({
-		ctx,
-		billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
-		billingContext,
-	});
-
-	// 7. Finalize (link subscription back to Autumn)
-	const finalizedCustomer = await finalizeCreateCustomer({
-		ctx,
-		context,
-		autumnBillingPlan,
-		stripeSubscription,
-	});
-
-	await queueCreatedWebhooks();
-
-	return finalizedCustomer;
 };
