@@ -85,7 +85,7 @@ export const pendingPlanLicense = ({
 	id: `pending-${licenseId}`,
 	parent_plan_id: parentPlanId,
 	license_plan_id: licenseId,
-	included: 1,
+	included: 0,
 	prepaid_only: true,
 	customize: null,
 	metadata: null,
