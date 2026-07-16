@@ -1,11 +1,11 @@
 /**
  * Regression coverage for customer-scoped migration serialization.
  *
- * Pre-fix: two migration definitions can load the same customer snapshot and
+ * Pre-fix: five migration definitions can load the same customer snapshot and
  * each replace the same customer product, leaving duplicate active products
  * and duplicated balances.
  * Post-fix: live migrations serialize before loading customer state, so the
- * second definition observes the first definition's completed update.
+ * four followers observe the first definition's completed update.
  */
 
 import { expect, test } from "bun:test";
@@ -39,7 +39,7 @@ const timeout = (milliseconds: number) =>
 	new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 test.concurrent(
-	`${chalk.yellowBright("migrations idempotency: different definitions cannot replace one customer from the same snapshot")}`,
+	`${chalk.yellowBright("migrations idempotency: five definitions cannot replace one customer from the same snapshot")}`,
 	async () => {
 		const customerId = "migration-cross-definition-idempotency";
 		const plan = products.base({
@@ -89,15 +89,18 @@ test.concurrent(
 			return { ...migration, prepared_state: preparedState };
 		};
 
-		const firstMigration = await prepareMigration({
-			migrationId: `${customerId}-first`,
-		});
-		const secondMigration = await prepareMigration({
-			migrationId: `${customerId}-second`,
-		});
+		const migrations: Awaited<ReturnType<typeof prepareMigration>>[] = [];
+		for (let index = 0; index < 5; index++) {
+			migrations.push(
+				await prepareMigration({
+					migrationId: `${customerId}-${index + 1}`,
+				}),
+			);
+		}
+		const [firstMigration, ...followerMigrations] = migrations;
 		const firstContextLoaded = createDeferred<void>();
 		const releaseFirstMigration = createDeferred<void>();
-		const secondContextLoaded = createDeferred<void>();
+		let followerContextsLoaded = 0;
 
 		const firstResult = migrateCustomer({
 			ctx,
@@ -113,29 +116,35 @@ test.concurrent(
 		});
 		await firstContextLoaded.promise;
 
-		const secondResult = migrateCustomer({
-			ctx,
-			customerId,
-			migration: secondMigration,
-			hooks: {
-				aroundMigrateCustomer: ({ run }) => {
-					secondContextLoaded.resolve(undefined);
-					return run();
+		const followerResults = followerMigrations.map((migration) =>
+			migrateCustomer({
+				ctx,
+				customerId,
+				migration,
+				hooks: {
+					aroundMigrateCustomer: ({ run }) => {
+						followerContextsLoaded++;
+						return run();
+					},
 				},
-			},
-		});
+			}),
+		);
 
 		try {
-			await Promise.race([secondContextLoaded.promise, timeout(250)]);
+			await timeout(250);
+			expect(followerContextsLoaded).toBe(0);
 		} finally {
 			releaseFirstMigration.resolve(undefined);
 		}
-		const [firstMigrationResult, secondMigrationResult] = await Promise.all([
-			firstResult,
-			secondResult,
-		]);
+		const [firstMigrationResult, ...followerMigrationResults] =
+			await Promise.all([firstResult, ...followerResults]);
 		expect(firstMigrationResult.status).toBe("succeeded");
-		expect(secondMigrationResult.status).toBe("skipped");
+		expect(followerMigrationResults.map((result) => result.status)).toEqual([
+			"skipped",
+			"skipped",
+			"skipped",
+			"skipped",
+		]);
 
 		const activeCustomerProducts = await ctx.db
 			.select({ id: customerProducts.id })
