@@ -10,6 +10,8 @@ export const productRelations = relations(products, ({ many, one }) => ({
 	entitlements: many(entitlements),
 	prices: many(prices),
 	licenses: many(planLicenses, { relationName: "parentProductLicenses" }),
+	// Links where this product is offered as a license under a parent plan.
+	parent_plan_licenses: many(planLicenses, { relationName: "licenseProduct" }),
 
 	free_trials: many(freeTrials),
 	org: one(organizations, {

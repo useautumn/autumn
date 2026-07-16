@@ -4,8 +4,9 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { customerTouchesLicenses } from "../../repos/customerLicenseRepo/customerTouchesLicenses.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
+import { expireUnusedAssignments } from "./expireUnusedAssignments.js";
 import { reconcileCustomerLicenseBalances } from "./reconcileCustomerLicenseBalances/reconcileCustomerLicenseBalances.js";
-import { reparentCustomerLicenses } from "./reparentCustomerLicenses/reparentCustomerLicenses.js";
+// import { reparentCustomerLicenses } from "./reparentCustomerLicenses/reparentCustomerLicenses.js";
 import { setupReconcileContext } from "./setupReconcileContext.js";
 import type { CustomerLicenseState } from "./types.js";
 
@@ -51,8 +52,10 @@ export const reconcileLicenseStateForCustomer = async ({
 			ctx,
 			fullCustomer: customer,
 		});
-		await reparentCustomerLicenses({ ctx, context });
+		// Reparent is paused while sync-driven transitions settle.
+		// await reparentCustomerLicenses({ ctx, context });
 		await reconcileCustomerLicenseBalances({ ctx, context });
+		await expireUnusedAssignments({ ctx, context });
 
 		logLicenseAction({
 			ctx,

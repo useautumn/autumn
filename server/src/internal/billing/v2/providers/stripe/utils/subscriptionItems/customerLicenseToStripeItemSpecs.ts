@@ -4,6 +4,7 @@ import type {
 	StripeItemSpec,
 } from "@autumn/shared";
 import { customerLicenseToUnusedPrepaidRows } from "@/internal/billing/v2/utils/lineItems/customerLicenseToUnusedPrepaidRows";
+import { resolveLicenseBillingRowsThroughDefinition } from "@/internal/billing/v2/utils/lineItems/resolveLicenseBillingRowsThroughDefinition";
 import { licenseBillingRowToStripeItemSpec } from "../stripeItemSpec/licenseBillingRowToStripeItemSpec";
 
 /**
@@ -19,14 +20,20 @@ export const customerLicenseToStripeItemSpecs = ({
 	billingContext: BillingContext;
 	customerLicense: FullCustomerLicense;
 }): StripeItemSpec[] => {
-	if (!customerLicense.planLicense) return [];
+	const planLicense = customerLicense.planLicense;
+	if (!planLicense) return [];
 
 	const seatRows = (
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
 
+	// Desired state prices seats through the pool's (possibly repointed)
+	// definition — the read-time twin of the seat repoint executor.
 	const licenseBillingRows = [
-		...seatRows,
+		...resolveLicenseBillingRowsThroughDefinition({
+			licenseBillingRows: seatRows,
+			planLicense,
+		}),
 		...customerLicenseToUnusedPrepaidRows({ customerLicense }),
 	];
 

@@ -20,7 +20,8 @@ export const computeUpdateQuantityPlan = ({
 	// one-off), so filter them out here before computeUpdateQuantityDetails.
 	const newOptions = featureQuantities.filter((option) => {
 		const cusPrice = customerProduct.customer_prices.find(
-			(cp) => cp.price.config.internal_feature_id === option.internal_feature_id,
+			(cp) =>
+				cp.price.config.internal_feature_id === option.internal_feature_id,
 		);
 		return cusPrice ? !isOneOffPrice(cusPrice.price) : true;
 	});

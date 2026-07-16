@@ -8,6 +8,8 @@ import { AppEnv } from "../genModels/genEnums";
 import {
 	type FullPlanLicense,
 	FullPlanLicenseSchema,
+	type ParentPlanLicense,
+	ParentPlanLicenseSchema,
 } from "../licenseModels/fullPlanLicenseModel";
 import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
@@ -83,12 +85,17 @@ export type FullProductWithoutLicenses = z.infer<
 
 export type FullProduct = FullProductWithoutLicenses & {
 	licenses?: FullPlanLicense[];
+	/** Catalog links where THIS product is the license; product = parent plan. */
+	parent_plan_licenses?: ParentPlanLicense[];
 };
 
 export const FullProductSchema: z.ZodType<FullProduct> =
 	FullProductWithoutLicensesSchema.extend({
 		// Lazy: breaks the init cycle with fullPlanLicenseModel (TDZ-safe).
 		licenses: z.array(z.lazy(() => FullPlanLicenseSchema)).optional(),
+		parent_plan_licenses: z
+			.array(z.lazy(() => ParentPlanLicenseSchema))
+			.optional(),
 	});
 
 export type ProductCounts = {

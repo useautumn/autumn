@@ -8,7 +8,8 @@ const formatPhase = ({
 }: {
 	startsAt: number;
 	productCount: number;
-}) => `${formatMs(startsAt)} (${productCount} plan${productCount === 1 ? "" : "s"})`;
+}) =>
+	`${formatMs(startsAt)} (${productCount} plan${productCount === 1 ? "" : "s"})`;
 
 export const logSyncContext = ({
 	ctx,
@@ -72,9 +73,7 @@ export const logSyncContext = ({
 						const expire = pc.currentCustomerProduct
 							? ` expire=${pc.currentCustomerProduct.id}`
 							: "";
-						const entity = pc.entity
-							? ` entity=${pc.entity.internal_id}`
-							: "";
+						const entity = pc.entity ? ` entity=${pc.entity.internal_id}` : "";
 						return `${pc.fullProduct.id}${customize}${expire}${entity}`;
 					})
 					.join(" | "),

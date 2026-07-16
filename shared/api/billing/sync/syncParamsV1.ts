@@ -1,3 +1,4 @@
+import { LicenseQuantityParamsSchema } from "@api/billing/common/licenseQuantityParams";
 import { MultiPlanInstanceSchema } from "@api/billing/common/multi/multiPlanInstance";
 import { z } from "zod/v4";
 import {
@@ -6,10 +7,7 @@ import {
 } from "../common/customizePlan/customizePlanV1";
 
 const SyncCustomizePlanSchema = refineCustomizePlanV1Schema(
-	CustomizePlanV1BaseSchema.omit({
-		upsert_licenses: true,
-	}).strict(),
-	{ includeLicenses: false },
+	CustomizePlanV1BaseSchema.strict(),
 );
 
 /**
@@ -38,6 +36,10 @@ export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.omit({
 	enable_plan_immediately: z.boolean().optional().meta({
 		description:
 			"If true for a future schedule-only sync plan, grant access immediately while billing still starts at the phase starts_at.",
+	}),
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+		description:
+			"Total seat quantities (inclusive of the catalog link's included count) per license plan offered by this plan. Same semantics as attach.",
 	}),
 });
 

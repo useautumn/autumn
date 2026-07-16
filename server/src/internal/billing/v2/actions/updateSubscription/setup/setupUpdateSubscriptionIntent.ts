@@ -24,11 +24,16 @@ export const setupUpdateSubscriptionIntent = ({
 	const featureQuantitiesParams = params.feature_quantities ?? [];
 
 	const itemsChanged = hasCustomItems(params.customize);
+	const licensesChanged = params.customize?.upsert_licenses !== undefined;
 	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = params.customize?.free_trial !== undefined;
 
-	if (itemsChanged || versionChanged || freeTrialChanged)
+	if (itemsChanged || licensesChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;
+
+	// Seat-count-only changes converge the pool in place — no plan restructure.
+	if (params.license_quantities?.length)
+		return UpdateSubscriptionIntent.UpdateLicenseQuantity;
 
 	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know
 	// this isn't a plan restructure, any feature_quantities entry targeting a

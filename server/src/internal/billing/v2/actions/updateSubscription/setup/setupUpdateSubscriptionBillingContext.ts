@@ -1,18 +1,19 @@
 import {
 	BillingVersion,
-	ErrCode,
 	hasCustomItems,
 	orgDisableStripeWrites,
-	RecaseError,
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
+import { setupUpdateLicenseQuantities } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateLicenseQuantities";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
+import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
@@ -33,27 +34,13 @@ import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTr
 
 const FIELDS_WITH_BILLING_CHANGES = [
 	"feature_quantities",
+	"license_quantities",
 	"version",
 	"customize",
 	"cancel_action",
 	"billing_cycle_anchor",
 	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
-
-/** License customize is attach-only for now; fail loudly instead of ignoring. */
-const rejectLicenseCustomize = ({
-	params,
-}: {
-	params: UpdateSubscriptionV1Params;
-}) => {
-	if (params.customize?.upsert_licenses === undefined) return;
-	throw new RecaseError({
-		message:
-			"customize.upsert_licenses is not supported on subscription updates yet; use billing.attach.",
-		code: ErrCode.InvalidRequest,
-		statusCode: 400,
-	});
-};
 
 /**
  * Fetch the context for updating a subscription
@@ -79,12 +66,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			params,
 		}));
 
+	// Before product resolution: a seat-holding entity's plan is managed
+	// through its license, never updated directly.
+	handleEntityLicenseAssignmentErrors({ fullCustomer });
+
 	const {
 		customerProduct,
 		fullProduct,
 		patchContext,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
+		customerLicenseQuantities: productContextLicenseQuantities,
 		isUpdatingFreeCustomerProduct,
 	} = await setupUpdateSubscriptionProductContext({
 		ctx,
@@ -102,7 +95,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
-	rejectLicenseCustomize({ params });
+	const customerLicenseQuantities =
+		productContextLicenseQuantities ??
+		setupUpdateLicenseQuantities({ params, fullProduct, customerProduct });
+
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
 	const billingRelatedFields = Object.keys(params).filter((key) =>
 		FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
@@ -266,6 +264,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		invoiceMode,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
+		customerLicenseQuantities,
+		customerLicenseBillingContext,
+		insertPlanLicenses,
 
 		customPrices,
 		customEnts,

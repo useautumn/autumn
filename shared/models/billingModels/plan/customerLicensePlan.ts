@@ -55,5 +55,8 @@ export const CustomerLicenseUpdateSchema = z.object({
 	customerLicenseId: z.string().optional(),
 	customerLicenseLinkId: z.string().nullish(),
 	remainingChange: z.number(),
+	/** Absolute paid-seat count to converge the pool to (idempotent);
+	 * granted shifts with it and remaining follows, floored at zero. */
+	paidQuantity: z.number().optional(),
 });
 export type CustomerLicenseUpdate = z.infer<typeof CustomerLicenseUpdateSchema>;

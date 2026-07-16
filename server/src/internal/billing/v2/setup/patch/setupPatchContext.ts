@@ -1,4 +1,5 @@
 import {
+	type CustomizePlanV1,
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullProduct,
@@ -81,14 +82,30 @@ export const setupPatchContext = ({
 	customerProduct,
 	fullProduct,
 	reusePricesAndEntitlements,
+	includeUpsertLicenses = false,
 }: {
 	ctx: SharedContext;
 	params: UpdateSubscriptionV1Params;
 	customerProduct: FullCusProduct;
 	fullProduct: FullProduct;
 	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
+	/** Treat upsert_licenses as patch-style: pools repoint on the same row. */
+	includeUpsertLicenses?: boolean;
 }): PatchContext | undefined => {
-	if (!isCustomizePlanPatchStyle(params.customize)) return undefined;
+	// Version changes replace the row anyway — upsert-only + version rides
+	// the expire+insert path, where transitions carry the pool across rows.
+	const upsertsLicenses =
+		includeUpsertLicenses &&
+		params.version === undefined &&
+		(params.customize?.upsert_licenses?.length ?? 0) > 0;
+	// The guard also narrows: upsert-only customize is patch-shaped too (no
+	// item fields), it just fails the classifier's presence checks.
+	const customize = isCustomizePlanPatchStyle(params.customize)
+		? params.customize
+		: upsertsLicenses
+			? ((params.customize ?? {}) as CustomizePlanV1)
+			: undefined;
+	if (!customize) return undefined;
 
 	const mode =
 		params.version !== undefined &&
@@ -109,7 +126,7 @@ export const setupPatchContext = ({
 		customerProduct: finalCustomerProduct,
 	});
 
-	if (mode === "new" && params.customize?.price === undefined) {
+	if (mode === "new" && customize.price === undefined) {
 		applyProductBasePriceToCustomerProduct({
 			fullProduct,
 			customerProduct: finalCustomerProduct,
@@ -120,7 +137,7 @@ export const setupPatchContext = ({
 		customerPrices: deleteCustomerPrices,
 		customerEntitlements: deleteCustomerEntitlements,
 	} = handleCustomizeDeleteItems({
-		customize: params.customize,
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 	});
 
@@ -131,7 +148,7 @@ export const setupPatchContext = ({
 		entitlements: updateNewEntitlements,
 		carryLinks: updateItemCarryLinks,
 	} = handleCustomizeUpdateItems({
-		customize: params.customize ?? {},
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 		features: ctx.features,
 	});
@@ -157,14 +174,14 @@ export const setupPatchContext = ({
 		prices: customPricePrices,
 	} = handleCustomizePrice({
 		ctx,
-		customize: params.customize,
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 		fullProduct: patchFullProduct,
 		reusePricesAndEntitlements,
 	});
 
 	const { addItems: nonNoopAddItems } = handleCustomizeNoopItems({
-		customize: params.customize,
+		customize,
 		targetCustomerProduct: finalCustomerProduct,
 		features: ctx.features,
 	});
@@ -172,7 +189,7 @@ export const setupPatchContext = ({
 	const { prices: customItemPrices, entitlements: customEntitlements } =
 		handleCustomizeAddItems({
 			ctx,
-			customize: { ...params.customize, add_items: nonNoopAddItems },
+			customize: { ...customize, add_items: nonNoopAddItems },
 			fullProduct: patchFullProduct,
 			reusePricesAndEntitlements,
 		});

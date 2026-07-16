@@ -10,7 +10,6 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 
 const licenseProducts = alias(products, "license_products");
-const parentProducts = alias(products, "parent_products");
 
 const upsert = async ({
 	db,
@@ -164,41 +163,6 @@ const listCatalogByOrgEnv = async ({
 	return rows.map(({ row }) => row);
 };
 
-/** Distinct parent plan (public) ids holding catalog links to any version of
- * the given license plan — the one-to-one ownership lookup. */
-const listCatalogParentPlanIdsByLicensePlanId = async ({
-	db,
-	orgId,
-	env,
-	licensePlanId,
-}: {
-	db: DrizzleCli;
-	orgId: string;
-	env: AppEnv;
-	licensePlanId: string;
-}): Promise<string[]> => {
-	const rows = await db
-		.selectDistinct({ parentPlanId: parentProducts.id })
-		.from(planLicenses)
-		.innerJoin(
-			licenseProducts,
-			eq(planLicenses.license_internal_product_id, licenseProducts.internal_id),
-		)
-		.innerJoin(
-			parentProducts,
-			eq(planLicenses.parent_internal_product_id, parentProducts.internal_id),
-		)
-		.where(
-			and(
-				eq(licenseProducts.id, licensePlanId),
-				eq(licenseProducts.org_id, orgId),
-				eq(licenseProducts.env, env),
-				eq(planLicenses.is_custom, false),
-			),
-		);
-	return rows.map((row) => row.parentPlanId);
-};
-
 const insertMany = async ({
 	db,
 	rows,
@@ -231,7 +195,6 @@ export const planLicenseRepo = {
 	listCatalogByParentInternalProductIds,
 	listCatalogByLicenseInternalProductIds,
 	listWithLicensePlanIdByParents,
-	listCatalogParentPlanIdsByLicensePlanId,
 	listCatalogByOrgEnv,
 	insertMany,
 	deleteByIds,
