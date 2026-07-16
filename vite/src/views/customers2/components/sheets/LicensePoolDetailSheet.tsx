@@ -140,7 +140,7 @@ export function LicensePoolDetailSheet() {
 
 			<SheetSection withSeparator={true}>
 				<h3 className="text-sub mb-2">Assigned Entities</h3>
-				{poolAssignments.length > ASSIGNMENTS_PAGE_SIZE && (
+				{(poolAssignments.length > ASSIGNMENTS_PAGE_SIZE || search !== "") && (
 					<div className="relative mb-3">
 						<Input
 							placeholder="Search entities..."

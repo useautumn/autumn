@@ -35,7 +35,11 @@ export function LicensePlanPrice({
 }) {
 	const { displayCurrency, productForDisplay } = useCustomerDisplayCurrency();
 
-	const basePrice = product?.items?.length
+	if (!product) {
+		return <div className="text-tertiary-foreground">-</div>;
+	}
+
+	const basePrice = product.items?.length
 		? productV2ToBasePrice({
 				product: productForDisplay(productV2ToFrontendProduct({ product })),
 			})

@@ -1769,7 +1769,14 @@ export async function initScenario({
 					"Cannot assign license: customerId is required when using s.licenses.assign()",
 				);
 			}
-			const entityIndexes = action.entityIndexes ?? [action.entityIndex ?? 0];
+			const entityIndexes =
+				action.entityIndexes ??
+				(action.entityIndex !== undefined ? [action.entityIndex] : []);
+			if (entityIndexes.length === 0) {
+				throw new Error(
+					"s.licenses.assign() requires entityIndex or entityIndexes",
+				);
+			}
 			for (const index of entityIndexes) {
 				if (index >= generatedEntities.length) {
 					throw new Error(
