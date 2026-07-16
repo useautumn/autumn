@@ -12,6 +12,7 @@ import { EditPlanPriceSheet } from "./components/EditPlanPriceSheet";
 import { EditPlanSheet } from "./components/EditPlanSheet";
 import { EditPlanFeatureSheet } from "./components/edit-plan-feature/EditPlanFeatureSheet";
 import { NewFeatureSheet } from "./components/new-feature/NewFeatureSheet";
+import { LicenseEditScopeNotice } from "./components/plan-licenses/LicenseEditScopeNotice";
 import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 import {
 	useIsActiveSheetOwner,
@@ -203,5 +204,11 @@ export const ProductSheets = () => {
 	// panel during the single render between a switch and the loser's cleanup.
 	if (!sheetType || !panelTarget || !isActiveOwner) return null;
 
-	return createPortal(renderSheet(), panelTarget);
+	return createPortal(
+		<div className="flex h-full flex-col">
+			<LicenseEditScopeNotice />
+			<div className="min-h-0 flex-1">{renderSheet()}</div>
+		</div>,
+		panelTarget,
+	);
 };
