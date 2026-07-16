@@ -4,7 +4,11 @@ import type {
 	PlanLicenseParams,
 	ProductV2,
 } from "@autumn/shared";
-import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useEffect } from "react";
+import {
+	useProduct,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import PlanCard from "@/views/products/plan/components/plan-card/PlanCard";
 import { LicensePlanCardHeader } from "./LicensePlanCardHeader";
@@ -15,6 +19,7 @@ import {
 import type { LicenseEditSnapshot } from "./licenseCustomizeUtils";
 import { useLicenseDraft } from "./useLicenseDraftStore";
 import { useLicensePlanCardLifecycle } from "./useLicensePlanCardLifecycle";
+import { useLicenseRowStore } from "./useLicenseRowStore";
 
 export function LicensePlanCardEditor({
 	planLicense,
@@ -33,7 +38,8 @@ export function LicensePlanCardEditor({
 	isPendingLink: boolean;
 	isLast: boolean;
 }) {
-	const { sheetType } = useSheet();
+	const { product: liveLicense } = useProduct();
+	const { sheetType, setSheet } = useSheet();
 	useLicensePlanCardLifecycle({
 		planLicense,
 		license,
@@ -42,6 +48,29 @@ export function LicensePlanCardEditor({
 		buildCustomize,
 		isPendingLink,
 	});
+
+	const publish = useLicenseRowStore((s) => s.publish);
+	const clear = useLicenseRowStore((s) => s.clear);
+	const requestedOpen = useLicenseRowStore((s) => s.openRequests[license.id]);
+	const consumeOpen = useLicenseRowStore((s) => s.consumeOpen);
+
+	// Mirror this card's live product to the parent-plan row so its price tracks
+	// unsaved edits (which only exist in this card's context).
+	useEffect(() => {
+		publish(license.id, {
+			product: liveLicense,
+			isEditingPrice: sheetType === "edit-plan-price",
+		});
+	}, [publish, license.id, liveLicense, sheetType]);
+
+	useEffect(() => () => clear(license.id), [clear, license.id]);
+
+	// The parent-plan row can't reach this card's sheet state, so it signals here.
+	useEffect(() => {
+		if (!requestedOpen) return;
+		consumeOpen(license.id);
+		setSheet({ type: "edit-plan-price", itemId: license.id });
+	}, [requestedOpen, consumeOpen, setSheet, license.id]);
 
 	const removed = useLicenseDraft(license.id)?.removed ?? false;
 
