@@ -454,6 +454,7 @@ export const multiAttachParamsSchema = z.object({
 		.union([multiAttachFreeTrialParamsSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 	invoiceMode: z
 		.union([multiAttachInvoiceModeSchema, z.undefined()])
 		.optional(),
@@ -498,6 +499,7 @@ export const multiAttachParamsOutboundSchema = z.object({
 		.union([multiAttachFreeTrialParamsOutboundSchema, z.undefined()])
 		.optional()
 		.nullable(),
+	currency: z.union([z.string(), z.undefined()]).optional(),
 	invoice_mode: z
 		.union([multiAttachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),

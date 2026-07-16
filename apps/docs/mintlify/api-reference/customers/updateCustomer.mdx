@@ -2264,6 +2264,40 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="licenses" type="object[]">
+  License seat pools granted by the customer's plans, with seat counts.
+  <Expandable title="properties">
+    <DynamicResponseField name="license_plan_id" type="string">
+      The plan offered as an assignable license.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="parent_plan_id" type="string">
+      The plan that offers this license.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="license_plan_name" type="string">
+      Display name of the license plan.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total seats the customer has for this license, included plus paid.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Seats currently assigned to entities.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Seats still available to assign.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="paid_quantity" type="number">
+      Paid seats purchased on top of the plan's included amount.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="balances.{key}" type="object">
   Feature balances keyed by feature ID, showing usage limits and remaining amounts.
   <Expandable title="properties">
@@ -2688,6 +2722,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     }
   ],
   "purchases": [],
+  "licenses": [],
   "balances": {
     "messages": {
       "featureId": "messages",

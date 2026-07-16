@@ -25,7 +25,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
     <DynamicParamField body="customize" type="object">
-      Customize the plan to attach. Can override the price or items.
+      Customize the plan to attach. Can override the price, items, or licenses.
       <Expandable title="properties">
         <DynamicParamField body="price" type="object | null">
           Base price configuration for a plan.
@@ -249,6 +249,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicParamField>
 
   </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="currency" type="string">
+  Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.
 </DynamicParamField>
 
 <DynamicParamField body="invoice_mode" type="object">

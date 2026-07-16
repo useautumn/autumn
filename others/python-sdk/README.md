@@ -298,11 +298,20 @@ Use this to modify feature properties like name, display settings, or to archive
 
 Use this to permanently remove a feature. Note: features that are used in products cannot be deleted - archive them instead.
 
+### [Invoices](docs/sdks/invoices/README.md)
+
+* [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
+
 ### [Keys](docs/sdks/keys/README.md)
 
 * [mint](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
 * [refresh](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
 * [revoke](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+
+### [Licenses](docs/sdks/licenses/README.md)
+
+* [attach](docs/sdks/licenses/README.md#attach) - Assigns licenses to one or more entities.
+* [release](docs/sdks/licenses/README.md#release) - Releases licenses assigned to one or more entities.
 
 ### [Plans](docs/sdks/plans/README.md)
 

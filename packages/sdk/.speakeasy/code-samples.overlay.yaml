@@ -976,6 +976,33 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/invoices.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.invoices.list({
+                limit: 10,
+                customerId: "cus_123",
+                status: [
+                  "open",
+                  "paid",
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/keys.mint"]["post"]
     update:
       x-codeSamples:
@@ -1034,6 +1061,61 @@ actions:
             async function run() {
               const result = await autumn.keys.revoke({
                 customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/licenses.attach"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.licenses.attach({
+                customerId: "cus_123",
+                planId: "seat_plan",
+                entities: [
+                  {
+                    entityId: "user_123",
+                    name: "Ada Lovelace",
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/licenses.release"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.licenses.release({
+                customerId: "cus_123",
+                licensePlanId: "seat_plan",
+                entityIds: [
+                  "user_123",
+                ],
               });
 
               console.log(result);
