@@ -4,6 +4,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
+import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -22,6 +24,12 @@ import { updateProduct } from "../../product/utils/updateProduct";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
 import { PlanEditorBar } from "./PlanEditorBar";
+import {
+	discardAllLicenses,
+	saveAllLicenses,
+	useHasLicenseChanges,
+	useLicensePlanEditNames,
+} from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
@@ -39,7 +47,12 @@ export const SaveChangesBar = ({
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
-	const hasChanges = useHasChanges();
+	const planHasChanges = useHasChanges();
+	const licenseHasChanges = useHasLicenseChanges();
+	const hasChanges = planHasChanges || licenseHasChanges;
+	const { planLicenses, invalidate: invalidatePlanLicenses } =
+		usePlanLicensesQuery(product.id);
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { features = [] } = useFeaturesQuery();
 	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
@@ -57,7 +70,13 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
+	const hasLicensePlanEdits = useLicensePlanEditNames().length > 0;
+	let saveButtonText = "Save";
+	if (isCusPlanEditor) {
+		saveButtonText = "Save and Return";
+	} else if (hasLicensePlanEdits) {
+		saveButtonText = "Save & Update Licenses";
+	}
 
 	const { data: variants = [] } = usePlanVariants(
 		product.id,
@@ -69,7 +88,7 @@ export const SaveChangesBar = ({
 			if (!checkItemCurrenciesValid(item)) return;
 		}
 
-		if (!isOnboarding) {
+		if (!isOnboarding && planHasChanges) {
 			if (isCountsLoading) {
 				toast.error("Plan counts are loading");
 				return;
@@ -111,20 +130,41 @@ export const SaveChangesBar = ({
 				basePriceType: "usage",
 			});
 		}
-		const result = await updateProduct({
-			axiosInstance,
-			productId: product.id,
-			product,
-			version: product.version,
-			orgCurrency: org?.default_currency,
-			onSuccess: async () => {
-				await queryRefetch();
-				await Promise.all([invalidateProduct(), invalidateProducts()]);
-			},
-		});
 
-		// Only show success toast if update was successful
-		if (result) {
+		// Save the plan (when changed) and every dirty license together, so one
+		// action persists everything on the page.
+		const [planSaved, licensesSaved] = await Promise.all([
+			planHasChanges
+				? updateProduct({
+						axiosInstance,
+						productId: product.id,
+						product,
+						version: product.version,
+						orgCurrency: org?.default_currency,
+						onSuccess: async () => {
+							await queryRefetch();
+							await Promise.all([invalidateProduct(), invalidateProducts()]);
+						},
+					})
+				: Promise.resolve(true),
+			saveAllLicenses({
+				axiosInstance,
+				parentPlanId: product.id,
+				persistedLinks: planLicenses,
+				// License item edits update the license plan itself, so refresh the
+				// product caches the cards re-seed from — not just the links.
+				onSuccess: () =>
+					Promise.all([
+						invalidatePlanLicenses(),
+						invalidateLicenseProducts(),
+						invalidateProducts(),
+					]),
+			}),
+		]);
+
+		// License failures already toast their own error, so only the combined
+		// success gets a toast here.
+		if (planSaved && licensesSaved) {
 			toast.success("Changes saved successfully");
 		}
 
@@ -136,6 +176,7 @@ export const SaveChangesBar = ({
 		if (baseProduct) {
 			setProduct(baseProduct);
 		}
+		discardAllLicenses();
 		// If we're editing or creating a feature, go back to edit-plan
 		// if (sheetType === "edit-feature" || sheetType === "new-feature") {
 		// 	setSheet({ type: "edit-plan", itemId: null });

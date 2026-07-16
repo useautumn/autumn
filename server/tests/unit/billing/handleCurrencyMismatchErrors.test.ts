@@ -85,7 +85,7 @@ describe("handleCurrencyMismatchErrors", () => {
 
 	test("blocks when the plan does not offer the locked customer's currency", () => {
 		expect(() => run({ customerCurrency: "eur", prices: [paidUsd] })).toThrow(
-			/does not offer/i,
+			/has no eur price/i,
 		);
 	});
 

@@ -1,6 +1,7 @@
 import type {
 	AttachParamsV0,
 	BillingBehavior,
+	CustomizePlanLicense,
 	FreeTrialDuration,
 	PlanTiming,
 	ProductItem,
@@ -12,6 +13,7 @@ import type {
 import { useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
+import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantityUtils";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
@@ -25,7 +27,9 @@ export interface BuildAttachRequestBodyParams {
 	entityId: string | undefined;
 	product: ProductV2 | undefined;
 	prepaidOptions: Record<string, number | undefined>;
+	licenseQuantities: Record<string, number | undefined>;
 	items: ProductItem[] | null;
+	addLicenses: CustomizePlanLicense[] | null;
 	grantFree: boolean;
 	version: number | undefined;
 	trialLength: number | null;
@@ -49,6 +53,7 @@ export interface BuildAttachRequestBodyParams {
 	carryOverUsageFeatureIds: string[];
 	customLineItems: FormCustomLineItem[];
 	disableProration: boolean;
+	currency: string | null;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -57,7 +62,9 @@ export function buildAttachRequestBody({
 	entityId,
 	product,
 	prepaidOptions,
+	licenseQuantities,
 	items,
+	addLicenses,
 	grantFree,
 	version,
 	trialLength,
@@ -81,6 +88,7 @@ export function buildAttachRequestBody({
 	carryOverUsageFeatureIds = [],
 	customLineItems,
 	disableProration,
+	currency,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -101,8 +109,19 @@ export function buildAttachRequestBody({
 		body.entity_id = entityId;
 	}
 
+	if (currency) {
+		body.currency = currency.toLowerCase();
+	}
+
 	if (options && options.length > 0) {
 		body.options = options;
+	}
+
+	const licenseQuantityParams = convertLicenseQuantitiesToParams({
+		licenseQuantities,
+	});
+	if (licenseQuantityParams) {
+		body.license_quantities = licenseQuantityParams;
 	}
 
 	if (items !== null) {
@@ -117,6 +136,10 @@ export function buildAttachRequestBody({
 			// (paid) items; omitting `items` falls back to them. See useGrantFree.
 			body.items = [];
 		}
+	}
+
+	if (addLicenses !== null) {
+		body.upsert_licenses = addLicenses;
 	}
 
 	if (version !== undefined) {
@@ -211,7 +234,9 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		entityId,
 		product,
 		prepaidOptions,
+		licenseQuantities,
 		items,
+		addLicenses,
 		grantFree,
 		version,
 		trialLength,
@@ -235,6 +260,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		carryOverUsageFeatureIds,
 		customLineItems,
 		disableProration,
+		currency,
 	} = params;
 
 	const requestBody = useMemo(
@@ -244,7 +270,9 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				entityId,
 				product,
 				prepaidOptions,
+				licenseQuantities,
 				items,
+				addLicenses,
 				grantFree,
 				version,
 				trialLength,
@@ -268,13 +296,16 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				carryOverUsageFeatureIds,
 				customLineItems,
 				disableProration,
+				currency,
 			}),
 		[
 			customerId,
 			entityId,
 			product,
 			prepaidOptions,
+			licenseQuantities,
 			items,
+			addLicenses,
 			grantFree,
 			version,
 			trialLength,
@@ -298,6 +329,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			carryOverUsageFeatureIds,
 			customLineItems,
 			disableProration,
+			currency,
 		],
 	);
 

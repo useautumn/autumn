@@ -2,10 +2,9 @@ import {
 	type AttachBillingContext,
 	type AttachParamsV1,
 	ErrCode,
-	isFreeProduct,
 	isFutureStartDate,
-	isOneOffProduct,
 	isPastStartDate,
+	isProductPaidAndRecurring,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -32,9 +31,9 @@ export const handleStartDateErrors = ({
 		});
 	}
 
-	const prices = billingContext.attachProduct.prices;
-	const isPaidRecurring =
-		!isFreeProduct({ prices }) && !isOneOffProduct({ prices });
+	const isPaidRecurring = isProductPaidAndRecurring(
+		billingContext.attachProduct,
+	);
 
 	if (isPastStartDate(params.starts_at, billingContext.currentEpochMs)) {
 		if (!isPaidRecurring) {

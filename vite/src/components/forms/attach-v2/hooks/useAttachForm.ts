@@ -20,7 +20,9 @@ export function useAttachForm({
 		defaultValues: {
 			productId: initialProductId || "",
 			prepaidOptions: initialPrepaidOptions ?? {},
+			licenseQuantities: {},
 			items: initialItems ?? null,
+			addLicenses: null,
 			isCustom: initialIsCustom ?? false,
 			version: initialVersion ?? undefined,
 			trialLength: null,
@@ -37,6 +39,7 @@ export function useAttachForm({
 			resetBillingCycle: false,
 			discounts: [],
 			grantFree: false,
+			currency: null,
 			noBillingChanges: false,
 			enablePlanImmediately: false,
 			longLivedCheckout: false,

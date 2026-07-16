@@ -6,6 +6,7 @@ import type {
 	FullCustomerEntitlement,
 	FullCustomerPrice,
 	FullProduct,
+	InsertPlanLicenseSpec,
 	Price,
 	StripeBillingContextOverride,
 } from "@autumn/shared";
@@ -13,6 +14,8 @@ import type { BillingContext, BillingVersion } from "./billingContext";
 
 export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
+	/** Converge license pool paid quantities in place — no plan restructure. */
+	UpdateLicenseQuantity = "update_license_quantity",
 	UpdatePlan = "update_plan",
 	CancelAction = "cancel_action",
 	/** Add credits to a one-off prepaid item hosted on a paid-recurring cusProduct. */
@@ -46,6 +49,9 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	recalculateBalances?: boolean;
 
 	intent: UpdateSubscriptionIntent;
+
+	/** Custom license definitions (is_custom plan licenses) to persist. */
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 
 	/**
 	 * Mirror of `UpdateSubscriptionBillingContextOverride.chargeExistingOverages`.

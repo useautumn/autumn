@@ -111,7 +111,7 @@ function ReviewPreviewBlock() {
 		isLoading: previewLoading,
 	} = previewQuery;
 
-	const showSkeleton = previewLoading || (!previewData && !queryError);
+	const showSkeleton = !queryError && (previewLoading || !previewData);
 	const hasShownSkeleton = useRef(false);
 	if (showSkeleton) hasShownSkeleton.current = true;
 	const animateIn = hasShownSkeleton.current && !showSkeleton;
@@ -430,6 +430,7 @@ function SheetContent() {
 		showPlanEditor,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
+		formValues,
 	} = useAttachFormContext();
 
 	const StageContent =
@@ -454,6 +455,8 @@ function SheetContent() {
 						onSave={handlePlanEditorSave}
 						onCancel={handlePlanEditorCancel}
 						isOpen={showPlanEditor}
+						enableLicenseEditing
+						initialAddLicenses={formValues.addLicenses}
 					/>
 				)}
 			</div>

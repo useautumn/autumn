@@ -22,8 +22,8 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
-import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
+import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 
 export const initStripeResourcesForProducts = async ({
 	ctx,
@@ -170,7 +170,38 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	const targetProducts = [...newProducts, ...patchProducts, ...existingProducts];
+	// License child products bill through their parents, so their prices need
+	// Stripe resources too. Price objects are shared refs — init mutates them.
+	// Keyed per DEFINITION: a custom plan_license and the catalog link share a
+	// product internal_id but carry different price rows.
+	const licenseProductsByDefinition = new Map<string, FullProduct>();
+	for (const customerProduct of [
+		...insertCustomerProducts,
+		...fullCustomer.customer_products,
+	]) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			const licenseProduct = customerLicense.planLicense?.product;
+			if (!licenseProduct) continue;
+			licenseProductsByDefinition.set(
+				customerLicense.plan_license_id ?? licenseProduct.internal_id,
+				licenseProduct,
+			);
+		}
+	}
+	// Transitions carry incoming definitions no persisted row references yet.
+	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
+		const planLicense = transition.incomingCustomerLicense.planLicense;
+		if (!planLicense) continue;
+		licenseProductsByDefinition.set(planLicense.id, planLicense.product);
+	}
+	const licenseProducts = Array.from(licenseProductsByDefinition.values());
+
+	const targetProducts = [
+		...newProducts,
+		...patchProducts,
+		...existingProducts,
+		...licenseProducts,
+	];
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	await Promise.all(

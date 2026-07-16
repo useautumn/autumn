@@ -47,7 +47,7 @@ const setupCreateScheduleCheckoutMode = ({
 	const hasPaymentMethod = !!billingContext.paymentMethod;
 	const hasExistingSubscription = !!billingContext.stripeSubscription;
 	const hasOneOffProduct = billingContext.fullProducts.some((product) =>
-		isOneOffProduct({ prices: product.prices }),
+		isOneOffProduct({ product }),
 	);
 	const hasPaidRecurringProduct = billingContext.fullProducts.some(
 		isProductPaidAndRecurring,

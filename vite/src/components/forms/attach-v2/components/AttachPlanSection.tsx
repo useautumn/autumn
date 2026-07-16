@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { useOrg } from "@/hooks/common/useOrg";
+import { productItemsForCurrency } from "@/views/products/plan/utils/currencyUtils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
@@ -22,38 +23,73 @@ export function AttachPlanSection({
 		previewPrepaidOptions,
 		handleEditPlan,
 		previewDiff,
+		attachCurrency,
 	} = useAttachFormContext();
 
 	const hideEditButton = readOnly || formValues.grantFree;
-	const { prepaidOptions } = formValues;
+	const { prepaidOptions, licenseQuantities } = formValues;
+
+	const licenseQuantityEditor = hideEditButton
+		? undefined
+		: { form, quantities: licenseQuantities };
 
 	const effectiveInitialPrepaidOptions = readOnly
 		? previewPrepaidOptions
 		: initialPrepaidOptions;
 
-	const { org } = useOrg();
-	const currency = org?.default_currency ?? "USD";
+	const { displayCurrency: currency, orgDefaultCurrency } = attachCurrency;
+
+	const displayProduct = useMemo(
+		() =>
+			product && {
+				...product,
+				items: productItemsForCurrency({
+					items: product.items,
+					currency,
+					orgDefaultCurrency,
+				}),
+			},
+		[product, currency, orgDefaultCurrency],
+	);
 
 	const outgoingItems = showDiff ? previewDiff.outgoingItems : [];
 
-	const originalItemsForDiff =
-		outgoingItems.length > 0 ? outgoingItems : productTemplateItems;
+	const originalItemsForDiff = useMemo(
+		() =>
+			showDiff && previewDiff.outgoingItems.length > 0
+				? previewDiff.outgoingItems
+				: productTemplateItems,
+		[showDiff, previewDiff.outgoingItems, productTemplateItems],
+	);
+
+	const displayOriginalItems = useMemo(
+		() =>
+			originalItemsForDiff &&
+			productItemsForCurrency({
+				items: originalItemsForDiff,
+				currency,
+				orgDefaultCurrency,
+			}),
+		[originalItemsForDiff, currency, orgDefaultCurrency],
+	);
 
 	const shouldShowDiff = showDiff
 		? outgoingItems.length > 0 || hasCustomizations
 		: false;
 
-	if (!product) return null;
+	if (!displayProduct || !product) return null;
 
 	const planItemsProps = {
-		product,
-		originalItems: originalItemsForDiff,
+		product: displayProduct,
+		originalItems: displayOriginalItems,
 		features,
 		prepaidOptions,
 		initialPrepaidOptions: effectiveInitialPrepaidOptions,
 		form,
 		showDiff: shouldShowDiff,
 		currency,
+		addLicenses: formValues.addLicenses,
+		licenseQuantityEditor,
 		onEditPlan: handleEditPlan,
 		gateDeletedItemsByDiff: true,
 		readOnly: hideEditButton,

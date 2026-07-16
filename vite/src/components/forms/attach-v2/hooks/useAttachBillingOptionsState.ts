@@ -128,8 +128,12 @@ export function useAttachBillingOptionsState() {
 		normalizedProrationBehavior !== null &&
 		normalizedProrationBehavior !== "none";
 
-	const isImmediateSelected = effectivePlanSchedule === "immediate";
-	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
+	const hasResolvedPlanSchedule =
+		planSchedule !== null || previewData !== undefined;
+	const isImmediateSelected =
+		hasResolvedPlanSchedule && effectivePlanSchedule === "immediate";
+	const isEndOfCycleSelected =
+		hasResolvedPlanSchedule && effectivePlanSchedule === "end_of_cycle";
 	const movePastStartDateToNow = useCallback(() => {
 		if (startDate !== null && startDate < Date.now()) {
 			form.setFieldValue("startDate", Date.now());

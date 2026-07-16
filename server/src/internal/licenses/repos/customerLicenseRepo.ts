@@ -1,0 +1,345 @@
+import {
+	customerLicenses,
+	type DbCustomerLicense,
+	type InsertCustomerLicense,
+} from "@autumn/shared";
+import { and, eq, gte, inArray, notInArray, sql } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
+import { listBillingPriceRows } from "./customerLicenseRepo/listBillingPriceRows.js";
+
+const getByParentAndLicense = async ({
+	db,
+	parentCustomerProductId,
+	licenseInternalProductId,
+}: {
+	db: DrizzleCli;
+	parentCustomerProductId: string;
+	licenseInternalProductId: string;
+}): Promise<DbCustomerLicense | undefined> =>
+	await db.query.customerLicenses.findFirst({
+		where: and(
+			eq(customerLicenses.parent_customer_product_id, parentCustomerProductId),
+			eq(
+				customerLicenses.license_internal_product_id,
+				licenseInternalProductId,
+			),
+		),
+	});
+
+/** All of a customer's pools, including ones whose parent is no longer live —
+ * those are exactly the rows transitions operate on. */
+const listByInternalCustomerId = async ({
+	db,
+	internalCustomerId,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+}): Promise<DbCustomerLicense[]> =>
+	await db.query.customerLicenses.findMany({
+		where: eq(customerLicenses.internal_customer_id, internalCustomerId),
+	});
+
+const update = async ({
+	db,
+	customerLicenseId,
+	updates,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	updates: Partial<
+		Pick<
+			DbCustomerLicense,
+			| "parent_customer_product_id"
+			| "license_internal_product_id"
+			| "plan_license_id"
+			| "granted"
+			| "remaining"
+		>
+	>;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({ ...updates, updated_at: Date.now() })
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
+const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
+	if (ids.length === 0) return;
+	await db.delete(customerLicenses).where(inArray(customerLicenses.id, ids));
+};
+
+const listByParentCustomerProductIds = async ({
+	db,
+	parentCustomerProductIds,
+}: {
+	db: DrizzleCli;
+	parentCustomerProductIds: string[];
+}): Promise<DbCustomerLicense[]> => {
+	if (parentCustomerProductIds.length === 0) return [];
+	return await db.query.customerLicenses.findMany({
+		where: inArray(
+			customerLicenses.parent_customer_product_id,
+			parentCustomerProductIds,
+		),
+	});
+};
+
+/** Idempotent ensure + granted sync for a (parent, license) balance row.
+ * Stamps plan_license_id when provided so stale links converge too. */
+const upsertGranted = async ({
+	db,
+	internalCustomerId,
+	parentCustomerProductId,
+	licenseInternalProductId,
+	planLicenseId,
+	granted,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+	parentCustomerProductId: string;
+	licenseInternalProductId: string;
+	planLicenseId?: string;
+	granted: number;
+}): Promise<DbCustomerLicense> => {
+	const [row] = await db
+		.insert(customerLicenses)
+		.values({
+			id: generateId("cus_lic"),
+			// Conflicting rows keep their link; only genuinely new pools mint.
+			link_id: generateId("cus_lic_link"),
+			internal_customer_id: internalCustomerId,
+			parent_customer_product_id: parentCustomerProductId,
+			license_internal_product_id: licenseInternalProductId,
+			plan_license_id: planLicenseId ?? null,
+			granted,
+			remaining: granted,
+		})
+		.onConflictDoUpdate({
+			target: [
+				customerLicenses.parent_customer_product_id,
+				customerLicenses.license_internal_product_id,
+			],
+			set: {
+				// Granted moves shift remaining by the same delta so assigned
+				// assignments stay accounted for.
+				remaining: sql`${customerLicenses.remaining} + (${granted} - ${customerLicenses.granted})`,
+				granted,
+				...(planLicenseId ? { plan_license_id: planLicenseId } : {}),
+				updated_at: Date.now(),
+			},
+		})
+		.returning();
+	return row;
+};
+
+/** Insert-time pool creation (initFullCustomerProduct). Conflicts are left to
+ * upsertGranted/reconcile — a concurrent take may have created the row. */
+const insertMany = async ({
+	db,
+	rows,
+}: {
+	db: DrizzleCli;
+	rows: InsertCustomerLicense[];
+}) => {
+	if (rows.length === 0) return;
+	await db.insert(customerLicenses).values(rows).onConflictDoNothing();
+};
+
+/** Atomically takes `count` assignments; rejected (returns undefined) when
+ * capacity is insufficient. */
+const takeAssignment = async ({
+	db,
+	customerLicenseId,
+	count = 1,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	count?: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			remaining: sql`${customerLicenses.remaining} - ${count}`,
+			updated_at: Date.now(),
+		})
+		.where(
+			and(
+				eq(customerLicenses.id, customerLicenseId),
+				gte(customerLicenses.remaining, count),
+			),
+		)
+		.returning();
+	return row;
+};
+
+const releaseAssignments = async ({
+	db,
+	parentCustomerProductId,
+	licenseInternalProductId,
+	count,
+}: {
+	db: DrizzleCli;
+	parentCustomerProductId: string;
+	licenseInternalProductId: string;
+	count: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			remaining: sql`LEAST(${customerLicenses.remaining} + ${count}, ${customerLicenses.granted})`,
+			updated_at: Date.now(),
+		})
+		.where(
+			and(
+				eq(
+					customerLicenses.parent_customer_product_id,
+					parentCustomerProductId,
+				),
+				eq(
+					customerLicenses.license_internal_product_id,
+					licenseInternalProductId,
+				),
+			),
+		)
+		.returning();
+	return row;
+};
+
+/** Converges the pool to an absolute paid-seat count: granted shifts by
+ * the same delta; remaining follows and may go NEGATIVE (over-allocated
+ * until enough seats release — reconcile owns the truthful arithmetic). */
+const setPaidQuantity = async ({
+	db,
+	customerLicenseId,
+	paidQuantity,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	paidQuantity: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			granted: sql`${customerLicenses.granted} - ${customerLicenses.paid_quantity} + ${paidQuantity}`,
+			remaining: sql`${customerLicenses.remaining} + (${paidQuantity} - ${customerLicenses.paid_quantity})`,
+			paid_quantity: paidQuantity,
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
+/** Repoints the pool onto a new definition in place: granted re-derives from
+ * the new included (+ optional new paid count); remaining shifts by the
+ * granted delta, floored at zero. Same row, same link — seats untouched. */
+const repointDefinition = async ({
+	db,
+	customerLicenseId,
+	planLicenseId,
+	included,
+	paidQuantity,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	planLicenseId: string;
+	included: number;
+	paidQuantity?: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const newGranted = sql`${included} + COALESCE(${paidQuantity ?? null}::numeric, ${customerLicenses.paid_quantity})`;
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			plan_license_id: planLicenseId,
+			granted: newGranted,
+			remaining: sql`GREATEST(${customerLicenses.remaining} + (${newGranted} - ${customerLicenses.granted}), 0)`,
+			...(paidQuantity !== undefined ? { paid_quantity: paidQuantity } : {}),
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.id, customerLicenseId))
+		.returning();
+	return row;
+};
+
+const releaseAssignmentsByLinkId = async ({
+	db,
+	customerLicenseLinkId,
+	count,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkId: string;
+	count: number;
+}): Promise<DbCustomerLicense | undefined> => {
+	const [row] = await db
+		.update(customerLicenses)
+		.set({
+			remaining: sql`LEAST(${customerLicenses.remaining} + ${count}, ${customerLicenses.granted})`,
+			updated_at: Date.now(),
+		})
+		.where(eq(customerLicenses.link_id, customerLicenseLinkId))
+		.returning();
+	return row;
+};
+
+/** Self-heal: remaining = granted - live assignment count. */
+const setRemaining = async ({
+	db,
+	customerLicenseId,
+	remaining,
+}: {
+	db: DrizzleCli;
+	customerLicenseId: string;
+	remaining: number;
+}) => {
+	await db
+		.update(customerLicenses)
+		.set({ remaining, updated_at: Date.now() })
+		.where(eq(customerLicenses.id, customerLicenseId));
+};
+
+const deleteByParentIdsExcept = async ({
+	db,
+	internalCustomerId,
+	keepParentCustomerProductIds,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+	keepParentCustomerProductIds: string[];
+}) => {
+	await db
+		.delete(customerLicenses)
+		.where(
+			and(
+				eq(customerLicenses.internal_customer_id, internalCustomerId),
+				...(keepParentCustomerProductIds.length > 0
+					? [
+							notInArray(
+								customerLicenses.parent_customer_product_id,
+								keepParentCustomerProductIds,
+							),
+						]
+					: []),
+			),
+		);
+};
+
+export const customerLicenseRepo = {
+	getByParentAndLicense,
+	listByInternalCustomerId,
+	listByParentCustomerProductIds,
+	listBillingPriceRows,
+	update,
+	deleteByIds,
+	upsertGranted,
+	insertMany,
+	takeAssignment,
+	releaseAssignments,
+	releaseAssignmentsByLinkId,
+	setPaidQuantity,
+	repointDefinition,
+	setRemaining,
+	deleteByParentIdsExcept,
+} as const;

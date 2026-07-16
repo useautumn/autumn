@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, type FullProduct } from "@autumn/shared";
+import { ErrCode, type FullProduct, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 

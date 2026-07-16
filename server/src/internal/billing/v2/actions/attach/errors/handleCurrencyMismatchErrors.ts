@@ -9,6 +9,7 @@ import {
 	orgToCurrency,
 	type Price,
 	priceHasCurrencyAmounts,
+	productToEffectivePrices,
 	RecaseError,
 	resolveCustomerCurrency,
 } from "@autumn/shared";
@@ -43,28 +44,43 @@ const priceOffersCurrency = ({
 		isFixed: isFixedPrice(price),
 	});
 
+export const planOffersCurrency = ({
+	ctx,
+	prices,
+	currency,
+}: {
+	ctx: AutumnContext;
+	prices: Price[];
+	currency: string;
+}): boolean => {
+	if (isFreeProduct({ prices })) return true;
+
+	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
+	return !prices
+		.filter(priceCharges)
+		.some((price) => !priceOffersCurrency({ price, currency, orgDefault }));
+};
+
 export const assertPlanOffersCurrency = ({
 	ctx,
 	prices,
 	planName,
 	currency,
+	customerConfigured = false,
 }: {
 	ctx: AutumnContext;
 	prices: Price[];
 	planName: string;
 	currency: string;
+	customerConfigured?: boolean;
 }) => {
-	if (isFreeProduct({ prices })) return;
-
-	const orgDefault = orgToCurrency({ org: ctx.org }).toLowerCase();
-	const planMissesCurrency = prices
-		.filter(priceCharges)
-		.some((price) => !priceOffersCurrency({ price, currency, orgDefault }));
-
-	if (planMissesCurrency) {
+	if (!planOffersCurrency({ ctx, prices, currency })) {
+		const code = currency.toUpperCase();
 		throw new RecaseError({
 			code: ErrCode.CurrencyMismatch,
-			message: `Plan '${planName}' does not offer a price in ${currency.toUpperCase()}`,
+			message: customerConfigured
+				? `This customer pays in ${code}, but plan '${planName}' has no ${code} price. Add ${code} pricing to the plan or pick a plan that offers it.`
+				: `Plan '${planName}' does not offer a price in ${code}. Add ${code} pricing to the plan or bill in a currency it supports.`,
 			statusCode: 400,
 		});
 	}
@@ -84,7 +100,7 @@ export const handleCurrencyMismatchErrors = ({
 	params: AttachParamsV1;
 }) => {
 	const { fullCustomer, attachProduct } = billingContext;
-	const prices = attachProduct.prices;
+	const prices = productToEffectivePrices({ product: attachProduct });
 
 	if (params.currency && !orgMultiCurrencyEnabled({ org: ctx.org })) {
 		throw new RecaseError({
@@ -95,7 +111,7 @@ export const handleCurrencyMismatchErrors = ({
 	}
 
 	// Free / auto-enabled plans neither need nor lock a currency.
-	if (isFreeProduct({ prices })) return;
+	if (isFreeProduct({ product: attachProduct })) return;
 
 	const locked =
 		(
@@ -126,5 +142,6 @@ export const handleCurrencyMismatchErrors = ({
 		prices,
 		planName: attachProduct.name,
 		currency: resolved,
+		customerConfigured: !!locked && resolved === locked,
 	});
 };

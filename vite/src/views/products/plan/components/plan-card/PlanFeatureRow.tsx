@@ -6,6 +6,7 @@ import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import {
+	useIsLicenseEditor,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -23,6 +24,8 @@ interface PlanFeatureRowProps {
 	index: number;
 	readOnly?: boolean;
 	prepaidQuantity?: number | null;
+	/** Display currency for amounts; defaults to the org default. */
+	currency?: string;
 }
 
 export const PlanFeatureRow = ({
@@ -31,9 +34,11 @@ export const PlanFeatureRow = ({
 	index,
 	readOnly = false,
 	prepaidQuantity,
+	currency,
 }: PlanFeatureRowProps) => {
 	const { setItem } = useProductItemContext();
 	const { product } = useProduct();
+	const isLicenseEditor = useIsLicenseEditor();
 	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
@@ -169,7 +174,9 @@ export const PlanFeatureRow = ({
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<PlanItemLabel
+					compact={isLicenseEditor}
 					item={item}
+					currency={currency}
 					wrapIcons={(icons) => (
 						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>
 					)}

@@ -9,7 +9,7 @@ import {
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
 /** Cache version - bump when cache schema changes to auto-invalidate old entries */
-const PRODUCTS_CACHE_VERSION = "1.0.0";
+const PRODUCTS_CACHE_VERSION = "1.1.0";
 
 /** TTL for products cache: 1 day */
 export const PRODUCTS_CACHE_TTL = 60 * 60 * 24;

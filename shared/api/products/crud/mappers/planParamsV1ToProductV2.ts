@@ -5,10 +5,12 @@ import type { FullProduct } from "@models/productModels/productModels";
 import type { ProductV2 } from "@models/productV2Models/productV2Models";
 import { notNullish } from "@utils/index";
 import type { SharedContext } from "../../../../types/sharedContext";
+import type { PlanLicenseParams } from "../licenses/planLicenseParams";
 import { planParamsV1ToProductItems } from "./planParamsV1ToProductItems";
 
 type ProductV2UpdateParams = Partial<ProductV2> & {
 	base_plan_id?: string | null;
+	licenses?: PlanLicenseParams[];
 };
 
 export function planParamsV1ToProductV2({
@@ -91,6 +93,9 @@ export function planParamsV1ToProductV2({
 			: params.free_trial;
 	}
 	if (archived !== undefined) result.archived = archived;
+	if ("licenses" in params && params.licenses !== undefined) {
+		result.licenses = params.licenses;
+	}
 	if (config !== undefined) result.config = config;
 	if (billingControls !== undefined) result.billing_controls = billingControls;
 	if (metadata !== undefined) result.metadata = metadata;

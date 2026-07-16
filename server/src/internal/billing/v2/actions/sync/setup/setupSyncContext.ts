@@ -21,8 +21,10 @@ import {
 	fetchStripeSyncSubscription,
 } from "@/internal/billing/v2/providers/stripe/utils/sync/fetchStripeSyncObjects";
 import { resolveStripeSyncCurrency } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/resolveStripeSyncCurrency";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { prepareSyncedCustomBasePrice } from "./prepareSyncedCustomBasePrice";
 
 const resolvePlanEntity = ({
@@ -81,7 +83,12 @@ const buildProductContext = async ({
 		fullProduct,
 		customPrices = [],
 		customEnts: customEntitlements = [],
+		insertPlanLicenses,
 	} = await setupAttachProductContext({ ctx, params: plan });
+
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params: plan,
+	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
@@ -131,6 +138,8 @@ const buildProductContext = async ({
 		customPrices: preparedCustomBase.customPrices,
 		customEntitlements,
 		featureQuantities,
+		customerLicenseQuantities,
+		insertPlanLicenses,
 		entity,
 		currentCustomerProduct,
 		accessStartsAt,
@@ -261,5 +270,9 @@ export const setupSyncContext = async ({
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
 		carryOverUsage: params.carry_over_usage ?? true,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: undefined,
+		}),
 	};
 };

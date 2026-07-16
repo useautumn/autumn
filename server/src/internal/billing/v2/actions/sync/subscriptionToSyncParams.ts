@@ -32,13 +32,25 @@ const matchedPlanToSyncPlan = ({
 	itemDiffs: ItemDiff[];
 }): SyncPlanInstance => {
 	const featureQuantities = buildFeatureQuantities({ matchedPlan, itemDiffs });
+	// Licenses whose Stripe item carries a non-catalog price sync as custom
+	// definitions via customize.upsert_licenses (same semantics as attach).
+	const upsertLicenses = matchedPlan.licenses?.flatMap(
+		({ license_plan_id, customize }) =>
+			customize ? [{ license_plan_id, customize }] : [],
+	);
+	const customize = upsertLicenses?.length
+		? { ...matchedPlan.customize, upsert_licenses: upsertLicenses }
+		: matchedPlan.customize;
 	return {
 		plan_id: matchedPlan.product.id,
 		quantity: matchedPlan.quantity,
-		customize: matchedPlan.customize,
+		customize,
 		expire_previous: true,
 		feature_quantities:
 			featureQuantities.length > 0 ? featureQuantities : undefined,
+		license_quantities: matchedPlan.licenses?.map(
+			({ license_plan_id, quantity }) => ({ license_plan_id, quantity }),
+		),
 	};
 };
 

@@ -20,6 +20,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
+import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
@@ -163,7 +164,17 @@ export const customerProductToLineItems = ({
 		);
 	}
 
-	// lineItems = lineItems.filter((item) => item.amount !== 0);
+	for (const customerLicense of customerProduct.customer_licenses ?? []) {
+		lineItems.push(
+			...customerLicenseToLineItems({
+				ctx,
+				billingContext,
+				customerProduct,
+				customerLicense,
+				direction,
+			}),
+		);
+	}
 
 	return lineItems;
 };

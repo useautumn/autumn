@@ -14,7 +14,10 @@ import {
 	PlusIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	useIsLicenseEditor,
+	useProduct,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import { stampBaseCurrency } from "../../utils/currencyUtils";
@@ -32,6 +35,7 @@ export const BasePriceSection = ({
 }) => {
 	const { product, setProduct } = useProduct();
 	const { org } = useOrg();
+	const isLicenseEditor = useIsLicenseEditor();
 	const defaultCurrency = org?.default_currency?.toUpperCase() ?? "USD";
 
 	if (!product.items) return null;
@@ -150,10 +154,14 @@ export const BasePriceSection = ({
 
 	return (
 		<SheetSection
-			title={isPaid ? "Base price" : undefined}
+			title={
+				isPaid ? (isLicenseEditor ? "Price per license" : "Base price") : undefined
+			}
 			description={
 				isPaid
-					? "Add a fixed price for the plan. Optional for per-unit or usage-based plans."
+					? isLicenseEditor
+						? "Charged for each license assigned beyond the included quantity."
+						: "Add a fixed price for the plan. Optional for per-unit or usage-based plans."
 					: undefined
 			}
 			className={className}
@@ -246,7 +254,8 @@ export const BasePriceSection = ({
 							Add a base price
 						</Button>
 					))}
-				<FreeTrialOption />
+				{/* The backend nulls free_trial on license products. */}
+				{!isLicenseEditor && <FreeTrialOption />}
 			</div>
 		</SheetSection>
 	);

@@ -42,6 +42,7 @@ export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";
+export * from "./productUtils/convertProduct/productToEffectivePrices";
 // Product utils
 export * from "./productUtils/convertProductUtils";
 export * from "./productUtils/entUtils/index";

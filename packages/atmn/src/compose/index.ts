@@ -10,6 +10,7 @@ import type {
 	BillingControls,
 	FreeTrial,
 	PlanItem,
+	PlanLicense,
 } from "./models/planModels.js";
 import type {
 	CustomizePlan,
@@ -28,6 +29,7 @@ export type {
 	Plan,
 	PlanItem,
 	PlanItemFilter,
+	PlanLicense,
 	Variant,
 };
 

@@ -12,9 +12,12 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	getProductItemDisplay,
+	isFreeProduct,
+	isOneOffProduct,
 	isPrepaidPrice,
 	type Price,
 	type ProductItem,
+	productToEffectivePrices,
 	sortProductItems,
 	toApiFeature,
 	UsageModel,
@@ -25,7 +28,6 @@ import { getFreeTrialAfterFingerprint } from "../../free-trials/freeTrialUtils.j
 import { getLargestInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { getItemType } from "../../product-items/productItemUtils/getItemType.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
-import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { mapToProductItems } from "../../productV2Utils.js";
 import { getAttachScenario } from "./getAttachScenario.js";
 
@@ -136,8 +138,9 @@ const getProductProperties = ({
 	product: FullProduct;
 	freeTrial?: ApiFreeTrial | null;
 }) => {
+	const effectivePrices = productToEffectivePrices({ product });
 	const largestInterval = getLargestInterval({
-		prices: product.prices,
+		prices: effectivePrices,
 		excludeOneOff: true,
 	});
 
@@ -145,8 +148,8 @@ const getProductProperties = ({
 		notNullish(freeTrial) && freeTrial?.trial_available !== false;
 
 	return ApiProductPropertiesSchema.parse({
-		is_free: isFreeProduct(product.prices) || false,
-		is_one_off: isOneOff(product.prices) || false,
+		is_free: isFreeProduct({ product }),
+		is_one_off: isOneOffProduct({ product }),
 		interval_group: largestInterval?.interval,
 		has_trial: hasFreeTrial,
 		updateable: product.prices.some(

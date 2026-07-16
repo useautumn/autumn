@@ -4,12 +4,7 @@ import {
 	CusProductStatus,
 	cp,
 	type Entity,
-	type FrontendProduct,
 	isCustomerProductTrialing,
-	type ProductItem,
-	sortPlanItems,
-	splitBooleanItems,
-	UsageModel,
 } from "@autumn/shared";
 import { Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
@@ -32,9 +27,9 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
-import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -44,9 +39,8 @@ import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
-import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
+import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
@@ -59,69 +53,9 @@ function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
 	return discount.name ? `${discount.name} (${value})` : value;
 }
 
-function SubscriptionDetailItems({
-	items,
-	product,
-	prepaidDisplayQuantities,
-	adminIds,
-}: {
-	items: ProductItem[];
-	product: FrontendProduct;
-	prepaidDisplayQuantities: Record<string, number>;
-	adminIds?: import("@/components/forms/shared/admin/AdminPlanIdsTooltip").AdminPlanIds;
-}) {
-	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
-	const { visibleItems, collapsedBooleanItems } = useMemo(
-		() => splitBooleanItems({ items: sortedItems }),
-		[sortedItems],
-	);
-
-	const renderRow = (item: ProductItem, index: number) => {
-		if (!item.feature_id) return null;
-		const prepaidQuantity =
-			item.usage_model === UsageModel.Prepaid
-				? (prepaidDisplayQuantities[item.feature_id] ?? null)
-				: null;
-
-		return (
-			<PlanFeatureRow
-				key={`${index}-${item.feature_id ?? ""}-${item.price_id ?? ""}-${item.entitlement_id ?? ""}`}
-				item={item}
-				index={index}
-				readOnly={true}
-				prepaidQuantity={prepaidQuantity}
-			/>
-		);
-	};
-
-	return (
-		<SheetSection>
-			<div className="flex gap-2 justify-between items-center h-6 mb-1">
-				<BasePriceDisplay
-					product={product}
-					readOnly={true}
-					adminIds={adminIds}
-				/>
-			</div>
-
-			<div className="flex flex-col gap-0">
-				{visibleItems.map((item, index) => renderRow(item, index))}
-				{collapsedBooleanItems.length > 0 && (
-					<CollapsedBooleanItems
-						items={collapsedBooleanItems}
-						triggerClassName="pl-0 pr-1"
-						renderItem={(item, index) =>
-							renderRow(item, visibleItems.length + index)
-						}
-					/>
-				)}
-			</div>
-		</SheetSection>
-	);
-}
-
 export function SubscriptionDetailSheet() {
 	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
+	const { displayCurrency, itemsForDisplay } = useCustomerDisplayCurrency();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -141,6 +75,10 @@ export function SubscriptionDetailSheet() {
 	const featureNameById = useMemo(
 		() => new Map(features.map((feature) => [feature.id, feature.name])),
 		[features],
+	);
+	const displayItems = useMemo(
+		() => productV2?.items && itemsForDisplay(productV2.items),
+		[productV2?.items, itemsForDisplay],
 	);
 
 	if (!cusProduct) {
@@ -214,12 +152,13 @@ export function SubscriptionDetailSheet() {
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			{productV2?.items && productV2.items.length > 0 && (
+			{productV2 && displayItems && displayItems.length > 0 && (
 				<SubscriptionDetailItems
-					items={productV2.items}
-					product={productV2}
+					items={displayItems}
+					product={{ ...productV2, items: displayItems }}
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
 					adminIds={adminIds}
+					currency={displayCurrency}
 				/>
 			)}
 

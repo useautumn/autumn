@@ -1,4 +1,5 @@
 import type {
+	CustomizePlanLicense,
 	Feature,
 	FeatureOptions,
 	FrontendProduct,
@@ -15,12 +16,14 @@ import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscr
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
+import type { LicenseQuantityEditor } from "./plan-items/LicenseQuantityControl";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
 import {
 	getItemMatchKey,
 	hasItemChanged,
 	PlanItemRow,
 } from "./plan-items/PlanItemRow";
+import { PlanLicensesSummary } from "./plan-items/PlanLicensesSummary";
 import { PlanPriceHeader } from "./plan-items/PlanPriceHeader";
 import {
 	PlanTrialEditor,
@@ -60,6 +63,11 @@ export interface PlanItemsSectionProps {
 	priceChange?: PriceChange | null;
 	versionChange?: VersionChange | null;
 	trialConfig?: TrialConfig;
+	/** add_licenses patch entries staged by the editor; null = unchanged,
+	 * undefined = the flow does not support license editing. */
+	addLicenses?: CustomizePlanLicense[] | null;
+	/** Present only in flows that support buying extra license seats (attach). */
+	licenseQuantityEditor?: LicenseQuantityEditor;
 
 	gateDeletedItemsByDiff?: boolean;
 	changesOnly?: boolean;
@@ -152,6 +160,8 @@ export function PlanItemsSection({
 	priceChange,
 	versionChange,
 	trialConfig,
+	addLicenses,
+	licenseQuantityEditor,
 	gateDeletedItemsByDiff = false,
 	changesOnly = false,
 	readOnly = false,
@@ -190,10 +200,19 @@ export function PlanItemsSection({
 
 	if (!hasItems) {
 		return (
-			<Button variant="secondary" onClick={onEditPlan} className="w-full">
-				<PencilSimpleIcon size={14} className="mr-1" />
-				Create Custom Plan
-			</Button>
+			<div className="flex flex-col gap-2">
+				<Button variant="secondary" onClick={onEditPlan} className="w-full">
+					<PencilSimpleIcon size={14} className="mr-1" />
+					Create Custom Plan
+				</Button>
+				<PlanLicensesSummary
+					planId={product?.id}
+					addLicenses={addLicenses}
+					showDiff={showDiff}
+					changesOnly={changesOnly}
+					quantityEditor={licenseQuantityEditor}
+				/>
+			</div>
 		);
 	}
 
@@ -207,6 +226,7 @@ export function PlanItemsSection({
 		form,
 		showDiff,
 		readOnly,
+		currency,
 	};
 
 	const itemKey = (item: ProductItem) =>
@@ -255,8 +275,16 @@ export function PlanItemsSection({
 							key={`deleted-${itemKey(item)}`}
 							item={item}
 							index={index}
+							currency={currency}
 						/>
 					))}
+					<PlanLicensesSummary
+						planId={product?.id}
+						addLicenses={addLicenses}
+						showDiff={showDiff}
+						changesOnly={changesOnly}
+						quantityEditor={licenseQuantityEditor}
+					/>
 					<PlanVersionChangeRow versionChange={versionChange} />
 					<PlanTrialEditor trialConfig={trialConfig} form={form} />
 					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} />}

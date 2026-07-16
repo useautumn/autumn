@@ -40,7 +40,9 @@ const canonicalizeBillingControls = (value: unknown): string => {
 		if (Array.isArray(entries) && entries.length === 0) continue;
 		normalized[key] = Array.isArray(entries)
 			? [...entries].sort((a, b) =>
-					String((a as { feature_id?: string })?.feature_id ?? "").localeCompare(
+					String(
+						(a as { feature_id?: string })?.feature_id ?? "",
+					).localeCompare(
 						String((b as { feature_id?: string })?.feature_id ?? ""),
 					),
 				)

@@ -19,5 +19,5 @@ export const filterBlockingCustomFeaturePriceItems = ({
 		if (plan?.product.is_add_on === true && plan.base.kind === "absent") {
 			return false;
 		}
-		return plan?.base.kind !== "matched";
+		return plan?.base.kind !== "matched" && plan?.base.kind !== "custom";
 	});

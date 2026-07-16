@@ -5,8 +5,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { normalizeSubscriptionPhases } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/normalizeSubscriptionPhases";
 import { findAutumnMatchForStripeItem } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnMatchForStripeItem";
 import { ProductService } from "@/internal/products/ProductService";
+import { itemDiffsToMatchedPlans } from "./itemDiffsToMatchedPlans/itemDiffsToMatchedPlans";
 import { rematchFeaturesWithinAnchoredPlans } from "./rematchFeaturesWithinAnchoredPlans";
-import { rollupMatchedPlans } from "./rollupMatchedPlans";
 import type { PhaseMatch, SubscriptionMatch } from "./types";
 
 /**
@@ -71,7 +71,7 @@ export const detectSubscriptionMatch = async ({
 			),
 			org: ctx.org,
 		});
-		const plans = rollupMatchedPlans({ itemDiffs });
+		const plans = itemDiffsToMatchedPlans({ itemDiffs });
 		return {
 			start_date: snapshot.start_date,
 			end_date: snapshot.end_date,

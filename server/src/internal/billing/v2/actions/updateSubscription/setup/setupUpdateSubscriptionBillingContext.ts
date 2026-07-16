@@ -8,9 +8,12 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
+import { setupUpdateLicenseQuantities } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateLicenseQuantities";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
+import { handleEntityLicenseAssignmentErrors } from "@/internal/billing/v2/common/errors/handleEntityLicenseAssignmentErrors";
 import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
@@ -24,12 +27,14 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { resolveCarryOverUsagesParam } from "@/internal/billing/v2/utils/handleCarryOvers/resolveCarryOverUsagesParam";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
 
 const FIELDS_WITH_BILLING_CHANGES = [
 	"feature_quantities",
+	"license_quantities",
 	"version",
 	"customize",
 	"cancel_action",
@@ -61,12 +66,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			params,
 		}));
 
+	// Before product resolution: a seat-holding entity's plan is managed
+	// through its license, never updated directly.
+	handleEntityLicenseAssignmentErrors({ fullCustomer });
+
 	const {
 		customerProduct,
 		fullProduct,
 		patchContext,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
+		customerLicenseQuantities: productContextLicenseQuantities,
 		isUpdatingFreeCustomerProduct,
 	} = await setupUpdateSubscriptionProductContext({
 		ctx,
@@ -84,6 +95,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
+	const customerLicenseQuantities =
+		productContextLicenseQuantities ??
+		setupUpdateLicenseQuantities({ params, fullProduct, customerProduct });
+
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
 	const billingRelatedFields = Object.keys(params).filter((key) =>
 		FIELDS_WITH_BILLING_CHANGES.includes(
 			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
@@ -247,6 +264,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		invoiceMode,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
+		customerLicenseQuantities,
+		customerLicenseBillingContext,
+		insertPlanLicenses,
 
 		customPrices,
 		customEnts,
@@ -273,6 +293,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		chargeExistingOverages: contextOverride.chargeExistingOverages,
 		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
-		carryOverUsages: params.carry_over_usages,
+		carryOverUsages: await resolveCarryOverUsagesParam({
+			ctx,
+			carryOverUsages: params.carry_over_usages,
+		}),
 	};
 };

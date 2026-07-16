@@ -58,12 +58,21 @@ export const planUpdatePreviewHasDiff = ({
 	previous_attributes,
 	price_change,
 	item_changes,
+	license_changes,
 }: Pick<
 	CorePlanUpdatePreview,
-	"customize" | "previous_attributes" | "price_change" | "item_changes"
+	| "customize"
+	| "previous_attributes"
+	| "price_change"
+	| "item_changes"
+	| "license_changes"
 >): boolean =>
 	Boolean(
-		customize || previous_attributes || price_change || item_changes.length > 0,
+		customize ||
+			previous_attributes ||
+			price_change ||
+			item_changes.length > 0 ||
+			license_changes.length > 0,
 	);
 
 export const diffPlanV1PreviousAttributes = ({

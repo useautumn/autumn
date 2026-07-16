@@ -22,11 +22,12 @@ export class ProductService {
 		axiosInstance: AxiosInstance,
 		productId: string,
 		data: any,
-		options?: { version?: number },
+		options?: { version?: number; disableVersion?: boolean },
 	) {
 		const params = new URLSearchParams();
 		if (notNullish(options?.version))
 			params.set("version", String(options.version));
+		if (options?.disableVersion) params.set("disable_version", "true");
 		const qs = params.toString();
 		const url = qs
 			? `/v1/products/${productId}?${qs}`

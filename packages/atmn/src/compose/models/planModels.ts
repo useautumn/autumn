@@ -272,6 +272,12 @@ export const FreeTrialSchema = z.object({
 
 export const BillingControlsSchema = z.custom<BillingControls>();
 
+export const PlanLicenseSchema = z.object({
+	licensePlanId: z.string().nonempty(),
+	version: z.number().int().min(1).optional(),
+	included: z.number().int().min(0).optional(),
+});
+
 export const PlanSchema = z.object({
 	description: z.string().nullable().default(null).meta({
 		description: "Optional description of the plan.",
@@ -299,6 +305,7 @@ export const PlanSchema = z.object({
 	billingControls: BillingControlsSchema.optional().meta({
 		description: "Plan-level billing controls used as customer defaults.",
 	}),
+	licenses: z.array(PlanLicenseSchema).optional(),
 	/** Unique identifier for the plan */
 	id: z.string().nonempty().regex(idRegex),
 	/** Display name for the plan */
@@ -496,6 +503,7 @@ export type PlanItem = PlanItemWithReset | PlanItemWithPrice | PlanItemNoReset;
 // Override Plan type to use PlanItem discriminated union
 type PlanBase = z.infer<typeof PlanSchema>;
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
+export type PlanLicense = z.infer<typeof PlanLicenseSchema>;
 
 export type Plan = {
 	/** Unique identifier for the plan. */
@@ -536,6 +544,9 @@ export type Plan = {
 
 	/** Plan-level billing controls used as customer defaults */
 	billingControls?: BillingControls;
+
+	/** Plans offered as assignable licenses under this plan. */
+	licenses?: PlanLicense[];
 
 	/** Whether the plan is archived */
 	archived?: boolean;

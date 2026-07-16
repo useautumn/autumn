@@ -1,4 +1,8 @@
-import type { FullCusProduct, FullProduct } from "@autumn/shared";
+import type {
+	FullCusProduct,
+	FullProduct,
+	InsertPlanLicenseSpec,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import type { BillingContext } from "./billingContext";
 
@@ -38,6 +42,10 @@ export interface AttachBillingContext extends BillingContext {
 
 	// User-provided subscription ID for targeting
 	externalId?: string;
+
+	// Custom plan_license definitions resolved at setup from
+	// customize.upsert_licenses; execute inserts them before pools.
+	insertPlanLicenses?: InsertPlanLicenseSpec[];
 }
 
 // export interface AttachBillingContextOverride {

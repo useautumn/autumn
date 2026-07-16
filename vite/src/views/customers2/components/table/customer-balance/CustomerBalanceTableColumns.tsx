@@ -13,6 +13,10 @@ import {
 	nullish,
 } from "@autumn/shared";
 import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
 	ToolbarButton,
 	Tooltip,
 	TooltipContent,
@@ -31,12 +35,6 @@ import {
 import type { Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";

@@ -1,16 +1,15 @@
 import {
-	ACTIVE_STATUSES,
 	type AttachBillingContext,
 	type AttachParamsV1,
 	type BillingContextOverride,
 	BillingVersion,
-	CusProductStatus,
-	cusProductToPrices,
+	hasActivePaidSubscription,
 	hasCustomItems,
-	isFreeProduct,
+	isCustomerProductFree,
 	isFutureStartDate,
 	isOneOffProduct,
 	isPastStartDate,
+	isProductPaidAndRecurring,
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
@@ -18,8 +17,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { setupCustomerLicenseBillingContext } from "@/internal/billing/v2/setup/customerLicenseBillingContext/setupCustomerLicenseBillingContext";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
+import { setupCustomerLicenseQuantityContext } from "@/internal/billing/v2/setup/setupCustomerLicenseQuantityContext";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFinalizeFirstInvoice";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
@@ -67,6 +68,7 @@ export const setupAttachBillingContext = async ({
 		fullProduct: attachProduct,
 		customPrices,
 		customEnts,
+		insertPlanLicenses,
 	} = await setupAttachProductContext({
 		ctx,
 		params,
@@ -81,34 +83,15 @@ export const setupAttachBillingContext = async ({
 			planScheduleOverride: params.plan_schedule,
 		});
 
-	const isAttachPaidRecurring =
-		!isOneOffProduct({ prices: attachProduct.prices }) &&
-		!isFreeProduct({ prices: attachProduct.prices });
+	const isAttachPaidRecurring = isProductPaidAndRecurring(attachProduct);
 
-	const hasPaidRecurringSubscription = fullCustomer.customer_products.some(
-		(customerProduct) => {
-			const hasActiveOrTrialingStatus =
-				ACTIVE_STATUSES.includes(customerProduct.status) ||
-				customerProduct.status === CusProductStatus.Trialing;
-
-			if (!hasActiveOrTrialingStatus) return false;
-			if (!customerProduct.subscription_ids?.length) return false;
-
-			const prices = cusProductToPrices({
-				cusProduct: customerProduct,
-			});
-
-			return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
-		},
-	);
+	const hasPaidRecurringSubscription = hasActivePaidSubscription({
+		customerProducts: fullCustomer.customer_products,
+	});
 
 	const isTransitionFromFree =
 		notNullish(currentCustomerProduct) &&
-		isFreeProduct({
-			prices: cusProductToPrices({
-				cusProduct: currentCustomerProduct,
-			}),
-		});
+		isCustomerProductFree(currentCustomerProduct);
 
 	// Only respect new_billing_subscription for non-transition scenarios
 	// (add-ons, entity products). Upgrades/downgrades ignore the flag.
@@ -162,6 +145,10 @@ export const setupAttachBillingContext = async ({
 		currentCustomerProduct: currentCustomerProduct,
 		initializeUndefinedQuantities: true,
 		contextOverride,
+	});
+
+	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
+		params,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
@@ -272,6 +259,9 @@ export const setupAttachBillingContext = async ({
 			outgoingCusProductIds,
 		});
 
+	const customerLicenseBillingContext =
+		await setupCustomerLicenseBillingContext({ ctx, fullCustomer });
+
 	return {
 		fullCustomer,
 		fullProducts: [attachProduct],
@@ -283,6 +273,7 @@ export const setupAttachBillingContext = async ({
 			stripeCurrency: stripeCustomer?.currency,
 		}),
 		featureQuantities,
+		customerLicenseQuantities,
 		transitionConfig,
 
 		currentCustomerProduct,
@@ -306,7 +297,7 @@ export const setupAttachBillingContext = async ({
 		subscriptionBackdateStartMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		requestedProrationBehavior: setupIgnoreProrationBehavior({
-			isOneOffAttach: isOneOffProduct({ prices: attachProduct.prices }),
+			isOneOffAttach: isOneOffProduct({ product: attachProduct }),
 		})
 			? undefined
 			: params.proration_behavior,
@@ -336,12 +327,14 @@ export const setupAttachBillingContext = async ({
 		taxRateId: params.tax_rate_id,
 
 		externalId: params.subscription_id,
+		insertPlanLicenses,
 
 		skipBillingChanges,
 		dryRunStripe: preview,
 
 		storedChargeLineItems,
 		storedRefundLineItems,
+		customerLicenseBillingContext,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

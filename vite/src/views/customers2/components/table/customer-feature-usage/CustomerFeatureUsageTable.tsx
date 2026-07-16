@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
-import { CubeIcon, PlusIcon } from "@phosphor-icons/react";
+import { LegoIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -177,7 +177,7 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<CubeIcon size={16} weight="fill" className="text-subtle" />
+							<LegoIcon size={16} weight="fill" className="text-subtle" />
 							Features
 						</Table.Heading>
 						<Table.Actions>

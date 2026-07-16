@@ -24,6 +24,7 @@ const unwrapSchema = (schema: z.ZodTypeAny): z.ZodTypeAny => {
 	if (type === "nullable") return unwrapSchema(def.innerType);
 	if (type === "effects") return unwrapSchema(def.schema);
 	if (type === "default") return unwrapSchema(def.innerType);
+	if (type === "lazy" && def.getter) return unwrapSchema(def.getter());
 
 	return schema;
 };
@@ -38,6 +39,8 @@ const isNullable = (schema: z.ZodTypeAny): boolean => {
 		const innerSchema = def.innerType || def.schema;
 		return isNullable(innerSchema);
 	}
+
+	if (type === "lazy" && def.getter) return isNullable(def.getter());
 
 	return false;
 };
@@ -111,8 +114,7 @@ export const normalizeFromSchema = <T>({
 	if (type === "object") {
 		// Upstash Lua cjson collapses empty `{}` to `[]`; treat as empty object
 		// so nested defaults still get applied on round-trip.
-		const objectData =
-			Array.isArray(data) && data.length === 0 ? {} : data;
+		const objectData = Array.isArray(data) && data.length === 0 ? {} : data;
 		if (
 			!objectData ||
 			typeof objectData !== "object" ||

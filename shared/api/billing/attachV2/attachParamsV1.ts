@@ -1,9 +1,11 @@
 import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase/billingParamsBaseV1";
+import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem";
+import { LicenseQuantityParamsSchema } from "../common/licenseQuantityParams";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -75,6 +77,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 
 	carry_over_usages: CarryOverUsagesSchema,
 
+	license_quantities: z.array(LicenseQuantityParamsSchema).optional().meta({
+		description:
+			"Seat quantities for the plan's licenses, keyed by license plan.",
+	}),
+
 	metadata: z.record(z.string(), z.string()).optional().meta({
 		description:
 			"Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.",
@@ -94,7 +101,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			"Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.",
 	}),
 
-	currency: z.string().optional().meta({
+	currency: CurrencyCodeSchema.optional().meta({
 		description:
 			"Currency to bill this attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and the plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
 	}),

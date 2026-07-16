@@ -6,10 +6,12 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
+import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
@@ -45,11 +47,27 @@ export const computeAttachPlan = ({
 		attachBillingContext,
 		params,
 	});
+	const oneOffPurchaseRebalance = computeOneOffPurchaseRebalance({
+		ctx,
+		newCustomerProduct,
+	});
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
 		attachBillingContext,
 		params,
 	});
+
+	// Customer licenses follow the incoming definitions on immediate swaps;
+	// scheduled swaps transition at activation instead.
+	const customerLicenseTransitions =
+		planTiming === "immediate" && currentCustomerProduct
+			? computeCustomerLicenseTransitions({
+					outgoingCustomerProducts: [currentCustomerProduct],
+					incomingCustomerProducts: [newCustomerProduct],
+					customerLicenseBillingContext:
+						attachBillingContext.customerLicenseBillingContext,
+				})
+			: [];
 
 	const {
 		entitlements: carriedOverEntitlements,
@@ -99,7 +117,7 @@ export const computeAttachPlan = ({
 	const lockCustomerCurrency =
 		resolvedCurrency &&
 		!fullCustomer.currency &&
-		!isFreeProduct({ prices: attachProduct.prices })
+		!isFreeProduct({ product: attachProduct })
 			? {
 					internalCustomerId: fullCustomer.internal_id,
 					currency: resolvedCurrency,
@@ -119,12 +137,15 @@ export const computeAttachPlan = ({
 			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
+		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
+		customerLicenseTransitions,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),
 			...oneOffPrepaidCarryOvers.customerEntitlements,
 		],
 		updateCustomerEntitlements,
+		oneOffPurchaseRebalance,
 	};
 
 	plan = finalizeAttachPlan({

@@ -3,11 +3,12 @@ import {
 	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
+	type InsertPlanLicenseSpec,
 	type Price,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { carryOverEntitlementUsage } from "./carryOverUsage";
+import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -19,6 +20,7 @@ export type ImmediatePhaseResult = {
 	updateCustomerProducts: CustomerProductUpdate[];
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
+	insertPlanLicenses: InsertPlanLicenseSpec[];
 };
 
 const expireCustomerProduct = ({
@@ -57,6 +59,7 @@ export const computeSyncImmediatePhase = ({
 		stripeSubscription,
 		currentEpochMs,
 		carryOverUsage,
+		carryOverUsages,
 	} = syncContext;
 	if (!immediatePhase || !stripeSubscription) {
 		return {
@@ -64,6 +67,7 @@ export const computeSyncImmediatePhase = ({
 			updateCustomerProducts: [],
 			customPrices: [],
 			customEntitlements: [],
+			insertPlanLicenses: [],
 		};
 	}
 
@@ -71,26 +75,31 @@ export const computeSyncImmediatePhase = ({
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const customPrices: Price[] = [];
 	const customEntitlements: Entitlement[] = [];
+	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
+		const existingUsagesConfig =
+			carryOverUsage && productContext.currentCustomerProduct
+				? resolveSyncExistingUsagesConfig({
+						ctx,
+						carryOverUsages,
+						currentCustomerProduct: productContext.currentCustomerProduct,
+					})
+				: undefined;
+
 		const insertedCustomerProduct = initImmediateSyncCustomerProduct({
 			ctx,
 			fullCustomer,
 			productContext,
 			stripeSubscription,
 			currentEpochMs,
+			existingUsagesConfig,
 		});
-
-		if (carryOverUsage && productContext.currentCustomerProduct) {
-			carryOverEntitlementUsage({
-				inserted: insertedCustomerProduct,
-				expiring: productContext.currentCustomerProduct,
-			});
-		}
 
 		insertCustomerProducts.push(insertedCustomerProduct);
 		customPrices.push(...productContext.customPrices);
 		customEntitlements.push(...productContext.customEntitlements);
+		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
 		if (productContext.currentCustomerProduct) {
 			updateCustomerProducts.push(
@@ -107,5 +116,6 @@ export const computeSyncImmediatePhase = ({
 		updateCustomerProducts,
 		customPrices,
 		customEntitlements,
+		insertPlanLicenses,
 	};
 };

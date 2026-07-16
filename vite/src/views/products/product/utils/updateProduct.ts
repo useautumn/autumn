@@ -23,6 +23,7 @@ export const updateProduct = async ({
 	product,
 	onSuccess,
 	version,
+	disableVersion,
 	orgCurrency,
 }: {
 	axiosInstance: AxiosInstance;
@@ -30,6 +31,7 @@ export const updateProduct = async ({
 	product: EditableProductUpdate;
 	onSuccess: () => Promise<void>;
 	version?: number;
+	disableVersion?: boolean;
 	orgCurrency?: string;
 }) => {
 	const validated = validateItemsBeforeSave(
@@ -55,7 +57,8 @@ export const updateProduct = async ({
 			free_trial: product.free_trial,
 		});
 
-		const options = version ? { version } : undefined;
+		const options =
+			version || disableVersion ? { version, disableVersion } : undefined;
 
 		const updatedProduct = await ProductService.updateProduct(
 			axiosInstance,

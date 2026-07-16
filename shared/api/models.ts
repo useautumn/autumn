@@ -1,5 +1,10 @@
 // Core
 
+export * from "./catalog/catalogMappingModels.js";
+export * from "./catalog/previewUpdateCatalogParams.js";
+export * from "./catalog/previewUpdateCatalogResponse.js";
+export * from "./catalog/updateCatalogResponse.js";
+export * from "./catalog/utils/index.js";
 // NOTE: coreOpenApi.js is NOT exported here - it's only imported by openapi.ts for spec generation
 export * from "./core/coreOpModels.js";
 // Customers
@@ -18,16 +23,13 @@ export * from "./features/apiFeatureV1.js";
 export * from "./features/previewUpdateFeature/previewUpdateFeatureResponse.js";
 export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
+// Licenses
+export * from "./licenses/index.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
 export * from "./products/index.js";
-export * from "./catalog/catalogMappingModels.js";
-export * from "./catalog/previewUpdateCatalogParams.js";
-export * from "./catalog/previewUpdateCatalogResponse.js";
-export * from "./catalog/updateCatalogResponse.js";
-export * from "./catalog/utils/index.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/createReferralCodeParams.js";
@@ -57,9 +59,9 @@ export * from "./balances/index.js";
 export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
-export * from "./balances/track/trackTokensParams.js";
 export * from "./balances/track/trackResponseV2.js";
 export * from "./balances/track/trackResponseV3.js";
+export * from "./balances/track/trackTokensParams.js";
 export * from "./balances/update/updateBalanceParams.js";
 export * from "./balances/usageModels.js";
 export * from "./billing";
@@ -93,6 +95,8 @@ export * from "./features/prevVersions/apiFeatureV0.js";
 export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiInvoice/apiInvoiceItem.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
+export * from "./others/apiInvoice/apiListInvoiceV1.js";
+export * from "./others/apiInvoice/listInvoicesParams.js";
 // Models
 export * from "./platform/platformModels.js";
 // Utils

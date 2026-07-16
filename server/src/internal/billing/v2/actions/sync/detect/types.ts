@@ -1,4 +1,10 @@
-import type { CustomizePlanV1, FullProduct, Price } from "@autumn/shared";
+import type {
+	CustomizePlanV1,
+	FullProduct,
+	LicenseCustomize,
+	ParentPlanLicense,
+	Price,
+} from "@autumn/shared";
 import type {
 	PriceMatchCondition,
 	ProductMatchCondition,
@@ -20,6 +26,18 @@ export type ItemMatch =
 			matched_on: PriceMatchCondition;
 			price: Price;
 			product: FullProduct;
+	  }
+	| {
+			/** The item hit a LICENSE plan (base price, or the product itself) —
+			 * it belongs to the (single) parent plan offering that license. */
+			kind: "autumn_license";
+			matched_on: PriceMatchCondition | ProductMatchCondition;
+			/** The license's base price; null when only the product matched. */
+			price: Price | null;
+			/** The license product that matched (full shape). */
+			product: FullProduct;
+			/** Catalog link to the parent; product = the parent plan. */
+			parent_plan_license: ParentPlanLicense;
 	  }
 	| {
 			kind: "autumn_product";
@@ -57,7 +75,19 @@ export type PlanWarning =
 	| { type: "base_price_dropped" }
 	| { type: "base_price_adopted"; stripe_item_id: string }
 	| { type: "extra_items_under_plan"; stripe_item_ids: string[] }
-	| { type: "base_plan_quantity_gt_one"; quantity: number };
+	| { type: "base_plan_quantity_gt_one"; quantity: number }
+	| { type: "license_price_unresolvable"; stripe_item_ids: string[] };
+
+/** A license plan's seat item folded into its parent's matched plan. */
+export type MatchedPlanLicense = {
+	license_plan_id: string;
+	/** Total seats: catalog link included + Stripe item quantity. */
+	quantity: number;
+	stripe_item_id: string;
+	/** Set when the item's price isn't the license's catalog base — flows to
+	 * customize.upsert_licenses so sync provisions a custom definition. */
+	customize?: LicenseCustomize;
+};
 
 export type MatchedPlan = {
 	product: FullProduct;
@@ -67,6 +97,8 @@ export type MatchedPlan = {
 	extras: PlanExtra[];
 	customize?: CustomizePlanV1;
 	warnings: PlanWarning[];
+	/** Seat quantities folded from license-plan items on the sub. */
+	licenses?: MatchedPlanLicense[];
 };
 
 /* -------------------------------------------------------------------------

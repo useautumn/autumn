@@ -291,6 +291,8 @@ const buildCustomerProduct = ({
 	stripe_checkout_session_id: null,
 	previous_customer_product_id: null,
 	on_trial_end: null,
+	customer_license_link_id: null,
+	released_at: null,
 });
 
 const buildCustomerPrice = ({
@@ -342,11 +344,11 @@ const buildCustomerEntitlement = ({
 	unlimited: false,
 	balance,
 	created_at: now,
-		next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
-		usage_allowed: false,
-		separate_interval: false,
-		reset_cycle_anchor: null,
-		adjustment: 0,
+	next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
+	usage_allowed: false,
+	separate_interval: false,
+	reset_cycle_anchor: null,
+	adjustment: 0,
 	additional_balance: 0,
 	entities: null,
 	expires_at: expiresAt,

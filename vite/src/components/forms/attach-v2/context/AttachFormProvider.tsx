@@ -1,5 +1,6 @@
 import type {
 	CusProduct,
+	CustomizePlanLicense,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
@@ -40,8 +41,13 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import { clampLicenseQuantitiesToIncluded } from "@/utils/billing/licenseQuantityUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
+import {
+	type UseAttachCurrencyReturn,
+	useAttachCurrency,
+} from "../hooks/useAttachCurrency";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
 import { useAttachMutation } from "../hooks/useAttachMutation";
 import {
@@ -75,13 +81,19 @@ interface AttachFormContextValue {
 
 	isFreeToPaidTransition: boolean;
 	hasActiveSubscription: boolean;
+	isAutoSelectingImmediateSchedule: boolean;
+
+	attachCurrency: UseAttachCurrencyReturn;
 
 	previewQuery: UseAttachPreviewReturn;
 	previewDiff: UsePreviewDiffReturn;
 
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
-	handlePlanEditorSave: (product: FrontendProduct) => void;
+	handlePlanEditorSave: (
+		product: FrontendProduct,
+		addLicenses?: CustomizePlanLicense[],
+	) => void;
 	handlePlanEditorCancel: () => void;
 
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
@@ -172,7 +184,9 @@ export function AttachFormProvider({
 	const {
 		productId,
 		prepaidOptions,
+		licenseQuantities,
 		items,
+		addLicenses,
 		version,
 		trialLength,
 		trialDuration,
@@ -188,6 +202,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		grantFree,
+		currency,
 		noBillingChanges,
 		enablePlanImmediately,
 		carryOverBalances,
@@ -292,6 +307,12 @@ export function AttachFormProvider({
 
 	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
+	const attachCurrency = useAttachCurrency({
+		items: items ?? (effectiveProduct?.items as ProductItem[] | null) ?? [],
+		customerCurrency: fullCustomer?.currency,
+		selectedCurrency: currency,
+	});
+
 	const resolveCurrentItems = useCallback(
 		() => items ?? (effectiveProduct?.items as ProductItem[]) ?? [],
 		[items, effectiveProduct?.items],
@@ -308,6 +329,8 @@ export function AttachFormProvider({
 		if (previousVersionRef.current === version) return;
 		previousVersionRef.current = version;
 		form.setFieldValue("items", null);
+		form.setFieldValue("addLicenses", null);
+		form.setFieldValue("licenseQuantities", {});
 	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
@@ -326,6 +349,8 @@ export function AttachFormProvider({
 
 		if (isProductChange) {
 			form.setFieldValue("items", null);
+			form.setFieldValue("addLicenses", null);
+			form.setFieldValue("licenseQuantities", {});
 			form.setFieldValue("version", undefined);
 			form.setFieldValue("trialEnabled", false);
 			form.setFieldValue("trialLength", null);
@@ -333,6 +358,7 @@ export function AttachFormProvider({
 			form.setFieldValue("trialCardRequired", true);
 			form.setFieldValue("trialOnEnd", "bill");
 			form.setFieldValue("grantFree", false);
+			form.setFieldValue("currency", null);
 			resetGrantFree();
 		}
 
@@ -369,7 +395,8 @@ export function AttachFormProvider({
 
 	const originalItems = effectiveProduct?.items as ProductItem[] | undefined;
 
-	const hasCustomizations = items !== null && items.length > 0;
+	const hasCustomizations =
+		(items !== null && items.length > 0) || addLicenses !== null;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!effectiveProduct) return undefined;
@@ -404,7 +431,9 @@ export function AttachFormProvider({
 		entityId,
 		product: effectiveProduct,
 		prepaidOptions,
+		licenseQuantities,
 		items,
+		addLicenses,
 		grantFree,
 		version,
 		trialLength,
@@ -428,11 +457,23 @@ export function AttachFormProvider({
 		carryOverUsageFeatureIds,
 		customLineItems,
 		disableProration,
+		currency: attachCurrency.requestCurrency,
 	});
 	const previewQuery = useAttachPreview({
 		requestBody,
 		enabled: disablePreview ? false : undefined,
 	});
+	const isAutoSelectingImmediateSchedule =
+		hasActiveSubscription &&
+		planSchedule === null &&
+		(previewQuery.data?.outgoing.length ?? 0) === 0 &&
+		previewQuery.isError &&
+		!previewQuery.isLoading;
+
+	useEffect(() => {
+		if (!isAutoSelectingImmediateSchedule) return;
+		form.setFieldValue("planSchedule", "immediate");
+	}, [form, isAutoSelectingImmediateSchedule]);
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -474,7 +515,10 @@ export function AttachFormProvider({
 	}, [productWithFormItems, onPlanEditorOpen, grantFree]);
 
 	const handlePlanEditorSave = useCallback(
-		(draftProduct: FrontendProduct) => {
+		(
+			draftProduct: FrontendProduct,
+			editedAddLicenses?: CustomizePlanLicense[],
+		) => {
 			if (!productWithFormItems) {
 				setShowPlanEditor(false);
 				onPlanEditorClose?.();
@@ -506,6 +550,19 @@ export function AttachFormProvider({
 				},
 			});
 
+			if (editedAddLicenses) {
+				form.setFieldValue("addLicenses", editedAddLicenses);
+				// Seat totals are inclusive of included, so a customized included
+				// amount raises any staged total that fell below it.
+				form.setFieldValue(
+					"licenseQuantities",
+					clampLicenseQuantitiesToIncluded({
+						licenseQuantities: form.store.state.values.licenseQuantities,
+						upsertLicenses: editedAddLicenses,
+					}),
+				);
+			}
+
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
 		},
@@ -535,6 +592,8 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
+			attachCurrency,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,
@@ -563,6 +622,8 @@ export function AttachFormProvider({
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			hasActiveSubscription,
+			isAutoSelectingImmediateSchedule,
+			attachCurrency,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,

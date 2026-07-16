@@ -1,6 +1,8 @@
 import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
+import { composeCustomerLicensesCtes } from "./composeCustomerLicensesCtes.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
 export const CUSTOMER_PRODUCT_LIMIT = 200;
@@ -11,6 +13,7 @@ const SUBJECT_AGGREGATES = [
 	{ cte: "cus_products_agg", column: "customer_products" },
 	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
 	{ cte: "cus_prices_agg", column: "customer_prices" },
+	{ cte: "customer_licenses_agg", column: "customer_licenses" },
 	{ cte: "extra_cus_entitlements_agg", column: "extra_customer_entitlements" },
 	{ cte: "replaceables_agg", column: "replaceables" },
 	{ cte: "rollovers_agg", column: "rollovers" },
@@ -87,15 +90,18 @@ export const getFullSubjectRowsQuery = ({
 				statusFilter,
 			})
 		: emptyEntityFragments;
+	const customerLevelProductPredicate = sql`
+		cp.internal_entity_id IS NULL
+		AND ${sql.raw(notLicenseAssignmentSql("cp"))}`;
 
 	const customerProductSubjectPredicate = entityScopedOnly
 		? sql`cp.internal_entity_id = sr.internal_entity_id`
 		: sql`cp.internal_customer_id = sr.internal_customer_id
 					AND (
-						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						(sr.internal_entity_id IS NULL AND ${customerLevelProductPredicate})
 						OR
 						(sr.internal_entity_id IS NOT NULL AND (
-							cp.internal_entity_id IS NULL
+							${customerLevelProductPredicate}
 							OR cp.internal_entity_id = sr.internal_entity_id
 						))
 					)`;
@@ -268,7 +274,9 @@ export const getFullSubjectRowsQuery = ({
 			FROM customer_prices cpr
 			JOIN cus_products cp
 				ON cp.id = cpr.customer_product_id
-		)
+		),
+
+		${composeCustomerLicensesCtes()}
 
 		${invoicesCte}
 		${entityFragments.ctes}
@@ -368,6 +376,18 @@ export const getFullSubjectRowsQuery = ({
 						- 'has_customer_prices'
 						- 'product_is_add_on'
 						- 'subject_rank'
+						-- Seat rows carry their pool + the parent's lifecycle snapshot
+						-- (fetched unfiltered: an expired parent is not in cus_products).
+						|| jsonb_build_object(
+							'parent_customer_license',
+							CASE WHEN pcl.id IS NULL THEN NULL ELSE to_jsonb(pcl) END,
+							'parent_customer_product',
+							CASE WHEN pcp_lifecycle.id IS NULL THEN NULL ELSE jsonb_build_object(
+								'status', pcp_lifecycle.status,
+								'subscription_ids', to_jsonb(pcp_lifecycle.subscription_ids),
+								'canceled_at', pcp_lifecycle.canceled_at
+							) END
+						)
 					)::json
 					ORDER BY
 						cp.subject_entity_priority ASC,
@@ -377,6 +397,21 @@ export const getFullSubjectRowsQuery = ({
 						cp.created_at DESC
 				) AS items
 			FROM cus_products cp
+			-- Links can match multiple pool rows (predecessors linger on expired
+			-- parents); seats inherit from the pool on the LIVE parent.
+			LEFT JOIN LATERAL (
+				SELECT pool.*
+				FROM customer_licenses pool
+				JOIN customer_products pool_parent
+					ON pool_parent.id = pool.parent_customer_product_id
+				WHERE cp.customer_license_link_id IS NOT NULL
+					AND pool.link_id = cp.customer_license_link_id
+				ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+					pool.created_at DESC
+				LIMIT 1
+			) pcl ON true
+			LEFT JOIN customer_products pcp_lifecycle
+				ON pcp_lifecycle.id = pcl.parent_customer_product_id
 			GROUP BY cp.subject_key
 		),
 

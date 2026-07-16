@@ -3,6 +3,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
+import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import { computeCreateCustomerPlan } from "./compute/computeCreateCustomerPlan.js";
 import { executeAutumnCreateCustomerPlan } from "./execute/executeAutumnCreateCustomerPlan.js";
 import { finalizeCreateCustomer } from "./finalizeCreateCustomer.js";
@@ -64,43 +66,63 @@ export const createCustomerWithDefaults = async ({
 
 	// ============ Phase 2: Create stripe customer / attach paid defaults ============
 
-	// 4. Setup billing context (creates Stripe customer)
+	// Webhook consumers call customers.get on receipt, so emission waits until
+	// the Stripe customer id (when one is created) is persisted. Emitted in the
+	// finally: phase 1 is committed either way, and a phase-2 throw must not
+	// drop the webhooks — a client retry lands on the "existing" path above and
+	// would never emit them.
+	try {
+		// 4. Setup billing context (creates Stripe customer)
 
-	const shouldCreateStripeCustomer =
-		customerData?.create_in_stripe || context.hasPaidProducts;
+		const shouldCreateStripeCustomer =
+			customerData?.create_in_stripe || context.hasPaidProducts;
 
-	const shouldAttachPaidDefaults = context.hasPaidProducts;
+		const shouldAttachPaidDefaults = context.hasPaidProducts;
 
-	if (!shouldCreateStripeCustomer) return context.fullCustomer;
+		if (!shouldCreateStripeCustomer) return context.fullCustomer;
 
-	const billingContext = await setupCreateCustomerBillingContext({
-		ctx,
-		context,
-	});
+		const billingContext = await setupCreateCustomerBillingContext({
+			ctx,
+			context,
+		});
 
-	if (!shouldAttachPaidDefaults) return context.fullCustomer;
+		if (!shouldAttachPaidDefaults) return context.fullCustomer;
 
-	// 5. Evaluate Stripe billing plan
-	const stripeBillingPlan = await evaluateStripeBillingPlan({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-	});
+		// 5. Evaluate Stripe billing plan
+		const stripeBillingPlan = await evaluateStripeBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
 
-	logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
+		logStripeBillingPlan({ ctx, stripeBillingPlan, billingContext });
 
-	// 6. Execute Stripe billing plan
-	const { stripeSubscription } = await executeStripeBillingPlan({
-		ctx,
-		billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
-		billingContext,
-	});
+		// 6. Execute Stripe billing plan
+		const { stripeSubscription } = await executeStripeBillingPlan({
+			ctx,
+			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
+			billingContext,
+		});
 
-	// 7. Finalize (link subscription back to Autumn)
-	return finalizeCreateCustomer({
-		ctx,
-		context,
-		autumnBillingPlan,
-		stripeSubscription,
-	});
+		// 7. Finalize (link subscription back to Autumn)
+		return await finalizeCreateCustomer({
+			ctx,
+			context,
+			autumnBillingPlan,
+			stripeSubscription,
+		});
+	} finally {
+		await billingPlanToSendProductsUpdated({
+			ctx,
+			autumnBillingPlan,
+			billingContext: context,
+		});
+
+		// Fire-and-forget: don't block customer creation on svix delivery
+		void sendBillingUpdatedWebhook({
+			ctx,
+			autumnBillingPlan,
+			originalFullCustomer: context.fullCustomer,
+		});
+	}
 };

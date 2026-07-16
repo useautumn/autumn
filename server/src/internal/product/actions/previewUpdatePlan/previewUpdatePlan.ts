@@ -8,7 +8,13 @@ import {
 	type UpdateVariantParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	previewPlanLicenseSync,
+	validatePlanLicenseUpdate,
+} from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
+import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 import { buildCorePlanUpdatePreview } from "./buildCorePlanUpdatePreview.js";
 import { buildIncomingFullProduct } from "./buildIncomingFullProduct.js";
 import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
@@ -16,8 +22,6 @@ import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
-import { getVariantSettingsPatch } from "../common/planTransformUtils.js";
-import { previewOtherProductVersions } from "../updateProduct/updateOtherProductVersions.js";
 
 export const buildPlanUpdatePreview = async ({
 	ctx,
@@ -66,12 +70,21 @@ export const buildPlanUpdatePreview = async ({
 		updates: data,
 		hasCustomers,
 	});
+	const licensePreview = await previewPlanLicenseSync({
+		ctx,
+		parentProduct: incomingFullProduct,
+		licenses: data.licenses,
+		newParentVersion: versionable,
+	});
+	previewPlan.licenses = licensePreview.licenses;
 	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
 	const settingsPatch = getVariantSettingsPatch({
 		from: currentPlan,
 		to: previewPlan,
 	});
-	const shouldPreviewVersions = Boolean(data.include_versions || data.all_versions);
+	const shouldPreviewVersions = Boolean(
+		data.include_versions || data.all_versions,
+	);
 	const shouldPreviewVariants = Boolean(
 		data.include_variants ||
 			(data.update_variant_ids?.length ?? 0) > 0 ||
@@ -112,6 +125,7 @@ export const buildPlanUpdatePreview = async ({
 			customerCount,
 			versionable,
 		}),
+		license_changes: licensePreview.changes,
 		variants,
 		other_versions: otherVersions,
 	});
@@ -124,6 +138,10 @@ export const previewUpdatePlan = async ({
 	ctx: AutumnContext;
 	data: PreviewUpdatePlanParamsV2;
 }): Promise<PlanUpdatePreview> => {
+	validatePlanLicenseUpdate({
+		allVersions: data.all_versions,
+		licenses: data.licenses,
+	});
 	const baseFullProduct = await getPreviewTargetProduct({
 		ctx,
 		planId: data.plan_id,

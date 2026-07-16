@@ -4,11 +4,13 @@ import type {
 	Entitlement,
 	EntitlementWithFeature,
 } from "../../models/productModels/entModels/entModels.js";
+import type { FixedPriceConfig } from "../../models/productModels/priceModels/priceConfig/fixedPriceConfig.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import type {
 	FullProduct,
 	Product,
 } from "../../models/productModels/productModels.js";
+import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
 export const entToPrice = ({
 	ent,
@@ -88,6 +90,14 @@ export const productToStripeIds = ({
 	if (!processor?.id) return [];
 	return [processor.id, ...(processor.additional_ids ?? [])];
 };
+
+/** The plan's fixed base price, or null when it has none (e.g. free plans). */
+export const productToBasePrice = ({
+	product,
+}: {
+	product: FullProduct;
+}): (Price & { config: FixedPriceConfig }) | null =>
+	product.prices.find(isFixedPrice) ?? null;
 
 export const productToEnt = ({
 	product,

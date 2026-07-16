@@ -48,6 +48,13 @@ import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
 import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
+import {
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
+	planLicenses,
+} from "../models/licenseModels/licenseTable.js";
+import { planLicenseRelations } from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -60,6 +67,7 @@ import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js"
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
+import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
@@ -153,6 +161,9 @@ export {
 	invoiceRelations,
 	invoiceTemplates,
 	invoices,
+	customerLicenses,
+	licenseEntitlements,
+	licensePrices,
 	// OAuth Provider
 	jwks,
 	member,
@@ -170,8 +181,11 @@ export {
 	oauthConsent,
 	oauthRefreshToken,
 	agentRules,
+	transitionRules,
 	// Tables
 	organizations,
+	planLicenses,
+	planLicenseRelations,
 	passkey,
 	// Relations
 	organizationsRelations,

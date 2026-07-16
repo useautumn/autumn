@@ -88,7 +88,10 @@ const resetCustomerEntitlementInDb = async ({
 						},
 					})
 				: null;
+			const resetsViaInvoice =
+				(cusEnt.customer_product?.subscription_ids?.length ?? 0) > 0;
 			if (
+				resetsViaInvoice &&
 				relatedCusPrice &&
 				(!customerEntitlementWithPrices ||
 					!isCustomerEntitlementPrepaidWithSeparateResetInterval({

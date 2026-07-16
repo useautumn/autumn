@@ -1,15 +1,16 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
  * Activates a scheduled customer product.
@@ -63,10 +64,20 @@ export const activateScheduledCustomerProduct = async ({
 		scheduled_ids: scheduledIds,
 	};
 
-	await CusProductService.update({
+	// Executing through the shared plan runs the license lifecycle for
+	// activations that bring license-bearing parents live.
+	await executeAutumnBillingPlan({
 		ctx,
-		cusProductId: customerProduct.id,
-		updates,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
+		},
 	});
 
 	// 2. Send webhook

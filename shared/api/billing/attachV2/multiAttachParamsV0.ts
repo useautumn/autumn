@@ -1,5 +1,6 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
+import { CurrencyCodeSchema } from "@api/products/components/additionalCurrencies";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
@@ -29,7 +30,7 @@ export const MultiAttachPlanSchema = z.object({
 	}),
 	customize: MultiAttachCustomizePlanSchema.meta({
 		description:
-			"Customize the plan to attach. Can override the price or items.",
+			"Customize the plan to attach. Can override the price, items, or licenses.",
 	}),
 	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
 		description:
@@ -62,6 +63,11 @@ export const MultiAttachParamsV0Schema = z.object({
 	free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 		description:
 			"Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial.",
+	}),
+
+	currency: CurrencyCodeSchema.optional().meta({
+		description:
+			"Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default.",
 	}),
 
 	invoice_mode: InvoiceModeParamsSchema.optional().meta({

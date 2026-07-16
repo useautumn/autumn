@@ -3,8 +3,8 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 } from "../../../../utils/productUtils/classifyProduct/classifyProductUtils.js";
-import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
+import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
 export const planFilterMatchesProduct = ({
@@ -46,7 +46,7 @@ export const planFilterMatchesProduct = ({
 		}
 	}
 
-	const paid = !isFreeProduct({ prices: product.prices });
+	const paid = !isFreeProduct({ product });
 	if (filter.paid !== undefined && paid !== filter.paid) {
 		return false;
 	}
@@ -55,7 +55,7 @@ export const planFilterMatchesProduct = ({
 		return false;
 	}
 
-	const recurring = !isOneOffProduct({ prices: product.prices });
+	const recurring = !isOneOffProduct({ product });
 	if (filter.recurring !== undefined && recurring !== filter.recurring) {
 		return false;
 	}
