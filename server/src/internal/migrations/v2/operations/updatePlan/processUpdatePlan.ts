@@ -72,12 +72,7 @@ export const processUpdatePlan = async ({
 			customerProduct,
 		});
 		if (!productContext) {
-			const alreadyOnRequestedVersion =
-				op.version !== undefined &&
-				op.customize === undefined &&
-				op.version === customerProduct.product.version &&
-				!customerProduct.is_custom;
-			if (alreadyOnRequestedVersion) matchedCustomerProductCount -= 1;
+			matchedCustomerProductCount -= 1;
 			continue;
 		}
 

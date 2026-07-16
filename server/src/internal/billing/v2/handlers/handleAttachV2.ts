@@ -6,8 +6,8 @@ import {
 	InternalError,
 	Scopes,
 } from "@autumn/shared";
-import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
@@ -22,6 +22,7 @@ export const handleAttachV2 = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"Attach already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

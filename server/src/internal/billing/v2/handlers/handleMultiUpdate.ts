@@ -17,6 +17,7 @@ export const handleMultiUpdate = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"Multi-update already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

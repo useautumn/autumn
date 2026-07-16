@@ -10,7 +10,7 @@ import type { Context, Env, Next } from "hono";
 import type { H } from "hono/types";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { acquireLock, clearLock } from "@/external/redis/redisUtils.js";
+import { withLock } from "@/external/redis/redisUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
@@ -147,6 +147,8 @@ export function createRoute<
 		ttlMs?: number;
 		/** Error message to show when lock is already held */
 		errorMessage?: string;
+		/** Whether configured Redis failures may proceed without a lock. */
+		failOpen?: boolean;
 	};
 	/**
 	 * Required auth scopes for this route. See `RouteScopeRequirement`.
@@ -290,21 +292,7 @@ export function createRoute<
 
 		const handler = pickHandler(c);
 
-		// Acquire lock if lock config provided
-		let lockKey: string | null = null;
-		let lockValue: string | null = null;
-		if (opts.lock) {
-			lockKey = opts.lock.getKey(c);
-			if (lockKey) {
-				lockValue = await acquireLock({
-					lockKey,
-					ttlMs: opts.lock.ttlMs,
-					errorMessage: opts.lock.errorMessage,
-				});
-			}
-		}
-
-		try {
+		const executeHandler = async () => {
 			if (opts.withTx) {
 				const db = c.get("ctx").db;
 
@@ -318,12 +306,19 @@ export function createRoute<
 			} else {
 				return await handler(c);
 			}
-		} finally {
-			// Always release lock
-			if (lockKey) {
-				await clearLock({ lockKey, lockValue });
-			}
-		}
+		};
+
+		if (!opts.lock) return executeHandler();
+		const lockKey = opts.lock.getKey(c);
+		if (!lockKey) return executeHandler();
+
+		return withLock({
+			lockKey,
+			ttlMs: opts.lock.ttlMs,
+			errorMessage: opts.lock.errorMessage,
+			failOpen: opts.lock.failOpen,
+			fn: executeHandler,
+		});
 	};
 
 	return [...middlewares, wrappedHandler as H] as unknown as [H, ...H[]];

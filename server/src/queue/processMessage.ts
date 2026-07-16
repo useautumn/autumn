@@ -9,6 +9,7 @@ import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisEr
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
+import { isRetryableAutoTopupError } from "@/internal/balances/autoTopUp/isRetryableAutoTopupError.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
@@ -58,6 +59,8 @@ export const shouldRetrySqsJobError = ({
 			return isTransientDbError({ error });
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		case JobName.AutoTopUp:
+			return isRetryableAutoTopupError({ error });
 		default:
 			return false;
 	}

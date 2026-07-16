@@ -25,7 +25,7 @@ export type MigrateCustomerResult = {
 	response: Record<string, unknown> | null;
 };
 
-const MIGRATION_CUSTOMER_LOCK_TTL_MS = 10 * 60 * 1000;
+const MIGRATION_CUSTOMER_LOCK_TTL_MS = 60 * 1000;
 const MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
 
 /** Top-level per-customer migration runner. Preview evaluates without writes. */
@@ -61,6 +61,7 @@ export const migrateCustomer = async ({
 			customerId,
 			preview,
 		});
+		assertLockOwned();
 
 		const run = async (): Promise<MigrateCustomerResult> => {
 			const {
@@ -76,6 +77,7 @@ export const migrateCustomer = async ({
 					insertCustomerProducts: [],
 				},
 			});
+			assertLockOwned();
 
 			const billingPlan = await evaluateMigrateCustomerStripe({
 				ctx: migrationCtx,
@@ -83,9 +85,9 @@ export const migrateCustomer = async ({
 				billingContexts,
 				autumnBillingPlan: autumnPlan,
 			});
+			assertLockOwned();
 
 			if (!preview) {
-				assertLockOwned();
 				await executeMigrateCustomerPlan({
 					ctx: migrationCtx,
 					context,

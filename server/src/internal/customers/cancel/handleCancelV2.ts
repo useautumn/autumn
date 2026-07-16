@@ -19,6 +19,7 @@ export const handleCancelV2 = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"Cancel already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

@@ -10,6 +10,7 @@ export const handleReleaseLicense = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"License release already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

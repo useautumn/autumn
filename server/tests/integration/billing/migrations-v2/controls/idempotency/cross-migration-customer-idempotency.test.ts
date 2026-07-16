@@ -11,17 +11,22 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
+	ApiVersion,
 	CusProductStatus,
 	customerProducts,
 	customers,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
+import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { createProducts } from "@tests/utils/productUtils.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { and, eq } from "drizzle-orm";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
 import { preProcessMigration } from "@/internal/migrations/v2/run/preProcess/index.js";
@@ -47,14 +52,41 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 1_500 })],
 		});
 
-		const { autumnV1, autumnV2_2, ctx } = await initScenario({
-			customerId,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [plan] }),
-			],
-			actions: [s.billing.attach({ productId: plan.id })],
+		const autumnV1 = new AutumnInt({
+			version: ApiVersion.V1_2,
+			secretKey: ctx.orgSecretKey,
 		});
+		const autumnV2_2 = new AutumnInt({
+			version: ApiVersion.V2_2,
+			secretKey: ctx.orgSecretKey,
+		});
+
+		try {
+			await autumnV1.customers.delete(customerId);
+		} catch {}
+		await createProducts({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			env: ctx.env,
+			autumn: autumnV1,
+			products: [plan],
+			createInStripe: false,
+		});
+		await autumnV1.customers.create({
+			id: customerId,
+			name: customerId,
+			email: `${customerId}@example.com`,
+			skipWebhooks: true,
+			internalOptions: { disable_defaults: true },
+		});
+		await autumnV1.billing.attach(
+			{
+				customer_id: customerId,
+				product_id: plan.id,
+				no_billing_changes: true,
+			},
+			{ timeout: 0, skipWebhooks: true },
+		);
 
 		await autumnV1.products.update(plan.id, {
 			items: [items.monthlyMessages({ includedUsage: 1_800 })],
@@ -75,6 +107,7 @@ test.concurrent(
 								type: "update_plan",
 								plan_filter: { plan_id: plan.id },
 								version: 2,
+								customize: { add_items: [itemsV2.dashboard()] },
 							},
 						],
 					},
@@ -129,15 +162,17 @@ test.concurrent(
 				},
 			}),
 		);
+		const migrationResults = [firstResult, ...followerResults];
 
 		try {
 			await timeout(250);
 			expect(followerContextsLoaded).toBe(0);
 		} finally {
 			releaseFirstMigration.resolve(undefined);
+			await Promise.allSettled(migrationResults);
 		}
 		const [firstMigrationResult, ...followerMigrationResults] =
-			await Promise.all([firstResult, ...followerResults]);
+			await Promise.all(migrationResults);
 		expect(firstMigrationResult.status).toBe("succeeded");
 		expect(followerMigrationResults.map((result) => result.status)).toEqual([
 			"skipped",
@@ -168,9 +203,15 @@ test.concurrent(
 		expectBalanceCorrect({
 			customer,
 			featureId: TestFeature.Messages,
-			granted: 1_800,
-			remaining: 1_800,
+			granted: 1_500,
+			remaining: 1_500,
 			usage: 0,
+			planId: plan.id,
+		});
+		expectFlagCorrect({
+			customer,
+			featureId: TestFeature.Dashboard,
+			present: true,
 			planId: plan.id,
 		});
 	},

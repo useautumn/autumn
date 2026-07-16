@@ -2,12 +2,12 @@ import {
 	AffectedResource,
 	ApiVersion,
 	InternalError,
+	Scopes,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
-import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
@@ -22,6 +22,7 @@ export const handleUpdateSubscription = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"Update subscription already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

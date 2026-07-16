@@ -1,7 +1,7 @@
 import {
-    CreateScheduleParamsV0Schema,
-    type CreateScheduleResponse,
-    Scopes,
+	CreateScheduleParamsV0Schema,
+	type CreateScheduleResponse,
+	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -16,6 +16,7 @@ export const handleCreateSchedule = createRoute({
 		process.env.NODE_ENV !== "development"
 			? {
 					ttlMs: 120000,
+					failOpen: false,
 					errorMessage:
 						"Create schedule already in progress for this customer, try again in a few seconds",
 					getKey: (c) => {

@@ -1,5 +1,5 @@
 import { AppEnv } from "@autumn/shared";
-import { withLock } from "@/external/redis/redisUtils.js";
+import { withWaitingLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
@@ -13,6 +13,7 @@ import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
 import { clearAutoTopupPendingKey } from "./helpers/enqueueAutoTopupWithBurstSuppression.js";
 import { recordAutoTopupAttempt } from "./helpers/limits/index.js";
+import { isRetryableAutoTopupError } from "./isRetryableAutoTopupError.js";
 import { logAutoTopupContext } from "./logs/logAutoTopupContext.js";
 import { setupAutoTopupContext } from "./setup/setupAutoTopupContext.js";
 import {
@@ -20,6 +21,9 @@ import {
 	sendAutoTopupFailedWebhook,
 } from "./webhooks/sendAutoTopupFailedWebhook.js";
 import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
+
+const AUTO_TOPUP_LOCK_TTL_MS = 60_000;
+const AUTO_TOPUP_LOCK_MAX_WAIT_MS = 5_000;
 
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
@@ -33,6 +37,7 @@ export const autoTopup = async ({
 	const { customerId, featureId } = payload;
 	let failureWebhookSent = false;
 	let lastAutoTopupContext: AutoTopupContext | undefined;
+	let preservePendingKeyForRetry = false;
 
 	const sendFailureWebhook = async ({
 		autoTopupContext,
@@ -167,18 +172,20 @@ export const autoTopup = async ({
 
 	try {
 		// 2. Execute under lock (shares attach lock to prevent concurrent attach + auto-topup)
-		await withLock({
+		await withWaitingLock({
 			lockKey: buildAutoTopUpLockKey({
 				orgId: org.id,
 				env,
 				customerId,
 			}),
-			ttlMs: 60_000,
+			ttlMs: AUTO_TOPUP_LOCK_TTL_MS,
+			maxWaitMs: AUTO_TOPUP_LOCK_MAX_WAIT_MS,
 			errorMessage: `Another billing operation is already in progress for customer ${customerId}`,
 			fn: executeAutoTopup,
 		});
 	} catch (error) {
-		if (!failureWebhookSent) {
+		preservePendingKeyForRetry = isRetryableAutoTopupError({ error });
+		if (!preservePendingKeyForRetry && !failureWebhookSent) {
 			const failure = classifyAutoTopupError({ error });
 			await sendFailureWebhook({
 				...failure,
@@ -188,6 +195,8 @@ export const autoTopup = async ({
 		}
 		throw error;
 	} finally {
-		await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		if (!preservePendingKeyForRetry) {
+			await clearAutoTopupPendingKey({ ctx, customerId, featureId });
+		}
 	}
 };
