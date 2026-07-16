@@ -10,6 +10,13 @@ end
 return 0
 `;
 
+const RENEW_LOCK_SCRIPT = `
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+	return redis.call("PEXPIRE", KEYS[1], ARGV[2])
+end
+return 0
+`;
+
 interface LockData {
 	errorMessage: string;
 	ownerToken: string;
@@ -34,6 +41,25 @@ export const clearLock = async ({
 		// The TTL still guarantees eventual release if Redis becomes unavailable.
 		return false;
 	}
+};
+
+const renewLock = async ({
+	lockKey,
+	lockValue,
+	ttlMs,
+}: {
+	lockKey: string;
+	lockValue: string;
+	ttlMs: number;
+}): Promise<boolean> => {
+	if (redis.status !== "ready") return false;
+
+	const result = await runRedisOp({
+		operation: () =>
+			redis.eval(RENEW_LOCK_SCRIPT, 1, lockKey, lockValue, ttlMs),
+		source: "renewLock",
+	});
+	return result === 1;
 };
 
 /**
@@ -106,11 +132,103 @@ export const acquireLock = async ({
 	}
 };
 
-const waitForLockRetry = () =>
+const waitForLockRetry = ({ maxDelayMs }: { maxDelayMs: number }) =>
 	new Promise<void>((resolve) => {
 		const jitterMs = Math.floor(Math.random() * 50);
-		setTimeout(resolve, 75 + jitterMs);
+		setTimeout(resolve, Math.min(75 + jitterMs, maxDelayMs));
 	});
+
+const waitForLeaseRenewal = ({
+	delayMs,
+	signal,
+}: {
+	delayMs: number;
+	signal: AbortSignal;
+}): Promise<boolean> => {
+	if (signal.aborted) return Promise.resolve(false);
+
+	return new Promise((resolve) => {
+		const onAbort = () => {
+			clearTimeout(timeoutId);
+			resolve(false);
+		};
+		const timeoutId = setTimeout(() => {
+			signal.removeEventListener("abort", onAbort);
+			resolve(true);
+		}, delayMs);
+		signal.addEventListener("abort", onAbort, { once: true });
+	});
+};
+
+const createLockOwnershipLostError = () =>
+	new RecaseError({
+		message: "Lost ownership of operation lock while work was still running",
+		code: ErrCode.LockAlreadyExists,
+		statusCode: 423,
+	});
+
+const createLockWaitTimeoutError = ({ maxWaitMs }: { maxWaitMs: number }) =>
+	new RecaseError({
+		message: `Timed out after ${maxWaitMs}ms waiting for operation lock`,
+		code: ErrCode.LockAlreadyExists,
+		statusCode: 423,
+	});
+
+type OwnedLockContext = {
+	assertLockOwned: () => void;
+};
+
+const runWithOwnedLock = async <T>({
+	lockKey,
+	lockValue,
+	ttlMs,
+	fn,
+}: {
+	lockKey: string;
+	lockValue: string | null;
+	ttlMs: number;
+	fn: (context: OwnedLockContext) => Promise<T>;
+}): Promise<T> => {
+	if (!lockValue) {
+		return fn({ assertLockOwned: () => undefined });
+	}
+
+	const renewalController = new AbortController();
+	let ownershipError: unknown;
+	const assertLockOwned = () => {
+		if (ownershipError) throw ownershipError;
+	};
+	const renewalPromise = (async () => {
+		const renewalIntervalMs = Math.max(1, Math.floor(ttlMs / 3));
+		while (
+			await waitForLeaseRenewal({
+				delayMs: renewalIntervalMs,
+				signal: renewalController.signal,
+			})
+		) {
+			try {
+				const renewed = await renewLock({ lockKey, lockValue, ttlMs });
+				if (!renewed) {
+					ownershipError = createLockOwnershipLostError();
+					renewalController.abort();
+				}
+			} catch (error) {
+				ownershipError = error;
+				renewalController.abort();
+			}
+		}
+	})();
+
+	try {
+		const result = await fn({ assertLockOwned });
+		assertLockOwned();
+		return result;
+	} finally {
+		renewalController.abort();
+		await renewalPromise;
+		await clearLock({ lockKey, lockValue });
+	}
+};
 
 /**
  * Execute a function with a distributed lock. Acquires lock, runs the function, then releases the lock.
@@ -138,20 +256,24 @@ export const withLock = async <T>({
 
 /**
  * Execute a function after waiting for exclusive ownership of a lock.
- * Unlike `withLock`, this is fail-closed when Redis is unavailable.
+ * Unlike `withLock`, this is fail-closed when Redis is unavailable, bounds
+ * acquisition by `maxWaitMs`, and renews the owned lease until work settles.
  */
 export const withWaitingLock = async <T>({
 	lockKey,
 	ttlMs,
+	maxWaitMs,
 	errorMessage = DEFAULT_ERROR_MESSAGE,
 	fn,
 }: {
 	lockKey: string;
 	ttlMs: number;
+	maxWaitMs: number;
 	errorMessage?: string;
-	fn: () => Promise<T>;
+	fn: (context: OwnedLockContext) => Promise<T>;
 }): Promise<T> => {
 	let lockValue: string | null = null;
+	const deadlineMs = Date.now() + maxWaitMs;
 
 	while (!lockValue) {
 		try {
@@ -166,16 +288,19 @@ export const withWaitingLock = async <T>({
 				error instanceof RecaseError &&
 				error.code === ErrCode.LockAlreadyExists
 			) {
-				await waitForLockRetry();
+				const remainingMs = deadlineMs - Date.now();
+				if (remainingMs <= 0) {
+					throw createLockWaitTimeoutError({ maxWaitMs });
+				}
+				await waitForLockRetry({ maxDelayMs: remainingMs });
+				if (Date.now() >= deadlineMs) {
+					throw createLockWaitTimeoutError({ maxWaitMs });
+				}
 				continue;
 			}
 			throw error;
 		}
 	}
 
-	try {
-		return await fn();
-	} finally {
-		await clearLock({ lockKey, lockValue });
-	}
+	return runWithOwnedLock({ lockKey, lockValue, ttlMs, fn });
 };

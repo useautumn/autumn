@@ -26,6 +26,7 @@ export type MigrateCustomerResult = {
 };
 
 const MIGRATION_CUSTOMER_LOCK_TTL_MS = 10 * 60 * 1000;
+const MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
 
 /** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
@@ -48,7 +49,12 @@ export const migrateCustomer = async ({
 		preview,
 	});
 
-	const migrate = async (): Promise<MigrateCustomerResult> => {
+	const migrate = async ({
+		assertLockOwned = () => undefined,
+	}: {
+		assertLockOwned?: () => void;
+	} = {}): Promise<MigrateCustomerResult> => {
+		assertLockOwned();
 		const context = await setupMigrateCustomerContext({
 			ctx: migrationCtx,
 			migration,
@@ -79,12 +85,14 @@ export const migrateCustomer = async ({
 			});
 
 			if (!preview) {
+				assertLockOwned();
 				await executeMigrateCustomerPlan({
 					ctx: migrationCtx,
 					context,
 					billingPlan,
 					billingContexts,
 				});
+				assertLockOwned();
 			}
 
 			const response = {
@@ -141,6 +149,7 @@ export const migrateCustomer = async ({
 			customerId,
 		}),
 		ttlMs: MIGRATION_CUSTOMER_LOCK_TTL_MS,
+		maxWaitMs: MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS,
 		errorMessage:
 			"Customer billing migration already in progress, try again in a few seconds",
 		fn: migrate,
