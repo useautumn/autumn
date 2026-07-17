@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerDataSchema } from "../../common/customerData";
 import { EntityDataSchema } from "../../common/entityData";
+import { OverageBehaviorSchema } from "./overageBehavior";
 import { TrackTimestampSchema } from "./trackTimestamp";
 
 export const TrackTokensParamsSchema = z.object({
@@ -48,9 +49,7 @@ export const TrackTokensParamsSchema = z.object({
 		internal: true,
 	}),
 	timestamp: TrackTimestampSchema.optional(),
-	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
-		internal: true,
-	}),
+	overage_behavior: OverageBehaviorSchema.optional(),
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,
 	}),

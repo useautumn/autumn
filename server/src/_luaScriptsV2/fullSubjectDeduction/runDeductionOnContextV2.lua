@@ -33,6 +33,8 @@ local function process_deduction_pass(params)
   local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
   local alter_granted_balance = params.alter_granted_balance or false
   local overage_behavior_is_allow = params.overage_behavior_is_allow or false
+  local enforce_spend_limit_gate = params.enforce_spend_limit_gate or false
+  local bypass_usage_windows = params.bypass_usage_windows or false
   local pass_number = params.pass_number
   local skip_if_not_usage_allowed = params.skip_if_not_usage_allowed
   local updates = params.updates or {}
@@ -57,7 +59,7 @@ local function process_deduction_pass(params)
     local available_overage = nil
     if pass_number == 2
         and remaining_amount > 0
-        and not overage_behavior_is_allow
+        and enforce_spend_limit_gate
         and not is_nil(ent_feature_id)
     then
       local spend_limit = nil
@@ -98,7 +100,7 @@ local function process_deduction_pass(params)
     -- ent is skipped rather than breaking the loop -- a balance-dim cap only
     -- binds its own feature's pools, so other ents may be unconstrained.
     local ent_amount = remaining_amount
-    if should_process and remaining_amount > 0 then
+    if should_process and remaining_amount > 0 and not bypass_usage_windows then
       local available_from_usage_windows = get_available_from_usage_windows({
         context = context,
         ent_feature_id = ent_feature_id,
@@ -175,6 +177,7 @@ local function process_rollover_deduction(params)
   local rollovers = params.rollovers
   local target_entity_id = params.target_entity_id
   local remaining_amount = params.remaining_amount or 0
+  local bypass_usage_windows = params.bypass_usage_windows or false
   local logger = context.logger
 
   if is_nil(rollovers) or #rollovers == 0 or remaining_amount <= 0 then
@@ -186,14 +189,16 @@ local function process_rollover_deduction(params)
   -- = nil): rollover drains stay outside credit-pool caps, matching how spend
   -- limits ignore them.
   local rollover_amount = remaining_amount
-  local available_from_usage_windows = get_available_from_usage_windows({
-    context = context,
-    ent_feature_id = nil,
-    credit_cost = 1,
-  })
-  if not is_nil(available_from_usage_windows)
-      and available_from_usage_windows < rollover_amount then
-    rollover_amount = available_from_usage_windows
+  if not bypass_usage_windows then
+    local available_from_usage_windows = get_available_from_usage_windows({
+      context = context,
+      ent_feature_id = nil,
+      credit_cost = 1,
+    })
+    if not is_nil(available_from_usage_windows)
+        and available_from_usage_windows < rollover_amount then
+      rollover_amount = available_from_usage_windows
+    end
   end
 
   if rollover_amount <= 0 then
@@ -260,7 +265,14 @@ local function run_deduction_on_context(params)
   local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
   local alter_granted_balance = params.alter_granted_balance or false
   local overage_behaviour = params.overage_behaviour or 'cap'
-  local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
+  -- 'overflow' removes balance floors like 'allow', but keeps monetary spend
+  -- limits authoritative and punches through usage-window caps.
+  local overage_behavior_is_allow = alter_granted_balance
+      or overage_behaviour == 'allow'
+      or overage_behaviour == 'overflow'
+  local enforce_spend_limit_gate = overage_behaviour == 'overflow'
+      or not (alter_granted_balance or overage_behaviour == 'allow')
+  local bypass_usage_windows = overage_behaviour == 'overflow'
   local updates = {}
 
   local remaining_amount
@@ -284,6 +296,7 @@ local function run_deduction_on_context(params)
       rollovers = rollovers,
       target_entity_id = target_entity_id,
       remaining_amount = remaining_amount,
+      bypass_usage_windows = bypass_usage_windows,
     })
     remaining_amount = remaining_amount - rollover_deducted
   end
@@ -296,6 +309,8 @@ local function run_deduction_on_context(params)
     usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
     alter_granted_balance = alter_granted_balance,
     overage_behavior_is_allow = overage_behavior_is_allow,
+    enforce_spend_limit_gate = enforce_spend_limit_gate,
+    bypass_usage_windows = bypass_usage_windows,
     pass_number = 1,
     skip_if_not_usage_allowed = false,
     updates = updates,
@@ -313,6 +328,8 @@ local function run_deduction_on_context(params)
       usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
       alter_granted_balance = alter_granted_balance,
       overage_behavior_is_allow = overage_behavior_is_allow,
+      enforce_spend_limit_gate = enforce_spend_limit_gate,
+      bypass_usage_windows = bypass_usage_windows,
       pass_number = 2,
       skip_if_not_usage_allowed = not is_refund,
       updates = updates,

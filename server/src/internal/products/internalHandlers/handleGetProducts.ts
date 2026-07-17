@@ -108,8 +108,21 @@ export const handleGetLicenseProducts = createRoute({
 			orgId: org.id,
 			env,
 		});
-		const linkedInternalIds = new Set(
-			links.map((link) => link.license_internal_product_id),
+		const linkedInternalIds = links.map(
+			(link) => link.license_internal_product_id,
+		);
+
+		// A link points at the exact version's internal_id it was created against,
+		// which may be an older version. Resolve to public ids across all versions
+		// so versioned license plans still match the latest-version list below.
+		const linkedProducts = await planLicenseRepo.listProductsByInternalIds({
+			db,
+			orgId: org.id,
+			env,
+			internalProductIds: linkedInternalIds,
+		});
+		const linkedExternalIds = new Set(
+			linkedProducts.map((product) => product.id),
 		);
 
 		const products = await ProductService.listFull({
@@ -118,11 +131,6 @@ export const handleGetLicenseProducts = createRoute({
 			env,
 			returnAll: all_versions,
 		});
-		const linkedExternalIds = new Set(
-			products
-				.filter((product) => linkedInternalIds.has(product.internal_id))
-				.map((product) => product.id),
-		);
 		const licenseProducts = products.filter((product) =>
 			linkedExternalIds.has(product.id),
 		);
