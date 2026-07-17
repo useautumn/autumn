@@ -214,10 +214,10 @@ export const listPlansBasePriceSchema = z.object({
 		.optional(),
 });
 
-export const listPlansAddItemResetIntervalSchema = openEnumSchema;
+export const listPlansVariantDetailsResetIntervalSchema = openEnumSchema;
 
 export const listPlansVariantDetailsResetSchema = z.object({
-	interval: listPlansAddItemResetIntervalSchema,
+	interval: listPlansVariantDetailsResetIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 

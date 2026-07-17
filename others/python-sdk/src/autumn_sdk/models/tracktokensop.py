@@ -38,6 +38,13 @@ class TrackTokensGlobals(BaseModel):
         return m
 
 
+TrackTokensOverageBehavior = Literal[
+    "cap",
+    "overflow",
+]
+r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
+
+
 class TrackTokensParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
@@ -65,6 +72,8 @@ class TrackTokensParamsTypedDict(TypedDict):
     r"""Additional properties to attach to this usage event."""
     timestamp: NotRequired[int]
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
+    overage_behavior: NotRequired[TrackTokensOverageBehavior]
+    r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
     async_: NotRequired[bool]
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
@@ -109,6 +118,9 @@ class TrackTokensParams(BaseModel):
     timestamp: Optional[int] = None
     r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
 
+    overage_behavior: Optional[TrackTokensOverageBehavior] = None
+    r"""How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply."""
+
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
@@ -125,6 +137,7 @@ class TrackTokensParams(BaseModel):
                 "reasoning_tokens",
                 "properties",
                 "timestamp",
+                "overage_behavior",
                 "async",
             ]
         )
