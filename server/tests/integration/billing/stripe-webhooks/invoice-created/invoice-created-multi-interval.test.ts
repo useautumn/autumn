@@ -18,7 +18,6 @@ import { expectStripeInvoiceLineItemPeriodCorrect } from "@tests/integration/bil
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { pollUntil } from "@tests/utils/pollUntil";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -97,19 +96,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		withPause: true,
-		waitForSeconds: 2,
 	});
-	// Wait for the month-1 invoice to be recorded and messages to reset.
-	await pollUntil(
-		async () => {
-			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-			return (
-				(c.invoices?.length ?? 0) >= 2 &&
-				c.features[TestFeature.Messages]?.balance === 100
-			);
-		},
-		{ deadlineMs: 30_000 },
-	);
 
 	const customerMonth1 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -155,19 +142,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 		testClockId: testClockId!,
 		currentEpochMs,
 		withPause: true,
-		waitForSeconds: 2,
 	});
-	// Wait for the month-2 invoice to be recorded and messages to reset.
-	await pollUntil(
-		async () => {
-			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-			return (
-				(c.invoices?.length ?? 0) >= 3 &&
-				c.features[TestFeature.Messages]?.balance === 100
-			);
-		},
-		{ deadlineMs: 30_000 },
-	);
 
 	const customerMonth2 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -218,19 +193,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 		testClockId: testClockId!,
 		currentEpochMs,
 		withPause: true,
-		waitForSeconds: 2,
 	});
-	// Wait for the month-3 invoice and the quarterly words reset.
-	await pollUntil(
-		async () => {
-			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-			return (
-				(c.invoices?.length ?? 0) >= 4 &&
-				c.features[TestFeature.Words]?.balance === 50
-			);
-		},
-		{ deadlineMs: 30_000 },
-	);
 
 	const customerMonth3 =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);

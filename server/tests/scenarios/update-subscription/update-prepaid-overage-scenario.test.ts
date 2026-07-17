@@ -8,7 +8,6 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -51,17 +50,13 @@ test(`${chalk.yellowBright("update-subscription: prepaid overage recalculate bal
 			s.track({
 				featureId: TestFeature.Messages,
 				value: 450,
+				timeout: 2000,
 			}),
 		],
 	});
 
-	// Poll until the tracked overage has landed
-	const customerBefore = await pollUntil({
-		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
-		until: (c) => c.balances[TestFeature.Messages]?.remaining === 0,
-		timeoutMs: 6000,
-		intervalMs: 2000,
-	});
+	const customerBefore =
+		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
 		customer: customerBefore,
 		featureId: TestFeature.Messages,

@@ -9,7 +9,6 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { hoursToFinalizeInvoice } from "@tests/utils/constants.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { pollUntil } from "@tests/utils/genUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -83,13 +82,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity1 - create/dele
 		{ id: "3", name: "test2", feature_id: TestFeature.Users },
 	];
 	await autumnV1.entities.create(customerId, entities);
-	// Poll until the entity-seat invoice has been created
-	await pollUntil({
-		fetch: () => autumnV1.customers.get(customerId),
-		until: (c) => c.invoices?.length === 2,
-		timeoutMs: 9000,
-		intervalMs: 2000,
-	});
+	await timeout(3000);
 	usage += entities.length;
 
 	await expectSubQuantityCorrect({
@@ -133,13 +126,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity1 - create/dele
 		{ id: "5", name: "test4", feature_id: TestFeature.Users },
 	];
 	await autumnV1.entities.create(customerId, newEntities);
-	// Poll until the new-seat invoice has been created
-	await pollUntil({
-		fetch: () => autumnV1.customers.get(customerId),
-		until: (c) => c.invoices?.length === 3,
-		timeoutMs: 9000,
-		intervalMs: 2000,
-	});
+	await timeout(3000);
 	usage += 1; // Only 1 because 1 uses the replaceable
 
 	customer = await autumnV1.customers.get(customerId);
@@ -234,13 +221,7 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity2 - prorate imm
 		itemQuantity: usage,
 	});
 
-	// Poll until the prorated invoice has been created
-	await pollUntil({
-		fetch: () => autumnV1.customers.get(customerId),
-		until: (c) => c.invoices?.length === 2,
-		timeoutMs: 15_000,
-		intervalMs: 2000,
-	});
+	await timeout(5000);
 
 	await calcProrationAndExpectInvoice({
 		autumn: autumnV1,
@@ -490,17 +471,11 @@ test.concurrent(`${chalk.yellowBright("create-entity-paid: entity4 - per entity 
 		feature_id: TestFeature.Messages,
 		value: deduction,
 	});
+	await timeout(5000);
 
-	// Poll until the tracked deduction has been applied
-	const { balance } = await pollUntil({
-		fetch: () =>
-			autumnV1.check({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-			}),
-		until: (res) => res.balance === perEntityIncluded * usage - deduction,
-		timeoutMs: 15_000,
-		intervalMs: 2000,
+	const { balance } = await autumnV1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
 	});
 
 	expect(balance).toBe(perEntityIncluded * usage - deduction);
