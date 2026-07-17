@@ -5,9 +5,9 @@ import {
 	type CusProductStatus,
 	LegacyVersion,
 	type Organization,
-	type ProductOptions,
 	type ProductV2,
 } from "@autumn/shared";
+import type { MultiAttachParamsV0Input } from "@shared/api/billing/attachV2/multiAttachParamsV0";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
 import { expect } from "chai";
@@ -27,11 +27,11 @@ export const expectMultiAttachCorrect = async ({
 	autumn,
 	customerId,
 	entityId,
-	products,
+	plans,
 	results,
-	rewards,
+	discounts,
 	expectedRewards,
-	attachParams,
+	invoiceMode,
 	db,
 	org,
 	env,
@@ -39,44 +39,37 @@ export const expectMultiAttachCorrect = async ({
 	autumn?: AutumnInt;
 	customerId: string;
 	entityId?: string;
-	products: ProductOptions[];
+	plans: MultiAttachParamsV0Input["plans"];
 	results: {
 		product: ProductV2;
-		quantity: number;
 		status: CusProductStatus;
 		entityId?: string;
 	}[];
-	rewards?: string[];
+	discounts?: MultiAttachParamsV0Input["discounts"];
 	expectedRewards?: string[];
-	attachParams?: any;
+	invoiceMode?: MultiAttachParamsV0Input["invoice_mode"];
 	db: DrizzleCli;
 	org: Organization;
 	env: AppEnv;
 }) => {
 	autumn = autumn || new AutumnInt({ version: LegacyVersion.v1_2 });
-	const checkoutRes = await autumn.checkout({
-		customer_id: customerId,
-		products: products,
-		entity_id: entityId,
-		reward: rewards,
-		...attachParams,
-	});
 
-	const attachRes = await autumn.attach({
+	const params: MultiAttachParamsV0Input = {
 		customer_id: customerId,
-		products: products,
 		entity_id: entityId,
-		reward: rewards,
-		...attachParams,
-	});
+		plans,
+		discounts,
+		invoice_mode: invoiceMode,
+	};
 
-	if (attachRes.checkout_url) {
-		if (attachParams?.invoice) {
-			await completeInvoiceCheckout({
-				url: attachRes.checkout_url,
-			});
-		}
-		await completeStripeCheckoutForm({ url: attachRes.checkout_url });
+	const previewRes = await autumn.billing.previewMultiAttach(params);
+	const attachRes = await autumn.billing.multiAttach(params);
+
+	if (invoiceMode?.enabled && attachRes.invoice?.hosted_invoice_url) {
+		await completeInvoiceCheckout({ url: attachRes.invoice.hosted_invoice_url });
+		await timeout(5000);
+	} else if (attachRes.payment_url) {
+		await completeStripeCheckoutForm({ url: attachRes.payment_url });
 		await timeout(5000);
 	}
 
@@ -100,7 +93,7 @@ export const expectMultiAttachCorrect = async ({
 
 	const customer = await autumn.customers.get(customerId);
 	const latestInvoice = customer.invoices?.[0];
-	expect(latestInvoice.total).to.equal(checkoutRes.total);
+	expect(latestInvoice.total).to.equal(previewRes.total);
 
 	await expectSubToBeCorrect({
 		db,
@@ -111,7 +104,7 @@ export const expectMultiAttachCorrect = async ({
 	});
 
 	return {
-		checkoutRes,
+		previewRes,
 	};
 };
 

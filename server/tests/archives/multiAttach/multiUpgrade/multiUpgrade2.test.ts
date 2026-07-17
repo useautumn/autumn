@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -78,26 +78,15 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: pro.id,
-				quantity: 5,
-				product: pro,
-				status: CusProductStatus.Active,
-			},
-			{
-				product_id: premium.id,
-				quantity: 3,
-				product: premium,
-				status: CusProductStatus.Active,
-			},
-		];
-
+		// Old product-level quantity multipliers (5/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			autumn,
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [{ plan_id: pro.id }, { plan_id: premium.id }],
+			results: [
+				{ product: pro, status: CusProductStatus.Active },
+				{ product: premium, status: CusProductStatus.Active },
+			],
 			db,
 			org,
 			env,
@@ -153,45 +142,6 @@ describe(`${chalk.yellowBright("multiUpgrade2: Testing multi attach and update q
 		});
 	});
 
-	test("should update premium and pro quantities downward", async () => {
-		const productsList = [
-			{
-				product_id: pro.id,
-				quantity: 6,
-			},
-			{
-				product_id: premium.id,
-				quantity: 1,
-			},
-		];
-
-		const results = [
-			{
-				product: pro,
-				quantity: 6,
-				status: CusProductStatus.Active,
-			},
-			{
-				product: premium,
-				quantity: 1,
-				status: CusProductStatus.Active,
-			},
-			{
-				product: pro,
-				quantity: 1,
-				entityId: "1",
-				status: CusProductStatus.Active,
-			},
-		];
-
-		await expectMultiAttachCorrect({
-			autumn,
-			customerId,
-			products: productsList,
-			results,
-			db,
-			org,
-			env,
-		});
-	});
+	// Old contract re-attached with new product-level quantities (6/1); /billing.multi_attach has no quantity multiplier
+	test.todo("should update premium and pro quantities downward", () => {});
 });

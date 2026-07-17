@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -72,28 +72,17 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
 	});
 
 	test("should run multi attach through invoice checkout flow", async () => {
-		const productsList = [
-			{
-				product_id: pro.id,
-				quantity: 3,
-				product: pro,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product_id: premium.id,
-				quantity: 3,
-				product: premium,
-				status: CusProductStatus.Trialing,
-			},
-		];
-
+		// Old product-level quantity multipliers (3/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			customerId,
-			products: productsList,
-			results: productsList,
-			attachParams: {
-				invoice: true,
-				enable_product_immediately: true,
+			plans: [{ plan_id: pro.id }, { plan_id: premium.id }],
+			results: [
+				{ product: pro, status: CusProductStatus.Trialing },
+				{ product: premium, status: CusProductStatus.Trialing },
+			],
+			invoiceMode: {
+				enabled: true,
+				enable_plan_immediately: true,
 			},
 			db,
 			org,
@@ -101,42 +90,6 @@ describe(`${chalk.yellowBright("multiInvoice1: Testing multi attach through invo
 		});
 	});
 
-	test("should update premium & pro while trialing", async () => {
-		const newProducts = [
-			{
-				product_id: premium.id,
-				quantity: 2,
-			},
-			{
-				product_id: pro.id,
-				quantity: 4,
-			},
-		];
-
-		const results = [
-			{
-				product: pro,
-				quantity: 4,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product: premium,
-				quantity: 2,
-				status: CusProductStatus.Trialing,
-			},
-		];
-
-		await expectMultiAttachCorrect({
-			customerId,
-			products: newProducts,
-			results,
-			db,
-			org,
-			env,
-			attachParams: {
-				invoice: true,
-				enable_product_immediately: true,
-			},
-		});
-	});
+	// Old contract updated product-level quantities mid-trial; /billing.multi_attach has no quantity multiplier
+	test.todo("should update premium & pro while trialing", () => {});
 });

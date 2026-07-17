@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -56,28 +56,24 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: multiRewardPro.id,
-				quantity: 3,
-				product: multiRewardPro,
-				status: CusProductStatus.Active,
-			},
-			{
-				product_id: multiRewardPremium.id,
-				quantity: 3,
-				product: multiRewardPremium,
-				status: CusProductStatus.Active,
-			},
-		];
+		// Old product-level quantity multipliers (3/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [
+				{ plan_id: multiRewardPro.id },
+				{ plan_id: multiRewardPremium.id },
+			],
+			results: [
+				{ product: multiRewardPro, status: CusProductStatus.Active },
+				{ product: multiRewardPremium, status: CusProductStatus.Active },
+			],
 			db,
 			org,
 			env,
-			rewards: [proReward.id, premiumReward.id],
+			discounts: [
+				{ reward_id: proReward.id },
+				{ reward_id: premiumReward.id },
+			],
 			expectedRewards: [proReward.id, premiumReward.id],
 		});
 	});
@@ -100,36 +96,8 @@ describe(`${chalk.yellowBright("multiReward2: Testing multi attach with rewards 
 		});
 	});
 
-	test("should update pro quantity and have correct checkout amount", async () => {
-		const productsList = [
-			{
-				product_id: multiRewardPro.id,
-				quantity: 5,
-			},
-		];
-
-		const results = [
-			{
-				product: multiRewardPro,
-				quantity: 5,
-				status: CusProductStatus.Active,
-			},
-			{
-				product: multiRewardPremium,
-				quantity: 3,
-				status: CusProductStatus.Active,
-			},
-		];
-		await expectMultiAttachCorrect({
-			customerId,
-			products: productsList,
-			results,
-			db,
-			org,
-			env,
-			expectedRewards: [],
-		});
-	});
+	// Old contract re-attached with a new product-level quantity (5); /billing.multi_attach has no quantity multiplier
+	test.todo("should update pro quantity and have correct checkout amount", () => {});
 	return;
 
 	// it("should advance clock and update premium & growth while trialing", async function () {

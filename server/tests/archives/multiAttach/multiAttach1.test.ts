@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -7,10 +7,8 @@ import {
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectMultiAttachCorrect } from "@tests/utils/expectUtils/expectMultiAttach.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -98,81 +96,25 @@ describe(`${chalk.yellowBright("multiAttach1: Testing multi attach for trial pro
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: pro.id,
-				quantity: 5,
-				product: pro,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product_id: premium.id,
-				quantity: 3,
-				product: premium,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product_id: growth.id,
-				quantity: 2,
-				product: growth,
-				status: CusProductStatus.Trialing,
-			},
-		];
-
+		// Old product-level quantity multipliers (5/3/2) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [
+				{ plan_id: pro.id },
+				{ plan_id: premium.id },
+				{ plan_id: growth.id },
+			],
+			results: [
+				{ product: pro, status: CusProductStatus.Trialing },
+				{ product: premium, status: CusProductStatus.Trialing },
+				{ product: growth, status: CusProductStatus.Trialing },
+			],
 			db,
 			org,
 			env,
 		});
 	});
 
-	test("should advance clock and update premium & growth while trialing", async () => {
-		const newProducts = [
-			{
-				product_id: premium.id,
-				quantity: 1,
-			},
-			{
-				product_id: growth.id,
-				quantity: 5,
-			},
-		];
-
-		const results = [
-			{
-				product: pro,
-				quantity: 5,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product: premium,
-				quantity: 1,
-				status: CusProductStatus.Trialing,
-			},
-
-			{
-				product: growth,
-				quantity: 5,
-				status: CusProductStatus.Trialing,
-			},
-		];
-
-		await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addDays(new Date(), 3).getTime(),
-		});
-
-		await expectMultiAttachCorrect({
-			customerId,
-			products: newProducts,
-			results,
-			db,
-			org,
-			env,
-		});
-	});
+	// Old contract updated product-level quantities mid-trial; /billing.multi_attach has no quantity multiplier
+	test.todo("should advance clock and update premium & growth while trialing", () => {});
 });

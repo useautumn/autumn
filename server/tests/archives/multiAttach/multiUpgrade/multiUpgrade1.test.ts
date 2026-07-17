@@ -78,26 +78,15 @@ describe(`${chalk.yellowBright("multiUpgrade1: Testing multi attach and upgrade"
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: pro.id,
-				quantity: 5,
-				product: pro,
-				status: CusProductStatus.Active,
-			},
-			{
-				product_id: premium.id,
-				quantity: 3,
-				product: premium,
-				status: CusProductStatus.Active,
-			},
-		];
-
+		// Old product-level quantity multipliers (5/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			autumn,
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [{ plan_id: pro.id }, { plan_id: premium.id }],
+			results: [
+				{ product: pro, status: CusProductStatus.Active },
+				{ product: premium, status: CusProductStatus.Active },
+			],
 			db,
 			org,
 			env,

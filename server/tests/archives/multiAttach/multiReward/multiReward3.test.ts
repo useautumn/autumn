@@ -1,18 +1,13 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
 	LegacyVersion,
 	type Organization,
 } from "@autumn/shared";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectMultiAttachCorrect } from "@tests/utils/expectUtils/expectMultiAttach.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
-import { addDays } from "date-fns";
-import { Decimal } from "decimal.js";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -59,101 +54,28 @@ describe(`${chalk.yellowBright("multiReward3: Testing multi attach with rewards 
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: proTrial.id,
-				quantity: 3,
-				product: proTrial,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product_id: premiumTrial.id,
-				quantity: 3,
-				product: premiumTrial,
-				status: CusProductStatus.Trialing,
-			},
-		];
+		// Old product-level quantity multipliers (3/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [{ plan_id: proTrial.id }, { plan_id: premiumTrial.id }],
+			results: [
+				{ product: proTrial, status: CusProductStatus.Trialing },
+				{ product: premiumTrial, status: CusProductStatus.Trialing },
+			],
 			db,
 			org,
 			env,
-			rewards: [proReward.id, premiumReward.id],
+			discounts: [
+				{ reward_id: proReward.id },
+				{ reward_id: premiumReward.id },
+			],
 			expectedRewards: [proReward.id, premiumReward.id],
 		});
 	});
 
-	let checkoutRes: any;
+	// Old contract re-attached with a new product-level quantity (5); /billing.multi_attach has no quantity multiplier
+	test.todo("should advance clock and update pro quantity", () => {});
 
-	test("should advance clock and update pro quantity", async () => {
-		const productsList = [
-			{
-				product_id: proTrial.id,
-				quantity: 5,
-				product: proTrial,
-				status: CusProductStatus.Trialing,
-			},
-		];
-
-		const results = [
-			{
-				product: proTrial,
-				quantity: 5,
-				status: CusProductStatus.Trialing,
-			},
-			{
-				product: premiumTrial,
-				quantity: 3,
-				status: CusProductStatus.Trialing,
-			},
-		];
-		const res = await expectMultiAttachCorrect({
-			customerId,
-			products: productsList,
-			results,
-			db,
-			org,
-			env,
-			rewards: [proReward.id, premiumReward.id],
-			expectedRewards: [proReward.id, premiumReward.id],
-		});
-
-		checkoutRes = res.checkoutRes;
-	});
-
-	test("should advance to trial end and have correct quantity", async () => {
-		await advanceTestClock({
-			stripeCli,
-			testClockId,
-			advanceTo: addDays(new Date(), 12).getTime(),
-			waitForSeconds: 30,
-		});
-
-		await expectSubToBeCorrect({
-			customerId,
-			db,
-			org,
-			env,
-			// sub: curSub,
-			// cusProduct: curMainProduct,
-			// results: productsList,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		const latestInvoice = customer.invoices[0];
-
-		const checkoutNextCycleTotal = checkoutRes.next_cycle?.total;
-		const premiumPrice = new Decimal(getBasePrice({ product: premiumTrial }))
-			.mul(3)
-			.mul(0.2)
-			.toNumber();
-
-		console.log("Premium price: ", premiumPrice);
-		console.log("Checkout next cycle total: ", checkoutNextCycleTotal);
-		expect(latestInvoice.total).toBe(
-			checkoutRes.next_cycle?.total + premiumPrice,
-		);
-	});
+	// Asserted quantity-multiplied trial-end invoice math (3x base * 20%) from the removed quantity model
+	test.todo("should advance to trial end and have correct quantity", () => {});
 });

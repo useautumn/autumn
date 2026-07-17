@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, test } from "bun:test";
 import {
 	type AppEnv,
 	CusProductStatus,
@@ -54,28 +54,24 @@ describe(`${chalk.yellowBright("multiReward1: Testing multi attach with rewards"
 	});
 
 	test("should run multi attach through checkout and have correct sub", async () => {
-		const productsList = [
-			{
-				product_id: multiRewardPro.id,
-				quantity: 3,
-				product: multiRewardPro,
-				status: CusProductStatus.Active,
-			},
-			{
-				product_id: multiRewardPremium.id,
-				quantity: 3,
-				product: multiRewardPremium,
-				status: CusProductStatus.Active,
-			},
-		];
+		// Old product-level quantity multipliers (3/3) dropped: no /billing.multi_attach equivalent
 		await expectMultiAttachCorrect({
 			customerId,
-			products: productsList,
-			results: productsList,
+			plans: [
+				{ plan_id: multiRewardPro.id },
+				{ plan_id: multiRewardPremium.id },
+			],
+			results: [
+				{ product: multiRewardPro, status: CusProductStatus.Active },
+				{ product: multiRewardPremium, status: CusProductStatus.Active },
+			],
 			db,
 			org,
 			env,
-			rewards: [proReward.id, premiumReward.id],
+			discounts: [
+				{ reward_id: proReward.id },
+				{ reward_id: premiumReward.id },
+			],
 			expectedRewards: [proReward.id, premiumReward.id],
 		});
 	});
