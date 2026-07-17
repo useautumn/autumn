@@ -98,19 +98,23 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
 - **Decision needed:** is a v2 multiplier/quantity-update capability planned? If
   not, archive/delete those tests instead of carrying todos.
 
-### 11. Archived tests crash on deleted-helper imports
+### 11. Archived tests crash on deleted-helper imports — RESOLVED (archived)
 - **What happened:** `b6a37c676` ("migrated legacy tests to legacy/attach")
   deleted shared helpers but left 6 archived tests importing the old paths, so
-  they crash at import (0 tests run) on every run.
-  - `archives/contUse/update/updateContUse1-4` — import `replaceItems` (moved to
-    `@tests/utils/testProductUtils`) and `attachNewContUseAndExpectCorrect`
-    (moved to `expectContUse/expectUpdateContUse`). Both still exist — a
-    mechanical import repoint could resurrect them (test bodies unverified).
-  - `archives/newVersion/newVersion1-2` — import `runUpdateEntsTest` from
-    `expectUpdateEnts.ts`, which was fully deleted (130 lines, no successor).
-- **Decision needed:** fix the imports (do these archived scenarios still earn
-  their keep?), or delete the 6 files as dead scope. Not OOM — no compute/mem
-  change helps. Same family as #7/#8.
+  they crashed at import (0 tests run) on every run.
+- **Resolution:** renamed the 6 files to `.test.archive.ts` so neither the tw
+  runner (`endsWith(".test.ts")`) nor local `bun test` (matcher anchors
+  `.test.ts` at the end) discovers them — code + history preserved, out of the
+  count. Not OOM; no compute/mem change was ever indicated.
+  - `updateContUse1-4` still reference live-but-moved helpers (`replaceItems` →
+    `@tests/utils/testProductUtils`, `attachNewContUseAndExpectCorrect` →
+    `expectContUse/expectUpdateContUse`) — resurrectable later via import repoint
+    if the scenarios are still wanted.
+  - `newVersion1-2` reference `runUpdateEntsTest` from the fully-deleted
+    `expectUpdateEnts.ts` (130 lines, no successor) — would need the helper
+    restored to run again.
+- **Optional follow-up:** decide whether any of the 6 earn a real
+  resurrection, else they stay archived indefinitely.
 
 ## Process / hygiene
 
