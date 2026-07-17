@@ -222,7 +222,14 @@ export const buildIncrementalSyncParams = ({
 		}
 
 		const linkedProduct = linkedTargets.targets.get(target.key);
-		if (!linkedProduct || linkedProduct.product.id !== target.productId) {
+		const versionChanged =
+			syncPlan.version !== undefined &&
+			linkedProduct?.product.version !== syncPlan.version;
+		if (
+			!linkedProduct ||
+			linkedProduct.product.id !== target.productId ||
+			versionChanged
+		) {
 			changedPlans.push(syncPlan);
 			continue;
 		}
