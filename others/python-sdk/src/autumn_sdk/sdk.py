@@ -473,6 +473,7 @@ class Autumn(BaseSDK):
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -491,6 +492,7 @@ class Autumn(BaseSDK):
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
@@ -516,6 +518,7 @@ class Autumn(BaseSDK):
             value=value,
             properties=properties,
             timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -591,6 +594,7 @@ class Autumn(BaseSDK):
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
         timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackOverageBehavior] = None,
         async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -609,6 +613,7 @@ class Autumn(BaseSDK):
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
@@ -634,6 +639,7 @@ class Autumn(BaseSDK):
             value=value,
             properties=properties,
             timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
@@ -715,6 +721,7 @@ class Autumn(BaseSDK):
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
         timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackTokensOverageBehavior] = None,
         async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -738,6 +745,7 @@ class Autumn(BaseSDK):
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -768,6 +776,7 @@ class Autumn(BaseSDK):
             reasoning_tokens=reasoning_tokens,
             properties=properties,
             timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
         )
 
@@ -848,6 +857,7 @@ class Autumn(BaseSDK):
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
         timestamp: Optional[int] = None,
+        overage_behavior: Optional[models.TrackTokensOverageBehavior] = None,
         async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -871,6 +881,7 @@ class Autumn(BaseSDK):
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
         :param timestamp: Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+        :param overage_behavior: How to handle usage that exceeds the available balance. \"cap\" (default) deducts only what fits, stopping at zero. \"overflow\" deducts the full value: the balance can go negative and usage limits do not clamp the deduction, though spend limits still apply.
         :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -901,6 +912,7 @@ class Autumn(BaseSDK):
             reasoning_tokens=reasoning_tokens,
             properties=properties,
             timestamp=timestamp,
+            overage_behavior=overage_behavior,
             async_=async_,
         )
 

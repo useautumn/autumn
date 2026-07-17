@@ -6496,6 +6496,294 @@ paths:
                         maximum: 9007199254740991
                       prepaid_only:
                         type: boolean
+                      customize:
+                        anyOf:
+                          - type: object
+                            properties:
+                              price:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      amount:
+                                        type: number
+                                        description: Base price amount for the plan.
+                                      interval:
+                                        enum:
+                                          - one_off
+                                          - week
+                                          - month
+                                          - quarter
+                                          - semi_annual
+                                          - year
+                                        type: string
+                                        description: Billing interval (e.g. 'month', 'year').
+                                      interval_count:
+                                        type: number
+                                        description: Number of intervals per billing cycle. Defaults to 1.
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Price amount in this currency. Set explicitly per currency, not
+                                                converted from the base amount.
+                                          required:
+                                            - currency
+                                            - amount
+                                        description: Base price amounts in additional currencies. The base 'amount' is
+                                          in the org's default currency.
+                                    required:
+                                      - amount
+                                      - interval
+                                    title: BasePrice
+                                    description: Base price configuration for a plan.
+                                  - type: "null"
+                              add_items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: The ID of the feature to configure.
+                                    included:
+                                      type: number
+                                      description: Number of free units included. Balance resets to this each interval
+                                        for consumable features.
+                                    unlimited:
+                                      type: boolean
+                                      description: If true, customer has unlimited access to this feature.
+                                    reset:
+                                      type: object
+                                      properties:
+                                        interval:
+                                          enum:
+                                            - one_off
+                                            - minute
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                          description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                            consumable features only.
+                                        interval_count:
+                                          type: number
+                                          description: Number of intervals between resets. Defaults to 1.
+                                      required:
+                                        - interval
+                                      description: Reset configuration for consumable features. Omit for
+                                        non-consumable features like seats.
+                                    price:
+                                      type: object
+                                      properties:
+                                        amount:
+                                          type: number
+                                          description: Price per billing_units after included usage. Either 'amount' or
+                                            'tiers' is required.
+                                        additional_currencies:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              currency:
+                                                type: string
+                                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                              amount:
+                                                type: number
+                                                description: Price amount in this currency. Set explicitly per currency, not
+                                                  converted from the base
+                                                  amount.
+                                            required:
+                                              - currency
+                                              - amount
+                                          description: Amounts in additional currencies for this flat price. The base
+                                            'amount' is in the org's default
+                                            currency. Only valid with 'amount',
+                                            not 'tiers'.
+                                        tiers:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              to:
+                                                anyOf:
+                                                  - type: number
+                                                  - const: inf
+                                              amount:
+                                                type: number
+                                              flat_amount:
+                                                type: number
+                                              additional_currencies:
+                                                type: array
+                                                items:
+                                                  type: object
+                                                  properties:
+                                                    currency: {}
+                                                    amount: {}
+                                                    flat_amount: {}
+                                                description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                                  shared across all currencies.
+                                            required:
+                                              - to
+                                          description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                        tier_behavior:
+                                          enum:
+                                            - graduated
+                                            - volume
+                                          type: string
+                                        interval:
+                                          enum:
+                                            - one_off
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                          description: Billing interval. For consumable features, should match
+                                            reset.interval.
+                                        interval_count:
+                                          type: number
+                                          default: 1
+                                          description: Number of intervals per billing cycle. Defaults to 1.
+                                        billing_units:
+                                          type: number
+                                          default: 1
+                                          description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                            billing_units=100 means 101 rounds
+                                            to 200).
+                                        billing_method:
+                                          enum:
+                                            - prepaid
+                                            - usage_based
+                                          type: string
+                                          description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                            pay-as-you-go."
+                                        max_purchase:
+                                          anyOf:
+                                            - type: number
+                                            - type: "null"
+                                          description: Max units purchasable beyond included. E.g. included=100,
+                                            max_purchase=300 allows 400 total.
+                                            Null for no limit.
+                                      required:
+                                        - interval
+                                        - billing_method
+                                      description: Pricing for usage beyond included units. Omit for free features.
+                                    proration:
+                                      type: object
+                                      properties:
+                                        on_increase:
+                                          enum:
+                                            - bill_immediately
+                                            - prorate_immediately
+                                            - prorate_next_cycle
+                                            - bill_next_cycle
+                                          type: string
+                                          description: Billing behavior when quantity increases mid-cycle.
+                                        on_decrease:
+                                          enum:
+                                            - prorate
+                                            - prorate_immediately
+                                            - prorate_next_cycle
+                                            - none
+                                            - no_prorations
+                                          type: string
+                                          description: Credit behavior when quantity decreases mid-cycle.
+                                      required:
+                                        - on_increase
+                                        - on_decrease
+                                      description: Proration settings for prepaid features. Controls mid-cycle
+                                        quantity change billing.
+                                    rollover:
+                                      type: object
+                                      properties:
+                                        max:
+                                          type: number
+                                          description: Max rollover units. Omit for unlimited rollover.
+                                        max_percentage:
+                                          type: number
+                                          description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                            grant. Mutually exclusive with max.
+                                        expiry_duration_type:
+                                          enum:
+                                            - month
+                                            - forever
+                                          type: string
+                                          description: When rolled over units expire.
+                                        expiry_duration_length:
+                                          type: number
+                                          description: Number of periods before expiry.
+                                      required:
+                                        - expiry_duration_type
+                                      description: Rollover config for unused units. If set, unused included units
+                                        carry over.
+                                  required:
+                                    - feature_id
+                                  title: PlanItem
+                                  description: Configuration for a feature item in a plan, including usage limits,
+                                    pricing, and rollover settings.
+                              remove_items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: Match items linked to this feature.
+                                    billing_method:
+                                      enum:
+                                        - prepaid
+                                        - usage_based
+                                      type: string
+                                      description: Match items with this billing method (prepaid or usage_based).
+                                    interval:
+                                      anyOf:
+                                        - enum:
+                                            - one_off
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                        - enum:
+                                            - one_off
+                                            - minute
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                      description: Match items with this interval. Accepts either a BillingInterval
+                                        (price-side) or a ResetInterval
+                                        (reset-side, includes day/hour/minute)
+                                        so price-less items keyed by
+                                        reset.interval can be disambiguated.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9007199254740991
+                                      maximum: 9007199254740991
+                                      exclusiveMinimum: 0
+                                      description: Match items with this interval_count. Disambiguates between items
+                                        that share an interval but differ in
+                                        count.
+                                  title: PlanItemFilter
+                                  description: Filter for matching plan items. All provided fields must match
+                                    (AND).
+                          - type: "null"
                       metadata:
                         type: object
                         propertyNames:
@@ -11002,6 +11290,294 @@ paths:
                         maximum: 9007199254740991
                       prepaid_only:
                         type: boolean
+                      customize:
+                        anyOf:
+                          - type: object
+                            properties:
+                              price:
+                                anyOf:
+                                  - type: object
+                                    properties:
+                                      amount:
+                                        type: number
+                                        description: Base price amount for the plan.
+                                      interval:
+                                        enum:
+                                          - one_off
+                                          - week
+                                          - month
+                                          - quarter
+                                          - semi_annual
+                                          - year
+                                        type: string
+                                        description: Billing interval (e.g. 'month', 'year').
+                                      interval_count:
+                                        type: number
+                                        description: Number of intervals per billing cycle. Defaults to 1.
+                                      additional_currencies:
+                                        type: array
+                                        items:
+                                          type: object
+                                          properties:
+                                            currency:
+                                              type: string
+                                              description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                            amount:
+                                              type: number
+                                              description: Price amount in this currency. Set explicitly per currency, not
+                                                converted from the base amount.
+                                          required:
+                                            - currency
+                                            - amount
+                                        description: Base price amounts in additional currencies. The base 'amount' is
+                                          in the org's default currency.
+                                    required:
+                                      - amount
+                                      - interval
+                                    title: BasePrice
+                                    description: Base price configuration for a plan.
+                                  - type: "null"
+                              add_items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: The ID of the feature to configure.
+                                    included:
+                                      type: number
+                                      description: Number of free units included. Balance resets to this each interval
+                                        for consumable features.
+                                    unlimited:
+                                      type: boolean
+                                      description: If true, customer has unlimited access to this feature.
+                                    reset:
+                                      type: object
+                                      properties:
+                                        interval:
+                                          enum:
+                                            - one_off
+                                            - minute
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                          description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                            consumable features only.
+                                        interval_count:
+                                          type: number
+                                          description: Number of intervals between resets. Defaults to 1.
+                                      required:
+                                        - interval
+                                      description: Reset configuration for consumable features. Omit for
+                                        non-consumable features like seats.
+                                    price:
+                                      type: object
+                                      properties:
+                                        amount:
+                                          type: number
+                                          description: Price per billing_units after included usage. Either 'amount' or
+                                            'tiers' is required.
+                                        additional_currencies:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              currency:
+                                                type: string
+                                                description: Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                                              amount:
+                                                type: number
+                                                description: Price amount in this currency. Set explicitly per currency, not
+                                                  converted from the base
+                                                  amount.
+                                            required:
+                                              - currency
+                                              - amount
+                                          description: Amounts in additional currencies for this flat price. The base
+                                            'amount' is in the org's default
+                                            currency. Only valid with 'amount',
+                                            not 'tiers'.
+                                        tiers:
+                                          type: array
+                                          items:
+                                            type: object
+                                            properties:
+                                              to:
+                                                anyOf:
+                                                  - type: number
+                                                  - const: inf
+                                              amount:
+                                                type: number
+                                              flat_amount:
+                                                type: number
+                                              additional_currencies:
+                                                type: array
+                                                items:
+                                                  type: object
+                                                  properties:
+                                                    currency: {}
+                                                    amount: {}
+                                                    flat_amount: {}
+                                                description: Per-currency amounts for this tier. Tier boundaries ('to') are
+                                                  shared across all currencies.
+                                            required:
+                                              - to
+                                          description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                        tier_behavior:
+                                          enum:
+                                            - graduated
+                                            - volume
+                                          type: string
+                                        interval:
+                                          enum:
+                                            - one_off
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                          description: Billing interval. For consumable features, should match
+                                            reset.interval.
+                                        interval_count:
+                                          type: number
+                                          default: 1
+                                          description: Number of intervals per billing cycle. Defaults to 1.
+                                        billing_units:
+                                          type: number
+                                          default: 1
+                                          description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                            billing_units=100 means 101 rounds
+                                            to 200).
+                                        billing_method:
+                                          enum:
+                                            - prepaid
+                                            - usage_based
+                                          type: string
+                                          description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                            pay-as-you-go."
+                                        max_purchase:
+                                          anyOf:
+                                            - type: number
+                                            - type: "null"
+                                          description: Max units purchasable beyond included. E.g. included=100,
+                                            max_purchase=300 allows 400 total.
+                                            Null for no limit.
+                                      required:
+                                        - interval
+                                        - billing_method
+                                      description: Pricing for usage beyond included units. Omit for free features.
+                                    proration:
+                                      type: object
+                                      properties:
+                                        on_increase:
+                                          enum:
+                                            - bill_immediately
+                                            - prorate_immediately
+                                            - prorate_next_cycle
+                                            - bill_next_cycle
+                                          type: string
+                                          description: Billing behavior when quantity increases mid-cycle.
+                                        on_decrease:
+                                          enum:
+                                            - prorate
+                                            - prorate_immediately
+                                            - prorate_next_cycle
+                                            - none
+                                            - no_prorations
+                                          type: string
+                                          description: Credit behavior when quantity decreases mid-cycle.
+                                      required:
+                                        - on_increase
+                                        - on_decrease
+                                      description: Proration settings for prepaid features. Controls mid-cycle
+                                        quantity change billing.
+                                    rollover:
+                                      type: object
+                                      properties:
+                                        max:
+                                          type: number
+                                          description: Max rollover units. Omit for unlimited rollover.
+                                        max_percentage:
+                                          type: number
+                                          description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                            grant. Mutually exclusive with max.
+                                        expiry_duration_type:
+                                          enum:
+                                            - month
+                                            - forever
+                                          type: string
+                                          description: When rolled over units expire.
+                                        expiry_duration_length:
+                                          type: number
+                                          description: Number of periods before expiry.
+                                      required:
+                                        - expiry_duration_type
+                                      description: Rollover config for unused units. If set, unused included units
+                                        carry over.
+                                  required:
+                                    - feature_id
+                                  title: PlanItem
+                                  description: Configuration for a feature item in a plan, including usage limits,
+                                    pricing, and rollover settings.
+                              remove_items:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      type: string
+                                      description: Match items linked to this feature.
+                                    billing_method:
+                                      enum:
+                                        - prepaid
+                                        - usage_based
+                                      type: string
+                                      description: Match items with this billing method (prepaid or usage_based).
+                                    interval:
+                                      anyOf:
+                                        - enum:
+                                            - one_off
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                        - enum:
+                                            - one_off
+                                            - minute
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                            - quarter
+                                            - semi_annual
+                                            - year
+                                          type: string
+                                      description: Match items with this interval. Accepts either a BillingInterval
+                                        (price-side) or a ResetInterval
+                                        (reset-side, includes day/hour/minute)
+                                        so price-less items keyed by
+                                        reset.interval can be disambiguated.
+                                    interval_count:
+                                      type: integer
+                                      minimum: -9007199254740991
+                                      maximum: 9007199254740991
+                                      exclusiveMinimum: 0
+                                      description: Match items with this interval_count. Disambiguates between items
+                                        that share an interval but differ in
+                                        count.
+                                  title: PlanItemFilter
+                                  description: Filter for matching plan items. All provided fields must match
+                                    (AND).
+                          - type: "null"
                       metadata:
                         type: object
                         propertyNames:
@@ -28623,6 +29199,16 @@ paths:
                   exclusiveMinimum: 0
                   description: Unix timestamp in milliseconds to use for the usage event. Defaults
                     to the current time.
+                overage_behavior:
+                  description: 'How to handle usage that exceeds the available balance. "cap"
+                    (default) deducts only what fits, stopping at zero.
+                    "overflow" deducts the full value: the balance can go
+                    negative and usage limits do not clamp the deduction, though
+                    spend limits still apply.'
+                  enum:
+                    - cap
+                    - overflow
+                  type: string
                 async:
                   type: boolean
                   description: If true, enqueue the event for asynchronous processing and return
@@ -29060,6 +29646,16 @@ paths:
                   exclusiveMinimum: 0
                   description: Unix timestamp in milliseconds to use for the usage event. Defaults
                     to the current time.
+                overage_behavior:
+                  description: 'How to handle usage that exceeds the available balance. "cap"
+                    (default) deducts only what fits, stopping at zero.
+                    "overflow" deducts the full value: the balance can go
+                    negative and usage limits do not clamp the deduction, though
+                    spend limits still apply.'
+                  enum:
+                    - cap
+                    - overflow
+                  type: string
                 async:
                   type: boolean
                   description: If true, enqueue the event for asynchronous processing and return
@@ -29458,6 +30054,16 @@ paths:
                     exclusiveMinimum: 0
                     description: Unix timestamp in milliseconds to use for the usage event. Defaults
                       to the current time.
+                  overage_behavior:
+                    description: 'How to handle usage that exceeds the available balance. "cap"
+                      (default) deducts only what fits, stopping at zero.
+                      "overflow" deducts the full value: the balance can go
+                      negative and usage limits do not clamp the deduction,
+                      though spend limits still apply.'
+                    enum:
+                      - cap
+                      - overflow
+                    type: string
                   async:
                     type: boolean
                     description: If true, enqueue the event for asynchronous processing and return

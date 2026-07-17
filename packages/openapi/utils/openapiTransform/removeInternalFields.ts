@@ -77,6 +77,20 @@ function sanitizeNode(node: unknown): void {
 	for (const value of Object.values(node)) {
 		sanitizeNode(value);
 	}
+
+	// Filtering internal union branches (during the recursion above) can leave
+	// a single-member anyOf; inline it so the public spec shows a plain schema.
+	if (Array.isArray(node.anyOf) && node.anyOf.length === 1) {
+		const [only] = node.anyOf;
+		if (isRecord(only)) {
+			delete node.anyOf;
+			for (const [key, value] of Object.entries(only)) {
+				if (!(key in node)) {
+					node[key] = value;
+				}
+			}
+		}
+	}
 }
 
 /**

@@ -113,7 +113,9 @@ DECLARE
   final_rollover_ids text[] := ARRAY[]::text[];
 BEGIN
   -- Compute overage_behavior_is_allow once (used for cap bypass in deduct_from_main_balance)
-  overage_behavior_is_allow := alter_granted_balance OR overage_behaviour = 'allow';
+  overage_behavior_is_allow := alter_granted_balance
+    OR overage_behaviour = 'allow'
+    OR overage_behaviour = 'overflow';
   all_locked_cus_ent_ids := ARRAY(
     SELECT DISTINCT id
     FROM unnest(
@@ -331,7 +333,12 @@ BEGIN
       credit_cost := (ent_obj->>'credit_cost')::numeric;
       usage_allowed := COALESCE((ent_obj->>'usage_allowed')::boolean, false) OR overage_behavior_is_allow;
       ent_feature_id := NULLIF(ent_obj->>'feature_id', '');
-      min_balance := (ent_obj->>'min_balance')::numeric;
+      -- 'overflow' removes the per-entitlement overage floor; spend limits
+      -- (available_overage) still clamp below.
+      min_balance := CASE
+        WHEN overage_behaviour = 'overflow' THEN NULL
+        ELSE (ent_obj->>'min_balance')::numeric
+      END;
       max_balance := (ent_obj->>'max_balance')::numeric;
       has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
 

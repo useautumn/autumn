@@ -494,7 +494,7 @@ export type GetPlanBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const GetPlanAddItemResetInterval = {
+export const GetPlanVariantDetailsResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -508,8 +508,8 @@ export const GetPlanAddItemResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type GetPlanAddItemResetInterval = OpenEnum<
-  typeof GetPlanAddItemResetInterval
+export type GetPlanVariantDetailsResetInterval = OpenEnum<
+  typeof GetPlanVariantDetailsResetInterval
 >;
 
 /**
@@ -519,7 +519,7 @@ export type GetPlanVariantDetailsReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: GetPlanAddItemResetInterval;
+  interval: GetPlanVariantDetailsResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
@@ -2068,10 +2068,10 @@ export function getPlanBasePriceFromJSON(
 }
 
 /** @internal */
-export const GetPlanAddItemResetInterval$inboundSchema: z.ZodMiniType<
-  GetPlanAddItemResetInterval,
+export const GetPlanVariantDetailsResetInterval$inboundSchema: z.ZodMiniType<
+  GetPlanVariantDetailsResetInterval,
   unknown
-> = openEnums.inboundSchema(GetPlanAddItemResetInterval);
+> = openEnums.inboundSchema(GetPlanVariantDetailsResetInterval);
 
 /** @internal */
 export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
@@ -2079,7 +2079,7 @@ export const GetPlanVariantDetailsReset$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: GetPlanAddItemResetInterval$inboundSchema,
+    interval: GetPlanVariantDetailsResetInterval$inboundSchema,
     interval_count: types.optional(types.number()),
   }),
   z.transform((v) => {
