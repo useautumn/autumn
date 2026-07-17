@@ -98,6 +98,20 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
 - **Decision needed:** is a v2 multiplier/quantity-update capability planned? If
   not, archive/delete those tests instead of carrying todos.
 
+### 11. Archived tests crash on deleted-helper imports
+- **What happened:** `b6a37c676` ("migrated legacy tests to legacy/attach")
+  deleted shared helpers but left 6 archived tests importing the old paths, so
+  they crash at import (0 tests run) on every run.
+  - `archives/contUse/update/updateContUse1-4` — import `replaceItems` (moved to
+    `@tests/utils/testProductUtils`) and `attachNewContUseAndExpectCorrect`
+    (moved to `expectContUse/expectUpdateContUse`). Both still exist — a
+    mechanical import repoint could resurrect them (test bodies unverified).
+  - `archives/newVersion/newVersion1-2` — import `runUpdateEntsTest` from
+    `expectUpdateEnts.ts`, which was fully deleted (130 lines, no successor).
+- **Decision needed:** fix the imports (do these archived scenarios still earn
+  their keep?), or delete the 6 files as dead scope. Not OOM — no compute/mem
+  change helps. Same family as #7/#8.
+
 ## Process / hygiene
 
 ### 9. Agent push discipline
