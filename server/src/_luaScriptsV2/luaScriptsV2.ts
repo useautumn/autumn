@@ -80,8 +80,7 @@ export const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
 
 import mainScript from "./deductFromCustomerEntitlements/deductFromCustomerEntitlements.lua";
 
-export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
-${LUA_UTILS}
+export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
 ${FULL_CUSTOMER_UTILS}
 ${READ_BALANCES}
 ${CONTEXT_UTILS}

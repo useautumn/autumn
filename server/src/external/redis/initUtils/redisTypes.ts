@@ -82,6 +82,7 @@ declare module "ioredis" {
 		): Promise<number>;
 		deductFromCustomerEntitlements(
 			cacheKey: string,
+			pathIndexKey: string,
 			paramsJson: string,
 		): Promise<string>;
 		deductFromSubjectBalances(

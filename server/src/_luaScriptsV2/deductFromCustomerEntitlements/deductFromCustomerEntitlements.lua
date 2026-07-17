@@ -10,7 +10,6 @@
     3. Pass 2: Allow negative if usage_allowed
 
   Helper functions are prepended via string interpolation from:
-    - fullCustomerKeyBuilders.lua (build_path_index_key, etc.)
     - luaUtils.lua (safe_table, safe_number, sorted_keys, is_nil)
     - fullCustomerUtils.lua (find_entitlement, find_entitlement_from_index, build_entity_path, etc.)
     - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
@@ -20,6 +19,7 @@
     - getTotalBalance.lua (get_total_balance)
 
   KEYS[1] = FullCustomer cache key (used for cluster slot routing)
+  KEYS[2] = Path index key (declared so key-checking Redis providers allow access)
 
   ARGV[1] = JSON params:
     {
@@ -56,9 +56,6 @@
 local cache_key = KEYS[1]
 local params = cjson.decode(ARGV[1])
 
--- Extract org/env/customer for path index key construction
-local org_id = params.org_id
-local env = params.env
 local customer_id = params.customer_id
 
 -- Extract parameters
@@ -88,8 +85,8 @@ if key_exists == 0 then
   return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
--- Build path index key and check existence (fast path vs fallback)
-local pathidx_key = build_path_index_key(org_id, env, customer_id)
+-- Path index key must come from KEYS: computing it in Lua breaks key-checking providers
+local pathidx_key = KEYS[2]
 local has_pathidx = redis.call('EXISTS', pathidx_key) == 1
 
 -- Only decode full customer if path index is NOT available (fallback)

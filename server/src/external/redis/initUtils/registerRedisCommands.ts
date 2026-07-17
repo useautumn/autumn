@@ -149,7 +149,7 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("deductFromCustomerEntitlements", {
-		numberOfKeys: 1,
+		numberOfKeys: 2,
 		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	});
 

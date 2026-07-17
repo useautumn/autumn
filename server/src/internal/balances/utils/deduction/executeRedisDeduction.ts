@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
+import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
@@ -91,6 +92,11 @@ export const executeRedisDeduction = async ({
 		env,
 		customerId,
 	});
+	const pathIndexKey = buildPathIndexKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 
 	for (const deduction of deductions) {
 		const {
@@ -165,6 +171,7 @@ export const executeRedisDeduction = async ({
 			() =>
 				targetRedis.deductFromCustomerEntitlements(
 					cacheKey,
+					pathIndexKey,
 					JSON.stringify(luaParams),
 				),
 			redisInstance,

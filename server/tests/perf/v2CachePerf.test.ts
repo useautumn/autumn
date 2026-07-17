@@ -568,6 +568,7 @@ describe(
 						});
 						const result = await redis.deductFromCustomerEntitlements(
 							CUSTOMER_CACHE_KEY,
+							CUSTOMER_PATH_IDX_KEY,
 							JSON.stringify(params),
 						);
 						const parsed = JSON.parse(result);
@@ -604,6 +605,7 @@ describe(
 						});
 						const result = await redis.deductFromCustomerEntitlements(
 							ENTITY_CACHE_KEY_PREFIX,
+							ENTITY_PATH_IDX_KEY_PREFIX,
 							JSON.stringify(params),
 						);
 						const parsed = JSON.parse(result);
