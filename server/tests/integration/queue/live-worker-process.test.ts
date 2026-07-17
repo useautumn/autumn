@@ -13,6 +13,10 @@ import {
 } from "@aws-sdk/client-sqs";
 
 const ELASTICMQ_JAR = `${process.env.HOME}/.autumn-agent/elasticmq/elasticmq.jar`;
+// Needs a local JVM + jar (dev machines only); swarm sandboxes ship neither.
+const canRunElasticmq =
+	Boolean(Bun.which("java")) && (await Bun.file(ELASTICMQ_JAR).exists());
+const describeElasticmq = canRunElasticmq ? describe : describe.skip;
 const WORKER_FIXTURE_PATH = new URL(
 	"./fixtures/livePollingWorker.ts",
 	import.meta.url,
@@ -241,7 +245,7 @@ afterEach(async () => {
 	}
 });
 
-describe("live worker process queue polling", () => {
+describeElasticmq("live worker process queue polling", () => {
 	test("enabled worker consumes a live SQS message", async () => {
 		const queueUrl = await createTestQueue();
 
