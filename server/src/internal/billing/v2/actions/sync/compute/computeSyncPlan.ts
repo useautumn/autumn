@@ -69,6 +69,10 @@ export const computeSyncPlan = ({
 			immediate.insertPlanLicenses.length > 0
 				? immediate.insertPlanLicenses
 				: undefined,
+		customerLicenseUpdates:
+			immediate.customerLicenseUpdates.length > 0
+				? immediate.customerLicenseUpdates
+				: undefined,
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
 		upsertSubscription,
 	};

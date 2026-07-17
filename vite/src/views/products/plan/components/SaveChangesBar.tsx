@@ -4,7 +4,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
@@ -28,7 +27,6 @@ import {
 	discardAllLicenses,
 	saveAllLicenses,
 	useHasLicenseChanges,
-	useLicensePlanEditNames,
 } from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
@@ -52,7 +50,6 @@ export const SaveChangesBar = ({
 	const hasChanges = planHasChanges || licenseHasChanges;
 	const { planLicenses, invalidate: invalidatePlanLicenses } =
 		usePlanLicensesQuery(product.id);
-	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { features = [] } = useFeaturesQuery();
 	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
 
@@ -70,12 +67,9 @@ export const SaveChangesBar = ({
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const hasLicensePlanEdits = useLicensePlanEditNames().length > 0;
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
-	} else if (hasLicensePlanEdits) {
-		saveButtonText = "Save & Update Licenses";
 	}
 
 	const { data: variants = [] } = usePlanVariants(
@@ -131,36 +125,32 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		// Save the plan (when changed) and every dirty license together, so one
-		// action persists everything on the page.
-		const [planSaved, licensesSaved] = await Promise.all([
-			planHasChanges
-				? updateProduct({
-						axiosInstance,
-						productId: product.id,
-						product,
-						version: product.version,
-						orgCurrency: org?.default_currency,
-						onSuccess: async () => {
-							await queryRefetch();
-							await Promise.all([invalidateProduct(), invalidateProducts()]);
-						},
-					})
-				: Promise.resolve(true),
-			saveAllLicenses({
-				axiosInstance,
-				parentPlanId: product.id,
-				persistedLinks: planLicenses,
-				// License item edits update the license plan itself, so refresh the
-				// product caches the cards re-seed from — not just the links.
-				onSuccess: () =>
-					Promise.all([
-						invalidatePlanLicenses(),
-						invalidateLicenseProducts(),
-						invalidateProducts(),
-					]),
-			}),
-		]);
+		const planSaved = planHasChanges
+			? await updateProduct({
+					axiosInstance,
+					productId: product.id,
+					product,
+					version: product.version,
+					orgCurrency: org?.default_currency,
+					onSuccess: async () => {
+						await queryRefetch();
+						await Promise.all([invalidateProduct(), invalidateProducts()]);
+					},
+				})
+			: true;
+		const licensesSaved = planSaved
+			? await saveAllLicenses({
+					axiosInstance,
+					parentPlanId: product.id,
+					persistedLinks: planLicenses,
+					onSuccess: () =>
+						Promise.all([
+							invalidatePlanLicenses(),
+							invalidateProduct(),
+							invalidateProducts(),
+						]),
+				})
+			: false;
 
 		// License failures already toast their own error, so only the combined
 		// success gets a toast here.

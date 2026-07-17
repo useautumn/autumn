@@ -46,13 +46,16 @@ export const findAutumnMatchForStripeItem = ({
 				return {
 					stripe: item,
 					match: climbLicenseMatch({
-						kind: "autumn_price",
-						matched_on: {
-							type: "stripe_price_id",
-							stripe_price_id: matchedPriceId,
+						item,
+						match: {
+							kind: "autumn_price",
+							matched_on: {
+								type: "stripe_price_id",
+								stripe_price_id: matchedPriceId,
+							},
+							price,
+							product,
 						},
-						price,
-						product,
 					}),
 				};
 			}
@@ -82,10 +85,13 @@ export const findAutumnMatchForStripeItem = ({
 		return {
 			stripe: item,
 			match: climbLicenseMatch({
-				kind: "autumn_price",
-				matched_on: productMatch.priceMatch.matched_on,
-				price: productMatch.priceMatch.price,
-				product: productMatch.product,
+				item,
+				match: {
+					kind: "autumn_price",
+					matched_on: productMatch.priceMatch.matched_on,
+					price: productMatch.priceMatch.price,
+					product: productMatch.product,
+				},
 			}),
 		};
 	}
@@ -93,9 +99,12 @@ export const findAutumnMatchForStripeItem = ({
 	return {
 		stripe: item,
 		match: climbLicenseMatch({
-			kind: "autumn_product",
-			matched_on: productMatch.matched_on,
-			product: productMatch.product,
+			item,
+			match: {
+				kind: "autumn_product",
+				matched_on: productMatch.matched_on,
+				product: productMatch.product,
+			},
 		}),
 	};
 };

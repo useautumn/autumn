@@ -179,6 +179,6 @@ export const planItemV0ToProductItem = ({
 		entitlement_id: entitlementId,
 		price_id: priceId,
 
-		entity_feature_id: planItem.entity_feature_id,
+		entity_feature_id: planItem.entity_feature_id ?? null,
 	} satisfies ProductItem);
 };

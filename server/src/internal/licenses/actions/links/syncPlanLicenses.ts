@@ -1,26 +1,45 @@
 import {
+	type Entitlement,
 	ErrCode,
 	type FullProduct,
 	findDuplicate,
 	type PlanLicenseParams,
+	type Price,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { insertCustomItems } from "@/internal/customers/attach/attachUtils/insertCustomItems.js";
+import {
+	computeLicenseCustomize,
+	derivePlanLicenseItemRefs,
+} from "@/internal/licenses/actions/customize/computeLicenseCustomize.js";
 import {
 	getFullLicenseProduct,
 	toApiPlanLicenses,
 } from "../../licenseUtils.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
+import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
+
+type LicenseItemCustomization =
+	| { mode: "preserve"; sourcePlanLicenseId?: string }
+	| { mode: "clear" }
+	| {
+			mode: "replace";
+			customPrices: Price[];
+			customEntitlements: Entitlement[];
+			items: ReturnType<typeof derivePlanLicenseItemRefs>;
+	  };
 
 type ResolvedLink = {
 	entry: PlanLicenseParams;
 	licenseProduct: FullProduct;
 	included: number;
 	prepaidOnly: boolean;
+	itemCustomization: LicenseItemCustomization;
 };
 
 export type PreparedPlanLicenseSync = {
@@ -89,12 +108,19 @@ const resolveLink = async ({
 	entry,
 	licenseProducts,
 	pinnedInternalIdByPublicId,
+	sourceLinkByLicenseInternalId,
+	sourceProductByLicenseInternalId,
 }: {
 	ctx: AutumnContext;
 	parentProduct: FullProduct;
 	entry: PlanLicenseParams;
 	licenseProducts?: FullProduct[];
 	pinnedInternalIdByPublicId: Map<string, string>;
+	sourceLinkByLicenseInternalId: Map<
+		string,
+		PreparedPlanLicenseSync["removed"][number]
+	>;
+	sourceProductByLicenseInternalId: Map<string, FullProduct>;
 }): Promise<ResolvedLink> => {
 	const pinnedInternalId =
 		entry.version === undefined
@@ -117,9 +143,41 @@ const resolveLink = async ({
 			version: entry.version,
 		}));
 
+	const sourceLink = sourceLinkByLicenseInternalId.get(
+		licenseProduct.internal_id,
+	);
+	let effectiveProduct = licenseProduct;
+	let itemCustomization: LicenseItemCustomization;
+	if (entry.customize === undefined) {
+		itemCustomization = {
+			mode: "preserve",
+			sourcePlanLicenseId: sourceLink?.id,
+		};
+		if (sourceLink?.customized) {
+			effectiveProduct =
+				sourceProductByLicenseInternalId.get(licenseProduct.internal_id) ??
+				licenseProduct;
+		}
+	} else if (entry.customize === null) {
+		itemCustomization = { mode: "clear" };
+	} else {
+		const computation = await computeLicenseCustomize({
+			ctx,
+			licenseProduct,
+			customize: entry.customize,
+		});
+		effectiveProduct = computation.effectiveProduct;
+		itemCustomization = {
+			mode: "replace",
+			customPrices: computation.customPrices,
+			customEntitlements: computation.customEntitlements,
+			items: derivePlanLicenseItemRefs(computation.effectiveProduct),
+		};
+	}
+
 	validateLicenseLink({
 		parentProduct,
-		licenseProduct,
+		licenseProduct: effectiveProduct,
 		prepaidOnly: entry.prepaid_only ?? true,
 		licensePlanId: entry.license_plan_id,
 	});
@@ -129,6 +187,7 @@ const resolveLink = async ({
 		licenseProduct,
 		included: entry.included ?? 0,
 		prepaidOnly: entry.prepaid_only ?? true,
+		itemCustomization,
 	};
 };
 
@@ -202,6 +261,15 @@ export const preparePlanLicenseSync = async ({
 	const pinnedInternalIdByPublicId = new Map(
 		existingLinkProducts.map((product) => [product.id, product.internal_id]),
 	);
+	const sourceLinkByLicenseInternalId = new Map(
+		sourceLinks.map((link) => [link.license_internal_product_id, link]),
+	);
+	const sourceProductByLicenseInternalId = new Map(
+		(parentProduct.licenses ?? []).map((link) => [
+			link.license_internal_product_id,
+			link.product,
+		]),
+	);
 	const resolved = await Promise.all(
 		licenses.map((entry) =>
 			resolveLink({
@@ -210,6 +278,8 @@ export const preparePlanLicenseSync = async ({
 				entry,
 				licenseProducts,
 				pinnedInternalIdByPublicId,
+				sourceLinkByLicenseInternalId,
+				sourceProductByLicenseInternalId,
 			}),
 		),
 	);
@@ -283,7 +353,7 @@ export const applyPreparedPlanLicenseSync = async ({
 	await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
 		for (const link of resolved) {
-			await planLicenseRepo.upsert({
+			const planLicense = await planLicenseRepo.upsert({
 				db: txDb,
 				parentInternalProductId,
 				licenseInternalProductId: link.licenseProduct.internal_id,
@@ -291,8 +361,46 @@ export const applyPreparedPlanLicenseSync = async ({
 				prepaidOnly: link.prepaidOnly,
 				metadata: link.entry.metadata,
 			});
+			const customization = link.itemCustomization;
+			if (customization.mode === "replace") {
+				await insertCustomItems({
+					db: txDb,
+					customPrices: customization.customPrices,
+					customEnts: customization.customEntitlements,
+				});
+				await licenseItemRepo.replaceItems({
+					db: txDb,
+					planLicenseId: planLicense.id,
+					items: customization.items,
+					customized: true,
+				});
+			} else if (customization.mode === "clear") {
+				await licenseItemRepo.replaceItems({
+					db: txDb,
+					planLicenseId: planLicense.id,
+					items: [],
+				});
+			} else if (
+				customization.sourcePlanLicenseId &&
+				customization.sourcePlanLicenseId !== planLicense.id
+			) {
+				await licenseItemRepo.cloneItems({
+					db: txDb,
+					fromPlanLicenseId: customization.sourcePlanLicenseId,
+					toPlanLicenseId: planLicense.id,
+					customized: true,
+				});
+			}
 		}
 		if (removed.length > 0) {
+			for (const link of removed) {
+				if (!link.customized) continue;
+				await licenseItemRepo.replaceItems({
+					db: txDb,
+					planLicenseId: link.id,
+					items: [],
+				});
+			}
 			await planLicenseRepo.deleteByIds({
 				db: txDb,
 				ids: removed.map((link) => link.id),

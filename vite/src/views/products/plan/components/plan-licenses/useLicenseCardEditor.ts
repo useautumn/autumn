@@ -6,8 +6,6 @@ import {
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { updateProduct } from "@/views/products/product/utils/updateProduct";
 import { useInitialLicensePatches } from "./LicenseCustomizeCollector";
 import {
 	buildCustomizePlanLicense,
@@ -17,14 +15,7 @@ import {
 	planLicenseItems,
 } from "./licenseCustomizeUtils";
 
-/**
- * Seeds a license card's inline editor with the license plan's own items (plus
- * any saved customize patch, so edits survive editor reopens) and exposes its
- * save/collect callbacks: item edits update the license plan directly (in
- * place — versioning a license is an explicit API action for now), the link
- * entry rides the parent's composed save, and the customize entry feeds the
- * attach/update collector.
- */
+/** Seeds effective catalog items and builds parent or customer license patches. */
 export const useLicenseCardEditor = ({
 	planLicense,
 	license,
@@ -35,52 +26,54 @@ export const useLicenseCardEditor = ({
 	features: Feature[];
 }) => {
 	const { org } = useOrg();
-	const axiosInstance = useAxiosInstance();
 	const currency = org?.default_currency ?? "USD";
 	const seededCustomize = useInitialLicensePatches()[license.id]?.customize;
-
-	const items = seededCustomize
+	const catalogItems = planLicense.customize
 		? licenseItemsWithCustomize({
 				license,
-				customize: seededCustomize,
+				customize: planLicense.customize,
 				features,
 				currency,
 			})
 		: planLicenseItems({ license });
+	const catalogLicense = { ...license, items: catalogItems };
+
+	const items = seededCustomize
+		? licenseItemsWithCustomize({
+				license: catalogLicense,
+				customize: seededCustomize,
+				features,
+				currency,
+			})
+		: catalogItems;
 
 	const seededProduct = productV2ToFrontendProduct({
 		product: { ...license, items },
 	});
 
-	const buildEntry = (): PlanLicenseParams =>
-		buildPlanLicenseParams({ planLicense, license });
-
-	const saveItems = async ({
+	const buildEntry = ({
 		product,
 		itemsChanged,
-	}: LicenseEditSnapshot): Promise<boolean> => {
-		if (!itemsChanged) return true;
-		const updated = await updateProduct({
-			axiosInstance,
-			productId: license.id,
-			product: { items: product.items },
-			disableVersion: true,
-			onSuccess: async () => {},
-		});
-		return Boolean(updated);
-	};
-
-	const buildCustomize = ({ product, itemsChanged }: LicenseEditSnapshot) =>
-		buildCustomizePlanLicense({
+	}: LicenseEditSnapshot): PlanLicenseParams =>
+		buildPlanLicenseParams({
 			product,
 			planLicense,
 			license,
 			features,
 			currency,
-			// A patch-seeded card must keep diffing against the stock license
-			// even when untouched, or re-saving would drop its customization.
+			itemsChanged,
+		});
+
+	const buildCustomize = ({ product, itemsChanged }: LicenseEditSnapshot) =>
+		buildCustomizePlanLicense({
+			product,
+			planLicense,
+			license: catalogLicense,
+			features,
+			currency,
+			// Re-emit a saved customer patch when its card was not edited.
 			itemsChanged: itemsChanged || Boolean(seededCustomize),
 		});
 
-	return { seededProduct, buildEntry, saveItems, buildCustomize };
+	return { seededProduct, buildEntry, buildCustomize };
 };

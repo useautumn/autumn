@@ -20,27 +20,17 @@ import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 import { useLicenseSaveRegistry } from "./useLicenseSaveRegistry";
 
-/**
- * Bridges a license card to its editor's save flow: seeds the license's draft
- * slot while mounted, and registers its dirty state plus ref-read callbacks.
- * On the plan page that's the save registry (the save bar composes one
- * plans.update from every card's entry); inside a customize editor it's the
- * collector (snapshot into the attach/update payload). A pending (staged,
- * unsaved) link is always dirty — saving creates the link, discarding drops
- * the card.
- */
+/** Registers a card with the parent save registry or customer patch collector. */
 export const useLicensePlanCardLifecycle = ({
 	planLicense,
 	license,
 	buildEntry,
-	saveItems,
 	buildCustomize,
 	isPendingLink,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
-	buildEntry: () => PlanLicenseParams;
-	saveItems: (snapshot: LicenseEditSnapshot) => Promise<boolean>;
+	buildEntry: (snapshot: LicenseEditSnapshot) => PlanLicenseParams;
 	buildCustomize: (snapshot: LicenseEditSnapshot) => CustomizePlanLicense;
 	isPendingLink: boolean;
 }) => {
@@ -84,16 +74,7 @@ export const useLicensePlanCardLifecycle = ({
 		if (useLicenseDraftStore.getState().drafts[license.id]?.removed) {
 			return null;
 		}
-		return buildEntry();
-	};
-
-	const saveItemsRef = useRef<() => Promise<boolean>>(async () => true);
-	saveItemsRef.current = () => {
-		// A removed card unlinks; its license plan's items are left alone.
-		if (useLicenseDraftStore.getState().drafts[license.id]?.removed) {
-			return Promise.resolve(true);
-		}
-		return saveItems({ product: editedProduct(), itemsChanged });
+		return buildEntry({ product: editedProduct(), itemsChanged });
 	};
 
 	const commitRef = useRef<() => void>(() => {});
@@ -117,9 +98,7 @@ export const useLicensePlanCardLifecycle = ({
 		seed(license.id, { included: planLicense.included });
 	};
 
-	// Key the reseed on VALUES, not object identity — pending links rebuild
-	// their planLicense every render and an identity-keyed reseed would wipe
-	// in-progress edits (e.g. a typed included quantity).
+	// Pending links rebuild their object every render; seed from stable values.
 	useEffect(() => {
 		seed(license.id, { included: seededIncluded });
 		return () => clear(license.id);
@@ -137,10 +116,7 @@ export const useLicensePlanCardLifecycle = ({
 
 		register(license.id, {
 			dirty: hasChanges,
-			editsLicensePlan: itemsChanged && !removed,
-			licenseName: license.name ?? license.id,
 			getEntry: () => entryRef.current(),
-			saveItems: () => saveItemsRef.current(),
 			commit: () => commitRef.current(),
 			discard: () => discardRef.current(),
 		});

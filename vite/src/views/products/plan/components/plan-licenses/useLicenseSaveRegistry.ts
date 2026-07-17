@@ -3,24 +3,11 @@ import type { AxiosInstance } from "axios";
 import { create } from "zustand";
 import { runWithErrorToast } from "./runWithErrorToast";
 
-/**
- * Registry of license cards on the plan page, keyed by license id.
- *
- * Each inline license editor lives in its own context, so the plan's single
- * SaveChangesBar can't reach their drafts directly. Instead every card
- * registers its entry builder here; the save bar composes ONE plans.update
- * carrying the full `licenses` array (entry per kept card, removed cards
- * omitted so the server unlinks them) and commits every card on success.
- */
+/** Collects isolated card drafts into one parent `plans.update`. */
 interface LicenseSaveEntry {
 	dirty: boolean;
-	/** Item/price edits change the underlying license plan (vs link config). */
-	editsLicensePlan: boolean;
-	licenseName: string;
 	/** The card's licenses[] entry, or null when the card is staged for removal. */
 	getEntry: () => PlanLicenseParams | null;
-	/** Persist the card's item edits onto the license plan itself. */
-	saveItems: () => Promise<boolean>;
 	/** Reset the card's drafts after a successful save. */
 	commit: () => void;
 	discard: () => void;
@@ -50,17 +37,7 @@ export const useHasLicenseChanges = () =>
 		Object.values(s.entries).some((entry) => entry.dirty),
 	);
 
-/** Names of licenses whose underlying plan the pending save would edit. */
-export const useLicensePlanEditNames = () => {
-	const entries = useLicenseSaveRegistry((s) => s.entries);
-	return Object.values(entries)
-		.filter((entry) => entry.editsLicensePlan)
-		.map((entry) => entry.licenseName);
-};
-
-/** Compose the full licenses[] payload: every registered card's entry (removed
- * cards drop out), plus persisted links with no mounted card passed through
- * untouched. */
+/** Includes mounted cards and passes unmounted persisted links through. */
 const composeLicensesPayload = ({
 	persistedLinks,
 }: {
@@ -84,9 +61,7 @@ const composeLicensesPayload = ({
 	return payload;
 };
 
-/** Persist every card — item edits land on each license plan, link config in
- * one parent plans.update; true when everything succeeded. Reads the registry
- * imperatively so it can be called from the plan save handler. */
+/** Persists all dirty card state through one parent `plans.update`. */
 export const saveAllLicenses = async ({
 	axiosInstance,
 	parentPlanId,
@@ -100,13 +75,6 @@ export const saveAllLicenses = async ({
 }): Promise<boolean> => {
 	const { entries } = useLicenseSaveRegistry.getState();
 	if (!Object.values(entries).some((entry) => entry.dirty)) return true;
-
-	const itemResults = await Promise.all(
-		Object.values(entries)
-			.filter((entry) => entry.dirty)
-			.map((entry) => entry.saveItems().catch(() => false)),
-	);
-	if (!itemResults.every(Boolean)) return false;
 
 	const licenses = composeLicensesPayload({ persistedLinks });
 	const saved = await runWithErrorToast({

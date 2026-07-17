@@ -4,6 +4,7 @@ import {
 	type CustomerPlanChange,
 	customerEntitlementToFeatureId,
 	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
 import { buildPlanItemChanges } from "./buildPlanItemChanges";
 import { buildPreviousAttributes } from "./buildPreviousAttributes";
@@ -74,13 +75,12 @@ const buildReplacementItemChanges = ({
 	return [
 		...buildPlanItemChanges({
 			customerProduct: activatedProduct,
-			insertCustomerEntitlements:
-				activatedProduct.customer_entitlements.filter(
-					(customerEntitlement) =>
-						expiredFeatureIds.has(
-							customerEntitlementToFeatureId(customerEntitlement),
-						) === false,
-				),
+			insertCustomerEntitlements: activatedProduct.customer_entitlements.filter(
+				(customerEntitlement) =>
+					expiredFeatureIds.has(
+						customerEntitlementToFeatureId(customerEntitlement),
+					) === false,
+			),
 			insertCustomerPrices: activatedProduct.customer_prices,
 		}),
 		...buildPlanItemChanges({
@@ -207,10 +207,18 @@ const mergeUpdatedPlanChanges = (
 
 export const buildPlanChanges = ({
 	autumnBillingPlan,
+	originalFullCustomer,
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
+	originalFullCustomer?: FullCustomer;
 }): CustomerPlanChange[] => {
 	const entries: PlanChangeEntry[] = [];
+	const licenseParentById = new Map<string, FullCusProduct>();
+	for (const customerProduct of originalFullCustomer?.customer_products ?? []) {
+		for (const customerLicense of customerProduct.customer_licenses ?? []) {
+			licenseParentById.set(customerLicense.id, customerProduct);
+		}
+	}
 
 	for (const cusProduct of autumnBillingPlan.insertCustomerProducts ?? []) {
 		const action =
@@ -295,6 +303,23 @@ export const buildPlanChanges = ({
 					insertCustomerPrices: patch.insertCustomerPrices,
 					deleteCustomerPrices: patch.deleteCustomerPrices,
 				}),
+			},
+		});
+	}
+
+	for (const update of autumnBillingPlan.customerLicenseUpdates ?? []) {
+		if (update.paidQuantity === undefined || !update.customerLicenseId)
+			continue;
+		const customerProduct = licenseParentById.get(update.customerLicenseId);
+		if (!customerProduct) continue;
+
+		entries.push({
+			customerProduct,
+			change: {
+				action: "updated",
+				...toCustomerPlanSnapshot({ cusProduct: customerProduct }),
+				previous_attributes: {},
+				item_changes: [],
 			},
 		});
 	}
