@@ -5,6 +5,7 @@ import {
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
+	CreditCardIcon,
 	MousePointerClickIcon,
 	PaletteIcon,
 	ReceiptIcon,
@@ -24,12 +25,14 @@ import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
+import { SubscriptionSection } from "./sections/SubscriptionSection";
 import { TransitionRulesSection } from "./sections/TransitionRulesSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
 
 type SettingsTab =
 	| "account"
 	| "organization"
+	| "subscription"
 	| "members"
 	| "agent"
 	| "appearance"
@@ -64,6 +67,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				id: "organization",
 				label: "Organization",
 				icon: <BuildingIcon className="size-4" />,
+			},
+			{
+				id: "subscription",
+				label: "Subscription",
+				icon: <CreditCardIcon className="size-4" />,
 			},
 			{
 				id: "members",
@@ -122,6 +130,7 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	account: AccountSection,
 	organization: OrganizationSection,
+	subscription: SubscriptionSection,
 	members: MembersSection,
 	agent: AgentSection,
 	appearance: AppearanceSection,
