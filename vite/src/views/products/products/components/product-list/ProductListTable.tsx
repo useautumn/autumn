@@ -4,8 +4,10 @@ import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import {
+	type ProductListItem,
+	useProductsQuery,
+} from "@/hooks/queries/useProductsQuery";
 import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
@@ -15,7 +17,7 @@ import { LicenseListTable } from "./LicenseListTable";
 import { createProductListColumns } from "./ProductListColumns";
 import { ProductListCreateButton } from "./ProductListCreateButton";
 
-type ProductWithCounts = ProductV2 & {
+type ProductWithCounts = ProductListItem & {
 	active_count?: number;
 	subRows?: ProductWithCounts[];
 };
@@ -48,7 +50,6 @@ function nestVariants(plans: ProductWithCounts[]): ProductWithCounts[] {
 
 export function ProductListTable() {
 	const { products, counts, isCountsLoading } = useProductsQuery();
-	const { licenseProducts } = useLicenseProductsQuery();
 	const { queryStates } = useProductsQueryState();
 
 	// Shared sorting state for all tables
@@ -64,20 +65,29 @@ export function ProductListTable() {
 		setDeleteDialog({ open: true, product });
 	}, []);
 
+	const { licenseProducts, nonLicenseProducts } = useMemo(() => {
+		const licenseProducts: ProductListItem[] = [];
+		const nonLicenseProducts: ProductListItem[] = [];
+
+		for (const product of products) {
+			if ((product.parent_plan_licenses?.length ?? 0) > 0) {
+				licenseProducts.push(product);
+			} else {
+				nonLicenseProducts.push(product);
+			}
+		}
+
+		return { licenseProducts, nonLicenseProducts };
+	}, [products]);
+
 	const { recurringBasePlans, recurringAddOnPlans, oneTimePlans } =
 		useMemo(() => {
-			// Linked licenses render in their own section below, not as plans.
-			const licenseIds = new Set(licenseProducts.map((license) => license.id));
-			const filtered = products?.filter(
-				(product) =>
-					!licenseIds.has(product.id) &&
-					(queryStates.showArchivedProducts
-						? product.archived
-						: !product.archived),
+			const visibleProducts = nonLicenseProducts.filter((product) =>
+				queryStates.showArchivedProducts ? product.archived : !product.archived,
 			);
 
 			// Deduplicate by ID, keeping the latest version
-			const deduplicated = filtered?.reduce((acc, product) => {
+			const deduplicated = visibleProducts.reduce((acc, product) => {
 				const existingIndex = acc.findIndex((p) => p.id === product.id);
 
 				if (existingIndex === -1) {
@@ -104,7 +114,7 @@ export function ProductListTable() {
 				}
 
 				return acc;
-			}, [] as ProductV2[]);
+			}, [] as ProductListItem[]);
 
 			// Add counts to products
 			const productsWithCounts = deduplicated?.map((product) => ({
@@ -129,7 +139,7 @@ export function ProductListTable() {
 			const recurringAddOnPlans = recurringPlans.filter((p) => p.is_add_on);
 
 			return { recurringBasePlans, recurringAddOnPlans, oneTimePlans };
-		}, [products, licenseProducts, counts, queryStates.showArchivedProducts]);
+		}, [nonLicenseProducts, counts, queryStates.showArchivedProducts]);
 
 	// Check if any product has a group
 	const hasAnyGroup = useMemo(
@@ -288,6 +298,9 @@ export function ProductListTable() {
 						</Table.Provider>
 
 						<LicenseListTable
+							licenseProducts={licenseProducts}
+							counts={counts}
+							isCountsLoading={isCountsLoading}
 							showArchivedProducts={queryStates.showArchivedProducts}
 						/>
 					</div>

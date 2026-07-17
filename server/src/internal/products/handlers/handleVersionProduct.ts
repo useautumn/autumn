@@ -25,7 +25,7 @@ import {
 	applyPreparedPlanLicenseSync,
 	type PreparedPlanLicenseSync,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
-import { prepareProductLicenseSync } from "./handleUpdatePlan/prepareProductLicenseSync.js";
+import { prepareProductLicenseSync } from "@/internal/product/actions/updateProduct/licenses/prepareProductLicenseSync.js";
 
 const clearDefaultFlagFromOtherVersions = async ({
 	ctx,

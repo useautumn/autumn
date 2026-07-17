@@ -7,17 +7,14 @@ import {
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { CusService } from "@/internal/customers/CusService";
 
-/**
- * Asserts the DB-side license definition behind a customer's pool: the parent
- * customer product (+ optional Stripe sub linkage) and the plan license the
- * pool anchors to — catalog (is_custom false) or custom, with its base price.
- */
+/** Asserts the customer pool's parent product and effective license definition. */
 export const expectLicenseDefinitionCorrect = async ({
 	ctx,
 	customerId,
 	parentPlanId,
 	subscriptionId,
 	isCustom,
+	isCustomized,
 	basePrice,
 }: {
 	ctx: TestContext;
@@ -26,7 +23,13 @@ export const expectLicenseDefinitionCorrect = async ({
 	/** When set, the parent customer product must be linked to this Stripe sub. */
 	subscriptionId?: string;
 	isCustom: boolean;
-	basePrice?: { amount: number; interval: BillingInterval };
+	isCustomized?: boolean;
+	basePrice?: {
+		amount: number;
+		interval: BillingInterval;
+		isCustom?: boolean;
+		stripeProductId?: string;
+	};
 }): Promise<FullCustomerLicense> => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
@@ -51,6 +54,9 @@ export const expectLicenseDefinitionCorrect = async ({
 		`Parent ${parentPlanId} has no customer license pool`,
 	).toBeDefined();
 	expect(customerLicense?.planLicense?.is_custom).toBe(isCustom);
+	if (isCustomized !== undefined) {
+		expect(customerLicense?.planLicense?.customized).toBe(isCustomized);
+	}
 
 	if (basePrice) {
 		const planLicenseProduct = customerLicense?.planLicense?.product;
@@ -60,6 +66,23 @@ export const expectLicenseDefinitionCorrect = async ({
 		expect(licenseBasePrice).not.toBeNull();
 		expect(licenseBasePrice?.config.amount).toBe(basePrice.amount);
 		expect(licenseBasePrice?.config.interval).toBe(basePrice.interval);
+		if (basePrice.isCustom !== undefined) {
+			expect(licenseBasePrice?.is_custom).toBe(basePrice.isCustom);
+		}
+		if (basePrice.stripeProductId) {
+			expect(licenseBasePrice?.config.stripe_product_id).toBe(
+				basePrice.stripeProductId,
+			);
+			expect(licenseBasePrice?.config.stripe_price_id).toBeDefined();
+			const stripePrice = await ctx.stripeCli.prices.retrieve(
+				licenseBasePrice!.config.stripe_price_id!,
+			);
+			const actualStripeProductId =
+				typeof stripePrice.product === "string"
+					? stripePrice.product
+					: stripePrice.product.id;
+			expect(actualStripeProductId).toBe(basePrice.stripeProductId);
+		}
 	}
 
 	if (!customerLicense) {

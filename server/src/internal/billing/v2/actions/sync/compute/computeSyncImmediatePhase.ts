@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	type CustomerLicenseUpdate,
 	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
@@ -8,6 +9,7 @@ import {
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
@@ -21,6 +23,7 @@ export type ImmediatePhaseResult = {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
+	customerLicenseUpdates: CustomerLicenseUpdate[];
 };
 
 const expireCustomerProduct = ({
@@ -68,6 +71,7 @@ export const computeSyncImmediatePhase = ({
 			customPrices: [],
 			customEntitlements: [],
 			insertPlanLicenses: [],
+			customerLicenseUpdates: [],
 		};
 	}
 
@@ -76,14 +80,29 @@ export const computeSyncImmediatePhase = ({
 	const customPrices: Price[] = [];
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
+	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
+		const currentCustomerProduct = productContext.currentCustomerProduct;
+		if (currentCustomerProduct?.product_id === productContext.fullProduct.id) {
+			const licenseQuantityChanges = computeCustomerLicenseQuantityChanges({
+				customerProduct: currentCustomerProduct,
+				customerLicenseQuantities: productContext.customerLicenseQuantities,
+			});
+			if (licenseQuantityChanges.length > 0) {
+				customerLicenseUpdates.push(
+					...licenseQuantityChanges.map(({ update }) => update),
+				);
+				continue;
+			}
+		}
+
 		const existingUsagesConfig =
-			carryOverUsage && productContext.currentCustomerProduct
+			carryOverUsage && currentCustomerProduct
 				? resolveSyncExistingUsagesConfig({
 						ctx,
 						carryOverUsages,
-						currentCustomerProduct: productContext.currentCustomerProduct,
+						currentCustomerProduct,
 					})
 				: undefined;
 
@@ -117,5 +136,6 @@ export const computeSyncImmediatePhase = ({
 		customPrices,
 		customEntitlements,
 		insertPlanLicenses,
+		customerLicenseUpdates,
 	};
 };

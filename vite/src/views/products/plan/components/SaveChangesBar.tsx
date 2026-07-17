@@ -1,12 +1,14 @@
-import { isFeaturePriceItem } from "@autumn/shared";
+import {
+	isFeaturePriceItem,
+	type PlanLicenseParams,
+	type PlanUpdatePreview,
+} from "@autumn/shared";
 import { Button, ShortcutButton } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
-import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
-import { usePrefetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
+import { useFetchPlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -17,7 +19,7 @@ import {
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
+import { getBackendErr } from "@/utils/genUtils";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
@@ -26,21 +28,25 @@ import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft"
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
 	discardAllLicenses,
+	getLicenseUpdatePayload,
 	saveAllLicenses,
 	useHasLicenseChanges,
-	useLicensePlanEditNames,
 } from "./plan-licenses/useLicenseSaveRegistry";
 
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
 }
 
+const previewHasParentCustomers = (preview: PlanUpdatePreview) =>
+	preview.has_customers ||
+	(preview.other_versions ?? []).some((version) => version.has_customers);
+
 export const SaveChangesBar = ({
 	isOnboarding = false,
 }: SaveChangesBarProps) => {
 	const axiosInstance = useAxiosInstance();
 	const { org } = useOrg();
-	const { setShowNewVersionDialog } = useProductContext();
+	const { setShowNewVersionDialog, catalogLicenses } = useProductContext();
 
 	// Get product state from store
 	const product = useProductStore((s) => s.product);
@@ -50,32 +56,21 @@ export const SaveChangesBar = ({
 	const planHasChanges = useHasChanges();
 	const licenseHasChanges = useHasLicenseChanges();
 	const hasChanges = planHasChanges || licenseHasChanges;
-	const { planLicenses, invalidate: invalidatePlanLicenses } =
-		usePlanLicensesQuery(product.id);
-	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
+	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
 	const { features = [] } = useFeaturesQuery();
-	const prefetchPlanUpdatePreview = usePrefetchPlanUpdatePreview();
+	const fetchPlanUpdatePreview = useFetchPlanUpdatePreview();
 
 	const [saving, setSaving] = useState(false);
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const {
-		refetch: queryRefetch,
-		invalidate: invalidateProduct,
-		versionCounts,
-	} = useProductQuery();
-	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
-		product.version ? { version: product.version } : {},
-	);
+	const { refetch: queryRefetch, invalidate: invalidateProduct } =
+		useProductQuery();
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const isMetadataOnlyChange = useIsMetadataOnlyChange();
-	const hasLicensePlanEdits = useLicensePlanEditNames().length > 0;
 	let saveButtonText = "Save";
 	if (isCusPlanEditor) {
 		saveButtonText = "Save and Return";
-	} else if (hasLicensePlanEdits) {
-		saveButtonText = "Save & Update Licenses";
 	}
 
 	const { data: variants = [] } = usePlanVariants(
@@ -87,34 +82,45 @@ export const SaveChangesBar = ({
 		for (const item of product.items) {
 			if (!checkItemCurrenciesValid(item)) return;
 		}
+		let licenses: PlanLicenseParams[] | undefined;
+		try {
+			licenses = getLicenseUpdatePayload({
+				persistedLinks: planLicenses,
+			});
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Complete the license price before saving",
+			);
+			return;
+		}
 
-		if (!isOnboarding && planHasChanges) {
-			if (isCountsLoading) {
-				toast.error("Plan counts are loading");
+		if (!isOnboarding && hasChanges) {
+			let preview: PlanUpdatePreview;
+			setSaving(true);
+			try {
+				preview = await fetchPlanUpdatePreview({
+					planId: product.id,
+					params: buildPreviewUpdatePlanParams({
+						baseProduct,
+						editedProduct: product,
+						features,
+						licenses,
+					}),
+				});
+			} catch (error) {
+				toast.error(getBackendErr(error, "Failed to preview plan changes"));
 				return;
+			} finally {
+				setSaving(false);
 			}
-			// Customers on any version (not just the one being edited) mean the
-			// change could affect grandfathered users, so surface the versioning
-			// dialog with its "update existing/all versions" options.
-			const hasCustomersOnAnyVersion =
-				(counts?.all ?? 0) > 0 ||
-				Object.values(versionCounts).some((vc) => (vc.active ?? 0) > 0);
-			const hasCustomers = hasCustomersOnAnyVersion && !isMetadataOnlyChange;
-			if (hasCustomers || variants.length > 0) {
-				// Warm the preview so the dialog opens with data already present.
-				setSaving(true);
-				try {
-					await prefetchPlanUpdatePreview({
-						planId: product.id,
-						params: buildPreviewUpdatePlanParams({
-							baseProduct,
-							editedProduct: product,
-							features,
-						}),
-					});
-				} finally {
-					setSaving(false);
-				}
+
+			const needsVersionChoice =
+				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
+			const hasCustomers =
+				previewHasParentCustomers(preview) && needsVersionChoice;
+			if (hasCustomers || (planHasChanges && variants.length > 0)) {
 				setShowNewVersionDialog(true);
 				return;
 			}
@@ -131,36 +137,28 @@ export const SaveChangesBar = ({
 			});
 		}
 
-		// Save the plan (when changed) and every dirty license together, so one
-		// action persists everything on the page.
-		const [planSaved, licensesSaved] = await Promise.all([
-			planHasChanges
-				? updateProduct({
-						axiosInstance,
-						productId: product.id,
-						product,
-						version: product.version,
-						orgCurrency: org?.default_currency,
-						onSuccess: async () => {
-							await queryRefetch();
-							await Promise.all([invalidateProduct(), invalidateProducts()]);
-						},
-					})
-				: Promise.resolve(true),
-			saveAllLicenses({
-				axiosInstance,
-				parentPlanId: product.id,
-				persistedLinks: planLicenses,
-				// License item edits update the license plan itself, so refresh the
-				// product caches the cards re-seed from — not just the links.
-				onSuccess: () =>
-					Promise.all([
-						invalidatePlanLicenses(),
-						invalidateLicenseProducts(),
-						invalidateProducts(),
-					]),
-			}),
-		]);
+		const planSaved = planHasChanges
+			? await updateProduct({
+					axiosInstance,
+					productId: product.id,
+					product,
+					version: product.version,
+					orgCurrency: org?.default_currency,
+					onSuccess: async () => {
+						await queryRefetch();
+						await Promise.all([invalidateProduct(), invalidateProducts()]);
+					},
+				})
+			: true;
+		const licensesSaved = planSaved
+			? await saveAllLicenses({
+					axiosInstance,
+					parentPlanId: product.id,
+					persistedLinks: planLicenses,
+					onSuccess: () =>
+						Promise.all([invalidateProduct(), invalidateProducts()]),
+				})
+			: false;
 
 		// License failures already toast their own error, so only the combined
 		// success gets a toast here.

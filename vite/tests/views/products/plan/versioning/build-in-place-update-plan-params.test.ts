@@ -1,14 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
+	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	type FrontendProduct,
 	ProductItemInterval,
 	UpdatePlanParamsV2Schema,
-	type Feature,
-	type FrontendProduct,
 } from "@autumn/shared";
-import { buildInPlaceUpdatePlanParams } from "@/views/products/plan/versioning/buildMigrationDraft";
+import {
+	buildInPlaceUpdatePlanParams,
+	buildPreviewUpdatePlanParams,
+	buildVersionUpdatePlanParams,
+} from "@/views/products/plan/versioning/buildMigrationDraft";
 
 const features: Feature[] = [
 	{
@@ -135,5 +139,38 @@ describe("buildInPlaceUpdatePlanParams", () => {
 		expect(body.items[0]).not.toHaveProperty("price");
 		expect(body.items[1]).not.toHaveProperty("price");
 		expect(() => UpdatePlanParamsV2Schema.parse(body)).not.toThrow();
+	});
+
+	test("uses the same staged licenses in preview and update bodies", () => {
+		const licenses = [{ license_plan_id: "developer-seat", included: 0 }];
+		const editedProduct = { ...baseProduct, name: "Pro Plus" };
+
+		const update = buildInPlaceUpdatePlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			licenses,
+		});
+		const preview = buildPreviewUpdatePlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			licenses,
+		});
+
+		expect(update.licenses).toEqual(licenses);
+		expect(update.disable_version).toBe(true);
+		expect(preview.licenses).toEqual(licenses);
+		expect(preview.disable_version).toBeUndefined();
+
+		const versionUpdate = buildVersionUpdatePlanParams({
+			baseProduct,
+			editedProduct,
+			features,
+			licenses,
+		});
+		expect(versionUpdate.licenses).toEqual(licenses);
+		expect(versionUpdate.disable_version).toBeUndefined();
+		expect(versionUpdate.force_version).toBeUndefined();
 	});
 });

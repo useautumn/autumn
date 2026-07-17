@@ -4,14 +4,15 @@ import {
 	useIsLicenseEditor,
 	useProduct,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useOptionalProductContext } from "@/views/products/product/ProductContext";
 import { useInitialLicensePatches } from "./LicenseCustomizeCollector";
 import {
 	pendingPlanLicense,
 	usePendingLicenseLinks,
 } from "./PendingLicenseLinksContext";
+import { resolvePlanLicenseProduct } from "./resolvePlanLicenseProduct";
 
 export interface ResolvedPlanLicense {
 	planLicense: PlanLicense;
@@ -27,12 +28,13 @@ export interface ResolvedPlanLicense {
 export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	const { product } = useProduct();
 	const isLicense = useIsLicenseEditor();
+	const productContext = useOptionalProductContext();
+	const pageCatalogLicenses = productContext?.catalogLicenses;
 
-	const { planLicenses } = usePlanLicensesQuery(
-		isLicense ? undefined : product?.id,
+	const { planLicenses: fallbackPlanLicenses } = usePlanLicensesQuery(
+		isLicense || pageCatalogLicenses ? undefined : product?.id,
 	);
-	const { licenseProducts } = useLicenseProductsQuery();
-	const { products } = useProductsQuery();
+	const { products } = useProductsQuery({ allVersions: true });
 	const { pendingLicenseIds } = usePendingLicenseLinks();
 	const initialPatches = useInitialLicensePatches();
 
@@ -41,11 +43,29 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 
 		// Staged links can point at any plan, so fall back to the full plans list.
 		const licenseById = new Map(
-			[...products, ...licenseProducts].map((license) => [license.id, license]),
+			products.map((license) => [license.id, license]),
 		);
+		for (const license of products) {
+			const latest = licenseById.get(license.id);
+			if (!latest || license.version > latest.version) {
+				licenseById.set(license.id, license);
+			}
+		}
+		const persistedLicenses = pageCatalogLicenses
+			? pageCatalogLicenses.map((entry) => ({ ...entry, isPendingLink: false }))
+			: fallbackPlanLicenses.flatMap((planLicense) => {
+					const license = resolvePlanLicenseProduct({
+						products,
+						planId: planLicense.license_plan_id,
+						version: planLicense.version,
+					});
+					return license
+						? [{ planLicense, license, isPendingLink: false }]
+						: [];
+				});
 
 		const persistedIds = new Set(
-			planLicenses.map((planLicense) => planLicense.license_plan_id),
+			persistedLicenses.map(({ planLicense }) => planLicense.license_plan_id),
 		);
 		// Patch keys cover links staged in a previous customize session — they
 		// exist only in the saved patch, so resurface them as pending.
@@ -57,21 +77,19 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 		const pendingPlanLicenses = [...stagedIds].map((licenseId) =>
 			pendingPlanLicense({ licenseId, parentPlanId: product.id }),
 		);
-		const pendingSet = new Set(pendingPlanLicenses);
-
-		return [...planLicenses, ...pendingPlanLicenses].flatMap((planLicense) => {
+		const pendingLicenses = pendingPlanLicenses.flatMap((planLicense) => {
 			const license = licenseById.get(planLicense.license_plan_id);
 			if (!license) return [];
-			return [
-				{ planLicense, license, isPendingLink: pendingSet.has(planLicense) },
-			];
+			return [{ planLicense, license, isPendingLink: true }];
 		});
+
+		return [...persistedLicenses, ...pendingLicenses];
 	}, [
 		isLicense,
 		product,
 		products,
-		licenseProducts,
-		planLicenses,
+		pageCatalogLicenses,
+		fallbackPlanLicenses,
 		pendingLicenseIds,
 		initialPatches,
 	]);

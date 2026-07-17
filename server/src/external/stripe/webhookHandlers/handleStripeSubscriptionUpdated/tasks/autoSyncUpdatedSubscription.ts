@@ -8,14 +8,10 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
-import type { SyncV2Result } from "@/internal/billing/v2/actions/sync/syncV2";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
-import {
-	trackCustomerProductInsertion,
-	trackCustomerProductUpdate,
-} from "../../common/trackCustomerProductUpdate";
+import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 const stripeProductId = (
@@ -47,53 +43,6 @@ const priceOrProductChanged = ({
 			(currentItem.quantity ?? 1) !== (previousItem.quantity ?? 1)
 		);
 	});
-};
-
-const trackSyncResult = async ({
-	ctx,
-	subscriptionUpdatedContext,
-	result,
-	linkedCustomerProducts,
-}: {
-	ctx: StripeWebhookContext;
-	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
-	result: SyncV2Result;
-	linkedCustomerProducts: FullCusProduct[];
-}) => {
-	const { customerProducts, fullCustomer } = subscriptionUpdatedContext;
-
-	for (const id of result.expired_cus_product_ids) {
-		const customerProduct =
-			customerProducts.find((cp) => cp.id === id) ??
-			linkedCustomerProducts.find((cp) => cp.id === id);
-		const syncedProduct = await CusProductService.getFull({ db: ctx.db, id });
-		if (!customerProduct || !syncedProduct) continue;
-
-		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-			updates: {
-				status: syncedProduct.status,
-				canceled: syncedProduct.canceled,
-				canceled_at: syncedProduct.canceled_at,
-				ended_at: syncedProduct.ended_at,
-			},
-		});
-	}
-
-	for (const id of result.inserted_cus_product_ids) {
-		const customerProduct = await CusProductService.getFull({ db: ctx.db, id });
-		if (!customerProduct) continue;
-
-		if (!fullCustomer.customer_products.some((cp) => cp.id === id)) {
-			fullCustomer.customer_products.push(customerProduct);
-		}
-
-		trackCustomerProductInsertion({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-		});
-	}
 };
 
 const expireRemovedCustomerProducts = async ({
@@ -189,14 +138,6 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	await billingActions.syncLicenseQuantities({
-		ctx,
-		params: {
-			customerId,
-			licenseQuantityDrifts: incremental.licenseQuantityDrifts,
-		},
-	});
-
 	await expireRemovedCustomerProducts({
 		ctx,
 		subscriptionUpdatedContext,
@@ -205,7 +146,7 @@ export const autoSyncUpdatedSubscription = async ({
 
 	if (!incremental.params) {
 		logger.info(
-			`sub.updated auto-sync applied ${stripeSubscription.id}: removed=${incremental.removedCustomerProducts.length}, licensePools=${incremental.licenseQuantityDrifts.length}`,
+			`sub.updated auto-sync applied ${stripeSubscription.id}: removed=${incremental.removedCustomerProducts.length}`,
 		);
 		return;
 	}
@@ -213,12 +154,7 @@ export const autoSyncUpdatedSubscription = async ({
 	const result = await billingActions.syncV2({
 		ctx,
 		params: incremental.params,
-	});
-	await trackSyncResult({
-		ctx,
-		subscriptionUpdatedContext,
-		result,
-		linkedCustomerProducts,
+		tags: ["sync:customer.subscription.updated"],
 	});
 	logger.info(
 		`sub.updated auto-sync applied ${stripeSubscription.id}: expired=${result.expired_cus_product_ids.length}, inserted=${result.inserted_cus_product_ids.length}, removed=${incremental.removedCustomerProducts.length}`,

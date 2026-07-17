@@ -22,7 +22,6 @@ import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { prepareProductLicenseSync } from "@/internal/products/handlers/handleUpdatePlan/prepareProductLicenseSync.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -31,6 +30,7 @@ import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
+import { prepareProductLicenseSync } from "./updateProduct/licenses/prepareProductLicenseSync.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";
@@ -277,6 +277,7 @@ export const updateProduct = async ({
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
 	const billingControlsProvided = "billing_controls" in productUpdates;
+	const licensesProvided = licenses !== undefined;
 
 	const same = productsAreSame({ newProductV2, curProductV2, features });
 	const billingControlsOnlyChanged =
@@ -291,8 +292,9 @@ export const updateProduct = async ({
 	const productVersioningEligible =
 		versionableCustomerProductExists &&
 		!effectiveDisableVersion &&
-		(itemsExist || freeTrialProvided);
-	const productChanged = !same.itemsSame || !same.freeTrialsSame;
+		(itemsExist || freeTrialProvided || licensesProvided);
+	const productChanged =
+		!same.itemsSame || !same.freeTrialsSame || licensesProvided;
 	const billingControlsWillVersion =
 		!force_version &&
 		versionableCustomerProductExists &&

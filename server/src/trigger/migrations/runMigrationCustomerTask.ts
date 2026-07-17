@@ -11,6 +11,8 @@ import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/in
 import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
+const LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS = 2 * 60 * 1000;
+
 const PayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
@@ -32,8 +34,12 @@ export const executeRunMigrationCustomer = async ({
 	logger: Logger;
 	payload: RunMigrationCustomerPayload;
 }) => {
-	const { migrationInternalId, migrationRunId, customerInternalId, customerId } =
-		payload;
+	const {
+		migrationInternalId,
+		migrationRunId,
+		customerInternalId,
+		customerId,
+	} = payload;
 
 	await warmupRegionalRedis().catch((error) => {
 		logger.warn("run-migration-customer: redis warmup failed (continuing)", {
@@ -85,6 +91,8 @@ export const executeRunMigrationCustomer = async ({
 				ctx,
 				customerId: cacheKey,
 				migration,
+				migrationCustomerLockMaxWaitMs:
+					LAZY_MIGRATION_CUSTOMER_LOCK_MAX_WAIT_MS,
 			});
 
 			return {

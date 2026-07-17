@@ -51,6 +51,7 @@ export const productV2ToApiPlanV1 = ({
 							}),
 						}
 					: {}),
+				price_id: basePriceItem.price_id ?? undefined,
 				...(currency
 					? {
 							display: getProductItemDisplay({

@@ -18,9 +18,7 @@ export const getApiSubscriptionsV2 = async ({
 }) => {
 	const apiSubscriptions: ApiSubscriptionV1[] = [];
 	const apiPurchasesAsSubscriptions: ApiSubscriptionV1[] = [];
-	const customerProducts = fullSubjectToApiCustomerProducts({
-		fullSubject,
-	});
+	const customerProducts = fullSubjectToApiCustomerProducts({ fullSubject });
 	const legacyData: Record<string, CusProductLegacyData> = {};
 
 	for (const customerProduct of customerProducts) {

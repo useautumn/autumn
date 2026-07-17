@@ -42,6 +42,8 @@ const productsToV2WithBaseIds = async ({
 
 	return products.map((product) => ({
 		...mapToProductV2({ product, features }),
+		licenses: product.licenses,
+		parent_plan_licenses: product.parent_plan_licenses,
 		base_id: product.base_internal_product_id
 			? (internalIdToPublicId.get(product.base_internal_product_id) ?? null)
 			: null,

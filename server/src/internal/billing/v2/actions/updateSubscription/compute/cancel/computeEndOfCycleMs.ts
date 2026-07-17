@@ -1,5 +1,5 @@
 import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import { cusProductToPrices, getCycleEnd } from "@autumn/shared";
+import { customerProductToEffectivePrices, getCycleEnd } from "@autumn/shared";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
 /**
@@ -23,11 +23,10 @@ export const computeEndOfCycleMs = ({
 		return currentEpochMs;
 	}
 
-	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	const prices = customerProductToEffectivePrices({ customerProduct });
 	const largestInterval = getLargestInterval({ prices, excludeOneOff: true });
 
 	if (!largestInterval) {
-		// No recurring interval found, default to current time
 		return currentEpochMs;
 	}
 

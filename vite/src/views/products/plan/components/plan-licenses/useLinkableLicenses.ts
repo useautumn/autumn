@@ -5,6 +5,7 @@ import {
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useOptionalProductContext } from "@/views/products/product/ProductContext";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 
 /**
@@ -17,10 +18,15 @@ import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 export const useLinkableLicenses = () => {
 	const { product } = useProduct();
 	const isLicense = useIsLicenseEditor();
-
-	const { planLicenses } = usePlanLicensesQuery(
-		isLicense ? undefined : product.id,
+	const productContext = useOptionalProductContext();
+	const pagePlanLicenses = productContext?.catalogLicenses.map(
+		({ planLicense }) => planLicense,
 	);
+
+	const { planLicenses: fallbackPlanLicenses } = usePlanLicensesQuery(
+		isLicense || pagePlanLicenses ? undefined : product.id,
+	);
+	const planLicenses = pagePlanLicenses ?? fallbackPlanLicenses;
 	const { licenseProducts } = useLicenseProductsQuery();
 	const { products } = useProductsQuery();
 	const { pendingLicenseIds, addPendingLink } = usePendingLicenseLinks();

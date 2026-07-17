@@ -9,8 +9,18 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 import { throwBackendError } from "@/utils/genUtils";
 
+import type { ProductDataResponse } from "../productDataTypes";
 import { useCachedProduct } from "./getCachedProduct";
 import { useProductCountsQuery } from "./queries/useProductCountsQuery";
+
+type ProductQueryResponse = ProductDataResponse & {
+	variants: PlanVariant[];
+	numVersions: number;
+	versionCounts: Record<
+		number,
+		{ active: number; canceled: number; custom: number; trialing: number }
+	>;
+};
 
 // Product query state...
 export const useProductQueryState = () => {
@@ -42,21 +52,15 @@ export const useProductQuery = () => {
 	const fetcher = async () => {
 		if (!productId) return null;
 
-		const url = `/products/${productId}/data2`;
-		const queryParams: { version?: number } = {};
-
-		// Only include version if it's explicitly set, otherwise fetch latest
-		if (queryStates.version) {
-			queryParams.version = queryStates.version;
-		}
-
 		try {
 			const url = `/products/${productId}/data`;
 			const queryParams = {
 				version: queryStates.version,
 			};
 
-			const { data } = await axiosInstance.get(url, { params: queryParams });
+			const { data } = await axiosInstance.get<ProductQueryResponse>(url, {
+				params: queryParams,
+			});
 			return data;
 		} catch (error) {
 			throwBackendError(error);
@@ -89,6 +93,7 @@ export const useProductQuery = () => {
 
 	return {
 		product,
+		catalogLicenses: data?.catalogLicenses ?? [],
 		variants,
 		numVersions: data?.numVersions || cachedProduct?.version || 1,
 		versionCounts: (data?.versionCounts || {}) as Record<
