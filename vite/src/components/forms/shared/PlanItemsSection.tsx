@@ -201,10 +201,6 @@ export function PlanItemsSection({
 	if (!hasItems) {
 		return (
 			<div className="flex flex-col gap-2">
-				<Button variant="secondary" onClick={onEditPlan} className="w-full">
-					<PencilSimpleIcon size={14} className="mr-1" />
-					Create Custom Plan
-				</Button>
 				<PlanLicensesSummary
 					planId={product?.id}
 					addLicenses={addLicenses}
@@ -212,6 +208,10 @@ export function PlanItemsSection({
 					changesOnly={changesOnly}
 					quantityEditor={licenseQuantityEditor}
 				/>
+				<Button variant="secondary" onClick={onEditPlan} className="w-full">
+					<PencilSimpleIcon size={14} className="mr-1" />
+					Create Custom Plan
+				</Button>
 			</div>
 		);
 	}

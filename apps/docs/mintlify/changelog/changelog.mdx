@@ -4,6 +4,58 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 17th 2026">
+  ## Multi-currency pricing and billing
+
+  Plans can now be priced in **multiple currencies** end-to-end. Add `base_currency` and `additional_currencies` to any fixed, tiered, or usage-based price, and customers get billed in their resolved currency across checkout, invoices, top-ups, refunds, upgrades, and previews. Customers pick up a `currency` field that locks on their first paid attach — pass `currency` on [`billing.attach`](/api-reference/billing/attach) or [`billing.multi_attach`](/api-reference/billing/multiAttach) to choose, and attaches in a different currency return a clean `currency_mismatch` 400. Reach out to enable the `multi_currency` org flag.
+
+  ## Licenses
+
+  The full **licenses** stack is live: plans can offer other plans as assignable seats with `included` free counts, prepaid seat quantities, and per-customer overrides. New endpoints — [`licenses.attach`](/api-reference/licenses/attachLicense), [`licenses.release`](/api-reference/licenses/releaseLicense), [`licenses.list`](/api-reference/licenses/listLicenses), and [`licenses.list_assignments`](/api-reference/licenses/listLicenseAssignments) — let you provision, release, and inspect seats on entities, with balance tracking and dashboard management for the whole lifecycle. Priced licenses require the license plan to be attached to the customer first (via [`billing.attach`](/api-reference/billing/attach)); free licenses assign directly.
+
+  ## List invoices endpoint
+
+  Fetch a customer's invoices programmatically with the new [`invoices.list`](/api-reference/invoices/listInvoices) endpoint — the same data the dashboard uses, now available on the API for building portals, reconciliation flows, and audit tooling.
+
+  ## Pay down overages on one-off add-ons
+
+  One-off prepaid add-ons now **pay down existing overages** at attach time, so a customer who's already over their included balance immediately settles the outstanding usage on their next invoice instead of waiting for the cycle to close. Behavior is gated by the price's `persist_free_overage` flag for finer control.
+
+  ## Back-sync carry usage on Stripe imports
+
+  When you import an existing Stripe subscription that's mid-cycle on a usage feature, Autumn now **carries the already-consumed usage** into the new customer product so balances line up with what the customer has actually used, instead of resetting on import.
+
+  ## Invoice-mode start for usage-in-arrears
+
+  Subscriptions with usage-in-arrears pricing can now be started directly in **invoice mode** — useful for large customers you're billing outside checkout — without needing a card on file up front.
+
+  ## Attach-time currency selection
+
+  The [`billing.attach`](/api-reference/billing/attach) flow now accepts a `currency` parameter, and dashboard attach/preview sheets show amounts in the customer's currency. Pair with multi-currency plans to sell in EUR, GBP, or any additional currency you configure.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Rollovers now carry to the best-candidate bucket on plan updates, so leftover balance doesn't disappear when you switch a customer between plans — [#2266](https://github.com/useautumn/autumn/pull/2266)
+      - Multi-currency plan updates work through preview, save, and migration flows — [#2236](https://github.com/useautumn/autumn/pull/2236)
+      - Multi-currency Stripe sync now imports historical subscriptions in their original currency — [#2227](https://github.com/useautumn/autumn/pull/2227)
+      - Attach schedule now always defaults to **immediate**, so plans go live on save unless you explicitly schedule them — [#2232](https://github.com/useautumn/autumn/pull/2232)
+      - Analytics dashboard refetches on window focus, so numbers stay fresh when you tab back in — [#2241](https://github.com/useautumn/autumn/pull/2241)
+      - `billing.updated` webhooks now fire after the Stripe customer ID is persisted, so downstream consumers always see the linked Stripe record — [#2267](https://github.com/useautumn/autumn/pull/2267)
+      - Plan **variants** now stamp their own `previous_price` history, so each variant keeps an independent price trail — [#2238](https://github.com/useautumn/autumn/pull/2238)
+      - Consent screen shows the Autumn brand logo in the org selector — [#2249](https://github.com/useautumn/autumn/pull/2249)
+      - Faster reset cron and invoice cron for large workspaces — [#2222](https://github.com/useautumn/autumn/pull/2222), [#2257](https://github.com/useautumn/autumn/pull/2257)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Coupon **scope** updates now apply cleanly to existing subscriptions instead of only new ones — [#2260](https://github.com/useautumn/autumn/pull/2260)
+      - Catalog updates that reference customers across plan versions no longer error — [#2244](https://github.com/useautumn/autumn/pull/2244)
+      - Non-consumable prepaid quantities update correctly on plan changes — [#2220](https://github.com/useautumn/autumn/pull/2220)
+      - Dashboard no longer shows false "unsaved changes" errors when saving plans — [#2276](https://github.com/useautumn/autumn/pull/2276)
+      - Entity creation is serialized per customer, avoiding duplicate rows under concurrent attaches — [#2242](https://github.com/useautumn/autumn/pull/2242)
+      - Pending invoice cleanup cron backs off gracefully instead of retrying tight — [#2239](https://github.com/useautumn/autumn/pull/2239)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="July 10th 2026">
   ## Multi-update billing endpoint
 

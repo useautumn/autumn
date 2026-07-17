@@ -7,9 +7,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	IconButton,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
 } from "@autumn/ui";
 import {
 	ArrowRightIcon,
@@ -27,7 +24,6 @@ import {
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
-import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
@@ -55,17 +51,11 @@ export function LicensePlanCardHeader({
 	const [menuOpen, setMenuOpen] = useState(false);
 
 	const draft = useLicenseDraft(license.id);
-	const included = draft?.included ?? planLicense.included;
 	const removed = draft?.removed ?? false;
 
 	const openSettings = () => {
 		if (item && !checkItemIsValid(item)) return;
 		setSheet({ type: "edit-plan", itemId: product.id });
-	};
-
-	const openPricing = () => {
-		if (item && !checkItemIsValid(item)) return;
-		setSheet({ type: "edit-plan-price", itemId: product.id });
 	};
 
 	const removeCard = () => {
@@ -106,21 +96,11 @@ export function LicensePlanCardHeader({
 		<CardHeader className="px-3">
 			<div className="flex items-center justify-between w-full gap-2 min-w-0">
 				<div className="flex items-center gap-2 text-xs min-w-0">
-					<Tooltip>
-						<TooltipTrigger
-							onClick={openPricing}
-							className="shrink-0 flex h-5 min-w-5 cursor-pointer items-center justify-center rounded-md border border-border bg-secondary px-1 font-medium tabular-nums transition-colors hover:bg-accent hover:text-foreground"
-						>
-							{included}
-						</TooltipTrigger>
-						<TooltipContent>Included quantity</TooltipContent>
-					</Tooltip>
 					<span className="font-medium truncate">
 						{license.name ?? license.id}
 					</span>
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
-					<BasePriceDisplay product={product} slim />
 					<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
 						<DropdownMenuTrigger asChild>
 							<IconButton
