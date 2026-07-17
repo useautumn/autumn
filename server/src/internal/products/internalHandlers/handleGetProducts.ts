@@ -117,6 +117,8 @@ export const handleGetLicenseProducts = createRoute({
 		// so versioned license plans still match the latest-version list below.
 		const linkedProducts = await planLicenseRepo.listProductsByInternalIds({
 			db,
+			orgId: org.id,
+			env,
 			internalProductIds: linkedInternalIds,
 		});
 		const linkedExternalIds = new Set(
