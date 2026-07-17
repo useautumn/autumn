@@ -16,6 +16,11 @@ afterEach(() => {
 test("plan item updates run the no-customer path in a transaction", async () => {
 	let transactionInsertCalled = false;
 	const transactionDb = {
+		query: {
+			planLicenses: {
+				findMany: async () => [],
+			},
+		},
 		select: () => ({
 			from: () => ({
 				where: () => ({
