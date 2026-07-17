@@ -245,8 +245,8 @@ test.concurrent(
 
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		const enterpriseCheck = await autumnV2_2.check<CheckResponseV3>({

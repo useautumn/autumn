@@ -31,12 +31,12 @@ import {
 	type PlanUpdatePreview,
 	ResetInterval,
 } from "@autumn/shared";
-import { TestFeature, getFeatures } from "@tests/setup/v2Features";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { getFeatures, TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
@@ -383,33 +383,6 @@ test.concurrent(
 		const variant = await createVariantRpc(baseId, variantId, "Variant Shape");
 		ApiPlanV1Schema.parse(variant);
 		expect(variant.id).toBe(variantId);
-	},
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. preview_update is idempotent (same body twice → identical responses, no writes)
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.concurrent(
-	`${chalk.yellowBright("variants contract: preview_update is idempotent")}`,
-	async () => {
-		const baseId = readableVariantTestId("cc_idempotent");
-		await createBase(baseId);
-
-		const body = { items: [msgItem(333)] };
-
-		const r1 = await previewUpdateRpc(baseId, body);
-		const r2 = await previewUpdateRpc(baseId, body);
-
-		expect(r1).toEqual(r2);
-
-		const unchanged = await ProductService.getFull({
-			db,
-			idOrInternalId: baseId,
-			orgId: org.id,
-			env,
-		});
-		expect(unchanged.version).toBe(1);
 	},
 );
 

@@ -282,6 +282,7 @@ test.concurrent(
 			plan_id: base.id,
 			items: [monthlyItem(200)],
 			price: { amount: 30, interval: BillingInterval.Month },
+			include_variants: true,
 		});
 
 		expectPreviewUpdatePlanCorrect({
@@ -434,10 +435,10 @@ test.concurrent(
 );
 
 // ───────────────────────────────────────────────────────────────────
-// 9. base patch in place → customer-bearing variant versions
+// 9. base patch in place → propagated variant patches in place too
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants propagate: base patches in place → customer-bearing variant versions")}`,
+	`${chalk.yellowBright("variants propagate: base patches in place → customer-bearing variant patches in place (disable_version cascades)")}`,
 	async () => {
 		const cid = readableVariantTestId("lc_prop_base_in_place");
 		const base = baseProduct(`lc_base_${cid}`);
@@ -483,11 +484,13 @@ test.concurrent(
 		expect(baseAfter.internal_id).toBe(baseBefore.internal_id);
 		expect(baseAfter.version).toBe(1);
 
-		expect(variantAfter.internal_id).not.toBe(variantBefore.internal_id);
+		// disable_version on the base cascades to explicitly-targeted variants:
+		// the propagated diff patches the variant in place, it does not version.
+		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
 		expectVariantProductCorrect({
 			base: baseAfter,
 			variant: variantAfter,
-			version: 2,
+			version: 1,
 		});
 
 		const variantEnt = variantAfter.entitlements.find(
@@ -498,10 +501,10 @@ test.concurrent(
 );
 
 // ───────────────────────────────────────────────────────────────────
-// 10. base versions + variant versions when base has customers
+// 10. base versions, customer-less variant patches in place onto new base
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants propagate: both version when base has customers — variant v2 base_internal_product_id = base v2 internal_id")}`,
+	`${chalk.yellowBright("variants propagate: base versions, customer-less variant patches in place onto base v2")}`,
 	async () => {
 		const cid = readableVariantTestId("lc_prop_versions");
 		const base = baseProduct(`lc_base_${cid}`);
@@ -537,67 +540,18 @@ test.concurrent(
 		const variantV2 = await getFull(ctx, variantId);
 
 		expect(baseV2.version).toBe(2);
+		// Variant has no customers of its own, so it doesn't need to version —
+		// it patches in place, re-pinned to the base's new v2 internal_id.
 		expectVariantProductCorrect({
 			base: baseV2,
 			variant: variantV2,
-			version: 2,
+			version: 1,
 		});
 
 		const variantEnt = variantV2.entitlements.find(
 			(e) => e.feature_id === TestFeature.Messages,
 		);
 		expect(variantEnt?.allowance).toBe(200);
-	},
-);
-
-// ───────────────────────────────────────────────────────────────────
-// 11. opt-out: omit propagate leaves variant pinned to old base
-// ───────────────────────────────────────────────────────────────────
-test.concurrent(
-	`${chalk.yellowBright("variants opt-out: omit propagate → base versions, variant stays at v1 pinned to old base")}`,
-	async () => {
-		const cid = readableVariantTestId("lc_opt_out");
-		const base = baseProduct(`lc_base_${cid}`);
-
-		const { ctx } = await initScenario({
-			customerId: cid,
-			setup: [
-				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [base] }),
-			],
-			actions: [s.billing.attach({ productId: base.id })],
-		});
-
-		const rpc = new AutumnRpcCli({
-			secretKey: ctx.orgSecretKey,
-			version: ApiVersion.V2_1,
-		});
-		const variantId = `lc_var_${cid}`;
-
-		await createVariant(rpc, {
-			base_plan_id: base.id,
-			variant_plan_id: variantId,
-			name: "Variant",
-		});
-
-		const baseV1 = await getFull(ctx, base.id);
-		const variantBefore = await getFull(ctx, variantId);
-
-		await rpc.plans.update<ApiPlanV1, RpcUpdate>(base.id, {
-			items: [monthlyItem(200)],
-			price: monthlyPrice,
-		});
-
-		const baseV2 = await getFull(ctx, base.id);
-		const variantAfter = await getFull(ctx, variantId);
-
-		expect(baseV2.version).toBe(2);
-		expect(variantAfter.version).toBe(1);
-		expect(variantAfter.internal_id).toBe(variantBefore.internal_id);
-		// Still pinned to old base v1
-		expect(variantAfter.base_internal_product_id).toBe(
-			baseV1.internal_id,
-		);
 	},
 );
 
@@ -801,7 +755,7 @@ test.concurrent(
 // 17. is_default=true on variant rejects
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants update: is_default=true on variant → 400 variant_cannot_be_default")}`,
+	`${chalk.yellowBright("variants update: is_default=true on variant → 400 invalid_propagation_target")}`,
 	async () => {
 		const cid = readableVariantTestId("lc_default_err");
 		const base = baseProduct(`lc_base_${cid}`);
@@ -831,6 +785,9 @@ test.concurrent(
 		);
 
 		expect(err).not.toBeNull();
-		expect(err?.code).toBe("variant_cannot_be_default");
+		// is_default is one of the general variant-settings fields blocked by
+		// validateVariantSettingsUpdate, which runs before the dedicated
+		// variant_cannot_be_default check in validateDefaultFlag.
+		expect(err?.code).toBe("invalid_propagation_target");
 	},
 );

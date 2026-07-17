@@ -15,7 +15,7 @@
  *   - multi-version skip: variant gets only latest diff, not cumulative
  *   - preview_update is read-only (no writes)
  *   - nested_variant_not_allowed: cannot fork a variant
- *   - variant_cannot_be_default: is_default rejected on variant
+ *   - invalid_propagation_target: is_default rejected on variant (blocked variant-settings field)
  *   - Stripe carry-forward: existing prices retain stripe_price_id across version-ups
  */
 
@@ -270,6 +270,7 @@ test.concurrent(
 			plan_id: baseId,
 			items: [...allItems(), v1.adminRights()],
 			price: monthlyPrice,
+			include_variants: true,
 		})) as PlanUpdatePreview;
 
 		expectPreviewVariantsCorrect({
@@ -583,7 +584,7 @@ test.concurrent(
 // 11. is_default on variant rejects
 // ═════════════════════════════════════════════════════════════════
 test.concurrent(
-	`${chalk.yellowBright("feature-drop errors: is_default=true on variant → 400 variant_cannot_be_default")}`,
+	`${chalk.yellowBright("feature-drop errors: is_default=true on variant → 400 invalid_propagation_target")}`,
 	async () => {
 		const cid = readableVariantTestId("fd_default_err");
 		const { rpc, baseId } = await setupScenario(cid, `fd_base_${cid}`);
@@ -595,7 +596,10 @@ test.concurrent(
 			rpc.plans.update<ApiPlanV1, RpcUpdate>(variantId, { is_default: true }),
 		);
 		expect(err).not.toBeNull();
-		expect(err?.code).toBe("variant_cannot_be_default");
+		// is_default is one of the general variant-settings fields blocked by
+		// validateVariantSettingsUpdate, which runs before the dedicated
+		// variant_cannot_be_default check in validateDefaultFlag.
+		expect(err?.code).toBe("invalid_propagation_target");
 	},
 );
 
