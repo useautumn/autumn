@@ -22,21 +22,32 @@ export const assignLicense = async ({
 	customerId,
 	entityId,
 	licensePlanId,
-	parentPlanId,
 }: {
 	autumn: AutumnInt;
 	customerId: string;
 	entityId: string;
 	licensePlanId: string;
+	/** Ignored — the redesigned API resolves the parent by link. */
 	parentPlanId?: string;
 }) => {
-	const response = (await autumn.post("/licenses.attach", {
+	// The attach response carries no assignment — fetch it back via list_assignments.
+	await autumn.post("/licenses.attach", {
 		customer_id: customerId,
-		entity_id: entityId,
 		plan_id: licensePlanId,
-		parent_plan_id: parentPlanId,
-	})) as { assignment: TestLicenseAssignment };
-	return response.assignment;
+		entities: [{ entity_id: entityId }],
+	});
+	const { list } = (await autumn.post("/licenses.list_assignments", {
+		customer_id: customerId,
+		plan_id: licensePlanId,
+		active: true,
+	})) as { list: TestLicenseAssignment[] };
+	const assignment = list.find((a) => a.entity_id === entityId);
+	if (!assignment) {
+		throw new Error(
+			`assignLicense: no active assignment for entity '${entityId}' on plan '${licensePlanId}'`,
+		);
+	}
+	return assignment;
 };
 
 export const listLicensePools = async ({
