@@ -2,6 +2,7 @@ import type { ApiCustomerLicenseV0, ProductV2 } from "@autumn/shared";
 import { DropdownMenuItem } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import { CheckIcon } from "lucide-react";
+import { AdminHover } from "@/components/general/AdminHover";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
@@ -37,7 +38,12 @@ export const createCustomerLicenseColumns = ({
 		cell: ({ row }: { row: Row<LicenseAssignmentRow> }) => (
 			<div className="font-medium text-foreground flex items-center gap-2">
 				<LicenseIcon size={14} className="shrink-0" />
-				{row.original.name}
+				<AdminHover
+					texts={[{ key: "Cus Product ID", value: row.original.id }]}
+					triggerClassName="min-w-0"
+				>
+					<span className="truncate">{row.original.name}</span>
+				</AdminHover>
 			</div>
 		),
 	},

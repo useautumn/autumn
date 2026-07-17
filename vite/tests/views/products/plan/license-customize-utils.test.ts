@@ -61,3 +61,24 @@ test("returns null when an edit restores the base license", () => {
 		}),
 	).toBeNull();
 });
+
+test("reports an incomplete base price without leaking a Zod error", () => {
+	const edited = productV2ToFrontendProduct({
+		product: { ...license, items: [] },
+	});
+	edited.items = [
+		{
+			price: "" as unknown as number,
+			interval: ProductItemInterval.Month,
+			interval_count: 1,
+		},
+	];
+
+	expect(() =>
+		productToLicenseCustomize({
+			product: edited,
+			license,
+			features: [],
+		}),
+	).toThrow("Enter a base price before saving");
+});

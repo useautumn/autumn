@@ -8,6 +8,7 @@ import {
 	previewPlanLicenseSync,
 	validatePlanLicenseUpdate,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { previewAffectedLicenses } from "@/internal/product/actions/previewUpdatePlan/previewAffectedLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { sortCatalogPlansByDependencies } from "./catalogPlanDependencies.js";
 
@@ -90,7 +91,15 @@ const preflightCatalogLicenses = async ({
 			newParentVersion: preview.versionable || !current,
 			licenseProducts,
 		});
-		preview.license_changes = licensePreview.changes;
+		preview.license_changes = await previewAffectedLicenses({
+			ctx,
+			currentParentProduct: {
+				...parent,
+				licenses: current?.licenses ?? [],
+			},
+			resolved: licensePreview.prepared?.resolved ?? [],
+			structuralChanges: licensePreview.changes,
+		});
 		if (preview.plan) preview.plan.licenses = licensePreview.licenses;
 	}
 };

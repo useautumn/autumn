@@ -5,11 +5,11 @@ import type {
 } from "@autumn/shared";
 import { AreaRadioGroupItem, Button, RadioGroup, Switch } from "@autumn/ui";
 import { useMemo, useState } from "react";
+import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { PropagateVariantsStep } from "@/views/products/plan/versioning/PropagateVariantsStep";
 import type { VariantConflictInfo } from "@/views/products/plan/versioning/variantConflicts";
 import type { LeafCatalogDecision } from "../chatTypes";
-import { PlanDiffBody } from "./PlanDiffBody";
 
 const isVersionableChange = (plan: CatalogPlanPreview) =>
 	Boolean(plan.customize) ||

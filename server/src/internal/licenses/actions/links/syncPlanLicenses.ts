@@ -1,4 +1,5 @@
 import {
+	type DbPlanLicense,
 	type Entitlement,
 	ErrCode,
 	type FullProduct,
@@ -18,14 +19,20 @@ import {
 	getFullLicenseProduct,
 	toApiPlanLicenses,
 } from "../../licenseUtils.js";
+import { customerLicenseRepo } from "../../repos/customerLicenseRepo.js";
 import { licenseAssignmentRepo } from "../../repos/licenseAssignmentRepo.js";
 import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { logLicenseAction } from "../logs/logLicenseAction.js";
+import { retireCatalogPlanLicenseIfReferenced } from "./retireCatalogPlanLicenseIfReferenced.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
 type LicenseItemCustomization =
-	| { mode: "preserve"; sourcePlanLicenseId?: string }
+	| {
+			mode: "preserve";
+			sourcePlanLicenseId?: string;
+			sourceCustomized?: boolean;
+	  }
 	| { mode: "clear" }
 	| {
 			mode: "replace";
@@ -34,17 +41,19 @@ type LicenseItemCustomization =
 			items: ReturnType<typeof derivePlanLicenseItemRefs>;
 	  };
 
-type ResolvedLink = {
+export type ResolvedPlanLicenseLink = {
 	entry: PlanLicenseParams;
 	licenseProduct: FullProduct;
+	effectiveProduct: FullProduct;
 	included: number;
 	prepaidOnly: boolean;
 	itemCustomization: LicenseItemCustomization;
+	sourcePlanLicense?: DbPlanLicense;
 };
 
 export type PreparedPlanLicenseSync = {
 	parentProduct: FullProduct;
-	resolved: ResolvedLink[];
+	resolved: ResolvedPlanLicenseLink[];
 	removed: Awaited<
 		ReturnType<typeof planLicenseRepo.listCatalogByParentInternalProductIds>
 	>;
@@ -98,7 +107,7 @@ export const previewPlanLicenseSync = async (
 			];
 		},
 	);
-	return { licenses: current, changes };
+	return { licenses: current, changes, prepared };
 };
 
 /** Resolves and validates one link without writing it. */
@@ -121,7 +130,7 @@ const resolveLink = async ({
 		PreparedPlanLicenseSync["removed"][number]
 	>;
 	sourceProductByLicenseInternalId: Map<string, FullProduct>;
-}): Promise<ResolvedLink> => {
+}): Promise<ResolvedPlanLicenseLink> => {
 	const pinnedInternalId =
 		entry.version === undefined
 			? pinnedInternalIdByPublicId.get(entry.license_plan_id)
@@ -152,6 +161,7 @@ const resolveLink = async ({
 		itemCustomization = {
 			mode: "preserve",
 			sourcePlanLicenseId: sourceLink?.id,
+			sourceCustomized: sourceLink?.customized,
 		};
 		if (sourceLink?.customized) {
 			effectiveProduct =
@@ -185,10 +195,34 @@ const resolveLink = async ({
 	return {
 		entry,
 		licenseProduct,
+		effectiveProduct,
 		included: entry.included ?? 0,
 		prepaidOnly: entry.prepaid_only ?? true,
 		itemCustomization,
+		sourcePlanLicense: sourceLink,
 	};
+};
+
+/** Nesting is not supported: a plan offered as a license under other plans
+ * cannot offer licenses of its own. Clearing (`licenses: []`) stays allowed. */
+const assertParentNotLicensed = ({
+	parentProduct,
+	licenses,
+}: {
+	parentProduct: FullProduct;
+	licenses: PlanLicenseParams[];
+}) => {
+	const parentIds = [
+		...new Set(
+			(parentProduct.parent_plan_licenses ?? []).map((link) => link.product.id),
+		),
+	];
+	if (licenses.length === 0 || parentIds.length === 0) return;
+	throw new RecaseError({
+		message: `Cannot add licenses to ${parentProduct.id}: it is offered as a license under ${parentIds.join(", ")}.`,
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
 };
 
 /** A plan cannot drop below what customers are already using. */
@@ -246,20 +280,23 @@ export const preparePlanLicenseSync = async ({
 			statusCode: 400,
 		});
 	}
+	assertParentNotLicensed({ parentProduct, licenses });
 
 	const sourceLinks =
-		await planLicenseRepo.listCatalogByParentInternalProductIds({
+		parentProduct.licenses
+			?.filter(
+				(link) => link.parent_internal_product_id === fromInternalProductId,
+			)
+			.map(({ product: _, base_product: __, ...link }) => link) ??
+		(await planLicenseRepo.listCatalogByParentInternalProductIds({
 			db: ctx.db,
 			parentInternalProductIds: [fromInternalProductId],
-		});
-	const existingLinkProducts = await planLicenseRepo.listProductsByInternalIds({
-		db: ctx.db,
-		internalProductIds: sourceLinks.map(
-			(link) => link.license_internal_product_id,
-		),
-	});
+		}));
 	const pinnedInternalIdByPublicId = new Map(
-		existingLinkProducts.map((product) => [product.id, product.internal_id]),
+		(parentProduct.licenses ?? []).map((link) => [
+			link.product.id,
+			link.license_internal_product_id,
+		]),
 	);
 	const sourceLinkByLicenseInternalId = new Map(
 		sourceLinks.map((link) => [link.license_internal_product_id, link]),
@@ -352,7 +389,37 @@ export const applyPreparedPlanLicenseSync = async ({
 
 	await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
+		const sourcePlanLicenses = resolved.flatMap(({ sourcePlanLicense }) =>
+			sourcePlanLicense?.parent_internal_product_id === parentInternalProductId
+				? [sourcePlanLicense]
+				: [],
+		);
+		const referencedPlanLicenseIds =
+			await customerLicenseRepo.listReferencedPlanLicenseIds({
+				db: txDb,
+				planLicenseIds: sourcePlanLicenses.map(({ id }) => id),
+			});
+		const sourceLinkByLicenseInternalId = new Map(
+			sourcePlanLicenses.map((link) => [
+				link.license_internal_product_id,
+				link,
+			]),
+		);
 		for (const link of resolved) {
+			const current = sourceLinkByLicenseInternalId.get(
+				link.licenseProduct.internal_id,
+			);
+			if (current) {
+				await retireCatalogPlanLicenseIfReferenced({
+					db: txDb,
+					current,
+					entry: link.entry,
+					included: link.included,
+					prepaidOnly: link.prepaidOnly,
+					itemCustomizationMode: link.itemCustomization.mode,
+					hasCustomerReference: referencedPlanLicenseIds.has(current.id),
+				});
+			}
 			const planLicense = await planLicenseRepo.upsert({
 				db: txDb,
 				parentInternalProductId,
@@ -388,7 +455,7 @@ export const applyPreparedPlanLicenseSync = async ({
 					db: txDb,
 					fromPlanLicenseId: customization.sourcePlanLicenseId,
 					toPlanLicenseId: planLicense.id,
-					customized: true,
+					customized: customization.sourceCustomized,
 				});
 			}
 		}

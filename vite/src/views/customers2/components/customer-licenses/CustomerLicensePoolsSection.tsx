@@ -41,7 +41,8 @@ export function CustomerLicensePoolsSection() {
 			}).flatMap((customerProduct) =>
 				(customerProduct.customer_licenses ?? []).map((customerLicense) => ({
 					id: customerLicense.id,
-					licensePlanId: customerLicense.planLicense?.product.id ?? null,
+					planLicenseId: customerLicense.plan_license_id,
+					licenseProductId: customerLicense.planLicense?.product.id ?? null,
 					name:
 						customerLicense.planLicense?.product.name ??
 						customerLicense.license_internal_product_id,
@@ -83,10 +84,10 @@ export function CustomerLicensePoolsSection() {
 					mobileCards: true,
 					selectedItemId,
 					onRowClick: (row: CustomerLicensePoolRow) => {
-						if (!row.licensePlanId) return;
+						if (!row.licenseProductId) return;
 						setSheet({
 							type: "license-pool-detail",
-							itemId: row.licensePlanId,
+							itemId: row.licenseProductId,
 						});
 					},
 				}}

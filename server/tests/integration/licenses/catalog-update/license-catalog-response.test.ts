@@ -158,6 +158,11 @@ test.concurrent(
 			{
 				action: "update",
 				license_plan_id: license.id,
+				version: 1,
+				included: 3,
+				prepaid_only: true,
+				previous_attributes: { included: 2 },
+				plan_changes: null,
 			},
 		]);
 		expect(change.plan?.licenses).toEqual([

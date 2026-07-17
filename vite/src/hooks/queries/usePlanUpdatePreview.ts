@@ -31,12 +31,14 @@ export function usePlanUpdatePreview({
 			),
 		enabled: enabled && !!planId && !!params,
 		staleTime: 0,
+		retry: false,
+		refetchOnMount: false,
+		refetchOnWindowFocus: false,
+		refetchOnReconnect: false,
 	});
 }
 
-// Warm the cache before opening the plan change dialog so it renders with data
-// already present instead of reflowing as the preview resolves.
-export function usePrefetchPlanUpdatePreview() {
+export function useFetchPlanUpdatePreview() {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 
@@ -47,8 +49,9 @@ export function usePrefetchPlanUpdatePreview() {
 		planId: string;
 		params: PreviewUpdatePlanParamsV2Input;
 	}) =>
-		queryClient.prefetchQuery({
+		queryClient.fetchQuery({
 			queryKey: planUpdatePreviewKey(planId, params),
 			queryFn: () => ProductService.previewUpdate(axiosInstance, params),
+			retry: false,
 		});
 }
