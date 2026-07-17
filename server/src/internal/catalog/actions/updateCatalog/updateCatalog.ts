@@ -476,6 +476,7 @@ export const updateCatalog = async ({
 		db,
 		orgId: org.id,
 		env,
+		returnAll: true,
 	});
 	validateCatalogVariantVersionTargets({
 		params,
