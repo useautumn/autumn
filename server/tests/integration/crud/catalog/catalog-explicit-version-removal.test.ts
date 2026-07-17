@@ -53,3 +53,49 @@ test(`${chalk.yellowBright("catalog: update removes every omitted explicit versi
 	});
 	expect(versions.map(({ version }) => version)).toEqual([1]);
 });
+
+test(`${chalk.yellowBright("catalog: update removes an entirely omitted versioned plan once")}`, async () => {
+	const suffix = Math.random().toString(36).slice(2, 9);
+	const planId = `catalog_remove_plan_${suffix}`;
+	const product = products.pro({ id: planId, items: [] });
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId: `catalog-remove-plan-${suffix}`,
+		setup: [s.products({ list: [product], prefix: "" })],
+		actions: [],
+	});
+
+	await autumnV2_2.post("/catalog.update", {
+		plans: [{ plan_id: planId, name: "Version 2", force_version: true }],
+	});
+
+	const productsBefore = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		returnAll: true,
+	});
+	const skipPlanIds = [
+		...new Set(
+			productsBefore
+				.map(({ id }) => id)
+				.filter((currentPlanId) => currentPlanId !== planId),
+		),
+	];
+
+	await autumnV2_2.catalog.update({
+		features: [],
+		plans: [],
+		skip_deletions: false,
+		skip_feature_ids: ctx.features.map(({ id }) => id),
+		skip_plan_ids: skipPlanIds,
+	});
+
+	const versions = await ProductService.listFull({
+		db: ctx.db,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		inIds: [planId],
+		returnAll: true,
+	});
+	expect(versions).toHaveLength(0);
+});
