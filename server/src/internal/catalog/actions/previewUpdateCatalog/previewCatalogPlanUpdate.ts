@@ -26,7 +26,7 @@ const previewNewPlan = ({
 	const {
 		plan_id,
 		new_plan_id,
-		version: _version,
+		version,
 		variants: _variants,
 		include_versions: _includeVersions,
 		include_variants: _includeVariants,
@@ -43,7 +43,7 @@ const previewNewPlan = ({
 	});
 	const product = {
 		env: ctx.env,
-		version: 1,
+		version: version ?? 1,
 		created_at: Date.now(),
 		archived: false,
 		...resolved,
