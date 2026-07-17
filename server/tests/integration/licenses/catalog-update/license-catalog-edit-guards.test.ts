@@ -10,6 +10,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { assignLicense } from "../licenseTestUtils.js";
 
 const makeLicenseProduct = ({
 	id,
@@ -58,11 +59,12 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 50 })],
 		});
 
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			plan_id: license.id,
-		})) as { assignment: { entity_id: string; ended_at: number | null } };
+		const assignment = await assignLicense({
+			autumn: autumnV2_2,
+			customerId,
+			entityId: entities[1].id,
+			licensePlanId: license.id,
+		});
 		expect(assignment).toMatchObject({
 			entity_id: entities[1].id,
 			ended_at: null,

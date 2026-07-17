@@ -55,8 +55,8 @@ test.concurrent(
 
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[0].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[0].id }],
 		});
 
 		const entityCheck = await autumnV2_2.check<CheckResponseV3>({
@@ -105,8 +105,8 @@ test.concurrent(
 		for (const entity of entities) {
 			await autumnV2_2.post("/licenses.attach", {
 				customer_id: customerId,
-				entity_id: entity.id,
 				plan_id: license.id,
+				entities: [{ entity_id: entity.id }],
 			});
 		}
 
@@ -187,10 +187,10 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_2.post("/licenses.update", {
+		await autumnV2_2.post("/licenses.release", {
 			customer_id: customerId,
-			cancel_action: "cancel_immediately",
-			assignment_id: assignment.id,
+			entity_ids: [assignment.entity_id],
+			license_plan_id: license.id,
 		});
 
 		const activeOnly = await listLicenseAssignments({
@@ -247,7 +247,7 @@ test.concurrent(
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
 			errMessage:
-				"Custom license changes conflict with active license assignments",
+				"License changes conflict with active license assignments",
 			func: () =>
 				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,

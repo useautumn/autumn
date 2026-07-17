@@ -46,7 +46,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import chalk from "chalk";
 import { inArray } from "drizzle-orm";
-import { runRepointSeatEntitlements } from "@/trigger/licenses/repointSeatEntitlementsTask";
 
 const CATALOG_SEAT_PRICE = 20;
 const CUSTOM_SEAT_PRICE = 40;
@@ -402,8 +401,7 @@ test.concurrent(
 			updateParams,
 		);
 
-		// ── DB: definition repointed; seat cusEnt refs converge via the
-		// trigger.dev task (asserted below by running the worker's runner) ──
+		// ── DB: definition repointed; seat cusEnt refs converge inline ──
 		const pool = await expectLicenseDefinitionCorrect({
 			ctx: scenario.ctx,
 			customerId,
@@ -444,31 +442,8 @@ test.concurrent(
 			);
 		};
 
-		// Ent repoints are QUEUED (trigger.dev), not inline — refs still carry
-		// the outgoing definition immediately after the update.
-		const queuedRows = await readSeatMessageRows();
-		expect(queuedRows).toHaveLength(ASSIGNED_SEATS);
-		const outgoingEntitlementIds = [
-			...new Set(queuedRows.map((row) => row.entitlementId)),
-		];
-		expect(outgoingEntitlementIds).toHaveLength(1);
-		expect(outgoingEntitlementIds[0]).not.toBe(customMessagesEntitlement?.id);
-
-		// Run the worker's runner directly (idempotent) and assert convergence.
-		await runRepointSeatEntitlements({
-			ctx: scenario.ctx as unknown as Parameters<
-				typeof runRepointSeatEntitlements
-			>[0]["ctx"],
-			customerLicenseLinkId: pool.link_id,
-			entitlementTransitions: [
-				{
-					fromEntitlementId: outgoingEntitlementIds[0] ?? "",
-					toEntitlementId: customMessagesEntitlement?.id ?? "",
-				},
-			],
-			source: "integration-test",
-		});
-
+		// Without a trigger secret the repoint runs inline, so seat refs are
+		// already converged onto the custom definition after the update.
 		const convergedRows = await readSeatMessageRows();
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 		for (const row of convergedRows) {

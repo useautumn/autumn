@@ -1,8 +1,5 @@
 import { expect, test } from "bun:test";
-import type {
-	CheckResponseV3,
-	UpdateSubscriptionV1ParamsInput,
-} from "@autumn/shared";
+import type { CheckResponseV3 } from "@autumn/shared";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -63,18 +60,12 @@ const setupLicense = async ({
 test.concurrent(
 	`${chalk.yellowBright("licenses billing: generic cancellation releases an assignment completely")}`,
 	async () => {
-		const {
-			customerId,
-			entities,
-			autumnV2_2,
-			ctx,
-			license,
-			licenseAssignments: [assignment],
-		} = await setupLicense({
-			customerId: "lic-generic-cancel",
-			included: 1,
-			assignEntityIndex: 0,
-		});
+		const { customerId, entities, autumnV2_2, ctx, license } =
+			await setupLicense({
+				customerId: "lic-generic-cancel",
+				included: 1,
+				assignEntityIndex: 0,
+			});
 
 		expect(
 			(
@@ -86,15 +77,18 @@ test.concurrent(
 			).allowed,
 		).toBe(true);
 
-		await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		await autumnV2_2.post("/licenses.release", {
 			customer_id: customerId,
-			customer_product_id: assignment.id,
-			cancel_action: "cancel_immediately",
+			entity_ids: [entities[0].id],
 		});
 
 		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
 		expect(dbState.assignments).toHaveLength(1);
-		expect(dbState.assignments[0]).toMatchObject({ status: "expired" });
+		expect(dbState.assignments[0]).toMatchObject({
+			entity_id: null,
+			internal_entity_id: null,
+		});
+		expect(dbState.assignments[0].released_at).not.toBeNull();
 		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.pools[0]).toMatchObject({ granted: 1, remaining: 1 });
 
@@ -107,11 +101,19 @@ test.concurrent(
 			});
 			expect(check.allowed).toBe(false);
 		}
+
 		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[1].id,
 			plan_id: license.id,
+			entities: [{ entity_id: entities[1].id }],
 		});
+		const reused = await getLicenseDbState({ db: ctx.db, customerId });
+		expect(reused.assignments).toHaveLength(1);
+		expect(reused.assignments[0]).toMatchObject({
+			entity_id: entities[1].id,
+			released_at: null,
+		});
+		expect(reused.pools[0]).toMatchObject({ granted: 1, remaining: 0 });
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -130,8 +132,8 @@ test.concurrent(
 			[0, 1].map(() =>
 				autumnV2_2.post("/licenses.attach", {
 					customer_id: customerId,
-					entity_id: entities[0].id,
 					plan_id: license.id,
+					entities: [{ entity_id: entities[0].id }],
 				}),
 			),
 		);
