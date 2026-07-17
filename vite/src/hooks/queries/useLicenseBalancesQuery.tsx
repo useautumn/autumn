@@ -74,6 +74,9 @@ export const useLicenseBalancesQuery = ({
 			queryClient.invalidateQueries({ queryKey: ["license_pools"] }),
 			queryClient.invalidateQueries({ queryKey: ["license_assignments"] }),
 			queryClient.invalidateQueries({ queryKey: ["customer"] }),
+			// Attach can create entities; refresh the entity list so a new one is
+			// immediately selectable.
+			queryClient.invalidateQueries({ queryKey: ["entities"] }),
 		]);
 
 	const assign = useMutation({

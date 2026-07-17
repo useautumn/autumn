@@ -28,6 +28,7 @@ import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
@@ -157,6 +158,7 @@ export default function PlanChangeDialog({
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
 	const { planLicenses, invalidate: invalidatePlanLicenses } =
 		usePlanLicensesQuery(product.id);
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
@@ -409,6 +411,7 @@ export default function PlanChangeDialog({
 					Promise.all([
 						invalidatePlanLicenses(),
 						invalidateProduct(),
+						invalidateLicenseProducts(),
 						invalidateProducts(),
 					]),
 			});

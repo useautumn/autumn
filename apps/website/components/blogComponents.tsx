@@ -1,5 +1,8 @@
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import { CreditBucketsTable } from "./blogComponents/ai-billing-infrastructure/CreditBucketsTable";
+import { CreditsTable } from "./blogComponents/ai-billing-infrastructure/CreditsTable";
+import { LockAndReleaseDiagram } from "./blogComponents/ai-billing-infrastructure/LockAndReleaseDiagram";
 import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
 import {
 	ConfigSim,
@@ -68,7 +71,7 @@ export const mdxComponents = {
 	},
 	pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
 		<pre
-			className="rounded-lg border border-[#292929] bg-[#141414] p-4 overflow-x-auto text-sm leading-relaxed"
+			className="rounded-lg border border-[#292929] bg-[#141414] p-4 whitespace-pre-wrap break-words text-sm leading-relaxed"
 			{...props}
 		>
 			{children}
@@ -120,6 +123,9 @@ export const mdxComponents = {
 		</td>
 	),
 	Expand,
+	CreditsTable,
+	CreditBucketsTable,
+	LockAndReleaseDiagram,
 	ConfigAsCodeSimulator,
 	ConfigSim,
 	HierarchyFlatSimulator,
