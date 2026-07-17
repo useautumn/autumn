@@ -85,11 +85,11 @@ export const buildPlanUpdatePreview = async ({
 	const shouldPreviewVersions = Boolean(
 		data.include_versions || data.all_versions,
 	);
-	const shouldPreviewVariants = Boolean(
-		data.include_variants ||
-			(data.update_variant_ids?.length ?? 0) > 0 ||
-			(data.variants?.length ?? 0) > 0,
-	);
+	// Variants preview by default; include_variants: false is an explicit opt-out.
+	const shouldPreviewVariants =
+		data.include_variants !== false ||
+		(data.update_variant_ids?.length ?? 0) > 0 ||
+		(data.variants?.length ?? 0) > 0;
 	const [variants, otherVersions] = await Promise.all([
 		shouldPreviewVariants
 			? previewAffectedVariants({

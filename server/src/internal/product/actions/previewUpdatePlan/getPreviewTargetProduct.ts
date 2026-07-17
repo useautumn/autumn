@@ -1,8 +1,7 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
-// Accepts a base plan or a variant. For a variant the propagation step no-ops,
-// since a variant has no children of its own.
 export const getPreviewTargetProduct = async ({
 	ctx,
 	planId,
@@ -14,11 +13,21 @@ export const getPreviewTargetProduct = async ({
 }) => {
 	const { db, org, env } = ctx;
 
-	return await ProductService.getFull({
+	const product = await ProductService.getFull({
 		db,
 		idOrInternalId: planId,
 		orgId: org.id,
 		env,
 		version,
 	});
+
+	if (product.base_internal_product_id !== null) {
+		throw new RecaseError({
+			message: `Cannot preview an update on variant plan ${planId}. Preview the base plan instead.`,
+			code: ErrCode.CannotPreviewOnVariant,
+			statusCode: 400,
+		});
+	}
+
+	return product;
 };

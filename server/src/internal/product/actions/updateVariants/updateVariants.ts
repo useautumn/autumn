@@ -214,6 +214,8 @@ export const updateVariants = async ({
 		return;
 	}
 
+	// β-rule for propagation: variant versions iff baseWasVersioned || variantHasCustomers.
+	// Request-level disable_version pins direct variant edits only, never bare propagation.
 	const resolveShouldVersion = async (
 		variant: FullProduct,
 		variantUpdate?: UpdateVariantParams,
@@ -221,7 +223,9 @@ export const updateVariants = async ({
 		if (variantUpdate?.force_version) return true;
 		if (variantUpdate?.disable_version) return false;
 		if (forceVersion) return true;
-		if (disableVersion || allVersions) return false;
+		if (allVersions) return false;
+		if (variantUpdate && disableVersion) return false;
+		if (baseWasVersioned) return true;
 		return hasPlanCustomers({ ctx, product: variant });
 	};
 
