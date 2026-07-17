@@ -9,7 +9,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getFullLicenseProduct } from "../../utils/getFullLicenseProduct.js";
+import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: propagates base license items through customized parent links")}`,
@@ -86,6 +86,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: monthlyParent.id, version: 1 },
+				{ plan_id: annualParent.id, version: 1 },
+			],
 			items: [
 				itemsV2.monthlyMessages({ included: 100 }),
 				itemsV2.monthlyWords({ included: 50 }),
@@ -121,6 +125,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: monthlyParent.id, version: 1 },
+				{ plan_id: annualParent.id, version: 1 },
+			],
 			items: [
 				itemsV2.monthlyMessages({ included: 200 }),
 				itemsV2.monthlyWords({ included: 50 }),
@@ -193,6 +201,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: monthlyParent.id, version: 1 },
+				{ plan_id: annualParent.id, version: 1 },
+			],
 			items: [itemsV2.monthlyMessages({ included: 200 })],
 		});
 		const [monthlyAfterRemove, annualAfterRemove] = await Promise.all([

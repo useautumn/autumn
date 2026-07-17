@@ -45,3 +45,10 @@ export const toApiPlanLicenseWithCustomize = async ({
 		...(customize ? { customize } : {}),
 	};
 };
+
+export const toPlanLicenseParamsWithCustomize = async (
+	args: Parameters<typeof toApiPlanLicenseWithCustomize>[0],
+) => {
+	const { version: _, ...license } = await toApiPlanLicenseWithCustomize(args);
+	return license;
+};

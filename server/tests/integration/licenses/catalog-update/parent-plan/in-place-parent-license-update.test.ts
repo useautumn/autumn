@@ -16,9 +16,9 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { expectLicenseDefinitionCorrect } from "../../../../../licenses/utils/expectLicenseDefinitionCorrect.js";
-import { buildCustomizedLicenseEntry } from "../../utils/buildCustomizedLicenseEntry.js";
-import { expectCatalogLicenseCorrect } from "../../utils/expectCatalogLicenseCorrect.js";
+import { expectLicenseDefinitionCorrect } from "../../utils/expectLicenseDefinitionCorrect.js";
+import { buildCustomizedLicenseEntry } from "../utils/buildCustomizedLicenseEntry.js";
+import { expectCatalogLicenseCorrect } from "../utils/expectCatalogLicenseCorrect.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: in-place license customization preserves the existing customer definition")}`,

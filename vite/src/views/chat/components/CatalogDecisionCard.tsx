@@ -7,8 +7,11 @@ import { AreaRadioGroupItem, Button, RadioGroup, Switch } from "@autumn/ui";
 import { useMemo, useState } from "react";
 import { PlanDiffBody } from "@/components/v2/PlanDiffBody";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { PropagateVariantsStep } from "@/views/products/plan/versioning/PropagateVariantsStep";
-import type { VariantConflictInfo } from "@/views/products/plan/versioning/variantConflicts";
+import { getDefaultPropagationTargetIds } from "@/views/products/plan/versioning/getDefaultPropagationTargetIds";
+import {
+	type PropagationTarget,
+	PropagationTargetsStep,
+} from "@/views/products/plan/versioning/PropagationTargetsStep";
 import type { LeafCatalogDecision } from "../chatTypes";
 
 const isVersionableChange = (plan: CatalogPlanPreview) =>
@@ -31,15 +34,6 @@ const hasCustomersAnywhere = (plan: CatalogPlanPreview) =>
 		(variant: PlanUpdatePreviewVariant) => variant.has_customers,
 	);
 
-/** Whether `previewUpdateCatalog` returned enough for this plan (customers,
- * variants, or historical versions) that the versioning/variant/migration
- * choices matter, mirroring the dashboard's `PlanChangeDialog` gating. */
-export const planNeedsDecision = (plan: CatalogPlanPreview): boolean =>
-	isVersionableChange(plan) &&
-	(plan.versionable ||
-		hasHistoricalVersions(plan) ||
-		(plan.variants?.length ?? 0) > 0);
-
 /** Versioning/variant-propagation/migration decisions for a previewed plan
  * update, sourced entirely from the `previewUpdateCatalog` result — same
  * fields the dashboard's `PlanChangeDialog` reads. "Continue" doesn't apply
@@ -60,12 +54,14 @@ export function CatalogDecisionCard({
 	const variants = plan.variants ?? [];
 	const showVariants = !metadataOnly && variants.length > 0;
 
-	const variantConflicts = useMemo<VariantConflictInfo[]>(
+	const variantTargets = useMemo<PropagationTarget[]>(
 		() =>
 			variants.map((variant: PlanUpdatePreviewVariant) => ({
+				id: variant.plan_id,
+				name: variant.name,
+				detail: variant.plan_id,
 				conflicts: variant.conflicts ?? [],
 				itemChanges: variant.item_changes ?? [],
-				variant: { id: variant.plan_id, name: variant.name },
 			})),
 		[variants],
 	);
@@ -74,9 +70,7 @@ export function CatalogDecisionCard({
 		LeafCatalogDecision["versioning"]
 	>(metadataOnly ? "update_all_versions" : "create_version");
 	const [selectedVariantIds, setSelectedVariantIds] = useState<string[]>(() =>
-		variantConflicts
-			.filter((entry) => entry.conflicts.length === 0)
-			.map((entry) => entry.variant.id),
+		getDefaultPropagationTargetIds({ targets: variantTargets }),
 	);
 	const [migrationDraft, setMigrationDraft] = useState(false);
 
@@ -139,7 +133,7 @@ export function CatalogDecisionCard({
 					<span className="font-medium text-tertiary-foreground text-xs">
 						Variants
 					</span>
-					<PropagateVariantsStep
+					<PropagationTargetsStep
 						onToggle={(id) =>
 							setSelectedVariantIds((prev) =>
 								prev.includes(id)
@@ -148,7 +142,7 @@ export function CatalogDecisionCard({
 							)
 						}
 						selectedIds={selectedVariantIds}
-						variants={variantConflicts}
+						targets={variantTargets}
 					/>
 				</div>
 			)}

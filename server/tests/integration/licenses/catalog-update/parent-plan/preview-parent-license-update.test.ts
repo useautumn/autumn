@@ -14,8 +14,8 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { buildCustomizedLicenseEntry } from "../../utils/buildCustomizedLicenseEntry.js";
-import { getFullLicenseProduct } from "../../utils/getFullLicenseProduct.js";
+import { buildCustomizedLicenseEntry } from "../utils/buildCustomizedLicenseEntry.js";
+import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 const onlyLicenseChange = (preview: PlanUpdatePreview) => {
 	expect(preview.license_changes).toHaveLength(1);

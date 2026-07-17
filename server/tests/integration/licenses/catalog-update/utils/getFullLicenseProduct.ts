@@ -11,11 +11,13 @@ export const getFullLicenseProduct = async ({
 	parentPlanId,
 	parentVersion,
 	licensePlanId,
+	licenseVersion,
 }: {
 	ctx: AutumnContext;
 	parentPlanId: string;
 	parentVersion?: number;
 	licensePlanId: string;
+	licenseVersion?: number;
 }) => {
 	const [parentProduct, baseLicenseProduct] = await Promise.all([
 		ProductService.getFull({
@@ -30,6 +32,7 @@ export const getFullLicenseProduct = async ({
 			idOrInternalId: licensePlanId,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			version: licenseVersion,
 		}),
 	]);
 	const planLicense = await planLicenseRepo.getCatalogByParentAndLicense({

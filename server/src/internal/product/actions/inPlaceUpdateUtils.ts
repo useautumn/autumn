@@ -13,6 +13,7 @@ import type { DrizzleCli } from "@server/db/initDrizzle";
 import { eq, inArray } from "drizzle-orm";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
@@ -85,20 +86,34 @@ export const productItemsHaveCustomerReferences = async ({
 	db: DrizzleCli;
 	currentFullProduct: FullProduct;
 }): Promise<boolean> => {
-	const [hasEntitlementReferences, hasPriceReferences] = await Promise.all([
+	const entitlementIds = currentFullProduct.entitlements.map(
+		(entitlement) => entitlement.id,
+	);
+	const priceIds = currentFullProduct.prices.map((price) => price.id);
+	const [
+		hasEntitlementReferences,
+		hasPriceReferences,
+		licenseEntitlementReferences,
+		licensePriceReferences,
+	] = await Promise.all([
 		CusEntService.hasAnyEntitlementReferences({
 			db,
-			entitlementIds: currentFullProduct.entitlements.map(
-				(entitlement) => entitlement.id,
-			),
+			entitlementIds,
 		}),
 		CusPriceService.hasAnyPriceReferences({
 			db,
-			priceIds: currentFullProduct.prices.map((price) => price.id),
+			priceIds,
 		}),
+		licenseItemRepo.listReferencedEntitlementIds({ db, entitlementIds }),
+		licenseItemRepo.listReferencedPriceIds({ db, priceIds }),
 	]);
 
-	return hasEntitlementReferences || hasPriceReferences;
+	return (
+		hasEntitlementReferences ||
+		hasPriceReferences ||
+		licenseEntitlementReferences.size > 0 ||
+		licensePriceReferences.size > 0
+	);
 };
 
 /**
@@ -144,14 +159,15 @@ const retireOrDeleteRows = async ({
 	entitlementIds: string[];
 	priceIds: string[];
 }) => {
-	const referencedEnts = await CusEntService.getReferencedEntitlementIds({
-		db,
-		entitlementIds,
-	});
-	const referencedPrices = await CusPriceService.getReferencedPriceIds({
-		db,
-		priceIds,
-	});
+	const [customerEnts, customerPrices, licenseEnts, licensePrices] =
+		await Promise.all([
+			CusEntService.getReferencedEntitlementIds({ db, entitlementIds }),
+			CusPriceService.getReferencedPriceIds({ db, priceIds }),
+			licenseItemRepo.listReferencedEntitlementIds({ db, entitlementIds }),
+			licenseItemRepo.listReferencedPriceIds({ db, priceIds }),
+		]);
+	const referencedEnts = new Set([...customerEnts, ...licenseEnts]);
+	const referencedPrices = new Set([...customerPrices, ...licensePrices]);
 	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
 	const entitlementsReferencedByRetainedPrices = new Set(
 		priceRows.flatMap((price) =>

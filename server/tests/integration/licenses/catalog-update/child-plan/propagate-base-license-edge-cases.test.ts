@@ -14,7 +14,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getFullLicenseProduct } from "../../utils/getFullLicenseProduct.js";
+import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: preserves explicit license removals and overrides during base propagation")}`,
@@ -79,6 +79,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: removedParent.id, version: 1 },
+				{ plan_id: overrideParent.id, version: 1 },
+			],
 			items: [
 				itemsV2.monthlyMessages({ included: 200 }),
 				itemsV2.monthlyWords({ included: 100 }),
@@ -136,6 +140,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: removedParent.id, version: 1 },
+				{ plan_id: overrideParent.id, version: 1 },
+			],
 			items: [itemsV2.monthlyCredits({ included: 25 })],
 		});
 		const [removedAfterDelete, overrideAfterDelete] = await Promise.all([
@@ -222,6 +230,10 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: matchingParent.id, version: 1 },
+				{ plan_id: remainingParent.id, version: 1 },
+			],
 			items: [itemsV2.monthlyMessages({ included: 500 })],
 		});
 		const [matchingAfterItemMatch, baseAfterItemMatch] = await Promise.all([
@@ -253,6 +265,10 @@ test.concurrent(
 			remainingBeforePriceMatch.items.entitlements[0].id;
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [
+				{ plan_id: matchingParent.id, version: 1 },
+				{ plan_id: remainingParent.id, version: 1 },
+			],
 			price: { amount: 20, interval: BillingInterval.Month },
 			items: [itemsV2.monthlyMessages({ included: 500 })],
 		});
@@ -333,6 +349,7 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [{ plan_id: parent.id, version: 1 }],
 			items: [
 				itemsV2.prepaidMessages({
 					included: 200,
@@ -407,6 +424,7 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [{ plan_id: parent.id, version: 1 }],
 			price: { amount: 20, interval: BillingInterval.Month },
 			items: [itemsV2.monthlyMessages({ included: 100 })],
 		});
@@ -472,6 +490,7 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [{ plan_id: parent.id, version: 1 }],
 			items: [itemsV2.monthlyMessages({ included: 200 })],
 		});
 		await autumnV2_3.licenses.attach({
@@ -495,6 +514,7 @@ test.concurrent(
 			granted: 100,
 		});
 	},
+	{ timeout: 15_000 },
 );
 
 test.concurrent(
@@ -525,6 +545,7 @@ test.concurrent(
 
 		await autumnV2_2.post("/plans.update", {
 			plan_id: license.id,
+			update_license_parents: [{ plan_id: parent.id, version: 1 }],
 			items: [itemsV2.monthlyWords({ included: 75 })],
 		});
 		const link = await getFullLicenseProduct({

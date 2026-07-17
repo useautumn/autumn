@@ -1,3 +1,7 @@
+import type {
+	PlanUpdatePreviewItemChange,
+	PlanUpdatePreviewVariantConflict,
+} from "@autumn/shared";
 import {
 	Checkbox,
 	HoverCard,
@@ -8,40 +12,42 @@ import { EyeIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { cn } from "@/lib/utils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
-import {
-	conflictBadgeLabel,
-	conflictSentence,
-	type VariantConflictInfo,
-} from "./variantConflicts";
+import { conflictBadgeLabel, conflictSentence } from "./variantConflicts";
 
-interface PropagateVariantsStepProps {
-	variants: VariantConflictInfo[];
-	selectedIds: string[];
-	onToggle: (id: string) => void;
-}
+export type PropagationTarget = {
+	id: string;
+	name: string;
+	detail: string;
+	conflicts: PlanUpdatePreviewVariantConflict[];
+	itemChanges: PlanUpdatePreviewItemChange[];
+};
 
-export function PropagateVariantsStep({
-	variants,
+export function PropagationTargetsStep({
+	targets,
 	selectedIds,
 	onToggle,
-}: PropagateVariantsStepProps) {
-	if (variants.length === 0) return null;
+}: {
+	targets: PropagationTarget[];
+	selectedIds: string[];
+	onToggle: (id: string) => void;
+}) {
+	if (targets.length === 0) return null;
 
-	const hasConflicts = variants.some((v) => v.conflicts.length > 0);
+	const hasConflicts = targets.some((target) => target.conflicts.length > 0);
 
 	return (
 		<div className="flex flex-col gap-2">
 			{hasConflicts && (
 				<InfoBox variant="warning">
-					This update conflicts with certain variants. We recommend handling
-					those separately.
+					This update conflicts with certain plans. We recommend handling them
+					separately.
 				</InfoBox>
 			)}
 
 			<div className="flex flex-col gap-2">
-				{variants.map(({ variant, conflicts, itemChanges }) => {
-					const checked = selectedIds.includes(variant.id);
-					const hasConflict = conflicts.length > 0;
+				{targets.map((target) => {
+					const checked = selectedIds.includes(target.id);
+					const hasConflict = target.conflicts.length > 0;
 					return (
 						<button
 							className={cn(
@@ -50,29 +56,29 @@ export function PropagateVariantsStep({
 									? "ring-primary"
 									: "ring-transparent hover:bg-secondary/60",
 							)}
-							key={variant.id}
-							onClick={() => onToggle(variant.id)}
+							key={target.id}
+							onClick={() => onToggle(target.id)}
 							type="button"
 						>
 							<Checkbox checked={checked} />
 							<div className="flex min-w-0 flex-1 items-baseline gap-2">
 								<span className="text-sm font-medium text-foreground">
-									{variant.name}
+									{target.name}
 								</span>
 								<span className="truncate font-mono text-tertiary-foreground text-xs">
-									{variant.id}
+									{target.detail}
 								</span>
 							</div>
 							<HoverCard>
 								<HoverCardTrigger asChild closeDelay={0} delay={0}>
 									<span
 										className="flex shrink-0 cursor-help items-center gap-1 text-xs"
-										onClick={(e) => e.stopPropagation()}
+										onClick={(event) => event.stopPropagation()}
 									>
 										{hasConflict ? (
 											<span className="flex items-center gap-1 text-amber-600 dark:text-amber-500">
 												<WarningIcon size={11} weight="fill" />
-												{conflictBadgeLabel(conflicts)}
+												{conflictBadgeLabel(target.conflicts)}
 											</span>
 										) : (
 											<span className="flex items-center gap-1 text-muted-foreground">
@@ -90,7 +96,7 @@ export function PropagateVariantsStep({
 									<div className="flex flex-col gap-2">
 										{hasConflict && (
 											<div className="flex flex-col gap-1">
-												{conflicts.map((conflict, index) => (
+												{target.conflicts.map((conflict, index) => (
 													<span
 														className="text-amber-600 text-xs dark:text-amber-500"
 														key={`${conflict.reason}-${index}`}
@@ -100,16 +106,16 @@ export function PropagateVariantsStep({
 												))}
 											</div>
 										)}
-										{itemChanges.length > 0 ? (
+										{target.itemChanges.length > 0 ? (
 											<>
 												<span className="text-xs text-muted-foreground">
 													Propagating would make these changes:
 												</span>
-												<ItemChangeList itemChanges={itemChanges} />
+												<ItemChangeList itemChanges={target.itemChanges} />
 											</>
 										) : (
 											<span className="text-xs text-muted-foreground">
-												No changes from this update.
+												No effective changes from this update.
 											</span>
 										)}
 									</div>

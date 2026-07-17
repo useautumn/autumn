@@ -9,7 +9,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getFullLicenseProduct } from "../../utils/getFullLicenseProduct.js";
+import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: customizes one license plan independently per parent")}`,

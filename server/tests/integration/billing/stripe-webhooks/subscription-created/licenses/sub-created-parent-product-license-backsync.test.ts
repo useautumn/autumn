@@ -13,7 +13,7 @@ import {
 	expectProductActive,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { getFullLicenseProduct } from "@tests/integration/crud/plans/licenses/utils/getFullLicenseProduct";
+import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { items } from "@tests/utils/fixtures/items";

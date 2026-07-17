@@ -14,9 +14,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { buildCustomizedLicenseEntry } from "../../utils/buildCustomizedLicenseEntry.js";
-import { expectCatalogLicenseCorrect } from "../../utils/expectCatalogLicenseCorrect.js";
-import { getFullLicenseProduct } from "../../utils/getFullLicenseProduct.js";
+import { buildCustomizedLicenseEntry } from "../utils/buildCustomizedLicenseEntry.js";
+import { expectCatalogLicenseCorrect } from "../utils/expectCatalogLicenseCorrect.js";
+import { getFullLicenseProduct } from "../utils/getFullLicenseProduct.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: parent-specific license edits stay in place without parent customers")}`,

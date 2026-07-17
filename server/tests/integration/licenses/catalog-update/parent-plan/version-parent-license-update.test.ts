@@ -18,8 +18,8 @@ import chalk from "chalk";
 import { buildProductDataCatalogLicenses } from "@/internal/products/internalHandlers/buildProductDataCatalogLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
-import { buildCustomizedLicenseEntry } from "../../utils/buildCustomizedLicenseEntry.js";
-import { expectCatalogLicenseCorrect } from "../../utils/expectCatalogLicenseCorrect.js";
+import { buildCustomizedLicenseEntry } from "../utils/buildCustomizedLicenseEntry.js";
+import { expectCatalogLicenseCorrect } from "../utils/expectCatalogLicenseCorrect.js";
 
 test.concurrent(
 	`${chalk.yellowBright("plans.update: license customization automatically versions a parent with customers")}`,
