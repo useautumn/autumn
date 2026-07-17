@@ -17,7 +17,7 @@ import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { replaceItems } from "../utils.js";
+import { replaceItems } from "../../utils/testProductUtils/testProductUtils.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 
 const wordsItem = constructArrearItem({

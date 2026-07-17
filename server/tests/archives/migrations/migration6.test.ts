@@ -20,6 +20,7 @@ import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js"
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { expectSubToBeCorrect } from "../../merged/mergeUtils/expectSubCorrect.js";
 import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached.js";
+import { migrateProductVersion } from "./runMigrationTest.js";
 
 const testCase = "migrations6";
 
@@ -140,11 +141,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for premium v1 ->
 		const premiumV2 = { ...premium, version: 2 };
 		premiumV2.items = [updatedPremiumWordsItem];
 
-		await autumn.migrate({
-			from_product_id: premium.id,
-			to_product_id: premiumV2.id,
-			from_version: premium.version,
-			to_version: premiumV2.version,
+		await migrateProductVersion({
+			productId: premium.id,
+			fromVersion: premium.version,
+			toVersion: premiumV2.version,
 		});
 
 		await timeout(10000);

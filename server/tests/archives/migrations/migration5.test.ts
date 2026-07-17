@@ -16,6 +16,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { expectSubToBeCorrect } from "../../merged/mergeUtils/expectSubCorrect.js";
 import { timeout } from "../../utils/genUtils.js";
 import { replaceItems } from "../../utils/testProductUtils/testProductUtils.js";
+import { migrateProductVersion } from "./runMigrationTest.js";
 
 const prepaidSeats = constructPrepaidItem({
 	featureId: TestFeature.Users,
@@ -114,11 +115,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for prepaid seats
 			}),
 		});
 
-		await autumn.migrate({
-			from_product_id: pro.id,
-			to_product_id: pro.id,
-			from_version: 1,
-			to_version: 2,
+		await migrateProductVersion({
+			productId: pro.id,
+			fromVersion: 1,
+			toVersion: 2,
 		});
 
 		await timeout(20000);

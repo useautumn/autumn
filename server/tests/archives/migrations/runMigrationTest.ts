@@ -1,5 +1,10 @@
 import { expect } from "bun:test";
-import type { AppEnv, Organization, ProductV2 } from "@autumn/shared";
+import {
+	type AppEnv,
+	ApiVersion,
+	type Organization,
+	type ProductV2,
+} from "@autumn/shared";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect.js";
 import { expectResetAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectResetAtCorrect.js";
 import { expectTrialEndsAtCorrect } from "@tests/utils/expectUtils/expectAttach/expectTrialEndsAt.js";
@@ -10,7 +15,7 @@ import {
 } from "@tests/utils/expectUtils/expectSubUtils.js";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -32,6 +37,37 @@ export const expectSubsSame = ({
 	// expect(invoicesAfter).toEqual(invoicesBefore);
 	expect(subIdsAfter).toEqual(subIdsBefore);
 	expect(periodsBefore).toEqual(periodsAfter);
+};
+
+// Legacy POST /migrations is session-authed; run the same product-version
+// migration through the secret-key v2 RPC surface (migrations.create/run).
+export const migrateProductVersion = async ({
+	productId,
+	fromVersion,
+	toVersion,
+}: {
+	productId: string;
+	fromVersion: number;
+	toVersion: number;
+}) => {
+	const migrationClient = new AutumnInt({ version: ApiVersion.V2_2 });
+	const migrationId = `${productId}-v${fromVersion}-to-v${toVersion}`;
+	await migrationClient.migrationsV2.deleteAndCreate({
+		id: migrationId,
+		filter: {
+			customer: { plan: { plan_id: productId, version: fromVersion } },
+		},
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: productId, version: fromVersion },
+					version: toVersion,
+				},
+			],
+		},
+	});
+	await migrationClient.migrationsV2.run({ id: migrationId, dry_run: false });
 };
 
 export const runMigrationTest = async ({
@@ -71,11 +107,10 @@ export const runMigrationTest = async ({
 
 	const cusBefore = await autumn.customers.get(customerId);
 
-	await autumn.migrate({
-		from_product_id: fromProduct.id,
-		to_product_id: toProduct.id,
-		from_version: fromProduct.version,
-		to_version: toProduct.version,
+	await migrateProductVersion({
+		productId: fromProduct.id,
+		fromVersion: fromProduct.version,
+		toVersion: toProduct.version,
 	});
 
 	await timeout(20000);
