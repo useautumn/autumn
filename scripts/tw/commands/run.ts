@@ -54,7 +54,6 @@ import {
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 	WORKER_VCPUS,
-	DEFAULT_PER_WORKER,
 } from "../constants.ts";
 import {
 	appendWorkerOutput,
@@ -647,10 +646,10 @@ const buildWorkerEnv = ({
 		TRACK_SQS_QUEUE_URL,
 		TRACK_ASYNC_SQS_QUEUE_URL,
 		CUSTOMER_JWT_SECRET: TW_CUSTOMER_JWT_SECRET,
-		// Test-util concurrency cushions (post-checkout sleeps, longer attach/webhook
-		// waits) key off this; leaving it unset ran the swarm with LESS padding than
-		// local parallel runs despite 3 files sharing 2 vCPUs.
-		TEST_FILE_CONCURRENCY: String(DEFAULT_PER_WORKER),
+		// NOTE: TEST_FILE_CONCURRENCY is deliberately NOT set here. Setting it flips
+		// every concurrency-keyed cushion suite-wide (attach sleeps, post-checkout
+		// waits, withPause pauses) — measured +23 failing files and a slower wall
+		// clock. Pad specific flaky tests individually instead.
 		// link_revenuecat builds its PKCE authorize URL locally (no RC HTTP call),
 		// so dummy creds satisfy getRcOAuthClient in the harness.
 		REVENUECAT_OAUTH_CLIENT_ID: "tw-dummy-rc-client-id",
