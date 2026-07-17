@@ -68,6 +68,7 @@ Local:
   Queues:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
+    - Name: autumn-track-async.fifo
 YAML
 
 echo "[freestyle-base] 6/7 bun (pinned to .bun-version) + node symlink"

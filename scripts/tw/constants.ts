@@ -180,3 +180,8 @@ export const CACHE_V2_DRAGONFLY_URL = REDIS_URL;
 export const ELASTICMQ_BASE_URL = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 export const SQS_QUEUE_URL_V2 = `${ELASTICMQ_BASE_URL}/autumn.fifo`;
 export const TRACK_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track.fifo`;
+export const TRACK_ASYNC_SQS_QUEUE_URL = `${ELASTICMQ_BASE_URL}/autumn-track-async.fifo`;
+
+/** Harness-only, ≥32 chars (customerJwt getSecret) so bad tokens 401 instead of 500. */
+export const TW_CUSTOMER_JWT_SECRET =
+	"tw-test-customer-jwt-secret-0123456789abcdef";
