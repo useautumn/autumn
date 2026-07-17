@@ -342,10 +342,405 @@ export type UpdatePlanItemPlanItem = {
   rollover?: UpdatePlanItemRolloverRequestBody | undefined;
 };
 
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export const UpdatePlanPriceLicenseInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval (e.g. 'month', 'year').
+ */
+export type UpdatePlanPriceLicenseInterval = ClosedEnum<
+  typeof UpdatePlanPriceLicenseInterval
+>;
+
+export type UpdatePlanLicenseAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
+/**
+ * Base price configuration for a plan.
+ */
+export type UpdatePlanLicenseBasePrice = {
+  /**
+   * Base price amount for the plan.
+   */
+  amount: number;
+  /**
+   * Billing interval (e.g. 'month', 'year').
+   */
+  interval: UpdatePlanPriceLicenseInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+   */
+  additionalCurrencies?: Array<UpdatePlanLicenseAdditionalCurrency> | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const UpdatePlanLicenseResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type UpdatePlanLicenseResetInterval = ClosedEnum<
+  typeof UpdatePlanLicenseResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type UpdatePlanLicenseReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: UpdatePlanLicenseResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type UpdatePlanLicenseAddItemAdditionalCurrency = {
+  /**
+   * Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+   */
+  currency: string;
+  /**
+   * Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+   */
+  amount: number;
+};
+
+export type UpdatePlanLicenseTo = number | string;
+
+export type UpdatePlanLicenseTierAdditionalCurrency = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+  flatAmount?: any | undefined;
+};
+
+export type UpdatePlanLicenseTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+  /**
+   * Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+   */
+  additionalCurrencies?:
+    | Array<UpdatePlanLicenseTierAdditionalCurrency>
+    | undefined;
+};
+
+export const UpdatePlanLicenseTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type UpdatePlanLicenseTierBehavior = ClosedEnum<
+  typeof UpdatePlanLicenseTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const UpdatePlanLicenseAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type UpdatePlanLicenseAddItemPriceInterval = ClosedEnum<
+  typeof UpdatePlanLicenseAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const UpdatePlanLicenseAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type UpdatePlanLicenseAddItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanLicenseAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type UpdatePlanLicensePrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+   */
+  additionalCurrencies?:
+    | Array<UpdatePlanLicenseAddItemAdditionalCurrency>
+    | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<UpdatePlanLicenseTier> | undefined;
+  tierBehavior?: UpdatePlanLicenseTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: UpdatePlanLicenseAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: UpdatePlanLicenseAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+   */
+  maxPurchase?: number | null | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const UpdatePlanLicenseOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type UpdatePlanLicenseOnIncrease = ClosedEnum<
+  typeof UpdatePlanLicenseOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const UpdatePlanLicenseOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type UpdatePlanLicenseOnDecrease = ClosedEnum<
+  typeof UpdatePlanLicenseOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type UpdatePlanLicenseProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: UpdatePlanLicenseOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: UpdatePlanLicenseOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const UpdatePlanLicenseExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type UpdatePlanLicenseExpiryDurationType = ClosedEnum<
+  typeof UpdatePlanLicenseExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type UpdatePlanLicenseRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: UpdatePlanLicenseExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type UpdatePlanLicensePlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: UpdatePlanLicenseReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: UpdatePlanLicensePrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: UpdatePlanLicenseProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: UpdatePlanLicenseRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const UpdatePlanLicenseRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type UpdatePlanLicenseRemoveItemBillingMethod = ClosedEnum<
+  typeof UpdatePlanLicenseRemoveItemBillingMethod
+>;
+
+export const UpdatePlanIntervalLicenseRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type UpdatePlanIntervalLicenseRemoveItemEnum2 = ClosedEnum<
+  typeof UpdatePlanIntervalLicenseRemoveItemEnum2
+>;
+
+export const UpdatePlanIntervalLicenseRemoveItemEnum1 = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type UpdatePlanIntervalLicenseRemoveItemEnum1 = ClosedEnum<
+  typeof UpdatePlanIntervalLicenseRemoveItemEnum1
+>;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type UpdatePlanLicenseIntervalUnion =
+  | UpdatePlanIntervalLicenseRemoveItemEnum1
+  | UpdatePlanIntervalLicenseRemoveItemEnum2;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type UpdatePlanLicensePlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: UpdatePlanLicenseRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+   */
+  interval?:
+    | UpdatePlanIntervalLicenseRemoveItemEnum1
+    | UpdatePlanIntervalLicenseRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type UpdatePlanLicenseCustomize = {
+  price?: UpdatePlanLicenseBasePrice | null | undefined;
+  addItems?: Array<UpdatePlanLicensePlanItem> | undefined;
+  removeItems?: Array<UpdatePlanLicensePlanItemFilter> | undefined;
+};
+
 export type UpdatePlanLicense = {
   licensePlanId: string;
   included?: number | undefined;
   prepaidOnly?: boolean | undefined;
+  customize?: UpdatePlanLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
   /**
    * Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
@@ -3352,10 +3747,556 @@ export function updatePlanItemPlanItemToJSON(
 }
 
 /** @internal */
+export const UpdatePlanPriceLicenseInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanPriceLicenseInterval
+> = z.enum(UpdatePlanPriceLicenseInterval);
+
+/** @internal */
+export type UpdatePlanLicenseAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const UpdatePlanLicenseAdditionalCurrency$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseAdditionalCurrency$Outbound,
+  UpdatePlanLicenseAdditionalCurrency
+> = z.object({
+  currency: z.string(),
+  amount: z.number(),
+});
+
+export function updatePlanLicenseAdditionalCurrencyToJSON(
+  updatePlanLicenseAdditionalCurrency: UpdatePlanLicenseAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseBasePrice$Outbound = {
+  amount: number;
+  interval: string;
+  interval_count?: number | undefined;
+  additional_currencies?:
+    | Array<UpdatePlanLicenseAdditionalCurrency$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseBasePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseBasePrice$Outbound,
+  UpdatePlanLicenseBasePrice
+> = z.pipe(
+  z.object({
+    amount: z.number(),
+    interval: UpdatePlanPriceLicenseInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+    additionalCurrencies: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicenseAdditionalCurrency$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+      additionalCurrencies: "additional_currencies",
+    });
+  }),
+);
+
+export function updatePlanLicenseBasePriceToJSON(
+  updatePlanLicenseBasePrice: UpdatePlanLicenseBasePrice,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseBasePrice$outboundSchema.parse(updatePlanLicenseBasePrice),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseResetInterval
+> = z.enum(UpdatePlanLicenseResetInterval);
+
+/** @internal */
+export type UpdatePlanLicenseReset$Outbound = {
+  interval: string;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseReset$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseReset$Outbound,
+  UpdatePlanLicenseReset
+> = z.pipe(
+  z.object({
+    interval: UpdatePlanLicenseResetInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function updatePlanLicenseResetToJSON(
+  updatePlanLicenseReset: UpdatePlanLicenseReset,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseReset$outboundSchema.parse(updatePlanLicenseReset),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseAddItemAdditionalCurrency$Outbound = {
+  currency: string;
+  amount: number;
+};
+
+/** @internal */
+export const UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    UpdatePlanLicenseAddItemAdditionalCurrency$Outbound,
+    UpdatePlanLicenseAddItemAdditionalCurrency
+  > = z.object({
+    currency: z.string(),
+    amount: z.number(),
+  });
+
+export function updatePlanLicenseAddItemAdditionalCurrencyToJSON(
+  updatePlanLicenseAddItemAdditionalCurrency:
+    UpdatePlanLicenseAddItemAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseAddItemAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseTo$Outbound = number | string;
+
+/** @internal */
+export const UpdatePlanLicenseTo$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseTo$Outbound,
+  UpdatePlanLicenseTo
+> = smartUnion([z.number(), z.string()]);
+
+export function updatePlanLicenseToToJSON(
+  updatePlanLicenseTo: UpdatePlanLicenseTo,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseTo$outboundSchema.parse(updatePlanLicenseTo),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseTierAdditionalCurrency$Outbound = {
+  currency?: any | undefined;
+  amount?: any | undefined;
+  flat_amount?: any | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseTierAdditionalCurrency$outboundSchema:
+  z.ZodMiniType<
+    UpdatePlanLicenseTierAdditionalCurrency$Outbound,
+    UpdatePlanLicenseTierAdditionalCurrency
+  > = z.pipe(
+    z.object({
+      currency: z.optional(z.any()),
+      amount: z.optional(z.any()),
+      flatAmount: z.optional(z.any()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        flatAmount: "flat_amount",
+      });
+    }),
+  );
+
+export function updatePlanLicenseTierAdditionalCurrencyToJSON(
+  updatePlanLicenseTierAdditionalCurrency:
+    UpdatePlanLicenseTierAdditionalCurrency,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseTierAdditionalCurrency$outboundSchema.parse(
+      updatePlanLicenseTierAdditionalCurrency,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+  additional_currencies?:
+    | Array<UpdatePlanLicenseTierAdditionalCurrency$Outbound>
+    | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseTier$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseTier$Outbound,
+  UpdatePlanLicenseTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      UpdatePlanLicenseTierAdditionalCurrency$outboundSchema
+    ))),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+      additionalCurrencies: "additional_currencies",
+    });
+  }),
+);
+
+export function updatePlanLicenseTierToJSON(
+  updatePlanLicenseTier: UpdatePlanLicenseTier,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseTier$outboundSchema.parse(updatePlanLicenseTier),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseTierBehavior
+> = z.enum(UpdatePlanLicenseTierBehavior);
+
+/** @internal */
+export const UpdatePlanLicenseAddItemPriceInterval$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemPriceInterval> = z.enum(
+    UpdatePlanLicenseAddItemPriceInterval,
+  );
+
+/** @internal */
+export const UpdatePlanLicenseAddItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseAddItemBillingMethod> = z.enum(
+    UpdatePlanLicenseAddItemBillingMethod,
+  );
+
+/** @internal */
+export type UpdatePlanLicensePrice$Outbound = {
+  amount?: number | undefined;
+  additional_currencies?:
+    | Array<UpdatePlanLicenseAddItemAdditionalCurrency$Outbound>
+    | undefined;
+  tiers?: Array<UpdatePlanLicenseTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | null | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicensePrice$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePrice$Outbound,
+  UpdatePlanLicensePrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    additionalCurrencies: z.optional(z.array(z.lazy(() =>
+      UpdatePlanLicenseAddItemAdditionalCurrency$outboundSchema
+    ))),
+    tiers: z.optional(z.array(z.lazy(() =>
+      UpdatePlanLicenseTier$outboundSchema
+    ))),
+    tierBehavior: z.optional(UpdatePlanLicenseTierBehavior$outboundSchema),
+    interval: UpdatePlanLicenseAddItemPriceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: UpdatePlanLicenseAddItemBillingMethod$outboundSchema,
+    maxPurchase: z.optional(z.nullable(z.number())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      additionalCurrencies: "additional_currencies",
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+      maxPurchase: "max_purchase",
+    });
+  }),
+);
+
+export function updatePlanLicensePriceToJSON(
+  updatePlanLicensePrice: UpdatePlanLicensePrice,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicensePrice$outboundSchema.parse(updatePlanLicensePrice),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseOnIncrease
+> = z.enum(UpdatePlanLicenseOnIncrease);
+
+/** @internal */
+export const UpdatePlanLicenseOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseOnDecrease
+> = z.enum(UpdatePlanLicenseOnDecrease);
+
+/** @internal */
+export type UpdatePlanLicenseProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const UpdatePlanLicenseProration$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseProration$Outbound,
+  UpdatePlanLicenseProration
+> = z.pipe(
+  z.object({
+    onIncrease: UpdatePlanLicenseOnIncrease$outboundSchema,
+    onDecrease: UpdatePlanLicenseOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
+
+export function updatePlanLicenseProrationToJSON(
+  updatePlanLicenseProration: UpdatePlanLicenseProration,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseProration$outboundSchema.parse(updatePlanLicenseProration),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanLicenseExpiryDurationType
+> = z.enum(UpdatePlanLicenseExpiryDurationType);
+
+/** @internal */
+export type UpdatePlanLicenseRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseRollover$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseRollover$Outbound,
+  UpdatePlanLicenseRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: UpdatePlanLicenseExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function updatePlanLicenseRolloverToJSON(
+  updatePlanLicenseRollover: UpdatePlanLicenseRollover,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseRollover$outboundSchema.parse(updatePlanLicenseRollover),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicensePlanItem$Outbound = {
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  reset?: UpdatePlanLicenseReset$Outbound | undefined;
+  price?: UpdatePlanLicensePrice$Outbound | undefined;
+  proration?: UpdatePlanLicenseProration$Outbound | undefined;
+  rollover?: UpdatePlanLicenseRollover$Outbound | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicensePlanItem$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePlanItem$Outbound,
+  UpdatePlanLicensePlanItem
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    reset: z.optional(z.lazy(() => UpdatePlanLicenseReset$outboundSchema)),
+    price: z.optional(z.lazy(() => UpdatePlanLicensePrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => UpdatePlanLicenseProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => UpdatePlanLicenseRollover$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updatePlanLicensePlanItemToJSON(
+  updatePlanLicensePlanItem: UpdatePlanLicensePlanItem,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicensePlanItem$outboundSchema.parse(updatePlanLicensePlanItem),
+  );
+}
+
+/** @internal */
+export const UpdatePlanLicenseRemoveItemBillingMethod$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanLicenseRemoveItemBillingMethod> = z.enum(
+    UpdatePlanLicenseRemoveItemBillingMethod,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemEnum2> = z.enum(
+    UpdatePlanIntervalLicenseRemoveItemEnum2,
+  );
+
+/** @internal */
+export const UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanIntervalLicenseRemoveItemEnum1> = z.enum(
+    UpdatePlanIntervalLicenseRemoveItemEnum1,
+  );
+
+/** @internal */
+export type UpdatePlanLicenseIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const UpdatePlanLicenseIntervalUnion$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseIntervalUnion$Outbound,
+  UpdatePlanLicenseIntervalUnion
+> = smartUnion([
+  UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema,
+  UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema,
+]);
+
+export function updatePlanLicenseIntervalUnionToJSON(
+  updatePlanLicenseIntervalUnion: UpdatePlanLicenseIntervalUnion,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseIntervalUnion$outboundSchema.parse(
+      updatePlanLicenseIntervalUnion,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicensePlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicensePlanItemFilter$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicensePlanItemFilter$Outbound,
+  UpdatePlanLicensePlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(
+      UpdatePlanLicenseRemoveItemBillingMethod$outboundSchema,
+    ),
+    interval: z.optional(
+      smartUnion([
+        UpdatePlanIntervalLicenseRemoveItemEnum1$outboundSchema,
+        UpdatePlanIntervalLicenseRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function updatePlanLicensePlanItemFilterToJSON(
+  updatePlanLicensePlanItemFilter: UpdatePlanLicensePlanItemFilter,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicensePlanItemFilter$outboundSchema.parse(
+      updatePlanLicensePlanItemFilter,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdatePlanLicenseCustomize$Outbound = {
+  price?: UpdatePlanLicenseBasePrice$Outbound | null | undefined;
+  add_items?: Array<UpdatePlanLicensePlanItem$Outbound> | undefined;
+  remove_items?: Array<UpdatePlanLicensePlanItemFilter$Outbound> | undefined;
+};
+
+/** @internal */
+export const UpdatePlanLicenseCustomize$outboundSchema: z.ZodMiniType<
+  UpdatePlanLicenseCustomize$Outbound,
+  UpdatePlanLicenseCustomize
+> = z.pipe(
+  z.object({
+    price: z.optional(
+      z.nullable(z.lazy(() => UpdatePlanLicenseBasePrice$outboundSchema)),
+    ),
+    addItems: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicensePlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => UpdatePlanLicensePlanItemFilter$outboundSchema)),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
+    });
+  }),
+);
+
+export function updatePlanLicenseCustomizeToJSON(
+  updatePlanLicenseCustomize: UpdatePlanLicenseCustomize,
+): string {
+  return JSON.stringify(
+    UpdatePlanLicenseCustomize$outboundSchema.parse(updatePlanLicenseCustomize),
+  );
+}
+
+/** @internal */
 export type UpdatePlanLicense$Outbound = {
   license_plan_id: string;
   included?: number | undefined;
   prepaid_only?: boolean | undefined;
+  customize?: UpdatePlanLicenseCustomize$Outbound | null | undefined;
   metadata?: { [k: string]: any } | undefined;
   version?: number | undefined;
 };
@@ -3369,6 +4310,9 @@ export const UpdatePlanLicense$outboundSchema: z.ZodMiniType<
     licensePlanId: z.string(),
     included: z.optional(z.int()),
     prepaidOnly: z.optional(z.boolean()),
+    customize: z.optional(
+      z.nullable(z.lazy(() => UpdatePlanLicenseCustomize$outboundSchema)),
+    ),
     metadata: z.optional(z.record(z.string(), z.any())),
     version: z.optional(z.int()),
   }),

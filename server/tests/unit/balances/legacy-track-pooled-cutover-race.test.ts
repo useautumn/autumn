@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { executeLegacyRedisDeductionWithBalanceSyncWithDependencies } from "@/internal/balances/utils/deduction/executeLegacyRedisDeductionWithBalanceSync.js";
+import {
+	type ExecuteLegacyRedisDeductionWithBalanceSyncDependencies,
+	executeLegacyRedisDeductionWithBalanceSyncWithDependencies,
+} from "@/internal/balances/utils/deduction/executeLegacyRedisDeductionWithBalanceSync.js";
 import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 
 const deferred = () => {
@@ -190,6 +193,45 @@ test("a failed legacy sync invalidates Redis so retry rebuilds without double de
 	expect(databaseBalance).toBe(400);
 	expect(cacheBalance).toBe(400);
 	expect(invalidationCount).toBe(1);
+});
+
+test("forwards overflow behavior through the legacy balance-sync wrapper", async () => {
+	let forwardedOverageBehavior: string | undefined;
+	const ctx = {
+		org: { id: "org_1" },
+		env: AppEnv.Sandbox,
+		db: {
+			transaction: async <T>(
+				callback: (transaction: {
+					execute: () => Promise<unknown[]>;
+				}) => Promise<T>,
+			) => callback({ execute: async () => [] }),
+		},
+	};
+
+	await executeLegacyRedisDeductionWithBalanceSyncWithDependencies({
+		ctx: ctx as never,
+		fullCustomer: {
+			id: "public_customer_1",
+			internal_id: "internal_customer_1",
+		} as never,
+		featureDeductions: [],
+		overageBehavior: "overflow",
+		dependencies: {
+			executeRedisDeduction: async ({
+				deductionOptions,
+			}: Parameters<
+				ExecuteLegacyRedisDeductionWithBalanceSyncDependencies["executeRedisDeduction"]
+			>[0]) => {
+				forwardedOverageBehavior = deductionOptions?.overageBehaviour;
+				return legacyDeductionResult({ balance: 400 }) as never;
+			},
+			writeFullCustomerBalancesToDb: async () => {},
+			invalidateLegacyCache: async () => {},
+		} as never,
+	});
+
+	expect(forwardedOverageBehavior).toBe("overflow");
 });
 
 for (const conflictCode of [

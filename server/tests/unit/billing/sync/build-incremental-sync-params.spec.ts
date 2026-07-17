@@ -29,16 +29,19 @@ const product = ({
 	id,
 	group = "main",
 	isAddOn = false,
+	version = 1,
 }: {
 	id: string;
 	group?: string | null;
 	isAddOn?: boolean;
+	version?: number;
 }): FullProduct =>
 	({
 		id,
 		internal_id: `${id}_internal`,
 		group,
 		is_add_on: isAddOn,
+		version,
 		prices: [],
 		entitlements: [],
 		items: [],
@@ -186,6 +189,27 @@ describe("buildIncrementalSyncParams", () => {
 		});
 	});
 
+	test("keeps a plan when the public id matches but the version changed", () => {
+		const proV1 = product({ id: "pro", version: 1 });
+		const proV2 = product({ id: "pro", version: 2 });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: proV2 })],
+			syncPlans: [{ ...syncPlan({ productId: "pro" }), version: 2 }],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [linkedCustomerProduct({ product: proV1 })],
+		});
+
+		expect(result.shouldSync).toBe(true);
+		if (!result.shouldSync) throw new Error(result.reason);
+		expect(result.params?.phases?.[0]?.plans).toEqual([
+			{ expire_previous: true, plan_id: "pro", quantity: 1, version: 2 },
+		]);
+	});
+
 	test("keeps a plan when the linked target has a different product", () => {
 		const pro = product({ id: "pro" });
 		const premium = product({ id: "premium" });
@@ -209,7 +233,6 @@ describe("buildIncrementalSyncParams", () => {
 	test("preserves params metadata and sync plan fields while pruning no-op targets", () => {
 		const pro = product({ id: "pro", group: "main" });
 		const premium = product({ id: "premium", group: "main" });
-		const analytics = product({ id: "analytics", group: "analytics" });
 		const analyticsV2 = product({ id: "analytics_v2", group: "analytics" });
 		const featureQuantities: FeatureOptions[] = [
 			{

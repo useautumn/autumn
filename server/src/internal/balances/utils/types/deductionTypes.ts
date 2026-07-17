@@ -7,7 +7,9 @@ import type {
 
 /** Behavior options for deduction */
 export type DeductionOptions = {
-	overageBehaviour?: "cap" | "reject" | "allow";
+	// "overflow": deduct the entire amount — no balance floor, bypasses usage
+	// windows — but monetary spend limits still clamp (unlike "allow").
+	overageBehaviour?: "cap" | "reject" | "allow" | "overflow";
 	/** The triggering event's properties; filtered usage limits only apply when these match. */
 	eventProperties?: Record<string, unknown> | null;
 	alterGrantedBalance?: boolean;

@@ -76,7 +76,7 @@ export const runRedisTrack = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	featureDeductions: FeatureDeduction[];
-	overageBehavior: "cap" | "reject";
+	overageBehavior: "cap" | "reject" | "overflow";
 	body: TrackParams;
 }): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(

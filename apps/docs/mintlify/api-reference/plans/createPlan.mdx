@@ -353,6 +353,201 @@ await autumn.plans.create({
 
     <DynamicParamField body="prepaid_only" type="boolean" />
 
+    <DynamicParamField body="customize" type="object | null">
+      <Expandable title="properties">
+        <DynamicParamField body="price" type="object | null">
+          Base price configuration for a plan.
+          <Expandable title="properties">
+            <DynamicParamField body="amount" type="number" required>
+              Base price amount for the plan.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+              Billing interval (e.g. 'month', 'year').
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="number">
+              Number of intervals per billing cycle. Defaults to 1.
+            </DynamicParamField>
+
+            <DynamicParamField body="additional_currencies" type="object[]">
+              Base price amounts in additional currencies. The base 'amount' is in the org's default currency.
+              <Expandable title="properties">
+                <DynamicParamField body="currency" type="string" required>
+                  Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                </DynamicParamField>
+
+                <DynamicParamField body="amount" type="number" required>
+                  Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="add_items" type="object[]">
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature to configure.
+            </DynamicParamField>
+
+            <DynamicParamField body="included" type="number">
+              Number of free units included. Balance resets to this each interval for consumable features.
+            </DynamicParamField>
+
+            <DynamicParamField body="unlimited" type="boolean">
+              If true, customer has unlimited access to this feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="reset" type="object">
+              Reset configuration for consumable features. Omit for non-consumable features like seats.
+              <Expandable title="properties">
+                <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals between resets. Defaults to 1.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="price" type="object">
+              Pricing for usage beyond included units. Omit for free features.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number">
+                  Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                </DynamicParamField>
+
+                <DynamicParamField body="additional_currencies" type="object[]">
+                  Amounts in additional currencies for this flat price. The base 'amount' is in the org's default currency. Only valid with 'amount', not 'tiers'.
+                  <Expandable title="properties">
+                    <DynamicParamField body="currency" type="string" required>
+                      Three-letter Stripe-supported currency code (e.g. 'eur', 'gbp').
+                    </DynamicParamField>
+
+                    <DynamicParamField body="amount" type="number" required>
+                      Price amount in this currency. Set explicitly per currency, not converted from the base amount.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tiers" type="object[]">
+                  Tiered pricing. Either 'amount' or 'tiers' is required.
+                  <Expandable title="properties">
+                    <DynamicParamField body="to" type="number" required />
+
+                    <DynamicParamField body="amount" type="number" />
+
+                    <DynamicParamField body="flat_amount" type="number" />
+
+                    <DynamicParamField body="additional_currencies" type="object[]">
+                      Per-currency amounts for this tier. Tier boundaries ('to') are shared across all currencies.
+                      <Expandable title="properties">
+                        <DynamicParamField body="currency" type="any" />
+
+                        <DynamicParamField body="amount" type="any" />
+
+                        <DynamicParamField body="flat_amount" type="any" />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval. For consumable features, should match reset.interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_units" type="number">
+                  Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                </DynamicParamField>
+
+                <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                  'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_purchase" type="number | null">
+                  Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="proration" type="object">
+              Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+              <Expandable title="properties">
+                <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                  Billing behavior when quantity increases mid-cycle.
+                </DynamicParamField>
+
+                <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                  Credit behavior when quantity decreases mid-cycle.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="rollover" type="object">
+              Rollover config for unused units. If set, unused included units carry over.
+              <Expandable title="properties">
+                <DynamicParamField body="max" type="number">
+                  Max rollover units. Omit for unlimited rollover.
+                </DynamicParamField>
+
+                <DynamicParamField body="max_percentage" type="number">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                  When rolled over units expire.
+                </DynamicParamField>
+
+                <DynamicParamField body="expiry_duration_length" type="number">
+                  Number of periods before expiry.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="remove_items" type="object[]">
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string">
+              Match items linked to this feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'">
+              Match items with this billing method (prepaid or usage_based).
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval_count" type="integer">
+              Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
     <DynamicParamField body="metadata" type="object" />
 
     <DynamicParamField body="version" type="integer">

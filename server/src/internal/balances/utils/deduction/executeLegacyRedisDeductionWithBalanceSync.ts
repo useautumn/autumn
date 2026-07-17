@@ -9,6 +9,8 @@ import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDe
 import { deleteLegacyCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { executeRedisDeduction } from "./executeRedisDeduction.js";
 
+type OverageBehavior = DeductionOptions["overageBehaviour"];
+
 export type ExecuteLegacyRedisDeductionWithBalanceSyncDependencies = {
 	executeRedisDeduction: typeof executeRedisDeduction;
 	writeFullCustomerBalancesToDb: typeof writeFullCustomerBalancesToDb;
@@ -39,7 +41,7 @@ export const executeLegacyRedisDeductionWithBalanceSyncWithDependencies =
 		ctx: AutumnContext;
 		fullCustomer: FullCustomer;
 		featureDeductions: FeatureDeduction[];
-		overageBehavior?: "cap" | "reject";
+		overageBehavior?: OverageBehavior;
 		deductionOptions?: DeductionOptions;
 		entityId?: string;
 		redisInstance?: Redis;
@@ -114,7 +116,7 @@ export const executeLegacyRedisDeductionWithBalanceSync = async ({
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	featureDeductions: FeatureDeduction[];
-	overageBehavior?: "cap" | "reject";
+	overageBehavior?: OverageBehavior;
 	deductionOptions?: DeductionOptions;
 	entityId?: string;
 	redisInstance?: Redis;

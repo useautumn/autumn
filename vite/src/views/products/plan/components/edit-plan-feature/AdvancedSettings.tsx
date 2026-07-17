@@ -13,7 +13,6 @@ import {
 	getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
-import { useHasEntityFeatureId } from "../../hooks/useHasEntityFeatureId";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
 import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
@@ -23,7 +22,6 @@ import { UsageLimit } from "./advanced-settings/UsageLimit";
 export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
-	const { hasEntityFeatureId } = useHasEntityFeatureId();
 
 	if (!item) return null;
 
@@ -31,17 +29,12 @@ export function AdvancedSettings() {
 	const hasCreditSystem = getFeatureCreditSystem({ item, features });
 	const isPriced = isFeaturePriceItem(item);
 
-	// Check if there are other continuous use features (for entity feature config)
-	const hasOtherContinuousFeatures = features.some(
-		(f) =>
-			f.config?.usage_type === FeatureUsageType.Continuous &&
-			f.id !== item.feature_id,
-	);
-
 	// Determine what will show in Advanced section
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	const showEntityFeature = hasEntityFeatureId && hasOtherContinuousFeatures;
+	// Deprecated in favor of licenses. Only surface it for items that already
+	// have it set, so existing plans keep working.
+	const showEntityFeature = item.entity_feature_id != null;
 	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
 	const showProration =
 		isPriced &&

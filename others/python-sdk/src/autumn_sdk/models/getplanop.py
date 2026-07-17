@@ -876,7 +876,7 @@ class GetPlanBasePrice(BaseModel):
         return m
 
 
-GetPlanAddItemResetInterval = Union[
+GetPlanVariantDetailsResetInterval = Union[
     Literal[
         "one_off",
         "minute",
@@ -896,7 +896,7 @@ r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable feat
 class GetPlanVariantDetailsResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: GetPlanAddItemResetInterval
+    interval: GetPlanVariantDetailsResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
@@ -905,7 +905,7 @@ class GetPlanVariantDetailsResetTypedDict(TypedDict):
 class GetPlanVariantDetailsReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: GetPlanAddItemResetInterval
+    interval: GetPlanVariantDetailsResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None

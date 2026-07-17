@@ -50,10 +50,13 @@ export const deriveReplacePlanRemovals = ({
 				.map((planId) => `${planId}:${plan.version}`);
 		}),
 	);
+	const omittedPlanIds = new Set<string>();
 
 	return products.flatMap((product): ReplacePlanRemoval[] => {
 		if (product.archived) return [];
 		if (!desiredPlanIds.has(product.id)) {
+			if (omittedPlanIds.has(product.id)) return [];
+			omittedPlanIds.add(product.id);
 			return [{ planId: product.id, allVersions: true }];
 		}
 		if (

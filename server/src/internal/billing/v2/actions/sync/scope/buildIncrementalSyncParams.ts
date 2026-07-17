@@ -233,8 +233,8 @@ export const buildIncrementalSyncParams = ({
 			continue;
 		}
 
-		// Main plans re-sync when the linked product changes or its prepaid
-		// quantities drift from Stripe.
+		// Main plans re-sync when the linked product or version changes, or its
+		// prepaid quantities drift from Stripe.
 		if (
 			!syncPlan.entity_id &&
 			linkedCustomerProducts.some(
@@ -259,9 +259,13 @@ export const buildIncrementalSyncParams = ({
 		}
 
 		const linkedProduct = linkedTargets.targets.get(target.key);
+		const versionChanged =
+			syncPlan.version !== undefined &&
+			linkedProduct?.product.version !== syncPlan.version;
 		if (
 			!linkedProduct ||
 			linkedProduct.product.id !== target.productId ||
+			versionChanged ||
 			prepaidQuantitiesDrifted({ linkedProduct, matchedPlan, syncPlan })
 		) {
 			changedPlans.push(syncPlan);
