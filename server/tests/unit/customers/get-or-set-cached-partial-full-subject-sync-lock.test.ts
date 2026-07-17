@@ -56,6 +56,9 @@ mock.module(
 );
 
 mock.module("@/internal/customers/repos/getFullSubject/index.js", () => ({
+	getFullSubjectQuery: () => {
+		throw new Error("unexpected getFullSubjectQuery call");
+	},
 	getFullSubjectNormalized: async ({
 		balanceSyncDb,
 	}: {
@@ -70,6 +73,9 @@ mock.module("@/internal/customers/repos/getFullSubject/index.js", () => ({
 			},
 			fullSubject: mockState.databaseSubject,
 		};
+	},
+	resultToFullSubject: () => {
+		throw new Error("unexpected resultToFullSubject call");
 	},
 }));
 
