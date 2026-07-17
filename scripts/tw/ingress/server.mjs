@@ -77,10 +77,15 @@ const sendText = (res, status, text) => {
 	res.end(text);
 };
 
+const FORWARD_ATTEMPTS = 4;
+const FORWARD_BACKOFF_MS = [1000, 3000, 9000];
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Forward an already-acked connect event to the owning worker. Never throws —
- * Stripe has already received its 200, so a forward failure is logged and dropped
- * rather than propagated.
+ * Stripe already got its 200 so it will never redeliver; retry with backoff
+ * (starved workers recover in seconds) before dropping for good.
  */
 const forwardConnectEvent = async (rawBody, env) => {
 	let accountId;
@@ -106,21 +111,38 @@ const forwardConnectEvent = async (rawBody, env) => {
 	}
 
 	const target = `${workerUrl}/webhooks/connect/${env}`;
-	try {
-		const response = await fetch(target, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: rawBody,
-		});
-		if (!response.ok) {
-			logWarn(
-				`forward to ${target} (account ${accountId}) returned ${response.status}`,
-			);
+	for (let attempt = 0; attempt < FORWARD_ATTEMPTS; attempt++) {
+		let failure;
+		try {
+			const response = await fetch(target, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: rawBody,
+			});
+			if (response.ok) return;
+			// 4xx = the worker rejected the event itself; retrying won't change that.
+			if (response.status < 500) {
+				logWarn(
+					`forward to ${target} (account ${accountId}) rejected with ${response.status} — not retrying`,
+				);
+				return;
+			}
+			failure = `status ${response.status}`;
+		} catch (error) {
+			failure = error.message;
 		}
-	} catch (error) {
-		logError(
-			`forward to ${target} (account ${accountId}) failed: ${error.message}`,
+
+		const lastAttempt = attempt === FORWARD_ATTEMPTS - 1;
+		if (lastAttempt) {
+			logError(
+				`forward to ${target} (account ${accountId}) DROPPED after ${FORWARD_ATTEMPTS} attempts: ${failure}`,
+			);
+			return;
+		}
+		logWarn(
+			`forward to ${target} (account ${accountId}) failed (${failure}) — retry ${attempt + 1}/${FORWARD_ATTEMPTS - 1}`,
 		);
+		await sleep(FORWARD_BACKOFF_MS[attempt]);
 	}
 };
 
