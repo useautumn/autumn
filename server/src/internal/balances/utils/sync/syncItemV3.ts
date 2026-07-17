@@ -257,7 +257,7 @@ export const writeFullCustomerBalancesToDb = async ({
 /**
  * Sync FullCustomer cache balances to Postgres
  */
-const syncItemV3WithDb = async ({
+export const syncItemV3WithDb = async ({
 	ctx,
 	payload,
 	db,
@@ -276,6 +276,7 @@ const syncItemV3WithDb = async ({
 		customerId,
 		redisInstance,
 		skipRolloutCheck: true,
+		balanceSyncDb: db,
 	});
 
 	if (!fullCustomer) {

@@ -500,6 +500,63 @@ test("a customer-product pooled item still uses normal recalculation", () => {
 	});
 });
 
+test("recalculates new entity rows through their top-level balances", () => {
+	const fullSubject = buildFullSubject({
+		balances: [
+			{
+				id: "entity-daily",
+				interval: EntInterval.Day,
+				allowance: 100,
+				pooled: false,
+				adjustment: 0,
+				balance: -30,
+			},
+			{
+				id: "entity-monthly",
+				interval: EntInterval.Month,
+				allowance: 200,
+				pooled: false,
+				adjustment: 0,
+				balance: 200,
+			},
+		],
+	});
+	const customerEntitlements = fullSubject.extra_customer_entitlements.map(
+		(customerEntitlement) => ({
+			...customerEntitlement,
+			internal_entity_id: null,
+			entities: null,
+			entitlement: {
+				...customerEntitlement.entitlement,
+				entity_feature_id: "seats",
+			},
+			customer_product: {
+				id: `product-${customerEntitlement.id}`,
+				internal_entity_id: "internal-entity-one",
+			} as never,
+		}),
+	);
+	const usage = 130;
+
+	reapplyUsageToCustomerEntitlements({
+		customerEntitlements,
+		usage,
+		targetEntityId: "entity-one",
+		getGrantState: getCustomerEntitlementGrantState,
+	});
+
+	expect(usage).toBe(130);
+	expect(
+		customerEntitlements.map((customerEntitlement) => ({
+			balance: customerEntitlement.balance,
+			entities: customerEntitlement.entities,
+		})),
+	).toEqual([
+		{ balance: 0, entities: null },
+		{ balance: 170, entities: null },
+	]);
+});
+
 test("preserves usage and debt when two sources coalesce into one entitlement", () => {
 	const fullSubject = buildFullSubject({
 		balances: [

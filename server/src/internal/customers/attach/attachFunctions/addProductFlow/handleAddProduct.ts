@@ -110,9 +110,12 @@ export const handleAddProduct = async ({
 			});
 		}
 
+		const pooledAttachParams = config?.disableTrial
+			? { ...attachParams, freeTrial: null }
+			: attachParams;
 		const { billingResponse, billingResult } = await dependencies.legacyAttach({
 			ctx,
-			attachParams,
+			attachParams: pooledAttachParams,
 			planTiming: "immediate",
 		});
 		return AttachFunctionResponseSchema.parse({

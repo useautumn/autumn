@@ -1,6 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isSyncConflictError } from "@/internal/balances/utils/sync/flushSubjectBalancesToDb.js";
 import { writeFullCustomerBalancesToDb } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import type { DeductionOptions } from "@/internal/balances/utils/types/deductionTypes.js";
@@ -45,46 +46,60 @@ export const executeLegacyRedisDeductionWithBalanceSyncWithDependencies =
 		dependencies?: ExecuteLegacyRedisDeductionWithBalanceSyncDependencies;
 	}) => {
 		const customerId = fullCustomer.id || fullCustomer.internal_id;
+		let deductionResult:
+			| Awaited<ReturnType<typeof executeRedisDeduction>>
+			| undefined;
 
-		return withCustomerBalanceSyncLock({
-			ctx,
-			customerId,
-			internalCustomerId: fullCustomer.internal_id,
-			callback: async ({ db }) => {
-				const result = await dependencies.executeRedisDeduction({
-					ctx,
-					fullCustomer,
-					entityId,
-					deductions: featureDeductions,
-					deductionOptions: deductionOptions ?? {
-						overageBehaviour: overageBehavior ?? "cap",
-						triggerAutoTopUp: true,
-					},
-					redisInstance,
-				});
-				const customerEntitlementIds = Object.keys(result.updates);
-				const rolloverIds = Object.keys(result.rolloverUpdates);
-
-				if (customerEntitlementIds.length > 0 || rolloverIds.length > 0) {
-					await dependencies.writeFullCustomerBalancesToDb({
+		try {
+			return await withCustomerBalanceSyncLock({
+				ctx,
+				customerId,
+				internalCustomerId: fullCustomer.internal_id,
+				callback: async ({ db }) => {
+					deductionResult = await dependencies.executeRedisDeduction({
 						ctx,
-						db,
-						customerId,
-						fullCustomer: result.fullCus ?? fullCustomer,
-						cusEntIds: customerEntitlementIds,
-						rolloverIds,
+						fullCustomer,
+						entityId,
+						deductions: featureDeductions,
+						deductionOptions: deductionOptions ?? {
+							overageBehaviour: overageBehavior ?? "cap",
+							triggerAutoTopUp: true,
+						},
+						redisInstance,
 					});
-				}
+					const customerEntitlementIds = Object.keys(deductionResult.updates);
+					const rolloverIds = Object.keys(deductionResult.rolloverUpdates);
 
-				return result;
-			},
-			onTransactionFailure: () =>
-				dependencies.invalidateLegacyCache({
-					ctx,
-					customerId,
-					source: "legacy-redis-balance-sync-failure",
-				}),
-		});
+					if (customerEntitlementIds.length > 0 || rolloverIds.length > 0) {
+						await dependencies.writeFullCustomerBalancesToDb({
+							ctx,
+							db,
+							customerId,
+							fullCustomer: deductionResult.fullCus ?? fullCustomer,
+							cusEntIds: customerEntitlementIds,
+							rolloverIds,
+						});
+					}
+
+					return deductionResult;
+				},
+				onTransactionFailure: () =>
+					dependencies.invalidateLegacyCache({
+						ctx,
+						customerId,
+						source: "legacy-redis-balance-sync-failure",
+					}),
+			});
+		} catch (error) {
+			if (
+				deductionResult &&
+				error instanceof Error &&
+				isSyncConflictError(error)
+			) {
+				return deductionResult;
+			}
+			throw error;
+		}
 	};
 
 export const executeLegacyRedisDeductionWithBalanceSync = async ({

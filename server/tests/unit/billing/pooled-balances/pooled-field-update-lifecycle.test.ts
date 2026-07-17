@@ -123,6 +123,25 @@ describe("pooled direct subscription field updates", () => {
 		]);
 	});
 
+	test("status Paused removes a live pooled source", () => {
+		const customerProduct = createSource();
+		const operations = computeFieldUpdatePooledBalanceOps({
+			billingContext: createBillingContext(customerProduct),
+			params: {
+				customer_id: "cus_test",
+				status: CusProductStatus.Paused as never,
+			},
+		});
+
+		expect(operations).toEqual([
+			expect.objectContaining({
+				op: "remove_source",
+				sourceCustomerProductId: customerProduct.id,
+				effectiveAt: null,
+			}),
+		]);
+	});
+
 	test("processor subscription relink updates the pooled reset-owner provenance", () => {
 		const customerProduct = createSource({ paid: true });
 		const operations = computeFieldUpdatePooledBalanceOps({
@@ -138,6 +157,25 @@ describe("pooled direct subscription field updates", () => {
 				op: "upsert_source",
 				resetOwnerType: "subscription",
 				resetOwnerId: "subscription_new",
+			}),
+		]);
+	});
+
+	test("clearing the processor subscription removes the paid pooled source", () => {
+		const customerProduct = createSource({ paid: true });
+		const operations = computeFieldUpdatePooledBalanceOps({
+			billingContext: createBillingContext(customerProduct),
+			params: {
+				customer_id: "cus_test",
+				processor_subscription_id: null,
+			},
+		});
+
+		expect(operations).toEqual([
+			expect.objectContaining({
+				op: "remove_source",
+				sourceCustomerProductId: customerProduct.id,
+				effectiveAt: null,
 			}),
 		]);
 	});

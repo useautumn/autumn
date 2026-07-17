@@ -96,7 +96,7 @@ export const UpsertPooledBalanceSourceOpSchema =
 		featureId: z.string(),
 		internalFeatureId: z.string(),
 		interval: z.nativeEnum(EntInterval),
-		intervalCount: z.number(),
+		intervalCount: z.number().int().positive(),
 		resetCycleAnchor: z.number().nullable(),
 		nextResetAt: z.number().nullable(),
 		rollover: RolloverConfigSchema.nullish().default(null),
@@ -104,8 +104,8 @@ export const UpsertPooledBalanceSourceOpSchema =
 		resetOwnerId: z.string(),
 		priceId: z.string().nullable(),
 		sourceEntitlementId: z.string(),
-		currentCycleContribution: z.number(),
-		nextCycleContribution: z.number(),
+		currentCycleContribution: z.number().nonnegative(),
+		nextCycleContribution: z.number().nonnegative(),
 		usageReapply: z
 			.object({
 				amount: z.number().positive(),

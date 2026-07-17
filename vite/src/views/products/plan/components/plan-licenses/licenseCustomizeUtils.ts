@@ -12,6 +12,7 @@ import {
 	type ProductItemInterval,
 	type ProductV2,
 	productV2ToApiPlanV1,
+	productV2ToBasePrice,
 	productV2ToFeatureItems,
 } from "@autumn/shared";
 import { planItemV1ToProductItem } from "@/utils/product/productItemUtils/planItemV1ToProductItem";
@@ -116,9 +117,17 @@ export const productToLicenseCustomize = ({
 	features: Feature[];
 	currency?: string;
 }): LicenseCustomize | null => {
+	const basePrice = productV2ToBasePrice({ product });
+	if (
+		basePrice &&
+		(typeof basePrice.price !== "number" || !Number.isFinite(basePrice.price))
+	) {
+		throw new Error("Enter a base price before saving");
+	}
+
 	const base = productV2ToApiPlanV1({ product: license, features, currency });
 	const edited = productV2ToApiPlanV1({
-		product: product as unknown as ProductV2,
+		product: { ...license, items: product.items },
 		features,
 		currency,
 	});

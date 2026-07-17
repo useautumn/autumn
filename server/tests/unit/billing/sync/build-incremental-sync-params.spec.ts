@@ -8,19 +8,22 @@
  * products sharing the same entity+group key.
  */
 import { describe, expect, test } from "bun:test";
-import type {
-	FeatureOptions,
-	FullCusProduct,
-	FullProduct,
-	SyncParamsV1,
-	SyncPlanInstance,
+import {
+	BillingInterval,
+	BillWhen,
+	type FeatureOptions,
+	type FullCusProduct,
+	type FullProduct,
+	PriceType,
+	type SyncParamsV1,
+	type SyncPlanInstance,
 } from "@autumn/shared";
-import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 import type {
 	ItemDiff,
 	MatchedPlan,
 	SubscriptionMatch,
 } from "@/internal/billing/v2/actions/sync/detect/types";
+import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams";
 
 const product = ({
 	id,
@@ -147,7 +150,9 @@ const draft = ({
 describe("buildIncrementalSyncParams", () => {
 	test("keeps a plan when no linked customer product exists for its target", () => {
 		const pro = product({ id: "pro" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -158,14 +163,16 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
-		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-			"pro",
-		]);
+		expect(
+			result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+		).toEqual(["pro"]);
 	});
 
 	test("prunes a plan when the linked target already has the same product", () => {
 		const pro = product({ id: "pro" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -239,7 +246,9 @@ describe("buildIncrementalSyncParams", () => {
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
 		expect(result.params.customer_id).toBe(params.customer_id);
-		expect(result.params.stripe_subscription_id).toBe(params.stripe_subscription_id);
+		expect(result.params.stripe_subscription_id).toBe(
+			params.stripe_subscription_id,
+		);
 		expect(result.params.stripe_schedule_id).toBe("sched_incremental");
 		expect(result.params.carry_over_usage).toBe(false);
 		expect(result.params.phases?.[0]?.starts_at).toBe("now");
@@ -271,7 +280,9 @@ describe("buildIncrementalSyncParams", () => {
 	test("rejects duplicate linked targets", () => {
 		const pro = product({ id: "pro" });
 		const premium = product({ id: "premium" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -305,17 +316,19 @@ describe("buildIncrementalSyncParams", () => {
 
 			expect(result.shouldSync).toBe(true);
 			if (!result.shouldSync) throw new Error(result.reason);
-		if (!result.params) throw new Error("expected incremental params");
-			expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-				unsupported.id,
-			]);
+			if (!result.params) throw new Error("expected incremental params");
+			expect(
+				result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+			).toEqual([unsupported.id]);
 		}
 	});
 
 	test("syncs a downgrade between two ungrouped products with a single linked target (production regression)", () => {
 		const ultra = product({ id: "poke_ultra", group: "" });
 		const pro = product({ id: "poke_pro", group: "" });
-		const { match, params } = draft({ matchedPlans: [matchedPlan({ product: pro })] });
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: pro })],
+		});
 
 		const result = buildIncrementalSyncParams({
 			match,
@@ -326,9 +339,9 @@ describe("buildIncrementalSyncParams", () => {
 		expect(result.shouldSync).toBe(true);
 		if (!result.shouldSync) throw new Error(result.reason);
 		if (!result.params) throw new Error("expected incremental params");
-		expect(result.params.phases?.[0]?.plans.map((plan) => plan.plan_id)).toEqual([
-			"poke_pro",
-		]);
+		expect(
+			result.params.phases?.[0]?.plans.map((plan) => plan.plan_id),
+		).toEqual(["poke_pro"]);
 	});
 
 	test("rejects genuinely ambiguous ungrouped linked targets", () => {
@@ -419,6 +432,70 @@ describe("buildIncrementalSyncParams", () => {
 				linkedCustomerProduct({ product: addOn, id: "cp_addon_1" }),
 				linkedCustomerProduct({ product: addOn, id: "cp_addon_2" }),
 			],
+		});
+
+		expect(result).toMatchObject({
+			shouldSync: false,
+			reason: "no_changed_targets",
+		});
+	});
+
+	test("treats a missing prepaid Stripe item as converged when purchased packs are zero", () => {
+		const prepaid = product({ id: "prepaid" });
+		prepaid.entitlements = [
+			{
+				id: "entitlement_credits",
+				internal_product_id: prepaid.internal_id,
+				internal_feature_id: "internal_credits",
+				feature_id: "credits",
+				allowance: 100,
+				feature: { id: "credits", internal_id: "internal_credits" },
+			} as never,
+		];
+		prepaid.prices = [
+			{
+				id: "price_credits",
+				internal_product_id: prepaid.internal_id,
+				entitlement_id: "entitlement_credits",
+				config: {
+					type: PriceType.Usage,
+					bill_when: BillWhen.InAdvance,
+					billing_units: 100,
+					internal_feature_id: "internal_credits",
+					feature_id: "credits",
+					usage_tiers: [{ to: -1, amount: 1 }],
+					interval: BillingInterval.Month,
+				},
+			} as never,
+		];
+		const linkedProduct = linkedCustomerProduct({ product: prepaid });
+		linkedProduct.options = [
+			{
+				feature_id: "credits",
+				internal_feature_id: "internal_credits",
+				quantity: 0,
+			},
+		];
+		const { match, params } = draft({
+			matchedPlans: [matchedPlan({ product: prepaid })],
+			syncPlans: [
+				syncPlan({
+					productId: prepaid.id,
+					featureQuantities: [
+						{
+							feature_id: "credits",
+							internal_feature_id: "internal_credits",
+							quantity: 0,
+						},
+					],
+				}),
+			],
+		});
+
+		const result = buildIncrementalSyncParams({
+			match,
+			params,
+			linkedCustomerProducts: [linkedProduct],
 		});
 
 		expect(result).toMatchObject({

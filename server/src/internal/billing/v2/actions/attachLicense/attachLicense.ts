@@ -18,12 +18,6 @@ export const attachLicense = async ({
 
 	// 2. Errors
 	handleAttachLicenseErrors({ context });
-	if (
-		context.existingEntities.length === 0 &&
-		context.newEntityParams.length === 0
-	) {
-		return { success: true as const };
-	}
 
 	// 3. Compute
 	const plan = computeAttachLicensePlan({ ctx, context });

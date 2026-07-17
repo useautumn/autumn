@@ -1,16 +1,17 @@
 import { beforeEach, expect, mock, test } from "bun:test";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import {
 	CusProductStatus,
 	type FullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 
 type ActiveAssignment = {
 	entityId: string;
 	internalCustomerId: string;
 	licenseInternalProductId: string;
 	parentCustomerProductId: string;
+	customerLicenseLinkId: string;
 };
 
 const parentCustomerProductId = "customer_product_parent";
@@ -87,10 +88,9 @@ const createFullCustomer = ({ remaining }: { remaining: number }) => {
 	} as unknown as FullCustomer;
 };
 
-mock.module(
-	"@/internal/billing/v2/setup/setupFullCustomerContext.js",
-	() => ({ setupFullCustomerContext: mock(async () => fullCustomer) }),
-);
+mock.module("@/internal/billing/v2/setup/setupFullCustomerContext.js", () => ({
+	setupFullCustomerContext: mock(async () => fullCustomer),
+}));
 mock.module(
 	"@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext.js",
 	() => ({
@@ -100,14 +100,12 @@ mock.module(
 		})),
 	}),
 );
-mock.module(
-	"@/internal/billing/v2/setup/setupBillingCycleAnchor.js",
-	() => ({ setupBillingCycleAnchor: mock(() => 1) }),
-);
-mock.module(
-	"@/internal/billing/v2/setup/setupResetCycleAnchor.js",
-	() => ({ setupResetCycleAnchor: mock(() => 1) }),
-);
+mock.module("@/internal/billing/v2/setup/setupBillingCycleAnchor.js", () => ({
+	setupBillingCycleAnchor: mock(() => 1),
+}));
+mock.module("@/internal/billing/v2/setup/setupResetCycleAnchor.js", () => ({
+	setupResetCycleAnchor: mock(() => 1),
+}));
 mock.module("@/internal/licenses/repos/licenseAssignmentRepo.js", () => ({
 	licenseAssignmentRepo: {
 		listAssignmentsWithEntityAndProductByCustomer: mock(
@@ -115,19 +113,26 @@ mock.module("@/internal/licenses/repos/licenseAssignmentRepo.js", () => ({
 				internalCustomerId,
 				licenseInternalProductId: requestedLicenseInternalProductId,
 				parentCustomerProductId: requestedParentCustomerProductId,
+				customerLicenseLinkId: requestedCustomerLicenseLinkId,
 			}: {
 				internalCustomerId: string;
-				licenseInternalProductId: string;
-				parentCustomerProductId: string;
+				licenseInternalProductId?: string;
+				parentCustomerProductId?: string;
+				customerLicenseLinkId?: string;
 			}) =>
 				activeAssignments
 					.filter(
 						(assignment) =>
 							assignment.internalCustomerId === internalCustomerId &&
-							assignment.licenseInternalProductId ===
-								requestedLicenseInternalProductId &&
-							assignment.parentCustomerProductId ===
-								requestedParentCustomerProductId,
+							(requestedLicenseInternalProductId === undefined ||
+								assignment.licenseInternalProductId ===
+									requestedLicenseInternalProductId) &&
+							(requestedParentCustomerProductId === undefined ||
+								assignment.parentCustomerProductId ===
+									requestedParentCustomerProductId) &&
+							(requestedCustomerLicenseLinkId === undefined ||
+								assignment.customerLicenseLinkId ===
+									requestedCustomerLicenseLinkId),
 					)
 					.map((assignment) => ({
 						assignment: { id: `assignment_${assignment.entityId}` },
@@ -172,7 +177,11 @@ mock.module(
 	"@/internal/billing/v2/execute/executeAutumnBillingPlan.js",
 	() => ({
 		executeAutumnBillingPlan: mock(
-			async ({ autumnBillingPlan }: { autumnBillingPlan: AutumnBillingPlan }) => {
+			async ({
+				autumnBillingPlan,
+			}: {
+				autumnBillingPlan: AutumnBillingPlan;
+			}) => {
 				executedPlans.push(autumnBillingPlan);
 			},
 		),
@@ -212,13 +221,22 @@ test("an already fulfilled assignment succeeds with zero remaining capacity", as
 			internalCustomerId: "customer_internal",
 			licenseInternalProductId,
 			parentCustomerProductId,
+			customerLicenseLinkId,
 		},
 	];
 
 	await expect(
 		attach({ entityIds: ["entity_existing_assignment"] }),
 	).resolves.toEqual({ success: true });
-	expect(executedPlans).toHaveLength(0);
+	expect(executedPlans).toHaveLength(1);
+	expect(executedPlans[0].insertCustomerProducts).toEqual([]);
+	expect(executedPlans[0].updateCustomerProducts).toEqual([]);
+	expect(executedPlans[0].customerLicenseUpdates).toEqual([
+		{
+			customerLicenseId: "customer_license",
+			remainingChange: 0,
+		},
+	]);
 });
 
 test("a mixed fulfilled and pending request consumes exactly one assignment", async () => {
@@ -229,14 +247,12 @@ test("a mixed fulfilled and pending request consumes exactly one assignment", as
 			internalCustomerId: "customer_internal",
 			licenseInternalProductId,
 			parentCustomerProductId,
+			customerLicenseLinkId,
 		},
 	];
 
 	await attach({
-		entityIds: [
-			"entity_existing_assignment",
-			"entity_pending_assignment",
-		],
+		entityIds: ["entity_existing_assignment", "entity_pending_assignment"],
 	});
 
 	expect(executedPlans).toHaveLength(1);
@@ -257,14 +273,37 @@ test("an assignment for a different license does not suppress the requested lice
 			internalCustomerId: "customer_internal",
 			licenseInternalProductId: "different_license_internal",
 			parentCustomerProductId,
+			customerLicenseLinkId: "different_customer_license_link",
 		},
 	];
 
 	await attach({ entityIds: ["entity_existing_assignment"] });
 
 	expect(executedPlans).toHaveLength(1);
-	expect(executedPlans[0].customerLicenseUpdates?.[0]?.remainingChange).toBe(-1);
+	expect(executedPlans[0].customerLicenseUpdates?.[0]?.remainingChange).toBe(
+		-1,
+	);
 	expect(executedPlans[0].insertCustomerProducts).toHaveLength(1);
+});
+
+test("an assignment from a previous child version remains fulfilled by its license link", async () => {
+	fullCustomer = createFullCustomer({ remaining: 0 });
+	activeAssignments = [
+		{
+			entityId: "entity_existing_assignment",
+			internalCustomerId: "customer_internal",
+			licenseInternalProductId: "product_license_v1_internal",
+			parentCustomerProductId: "customer_product_parent_v1",
+			customerLicenseLinkId,
+		},
+	];
+
+	await expect(
+		attach({ entityIds: ["entity_existing_assignment"] }),
+	).resolves.toEqual({ success: true });
+	expect(executedPlans).toHaveLength(1);
+	expect(executedPlans[0].insertCustomerProducts).toEqual([]);
+	expect(executedPlans[0].customerLicenseUpdates?.[0]?.remainingChange).toBe(0);
 });
 
 test("duplicate entity ids in one request remain invalid", async () => {
@@ -275,15 +314,13 @@ test("duplicate entity ids in one request remain invalid", async () => {
 			internalCustomerId: "customer_internal",
 			licenseInternalProductId,
 			parentCustomerProductId,
+			customerLicenseLinkId,
 		},
 	];
 
 	await expect(
 		attach({
-			entityIds: [
-				"entity_existing_assignment",
-				"entity_existing_assignment",
-			],
+			entityIds: ["entity_existing_assignment", "entity_existing_assignment"],
 		}),
 	).rejects.toThrow("Duplicate entity entity_existing_assignment in entities.");
 	expect(executedPlans).toHaveLength(0);

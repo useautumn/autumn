@@ -13,6 +13,7 @@ import {
 	computePooledFullTransferPlan,
 	computePooledSplitTransferPlan,
 } from "@/internal/customers/handlers/handleTransferProduct/computePooledTransferPlan.js";
+import { handlePooledFullTransfer } from "@/internal/customers/handlers/handleTransferProduct/handlePooledFullTransfer.js";
 
 const NOW = Date.UTC(2027, 0, 1);
 
@@ -292,5 +293,135 @@ describe("pooled customer-product transfer planning", () => {
 			}),
 		]);
 		expect(plan.pooledBalanceOps[0]).not.toHaveProperty("usageReapply");
+	});
+
+	test("a group transfer prepares every related pooled customer product", async () => {
+		const firstCustomerProduct = createPooledCustomerProduct({
+			id: "group-source-one",
+			entityAttached: false,
+			balance: 500,
+		});
+		const secondCustomerProduct = createPooledCustomerProduct({
+			id: "group-source-two",
+			entityAttached: false,
+			balance: 500,
+		});
+		for (const customerProduct of [
+			firstCustomerProduct,
+			secondCustomerProduct,
+		]) {
+			customerProduct.product.group = "shared-group";
+			customerProduct.product.is_add_on = false;
+			customerProduct.starts_at = Date.now() - 86_400_000;
+		}
+		const fullCustomer = createFullCustomer({
+			customerProduct: firstCustomerProduct,
+		});
+		fullCustomer.customer_products = [
+			firstCustomerProduct,
+			secondCustomerProduct,
+		];
+		const destinationEntity = fullCustomer.entities[1]!;
+		const operationSourceIds: string[] = [];
+		const updatedEntitlementIds: string[] = [];
+
+		await handlePooledFullTransfer({
+			ctx: {} as never,
+			fullCustomer,
+			fromEntity: null,
+			toEntity: destinationEntity,
+			product: {
+				id: firstCustomerProduct.product.id,
+				group: "shared-group",
+				is_add_on: false,
+			},
+			customerProduct: firstCustomerProduct,
+			dependencies: {
+				executePooledBalanceOps: async ({
+					pooledBalanceOps,
+					beforeRebalance,
+					afterRebalance,
+				}) => {
+					operationSourceIds.push(
+						...(pooledBalanceOps ?? []).flatMap((operation) =>
+							"sourceCustomerProductId" in operation
+								? [operation.sourceCustomerProductId]
+								: [],
+						),
+					);
+					await beforeRebalance?.({ db: {} as never });
+					await afterRebalance?.({ db: {} as never });
+				},
+				transferRelatedCustomerProducts: async () => ({
+					entity_id: destinationEntity.id,
+					internal_entity_id: destinationEntity.internal_id,
+				}),
+				updateCustomerEntitlement: async ({ id, updates }) => {
+					expect(updates.balance).toBe(0);
+					updatedEntitlementIds.push(id);
+					return [] as never;
+				},
+			},
+		});
+
+		expect(operationSourceIds).toEqual([
+			firstCustomerProduct.id,
+			secondCustomerProduct.id,
+		]);
+		expect(updatedEntitlementIds).toEqual([
+			firstCustomerProduct.customer_entitlements[0]!.id,
+			secondCustomerProduct.customer_entitlements[0]!.id,
+		]);
+	});
+
+	test("a scheduled customer-to-entity transfer persists normalized pooled rows even with no pooled operations", async () => {
+		const customerProduct = createPooledCustomerProduct({
+			id: "scheduled-group-source",
+			entityAttached: false,
+			balance: 500,
+		});
+		customerProduct.status = CusProductStatus.Scheduled;
+		customerProduct.product.group = "scheduled-group";
+		customerProduct.product.is_add_on = false;
+		const fullCustomer = createFullCustomer({ customerProduct });
+		const destinationEntity = fullCustomer.entities[1]!;
+		let operationCount = -1;
+		const updatedEntitlementIds: string[] = [];
+
+		await handlePooledFullTransfer({
+			ctx: {} as never,
+			fullCustomer,
+			fromEntity: null,
+			toEntity: destinationEntity,
+			product: {
+				id: customerProduct.product.id,
+				group: "scheduled-group",
+				is_add_on: false,
+			},
+			customerProduct,
+			dependencies: {
+				executePooledBalanceOps: async ({
+					pooledBalanceOps,
+					beforeRebalance,
+				}) => {
+					operationCount = pooledBalanceOps?.length ?? 0;
+					await beforeRebalance?.({ db: {} as never });
+				},
+				transferRelatedCustomerProducts: async () => ({
+					entity_id: destinationEntity.id,
+					internal_entity_id: destinationEntity.internal_id,
+				}),
+				updateCustomerEntitlement: async ({ id, updates }) => {
+					expect(updates.balance).toBe(0);
+					updatedEntitlementIds.push(id);
+					return [] as never;
+				},
+			},
+		});
+
+		expect(operationCount).toBe(0);
+		expect(updatedEntitlementIds).toEqual([
+			customerProduct.customer_entitlements[0]!.id,
+		]);
 	});
 });

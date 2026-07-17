@@ -61,6 +61,21 @@ const composeLicensesPayload = ({
 	return payload;
 };
 
+export const getLicenseUpdatePayload = ({
+	persistedLinks,
+}: {
+	persistedLinks: PlanLicense[];
+}): PlanLicenseParams[] | undefined => {
+	const { entries } = useLicenseSaveRegistry.getState();
+	if (!Object.values(entries).some((entry) => entry.dirty)) return undefined;
+	return composeLicensesPayload({ persistedLinks });
+};
+
+export const commitLicenseChanges = () => {
+	const { entries } = useLicenseSaveRegistry.getState();
+	for (const entry of Object.values(entries)) entry.commit();
+};
+
 /** Persists all dirty card state through one parent `plans.update`. */
 export const saveAllLicenses = async ({
 	axiosInstance,
@@ -73,10 +88,8 @@ export const saveAllLicenses = async ({
 	persistedLinks: PlanLicense[];
 	onSuccess?: () => Promise<unknown>;
 }): Promise<boolean> => {
-	const { entries } = useLicenseSaveRegistry.getState();
-	if (!Object.values(entries).some((entry) => entry.dirty)) return true;
-
-	const licenses = composeLicensesPayload({ persistedLinks });
+	const licenses = getLicenseUpdatePayload({ persistedLinks });
+	if (!licenses) return true;
 	const saved = await runWithErrorToast({
 		action: () =>
 			axiosInstance.post("/v1/plans.update", {
@@ -87,9 +100,7 @@ export const saveAllLicenses = async ({
 	});
 	if (!saved) return false;
 
-	for (const entry of Object.values(entries)) {
-		entry.commit();
-	}
+	commitLicenseChanges();
 	await onSuccess?.();
 	return true;
 };

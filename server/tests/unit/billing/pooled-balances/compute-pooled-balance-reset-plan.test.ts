@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { computePooledBalanceResetPlan } from "@/internal/billing/v2/pooledBalances/reset/computePooledBalanceResetPlan.js";
+import { cusEntToEffectiveRolloverMax } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils.js";
 
 const RESET_AT = Date.UTC(2027, 0, 1);
 const NEXT_EXPIRY = Date.UTC(2027, 1, 1);
@@ -114,4 +115,42 @@ test("lifetime pooled balances never produce reset or rollover work", () => {
 			contributions,
 		}),
 	).toBeNull();
+});
+
+test("pooled rollover caps reject invalid contribution-backed grants", () => {
+	const customerEntitlement = buildCustomerEntitlement({ balance: 800 });
+	customerEntitlement.entitlement.rollover = {
+		max_percentage: 100,
+		duration: RolloverExpiryDurationType.Month,
+		length: 1,
+	};
+
+	for (const startingBalanceOverride of [
+		-1,
+		Number.NaN,
+		Number.POSITIVE_INFINITY,
+	]) {
+		expect(() =>
+			cusEntToEffectiveRolloverMax({
+				cusEnt: customerEntitlement,
+				startingBalanceOverride,
+			}),
+		).toThrow("startingBalanceOverride must be finite and non-negative");
+	}
+});
+
+test("pooled rollover caps reject a computed maximum that overflows", () => {
+	const customerEntitlement = buildCustomerEntitlement({ balance: 800 });
+	customerEntitlement.entitlement.rollover = {
+		max_percentage: 200,
+		duration: RolloverExpiryDurationType.Month,
+		length: 1,
+	};
+
+	expect(() =>
+		cusEntToEffectiveRolloverMax({
+			cusEnt: customerEntitlement,
+			startingBalanceOverride: 1e308,
+		}),
+	).toThrow("effectiveRolloverMax must be finite and non-negative");
 });

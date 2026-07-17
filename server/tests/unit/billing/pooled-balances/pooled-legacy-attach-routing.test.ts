@@ -63,3 +63,29 @@ test("legacy multi-product entity attach rejects pooled items before partial per
 
 	expect(legacyPlanCalls).toBe(0);
 });
+
+test("pooled legacy routing honors disableTrial before delegating", async () => {
+	const attachParams = createPooledEntityAttachParams() as unknown as {
+		freeTrial: { duration: string; length: number } | null;
+	};
+	attachParams.freeTrial = { duration: "month", length: 1 };
+	let delegatedFreeTrial: unknown = "not called";
+
+	await handleAddProduct({
+		ctx: {} as never,
+		attachParams: attachParams as never,
+		branch: AttachBranch.New,
+		config: { disableTrial: true } as never,
+		dependencies: {
+			legacyAttach: async ({ attachParams: delegatedAttachParams }) => {
+				delegatedFreeTrial = delegatedAttachParams.freeTrial;
+				return {
+					billingResponse: {},
+					billingResult: { stripe: {} },
+				} as never;
+			},
+		},
+	});
+
+	expect(delegatedFreeTrial).toBeNull();
+});

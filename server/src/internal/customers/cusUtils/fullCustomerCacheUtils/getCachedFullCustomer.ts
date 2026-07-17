@@ -11,6 +11,7 @@ import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
@@ -130,12 +131,15 @@ export const getCachedFullCustomer = async ({
 	entityId,
 	redisInstance,
 	skipRolloutCheck = false,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	redisInstance?: Redis;
 	skipRolloutCheck?: boolean;
+	/** Existing customer balance-sync transaction used by pooled lazy reset. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<FullCustomer | undefined> => {
 	const { org, env } = ctx;
 	const cacheKey = buildFullCustomerCacheKey({
@@ -233,7 +237,11 @@ export const getCachedFullCustomer = async ({
 	// Skip when degraded — reset writes to primary, and we don't want cache-hit
 	// path to fail because the primary is down.
 	if (getDbHealth() !== PgHealth.Degraded) {
-		await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });
+		await resetCustomerEntitlements({
+			ctx,
+			fullCus: fullCustomer,
+			balanceSyncDb,
+		});
 		await checkPendingMigrationsForCustomer({ ctx, fullCustomer });
 	}
 

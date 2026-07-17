@@ -151,6 +151,44 @@ describe("pooled DFU plans", () => {
 		);
 	});
 
+	test("active imports reapply flashed usage after pooling the source grant", () => {
+		const entity = entities.create({ id: "entity_one", featureId: "seats" });
+		const product = createPooledProduct({
+			id: "pooled_imported_usage",
+			allowance: 500,
+		});
+		const planContext = createPlanContext({
+			fullProduct: product,
+			internalEntityId: entity.internal_id,
+		});
+		planContext.plan.balances = [
+			{
+				feature_id: "messages",
+				balance: 400,
+			},
+		];
+		const flashContext = createFlashContext({ planContext });
+
+		const result = computeFlashPlan({
+			ctx: contexts.create({}),
+			flashContext,
+		});
+		const insertedCustomerProduct =
+			result.autumnBillingPlan.insertCustomerProducts[0];
+
+		expect(insertedCustomerProduct?.customer_entitlements[0]?.balance).toBe(0);
+		expect(result.autumnBillingPlan.pooledBalanceOps).toEqual([
+			expect.objectContaining({
+				op: "upsert_source",
+				sourceCustomerProductId: insertedCustomerProduct?.id,
+				usageReapply: {
+					amount: 100,
+					excludedSourceCustomerProductId: insertedCustomerProduct?.id,
+				},
+			}),
+		]);
+	});
+
 	test("expired historical imports are zeroed without contributing", () => {
 		const entity = entities.create({ id: "entity_one", featureId: "seats" });
 		const product = createPooledProduct({

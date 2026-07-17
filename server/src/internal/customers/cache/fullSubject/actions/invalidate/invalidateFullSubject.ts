@@ -95,6 +95,20 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	}
 };
 
+export const shouldFlushSharedBalanceFields = ({
+	targetRedis,
+	authoritativeRedis,
+	flushBalances,
+	balanceCaptureMode,
+}: {
+	targetRedis: Redis;
+	authoritativeRedis: Redis;
+	flushBalances?: boolean;
+	balanceCaptureMode: SharedBalanceCaptureMode;
+}): boolean =>
+	targetRedis === authoritativeRedis &&
+	(Boolean(flushBalances) || balanceCaptureMode === "strict");
+
 export const invalidateCachedFullSubject = async ({
 	customerId,
 	entityId,
@@ -132,7 +146,12 @@ export const invalidateCachedFullSubject = async ({
 				redisV2,
 				// Only the authoritative cache may write a captured snapshot back
 				// to Postgres. Migration/secondary caches are deletion-only.
-				flushBalances: flushBalances && redisV2 === ctx.redisV2,
+				flushBalances: shouldFlushSharedBalanceFields({
+					targetRedis: redisV2,
+					authoritativeRedis: ctx.redisV2,
+					flushBalances,
+					balanceCaptureMode,
+				}),
 				balanceSyncDb: redisV2 === ctx.redisV2 ? balanceSyncDb : undefined,
 				balanceCaptureMode:
 					redisV2 === ctx.redisV2 ? balanceCaptureMode : "best_effort",

@@ -1,10 +1,9 @@
-import type { ProductV2 } from "@autumn/shared";
+import type { ProductCounts, ProductV2 } from "@autumn/shared";
 import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { LicenseSectionTag } from "@/components/v2/icons/LicenseSectionTag";
-import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import type { ProductListItem } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { DeletePlanDialog } from "@/views/products/plan/components/DeletePlanDialog";
@@ -13,13 +12,16 @@ import { createProductListColumns } from "./ProductListColumns";
 type LicenseWithCount = ProductV2 & { active_count?: number };
 
 export function LicenseListTable({
+	licenseProducts,
+	counts,
+	isCountsLoading,
 	showArchivedProducts = false,
 }: {
+	licenseProducts: ProductListItem[];
+	counts: Record<string, ProductCounts>;
+	isCountsLoading: boolean;
 	showArchivedProducts?: boolean;
 }) {
-	const { licenseProducts, isLoading } = useLicenseProductsQuery();
-	const { counts, isCountsLoading } = useProductsQuery();
-
 	const [sorting, setSorting] = useState<SortingState>([]);
 	const [deleteDialog, setDeleteDialog] = useState<{
 		open: boolean;
@@ -61,7 +63,7 @@ export function LicenseListTable({
 		},
 	});
 
-	if (isLoading || licenses.length === 0) return null;
+	if (licenses.length === 0) return null;
 
 	return (
 		<>

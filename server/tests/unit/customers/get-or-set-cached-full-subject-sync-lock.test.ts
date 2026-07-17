@@ -60,6 +60,7 @@ const mockState = {
 		callback,
 	}: {
 		callback: ({ db }: { db: unknown }) => Promise<FullSubject>;
+		onTransactionFailure?: ({ error }: { error: unknown }) => Promise<void>;
 	}) => callback({ db: lockedDb }),
 	databaseLabel: "database",
 	databaseReadCount: 0,
@@ -69,6 +70,11 @@ const mockState = {
 	setCount: 0,
 	onSet: undefined as undefined | (() => void),
 	rehydrated: undefined as FullSubject | undefined,
+	invalidations: [] as Array<{
+		ctx: unknown;
+		customerId: string;
+		source?: string;
+	}>,
 };
 
 mock.module(
@@ -83,7 +89,20 @@ mock.module(
 	() => ({
 		withCustomerBalanceSyncLock: async (args: {
 			callback: ({ db }: { db: unknown }) => Promise<FullSubject>;
+			onTransactionFailure?: ({ error }: { error: unknown }) => Promise<void>;
 		}) => mockState.withLock(args),
+	}),
+);
+
+mock.module(
+	"@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js",
+	() => ({
+		deleteCachedFullCustomer: async (args: {
+			ctx: unknown;
+			customerId: string;
+			source?: string;
+		}) => mockState.invalidations.push(args),
+		deleteLegacyCachedFullCustomer: async () => {},
 	}),
 );
 
@@ -108,8 +127,9 @@ mock.module(
 	() => ({
 		setCachedFullSubject: async () => {
 			mockState.setCount += 1;
+			const result = mockState.setResult;
 			mockState.onSet?.();
-			return mockState.setResult;
+			return result;
 		},
 	}),
 );
@@ -148,6 +168,7 @@ describe("getOrSetCachedFullSubject balance-sync serialization", () => {
 		mockState.setCount = 0;
 		mockState.onSet = undefined;
 		mockState.rehydrated = undefined;
+		mockState.invalidations = [];
 	});
 
 	test("waits for an in-flight lifecycle and queries through the lock transaction", async () => {
@@ -261,6 +282,80 @@ describe("getOrSetCachedFullSubject balance-sync serialization", () => {
 			expect(mockState.setCount).toBe(1);
 		});
 	}
+
+	test("rehydrates live balances after an ambiguous cache write result", async () => {
+		const liveSubject = buildFullSubject("live-after-ambiguous-write");
+		mockState.setResult = "FAILED";
+		mockState.rehydrated = liveSubject;
+
+		const result = await getOrSetCachedFullSubject({
+			ctx,
+			customerId: "customer_1",
+			source: "ambiguous-fill",
+		});
+
+		expect(result).toBe(liveSubject);
+	});
+
+	test("falls back to the database snapshot when an ambiguous write has no live balance state", async () => {
+		mockState.setResult = "FAILED";
+
+		const result = await getOrSetCachedFullSubject({
+			ctx,
+			customerId: "customer_1",
+			source: "ambiguous-fill-without-live-balances",
+		});
+
+		expect((result as unknown as { label: string }).label).toBe("database");
+	});
+
+	test("refetches Postgres before retrying a stale-epoch fill with no winner", async () => {
+		mockState.setResult = "STALE_WRITE";
+		mockState.cacheRead = async () => ({
+			fullSubject: undefined,
+			subjectViewEpoch: 2,
+		});
+		mockState.onSet = () => {
+			if (mockState.setCount !== 1) return;
+			mockState.databaseLabel = "after-stale-epoch";
+			mockState.setResult = "OK";
+		};
+
+		const result = await getOrSetCachedFullSubject({
+			ctx,
+			customerId: "customer_1",
+			source: "stale-fill",
+		});
+
+		expect(mockState.databaseReadCount).toBe(2);
+		expect((result as unknown as { label: string }).label).toBe(
+			"after-stale-epoch",
+		);
+	});
+
+	test("invalidates a cache fill when its enclosing transaction fails to commit", async () => {
+		mockState.withLock = async ({ callback, onTransactionFailure }) => {
+			await callback({ db: lockedDb });
+			const error = new Error("cache fill commit failed");
+			await onTransactionFailure?.({ error });
+			throw error;
+		};
+
+		await expect(
+			getOrSetCachedFullSubject({
+				ctx,
+				customerId: "customer_1",
+				source: "commit-failure",
+			}),
+		).rejects.toThrow("cache fill commit failed");
+		expect(mockState.invalidations).toEqual([
+			{
+				ctx,
+				customerId: "customer_1",
+				source: "full-subject-cache-fill-transaction-failure",
+			},
+		]);
+	});
 });
 
 afterAll(() => {

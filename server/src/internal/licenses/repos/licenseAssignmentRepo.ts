@@ -45,6 +45,7 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 	entityId,
 	licenseInternalProductId,
 	parentCustomerProductId,
+	customerLicenseLinkId,
 	activeOnly = true,
 }: {
 	db: DrizzleCli;
@@ -52,6 +53,7 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 	entityId?: string;
 	licenseInternalProductId?: string;
 	parentCustomerProductId?: string;
+	customerLicenseLinkId?: string;
 	activeOnly?: boolean;
 }) =>
 	await db
@@ -81,6 +83,14 @@ const listAssignmentsWithEntityAndProductByCustomer = async ({
 				...(entityId ? [eq(entities.id, entityId)] : []),
 				...(licenseInternalProductId
 					? [eq(customerProducts.internal_product_id, licenseInternalProductId)]
+					: []),
+				...(customerLicenseLinkId
+					? [
+							eq(
+								customerProducts.customer_license_link_id,
+								customerLicenseLinkId,
+							),
+						]
 					: []),
 				...(parentCustomerProductId
 					? [

@@ -9,6 +9,7 @@ import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { resetPooledCustomerEntitlements } from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
@@ -49,10 +50,13 @@ export const resetCustomerEntitlements = async ({
 	ctx,
 	fullCus,
 	now = Date.now(),
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
 	now?: number;
+	/** Existing customer balance-sync transaction used by pooled lazy reset. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<boolean> => {
 	const { logger } = ctx;
 	const customerId = fullCus.id || fullCus.internal_id;
@@ -67,6 +71,7 @@ export const resetCustomerEntitlements = async ({
 			customerId,
 			customerEntitlements: allCustomerEntitlements,
 			now,
+			balanceSyncDb,
 		});
 		const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
 		if (cusEntsNeedingReset.length === 0 && pooledResets.length === 0) {

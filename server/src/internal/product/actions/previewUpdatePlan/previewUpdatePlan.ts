@@ -21,6 +21,7 @@ import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
 import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
+import { previewAffectedLicenses } from "./previewAffectedLicenses.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
 
 export const buildPlanUpdatePreview = async ({
@@ -90,7 +91,13 @@ export const buildPlanUpdatePreview = async ({
 			(data.update_variant_ids?.length ?? 0) > 0 ||
 			(data.variants?.length ?? 0) > 0,
 	);
-	const [variants, otherVersions] = await Promise.all([
+	const [licenseChanges, variants, otherVersions] = await Promise.all([
+		previewAffectedLicenses({
+			ctx,
+			currentParentProduct: currentFullProduct,
+			resolved: licensePreview.prepared?.resolved ?? [],
+			structuralChanges: licensePreview.changes,
+		}),
 		shouldPreviewVariants
 			? previewAffectedVariants({
 					ctx,
@@ -125,7 +132,7 @@ export const buildPlanUpdatePreview = async ({
 			customerCount,
 			versionable,
 		}),
-		license_changes: licensePreview.changes,
+		license_changes: licenseChanges,
 		variants,
 		other_versions: otherVersions,
 	});

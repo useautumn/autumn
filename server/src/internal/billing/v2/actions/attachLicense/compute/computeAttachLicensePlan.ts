@@ -137,7 +137,8 @@ export const computeAttachLicensePlan = ({
 		customerLicenseUpdates: [
 			{
 				customerLicenseId: customerLicense.id,
-				remainingChange: -assignmentEntities.length,
+				remainingChange:
+					assignmentEntities.length === 0 ? 0 : -assignmentEntities.length,
 			},
 		],
 		pooledBalanceOps,

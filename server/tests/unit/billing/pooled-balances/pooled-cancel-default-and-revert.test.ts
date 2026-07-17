@@ -14,7 +14,10 @@ import { entities } from "@tests/utils/fixtures/db/entities.js";
 import { entitlements } from "@tests/utils/fixtures/db/entitlements.js";
 import { products } from "@tests/utils/fixtures/db/products.js";
 import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelPlan.js";
-import { computeRevertTrialExpiryPlan } from "@/internal/customers/cusProducts/actions/revertTrialExpiry.js";
+import {
+	computeRevertTrialExpiryPlan,
+	executePooledRevertTrialExpiryWithDependencies,
+} from "@/internal/customers/cusProducts/actions/revertTrialExpiry.js";
 
 const NOW = Date.UTC(2027, 0, 1);
 const entity = entities.create({ id: "entity_one", featureId: "seats" });
@@ -215,6 +218,85 @@ describe("pooled cancellation successors", () => {
 				sourceCustomerProductId: previousCustomerProduct.id,
 				currentCycleContribution: 500,
 			}),
+		]);
+	});
+
+	test("automatic revert expiry does not restore a previous pooled plan that is no longer paused", () => {
+		const previousCustomerProduct = createPooledCustomerProduct({
+			id: "previous_already_expired",
+			status: CusProductStatus.Expired,
+		});
+		const trialCustomerProduct = customerProducts.create({
+			id: "trial_with_expired_previous",
+			productId: "trial_product",
+			internalEntityId: entity.internal_id,
+			entityId: entity.id ?? undefined,
+			status: CusProductStatus.Active,
+			startsAt: NOW,
+		});
+		const fullCustomer = customers.create({
+			customerProducts: [trialCustomerProduct, previousCustomerProduct],
+		});
+
+		const result = computeRevertTrialExpiryPlan({
+			fullCustomer,
+			trialCustomerProduct,
+			previousCustomerProduct,
+			now: NOW,
+		});
+
+		expect(result.pooledBalanceOps).toEqual([]);
+		expect(result.updateCustomerProducts).toEqual([
+			expect.objectContaining({
+				customerProduct: trialCustomerProduct,
+				updates: { status: CusProductStatus.Expired },
+			}),
+		]);
+	});
+
+	test("a concurrent previous-plan expiry is rechecked under the balance lock before restoring pooled credits", async () => {
+		const events: string[] = [];
+		const restored = await executePooledRevertTrialExpiryWithDependencies({
+			ctx: {} as never,
+			customerId: "customer",
+			internalCustomerId: "internal_customer",
+			trialCustomerProductId: "trial",
+			previousCustomerProductId: "previous",
+			now: NOW,
+			pooledBalanceOps: [
+				{
+					op: "remove_source",
+					internalCustomerId: "internal_customer",
+					sourceCustomerProductId: "unused",
+					effectiveAt: null,
+				},
+			],
+			dependencies: {
+				withCustomerBalanceSyncLock: async ({ callback }) => {
+					events.push("lock");
+					const result = await callback({ db: {} as never });
+					events.push("commit");
+					return result;
+				},
+				updateRevertTrialStatuses: async () => {
+					events.push("conditional status update missed");
+					return false;
+				},
+				executePooledBalanceOps: async () => {
+					events.push("pooled restore");
+					return undefined;
+				},
+				applyPooledBalanceCacheCutover: async () => {
+					events.push("cache cutover");
+				},
+			},
+		});
+
+		expect(restored).toBe(false);
+		expect(events).toEqual([
+			"lock",
+			"conditional status update missed",
+			"commit",
 		]);
 	});
 });

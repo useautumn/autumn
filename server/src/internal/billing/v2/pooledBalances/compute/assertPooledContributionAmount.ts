@@ -4,7 +4,7 @@ export const assertPooledContributionAmount = ({
 	field,
 	value,
 }: {
-	field: "currentCycleContribution" | "nextCycleContribution";
+	field: "currentCycleContribution" | "nextCycleContribution" | "resetBalance";
 	value: number;
 }) => {
 	if (Number.isFinite(value) && value >= 0) return;

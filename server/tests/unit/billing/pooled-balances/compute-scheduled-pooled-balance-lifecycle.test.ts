@@ -10,6 +10,7 @@ import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitleme
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { customers } from "@tests/utils/fixtures/db/customers.js";
 import { prices } from "@tests/utils/fixtures/db/prices.js";
+import { computePatchPooledBalanceContributionRemovalOps } from "@/internal/billing/v2/compute/computePatchPlan/computePatchCustomerProductPlan.js";
 import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import {
 	customerProductToPooledBalanceRemovalOp,
@@ -370,6 +371,21 @@ describe("scheduled pooled balance lifecycle", () => {
 				expectedEffectiveAt: STARTS_AT,
 			}),
 		).toBeUndefined();
+	});
+
+	test("patching a scheduled source does not remove a contribution before activation", () => {
+		const scheduledCustomerProduct = createPooledCustomerProduct({
+			status: CusProductStatus.Scheduled,
+			startsAt: STARTS_AT,
+		});
+
+		expect(
+			computePatchPooledBalanceContributionRemovalOps({
+				customerProduct: scheduledCustomerProduct,
+				deleteCustomerEntitlements:
+					scheduledCustomerProduct.customer_entitlements,
+			}),
+		).toEqual([]);
 	});
 
 	test("a phase change can place activation and expiry in one pooled operation batch", () => {

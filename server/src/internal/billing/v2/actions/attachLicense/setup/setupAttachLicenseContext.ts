@@ -118,25 +118,23 @@ export const setupAttachLicenseContext = async ({
 		unusedAssignments,
 		activeAssignments,
 	] = await Promise.all([
-			setupStripeBillingContext({
-				ctx,
-				fullCustomer,
-				targetCustomerProduct: target.parentCustomerProduct,
-				createStripeCustomerIfMissing: false,
-			}),
-			licenseAssignmentRepo.listUnusedAssignmentsByLinkId({
-				db: ctx.db,
-				customerLicenseLinkId: target.customerLicense.link_id,
-				limit: params.entities.length,
-			}),
-			licenseAssignmentRepo.listAssignmentsWithEntityAndProductByCustomer({
-				db: ctx.db,
-				internalCustomerId: fullCustomer.internal_id,
-				licenseInternalProductId:
-					target.customerLicense.license_internal_product_id,
-				parentCustomerProductId: target.parentCustomerProduct.id,
-			}),
-		]);
+		setupStripeBillingContext({
+			ctx,
+			fullCustomer,
+			targetCustomerProduct: target.parentCustomerProduct,
+			createStripeCustomerIfMissing: false,
+		}),
+		licenseAssignmentRepo.listUnusedAssignmentsByLinkId({
+			db: ctx.db,
+			customerLicenseLinkId: target.customerLicense.link_id,
+			limit: params.entities.length,
+		}),
+		licenseAssignmentRepo.listAssignmentsWithEntityAndProductByCustomer({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+			customerLicenseLinkId: target.customerLicense.link_id,
+		}),
+	]);
 	const assignedEntityIds = new Set(
 		activeAssignments.map((assignment) => assignment.entity_id),
 	);

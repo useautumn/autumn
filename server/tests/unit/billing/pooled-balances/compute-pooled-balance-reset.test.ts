@@ -225,3 +225,24 @@ test.concurrent("reset rejects invalid next-cycle contributions", () => {
 		).toThrow("nextCycleContribution must be finite and non-negative");
 	}
 });
+
+test.concurrent("reset rejects a contribution sum that overflows", () => {
+	expect(() =>
+		computePooledBalanceReset({
+			resetAt,
+			lastAppliedResetAt: null,
+			contributions: [
+				{
+					id: "large_contribution_a",
+					currentCycleContribution: 1e308,
+					nextCycleContribution: 1e308,
+				},
+				{
+					id: "large_contribution_b",
+					currentCycleContribution: 1e308,
+					nextCycleContribution: 1e308,
+				},
+			],
+		}),
+	).toThrow("resetBalance must be finite and non-negative");
+});

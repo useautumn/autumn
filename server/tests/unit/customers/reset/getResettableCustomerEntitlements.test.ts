@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	BillingInterval,
 	BillWhen,
@@ -7,6 +7,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	type FullProduct,
+	type FullSubject,
 	PriceType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
@@ -14,6 +15,8 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { getResettableCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/getResettableCustomerEntitlements.js";
+import { triggerBatchResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/triggerBatchResetSubjectEntitlements.js";
+import { workflows } from "@/queue/workflows.js";
 
 const FEATURE_ID = "messages";
 const NOW = 1_700_000_000_000;
@@ -339,5 +342,62 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 		});
 
 		expect(result).toHaveLength(0);
+	});
+
+	test("queues an overdue synthetic pooled balance to trigger pooled rehydration", async () => {
+		const source = buildCusEnt({
+			productStatus: CusProductStatus.Active,
+			nextResetAt: PAST,
+			pooled: true,
+			entityAttached: true,
+		});
+		const synthetic = buildCusEnt({
+			nextResetAt: PAST,
+			pooled: true,
+			withCustomerProduct: false,
+		});
+		synthetic.id = "synthetic-pooled-balance";
+		const fullSubject = {
+			subjectType: "entity",
+			customerId: "customer-one",
+			internalCustomerId: "internal-customer-one",
+			entityId: "entity-one",
+			internalEntityId: "internal-entity-one",
+			customer: { config: {} },
+			entity: { id: "entity-one", internal_id: "internal-entity-one" },
+			customer_products: [source.customer_product],
+			extra_customer_entitlements: [synthetic],
+			invoices: [],
+		} as unknown as FullSubject;
+		const trigger = spyOn(
+			workflows,
+			"triggerBatchResetCusEnts",
+		).mockResolvedValue(undefined);
+
+		try {
+			await triggerBatchResetSubjectEntitlements({
+				ctx: {
+					org: { id: "org-one" },
+					env: "sandbox",
+				} as never,
+				fullSubjects: [fullSubject],
+			});
+
+			expect(trigger).toHaveBeenCalledWith({
+				orgId: "org-one",
+				env: "sandbox",
+				resets: [
+					{
+						internalCustomerId: "internal-customer-one",
+						customerId: "customer-one",
+						internalEntityId: "internal-entity-one",
+						entityId: "entity-one",
+						cusEntIds: ["synthetic-pooled-balance"],
+					},
+				],
+			});
+		} finally {
+			trigger.mockRestore();
+		}
 	});
 });

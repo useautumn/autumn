@@ -111,6 +111,32 @@ export const partitionSubjectBalancesByCacheVersion = ({
 	return { stale, syncable };
 };
 
+export const partitionCapturedBalancesForPooledReconciliation = ({
+	subjectBalances,
+	currentCustomerEntitlements,
+	pooledSourceCustomerEntitlementIds,
+}: {
+	subjectBalances: SubjectBalance[];
+	currentCustomerEntitlements: Array<{
+		id: string;
+		cache_version?: number | null;
+	}>;
+	pooledSourceCustomerEntitlementIds: ReadonlySet<string>;
+}) => {
+	const { syncable, stale } = partitionSubjectBalancesByCacheVersion({
+		subjectBalances,
+		currentCustomerEntitlements,
+	});
+	return {
+		liveBalances: syncable,
+		balancesToFlush: syncable.filter(
+			(subjectBalance) =>
+				!pooledSourceCustomerEntitlementIds.has(subjectBalance.id),
+		),
+		stale,
+	};
+};
+
 const partitionCurrentSubjectBalances = async ({
 	ctx,
 	subjectBalances,
@@ -280,16 +306,19 @@ const reconcileCapturedBalances = async ({
 	if (captured) {
 		const pooledSourceCustomerEntitlementIds =
 			getPooledSourceCustomerEntitlementIds({ fullSubject });
-		const { syncable } = await partitionCurrentSubjectBalances({
-			ctx,
-			subjectBalances: captured.subjectBalances.filter(
-				(subjectBalance) =>
-					!pooledSourceCustomerEntitlementIds.has(subjectBalance.id),
-			),
+		const currentCustomerEntitlements = await CusEntService.getByIds({
+			db: ctx.db,
+			ids: captured.subjectBalances.map((subjectBalance) => subjectBalance.id),
 		});
+		const { liveBalances, balancesToFlush } =
+			partitionCapturedBalancesForPooledReconciliation({
+				subjectBalances: captured.subjectBalances,
+				currentCustomerEntitlements,
+				pooledSourceCustomerEntitlementIds,
+			});
 		await writeSubjectBalancesToDb({
 			db: ctx.db,
-			subjectBalances: syncable,
+			subjectBalances: balancesToFlush,
 			usageWindowUpdates: captured.usageWindowUpdates,
 			queryName: "reconcileCapturedPooledBalances",
 		});
@@ -326,7 +355,7 @@ const reconcileCapturedBalances = async ({
 			fullSubject,
 			featureIds,
 			pooledGrantByCustomerEntitlementId,
-			liveBalances: captured.subjectBalances,
+			liveBalances,
 			reverseOrder,
 			inStatuses,
 		}).sort((first, second) =>

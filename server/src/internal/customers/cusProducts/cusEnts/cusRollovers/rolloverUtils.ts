@@ -6,6 +6,7 @@ import {
 	type FullCusEntWithProduct,
 	type FullCustomerEntitlement,
 	getStartingBalance,
+	InternalError,
 	type Rollover,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
@@ -96,6 +97,21 @@ function hasFullCusProduct(
 	);
 }
 
+const assertValidRolloverAmount = ({
+	field,
+	value,
+}: {
+	field: "startingBalanceOverride" | "effectiveRolloverMax";
+	value: number;
+}) => {
+	if (Number.isFinite(value) && value >= 0) return;
+
+	throw new InternalError({
+		message: `${field} must be finite and non-negative`,
+		data: { field, value },
+	});
+};
+
 /** Effective rollover cap for a cusEnt: null = unlimited (or no config). */
 export const cusEntToEffectiveRolloverMax = ({
 	cusEnt,
@@ -104,10 +120,26 @@ export const cusEntToEffectiveRolloverMax = ({
 	cusEnt: FullCusEntWithProduct;
 	startingBalanceOverride?: number;
 }): number | null => {
+	if (startingBalanceOverride !== undefined) {
+		assertValidRolloverAmount({
+			field: "startingBalanceOverride",
+			value: startingBalanceOverride,
+		});
+	}
+
 	const rolloverConfig = cusEnt.entitlement.rollover;
 	if (!rolloverConfig) return null;
 
-	if (rolloverConfig.max_percentage == null) return rolloverConfig.max ?? null;
+	if (rolloverConfig.max_percentage == null) {
+		const effectiveRolloverMax = rolloverConfig.max ?? null;
+		if (effectiveRolloverMax !== null) {
+			assertValidRolloverAmount({
+				field: "effectiveRolloverMax",
+				value: effectiveRolloverMax,
+			});
+		}
+		return effectiveRolloverMax;
+	}
 
 	let startingBalance: number;
 	if (startingBalanceOverride !== undefined) {
@@ -126,11 +158,16 @@ export const cusEntToEffectiveRolloverMax = ({
 		});
 	}
 
-	return new Decimal(startingBalance)
+	const effectiveRolloverMax = new Decimal(startingBalance)
 		.mul(rolloverConfig.max_percentage)
 		.div(100)
 		.floor()
 		.toNumber();
+	assertValidRolloverAmount({
+		field: "effectiveRolloverMax",
+		value: effectiveRolloverMax,
+	});
+	return effectiveRolloverMax;
 };
 
 export function performMaximumClearing({

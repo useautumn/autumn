@@ -1,6 +1,10 @@
 import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { executePooledBalanceOps } from "@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js";
+import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
+import {
+	applyPreparedPooledBalanceCacheCutover,
+	executePooledBalanceOps,
+} from "@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { customerTouchesLicenses } from "../../repos/customerLicenseRepo/customerTouchesLicenses.js";
@@ -25,32 +29,46 @@ const expireOrphanAssignments = async ({
 	const validCustomerLicenseLinkIds = context.customerLicenses.map(
 		(customerLicense) => customerLicense.link_id,
 	);
-	const orphanAssignments =
-		await licenseAssignmentRepo.listActiveOrphanAssignments({
-			db: ctx.db,
-			internalCustomerId: context.fullCustomer.internal_id,
-			validCustomerLicenseLinkIds,
-		});
-	if (orphanAssignments.length === 0) return;
-
-	onPooledBalanceTransition?.();
-	await executePooledBalanceOps({
+	const preparedCutover = await withCustomerBalanceSyncLock({
 		ctx,
 		customerId,
-		pooledBalanceOps: orphanAssignments.map((assignment) => ({
-			op: "remove_source",
-			internalCustomerId: assignment.internal_customer_id,
-			sourceCustomerProductId: assignment.id,
-			effectiveAt: null,
-		})),
-		beforeRebalance: ({ db }) =>
-			licenseAssignmentRepo.expireOrphanAssignments({
-				db,
-				internalCustomerId: context.fullCustomer.internal_id,
-				validCustomerLicenseLinkIds,
-				endedAt: Date.now(),
-			}),
+		internalCustomerId: context.fullCustomer.internal_id,
+		callback: async ({ db }) => {
+			const orphanAssignments =
+				await licenseAssignmentRepo.listActiveOrphanAssignments({
+					db,
+					internalCustomerId: context.fullCustomer.internal_id,
+					validCustomerLicenseLinkIds,
+				});
+			if (orphanAssignments.length === 0) return undefined;
+
+			onPooledBalanceTransition?.();
+			return executePooledBalanceOps({
+				ctx: { ...ctx, db },
+				customerId,
+				balanceSyncDb: db,
+				pooledBalanceOps: orphanAssignments.map((assignment) => ({
+					op: "remove_source",
+					internalCustomerId: assignment.internal_customer_id,
+					sourceCustomerProductId: assignment.id,
+					effectiveAt: null,
+				})),
+				beforeRebalance: ({ db: operationDb }) =>
+					licenseAssignmentRepo.expireOrphanAssignments({
+						db: operationDb,
+						internalCustomerId: context.fullCustomer.internal_id,
+						validCustomerLicenseLinkIds,
+						endedAt: Date.now(),
+					}),
+			});
+		},
 	});
+	if (preparedCutover) {
+		await applyPreparedPooledBalanceCacheCutover({
+			ctx,
+			prepared: preparedCutover,
+		});
+	}
 };
 
 /**

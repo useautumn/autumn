@@ -4,7 +4,7 @@ import type {
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
+import { customerProductHasActiveStatus } from "@autumn/shared";
 import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 
@@ -24,14 +24,6 @@ export const computeFieldUpdatePooledBalanceOps = ({
 	if (!updatesStatus && !updatesSubscription) return [];
 
 	const currentCustomerProduct = billingContext.customerProduct;
-	if (params.status === CusProductStatus.Expired) {
-		const removal = customerProductToPooledBalanceRemovalOp({
-			customerProduct: currentCustomerProduct,
-			effectiveAt: null,
-		});
-		return removal ? [removal] : [];
-	}
-
 	const targetCustomerProduct = {
 		...currentCustomerProduct,
 		status: params.status ?? currentCustomerProduct.status,
@@ -42,6 +34,20 @@ export const computeFieldUpdatePooledBalanceOps = ({
 					? [params.processor_subscription_id]
 					: [],
 	};
+	const clearsExistingSubscription =
+		params.processor_subscription_id === null &&
+		(currentCustomerProduct.subscription_ids?.length ?? 0) > 0;
+	if (
+		!customerProductHasActiveStatus(targetCustomerProduct) ||
+		clearsExistingSubscription
+	) {
+		const removal = customerProductToPooledBalanceRemovalOp({
+			customerProduct: currentCustomerProduct,
+			effectiveAt: null,
+		});
+		return removal ? [removal] : [];
+	}
+
 	const prepared = computeAttachPooledBalanceOps({
 		customerProduct: targetCustomerProduct,
 		attachBillingContext: {

@@ -141,9 +141,10 @@ const resetPooledBalance = async ({
 			return null;
 		}
 		const nextResetAt = await getNextPooledBalanceResetAt({
-			ctx,
 			resetMode: pool.reset_mode,
 			currentResetAt: resetAt,
+			resetCycleAnchor: pool.reset_cycle_anchor,
+			asOf,
 			interval: pool.interval,
 			intervalCount: pool.interval_count,
 			subscriptionNextResetAt,

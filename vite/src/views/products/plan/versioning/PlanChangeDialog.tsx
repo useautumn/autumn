@@ -30,7 +30,6 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -43,11 +42,18 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { saveAllLicenses } from "../components/plan-licenses/useLicenseSaveRegistry";
+import { useProductContext } from "../../product/ProductContext";
+import {
+	commitLicenseChanges,
+	getLicenseUpdatePayload,
+	useHasLicenseChanges,
+} from "../components/plan-licenses/useLicenseSaveRegistry";
 import {
 	buildInPlaceUpdatePlanParams,
 	buildPreviewUpdatePlanParams,
+	buildVersionUpdatePlanParams,
 } from "./buildMigrationDraft";
+import { LicenseChangeList } from "./LicenseChangeList";
 import { buildMigrateTargets, MigrateTargetsStep } from "./MigrateTargetsStep";
 import {
 	PlanSettingsChanges,
@@ -150,6 +156,7 @@ export default function PlanChangeDialog({
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { features = [] } = useFeaturesQuery();
+	const { catalogLicenses } = useProductContext();
 	const {
 		refetch,
 		invalidate: invalidateProduct,
@@ -159,8 +166,8 @@ export default function PlanChangeDialog({
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
-	const { planLicenses, invalidate: invalidatePlanLicenses } =
-		usePlanLicensesQuery(product.id);
+	const planLicenses = catalogLicenses.map(({ planLicense }) => planLicense);
+	const licenseHasChanges = useHasLicenseChanges();
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
 
@@ -180,6 +187,13 @@ export default function PlanChangeDialog({
 		() => getPlanPriceChange({ baseProduct, product, currency }),
 		[baseProduct, product, currency],
 	);
+	const licenseUpdates = useMemo(
+		() =>
+			open
+				? getLicenseUpdatePayload({ persistedLinks: planLicenses })
+				: undefined,
+		[open, licenseHasChanges, planLicenses],
+	);
 
 	// Preview the in-place update so versioning, customer impact, item changes
 	// and variant conflicts come from the backend. A malformed draft (e.g. a
@@ -190,11 +204,12 @@ export default function PlanChangeDialog({
 				baseProduct,
 				editedProduct: product,
 				features,
+				licenses: licenseUpdates,
 			});
 		} catch {
 			return null;
 		}
-	}, [baseProduct, product, features]);
+	}, [baseProduct, product, features, licenseUpdates]);
 
 	const { data: preview } = usePlanUpdatePreview({
 		planId: product.id,
@@ -211,9 +226,9 @@ export default function PlanChangeDialog({
 		() => previousAttributesToSettingChanges(preview?.previous_attributes),
 		[preview],
 	);
-	// customize holds the items/price/trial diff — the only versionable change.
-	// Billing controls and other settings are non-versionable metadata patches.
-	const isVersionableChange = !!preview?.customize;
+	const hasPlanVersionableChange = !!preview?.customize;
+	const hasLicenseChanges = (preview?.license_changes.length ?? 0) > 0;
+	const isVersionableChange = hasPlanVersionableChange || hasLicenseChanges;
 	const isMetadataOnly = !!preview && !isVersionableChange;
 
 	const customCount = useMemo(
@@ -230,11 +245,12 @@ export default function PlanChangeDialog({
 	const isLatest = product.version >= numVersions;
 	const { data: variants = [] } = usePlanVariants(product.id, open);
 	const hasVariants = variants.length > 0;
-	// Scope (variant selection) shows on the latest version, and on any version
-	// when applying to all versions — both propagate to variants. Metadata-only
-	// edits skip it (they fan out to all variants via the settings patch).
+	// Only main-plan changes propagate to variants; license-link edits stay on
+	// the selected parent version.
 	const showScope =
-		!isMetadataOnly && hasVariants && (isLatest || versionChoice === "all");
+		hasPlanVersionableChange &&
+		hasVariants &&
+		(isLatest || versionChoice === "all");
 	const effectiveVariantIds = useMemo(
 		() => (showScope ? selectedVariantIds : []),
 		[showScope, selectedVariantIds],
@@ -374,18 +390,19 @@ export default function PlanChangeDialog({
 					baseProduct,
 					editedProduct: product,
 					features,
+					licenses: licenseUpdates,
 				});
 				if (versionChoice === "all") {
 					delete updateParams.disable_version;
 					updateParams.all_versions = true;
 				}
 			} else {
-				updateParams = buildInPlaceUpdatePlanParams({
+				updateParams = buildVersionUpdatePlanParams({
 					baseProduct: baseProduct ?? product,
 					editedProduct: product,
 					features,
+					licenses: licenseUpdates,
 				});
-				delete updateParams.disable_version;
 			}
 			if (effectiveVariantIds.length > 0) {
 				updateParams.update_variant_ids = effectiveVariantIds;
@@ -401,23 +418,9 @@ export default function PlanChangeDialog({
 				axiosInstance,
 				updateParams,
 			);
-			// The save bar early-returns into this dialog, so dirty licenses are
-			// persisted here too (failures toast their own error).
-			const licensesSaved = await saveAllLicenses({
-				axiosInstance,
-				parentPlanId: product.id,
-				persistedLinks: planLicenses,
-				onSuccess: () =>
-					Promise.all([
-						invalidatePlanLicenses(),
-						invalidateProduct(),
-						invalidateLicenseProducts(),
-						invalidateProducts(),
-					]),
-			});
-			if (!licensesSaved) {
-				toast.error("Some license changes failed to save");
-				return;
+			if (licenseUpdates) {
+				commitLicenseChanges();
+				void invalidateLicenseProducts();
 			}
 			markSaved();
 			toast.success(
@@ -548,6 +551,10 @@ export default function PlanChangeDialog({
 												itemChanges={preview?.item_changes ?? []}
 											/>
 											<PlanSettingsChanges changes={settingsChanges} />
+											<LicenseChangeList
+												changes={preview?.license_changes ?? []}
+												features={features}
+											/>
 										</div>
 									</div>
 								)}
@@ -606,13 +613,14 @@ export default function PlanChangeDialog({
 														: `Updates only v${product.version}. Other versions and variants stay as they are.`
 												}
 											/>
-											{(!isLatest || hasHistoricalVersions) && (
-												<AreaRadioGroupItem
-													value="all"
-													label="Update all versions"
-													description="Applies this change to every version of this plan and its variants."
-												/>
-											)}
+											{!hasLicenseChanges &&
+												(!isLatest || hasHistoricalVersions) && (
+													<AreaRadioGroupItem
+														value="all"
+														label="Update all versions"
+														description="Applies this change to every version of this plan and its variants."
+													/>
+												)}
 										</RadioGroup>
 									</div>
 								)}

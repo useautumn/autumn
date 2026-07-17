@@ -8,6 +8,7 @@ import {
 	type CustomerBalanceSyncDb,
 	withCustomerBalanceSyncLock,
 } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { rehydrateWithLiveBalances } from "./rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
@@ -54,7 +55,7 @@ export const rebuildFullSubjectCacheAfterMiss = async ({
 			});
 			if (lockedCacheRead.fullSubject) return lockedCacheRead.fullSubject;
 
-			const result = await getFullSubjectNormalized({
+			let result = await getFullSubjectNormalized({
 				ctx,
 				customerId,
 				entityId,
@@ -65,7 +66,7 @@ export const rebuildFullSubjectCacheAfterMiss = async ({
 				throw new CustomerNotFoundError({ customerId });
 			}
 
-			const { normalized, fullSubject } = result;
+			let { normalized, fullSubject } = result;
 			let fetchedSubjectViewEpoch = lockedCacheRead.subjectViewEpoch;
 
 			// One retry covers ordinary cache-fill contention (CACHE_EXISTS) and
@@ -87,8 +88,12 @@ export const rebuildFullSubjectCacheAfterMiss = async ({
 					return withLiveBalances ?? fullSubject;
 				}
 
-				if (setResult !== "CACHE_EXISTS" && setResult !== "STALE_WRITE") {
-					return fullSubject;
+				if (setResult === "FAILED") {
+					const withLiveBalances = await rehydrateWithLiveBalances({
+						ctx,
+						normalized,
+					});
+					return withLiveBalances ?? fullSubject;
 				}
 
 				const winner = await readCachedSubject({
@@ -97,8 +102,30 @@ export const rebuildFullSubjectCacheAfterMiss = async ({
 				});
 				if (winner.fullSubject) return winner.fullSubject;
 				fetchedSubjectViewEpoch = winner.subjectViewEpoch;
+
+				if (setResult === "STALE_WRITE") {
+					result = await getFullSubjectNormalized({
+						ctx,
+						customerId,
+						entityId,
+						balanceSyncDb: db,
+					});
+					if (!result) {
+						if (entityId) throw new EntityNotFoundError({ entityId });
+						throw new CustomerNotFoundError({ customerId });
+					}
+					normalized = result.normalized;
+					fullSubject = result.fullSubject;
+				}
 			}
 
 			return fullSubject;
 		},
+		onTransactionFailure: () =>
+			deleteCachedFullCustomer({
+				ctx,
+				customerId,
+				...(entityId ? { entityId } : {}),
+				source: "full-subject-cache-fill-transaction-failure",
+			}),
 	});

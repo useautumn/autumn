@@ -127,6 +127,12 @@ test("deleteByInternalId removes a pooled balance's synthetic entitlement graph"
 		expect(pooledBalance).toEqual([]);
 	} finally {
 		await ctx.db
+			.delete(pooledBalances)
+			.where(eq(pooledBalances.id, pooledBalanceId));
+		await ctx.db
+			.delete(customerEntitlements)
+			.where(eq(customerEntitlements.id, syntheticCustomerEntitlementId));
+		await ctx.db
 			.delete(entitlements)
 			.where(eq(entitlements.id, syntheticEntitlementId));
 		await cleanupFullSubjectScenario({ ctx, scenario });

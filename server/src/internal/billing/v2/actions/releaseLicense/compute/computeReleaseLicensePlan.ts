@@ -1,4 +1,5 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import type { ReleaseLicenseContext, ReleaseLicensePlan } from "../types.js";
 import { computeCustomerLicenseRemainingChanges } from "./computeCustomerLicenseRemainingChanges.js";
 import { computeEntityCustomerProductUpdates } from "./computeEntityCustomerProductUpdates.js";
@@ -22,12 +23,13 @@ export const computeReleaseLicensePlan = ({
 				(release) => release.customerLicense.link_id,
 			),
 		}),
-		pooledBalanceOps: releases.map(({ assignment }) => ({
-			op: "remove_source",
-			internalCustomerId: assignment.internal_customer_id,
-			sourceCustomerProductId: assignment.id,
-			effectiveAt: null,
-		})),
+		pooledBalanceOps: releases.flatMap(({ assignment }) => {
+			const operation = customerProductToPooledBalanceRemovalOp({
+				customerProduct: assignment,
+				effectiveAt: null,
+			});
+			return operation ? [operation] : [];
+		}),
 	};
 
 	return { billingPlan };

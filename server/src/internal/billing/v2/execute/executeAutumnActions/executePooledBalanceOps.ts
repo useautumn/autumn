@@ -1028,7 +1028,12 @@ const executePooledBalanceOpsWithLock = async ({
 	afterRebalance?: PooledBalanceTransactionCallback;
 }) => {
 	const operations = pooledBalanceOps ?? [];
-	if (operations.length === 0) return;
+	if (operations.length === 0) {
+		await beforeDatabaseOperations?.({ db: ctx.db });
+		await beforeRebalance?.({ db: ctx.db });
+		await afterRebalance?.({ db: ctx.db });
+		return;
+	}
 	const expectedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
 		ctx,
 		customerId,
@@ -1189,7 +1194,14 @@ export const executePooledBalanceOpsWithDependencies = async ({
 	afterRebalance?: PooledBalanceTransactionCallback;
 	dependencies?: ExecutePooledBalanceOpsDependencies;
 }) => {
-	if (!pooledBalanceOps || pooledBalanceOps.length === 0) return;
+	const operations = pooledBalanceOps ?? [];
+	if (
+		operations.length === 0 &&
+		!beforeDatabaseOperations &&
+		!beforeRebalance &&
+		!afterRebalance
+	)
+		return;
 
 	const executeWithLock = ({ db }: { db: CustomerBalanceSyncDb }) =>
 		dependencies.executeWithLock({
@@ -1207,7 +1219,7 @@ export const executePooledBalanceOpsWithDependencies = async ({
 	const prepared = await dependencies.withCustomerBalanceSyncLock({
 		ctx,
 		customerId,
-		internalCustomerId: pooledBalanceOps[0].internalCustomerId,
+		internalCustomerId: operations[0]?.internalCustomerId,
 		callback: executeWithLock,
 	});
 	if (!prepared) return;

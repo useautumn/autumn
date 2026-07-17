@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 
 const deferred = () => {
@@ -10,6 +11,13 @@ const deferred = () => {
 	return { promise, resolve };
 };
 
+const getFirstSqlLiteral = ({ query }: { query: unknown }): string =>
+	(
+		query as {
+			queryChunks: Array<{ value?: string[] }>;
+		}
+	).queryChunks[0]?.value?.join("") ?? "";
+
 test("serializes each customer's Redis read through Postgres write window", async () => {
 	const firstMayFinish = deferred();
 	let releasePrevious = Promise.resolve();
@@ -18,7 +26,7 @@ test("serializes each customer's Redis read through Postgres write window", asyn
 	const db = {
 		transaction: async <T>(
 			callback: (transaction: {
-				execute: () => Promise<unknown[]>;
+				execute: (query: unknown) => Promise<unknown[]>;
 			}) => Promise<T>,
 		) => {
 			const waitForPrevious = releasePrevious;
@@ -26,7 +34,10 @@ test("serializes each customer's Redis read through Postgres write window", asyn
 			releasePrevious = releaseThis.promise;
 			let lockAcquired = false;
 			const transaction = {
-				execute: async () => {
+				execute: async (query: unknown) => {
+					if (!getFirstSqlLiteral({ query }).startsWith("SELECT pg_advisory")) {
+						return [];
+					}
 					if (!lockAcquired) {
 						await waitForPrevious;
 						lockAcquired = true;
@@ -143,6 +154,8 @@ test("invalidates a cache cutover when the enclosing transaction fails to commit
 
 test("serializes public and internal aliases on the canonical internal customer ID", async () => {
 	const firstMayFinish = deferred();
+	const firstStarted = deferred();
+	const secondLockAttempted = deferred();
 	const lockTails = new Map<string, Promise<void>>();
 	const acquiredLockKeys: string[] = [];
 	const events: string[] = [];
@@ -172,10 +185,14 @@ test("serializes public and internal aliases on the canonical internal customer 
 					},
 				},
 				execute: async (query: unknown) => {
+					if (!getFirstSqlLiteral({ query }).startsWith("SELECT pg_advisory")) {
+						return [];
+					}
 					const lockKey = (
 						query as { queryChunks: [unknown, string, ...unknown[]] }
 					).queryChunks[1];
 					acquiredLockKeys.push(lockKey);
+					if (acquiredLockKeys.length === 2) secondLockAttempted.resolve();
 
 					const waitForPrevious = lockTails.get(lockKey) ?? Promise.resolve();
 					const releaseThis = deferred();
@@ -207,12 +224,12 @@ test("serializes public and internal aliases on the canonical internal customer 
 		customerId: "public_customer_1",
 		callback: async () => {
 			events.push("first:read");
+			firstStarted.resolve();
 			await firstMayFinish.promise;
 			events.push("first:write");
 		},
 	});
-	await Promise.resolve();
-	await Promise.resolve();
+	await firstStarted.promise;
 
 	const second = withCustomerBalanceSyncLock({
 		ctx: ctx as never,
@@ -222,8 +239,7 @@ test("serializes public and internal aliases on the canonical internal customer 
 			events.push("second:write");
 		},
 	});
-	await Promise.resolve();
-	await Promise.resolve();
+	await secondLockAttempted.promise;
 
 	expect(events).toEqual(["first:read"]);
 	firstMayFinish.resolve();
@@ -269,6 +285,9 @@ test("uses the internal ID for a customer whose public ID is null", async () => 
 					},
 				},
 				execute: async (query: unknown) => {
+					if (!getFirstSqlLiteral({ query }).startsWith("SELECT pg_advisory")) {
+						return [];
+					}
 					acquiredLockKeys.push(
 						(query as { queryChunks: [unknown, string, ...unknown[]] })
 							.queryChunks[1],
@@ -293,4 +312,78 @@ test("uses the internal ID for a customer whose public ID is null", async () => 
 	expect(acquiredLockKeys).toEqual([
 		"customer-balance-sync:org_1:sandbox:internal_customer_without_public_id",
 	]);
+});
+
+test("bounds advisory-lock acquisition with a transaction-local lock timeout", async () => {
+	const executedQueries: unknown[] = [];
+	const db = {
+		transaction: async <T>(
+			callback: (transaction: {
+				execute: (query: unknown) => Promise<unknown[]>;
+			}) => Promise<T>,
+		) =>
+			callback({
+				execute: async (query: unknown) => {
+					executedQueries.push(query);
+					return [];
+				},
+			}),
+	};
+	const ctx = {
+		org: { id: "org_1" },
+		env: AppEnv.Sandbox,
+		db,
+	};
+
+	await withCustomerBalanceSyncLock({
+		ctx: ctx as never,
+		customerId: "customer_1",
+		internalCustomerId: "internal_customer_1",
+		callback: async () => undefined,
+	});
+
+	const lockTimeoutSql = getFirstSqlLiteral({ query: executedQueries[0] });
+	const advisoryLockSql = getFirstSqlLiteral({ query: executedQueries[1] });
+
+	expect(lockTimeoutSql).toBe("SET LOCAL lock_timeout = 10000");
+	expect(advisoryLockSql).toStartWith("SELECT pg_advisory_xact_lock");
+});
+
+test("propagates an advisory-lock timeout as a retryable sync failure", async () => {
+	const lockTimeoutError = new Error("canceling statement due to lock timeout");
+	let executeCount = 0;
+	let callbackRan = false;
+	const db = {
+		transaction: async <T>(
+			callback: (transaction: {
+				execute: () => Promise<unknown[]>;
+			}) => Promise<T>,
+		) =>
+			callback({
+				execute: async () => {
+					executeCount += 1;
+					if (executeCount === 1) return [];
+					throw lockTimeoutError;
+				},
+			}),
+	};
+	const ctx = {
+		org: { id: "org_1" },
+		env: AppEnv.Sandbox,
+		db,
+	};
+
+	await expect(
+		withCustomerBalanceSyncLock({
+			ctx: ctx as never,
+			customerId: "customer_1",
+			internalCustomerId: "internal_customer_1",
+			callback: async () => {
+				callbackRan = true;
+			},
+		}),
+	).rejects.toThrow("canceling statement due to lock timeout");
+
+	expect(callbackRan).toBe(false);
+	expect(isTransientDbError({ error: lockTimeoutError })).toBe(true);
 });

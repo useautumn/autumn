@@ -17,6 +17,30 @@ import { isPooledSourceCustomerEntitlement } from "@/internal/billing/v2/pooledB
 import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
+export const computePatchPooledBalanceContributionRemovalOps = ({
+	customerProduct,
+	deleteCustomerEntitlements,
+}: {
+	customerProduct: UpdateSubscriptionBillingContext["customerProduct"];
+	deleteCustomerEntitlements: FullCustomerEntitlement[];
+}): PooledBalanceOp[] =>
+	customerProduct.status === CusProductStatus.Scheduled
+		? []
+		: deleteCustomerEntitlements
+				.filter((customerEntitlement) =>
+					isPooledSourceCustomerEntitlement({
+						customerEntitlement,
+						customerProduct,
+					}),
+				)
+				.map((customerEntitlement) => ({
+					op: "remove_contribution" as const,
+					internalCustomerId: customerProduct.internal_customer_id,
+					sourceCustomerProductId: customerProduct.id,
+					sourceEntitlementId: customerEntitlement.entitlement.id,
+					effectiveAt: null,
+				}));
+
 export const computePatchCustomerProductPlan = ({
 	ctx,
 	updateSubscriptionContext,
@@ -89,21 +113,10 @@ export const computePatchCustomerProductPlan = ({
 		preparedCustomerProduct = preparedPooledSource.customerProduct;
 		pooledBalanceOps = preparedPooledSource.pooledBalanceOps;
 	} else {
-		pooledBalanceOps = patchContext.deleteCustomerEntitlements
-			.filter((customerEntitlement) =>
-				isPooledSourceCustomerEntitlement({
-					customerEntitlement,
-					customerProduct: patchContext.originalCustomerProduct,
-				}),
-			)
-			.map((customerEntitlement) => ({
-				op: "remove_contribution" as const,
-				internalCustomerId:
-					patchContext.originalCustomerProduct.internal_customer_id,
-				sourceCustomerProductId: patchContext.originalCustomerProduct.id,
-				sourceEntitlementId: customerEntitlement.entitlement.id,
-				effectiveAt: null,
-			}));
+		pooledBalanceOps = computePatchPooledBalanceContributionRemovalOps({
+			customerProduct: patchContext.originalCustomerProduct,
+			deleteCustomerEntitlements: patchContext.deleteCustomerEntitlements,
+		});
 
 		const insertedPooledCustomerEntitlements =
 			patchContext.insertCustomerEntitlements.filter((customerEntitlement) =>

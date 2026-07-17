@@ -570,6 +570,7 @@ const applyReset = async ({
 		.set({
 			balance,
 			adjustment,
+			additional_balance: 0,
 			next_reset_at: nextResetAt,
 		})
 		.where(

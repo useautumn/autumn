@@ -156,6 +156,7 @@ const processPrepaidPrice = async ({
 		});
 
 		if (isPooledEntitySource) {
+			customerProduct.options = newOptions;
 			pooledCustomerProductOptionsUpdate = {
 				customerProductId: customerProduct.id,
 				options: newOptions,

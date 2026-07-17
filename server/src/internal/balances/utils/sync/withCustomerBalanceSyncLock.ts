@@ -5,6 +5,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export type CustomerBalanceSyncDb = DrizzleCli;
 
+const CUSTOMER_BALANCE_SYNC_LOCK_TIMEOUT_MS = 10_000;
+
 const resolveInternalCustomerId = async ({
 	db,
 	ctx,
@@ -52,6 +54,11 @@ export const withCustomerBalanceSyncLock = async <T>({
 	try {
 		return await ctx.db.transaction(async (transaction) => {
 			const db = transaction as unknown as CustomerBalanceSyncDb;
+			await db.execute(
+				sql.raw(
+					`SET LOCAL lock_timeout = ${CUSTOMER_BALANCE_SYNC_LOCK_TIMEOUT_MS}`,
+				),
+			);
 			const canonicalInternalCustomerId =
 				internalCustomerId ??
 				(await resolveInternalCustomerId({ db, ctx, customerId }));

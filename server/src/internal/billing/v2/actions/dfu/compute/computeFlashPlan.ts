@@ -3,6 +3,7 @@ import {
 	type AutumnBillingPlan,
 	BillingVersion,
 	CusProductStatus,
+	cusEntsToUsage,
 	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
@@ -215,8 +216,38 @@ export const computeFlashPlan = ({
 			},
 			removeCurrentSource: false,
 		});
+		const flashedUsageBySourceEntitlementId = new Map(
+			customerProduct.customer_entitlements.map((customerEntitlement) => [
+				customerEntitlement.entitlement.id,
+				cusEntsToUsage({
+					cusEnts: [
+						{
+							...customerEntitlement,
+							customer_product: customerProduct,
+						},
+					],
+				}),
+			]),
+		);
+		const preparedPooledBalanceOps = prepared.pooledBalanceOps.map(
+			(operation) => {
+				if (operation.op !== "upsert_source") return operation;
+				const usage =
+					flashedUsageBySourceEntitlementId.get(
+						operation.sourceEntitlementId,
+					) ?? 0;
+				if (!Number.isFinite(usage) || usage <= 0) return operation;
+				return {
+					...operation,
+					usageReapply: {
+						amount: usage,
+						excludedSourceCustomerProductId: prepared.customerProduct.id,
+					},
+				};
+			},
+		);
 		insertCustomerProducts.push(prepared.customerProduct);
-		pooledBalanceOps.push(...prepared.pooledBalanceOps);
+		pooledBalanceOps.push(...preparedPooledBalanceOps);
 
 		flashed.push({
 			plan_id: planContext.plan.plan_id,

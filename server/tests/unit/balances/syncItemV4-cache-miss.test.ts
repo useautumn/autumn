@@ -5,13 +5,21 @@ import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/with
 
 const mockState = {
 	cacheReads: [] as string[],
+	cacheReadMasterValues: [] as Array<boolean | undefined>,
 	executeCalls: [] as unknown[],
 	balance: 42,
 	afterCacheRead: undefined as undefined | (() => void),
 };
 
-const getFeatureBalance = async ({ featureId }: { featureId: string }) => {
+const getFeatureBalance = async ({
+	featureId,
+	readMaster,
+}: {
+	featureId: string;
+	readMaster?: boolean;
+}) => {
 	mockState.cacheReads.push(featureId);
+	mockState.cacheReadMasterValues.push(readMaster);
 	if (featureId === "missing_feature") {
 		return { kind: "missing" as const, reason: "single_field_null" };
 	}
@@ -51,6 +59,7 @@ const deferred = () => {
 describe("syncItemV4 cache misses", () => {
 	test("drops balance sync after a feature cache miss", async () => {
 		mockState.cacheReads = [];
+		mockState.cacheReadMasterValues = [];
 		mockState.executeCalls = [];
 
 		const ctx = {
@@ -79,7 +88,7 @@ describe("syncItemV4 cache misses", () => {
 						},
 						execute: mock(async (query: unknown) => {
 							executeCount += 1;
-							if (executeCount === 1) return [];
+							if (executeCount <= 2) return [];
 							mockState.executeCalls.push(query);
 							return [
 								{
@@ -111,6 +120,7 @@ describe("syncItemV4 cache misses", () => {
 		});
 
 		expect(mockState.cacheReads).toEqual(["missing_feature"]);
+		expect(mockState.cacheReadMasterValues).toEqual([true]);
 		expect(mockState.executeCalls).toHaveLength(0);
 	});
 
@@ -137,7 +147,7 @@ describe("syncItemV4 cache misses", () => {
 							findFirst: () => Promise<{ internal_id: string }>;
 						};
 					};
-					execute: () => Promise<unknown[]>;
+					execute: (query: unknown) => Promise<unknown[]>;
 				}) => Promise<T>,
 			) => {
 				transactionIndex += 1;
@@ -158,7 +168,8 @@ describe("syncItemV4 cache misses", () => {
 						},
 						execute: async () => {
 							executeCount += 1;
-							if (executeCount === 1) {
+							if (executeCount === 1) return [];
+							if (executeCount === 2) {
 								await waitForPrevious;
 								return [];
 							}

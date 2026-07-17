@@ -28,6 +28,12 @@ export const getCustomerEntitlementGrantState = ({
 	const startingBalance = cusEntToStartingBalance({
 		cusEnt: customerEntitlement,
 	});
+	if (customerEntitlement.customer_product?.internal_entity_id) {
+		return {
+			startingBalance,
+			adjustment: 0,
+		};
+	}
 	if (
 		isSyntheticPooledBalanceCustomerEntitlement({
 			customerEntitlement,
@@ -86,10 +92,41 @@ export const reapplyUsageToCustomerEntitlements = ({
 		customerEntitlement.additional_balance = 0;
 	}
 
+	const usesTopLevelEntityRows = customerEntitlements.every(
+		(customerEntitlement) =>
+			customerEntitlement.customer_product?.internal_entity_id != null,
+	);
+	const deductionCustomerEntitlements = usesTopLevelEntityRows
+		? customerEntitlements.map((customerEntitlement) => ({
+				...customerEntitlement,
+				entitlement: {
+					...customerEntitlement.entitlement,
+					entity_feature_id: null,
+				},
+			}))
+		: customerEntitlements;
+
 	deductFromCusEntsTypescript({
-		cusEnts: customerEntitlements,
+		cusEnts: deductionCustomerEntitlements,
 		amountToDeduct: usage,
-		targetEntityId,
+		targetEntityId: usesTopLevelEntityRows ? undefined : targetEntityId,
 		allowOverage: true,
 	});
+
+	if (usesTopLevelEntityRows) {
+		const updatedById = new Map(
+			deductionCustomerEntitlements.map((customerEntitlement) => [
+				customerEntitlement.id,
+				customerEntitlement,
+			]),
+		);
+		for (const customerEntitlement of customerEntitlements) {
+			const updated = updatedById.get(customerEntitlement.id);
+			if (!updated) continue;
+			customerEntitlement.balance = updated.balance;
+			customerEntitlement.adjustment = updated.adjustment;
+			customerEntitlement.additional_balance = updated.additional_balance;
+			customerEntitlement.entities = updated.entities;
+		}
+	}
 };

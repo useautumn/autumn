@@ -8,7 +8,23 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executePooledBalanceOps } from "@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js";
 import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
 import { computePooledFullTransferPlan } from "./computePooledTransferPlan.js";
-import { transferRelatedCustomerProducts } from "./transferRelatedCustomerProducts.js";
+import {
+	getTransferCustomerProducts,
+	transferRelatedCustomerProducts,
+} from "./transferRelatedCustomerProducts.js";
+
+export type HandlePooledFullTransferDependencies = {
+	executePooledBalanceOps: typeof executePooledBalanceOps;
+	transferRelatedCustomerProducts: typeof transferRelatedCustomerProducts;
+	updateCustomerEntitlement: typeof CusEntService.update;
+};
+
+const defaultHandlePooledFullTransferDependencies: HandlePooledFullTransferDependencies =
+	{
+		executePooledBalanceOps,
+		transferRelatedCustomerProducts,
+		updateCustomerEntitlement: CusEntService.update,
+	};
 
 type TransferProduct = {
 	id: string;
@@ -29,6 +45,7 @@ export const handlePooledFullTransfer = async ({
 	product,
 	customerProduct,
 	customerProductId,
+	dependencies = defaultHandlePooledFullTransferDependencies,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -37,23 +54,28 @@ export const handlePooledFullTransfer = async ({
 	product: TransferProduct;
 	customerProduct: FullCusProduct;
 	customerProductId?: string | null;
+	dependencies?: HandlePooledFullTransferDependencies;
 }): Promise<TransferEntityUpdates> => {
-	const plan = computePooledFullTransferPlan({
+	const relatedCustomerProducts = getTransferCustomerProducts({
 		fullCustomer,
-		customerProduct,
-		toEntity,
-		now: Date.now(),
+		fromEntity,
+		product,
+		customerProductId,
 	});
-	if (plan.pooledBalanceOps.length === 0) {
-		return transferRelatedCustomerProducts({
-			ctx,
+	const transferCustomerProducts =
+		relatedCustomerProducts.length > 0
+			? relatedCustomerProducts
+			: [customerProduct];
+	const now = Date.now();
+	const plans = transferCustomerProducts.map((transferCustomerProduct) =>
+		computePooledFullTransferPlan({
 			fullCustomer,
-			fromEntity,
+			customerProduct: transferCustomerProduct,
 			toEntity,
-			product,
-			customerProductId,
-		});
-	}
+			now,
+		}),
+	);
+	const pooledBalanceOps = plans.flatMap((plan) => plan.pooledBalanceOps);
 
 	let updates: TransferEntityUpdates = {
 		entity_id: toEntity?.id ?? null,
@@ -65,13 +87,13 @@ export const handlePooledFullTransfer = async ({
 			message: "Cannot transfer a pooled product without a customer ID.",
 		});
 	}
-	await executePooledBalanceOps({
+	await dependencies.executePooledBalanceOps({
 		ctx,
 		customerId,
-		pooledBalanceOps: plan.pooledBalanceOps,
+		pooledBalanceOps,
 		beforeRebalance: async ({ db }) => {
 			const transactionContext = { ...ctx, db };
-			updates = await transferRelatedCustomerProducts({
+			updates = await dependencies.transferRelatedCustomerProducts({
 				ctx: transactionContext,
 				fullCustomer,
 				fromEntity,
@@ -80,38 +102,42 @@ export const handlePooledFullTransfer = async ({
 				customerProductId,
 			});
 
-			for (const customerEntitlement of plan.updatedCustomerProduct
-				.customer_entitlements) {
-				if (customerEntitlement.entitlement.pooled !== true) continue;
-				await CusEntService.update({
-					ctx: transactionContext,
-					id: customerEntitlement.id,
-					updates: {
-						balance: customerEntitlement.balance ?? 0,
-						adjustment: customerEntitlement.adjustment,
-						additional_balance: customerEntitlement.additional_balance,
-						entities: customerEntitlement.entities,
-						reset_cycle_anchor: customerEntitlement.reset_cycle_anchor,
-						next_reset_at: customerEntitlement.next_reset_at,
-					},
-					incrementCacheVersion: true,
-				});
+			for (const plan of plans) {
+				for (const customerEntitlement of plan.updatedCustomerProduct
+					.customer_entitlements) {
+					if (customerEntitlement.entitlement.pooled !== true) continue;
+					await dependencies.updateCustomerEntitlement({
+						ctx: transactionContext,
+						id: customerEntitlement.id,
+						updates: {
+							balance: customerEntitlement.balance ?? 0,
+							adjustment: customerEntitlement.adjustment,
+							additional_balance: customerEntitlement.additional_balance,
+							entities: customerEntitlement.entities,
+							reset_cycle_anchor: customerEntitlement.reset_cycle_anchor,
+							next_reset_at: customerEntitlement.next_reset_at,
+						},
+						incrementCacheVersion: true,
+					});
+				}
 			}
 		},
 		afterRebalance: async ({ db }) => {
 			const transactionContext = { ...ctx, db };
-			for (const restoration of plan.restoreOrdinaryCustomerEntitlements) {
-				await CusEntService.update({
-					ctx: transactionContext,
-					id: restoration.customerEntitlementId,
-					updates: {
-						balance: restoration.balance,
-						adjustment: restoration.adjustment,
-						additional_balance: restoration.additionalBalance,
-						entities: null,
-					},
-					incrementCacheVersion: true,
-				});
+			for (const plan of plans) {
+				for (const restoration of plan.restoreOrdinaryCustomerEntitlements) {
+					await dependencies.updateCustomerEntitlement({
+						ctx: transactionContext,
+						id: restoration.customerEntitlementId,
+						updates: {
+							balance: restoration.balance,
+							adjustment: restoration.adjustment,
+							additional_balance: restoration.additionalBalance,
+							entities: null,
+						},
+						incrementCacheVersion: true,
+					});
+				}
 			}
 		},
 	});

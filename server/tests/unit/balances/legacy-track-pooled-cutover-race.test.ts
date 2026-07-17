@@ -191,3 +191,49 @@ test("a failed legacy sync invalidates Redis so retry rebuilds without double de
 	expect(cacheBalance).toBe(400);
 	expect(invalidationCount).toBe(1);
 });
+
+for (const conflictCode of [
+	"RESET_AT_MISMATCH",
+	"ENTITY_COUNT_MISMATCH",
+	"CACHE_VERSION_MISMATCH",
+] as const) {
+	test(`an acknowledged legacy deduction returns its Redis result after ${conflictCode}`, async () => {
+		let invalidationCount = 0;
+		const expectedResult = legacyDeductionResult({ balance: 400 });
+		const ctx = {
+			org: { id: "org_1" },
+			env: AppEnv.Sandbox,
+			db: {
+				transaction: async <T>(
+					callback: (transaction: {
+						execute: () => Promise<unknown[]>;
+					}) => Promise<T>,
+				) => callback({ execute: async () => [] }),
+			},
+		};
+
+		const result =
+			await executeLegacyRedisDeductionWithBalanceSyncWithDependencies({
+				ctx: ctx as never,
+				fullCustomer: {
+					id: "public_customer_1",
+					internal_id: "internal_customer_1",
+				} as never,
+				featureDeductions: [],
+				dependencies: {
+					executeRedisDeduction: async () => expectedResult as never,
+					writeFullCustomerBalancesToDb: async () => {
+						throw new Error(
+							`${conflictCode} cus_ent_id:customer_entitlement_1`,
+						);
+					},
+					invalidateLegacyCache: async () => {
+						invalidationCount += 1;
+					},
+				} as never,
+			});
+
+		expect(result.updates.customer_entitlement_1?.balance).toBe(400);
+		expect(invalidationCount).toBe(1);
+	});
+}

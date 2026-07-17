@@ -15,14 +15,24 @@ const deferred = () => {
 	return { promise, resolve };
 };
 
+const getFirstSqlLiteral = ({ query }: { query: unknown }): string =>
+	(
+		query as {
+			queryChunks: Array<{ value?: string[] }>;
+		}
+	).queryChunks[0]?.value?.join("") ?? "";
+
 test("a delayed sync waits for the lazy pooled reset transaction", async () => {
 	const lazyResetMayFinish = deferred();
+	const lazyResetStarted = deferred();
+	const delayedSyncLockAttempted = deferred();
 	let releasePrevious = Promise.resolve();
+	let advisoryLockAttempts = 0;
 	const events: string[] = [];
 	const db = {
 		transaction: async <T>(
 			callback: (transaction: {
-				execute: () => Promise<unknown[]>;
+				execute: (query: unknown) => Promise<unknown[]>;
 			}) => Promise<T>,
 		) => {
 			const waitForPrevious = releasePrevious;
@@ -30,7 +40,12 @@ test("a delayed sync waits for the lazy pooled reset transaction", async () => {
 			releasePrevious = releaseThis.promise;
 			let advisoryLockAcquired = false;
 			const transaction = {
-				execute: async () => {
+				execute: async (query: unknown) => {
+					if (!getFirstSqlLiteral({ query }).startsWith("SELECT pg_advisory")) {
+						return [];
+					}
+					advisoryLockAttempts += 1;
+					if (advisoryLockAttempts === 2) delayedSyncLockAttempted.resolve();
 					if (!advisoryLockAcquired) {
 						await waitForPrevious;
 						advisoryLockAcquired = true;
@@ -75,6 +90,7 @@ test("a delayed sync waits for the lazy pooled reset transaction", async () => {
 		},
 		resetCustomerEntitlement: async () => {
 			events.push("lazy:read");
+			lazyResetStarted.resolve();
 			await lazyResetMayFinish.promise;
 			events.push("lazy:write");
 			return null;
@@ -88,8 +104,7 @@ test("a delayed sync waits for the lazy pooled reset transaction", async () => {
 		now: 2,
 		dependencies,
 	});
-	await Promise.resolve();
-	await Promise.resolve();
+	await lazyResetStarted.promise;
 
 	const delayedSync = withCustomerBalanceSyncLock({
 		ctx: ctx as never,
@@ -100,8 +115,7 @@ test("a delayed sync waits for the lazy pooled reset transaction", async () => {
 			events.push("sync:write");
 		},
 	});
-	await Promise.resolve();
-	await Promise.resolve();
+	await delayedSyncLockAttempted.promise;
 
 	expect(events).toEqual(["lazy:customer-lock", "lazy:capture", "lazy:read"]);
 	lazyResetMayFinish.resolve();

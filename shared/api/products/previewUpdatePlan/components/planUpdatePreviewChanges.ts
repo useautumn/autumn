@@ -23,11 +23,6 @@ export const PlanUpdatePreviewItemChangeSchema = z.object({
 	}),
 });
 
-export const PlanUpdatePreviewLicenseChangeSchema = z.object({
-	action: z.enum(["create", "update", "remove"]),
-	license_plan_id: z.string(),
-});
-
 export type PlanUpdatePreviewItemChange = z.infer<
 	typeof PlanUpdatePreviewItemChangeSchema
 >;

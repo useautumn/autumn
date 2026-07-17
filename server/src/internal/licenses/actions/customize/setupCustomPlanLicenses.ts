@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type {
 	CustomizePlanLicense,
 	DbPlanLicense,
@@ -45,8 +46,7 @@ const matchesCatalogLink = ({
 		return false;
 	if (
 		entry.metadata !== undefined &&
-		JSON.stringify(entry.metadata) !==
-			JSON.stringify(catalogLink.metadata ?? {})
+		!isDeepStrictEqual(entry.metadata, catalogLink.metadata ?? {})
 	)
 		return false;
 	return true;

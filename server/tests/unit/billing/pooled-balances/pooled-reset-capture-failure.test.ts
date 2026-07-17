@@ -9,8 +9,15 @@ import {
 const createTransactionContext = () => {
 	const events: string[] = [];
 	const transaction = {
-		execute: async () => {
-			events.push("advisory-lock");
+		execute: async (query: unknown) => {
+			const queryText = (
+				query as { queryChunks?: Array<{ value?: string[] }> }
+			).queryChunks?.[0]?.value?.join("");
+			events.push(
+				queryText?.startsWith("SET LOCAL lock_timeout")
+					? "lock-timeout"
+					: "advisory-lock",
+			);
 			return [];
 		},
 	};
@@ -67,6 +74,7 @@ test("subscription reset rolls back before reset work when strict capture fails"
 	).rejects.toBe(captureError);
 
 	expect(events).toEqual([
+		"lock-timeout",
 		"advisory-lock",
 		"customer-lock",
 		"capture:strict",
@@ -125,6 +133,7 @@ test("lazy reset flushes strictly before reset work and invalidates on capture f
 	).rejects.toBe(captureError);
 
 	expect(events).toEqual([
+		"lock-timeout",
 		"advisory-lock",
 		"customer-lock",
 		"capture:strict",

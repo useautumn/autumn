@@ -435,6 +435,60 @@ test("post-rebalance work runs after database rebalance and before cache cutover
 	});
 });
 
+test("empty pooled operations still run supplied lifecycle callbacks in one balance transaction", async () => {
+	const events: string[] = [];
+	const database = {};
+	const dependencies = {
+		withCustomerBalanceSyncLock: async ({
+			callback,
+		}: {
+			callback: ({ db }: { db: unknown }) => Promise<unknown>;
+		}) => {
+			events.push("transaction");
+			return callback({ db: database });
+		},
+		executeWithLock: async ({
+			beforeDatabaseOperations,
+			beforeRebalance,
+			afterRebalance,
+		}: {
+			beforeDatabaseOperations?: ({ db }: { db: never }) => Promise<void>;
+			beforeRebalance?: ({ db }: { db: never }) => Promise<void>;
+			afterRebalance?: ({ db }: { db: never }) => Promise<void>;
+		}) => {
+			await beforeDatabaseOperations?.({ db: database as never });
+			await beforeRebalance?.({ db: database as never });
+			await afterRebalance?.({ db: database as never });
+		},
+		applyCacheCutover: async () => {
+			events.push("cache cutover");
+		},
+	} as unknown as ExecutePooledBalanceOpsDependencies;
+
+	await executePooledBalanceOpsWithDependencies({
+		ctx: {} as never,
+		customerId: "customer_one",
+		pooledBalanceOps: [],
+		beforeDatabaseOperations: async () => {
+			events.push("before database operations");
+		},
+		beforeRebalance: async () => {
+			events.push("before rebalance");
+		},
+		afterRebalance: async () => {
+			events.push("after rebalance");
+		},
+		dependencies,
+	});
+
+	expect(events).toEqual([
+		"transaction",
+		"before database operations",
+		"before rebalance",
+		"after rebalance",
+	]);
+});
+
 test("post-rebalance failure rolls back pooled and restoration mutations together", async () => {
 	type State = {
 		contribution: number;

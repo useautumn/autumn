@@ -22,6 +22,7 @@ export default function PlanEditorView() {
 
 	const {
 		product: originalProduct,
+		catalogLicenses,
 		isLoading: productLoading,
 		refetch,
 		error,
@@ -78,6 +79,7 @@ export default function PlanEditorView() {
 			value={{
 				setShowNewVersionDialog,
 				refetch,
+				catalogLicenses,
 			}}
 		>
 			<PlanChangeDialog

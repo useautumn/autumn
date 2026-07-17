@@ -91,6 +91,10 @@ export const computePooledBalanceReset = ({
 	});
 
 	const resetAmount = resetGrant.toNumber();
+	assertPooledContributionAmount({
+		field: "resetBalance",
+		value: resetAmount,
+	});
 	return {
 		resetBalance: resetAmount,
 		resetAdjustment: resetAmount,

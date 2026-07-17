@@ -3,39 +3,61 @@
  *
  * Red: checkout expiry updates the customer product directly and leaves its
  * already-funded synthetic pooled balance behind.
- * Green: expiry sends the status update and idempotent source removal through
- * one Autumn billing plan, and a webhook retry emits the same safe removal.
+ * Green: expiry rechecks linkage and commits the status plus idempotent source
+ * removal in one balance-locked transaction.
  */
 
 import { afterAll, beforeEach, expect, mock, test } from "bun:test";
 import {
-	type AutumnBillingPlan,
 	CusProductStatus,
 	EntInterval,
 	type FullCusProduct,
+	type PooledBalanceOp,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements.js";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 
 let checkoutCustomerProducts: FullCusProduct[] = [];
-let executedPlans: AutumnBillingPlan[] = [];
-let directCustomerProductUpdates = 0;
+let executedOperations: PooledBalanceOp[][] = [];
+let customerProductUpdates: Array<Record<string, unknown>> = [];
 let metadataDeletes = 0;
 let failNextPlan = false;
+let linkSubscriptionBeforeLock = false;
 
 mock.module(
-	"@/internal/billing/v2/execute/executeAutumnBillingPlan.js",
+	"@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js",
 	() => ({
-		executeAutumnBillingPlan: async ({
-			autumnBillingPlan,
+		executePooledBalanceOps: async ({
+			pooledBalanceOps,
+			beforeDatabaseOperations,
 		}: {
-			autumnBillingPlan: AutumnBillingPlan;
+			pooledBalanceOps: PooledBalanceOp[];
+			beforeDatabaseOperations?: ({ db }: { db: never }) => Promise<void>;
 		}) => {
-			executedPlans.push(autumnBillingPlan);
+			executedOperations.push(pooledBalanceOps);
 			if (failNextPlan) {
 				failNextPlan = false;
 				throw new Error("transient pooled expiry failure");
 			}
+			await beforeDatabaseOperations?.({ db: {} as never });
+			return { marker: "prepared" } as never;
+		},
+		applyPreparedPooledBalanceCacheCutover: async () => {},
+	}),
+);
+
+mock.module(
+	"@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js",
+	() => ({
+		withCustomerBalanceSyncLock: async ({
+			callback,
+		}: {
+			callback: ({ db }: { db: never }) => Promise<unknown>;
+		}) => {
+			if (linkSubscriptionBeforeLock) {
+				checkoutCustomerProducts[0]!.subscription_ids = ["subscription_won"];
+			}
+			return callback({ db: {} as never });
 		},
 	}),
 );
@@ -43,8 +65,8 @@ mock.module(
 mock.module("@/internal/customers/cusProducts/CusProductService", () => ({
 	CusProductService: {
 		getByStripeCheckoutSessionId: async () => checkoutCustomerProducts,
-		update: async () => {
-			directCustomerProductUpdates += 1;
+		update: async ({ updates }: { updates: Record<string, unknown> }) => {
+			customerProductUpdates.push(updates);
 		},
 	},
 }));
@@ -113,33 +135,31 @@ const createExpiredEvent = () =>
 
 beforeEach(() => {
 	checkoutCustomerProducts = [createPooledCheckoutCustomerProduct()];
-	executedPlans = [];
-	directCustomerProductUpdates = 0;
+	executedOperations = [];
+	customerProductUpdates = [];
 	metadataDeletes = 0;
 	failNextPlan = false;
+	linkSubscriptionBeforeLock = false;
 });
 
-test("abandoned checkout expires the product and removes its pooled source in one plan", async () => {
+test("abandoned checkout expires the product and removes its pooled source atomically", async () => {
 	await handleStripeCheckoutSessionExpired({
 		ctx: createContext(),
 		event: createExpiredEvent(),
 	});
 
-	expect(directCustomerProductUpdates).toBe(0);
-	expect(executedPlans).toHaveLength(1);
-	expect(executedPlans[0]?.updateCustomerProducts).toEqual([
-		expect.objectContaining({
-			customerProduct: checkoutCustomerProducts[0],
-			updates: expect.objectContaining({ status: CusProductStatus.Expired }),
-		}),
+	expect(customerProductUpdates).toEqual([
+		expect.objectContaining({ status: CusProductStatus.Expired }),
 	]);
-	expect(executedPlans[0]?.pooledBalanceOps).toEqual([
-		{
-			op: "remove_source",
-			internalCustomerId: checkoutCustomerProducts[0]!.internal_customer_id,
-			sourceCustomerProductId: checkoutCustomerProducts[0]!.id,
-			effectiveAt: null,
-		},
+	expect(executedOperations).toEqual([
+		[
+			{
+				op: "remove_source",
+				internalCustomerId: checkoutCustomerProducts[0]!.internal_customer_id,
+				sourceCustomerProductId: checkoutCustomerProducts[0]!.id,
+				effectiveAt: null,
+			},
+		],
 	]);
 	expect(metadataDeletes).toBe(1);
 });
@@ -159,8 +179,7 @@ test("checkout expiry retry re-emits the same idempotent pooled removal", async 
 		event: createExpiredEvent(),
 	});
 
-	expect(executedPlans).toHaveLength(2);
-	expect(executedPlans.map((plan) => plan.pooledBalanceOps)).toEqual([
+	expect(executedOperations).toEqual([
 		[
 			{
 				op: "remove_source",
@@ -179,4 +198,19 @@ test("checkout expiry retry re-emits the same idempotent pooled removal", async 
 		],
 	]);
 	expect(metadataDeletes).toBe(1);
+});
+
+test("checkout expiry rechecks subscription linkage before removing the pooled source", async () => {
+	linkSubscriptionBeforeLock = true;
+
+	await handleStripeCheckoutSessionExpired({
+		ctx: createContext(),
+		event: createExpiredEvent(),
+	});
+
+	expect(checkoutCustomerProducts[0]?.subscription_ids).toEqual([
+		"subscription_won",
+	]);
+	expect(executedOperations).toEqual([]);
+	expect(customerProductUpdates).toEqual([]);
 });

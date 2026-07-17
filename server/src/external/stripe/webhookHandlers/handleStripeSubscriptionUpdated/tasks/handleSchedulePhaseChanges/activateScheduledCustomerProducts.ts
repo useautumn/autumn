@@ -105,6 +105,47 @@ export const completeScheduledCustomerProducts = async ({
 	}
 };
 
+type ActivateScheduledCustomerProductsDependencies = {
+	prepareScheduledCustomerProducts: typeof prepareScheduledCustomerProducts;
+	executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+	completeScheduledCustomerProducts: typeof completeScheduledCustomerProducts;
+};
+
+const defaultActivateScheduledCustomerProductsDependencies: ActivateScheduledCustomerProductsDependencies =
+	{
+		prepareScheduledCustomerProducts,
+		executeAutumnBillingPlan,
+		completeScheduledCustomerProducts,
+	};
+
+export const activateScheduledCustomerProductsWithDependencies = async ({
+	ctx,
+	eventContext,
+	dependencies = defaultActivateScheduledCustomerProductsDependencies,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+	dependencies?: ActivateScheduledCustomerProductsDependencies;
+}): Promise<void> => {
+	const preparedActivations =
+		await dependencies.prepareScheduledCustomerProducts({
+			ctx,
+			eventContext,
+		});
+
+	for (const preparedActivation of preparedActivations) {
+		await dependencies.executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: preparedActivation.autumnBillingPlan,
+		});
+		await dependencies.completeScheduledCustomerProducts({
+			ctx,
+			eventContext,
+			preparedActivations: [preparedActivation],
+		});
+	}
+};
+
 /** Activates scheduled products whose start time and subscription ownership match. */
 export const activateScheduledCustomerProducts = async ({
 	ctx,
@@ -112,22 +153,5 @@ export const activateScheduledCustomerProducts = async ({
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
-}): Promise<void> => {
-	const preparedActivations = await prepareScheduledCustomerProducts({
-		ctx,
-		eventContext,
-	});
-
-	for (const preparedActivation of preparedActivations) {
-		await executeAutumnBillingPlan({
-			ctx,
-			autumnBillingPlan: preparedActivation.autumnBillingPlan,
-		});
-	}
-
-	await completeScheduledCustomerProducts({
-		ctx,
-		eventContext,
-		preparedActivations,
-	});
-};
+}): Promise<void> =>
+	activateScheduledCustomerProductsWithDependencies({ ctx, eventContext });

@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type { AutumnBillingPlan, PooledBalanceOp } from "@autumn/shared";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -52,26 +52,9 @@ export const mergeAutumnBillingPlans = ({
 		base: base.customEntitlements,
 		incoming: incoming.customEntitlements,
 	}),
-	pooledBalanceOps: mergeByKey({
+	pooledBalanceOps: mergePooledBalanceOps({
 		base: base.pooledBalanceOps,
 		incoming: incoming.pooledBalanceOps,
-		getKey: (operation) => {
-			switch (operation.op) {
-				case "upsert_source":
-					return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}`;
-				case "remove_source":
-					return `${operation.sourceCustomerProductId}:remove`;
-				case "remove_contribution":
-					return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove`;
-				case "restore_source":
-					return `${operation.sourceCustomerProductId}:restore`;
-				case "transfer_source":
-					return `${operation.contributionId}:transfer`;
-				case "stage_owner_removal":
-				case "restore_owner":
-					return `owner:${operation.resetOwnerType}:${operation.resetOwnerId}`;
-			}
-		},
 	}),
 	customFreeTrial: incoming.customFreeTrial ?? base.customFreeTrial,
 	lineItems: mergeById({
@@ -147,6 +130,62 @@ const mergeByKey = <T>({
 	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
 
 	return Array.from(itemByKey.values());
+};
+
+const pooledBalanceOperationKey = (operation: PooledBalanceOp): string => {
+	switch (operation.op) {
+		case "upsert_source":
+			return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}`;
+		case "remove_source":
+			return `${operation.sourceCustomerProductId}:remove`;
+		case "remove_contribution":
+			return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove`;
+		case "restore_source":
+			return `${operation.sourceCustomerProductId}:restore`;
+		case "transfer_source":
+			return `${operation.contributionId}:transfer`;
+		case "stage_owner_removal":
+		case "restore_owner":
+			return `owner:${operation.resetOwnerType}:${operation.resetOwnerId}`;
+	}
+};
+
+const keepLastOperationByKey = (
+	operations: PooledBalanceOp[],
+): PooledBalanceOp[] => {
+	const seen = new Set<string>();
+	const reversed: PooledBalanceOp[] = [];
+	for (let index = operations.length - 1; index >= 0; index -= 1) {
+		const operation = operations[index];
+		const key = pooledBalanceOperationKey(operation);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		reversed.push(operation);
+	}
+	return reversed.reverse();
+};
+
+const mergePooledBalanceOps = ({
+	base,
+	incoming,
+}: {
+	base?: PooledBalanceOp[];
+	incoming?: PooledBalanceOp[];
+}): PooledBalanceOp[] | undefined => {
+	if (!base?.length && !incoming?.length) return undefined;
+
+	const uniqueIncoming = keepLastOperationByKey(incoming ?? []);
+	const incomingKeys = new Set(uniqueIncoming.map(pooledBalanceOperationKey));
+	const uniqueBase =
+		mergeByKey({
+			base,
+			incoming: [],
+			getKey: pooledBalanceOperationKey,
+		}) ?? [];
+	const remainingBase = uniqueBase.filter(
+		(operation) => !incomingKeys.has(pooledBalanceOperationKey(operation)),
+	);
+	return [...remainingBase, ...uniqueIncoming];
 };
 
 type PatchCustomerProduct = NonNullable<

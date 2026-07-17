@@ -277,6 +277,7 @@ export const updateProduct = async ({
 		customerUsage.hasVersionableCustomerProducts;
 	const freeTrialProvided = "free_trial" in productUpdates;
 	const billingControlsProvided = "billing_controls" in productUpdates;
+	const licensesProvided = licenses !== undefined;
 
 	const same = productsAreSame({ newProductV2, curProductV2, features });
 	const billingControlsOnlyChanged =
@@ -291,8 +292,9 @@ export const updateProduct = async ({
 	const productVersioningEligible =
 		versionableCustomerProductExists &&
 		!effectiveDisableVersion &&
-		(itemsExist || freeTrialProvided);
-	const productChanged = !same.itemsSame || !same.freeTrialsSame;
+		(itemsExist || freeTrialProvided || licensesProvided);
+	const productChanged =
+		!same.itemsSame || !same.freeTrialsSame || licensesProvided;
 	const billingControlsWillVersion =
 		!force_version &&
 		versionableCustomerProductExists &&

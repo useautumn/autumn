@@ -1,4 +1,4 @@
-import { expect, mock, test } from "bun:test";
+import { beforeEach, expect, mock, test } from "bun:test";
 import type { FullCustomer, PooledBalanceOp } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -12,6 +12,8 @@ const fullCustomer = {
 let poolRemoved = false;
 let assignmentExpired = false;
 let failAfterAssignmentExpiry = true;
+let assignmentAttachedToValidLink = false;
+let reattachBeforeLock = false;
 const executedOperations: PooledBalanceOp[][] = [];
 const invalidations: Array<{ customerId: string; flushBalances?: boolean }> =
 	[];
@@ -48,17 +50,30 @@ mock.module("@/internal/licenses/actions/logs/logLicenseAction.js", () => ({
 }));
 mock.module("@/internal/licenses/repos/licenseAssignmentRepo.js", () => ({
 	licenseAssignmentRepo: {
-		listActiveOrphanAssignments: mock(async () => [
-			{
-				id: "assignment_1",
-				internal_customer_id: "internal_customer_1",
-			},
-		]),
+		listActiveOrphanAssignments: mock(async () =>
+			assignmentAttachedToValidLink
+				? []
+				: [
+						{
+							id: "assignment_1",
+							internal_customer_id: "internal_customer_1",
+						},
+					],
+		),
 		expireOrphanAssignments: mock(async () => {
-			assignmentExpired = true;
+			if (!assignmentAttachedToValidLink) assignmentExpired = true;
 		}),
 	},
 }));
+mock.module(
+	"@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js",
+	() => ({
+		withCustomerBalanceSyncLock: mock(async ({ callback }) => {
+			if (reattachBeforeLock) assignmentAttachedToValidLink = true;
+			return callback({ db: {} as never });
+		}),
+	}),
+);
 mock.module(
 	"@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js",
 	() => ({
@@ -70,6 +85,7 @@ mock.module(
 				pooledBalanceOps: PooledBalanceOp[];
 				beforeRebalance?: ({ db }: { db: never }) => Promise<void>;
 			}) => {
+				if (reattachBeforeLock) assignmentAttachedToValidLink = true;
 				const snapshot = { poolRemoved, assignmentExpired };
 				try {
 					executedOperations.push(pooledBalanceOps);
@@ -86,6 +102,7 @@ mock.module(
 				}
 			},
 		),
+		applyPreparedPooledBalanceCacheCutover: mock(async () => {}),
 	}),
 );
 mock.module(
@@ -107,6 +124,16 @@ const { reconcileLicenseStateForCustomer } = await import(
 	// @ts-expect-error - Bun test cache-busting import isolates module mocks.
 	"@/internal/licenses/actions/reconcile/reconcileLicenseState.js?pooledLicenseEndTransaction"
 );
+
+beforeEach(() => {
+	poolRemoved = false;
+	assignmentExpired = false;
+	failAfterAssignmentExpiry = true;
+	assignmentAttachedToValidLink = false;
+	reattachBeforeLock = false;
+	executedOperations.length = 0;
+	invalidations.length = 0;
+});
 
 test("orphan source removal and assignment expiry roll back together and flush on failure", async () => {
 	const executeTransition = () =>
@@ -152,4 +179,20 @@ test("orphan source removal and assignment expiry roll back together and flush o
 			},
 		],
 	]);
+});
+
+test("orphan candidates are re-read after acquiring the balance lock", async () => {
+	reattachBeforeLock = true;
+	failAfterAssignmentExpiry = false;
+
+	await reconcileLicenseStateForCustomer({
+		ctx: {} as AutumnContext,
+		idOrInternalId: fullCustomer.id ?? fullCustomer.internal_id,
+	});
+
+	expect(executedOperations).toEqual([]);
+	expect({ poolRemoved, assignmentExpired }).toEqual({
+		poolRemoved: false,
+		assignmentExpired: false,
+	});
 });

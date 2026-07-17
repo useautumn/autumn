@@ -1,30 +1,24 @@
 import {
 	type EntInterval,
+	getCycleEnd,
 	InternalError,
 	PooledBalanceResetMode,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getResetAtUpdate } from "@/internal/customers/actions/resetCustomerEntitlements/getResetAtUpdate.js";
 
-/**
- * Advances a pooled reset on the same calendar as the owner that drives it.
- *
- * Lazy/free pools reuse the canonical customer-entitlement transition so
- * clamped month-end dates and late catch-up behave exactly like standard
- * balances. Subscription pools use the already-expanded Stripe invoice's
- * period end; recomputing from a stored anchor can disagree with Stripe.
- */
+/** Lazy pools advance from their stored anchor; subscription pools use Stripe's exact period end. */
 export const getNextPooledBalanceResetAt = async ({
-	ctx,
 	resetMode,
 	currentResetAt,
+	resetCycleAnchor,
+	asOf = currentResetAt,
 	interval,
 	intervalCount,
 	subscriptionNextResetAt,
 }: {
-	ctx: AutumnContext;
 	resetMode: PooledBalanceResetMode;
 	currentResetAt: number;
+	resetCycleAnchor?: number;
+	asOf?: number;
 	interval: EntInterval;
 	intervalCount: number;
 	subscriptionNextResetAt?: number;
@@ -51,12 +45,24 @@ export const getNextPooledBalanceResetAt = async ({
 		});
 	}
 
-	return getResetAtUpdate({
-		curResetAt: currentResetAt,
+	if (
+		typeof resetCycleAnchor !== "number" ||
+		!Number.isFinite(resetCycleAnchor)
+	) {
+		throw new InternalError({
+			message: "Lazy pooled reset requires a finite reset cycle anchor.",
+		});
+	}
+	if (!Number.isFinite(asOf)) {
+		throw new InternalError({
+			message: "Lazy pooled reset requires a finite as-of timestamp.",
+		});
+	}
+
+	return getCycleEnd({
+		anchor: resetCycleAnchor,
 		interval,
 		intervalCount,
-		cusProduct: null,
-		org: ctx.org,
-		env: ctx.env,
+		now: Math.max(currentResetAt, asOf),
 	});
 };

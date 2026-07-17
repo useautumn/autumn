@@ -1,5 +1,6 @@
 import type { ProductV2 } from "@autumn/shared";
 import type { Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
@@ -10,7 +11,8 @@ import { LicensePlanPrice } from "./LicensePlanPrice";
 
 export interface CustomerLicensePoolRow {
 	id: string;
-	licensePlanId: string | null;
+	planLicenseId: string | null;
+	licenseProductId: string | null;
 	name: string;
 	product: ProductV2 | null;
 	remaining: number;
@@ -42,7 +44,18 @@ export const createCustomerLicensePoolColumns = ({
 		cell: ({ row }: { row: Row<CustomerLicensePoolRow> }) => (
 			<div className="font-medium text-foreground flex items-center gap-2">
 				<LicenseIcon size={14} className="shrink-0" />
-				{row.original.name}
+				<AdminHover
+					texts={[
+						{ key: "Customer License ID", value: row.original.id },
+						{
+							key: "Plan License ID",
+							value: row.original.planLicenseId ?? "N/A",
+						},
+					]}
+					triggerClassName="min-w-0"
+				>
+					<span className="truncate">{row.original.name}</span>
+				</AdminHover>
 			</div>
 		),
 	},

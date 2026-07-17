@@ -272,6 +272,66 @@ test("collects multiple pooled lifetime renewals into one invoice batch", async 
 	expect(poolBalance).toBe(200);
 });
 
+test("promotes every pooled prepaid option when one product has multiple features", async () => {
+	const customerProduct = createLifetimePooledSource({
+		id: "multi_feature_source",
+	});
+	const creditsEntitlementId = "entitlement_multi_feature_credits";
+	const creditsCustomerEntitlement = customerEntitlements.create({
+		id: "customer_entitlement_multi_feature_credits",
+		entitlementId: creditsEntitlementId,
+		featureId: "credits",
+		featureName: "Credits",
+		allowance: 25,
+		balance: 0,
+		customerProductId: customerProduct.id,
+		interval: EntInterval.Lifetime,
+	});
+	creditsCustomerEntitlement.entitlement = {
+		...creditsCustomerEntitlement.entitlement,
+		pooled: true,
+	};
+	const creditsPrice = prices.createPrepaid({
+		id: "price_multi_feature_credits",
+		featureId: "credits",
+		billingUnits: 5,
+		entitlementId: creditsEntitlementId,
+	});
+	customerProduct.customer_entitlements.push(creditsCustomerEntitlement);
+	customerProduct.customer_prices.push(
+		prices.createCustomer({
+			price: creditsPrice,
+			customerProductId: customerProduct.id,
+		}),
+	);
+	customerProduct.options.push({
+		feature_id: "credits",
+		internal_feature_id: "internal_credits",
+		quantity: 1,
+		upcoming_quantity: 4,
+	});
+
+	await processPrepaidPricesForInvoiceCreatedWithDependencies({
+		ctx: createContext(),
+		dependencies: createDependencies(),
+		eventContext: createEventContext({ customerProducts: [customerProduct] }),
+	});
+
+	expect(customerProductOptionUpdates).toHaveLength(1);
+	expect(customerProductOptionUpdates[0]).toEqual([
+		expect.objectContaining({
+			feature_id: "messages",
+			quantity: 5,
+			upcoming_quantity: undefined,
+		}),
+		expect.objectContaining({
+			feature_id: "credits",
+			quantity: 4,
+			upcoming_quantity: undefined,
+		}),
+	]);
+});
+
 test("applies the final lifetime cutover after reset and outer transaction commit", async () => {
 	const events: string[] = [];
 	const preparedCutover = { marker: "invoice cutover" };

@@ -6,6 +6,9 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 // Stable empty object reference to prevent infinite re-renders
 const EMPTY_COUNTS: Record<string, ProductCounts> = {};
 
+export type ProductListItem = ProductV2 &
+	Pick<FullProduct, "licenses" | "parent_plan_licenses">;
+
 /**
  * Fetch all products for the current org.
  *
@@ -34,7 +37,7 @@ export const useProductsQuery = ({
 	};
 
 	const { data, isLoading, error, refetch } = useQuery<{
-		products: ProductV2[];
+		products: ProductListItem[];
 		groupToDefaults: Record<string, Record<string, FullProduct>>;
 	}>({
 		queryKey: buildKey(["products", allVersions ? "all" : "latest"]),
