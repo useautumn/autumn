@@ -7,7 +7,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setCustomerSpendLimit } from "../../utils/spend-limit-utils/customerSpendLimitUtils.js";
-import { expectCustomerFeatureCachedAndDb } from "../../utils/spend-limit-utils/entitySpendLimitUtils.js";
+import {
+	expectCustomerFeatureCachedAndDb,
+	expectEntityFeatureBalance,
+	setEntitySpendLimit,
+} from "../../utils/spend-limit-utils/entitySpendLimitUtils.js";
 import {
 	expectCustomerBalance,
 	expectCustomerUsageLimit,
@@ -235,6 +239,137 @@ test.concurrent(
 			usage: 1125,
 			maxPurchase: 300,
 			breakdownLength: 2,
+		});
+	},
+);
+
+// skip_cache forces the Postgres deduction fallback (performDeduction.sql),
+// covering the SQL parity changes for overflow.
+test.concurrent(
+	`${chalk.yellowBright("track-overage-overflow5: postgres path (skip_cache) drives the balance negative under overflow")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "overage-overflow-postgres",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = "overage-overflow-postgres-1";
+		await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 150,
+				overage_behavior: "overflow",
+			},
+			{ skipCache: true, timeout: 4000 },
+		);
+		await expectCustomerBalance({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			granted: 100,
+			remaining: 0,
+			usage: 150,
+		});
+
+		// Cap mode on the Postgres path still floors at the negative balance.
+		await autumnV2_3.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 10,
+			},
+			{ skipCache: true, timeout: 4000 },
+		);
+		await expectCustomerBalance({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			granted: 100,
+			remaining: 0,
+			usage: 150,
+		});
+	},
+);
+
+// Entity-scoped spend limit: the customer-level variant cannot run on the PG
+// path today (pre-existing get_available_overage_from_spend_limit bug with
+// jsonb-null entities, tracked separately).
+test.concurrent(
+	`${chalk.yellowBright("track-overage-overflow6: postgres path (skip_cache) spend limit still clamps an overflow track")}`,
+	async () => {
+		const entityProduct = products.base({
+			id: "overage-overflow-pg-spend-limit",
+			items: [
+				items.consumableMessages({
+					includedUsage: 100,
+					price: 0.5,
+				}),
+			],
+		});
+
+		const { autumnV2_1, customerId, entities } = await initScenario({
+			customerId: "overage-overflow-pg-spend-limit-1",
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [entityProduct] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: entityProduct.id, entityIndex: 0 }),
+			],
+		});
+
+		await setEntitySpendLimit({
+			autumn: autumnV2_1,
+			customerId,
+			entityId: entities[0].id,
+			featureId: TestFeature.Messages,
+			overageLimit: 25,
+		});
+
+		// 100 granted + 20 overage consumed: 5 units of overage headroom left.
+		// Both tracks go through the PG path so the spend-limit helper (which
+		// reads customer_entitlements rows) sees authoritative state.
+		await autumnV2_1.track(
+			{
+				customer_id: customerId,
+				entity_id: entities[0].id,
+				feature_id: TestFeature.Messages,
+				value: 120,
+			},
+			{ skipCache: true, timeout: 4000 },
+		);
+
+		// overflow must NOT punch through the spend limit on the PG path either.
+		await autumnV2_1.track(
+			{
+				customer_id: customerId,
+				entity_id: entities[0].id,
+				feature_id: TestFeature.Messages,
+				value: 10,
+				overage_behavior: "overflow",
+			},
+			{ skipCache: true, timeout: 4000 },
+		);
+		await expectEntityFeatureBalance({
+			autumn: autumnV2_1,
+			customerId,
+			entityId: entities[0].id,
+			featureId: TestFeature.Messages,
+			granted: 100,
+			remaining: 0,
+			usage: 125,
+			breakdownLength: 1,
 		});
 	},
 );
