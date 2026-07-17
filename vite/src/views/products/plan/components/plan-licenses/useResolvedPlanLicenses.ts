@@ -12,6 +12,7 @@ import {
 	pendingPlanLicense,
 	usePendingLicenseLinks,
 } from "./PendingLicenseLinksContext";
+import { resolvePlanLicenseProduct } from "./resolvePlanLicenseProduct";
 
 export interface ResolvedPlanLicense {
 	planLicense: PlanLicense;
@@ -33,7 +34,7 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 	const { planLicenses: fallbackPlanLicenses } = usePlanLicensesQuery(
 		isLicense || pageCatalogLicenses ? undefined : product?.id,
 	);
-	const { products } = useProductsQuery();
+	const { products } = useProductsQuery({ allVersions: true });
 	const { pendingLicenseIds } = usePendingLicenseLinks();
 	const initialPatches = useInitialLicensePatches();
 
@@ -44,10 +45,20 @@ export function useResolvedPlanLicenses(): ResolvedPlanLicense[] {
 		const licenseById = new Map(
 			products.map((license) => [license.id, license]),
 		);
+		for (const license of products) {
+			const latest = licenseById.get(license.id);
+			if (!latest || license.version > latest.version) {
+				licenseById.set(license.id, license);
+			}
+		}
 		const persistedLicenses = pageCatalogLicenses
 			? pageCatalogLicenses.map((entry) => ({ ...entry, isPendingLink: false }))
 			: fallbackPlanLicenses.flatMap((planLicense) => {
-					const license = licenseById.get(planLicense.license_plan_id);
+					const license = resolvePlanLicenseProduct({
+						products,
+						planId: planLicense.license_plan_id,
+						version: planLicense.version,
+					});
 					return license
 						? [{ planLicense, license, isPendingLink: false }]
 						: [];

@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-const EMPTY_PLAN_LICENSES: PlanLicense[] = [];
+export type VersionedPlanLicense = PlanLicense & { version: number };
+
+const EMPTY_PLAN_LICENSES: VersionedPlanLicense[] = [];
 
 const toPlanLicenses = ({
 	parentPlanId,
@@ -11,11 +13,12 @@ const toPlanLicenses = ({
 }: {
 	parentPlanId: string;
 	licenses: NonNullable<ApiPlanV1["licenses"]>;
-}): PlanLicense[] =>
+}): VersionedPlanLicense[] =>
 	licenses.map((link) => ({
 		id: `${parentPlanId}:${link.license_plan_id}`,
 		parent_plan_id: parentPlanId,
 		license_plan_id: link.license_plan_id,
+		version: link.version,
 		included: link.included,
 		prepaid_only: link.prepaid_only,
 		customize: link.customize ?? null,
@@ -45,7 +48,7 @@ export const usePlanLicensesQuery = (parentPlanId?: string) => {
 		});
 	};
 
-	const { data, isLoading, error, refetch } = useQuery<PlanLicense[]>({
+	const { data, isLoading, error, refetch } = useQuery<VersionedPlanLicense[]>({
 		queryKey: buildKey(["plan_licenses", parentPlanId ?? null]),
 		queryFn: () => fetchPlanLicenses(parentPlanId as string),
 		enabled: Boolean(parentPlanId),
