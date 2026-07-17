@@ -22,6 +22,12 @@ export const computeReleaseLicensePlan = ({
 				(release) => release.customerLicense.link_id,
 			),
 		}),
+		pooledBalanceOps: releases.map(({ assignment }) => ({
+			op: "remove_source",
+			internalCustomerId: assignment.internal_customer_id,
+			sourceCustomerProductId: assignment.id,
+			effectiveAt: null,
+		})),
 	};
 
 	return { billingPlan };

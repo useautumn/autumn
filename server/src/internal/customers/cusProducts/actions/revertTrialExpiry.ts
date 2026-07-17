@@ -1,16 +1,64 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
-	customerProducts as customerProductsTable,
 	type customerProducts,
+	customerProducts as customerProductsTable,
+	type FullCusProduct,
+	type FullCustomer,
 } from "@autumn/shared";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { RELEVANT_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
+
+export const computeRevertTrialExpiryPlan = ({
+	fullCustomer,
+	trialCustomerProduct,
+	previousCustomerProduct,
+	now,
+}: {
+	fullCustomer: FullCustomer;
+	trialCustomerProduct: FullCusProduct;
+	previousCustomerProduct: FullCusProduct;
+	now: number;
+}): AutumnBillingPlan => {
+	const pooledRestore = computeAttachPooledBalanceOps({
+		customerProduct: {
+			...previousCustomerProduct,
+			status: CusProductStatus.Active,
+		},
+		attachBillingContext: {
+			billingStartsAt: now,
+			currentCustomerProduct: previousCustomerProduct,
+			currentEpochMs: now,
+			fullCustomer,
+			planTiming: "immediate",
+			skipBillingChanges: true,
+		},
+		removeCurrentSource: false,
+	});
+
+	return {
+		customerId: fullCustomer.id ?? fullCustomer.internal_id,
+		insertCustomerProducts: [],
+		updateCustomerProducts: [
+			{
+				customerProduct: trialCustomerProduct,
+				updates: { status: CusProductStatus.Expired },
+			},
+			{
+				customerProduct: previousCustomerProduct,
+				updates: { status: CusProductStatus.Active },
+			},
+		],
+		pooledBalanceOps: pooledRestore.pooledBalanceOps,
+	};
+};
 
 /**
  * Handles revert trial expiry inside a transaction: expire the trial
@@ -61,24 +109,41 @@ export const tryProcessRevertExpiry = async ({
 	);
 
 	const now = Date.now();
-	await ctx.db.transaction(async (tx) => {
-		const txDb = tx as unknown as DrizzleCli;
+	let autumnBillingPlan: AutumnBillingPlan | undefined;
+	const updateStatusesInTransaction = () =>
+		ctx.db.transaction(async (tx) => {
+			const txDb = tx as unknown as DrizzleCli;
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Expired, updated_at: now })
-			.where(eq(customerProductsTable.id, customerProduct.id));
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Expired, updated_at: now })
+				.where(eq(customerProductsTable.id, customerProduct.id));
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Active, updated_at: now })
-			.where(
-				and(
-					eq(customerProductsTable.id, previousCusProductId),
-					eq(customerProductsTable.status, CusProductStatus.Paused),
-				),
-			);
-	});
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Active, updated_at: now })
+				.where(
+					and(
+						eq(customerProductsTable.id, previousCusProductId),
+						eq(customerProductsTable.status, CusProductStatus.Paused),
+					),
+				);
+		});
+	if (trialFullCusProduct && previousFullCusProduct) {
+		autumnBillingPlan = computeRevertTrialExpiryPlan({
+			fullCustomer,
+			trialCustomerProduct: trialFullCusProduct,
+			previousCustomerProduct: previousFullCusProduct,
+			now,
+		});
+		if (autumnBillingPlan.pooledBalanceOps?.length) {
+			await executeAutumnBillingPlan({ ctx, autumnBillingPlan });
+		} else {
+			await updateStatusesInTransaction();
+		}
+	} else {
+		await updateStatusesInTransaction();
+	}
 
 	await deleteCachedFullCustomer({
 		ctx,
@@ -89,22 +154,7 @@ export const tryProcessRevertExpiry = async ({
 	// Emit billing.updated webhook (fire-and-forget) describing both the
 	// trial expiry and the restored previous plan. Skipped silently if we
 	// couldn't resolve either snapshot.
-	if (trialFullCusProduct && previousFullCusProduct) {
-		const autumnBillingPlan: AutumnBillingPlan = {
-			customerId: fullCustomer.id ?? fullCustomer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct: trialFullCusProduct,
-					updates: { status: CusProductStatus.Expired },
-				},
-				{
-					customerProduct: previousFullCusProduct,
-					updates: { status: CusProductStatus.Active },
-				},
-			],
-		};
-
+	if (autumnBillingPlan) {
 		void sendBillingUpdatedWebhook({
 			ctx,
 			autumnBillingPlan,

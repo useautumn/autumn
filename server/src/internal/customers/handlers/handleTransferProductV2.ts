@@ -3,6 +3,7 @@ import {
 	AttachScenario,
 	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
+	findCustomerProductById,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -13,7 +14,11 @@ import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRe
 import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { CusService } from "../CusService.js";
+import { getOrSetCachedFullSubject } from "../cache/fullSubject/actions/getOrSetCachedFullSubject.js";
+import { customerProductHasPooledCatalogEntitlement } from "./handleTransferProduct/computePooledTransferPlan.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
+import { handlePooledFullTransfer } from "./handleTransferProduct/handlePooledFullTransfer.js";
+import { mergePooledTransferCustomer } from "./handleTransferProduct/mergePooledTransferCustomer.js";
 import {
 	findExistingTransferTargetProduct,
 	findTransferCustomerProduct,
@@ -88,14 +93,14 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		const cusProduct = findTransferCustomerProduct({
+		const customerProduct = findTransferCustomerProduct({
 			fullCustomer: customer,
 			fromEntity,
 			productId: product_id,
 			customerProductId: customer_product_id,
 		});
 
-		if (!cusProduct) {
+		if (!customerProduct) {
 			throw new CusProductNotFoundError({
 				customerId: customer_id,
 				productId: product_id,
@@ -106,11 +111,11 @@ export const handleTransferProductV2 = createRoute({
 		const licenseLinks =
 			await planLicenseRepo.listCatalogByParentInternalProductIds({
 				db,
-				parentInternalProductIds: [cusProduct.internal_product_id],
+				parentInternalProductIds: [customerProduct.internal_product_id],
 			});
 		const pools = await customerLicenseRepo.listByParentCustomerProductIds({
 			db,
-			parentCustomerProductIds: [cusProduct.id],
+			parentCustomerProductIds: [customerProduct.id],
 		});
 		if (licenseLinks.length > 0 || pools.length > 0) {
 			throw new RecaseError({
@@ -132,23 +137,73 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		// 1. If cus product has quantity > 1, only transfer 1...
-		if (cusProduct.quantity > 1) {
-			await handleDecreaseAndTransfer({
+		const hasPooledCatalogEntitlement =
+			customerProductHasPooledCatalogEntitlement({ customerProduct });
+		let transferCustomer = customer;
+		let transferCustomerProduct = customerProduct;
+		if (hasPooledCatalogEntitlement) {
+			const fullSubject = await getOrSetCachedFullSubject({
 				ctx,
-				fullCus: customer,
-				cusProduct: cusProduct,
+				customerId: customer_id,
+				entityId: fromEntity?.id ?? fromEntity?.internal_id,
+				source: "pooled-product-transfer",
+			});
+			transferCustomer = mergePooledTransferCustomer({
+				fullCustomer: customer,
+				fullSubject,
+			});
+			const liveCustomerProduct = findCustomerProductById({
+				fullCustomer: transferCustomer,
+				customerProductId: customerProduct.id,
+			});
+			if (!liveCustomerProduct) {
+				throw new CusProductNotFoundError({
+					customerId: customer_id,
+					productId: product_id,
+					entityId: from_entity_id || undefined,
+				});
+			}
+			transferCustomerProduct = liveCustomerProduct;
+		}
+
+		// 1. If cus product has quantity > 1, only transfer 1...
+		if (transferCustomerProduct.quantity > 1) {
+			const transferredCustomerProduct = await handleDecreaseAndTransfer({
+				ctx,
+				fullCus: transferCustomer,
+				cusProduct: transferCustomerProduct,
 				toEntity: toEntity,
 			});
+			if (transferredCustomerProduct) {
+				await addProductsUpdatedWebhookTask({
+					ctx,
+					internalCustomerId: customer.internal_id,
+					org: ctx.org,
+					env: ctx.env,
+					customerId: customer.id || customer.internal_id,
+					scenario: AttachScenario.New,
+					cusProduct: transferredCustomerProduct,
+				});
+			}
 		} else {
-			const updates = await transferRelatedCustomerProducts({
-				ctx,
-				fullCustomer: customer,
-				fromEntity,
-				toEntity,
-				product,
-				customerProductId: customer_product_id,
-			});
+			const updates = hasPooledCatalogEntitlement
+				? await handlePooledFullTransfer({
+						ctx,
+						fullCustomer: transferCustomer,
+						fromEntity,
+						toEntity,
+						product,
+						customerProduct: transferCustomerProduct,
+						customerProductId: customer_product_id,
+					})
+				: await transferRelatedCustomerProducts({
+						ctx,
+						fullCustomer: transferCustomer,
+						fromEntity,
+						toEntity,
+						product,
+						customerProductId: customer_product_id,
+					});
 
 			await addProductsUpdatedWebhookTask({
 				ctx,
@@ -158,7 +213,7 @@ export const handleTransferProductV2 = createRoute({
 				customerId: customer.id || customer.internal_id,
 				scenario: AttachScenario.New,
 				cusProduct: {
-					...cusProduct,
+					...transferCustomerProduct,
 					...updates,
 				},
 			});

@@ -15,6 +15,8 @@ import { createFullCusProduct } from "../../add-product/createFullCusProduct.js"
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { CusEntService } from "../../cusProducts/cusEnts/CusEntitlementService.js";
 import { getRelatedCusPrice } from "../../cusProducts/cusEnts/cusEntUtils.js";
+import { customerProductHasPooledCatalogEntitlement } from "./computePooledTransferPlan.js";
+import { handlePooledDecreaseAndTransfer } from "./handlePooledDecreaseAndTransfer.js";
 
 export const handleDecreaseAndTransfer = async ({
 	ctx,
@@ -27,6 +29,17 @@ export const handleDecreaseAndTransfer = async ({
 	cusProduct: FullCusProduct;
 	toEntity?: Entity | null;
 }) => {
+	if (
+		customerProductHasPooledCatalogEntitlement({ customerProduct: cusProduct })
+	) {
+		return handlePooledDecreaseAndTransfer({
+			ctx,
+			fullCustomer: fullCus,
+			customerProduct: cusProduct,
+			toEntity,
+		});
+	}
+
 	// 1. Create new cus product for entity...
 	const { org, env, db, logger, features } = ctx;
 	const stripeCli = createStripeCli({ org, env });

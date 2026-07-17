@@ -44,6 +44,12 @@ export const releaseLicenseAssignmentsForEntity = async ({
 						: [],
 				),
 			}),
+			pooledBalanceOps: assignments.map((assignment) => ({
+				op: "remove_source",
+				internalCustomerId: assignment.internal_customer_id,
+				sourceCustomerProductId: assignment.id,
+				effectiveAt: null,
+			})),
 		},
 	});
 };

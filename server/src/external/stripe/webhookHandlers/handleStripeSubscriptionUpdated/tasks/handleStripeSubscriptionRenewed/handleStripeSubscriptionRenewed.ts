@@ -1,13 +1,19 @@
 import {
 	AttachScenario,
+	type AutumnBillingPlan,
 	cp,
 	type FullCusProduct,
 	findMainScheduledCustomerProductByGroup,
+	type PooledBalanceOp,
 } from "@autumn/shared";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import {
+	customerProductToPooledBalanceOwnerRestoreOp,
+	customerProductToPooledBalanceRestoreOp,
+} from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import {
 	trackCustomerProductDeletion,
 	trackCustomerProductUpdate,
@@ -25,12 +31,24 @@ import { isStripeSubscriptionRenewedEvent } from "./isStripeSubscriptionRenewedE
  * 4. Deletes scheduled products for recurring main products (since they're staying)
  * 5. Sends renewal webhooks
  */
-export const handleStripeSubscriptionRenewed = async ({
+export type HandleStripeSubscriptionRenewedDependencies = {
+	getStripeSubscriptionLock: typeof getStripeSubscriptionLock;
+	executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+	addProductsUpdatedWebhookTask: typeof addProductsUpdatedWebhookTask;
+};
+
+export const handleStripeSubscriptionRenewedWithDependencies = async ({
 	ctx,
 	subscriptionUpdatedContext,
+	dependencies = {
+		getStripeSubscriptionLock,
+		executeAutumnBillingPlan,
+		addProductsUpdatedWebhookTask,
+	},
 }: {
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	dependencies?: HandleStripeSubscriptionRenewedDependencies;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 	const {
@@ -49,7 +67,7 @@ export const handleStripeSubscriptionRenewed = async ({
 	if (!renewed) return;
 
 	// 2. Check lock or schedule - skip if Autumn initiated or schedule exists
-	const lock = await getStripeSubscriptionLock({
+	const lock = await dependencies.getStripeSubscriptionLock({
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 	const hasSchedule = Boolean(stripeSubscription.schedule);
@@ -60,13 +78,22 @@ export const handleStripeSubscriptionRenewed = async ({
 		);
 		return;
 	}
+	const pooledBalanceOps: PooledBalanceOp[] = [];
+	const updateCustomerProducts: NonNullable<
+		AutumnBillingPlan["updateCustomerProducts"]
+	> = [];
+	const deleteCustomerProducts: FullCusProduct[] = [];
+	const plannedDeletionIds = new Set<string>();
+	const plannedRenewals: {
+		customerProduct: FullCusProduct;
+		updates: NonNullable<
+			AutumnBillingPlan["updateCustomerProducts"]
+		>[number]["updates"];
+		deletedScheduledProduct?: FullCusProduct;
+		sendWebhook: boolean;
+	}[] = [];
 
-	// PASS 1: Update customer products and handle scheduled products.
-	// Iterate over a snapshot: `trackCustomerProductDeletion` (called below when
-	// a scheduled default product is deleted alongside the main product's
-	// renewal) splices `customerProducts` in place, which would otherwise
-	// invalidate the for-of cursor and skip subsequent entries (e.g. an add-on
-	// that sits after the main product in the array).
+	// Prepare from a stable snapshot; post-commit tracking mutates customerProducts.
 	for (const customerProduct of [...customerProducts]) {
 		// Skip if not active or not on this subscription
 
@@ -87,58 +114,88 @@ export const handleStripeSubscriptionRenewed = async ({
 			ended_at: null,
 		};
 
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates,
-		});
-
-		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-			updates,
-		});
-
-		logger.info(
-			`[handleStripeSubscriptionRenewed] Cleared cancellation for ${customerProduct.product.name}`,
-		);
+		updateCustomerProducts.push({ customerProduct, updates });
+		const expectedEffectiveAt = customerProduct.ended_at;
+		if (typeof expectedEffectiveAt === "number") {
+			const pooledSourceRestore = customerProductToPooledBalanceRestoreOp({
+				customerProduct,
+				expectedEffectiveAt,
+			});
+			if (pooledSourceRestore) pooledBalanceOps.push(pooledSourceRestore);
+			pooledBalanceOps.push(
+				customerProductToPooledBalanceOwnerRestoreOp({
+					customerProduct,
+					expectedEffectiveAt,
+				}),
+			);
+		}
 
 		// For recurring main products, delete any scheduled product in the same group
 		const { valid: isRecurringAndMain } = cp(customerProduct)
 			.recurring()
 			.main();
 
-		if (!org.config.sync_status) continue; // legacy
-
 		let deletedScheduledProduct: FullCusProduct | undefined;
-		if (isRecurringAndMain) {
+		if (org.config.sync_status && isRecurringAndMain) {
 			const scheduledProduct = findMainScheduledCustomerProductByGroup({
 				fullCustomer,
 				productGroup: customerProduct.product.group,
 				internalEntityId: customerProduct.internal_entity_id ?? undefined,
 			});
 
-			if (scheduledProduct) {
-				await CusProductService.delete({
-					ctx,
-					cusProductId: scheduledProduct.id,
-				});
-
+			if (scheduledProduct && !plannedDeletionIds.has(scheduledProduct.id)) {
+				plannedDeletionIds.add(scheduledProduct.id);
+				deleteCustomerProducts.push(scheduledProduct);
 				deletedScheduledProduct = scheduledProduct;
-
-				logger.info(
-					`[handleStripeSubscriptionRenewed] Deleted scheduled ${scheduledProduct.product.name}`,
-				);
-
-				trackCustomerProductDeletion({
-					eventContext: subscriptionUpdatedContext,
-					customerProduct: scheduledProduct,
-				});
 			}
 		}
 
-		// Send webhook
-		await addProductsUpdatedWebhookTask({
+		plannedRenewals.push({
+			customerProduct,
+			updates,
+			deletedScheduledProduct,
+			sendWebhook: org.config.sync_status,
+		});
+	}
+
+	if (updateCustomerProducts.length > 0) {
+		await dependencies.executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: {
+				customerId: fullCustomer.id ?? fullCustomer.internal_id,
+				insertCustomerProducts: [],
+				updateCustomerProducts,
+				deleteCustomerProducts,
+				pooledBalanceOps:
+					pooledBalanceOps.length > 0 ? pooledBalanceOps : undefined,
+			},
+		});
+	}
+
+	for (const plannedRenewal of plannedRenewals) {
+		const { customerProduct, updates, deletedScheduledProduct, sendWebhook } =
+			plannedRenewal;
+		trackCustomerProductUpdate({
+			eventContext: subscriptionUpdatedContext,
+			customerProduct,
+			updates,
+		});
+		logger.info(
+			`[handleStripeSubscriptionRenewed] Cleared cancellation for ${customerProduct.product.name}`,
+		);
+
+		if (deletedScheduledProduct) {
+			logger.info(
+				`[handleStripeSubscriptionRenewed] Deleted scheduled ${deletedScheduledProduct.product.name}`,
+			);
+			trackCustomerProductDeletion({
+				eventContext: subscriptionUpdatedContext,
+				customerProduct: deletedScheduledProduct,
+			});
+		}
+
+		if (!sendWebhook) continue;
+		await dependencies.addProductsUpdatedWebhookTask({
 			ctx,
 			internalCustomerId: fullCustomer.internal_id,
 			org,
@@ -150,3 +207,15 @@ export const handleStripeSubscriptionRenewed = async ({
 		});
 	}
 };
+
+export const handleStripeSubscriptionRenewed = async ({
+	ctx,
+	subscriptionUpdatedContext,
+}: {
+	ctx: StripeWebhookContext;
+	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+}): Promise<void> =>
+	handleStripeSubscriptionRenewedWithDependencies({
+		ctx,
+		subscriptionUpdatedContext,
+	});

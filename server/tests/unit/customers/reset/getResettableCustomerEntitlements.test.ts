@@ -26,6 +26,8 @@ const buildCusEnt = ({
 	productStatus,
 	ignorePastDue = false,
 	nextResetAt,
+	pooled = false,
+	entityAttached = false,
 	withMatchingPrice = false,
 	withSeparateIntervalPrice = false,
 	withCustomerProduct = true,
@@ -33,6 +35,8 @@ const buildCusEnt = ({
 	productStatus?: CusProductStatus;
 	ignorePastDue?: boolean;
 	nextResetAt: number | null;
+	pooled?: boolean;
+	entityAttached?: boolean;
 	withMatchingPrice?: boolean;
 	withSeparateIntervalPrice?: boolean;
 	withCustomerProduct?: boolean;
@@ -46,6 +50,10 @@ const buildCusEnt = ({
 		customerProductId: withCustomerProduct ? CUS_PROD_ID : undefined,
 		interval: withSeparateIntervalPrice ? EntInterval.Month : null,
 	});
+	cusEnt.entitlement = {
+		...cusEnt.entitlement,
+		pooled,
+	};
 
 	if (!withCustomerProduct) {
 		return {
@@ -97,6 +105,8 @@ const buildCusEnt = ({
 		customerPrices,
 		status: productStatus,
 		product,
+		internalEntityId: entityAttached ? "internal_entity_one" : undefined,
+		entityId: entityAttached ? "entity_one" : undefined,
 	});
 
 	return {
@@ -159,9 +169,9 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product?.status).toBe(CusProductStatus.PastDue);
-		expect(
-			result[0].customer_product?.product?.config?.ignore_past_due,
-		).toBe(true);
+		expect(result[0].customer_product?.product?.config?.ignore_past_due).toBe(
+			true,
+		);
 	});
 
 	test("only gates past-due status and leaves other upstream statuses to the caller", () => {
@@ -276,5 +286,58 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product).toBeNull();
+	});
+
+	test("returns an overdue customer-level item whose catalog entitlement is pooled", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				pooled: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].customer_product?.internal_entity_id).toBeNull();
+	});
+
+	test("skips an overdue pooled source owned by an entity-attached product", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				pooled: true,
+				entityAttached: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("skips an overdue synthetic pooled balance", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				nextResetAt: PAST,
+				pooled: true,
+				withCustomerProduct: false,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(0);
 	});
 });

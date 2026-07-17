@@ -64,6 +64,29 @@ export const logAutumnBillingPlan = ({
 						? `${plan.customEntitlements?.length} custom ent(s)`
 						: "none",
 
+				pooledBalanceOps:
+					plan.pooledBalanceOps
+						?.map((operation) => {
+							switch (operation.op) {
+								case "upsert_source":
+									return `${operation.sourceCustomerProductId}:${operation.featureId}=${operation.currentCycleContribution}`;
+								case "remove_source":
+									return `${operation.sourceCustomerProductId}:remove${operation.effectiveAt ? `@${operation.effectiveAt}` : ""}`;
+								case "remove_contribution":
+									return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove${operation.effectiveAt ? `@${operation.effectiveAt}` : ""}`;
+								case "restore_source":
+									return `${operation.sourceCustomerProductId}:restore@${operation.expectedEffectiveAt}`;
+								case "transfer_source":
+									return `${operation.sourceCustomerProductId}:${operation.featureId}=transfer:${operation.currentCycleContribution}`;
+								case "stage_owner_removal":
+									return `${operation.resetOwnerType}:${operation.resetOwnerId}:stage@${operation.effectiveAt}`;
+								case "restore_owner":
+									return `${operation.resetOwnerType}:${operation.resetOwnerId}:restore@${operation.expectedEffectiveAt}`;
+							}
+							return operation satisfies never;
+						})
+						.join(", ") || "none",
+
 				trialTransition: `${isTrialing ? "trialing" : "not trialing"} -> ${willBeTrialing ? "will trial" : "no trial"}`,
 
 				updateCustomerEntitlements:

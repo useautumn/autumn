@@ -1,5 +1,8 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
-import { cp } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	cp,
+	PooledBalanceResetOwnerType,
+} from "@autumn/shared";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
 /**
@@ -22,5 +25,19 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 		}
 
 		customerProduct.subscription_ids = [stripeSubscriptionId];
+		for (const pooledBalanceOperation of autumnBillingPlan.pooledBalanceOps ??
+			[]) {
+			if (
+				(pooledBalanceOperation.op !== "upsert_source" &&
+					pooledBalanceOperation.op !== "transfer_source") ||
+				pooledBalanceOperation.sourceCustomerProductId !== customerProduct.id ||
+				pooledBalanceOperation.resetOwnerType !==
+					PooledBalanceResetOwnerType.Subscription
+			) {
+				continue;
+			}
+
+			pooledBalanceOperation.resetOwnerId = stripeSubscriptionId;
+		}
 	}
 };

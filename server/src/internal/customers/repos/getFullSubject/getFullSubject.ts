@@ -7,6 +7,7 @@ import {
 	type SubjectQueryRow,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
@@ -25,14 +26,19 @@ export async function getFullSubject({
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
 	allowMissingEntity?: boolean;
+	/** Existing customer balance-sync transaction. Cache-miss rebuilds pass
+	 * this so their DB snapshot and any due pooled reset share one lock. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<FullSubject | undefined> {
-	const { db, org, env } = ctx;
+	const { org, env } = ctx;
+	const db = balanceSyncDb ?? ctx.db;
 
 	const result = await runWithFullSubjectGate({
 		customerId,
@@ -59,7 +65,7 @@ export async function getFullSubject({
 		entityIdRequested: !!entityId,
 		allowMissingEntity,
 	});
-	await lazyResetSubjectEntitlements({ ctx, fullSubject });
+	await lazyResetSubjectEntitlements({ ctx, fullSubject, balanceSyncDb });
 	await lazyResetSubjectUsageWindows({ ctx, fullSubject });
 	await checkPendingMigrationsForCustomer({
 		ctx,
@@ -76,16 +82,21 @@ export async function getFullSubjectNormalized({
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
 	allowMissingEntity = false,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
 	allowMissingEntity?: boolean;
+	/** Existing customer balance-sync transaction. Cache-miss rebuilds pass
+	 * this so their DB snapshot and any due pooled reset share one lock. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
-	const { db, org, env } = ctx;
+	const { org, env } = ctx;
+	const db = balanceSyncDb ?? ctx.db;
 
 	const result = await runWithFullSubjectGate({
 		customerId,
@@ -114,7 +125,12 @@ export async function getFullSubjectNormalized({
 	});
 
 	const fullSubject = normalizedToFullSubject({ normalized });
-	await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+	await lazyResetSubjectEntitlements({
+		ctx,
+		fullSubject,
+		normalized,
+		balanceSyncDb,
+	});
 	await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 	await checkPendingMigrationsForCustomer({
 		ctx,

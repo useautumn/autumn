@@ -8,8 +8,9 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { buildIncrementalSyncParams } from "@/internal/billing/v2/actions/sync/scope/buildIncrementalSyncParams.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import { trackCustomerProductUpdate } from "../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
@@ -45,29 +46,57 @@ const priceOrProductChanged = ({
 	});
 };
 
-const expireRemovedCustomerProducts = async ({
+export const expireRemovedCustomerProducts = async ({
 	ctx,
 	subscriptionUpdatedContext,
 	removedCustomerProducts,
+	nowMs = Date.now(),
+	dependencies = {
+		executeAutumnBillingPlan,
+		trackCustomerProductUpdate,
+	},
 }: {
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 	removedCustomerProducts: FullCusProduct[];
+	nowMs?: number;
+	dependencies?: {
+		executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+		trackCustomerProductUpdate: typeof trackCustomerProductUpdate;
+	};
 }) => {
-	const nowMs = Date.now();
+	const pooledBalanceOps = removedCustomerProducts.flatMap(
+		(customerProduct) => {
+			const operation = customerProductToPooledBalanceRemovalOp({
+				customerProduct,
+				effectiveAt: null,
+			});
+			return operation ? [operation] : [];
+		},
+	);
+	const customerId =
+		subscriptionUpdatedContext.fullCustomer.id ??
+		subscriptionUpdatedContext.fullCustomer.internal_id;
+	const updates = {
+		status: CusProductStatus.Expired,
+		ended_at: nowMs,
+		canceled: true,
+		canceled_at: nowMs,
+	};
+	await dependencies.executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: {
+			customerId,
+			insertCustomerProducts: [],
+			updateCustomerProducts: removedCustomerProducts.map(
+				(customerProduct) => ({ customerProduct, updates }),
+			),
+			pooledBalanceOps,
+		},
+	});
+
 	for (const customerProduct of removedCustomerProducts) {
-		const updates = {
-			status: CusProductStatus.Expired,
-			ended_at: nowMs,
-			canceled: true,
-			canceled_at: nowMs,
-		};
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates,
-		});
-		trackCustomerProductUpdate({
+		dependencies.trackCustomerProductUpdate({
 			eventContext: subscriptionUpdatedContext,
 			customerProduct,
 			updates,

@@ -1,5 +1,6 @@
 import {
 	AttachScenario,
+	type AutumnBillingPlan,
 	CusProductStatus,
 	type CustomerProductUpdate,
 	type FullCusProduct,
@@ -9,21 +10,91 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Expires a customer product and activates the default product if needed.
- *
- * This action:
- * 1. Sets status to Expired
- * 2. Sends products_updated webhook with Expired scenario
- * 3. Activates free successor (scheduled or default) if no other active product in group
- *
- * @returns updates - The updates applied to the expired customer product
- * @returns activatedCustomerProduct - If a scheduled product was activated (UPDATE)
- * @returns insertedCustomerProduct - If a new default product was created (INSERT)
- */
+export type PreparedCustomerProductExpiry = {
+	customerProduct: FullCusProduct;
+	updates: Partial<InsertCustomerProduct>;
+	autumnBillingPlan: AutumnBillingPlan;
+};
+
+export const prepareCustomerProductExpiry = ({
+	customerProduct,
+	fullCustomer,
+	updates: extraUpdates,
+}: {
+	customerProduct: FullCusProduct;
+	fullCustomer: FullCustomer;
+	updates?: Partial<InsertCustomerProduct>;
+}): PreparedCustomerProductExpiry => {
+	const updates: Partial<InsertCustomerProduct> = {
+		status: CusProductStatus.Expired,
+		...extraUpdates,
+	};
+	const pooledBalanceRemoval = customerProductToPooledBalanceRemovalOp({
+		customerProduct,
+		effectiveAt: null,
+	});
+
+	return {
+		customerProduct,
+		updates,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id || fullCustomer.internal_id,
+			insertCustomerProducts: [],
+			updateCustomerProducts: [
+				{
+					customerProduct,
+					updates: updates as CustomerProductUpdate["updates"],
+				},
+			],
+			pooledBalanceOps: pooledBalanceRemoval
+				? [pooledBalanceRemoval]
+				: undefined,
+		},
+	};
+};
+
+export const completeCustomerProductExpiry = async ({
+	ctx,
+	customerProduct,
+	fullCustomer,
+	updates,
+}: {
+	ctx: AutumnContext;
+	customerProduct: FullCusProduct;
+	fullCustomer: FullCustomer;
+	updates: Partial<InsertCustomerProduct>;
+}): Promise<{
+	activatedCustomerProduct?: FullCusProduct;
+	insertedCustomerProduct?: FullCusProduct;
+}> => {
+	await addProductsUpdatedWebhookTask({
+		ctx,
+		internalCustomerId: customerProduct.internal_customer_id,
+		org: ctx.org,
+		env: ctx.env,
+		customerId: fullCustomer.id || "",
+		scenario: AttachScenario.Expired,
+		cusProduct: customerProduct,
+	});
+
+	fullCustomer.customer_products = fullCustomer.customer_products.map(
+		(fullCustomerProduct) =>
+			fullCustomerProduct.id === customerProduct.id
+				? ({ ...fullCustomerProduct, ...updates } as FullCusProduct)
+				: fullCustomerProduct,
+	);
+
+	return activateFreeSuccessorProduct({
+		ctx,
+		fromCustomerProduct: customerProduct,
+		fullCustomer,
+	});
+};
+
+/** Expires a customer product and activates its free successor when needed. */
 export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
 	customerProduct,
@@ -39,59 +110,34 @@ export const expireCustomerProductAndActivateDefault = async ({
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
-	const { db, org, env } = ctx;
-
-	// 1. Expire the product
-	const updates: Partial<InsertCustomerProduct> = {
-		status: CusProductStatus.Expired,
-		...extraUpdates,
-	};
+	const preparedExpiry = prepareCustomerProductExpiry({
+		customerProduct,
+		fullCustomer,
+		updates: extraUpdates,
+	});
 
 	// Executing through the shared plan runs the license lifecycle when the
 	// expiring product carried license state.
 	await executeAutumnBillingPlan({
 		ctx,
-		autumnBillingPlan: {
-			customerId: fullCustomer.id || fullCustomer.internal_id,
-			insertCustomerProducts: [],
-			updateCustomerProducts: [
-				{
-					customerProduct,
-					updates: updates as CustomerProductUpdate["updates"],
-				},
-			],
-		},
+		autumnBillingPlan: preparedExpiry.autumnBillingPlan,
 	});
 
 	ctx.logger.debug(
 		`[expireCustomerProduct]: expiring ${customerProduct.product.name}`,
 	);
 
-	// 2. Send webhook
-	await addProductsUpdatedWebhookTask({
-		ctx,
-		internalCustomerId: customerProduct.internal_customer_id,
-		org,
-		env,
-		customerId: fullCustomer.id || "",
-		scenario: AttachScenario.Expired,
-		cusProduct: customerProduct,
-	});
-
-	// Update full customer
-	fullCustomer.customer_products = fullCustomer.customer_products.map((cp) =>
-		cp.id === customerProduct.id
-			? ({ ...cp, ...updates } as FullCusProduct)
-			: cp,
-	);
-
-	// 3. Activate free successor (scheduled or default)
 	const { activatedCustomerProduct, insertedCustomerProduct } =
-		await activateFreeSuccessorProduct({
+		await completeCustomerProductExpiry({
 			ctx,
-			fromCustomerProduct: customerProduct,
 			fullCustomer,
+			customerProduct,
+			updates: preparedExpiry.updates,
 		});
 
-	return { updates, activatedCustomerProduct, insertedCustomerProduct };
+	return {
+		updates: preparedExpiry.updates,
+		activatedCustomerProduct,
+		insertedCustomerProduct,
+	};
 };

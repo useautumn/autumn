@@ -99,8 +99,10 @@ function hasFullCusProduct(
 /** Effective rollover cap for a cusEnt: null = unlimited (or no config). */
 export const cusEntToEffectiveRolloverMax = ({
 	cusEnt,
+	startingBalanceOverride,
 }: {
 	cusEnt: FullCusEntWithProduct;
+	startingBalanceOverride?: number;
 }): number | null => {
 	const rolloverConfig = cusEnt.entitlement.rollover;
 	if (!rolloverConfig) return null;
@@ -108,7 +110,9 @@ export const cusEntToEffectiveRolloverMax = ({
 	if (rolloverConfig.max_percentage == null) return rolloverConfig.max ?? null;
 
 	let startingBalance: number;
-	if (hasFullCusProduct(cusEnt)) {
+	if (startingBalanceOverride !== undefined) {
+		startingBalance = startingBalanceOverride;
+	} else if (hasFullCusProduct(cusEnt)) {
 		startingBalance = cusEntToStartingBalance({ cusEnt });
 	} else {
 		const options = entToOptions({
@@ -132,9 +136,11 @@ export const cusEntToEffectiveRolloverMax = ({
 export function performMaximumClearing({
 	rows,
 	cusEnt,
+	startingBalanceOverride,
 }: {
 	rows: Rollover[];
 	cusEnt: FullCusEntWithProduct;
+	startingBalanceOverride?: number;
 }) {
 	const rolloverConfig = cusEnt.entitlement.rollover;
 
@@ -142,7 +148,10 @@ export function performMaximumClearing({
 		return { toDelete: [], toUpdate: [] };
 	}
 
-	const effectiveMax = cusEntToEffectiveRolloverMax({ cusEnt });
+	const effectiveMax = cusEntToEffectiveRolloverMax({
+		cusEnt,
+		startingBalanceOverride,
+	});
 
 	if (effectiveMax == null) {
 		return { toDelete: [], toUpdate: [] };

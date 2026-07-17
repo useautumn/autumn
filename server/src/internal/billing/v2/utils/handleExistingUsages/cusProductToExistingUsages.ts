@@ -10,6 +10,7 @@ import {
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { isPooledSourceCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 
 export const cusProductToExistingUsages = ({
 	cusProduct,
@@ -37,6 +38,17 @@ export const cusProductToExistingUsages = ({
 	> = {};
 
 	for (const cusEnt of cusEnts) {
+		// Pooled source rows intentionally retain a zero balance while the shared
+		// loose entitlement owns runtime usage. Treating that zero as source usage
+		// would subtract the entire allowance again during a replacement.
+		if (
+			isPooledSourceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+				customerProduct: cusProduct,
+			})
+		)
+			continue;
+
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
 		if (isUnlimitedCusEnt(cusEnt)) continue;

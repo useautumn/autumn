@@ -7,6 +7,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
+import { customerProductHasPooledSource } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 import { releaseLicenseAssignmentsForEntity } from "@/internal/licenses/actions/assignments/utils/releaseLicenseAssignmentsForEntity.js";
 
 export const cancelSubsForEntity = async ({
@@ -41,6 +43,47 @@ export const cancelSubsForEntity = async ({
 				customerId,
 				insertCustomerProducts: [],
 				deleteCustomerProducts: scheduledProducts,
+			},
+		});
+	}
+
+	const endedAt = Date.now();
+	const ordinaryPooledProducts = entityProducts.filter((customerProduct) => {
+		if (
+			customerProduct.status !== CusProductStatus.Active &&
+			customerProduct.status !== CusProductStatus.PastDue
+		) {
+			return false;
+		}
+		if (customerProduct.customer_license_link_id) return false;
+		if (isCustomerProductPaidRecurring(customerProduct)) return false;
+		return customerProductHasPooledSource({ customerProduct });
+	});
+	const ordinaryPooledBalanceOps = ordinaryPooledProducts.flatMap(
+		(customerProduct) => {
+			const operation = customerProductToPooledBalanceRemovalOp({
+				customerProduct,
+				effectiveAt: null,
+			});
+			return operation ? [operation] : [];
+		},
+	);
+	if (ordinaryPooledProducts.length > 0) {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: {
+				customerId,
+				insertCustomerProducts: [],
+				updateCustomerProducts: ordinaryPooledProducts.map(
+					(customerProduct) => ({
+						customerProduct,
+						updates: {
+							status: CusProductStatus.Expired,
+							ended_at: endedAt,
+						},
+					}),
+				),
+				pooledBalanceOps: ordinaryPooledBalanceOps,
 			},
 		});
 	}

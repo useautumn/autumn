@@ -27,6 +27,7 @@ local ttl = tonumber(ARGV[2])
 local epoch_ttl = tonumber(ARGV[3])
 local subject_view_json = ARGV[4]
 local num_balance_keys = tonumber(ARGV[5])
+local BALANCE_EPOCH_FIELD = '_subject_view_epoch'
 
 if redis.call('EXISTS', subject_key) == 1 then
   return 'CACHE_EXISTS'
@@ -43,16 +44,21 @@ for i = 1, num_balance_keys do
   local balance_key = KEYS[2 + i]
   local field_count = tonumber(ARGV[argv_index])
   argv_index = argv_index + 1
+  local balance_epoch = redis.call('HGET', balance_key, BALANCE_EPOCH_FIELD)
+  if balance_epoch ~= expected_epoch then
+    redis.call('UNLINK', balance_key)
+  end
 
   if field_count > 0 then
     for j = 1, field_count do
       local field_name = ARGV[argv_index]
       local field_value = ARGV[argv_index + 1]
-      redis.call('HSET', balance_key, field_name, field_value)
+      redis.call('HSETNX', balance_key, field_name, field_value)
       argv_index = argv_index + 2
     end
   end
 
+  redis.call('HSET', balance_key, BALANCE_EPOCH_FIELD, expected_epoch)
   redis.call('EXPIRE', balance_key, ttl)
 end
 

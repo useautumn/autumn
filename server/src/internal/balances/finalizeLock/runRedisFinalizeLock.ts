@@ -1,9 +1,6 @@
 import type { Redis } from "ioredis";
-import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
-import { deductionUpdatesToModifiedIds } from "@/internal/balances/utils/sync/deductionUpdatesToModifiedIds.js";
-import { globalSyncBatchingManagerV2 } from "@/internal/balances/utils/sync/SyncBatchingManagerV2.js";
+import { executeLegacyRedisDeductionWithBalanceSync } from "@/internal/balances/utils/deduction/executeLegacyRedisDeductionWithBalanceSync.js";
 import { RedisDeductionError } from "@/internal/balances/utils/types/redisDeductionError.js";
 import type { FinalizeLockContext } from "./buildFinalizeLockContext.js";
 import { insertFinalizeLockEvent } from "./insertFinalizeLockEvent.js";
@@ -26,14 +23,12 @@ export const runRedisFinalizeLock = async ({
 		deductionOptions,
 	} = finalizeLockContext;
 
-	let redisResult: Awaited<ReturnType<typeof executeRedisDeduction>>;
-
 	try {
-		redisResult = await executeRedisDeduction({
+		await executeLegacyRedisDeductionWithBalanceSync({
 			ctx,
 			fullCustomer,
 			entityId: receipt.entity_id ?? undefined,
-			deductions: [deduction],
+			featureDeductions: [deduction],
 			deductionOptions,
 			redisInstance,
 		});
@@ -46,23 +41,6 @@ export const runRedisFinalizeLock = async ({
 			return;
 		}
 		throw error;
-	}
-
-	const { updates, rolloverUpdates } = redisResult;
-
-	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
-	const rolloverIds = Object.keys(rolloverUpdates);
-
-	if (modifiedCusEntIds.length > 0 || rolloverIds.length > 0) {
-		ctx.logger.info(`[QUEUE SYNC] (${receipt.customer_id})`);
-		globalSyncBatchingManagerV2.addSyncItem({
-			customerId: receipt.customer_id,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			cusEntIds: modifiedCusEntIds,
-			rolloverIds,
-			region: currentRegion,
-		});
 	}
 
 	insertFinalizeLockEvent({ ctx, finalizeLockContext });

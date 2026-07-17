@@ -52,6 +52,27 @@ export const mergeAutumnBillingPlans = ({
 		base: base.customEntitlements,
 		incoming: incoming.customEntitlements,
 	}),
+	pooledBalanceOps: mergeByKey({
+		base: base.pooledBalanceOps,
+		incoming: incoming.pooledBalanceOps,
+		getKey: (operation) => {
+			switch (operation.op) {
+				case "upsert_source":
+					return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}`;
+				case "remove_source":
+					return `${operation.sourceCustomerProductId}:remove`;
+				case "remove_contribution":
+					return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove`;
+				case "restore_source":
+					return `${operation.sourceCustomerProductId}:restore`;
+				case "transfer_source":
+					return `${operation.contributionId}:transfer`;
+				case "stage_owner_removal":
+				case "restore_owner":
+					return `owner:${operation.resetOwnerType}:${operation.resetOwnerId}`;
+			}
+		},
+	}),
 	customFreeTrial: incoming.customFreeTrial ?? base.customFreeTrial,
 	lineItems: mergeById({
 		base: base.lineItems,

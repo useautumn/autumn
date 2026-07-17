@@ -1,10 +1,18 @@
-import type { FullCustomer } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
+} from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
+import {
+	type PooledCustomerEntitlementReset,
+	resetPooledCustomerEntitlements,
+} from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
 import { executeResetCache } from "./executeResetCache.js";
@@ -33,6 +41,25 @@ const toResetParam = ({
 	};
 };
 
+const pooledResetToProcessResetResult = ({
+	pooledReset,
+}: {
+	pooledReset: PooledCustomerEntitlementReset;
+}): ProcessResetResult => {
+	return {
+		updates: {
+			balance: pooledReset.balance,
+			additional_balance: 0,
+			adjustment: pooledReset.adjustment,
+			entities: null,
+			next_reset_at: pooledReset.nextResetAt,
+		},
+		...(pooledReset.rolloverInsert
+			? { rolloverInsert: pooledReset.rolloverInsert }
+			: {}),
+	};
+};
+
 /**
  * Lazily resets customer entitlements that have passed their next_reset_at.
  * Uses an atomic Postgres function with per-row locking to prevent double-resets.
@@ -51,15 +78,24 @@ export const resetCustomerEntitlements = async ({
 	const { logger } = ctx;
 	const customerId = fullCus.id || fullCus.internal_id;
 
-	const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
-
-	// cusEntsNeedingReset = [];
-
-	if (cusEntsNeedingReset.length === 0) return false;
-
 	try {
+		const allCustomerEntitlements = fullCustomerToCustomerEntitlements({
+			fullCustomer: fullCus,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+		});
+		const pooledResets = await resetPooledCustomerEntitlements({
+			ctx,
+			customerId,
+			customerEntitlements: allCustomerEntitlements,
+			now,
+		});
+		const cusEntsNeedingReset = getCusEntsNeedingReset({ fullCus, now });
+		if (cusEntsNeedingReset.length === 0 && pooledResets.length === 0) {
+			return false;
+		}
+
 		logger.info(
-			`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length}`,
+			`[resetCustomerEntitlements] customer=${customerId}, cusEnts needing reset: ${cusEntsNeedingReset.length + pooledResets.length}`,
 		);
 
 		// 1. Compute all resets (pure computation, no DB writes)
@@ -74,17 +110,32 @@ export const resetCustomerEntitlements = async ({
 			computed.push({ cusEntId: cusEnt.id, result });
 		}
 
-		if (computed.length === 0) return false;
-
 		// 2. Execute atomic DB writes via Postgres function
-		const resets = computed.map(({ cusEntId, result }) =>
+		const standardResets = computed.map(({ cusEntId, result }) =>
+			toResetParam({ cusEntId, result }),
+		);
+		const { applied, skipped } =
+			standardResets.length > 0
+				? await resetCusEnts({ ctx, resets: standardResets })
+				: { applied: {}, skipped: [] };
+		const pooledComputed = pooledResets.map((pooledReset) => ({
+			cusEntId: pooledReset.customerEntitlementId,
+			result: pooledResetToProcessResetResult({ pooledReset }),
+		}));
+		const allComputed = [...computed, ...pooledComputed];
+		if (allComputed.length === 0) return false;
+		const allSkipped = [
+			...skipped,
+			...pooledResets
+				.filter((pooledReset) => !pooledReset.applied)
+				.map((pooledReset) => pooledReset.customerEntitlementId),
+		];
+		const resets = allComputed.map(({ cusEntId, result }) =>
 			toResetParam({ cusEntId, result }),
 		);
 
-		const { applied, skipped } = await resetCusEnts({ ctx, resets });
-
 		logger.info(
-			`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
+			`[resetCustomerEntitlements] customer=${customerId}, applied: ${Object.keys(applied).length + pooledResets.filter((pooledReset) => pooledReset.applied).length}, skipped: ${allSkipped.length}`,
 		);
 
 		// 3. Apply computed reset values to in-memory FullCustomer.
@@ -94,14 +145,17 @@ export const resetCustomerEntitlements = async ({
 		const clearingMap = await applyResetResults({
 			ctx,
 			fullCus,
-			computed,
-			skipped,
+			computed: allComputed,
+			skipped: allSkipped,
 		});
 
 		// 4. Update Redis cache atomically (fire-and-forget)
 		// Only needed when we actually wrote to DB — skipped means cache was
 		// already updated by the winning request.
-		if (Object.keys(applied).length > 0) {
+		if (
+			Object.keys(applied).length > 0 ||
+			pooledResets.some((pooledReset) => pooledReset.applied)
+		) {
 			const oldNextResetAts: Record<string, number> = {};
 			const customerEntitlementFeatureIds: Record<string, string> = {};
 			for (const cusEnt of cusEntsNeedingReset) {
@@ -109,6 +163,12 @@ export const resetCustomerEntitlements = async ({
 					oldNextResetAts[cusEnt.id] = cusEnt.next_reset_at;
 				}
 				customerEntitlementFeatureIds[cusEnt.id] = cusEnt.feature_id;
+			}
+			for (const pooledReset of pooledResets) {
+				oldNextResetAts[pooledReset.customerEntitlementId] =
+					pooledReset.resetAt;
+				customerEntitlementFeatureIds[pooledReset.customerEntitlementId] =
+					pooledReset.featureId;
 			}
 
 			await executeResetCache({

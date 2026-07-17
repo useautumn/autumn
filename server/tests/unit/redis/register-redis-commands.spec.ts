@@ -9,6 +9,7 @@ type RegisteredCommand = {
 
 const upstashLockedCommands = new Set([
 	"deductFromSubjectBalances",
+	"updateSubjectBalanceBatches",
 	"updateSubjectBalances",
 	"setCachedFullSubject",
 	"updateFullSubjectCustomerDataV2",
@@ -64,5 +65,13 @@ describe("registerRedisCommands", () => {
 			expect(shebangCount(lua), name).toBe(0);
 			expect(lua.startsWith(UPSTASH_KEY_LOCKING_SHEBANG), name).toBe(false);
 		}
+	});
+
+	test("registers pooled cutovers with a dynamic key count", () => {
+		const commands = registerCommands(true);
+
+		expect(
+			commands.get("updateSubjectBalanceBatches")?.numberOfKeys,
+		).toBeUndefined();
 	});
 });

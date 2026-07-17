@@ -3,10 +3,13 @@ import {
 	type AttachConfig,
 	AttachFunctionResponseSchema,
 	AttachScenario,
+	ErrCode,
+	RecaseError,
 	SuccessCode,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { getCustomerDisplay } from "../../../../billing/attach/utils/getCustomerDisplay.js";
 import { createFullCusProduct } from "../../../add-product/createFullCusProduct.js";
@@ -81,15 +84,51 @@ export const handleAddProduct = async ({
 	attachParams,
 	config,
 	branch,
+	dependencies = { legacyAttach: billingActions.legacy.attach },
 }: {
 	ctx: AutumnContext;
 	attachParams: AttachParams;
 	config?: AttachConfig;
 	branch?: AttachBranch;
+	dependencies?: {
+		legacyAttach: typeof billingActions.legacy.attach;
+	};
 }) => {
-	const { prices } = attachParams;
+	const { customer, entitlements, prices, products } = attachParams;
 
 	const defaultConfig: AttachConfig = getDefaultAttachConfig();
+	const hasPooledEntityItem =
+		Boolean(customer.entity) &&
+		entitlements.some((entitlement) => entitlement.pooled === true);
+	if (hasPooledEntityItem) {
+		if (products.length !== 1) {
+			throw new RecaseError({
+				message:
+					"Legacy pooled entity attachment supports one product at a time. Use the current multi-attach API for multiple products.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const { billingResponse, billingResult } = await dependencies.legacyAttach({
+			ctx,
+			attachParams,
+			planTiming: "immediate",
+		});
+		return AttachFunctionResponseSchema.parse({
+			code:
+				prices.length > 0
+					? SuccessCode.NewProductAttached
+					: SuccessCode.FreeProductAttached,
+			message: `Successfully attached pooled entity product ${products[0]!.name}`,
+			checkout_url: billingResponse?.payment_url ?? undefined,
+			invoice: attachParams.invoiceOnly
+				? billingResult?.stripe?.stripeInvoice
+				: undefined,
+			product_ids: [products[0]!.id],
+			customer_id: customer.id || customer.internal_id,
+		});
+	}
 
 	if (prices.length > 0) {
 		return await handlePaidProduct({

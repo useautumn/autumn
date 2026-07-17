@@ -4,17 +4,13 @@ import type {
 	TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
-import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "../../events/EventBatchingManager.js";
 import { buildEventInfo, initEvent } from "../../events/initEvent.js";
 import { deductionToTrackResponse } from "../../utils/deduction/deductionToTrackResponse.js";
-import { executeRedisDeduction } from "../../utils/deduction/executeRedisDeduction.js";
-import { deductionUpdatesToModifiedIds } from "../../utils/sync/deductionUpdatesToModifiedIds.js";
-import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManagerV2.js";
+import { executeLegacyRedisDeductionWithBalanceSync } from "../../utils/deduction/executeLegacyRedisDeductionWithBalanceSync.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
-import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import { buildAiCreditCostProperty } from "./buildAiCreditCostProperty.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
@@ -39,33 +35,6 @@ const aiCreditCostEntries = ({
 		entries.push({ featureId, amount: update.deducted });
 	}
 	return entries;
-};
-
-const queueSyncItem = ({
-	ctx,
-	body,
-	updates,
-	rolloverUpdates,
-}: {
-	ctx: AutumnContext;
-	body: TrackParams;
-	updates: Record<string, DeductionUpdate>;
-	rolloverUpdates: Record<string, RolloverUpdate>;
-}): void => {
-	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
-	const rolloverIds = Object.keys(rolloverUpdates);
-
-	if (modifiedCusEntIds.length === 0 && rolloverIds.length === 0) return;
-
-	ctx.logger.info(`[QUEUE SYNC] (${body.customer_id})`);
-	globalSyncBatchingManagerV2.addSyncItem({
-		customerId: body.customer_id,
-		orgId: ctx.org.id,
-		env: ctx.env,
-		cusEntIds: modifiedCusEntIds,
-		rolloverIds,
-		region: currentRegion,
-	});
 };
 
 const queueEvent = ({
@@ -111,15 +80,11 @@ export const runRedisTrack = async ({
 	body: TrackParams;
 }): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(
-		executeRedisDeduction({
+		executeLegacyRedisDeductionWithBalanceSync({
 			ctx,
 			fullCustomer,
-			entityId: fullCustomer.entity?.id ?? undefined,
-			deductions: featureDeductions,
-			deductionOptions: {
-				overageBehaviour: overageBehavior || "cap",
-				triggerAutoTopUp: true,
-			},
+			featureDeductions,
+			overageBehavior,
 		}),
 	);
 
@@ -133,7 +98,7 @@ export const runRedisTrack = async ({
 		});
 	}
 
-	const { updates, fullCus, rolloverUpdates } = result;
+	const { updates, fullCus } = result;
 
 	const aiCreditCost = buildAiCreditCostProperty({
 		featureDeductions,
@@ -142,14 +107,6 @@ export const runRedisTrack = async ({
 	if (aiCreditCost) {
 		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
 	}
-
-	// Queue sync and event
-	queueSyncItem({
-		ctx,
-		body,
-		updates,
-		rolloverUpdates,
-	});
 
 	queueEvent({ ctx, body, fullCustomer });
 

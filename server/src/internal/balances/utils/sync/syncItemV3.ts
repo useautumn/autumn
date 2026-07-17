@@ -12,6 +12,10 @@ import { getRegionalRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
+import {
+	type CustomerBalanceSyncDb,
+	withCustomerBalanceSyncLock,
+} from "./withCustomerBalanceSyncLock.js";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -65,7 +69,7 @@ const handleSyncPostgresError = async ({
 	return true;
 };
 
-interface SyncItemV3 {
+export interface SyncItemV3 {
 	customerId: string;
 	orgId: string;
 	env: string;
@@ -187,37 +191,26 @@ const formatRolloverSyncEntry = ({
 	return `rollover ${entry.rollover_id}: bal=${entry.balance}, usage=${entry.usage}${entitiesStr}`;
 };
 
-/**
- * Sync FullCustomer cache balances to Postgres
- */
-export const syncItemV3 = async ({
+export const writeFullCustomerBalancesToDb = async ({
 	ctx,
-	payload,
+	db,
+	customerId,
+	fullCustomer,
+	cusEntIds,
+	rolloverIds = [],
 }: {
 	ctx: AutumnContext;
-	payload: SyncItemV3;
+	db: CustomerBalanceSyncDb;
+	customerId: string;
+	fullCustomer: FullCustomer;
+	cusEntIds: string[];
+	rolloverIds?: string[];
 }): Promise<void> => {
-	const { customerId, region, cusEntIds, rolloverIds } = payload;
-	const { db, logger } = ctx;
-
-	const redisInstance = region ? getRegionalRedis(region) : undefined;
-
-	const fullCustomer = await getCachedFullCustomer({
-		ctx,
-		customerId,
-		redisInstance,
-		skipRolloutCheck: true,
-	});
-
-	if (!fullCustomer) {
-		logger.info(`[SYNC V3] Cache miss for ${customerId}, skipping`);
-		return;
-	}
-
+	const { logger } = ctx;
 	const entries = buildSyncEntries({ fullCustomer, cusEntIds });
 	const rolloverEntries = buildRolloverSyncEntries({
 		fullCustomer,
-		rolloverIds: rolloverIds ?? [],
+		rolloverIds,
 	});
 
 	if (entries.length === 0 && rolloverEntries.length === 0) {
@@ -235,23 +228,12 @@ export const syncItemV3 = async ({
 		);
 	}
 
-	const { data: result, error } = await tryCatch(
-		db.execute(
-			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
-				customer_entitlement_updates: entries,
-				rollover_updates: rolloverEntries,
-			})}::jsonb) ${planetScaleTag({ query: "syncItemV3" })}`,
-		),
+	const result = await db.execute(
+		sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
+			customer_entitlement_updates: entries,
+			rollover_updates: rolloverEntries,
+		})}::jsonb) ${planetScaleTag({ query: "syncItemV3" })}`,
 	);
-
-	if (error) {
-		await handleSyncPostgresError({
-			error,
-			customerId,
-			ctx,
-		});
-		return;
-	}
 
 	const syncResult = result[0]?.sync_balances_v2 as
 		| {
@@ -270,4 +252,65 @@ export const syncItemV3 = async ({
 	logger.info(
 		`[SYNC V3] (${customerId}) Done: ${updateCount} cus_ents, ${rolloverUpdateCount} rollovers updated`,
 	);
+};
+
+/**
+ * Sync FullCustomer cache balances to Postgres
+ */
+const syncItemV3WithDb = async ({
+	ctx,
+	payload,
+	db,
+}: {
+	ctx: AutumnContext;
+	payload: SyncItemV3;
+	db: CustomerBalanceSyncDb;
+}): Promise<void> => {
+	const { customerId, region, cusEntIds, rolloverIds } = payload;
+	const { logger } = ctx;
+
+	const redisInstance = region ? getRegionalRedis(region) : undefined;
+
+	const fullCustomer = await getCachedFullCustomer({
+		ctx,
+		customerId,
+		redisInstance,
+		skipRolloutCheck: true,
+	});
+
+	if (!fullCustomer) {
+		logger.info(`[SYNC V3] Cache miss for ${customerId}, skipping`);
+		return;
+	}
+
+	await writeFullCustomerBalancesToDb({
+		ctx,
+		db,
+		customerId,
+		fullCustomer,
+		cusEntIds,
+		rolloverIds,
+	});
+};
+
+export const syncItemV3 = async ({
+	ctx,
+	payload,
+}: {
+	ctx: AutumnContext;
+	payload: SyncItemV3;
+}): Promise<void> => {
+	const { error } = await tryCatch(
+		withCustomerBalanceSyncLock({
+			ctx,
+			customerId: payload.customerId,
+			callback: ({ db }) => syncItemV3WithDb({ ctx, payload, db }),
+		}),
+	);
+	if (!error) return;
+	await handleSyncPostgresError({
+		error,
+		customerId: payload.customerId,
+		ctx,
+	});
 };

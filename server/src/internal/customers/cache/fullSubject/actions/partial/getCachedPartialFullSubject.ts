@@ -3,6 +3,7 @@ import { normalizedToFullSubject } from "@autumn/shared";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
@@ -42,12 +43,16 @@ export const getCachedPartialFullSubject = async ({
 	entityId,
 	featureIds,
 	source,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	featureIds: string[];
 	source?: string;
+	/** Existing customer balance-sync transaction for a serialized miss
+	 * recheck. Prevents a due pooled reset from nesting the same lock. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<GetCachedPartialFullSubjectResult> => {
 	const { org, env, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -309,7 +314,12 @@ export const getCachedPartialFullSubject = async ({
 			});
 
 			const fullSubject = normalizedToFullSubject({ normalized });
-			await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+			await lazyResetSubjectEntitlements({
+				ctx,
+				fullSubject,
+				normalized,
+				balanceSyncDb,
+			});
 			await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 			return fullSubject;
 		},

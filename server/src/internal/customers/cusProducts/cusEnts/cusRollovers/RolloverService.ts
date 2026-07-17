@@ -4,11 +4,15 @@ import {
 	rollovers,
 } from "@autumn/shared";
 import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
-import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { RepoContext } from "@/db/repoContext.js";
 import { performMaximumClearing } from "./rolloverUtils.js";
+
+type RolloverDb = Pick<DrizzleCli, "select" | "insert" | "update" | "delete">;
+
+type RolloverContext = {
+	db: RolloverDb;
+};
 
 export class RolloverService {
 	static async update({
@@ -16,7 +20,7 @@ export class RolloverService {
 		id,
 		updates,
 	}: {
-		db: DrizzleCli;
+		db: RolloverDb;
 		id: string;
 		updates: Partial<Rollover>;
 	}) {
@@ -31,7 +35,7 @@ export class RolloverService {
 		return data;
 	}
 
-	static async upsert({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
+	static async upsert({ db, rows }: { db: RolloverDb; rows: Rollover[] }) {
 		if (Array.isArray(rows) && rows.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(rollovers, ["id"]);
@@ -64,8 +68,7 @@ export class RolloverService {
 		ctx,
 		cusEntID,
 	}: {
-		// db: DrizzleCli;
-		ctx: CronContext;
+		ctx: RolloverContext;
 		cusEntID: string;
 	}) {
 		const { db } = ctx;
@@ -87,10 +90,12 @@ export class RolloverService {
 		ctx,
 		rows,
 		fullCusEnt,
+		startingBalanceOverride,
 	}: {
-		ctx: RepoContext;
+		ctx: RolloverContext;
 		rows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
+		startingBalanceOverride?: number;
 	}) {
 		const { db } = ctx;
 		if (rows.length === 0) return {};
@@ -101,6 +106,7 @@ export class RolloverService {
 			ctx,
 			newRows: rows,
 			fullCusEnt,
+			startingBalanceOverride,
 		});
 
 		return result;
@@ -111,10 +117,12 @@ export class RolloverService {
 		ctx,
 		newRows,
 		fullCusEnt,
+		startingBalanceOverride,
 	}: {
-		ctx: RepoContext;
+		ctx: RolloverContext;
 		newRows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
+		startingBalanceOverride?: number;
 	}): Promise<{
 		rollovers: Rollover[];
 		deletedIds: string[];
@@ -129,6 +137,7 @@ export class RolloverService {
 		const { toDelete, toUpdate } = performMaximumClearing({
 			rows: curRollovers as Rollover[],
 			cusEnt: fullCusEnt,
+			startingBalanceOverride,
 		});
 
 		if (toDelete.length > 0) {
@@ -150,8 +159,8 @@ export class RolloverService {
 		};
 	}
 
-	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+	static async delete({ db, ids }: { db: RolloverDb; ids: string[] }) {
 		if (ids.length === 0) return;
-		const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
+		await db.delete(rollovers).where(inArray(rollovers.id, ids));
 	}
 }

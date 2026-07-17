@@ -24,20 +24,25 @@ export const FALLBACK_ERROR_CODES = [
 export class RedisDeductionError extends Error {
 	code: RedisDeductionErrorCode;
 	featureId?: string;
+	/** False when falling back would replay an earlier successful Redis feature. */
+	fallbackAllowed: boolean;
 
 	constructor({
 		message,
 		code,
 		featureId,
+		fallbackAllowed = true,
 	}: {
 		message: string;
 		code: RedisDeductionErrorCode;
 		featureId?: string;
+		fallbackAllowed?: boolean;
 	}) {
 		super(message);
 		this.name = "RedisDeductionError";
 		this.code = code;
 		this.featureId = featureId;
+		this.fallbackAllowed = fallbackAllowed;
 	}
 
 	isRedisUnavailable(): boolean {
@@ -46,8 +51,11 @@ export class RedisDeductionError extends Error {
 
 	/** Check if this error should trigger a Postgres fallback */
 	shouldFallback(): boolean {
-		return FALLBACK_ERROR_CODES.includes(
-			this.code as (typeof FALLBACK_ERROR_CODES)[number],
+		return (
+			this.fallbackAllowed &&
+			FALLBACK_ERROR_CODES.includes(
+				this.code as (typeof FALLBACK_ERROR_CODES)[number],
+			)
 		);
 	}
 }

@@ -48,6 +48,14 @@ export const fullCustomerToCustomerEntitlements = ({
 		});
 	}
 
+	cusEnts = cusEnts.filter(
+		(cusEnt) =>
+			!(
+				cusEnt.entitlement.pooled &&
+				notNullish(cusEnt.customer_product?.internal_entity_id)
+			),
+	);
+
 	if (featureId) {
 		cusEnts = cusEnts.filter(
 			(cusEnt) => cusEnt.entitlement.feature.id === featureId,

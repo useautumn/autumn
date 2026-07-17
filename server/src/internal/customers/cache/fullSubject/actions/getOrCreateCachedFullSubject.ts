@@ -1,5 +1,7 @@
 import {
 	type CheckParams,
+	CustomerNotFoundError,
+	EntityNotFoundError,
 	type FullSubject,
 	fullCustomerToFullSubject,
 	SubjectType,
@@ -11,6 +13,7 @@ import { updateCustomerData } from "@/internal/customers/actions/updateCustomerD
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
+import { rebuildFullSubjectCacheAfterMiss } from "./rebuildFullSubjectCacheAfterMiss.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrCreateCachedFullSubject = async ({
@@ -53,6 +56,36 @@ export const getOrCreateCachedFullSubject = async ({
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
 			setCache = false;
+		}
+	}
+
+	const hasCreateOrUpdateData = Boolean(customerData || entityData);
+	if (!fullSubject && customerId && useRedis && !hasCreateOrUpdateData) {
+		try {
+			// Existing subjects with no inline create/update payload use the same
+			// lifecycle-serialized rebuild as the V2.1+ read path. Genuine customer
+			// or entity creation stays on the legacy flow below.
+			return await rebuildFullSubjectCacheAfterMiss({
+				ctx,
+				customerId,
+				entityId,
+				source,
+				readCachedSubject: ({ balanceSyncDb, source: cacheReadSource }) =>
+					getCachedFullSubject({
+						ctx,
+						customerId,
+						entityId,
+						source: cacheReadSource,
+						balanceSyncDb,
+					}),
+			});
+		} catch (error) {
+			if (
+				!(error instanceof CustomerNotFoundError) &&
+				!(error instanceof EntityNotFoundError)
+			) {
+				throw error;
+			}
 		}
 	}
 

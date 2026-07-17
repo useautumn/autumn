@@ -1,7 +1,6 @@
 import {
 	cusEntsToUsage,
 	cusEntToRecalculateScopeKey,
-	cusEntToStartingBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -10,28 +9,12 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { deductFromCusEntsTypescript } from "@/internal/balances/track/deductUtils/deductFromCusEntsTypescript";
 import { CusService } from "@/internal/customers/CusService";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
-
-const resetCusEntInPlace = ({
-	cusEnt,
-}: {
-	cusEnt: FullCusEntWithFullCusProduct;
-}): void => {
-	const resetUpdate = getResetBalancesUpdate({
-		cusEnt,
-		allowance: cusEntToStartingBalance({ cusEnt }) ?? undefined,
-	});
-	if ("entities" in resetUpdate) {
-		cusEnt.entities = resetUpdate.entities;
-	} else {
-		cusEnt.balance = resetUpdate.balance;
-		cusEnt.additional_balance = resetUpdate.additional_balance;
-	}
-	cusEnt.adjustment = 0;
-};
+import {
+	getCustomerEntitlementGrantState,
+	reapplyUsageToCustomerEntitlements,
+} from "./reapplyUsageToCustomerEntitlements.js";
 
 /**
  * Computes (without persisting) the result of recalculating a customer's
@@ -95,14 +78,11 @@ export const computeRecalculateBalance = async ({
 			continue;
 		}
 		const scopeUsage = cusEntsToUsage({ cusEnts: group, entityId });
-		for (const cusEnt of group) {
-			resetCusEntInPlace({ cusEnt });
-		}
-		deductFromCusEntsTypescript({
-			cusEnts: group,
-			amountToDeduct: scopeUsage,
+		reapplyUsageToCustomerEntitlements({
+			customerEntitlements: group,
+			usage: scopeUsage,
 			targetEntityId: entityId,
-			allowOverage: true,
+			getGrantState: getCustomerEntitlementGrantState,
 		});
 	}
 	return { fullCustomer, entityId, before, after, totalUsage };

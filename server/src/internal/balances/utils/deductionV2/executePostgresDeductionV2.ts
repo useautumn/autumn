@@ -19,9 +19,10 @@ import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
-import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
+import { mergeDeductionUpdates } from "./mergeDeductionUpdates.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
@@ -146,8 +147,8 @@ export const executePostgresDeductionV2 = async ({
 				continue;
 			}
 
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
 				// No usage_window_limits here: the hard usage cap is enforced only on the
@@ -169,7 +170,7 @@ export const executePostgresDeductionV2 = async ({
 				feature_id: feature.id,
 			})}::jsonb
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
-		);
+			);
 
 			const resultJson = result[0]?.deduct_from_cus_ents as {
 				updates: Record<string, DeductionUpdate>;
@@ -192,7 +193,6 @@ export const executePostgresDeductionV2 = async ({
 				updates,
 				source: "executePostgresDeductionV2",
 			});
-			allUpdates = { ...allUpdates, ...updates };
 			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
 			if (rollover_updates?.length > 0) {
 				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
@@ -279,6 +279,11 @@ export const executePostgresDeductionV2 = async ({
 				throw error;
 			}
 
+			allUpdates = mergeDeductionUpdates({
+				accumulatedUpdates: allUpdates,
+				currentUpdates: updates,
+			});
+
 			const featuresFromMutationLogs = mutationLogsToFeaturesV2({
 				fullSubject,
 				mutationLogs: mutation_logs ?? [],
@@ -326,11 +331,11 @@ export const executePostgresDeductionV2 = async ({
 
 	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
-			lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-			ttlMs: 60000,
-			errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
-			fn: executeDeduction,
-		})
+				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+				ttlMs: 60000,
+				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+				fn: executeDeduction,
+			})
 		: await executeDeduction();
 
 	return {

@@ -1,13 +1,25 @@
 import {
 	AttachScenario,
 	CusProductStatus,
+	type CustomerProductUpdate,
 	type FullCusProduct,
 	type FullCustomer,
 	type InsertCustomerProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import {
+	customerProductToPooledBalanceOwnerRestoreOp,
+	customerProductToPooledBalanceRestoreOp,
+} from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+
+export type UncancelCustomerProductDependencies = {
+	executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+	updateCustomerProduct: typeof CusProductService.update;
+	addProductsUpdatedWebhookTask: typeof addProductsUpdatedWebhookTask;
+};
 
 /**
  * Uncancels a customer product (reverses a previous cancellation).
@@ -23,10 +35,16 @@ export const uncancelCustomerProduct = async ({
 	ctx,
 	customerProduct,
 	fullCustomer,
+	dependencies = {
+		executeAutumnBillingPlan,
+		updateCustomerProduct: CusProductService.update,
+		addProductsUpdatedWebhookTask,
+	},
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
+	dependencies?: UncancelCustomerProductDependencies;
 }): Promise<{ updates: Partial<InsertCustomerProduct> }> => {
 	const { org, env } = ctx;
 
@@ -38,18 +56,53 @@ export const uncancelCustomerProduct = async ({
 		status: CusProductStatus.Active,
 	};
 
-	await CusProductService.update({
-		ctx,
-		cusProductId: customerProduct.id,
-		updates,
-	});
+	const pooledBalanceRestore =
+		typeof customerProduct.ended_at === "number"
+			? customerProductToPooledBalanceRestoreOp({
+					customerProduct,
+					expectedEffectiveAt: customerProduct.ended_at,
+				})
+			: undefined;
+	const pooledBalanceOps = [
+		...(pooledBalanceRestore ? [pooledBalanceRestore] : []),
+		...(typeof customerProduct.ended_at === "number"
+			? [
+					customerProductToPooledBalanceOwnerRestoreOp({
+						customerProduct,
+						expectedEffectiveAt: customerProduct.ended_at,
+					}),
+				]
+			: []),
+	];
+	if (pooledBalanceOps.length > 0) {
+		await dependencies.executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: {
+				customerId: fullCustomer.id ?? fullCustomer.internal_id,
+				insertCustomerProducts: [],
+				updateCustomerProducts: [
+					{
+						customerProduct,
+						updates: updates as CustomerProductUpdate["updates"],
+					},
+				],
+				pooledBalanceOps,
+			},
+		});
+	} else {
+		await dependencies.updateCustomerProduct({
+			ctx,
+			cusProductId: customerProduct.id,
+			updates,
+		});
+	}
 
 	ctx.logger.debug(
 		`[uncancelCustomerProduct]: uncanceling ${customerProduct.product.name}`,
 	);
 
 	// 2. Send webhook
-	await addProductsUpdatedWebhookTask({
+	await dependencies.addProductsUpdatedWebhookTask({
 		ctx,
 		internalCustomerId: customerProduct.internal_customer_id,
 		org,

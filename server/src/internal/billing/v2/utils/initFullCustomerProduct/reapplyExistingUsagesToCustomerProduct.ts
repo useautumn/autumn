@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { isPooledSourceCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/applyExistingUsages";
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
@@ -22,9 +23,8 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 	fromCustomerProduct?: FullCusProduct;
 	customerProduct: FullCusProduct;
 }) => {
-	const { db } = ctx;
 	const { valid } = cp(customerProduct).main().recurring();
-	if (!valid) return;
+	if (!valid) return undefined;
 
 	const currentCustomerProduct =
 		fromCustomerProduct ??
@@ -33,7 +33,7 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 			customerProduct,
 		});
 
-	if (!currentCustomerProduct) return;
+	if (!currentCustomerProduct) return undefined;
 
 	// const featuresToCarryUsagesFor = customerProductToFeaturesToCarryUsagesFor({
 	// 	cusProduct: customerProduct,
@@ -72,6 +72,13 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 	});
 
 	for (const cusEnt of customerProduct.customer_entitlements) {
+		if (
+			isPooledSourceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+				customerProduct,
+			})
+		)
+			continue;
 		await CusEntService.update({
 			ctx,
 			id: cusEnt.id,
@@ -81,4 +88,6 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 			},
 		});
 	}
+
+	return currentCustomerProduct;
 };

@@ -184,6 +184,20 @@ export const buildIncrementalSyncParams = ({
 		// from the base item's Stripe quantity, never from prepaid items —
 		// prepaid pack counts live in syncPlan.feature_quantities instead).
 		if (matchedPlan.product.is_add_on === true) {
+			if (
+				!syncPlan.entity_id &&
+				linkedCustomerProducts.some(
+					(linkedProduct) =>
+						isCustomerProductAddOn(linkedProduct) &&
+						linkedProduct.product.id === syncPlan.plan_id &&
+						Boolean(linkedProduct.internal_entity_id),
+				)
+			) {
+				return {
+					shouldSync: false,
+					reason: "ambiguous_linked_targets",
+				};
+			}
 			const linkedInstances = linkedAddOnInstances({
 				linkedCustomerProducts,
 				syncPlan,
@@ -211,8 +225,23 @@ export const buildIncrementalSyncParams = ({
 			continue;
 		}
 
-		// Main plans re-sync only when the linked target's product id changed
-		// (upgrade/downgrade); prepaid drift is not checked for them here.
+		// Main plans re-sync when the linked product changes or its prepaid
+		// quantities drift from Stripe.
+		if (
+			!syncPlan.entity_id &&
+			linkedCustomerProducts.some(
+				(linkedProduct) =>
+					!isCustomerProductAddOn(linkedProduct) &&
+					Boolean(linkedProduct.internal_entity_id) &&
+					(linkedProduct.product.group ?? "") ===
+						(matchedPlan.product.group ?? ""),
+			)
+		) {
+			return {
+				shouldSync: false,
+				reason: "ambiguous_linked_targets",
+			};
+		}
 		const target = matchedPlanToTargetGroupLink({ matchedPlan, syncPlan });
 		if (!target) {
 			return {
@@ -222,7 +251,11 @@ export const buildIncrementalSyncParams = ({
 		}
 
 		const linkedProduct = linkedTargets.targets.get(target.key);
-		if (!linkedProduct || linkedProduct.product.id !== target.productId) {
+		if (
+			!linkedProduct ||
+			linkedProduct.product.id !== target.productId ||
+			prepaidQuantitiesDrifted({ linkedProduct, matchedPlan, syncPlan })
+		) {
 			changedPlans.push(syncPlan);
 			continue;
 		}

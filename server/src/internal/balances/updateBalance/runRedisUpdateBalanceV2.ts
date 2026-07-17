@@ -1,11 +1,8 @@
 import type { CustomerEntitlementFilters, FullCustomer } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
-import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { executeLegacyRedisDeductionWithBalanceSync } from "../utils/deduction/executeLegacyRedisDeductionWithBalanceSync.js";
 import { executePostgresDeduction } from "../utils/deduction/executePostgresDeduction.js";
-import { executeRedisDeduction } from "../utils/deduction/executeRedisDeduction.js";
-import { deductionUpdatesToModifiedIds } from "../utils/sync/deductionUpdatesToModifiedIds.js";
-import { syncItemV3 } from "../utils/sync/syncItemV3.js";
 import type { DeductionOptions } from "../utils/types/deductionTypes.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { RedisDeductionError } from "../utils/types/redisDeductionError.js";
@@ -26,7 +23,6 @@ export const runRedisUpdateBalanceV2 = async ({
 	featureDeductions: FeatureDeduction[];
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
-	const { org, env } = ctx;
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 	const entityId = fullCustomer.entity?.id ?? undefined;
 
@@ -37,11 +33,11 @@ export const runRedisUpdateBalanceV2 = async ({
 	};
 
 	const { data: result, error } = await tryCatch(
-		executeRedisDeduction({
+		executeLegacyRedisDeductionWithBalanceSync({
 			ctx,
 			fullCustomer,
 			entityId,
-			deductions: featureDeductions,
+			featureDeductions,
 			deductionOptions,
 		}),
 	);
@@ -68,26 +64,6 @@ export const runRedisUpdateBalanceV2 = async ({
 		}
 
 		throw error;
-	}
-
-	const { updates, rolloverUpdates } = result;
-
-	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
-	const modifiedRolloverIds = Object.keys(rolloverUpdates);
-
-	if (modifiedCusEntIds.length > 0 || modifiedRolloverIds.length > 0) {
-		await syncItemV3({
-			payload: {
-				customerId,
-				orgId: org.id,
-				env,
-				cusEntIds: modifiedCusEntIds,
-				rolloverIds: modifiedRolloverIds,
-				region: currentRegion,
-				timestamp: Date.now(),
-			},
-			ctx,
-		});
 	}
 
 	return result;

@@ -3,6 +3,7 @@ import {
 	getRegionalRedis,
 	redis,
 } from "@/external/redis/initRedis.js";
+import { withCustomerBalanceSyncLock } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -13,24 +14,19 @@ import {
 } from "./fullCustomerCacheConfig.js";
 import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
-/**
- * Delete FullCustomer from Redis cache across ALL regions.
- * @param skipGuard - If true, skips setting the guard key. Default false (guard is set). Use skipGuard: true when deleting cache before a fresh Postgres read.
- */
-export const deleteCachedFullCustomer = async ({
+/** Delete only the legacy FullCustomer view across all regions. */
+export const deleteLegacyCachedFullCustomer = async ({
 	ctx,
 	customerId,
 	entityId,
 	source,
 	skipGuard = false,
-	flushBalances = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
 	skipGuard?: boolean;
-	flushBalances?: boolean;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 
@@ -45,21 +41,10 @@ export const deleteCachedFullCustomer = async ({
 	const guardTimestamp = Date.now().toString();
 	const customerLabel = entityId ? `${customerId}:${entityId}` : customerId;
 
-	const invalidationPromises: Promise<void>[] = [
-		invalidateCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source,
-			flushBalances,
-		}),
-	];
-
 	if (redis.status !== "ready") {
 		logger.warn(
 			`[deleteCachedFullCustomer] primary redis not_ready, skipping fullCustomer invalidation for ${customerLabel}`,
 		);
-		await Promise.all(invalidationPromises);
 		return;
 	}
 
@@ -109,5 +94,64 @@ export const deleteCachedFullCustomer = async ({
 		}
 	});
 
-	await Promise.all([...deletePromises, ...invalidationPromises]);
+	await Promise.all(deletePromises);
+};
+
+/**
+ * Delete FullCustomer and FullSubject cache views.
+ * @param skipGuard - If true, skips setting the legacy guard key. Default false.
+ */
+export const deleteCachedFullCustomer = async ({
+	ctx,
+	customerId,
+	entityId,
+	source,
+	skipGuard = false,
+	flushBalances = false,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+	source?: string;
+	skipGuard?: boolean;
+	flushBalances?: boolean;
+}): Promise<void> => {
+	if (!customerId) return;
+
+	const invalidateAllViews = async ({
+		balanceSyncDb,
+	}: {
+		balanceSyncDb?: Parameters<
+			typeof invalidateCachedFullSubject
+		>[0]["balanceSyncDb"];
+	}) => {
+		await Promise.all([
+			invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				source,
+				flushBalances,
+				balanceSyncDb,
+			}),
+			deleteLegacyCachedFullCustomer({
+				ctx,
+				customerId,
+				entityId,
+				source,
+				skipGuard,
+			}),
+		]);
+	};
+
+	if (!flushBalances) {
+		await invalidateAllViews({});
+		return;
+	}
+
+	await withCustomerBalanceSyncLock({
+		ctx,
+		customerId,
+		callback: ({ db }) => invalidateAllViews({ balanceSyncDb: db }),
+	});
 };

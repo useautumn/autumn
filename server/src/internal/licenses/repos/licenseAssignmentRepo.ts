@@ -5,6 +5,7 @@ import {
 	customerProducts,
 	type DbCustomerProduct,
 	entities,
+	type FullCusProduct,
 	products,
 } from "@autumn/shared";
 import {
@@ -17,7 +18,6 @@ import {
 	isNotNull,
 	isNull,
 	notInArray,
-	or,
 	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -111,16 +111,30 @@ const listUnusedAssignmentsByLinkId = async ({
 	db: DrizzleCli;
 	customerLicenseLinkId: string;
 	limit: number;
-}): Promise<DbLicenseAssignment[]> =>
-	await db.query.customerProducts.findMany({
+}): Promise<FullCusProduct[]> => {
+	const assignments = await db.query.customerProducts.findMany({
 		where: and(
 			eq(customerProducts.customer_license_link_id, customerLicenseLinkId),
 			isNull(customerProducts.internal_entity_id),
 			inArray(customerProducts.status, ACTIVE_STATUSES),
 		),
+		with: {
+			product: true,
+			customer_entitlements: {
+				with: {
+					entitlement: { with: { feature: true } },
+					replaceables: true,
+					rollovers: true,
+				},
+			},
+			customer_prices: { with: { price: true } },
+			free_trial: true,
+		},
 		orderBy: asc(customerProducts.released_at),
 		limit,
 	});
+	return assignments as FullCusProduct[];
+};
 
 const listActiveAssignmentsByInternalEntityId = async ({
 	db,
@@ -136,8 +150,32 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
-/** Ends active seats anchored to no surviving pool link (unstamped or
- * dangling) — one set-based UPDATE per reconcile. */
+const listActiveOrphanAssignments = async ({
+	db,
+	internalCustomerId,
+	validCustomerLicenseLinkIds,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+	validCustomerLicenseLinkIds: string[];
+}): Promise<DbLicenseAssignment[]> =>
+	await db.query.customerProducts.findMany({
+		where: and(
+			eq(customerProducts.internal_customer_id, internalCustomerId),
+			...activeAssignmentConditions(),
+			...(validCustomerLicenseLinkIds.length > 0
+				? [
+						notInArray(
+							customerProducts.customer_license_link_id,
+							validCustomerLicenseLinkIds,
+						),
+					]
+				: []),
+		),
+	});
+
+/** Ends active seats anchored to no surviving pool link — one set-based
+ * UPDATE per reconcile. An empty valid-link set means every active seat. */
 const expireOrphanAssignments = async ({
 	db,
 	internalCustomerId,
@@ -156,17 +194,14 @@ const expireOrphanAssignments = async ({
 			and(
 				eq(customerProducts.internal_customer_id, internalCustomerId),
 				...activeAssignmentConditions(),
-				or(
-					isNull(customerProducts.customer_license_link_id),
-					...(validCustomerLicenseLinkIds.length > 0
-						? [
-								notInArray(
-									customerProducts.customer_license_link_id,
-									validCustomerLicenseLinkIds,
-								),
-							]
-						: []),
-				),
+				...(validCustomerLicenseLinkIds.length > 0
+					? [
+							notInArray(
+								customerProducts.customer_license_link_id,
+								validCustomerLicenseLinkIds,
+							),
+						]
+					: []),
 			),
 		);
 };
@@ -308,6 +343,7 @@ const repointSeatEntitlements = async ({
 export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
+	listActiveOrphanAssignments,
 	listUnusedAssignmentsByLinkId,
 	expireOrphanAssignments,
 	expireUnusedAssignmentsByLinkIds,

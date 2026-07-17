@@ -10,6 +10,13 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyUncancelToPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/applyUncancelToPlan";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
+import {
+	customerProductToPooledBalanceOwnerRemovalOp,
+	customerProductToPooledBalanceOwnerRestoreOp,
+	customerProductToPooledBalanceRemovalOp,
+	customerProductToPooledBalanceRestoreOp,
+} from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { applyCancelPlan } from "./applyCancelPlan";
 import { computeCancelLineItems } from "./computeCancelLineItems";
 import { computeCancelUpdates } from "./computeCancelUpdates";
@@ -129,6 +136,22 @@ const applyRevertTrialUnpause = ({
 	const canRestore = previousCusProduct?.status === CusProductStatus.Paused;
 
 	if (!canRestore) return plan;
+	const pooledRestore = computeAttachPooledBalanceOps({
+		customerProduct: {
+			...previousCusProduct,
+			status: CusProductStatus.Active,
+		},
+		attachBillingContext: {
+			billingStartsAt: billingContext.currentEpochMs,
+			currentCustomerProduct: previousCusProduct,
+			currentEpochMs: billingContext.currentEpochMs,
+			fullCustomer,
+			planTiming: "immediate",
+			requestedBillingCycleAnchor: billingContext.requestedBillingCycleAnchor,
+			skipBillingChanges: billingContext.skipBillingChanges,
+		},
+		removeCurrentSource: false,
+	});
 
 	return {
 		...plan,
@@ -138,6 +161,10 @@ const applyRevertTrialUnpause = ({
 				customerProduct: previousCusProduct,
 				updates: { status: CusProductStatus.Active },
 			},
+		],
+		pooledBalanceOps: [
+			...(plan.pooledBalanceOps ?? []),
+			...pooledRestore.pooledBalanceOps,
 		],
 	};
 };
@@ -161,10 +188,28 @@ export const computeCancelPlan = ({
 	if (!billingContext.cancelAction) return plan;
 
 	if (billingContext.cancelAction === "uncancel") {
-		return applyUncancelToPlan({
+		const uncancelledPlan = applyUncancelToPlan({
 			billingContext,
 			plan,
 		});
+		const expectedEffectiveAt = billingContext.customerProduct.ended_at;
+		if (typeof expectedEffectiveAt !== "number") return uncancelledPlan;
+		const pooledSourceRestore = customerProductToPooledBalanceRestoreOp({
+			customerProduct: billingContext.customerProduct,
+			expectedEffectiveAt,
+		});
+
+		return {
+			...uncancelledPlan,
+			pooledBalanceOps: [
+				...(uncancelledPlan.pooledBalanceOps ?? []),
+				...(pooledSourceRestore ? [pooledSourceRestore] : []),
+				customerProductToPooledBalanceOwnerRestoreOp({
+					customerProduct: billingContext.customerProduct,
+					expectedEffectiveAt,
+				}),
+			],
+		};
 	}
 
 	if (
@@ -193,13 +238,33 @@ export const computeCancelPlan = ({
 	// Skip when cancelling a revert trial — the previous plan will be restored instead.
 	const isRevertTrialCancel =
 		billingContext.customerProduct.on_trial_end === "revert";
-	const defaultCustomerProduct = isRevertTrialCancel
+	const rawDefaultCustomerProduct = isRevertTrialCancel
 		? undefined
 		: computeDefaultCustomerProduct({
 				ctx,
 				billingContext,
 				endOfCycleMs,
 			});
+	const preparedDefault =
+		rawDefaultCustomerProduct &&
+		billingContext.cancelAction === "cancel_immediately"
+			? computeAttachPooledBalanceOps({
+					customerProduct: rawDefaultCustomerProduct,
+					attachBillingContext: {
+						billingStartsAt: billingContext.currentEpochMs,
+						currentCustomerProduct: billingContext.customerProduct,
+						currentEpochMs: billingContext.currentEpochMs,
+						fullCustomer: billingContext.fullCustomer,
+						planTiming: "immediate",
+						requestedBillingCycleAnchor:
+							billingContext.requestedBillingCycleAnchor,
+						skipBillingChanges: billingContext.skipBillingChanges,
+					},
+					removeCurrentSource: false,
+				})
+			: undefined;
+	const defaultCustomerProduct =
+		preparedDefault?.customerProduct ?? rawDefaultCustomerProduct;
 
 	ctx.logger.debug(
 		`[computeCancelPlan] default customer product: ${defaultCustomerProduct?.product.name}`,
@@ -224,8 +289,38 @@ export const computeCancelPlan = ({
 	});
 
 	// If this is a revert trial being cancelled, unpause the previous plan
-	return applyRevertTrialUnpause({
+	const finalPlan = applyRevertTrialUnpause({
 		billingContext,
 		plan: cancelledPlan,
 	});
+	const pooledSourceRemoval = customerProductToPooledBalanceRemovalOp({
+		customerProduct: billingContext.customerProduct,
+		effectiveAt:
+			billingContext.cancelAction === "cancel_end_of_cycle"
+				? endOfCycleMs
+				: null,
+	});
+	if (billingContext.cancelAction !== "cancel_end_of_cycle") {
+		return {
+			...finalPlan,
+			pooledBalanceOps: [
+				...(finalPlan.pooledBalanceOps ?? []),
+				...(preparedDefault?.pooledBalanceOps ?? []),
+				...(pooledSourceRemoval ? [pooledSourceRemoval] : []),
+			],
+		};
+	}
+
+	return {
+		...finalPlan,
+		pooledBalanceOps: [
+			...(finalPlan.pooledBalanceOps ?? []),
+			...(preparedDefault?.pooledBalanceOps ?? []),
+			...(pooledSourceRemoval ? [pooledSourceRemoval] : []),
+			customerProductToPooledBalanceOwnerRemovalOp({
+				customerProduct: billingContext.customerProduct,
+				effectiveAt: endOfCycleMs,
+			}),
+		],
+	};
 };

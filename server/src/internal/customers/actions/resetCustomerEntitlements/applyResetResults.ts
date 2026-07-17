@@ -72,29 +72,31 @@ export const applyResetResults = async ({
 		if (updates.entities !== null) original.entities = updates.entities;
 		original.next_reset_at = updates.next_reset_at;
 
-		if (!result.rolloverInsert) continue;
-
-		if (!skippedSet.has(cusEntId)) {
-			// Winner: we inserted the rollover into DB. Clear excess and
-			// update the in-memory array to include the new rollovers.
-			const { rollovers, deletedIds, overwrites } =
-				await RolloverService.clearExcessRollovers({
-					ctx: generalCtx,
-					newRows: result.rolloverInsert.rows,
-					fullCusEnt: original,
-				});
-			original.rollovers = rollovers;
-
-			if (deletedIds.length > 0 || overwrites.length > 0) {
-				clearingMap[cusEntId] = { deletedIds, overwrites };
-			}
-		} else {
+		if (skippedSet.has(cusEntId)) {
 			// Loser: the winning request already inserted the rollover and
 			// cleared excess. Re-read from DB to get the authoritative state.
 			original.rollovers = await RolloverService.getCurrentRollovers({
 				ctx: generalCtx,
 				cusEntID: cusEntId,
 			});
+			continue;
+		}
+
+		if (!result.rolloverInsert) continue;
+
+		// Winner: we inserted the rollover into DB. Clear excess and
+		// update the in-memory array to include the new rollovers.
+		const { rollovers, deletedIds, overwrites } =
+			await RolloverService.clearExcessRollovers({
+				ctx: generalCtx,
+				newRows: result.rolloverInsert.rows,
+				fullCusEnt: original,
+				startingBalanceOverride: result.rolloverInsert.startingBalanceOverride,
+			});
+		original.rollovers = rollovers;
+
+		if (deletedIds.length > 0 || overwrites.length > 0) {
+			clearingMap[cusEntId] = { deletedIds, overwrites };
 		}
 	}
 

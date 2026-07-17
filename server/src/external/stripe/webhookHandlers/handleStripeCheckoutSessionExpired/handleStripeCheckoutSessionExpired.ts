@@ -1,6 +1,8 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, type FullCusProduct } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
@@ -40,18 +42,47 @@ export const handleStripeCheckoutSessionExpired = async ({
 		return;
 	}
 
-	const now = Date.now();
+	const abandonedCustomerProducts = cusProducts.filter(
+		(customerProduct) => (customerProduct.subscription_ids ?? []).length === 0,
+	);
+	const customerProductsByInternalCustomerId = new Map<
+		string,
+		FullCusProduct[]
+	>();
+	for (const customerProduct of abandonedCustomerProducts) {
+		const internalCustomerId = customerProduct.internal_customer_id;
+		customerProductsByInternalCustomerId.set(internalCustomerId, [
+			...(customerProductsByInternalCustomerId.get(internalCustomerId) ?? []),
+			customerProduct,
+		]);
+	}
 
-	for (const cusProduct of cusProducts) {
-		// If the success-path webhook already linked a subscription, leave it.
-		if ((cusProduct.subscription_ids ?? []).length > 0) continue;
+	for (const [
+		internalCustomerId,
+		customerProducts,
+	] of customerProductsByInternalCustomerId) {
+		const now = Date.now();
+		const pooledBalanceOps = customerProducts.flatMap((customerProduct) => {
+			const operation = customerProductToPooledBalanceRemovalOp({
+				customerProduct,
+				effectiveAt: null,
+			});
+			return operation ? [operation] : [];
+		});
 
-		await CusProductService.update({
+		await executeAutumnBillingPlan({
 			ctx,
-			cusProductId: cusProduct.id,
-			updates: {
-				status: CusProductStatus.Expired,
-				ended_at: now,
+			autumnBillingPlan: {
+				customerId: internalCustomerId,
+				insertCustomerProducts: [],
+				updateCustomerProducts: customerProducts.map((customerProduct) => ({
+					customerProduct,
+					updates: {
+						status: CusProductStatus.Expired,
+						ended_at: now,
+					},
+				})),
+				pooledBalanceOps,
 			},
 		});
 	}
@@ -64,6 +95,6 @@ export const handleStripeCheckoutSessionExpired = async ({
 	}
 
 	ctx.logger.info(
-		`[checkout.session.expired] Expired ${cusProducts.length} cusProduct(s) linked to ${session.id}`,
+		`[checkout.session.expired] Expired ${abandonedCustomerProducts.length} cusProduct(s) linked to ${session.id}`,
 	);
 };

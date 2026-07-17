@@ -1,11 +1,63 @@
 import type {
 	AutumnBillingPlan,
+	PooledBalanceOp,
+	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 
 type CusProductFieldUpdates = NonNullable<
 	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
 >;
+
+export const computeFieldUpdatePooledBalanceOps = ({
+	billingContext,
+	params,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV1Params;
+}): PooledBalanceOp[] => {
+	const updatesStatus = params.status !== undefined;
+	const updatesSubscription = params.processor_subscription_id !== undefined;
+	if (!updatesStatus && !updatesSubscription) return [];
+
+	const currentCustomerProduct = billingContext.customerProduct;
+	if (params.status === CusProductStatus.Expired) {
+		const removal = customerProductToPooledBalanceRemovalOp({
+			customerProduct: currentCustomerProduct,
+			effectiveAt: null,
+		});
+		return removal ? [removal] : [];
+	}
+
+	const targetCustomerProduct = {
+		...currentCustomerProduct,
+		status: params.status ?? currentCustomerProduct.status,
+		subscription_ids:
+			params.processor_subscription_id === undefined
+				? currentCustomerProduct.subscription_ids
+				: params.processor_subscription_id
+					? [params.processor_subscription_id]
+					: [],
+	};
+	const prepared = computeAttachPooledBalanceOps({
+		customerProduct: targetCustomerProduct,
+		attachBillingContext: {
+			billingStartsAt: billingContext.currentEpochMs,
+			currentCustomerProduct,
+			currentEpochMs: billingContext.currentEpochMs,
+			fullCustomer: billingContext.fullCustomer,
+			planTiming: "immediate",
+			requestedBillingCycleAnchor: billingContext.requestedBillingCycleAnchor,
+			skipBillingChanges: billingContext.skipBillingChanges,
+		},
+		removeCurrentSource: false,
+	});
+
+	return prepared.pooledBalanceOps;
+};
 
 export const computeFieldUpdates = ({
 	params,

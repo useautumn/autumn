@@ -1,6 +1,6 @@
 import {
-	cusEntToOptions,
 	cusEntToCusPrice,
+	cusEntToOptions,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
@@ -29,6 +29,7 @@ export type ProcessResetResult = {
 	rolloverInsert?: {
 		rows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
+		startingBalanceOverride?: number;
 	};
 };
 

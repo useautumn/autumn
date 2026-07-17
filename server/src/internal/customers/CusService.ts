@@ -39,6 +39,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { pooledBalanceRepo } from "@/internal/billing/v2/pooledBalances/repos/pooledBalanceRepo.js";
 import { hydrateFullCustomerLicenses } from "@/internal/licenses/actions/hydrateFullCustomerLicenses.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
@@ -804,18 +805,37 @@ export class CusService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		const results = await db
-			.delete(customers)
-			.where(
-				and(
-					eq(customers.internal_id, internalId),
-					eq(customers.org_id, orgId),
-					eq(customers.env, env),
-				),
-			)
-			.returning();
+		return db.transaction(async (transaction) => {
+			const matchingCustomers = await transaction
+				.select({ internalId: customers.internal_id })
+				.from(customers)
+				.where(
+					and(
+						eq(customers.internal_id, internalId),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				)
+				.for("update");
 
-		return results;
+			await pooledBalanceRepo.deleteGraphsByInternalCustomerIds({
+				db: transaction,
+				internalCustomerIds: matchingCustomers.map(
+					({ internalId }) => internalId,
+				),
+			});
+
+			return transaction
+				.delete(customers)
+				.where(
+					and(
+						eq(customers.internal_id, internalId),
+						eq(customers.org_id, orgId),
+						eq(customers.env, env),
+					),
+				)
+				.returning();
+		});
 	}
 
 	static async deleteByOrgId({
@@ -830,12 +850,25 @@ export class CusService {
 		if (env === AppEnv.Live)
 			throw new Error("Cannot delete all customers under org in live mode");
 
-		const results = await db
-			.delete(customers)
-			.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
-			.returning();
+		return db.transaction(async (transaction) => {
+			const matchingCustomers = await transaction
+				.select({ internalId: customers.internal_id })
+				.from(customers)
+				.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+				.for("update");
 
-		return results;
+			await pooledBalanceRepo.deleteGraphsByInternalCustomerIds({
+				db: transaction,
+				internalCustomerIds: matchingCustomers.map(
+					({ internalId }) => internalId,
+				),
+			});
+
+			return transaction
+				.delete(customers)
+				.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+				.returning();
+		});
 	}
 
 	/** Deletes customers in batches to avoid locking all rows at once. */
@@ -854,25 +887,34 @@ export class CusService {
 			throw new Error("Cannot delete all customers under org in live mode");
 
 		while (true) {
-			const batch = await db
-				.select({ internal_id: customers.internal_id })
-				.from(customers)
-				.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
-				.limit(batchSize);
+			const deletedCount = await db.transaction(async (transaction) => {
+				const batch = await transaction
+					.select({ internalId: customers.internal_id })
+					.from(customers)
+					.where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+					.limit(batchSize)
+					.for("update");
+				if (batch.length === 0) return 0;
 
-			if (batch.length === 0) break;
+				const internalCustomerIds = batch.map(({ internalId }) => internalId);
+				await pooledBalanceRepo.deleteGraphsByInternalCustomerIds({
+					db: transaction,
+					internalCustomerIds,
+				});
+				await transaction
+					.delete(customers)
+					.where(
+						and(
+							inArray(customers.internal_id, internalCustomerIds),
+							eq(customers.org_id, orgId),
+							eq(customers.env, env),
+						),
+					);
 
-			const ids = batch.map((r) => r.internal_id);
+				return batch.length;
+			});
 
-			await db
-				.delete(customers)
-				.where(
-					and(
-						inArray(customers.internal_id, ids),
-						eq(customers.org_id, orgId),
-						eq(customers.env, env),
-					),
-				);
+			if (deletedCount === 0) break;
 		}
 	}
 
