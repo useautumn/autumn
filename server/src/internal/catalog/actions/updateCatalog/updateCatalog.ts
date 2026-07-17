@@ -158,6 +158,32 @@ const upsertPlans = async ({
 
 		if (!current) {
 			const variantUpdates = variants ?? [];
+			const latest =
+				version === undefined
+					? null
+					: await ProductService.getFull({
+							db,
+							idOrInternalId: plan_id,
+							orgId: org.id,
+							env,
+							allowNotFound: true,
+						});
+			if (latest) {
+				const updates = apiPlan.map.paramsV1ToProductV2({
+					ctx,
+					currentFullProduct: latest,
+					params: { id: new_plan_id ?? plan_id, ...rest },
+				}) as UpdateProductV2Params;
+				await updateProduct({
+					ctx,
+					productId: plan_id,
+					query: { force_version: true },
+					updates,
+					initialFullProduct: latest,
+					variantUpdates,
+				});
+				continue;
+			}
 			const createParams = apiPlan.map.paramsV1ToProductV2({
 				ctx,
 				params: {
