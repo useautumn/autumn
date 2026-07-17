@@ -24,6 +24,10 @@ import { orgDisableStripeWrites } from "@/internal/orgs/orgUtils/convertOrgUtils
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
+import {
+	planLicenseToParentStripeInitProduct,
+	planLicenseToStripeInitProduct,
+} from "./licenseStripeResourceUtils";
 
 export const initStripeResourcesForProducts = async ({
 	ctx,
@@ -64,9 +68,17 @@ export const initStripeResourcesForProducts = async ({
 	}
 	await Promise.all(batchProductUpdates);
 
+	const customLicenseProducts = products.flatMap((parentProduct) =>
+		(parentProduct.licenses ?? [])
+			.map((planLicense) =>
+				planLicenseToParentStripeInitProduct({ planLicense, parentProduct }),
+			)
+			.filter((licenseProduct) => licenseProduct !== null),
+	);
+
 	const batchPriceUpdates = [];
 
-	for (const product of products) {
+	for (const product of [...products, ...customLicenseProducts]) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({
@@ -170,21 +182,19 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	// License child products bill through their parents, so their prices need
-	// Stripe resources too. Price objects are shared refs — init mutates them.
-	// Keyed per DEFINITION: a custom plan_license and the catalog link share a
-	// product internal_id but carry different price rows.
+	// Definitions can share a child product id while carrying distinct custom rows.
 	const licenseProductsByDefinition = new Map<string, FullProduct>();
 	for (const customerProduct of [
 		...insertCustomerProducts,
 		...fullCustomer.customer_products,
 	]) {
+		const parentProduct = cusProductToProduct({ cusProduct: customerProduct });
 		for (const customerLicense of customerProduct.customer_licenses ?? []) {
-			const licenseProduct = customerLicense.planLicense?.product;
-			if (!licenseProduct) continue;
+			const planLicense = customerLicense.planLicense;
+			if (!planLicense) continue;
 			licenseProductsByDefinition.set(
-				customerLicense.plan_license_id ?? licenseProduct.internal_id,
-				licenseProduct,
+				customerLicense.plan_license_id ?? planLicense.product.internal_id,
+				planLicenseToStripeInitProduct({ planLicense, parentProduct }),
 			);
 		}
 	}
@@ -192,7 +202,24 @@ export const initStripeResourcesForBillingPlan = async ({
 	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
 		const planLicense = transition.incomingCustomerLicense.planLicense;
 		if (!planLicense) continue;
-		licenseProductsByDefinition.set(planLicense.id, planLicense.product);
+		const parentCustomerProduct = [
+			...insertCustomerProducts,
+			...fullCustomer.customer_products,
+		].find(
+			(customerProduct) =>
+				customerProduct.id ===
+				transition.incomingCustomerLicense.parent_customer_product_id,
+		);
+		if (!parentCustomerProduct) continue;
+		licenseProductsByDefinition.set(
+			planLicense.id,
+			planLicenseToStripeInitProduct({
+				planLicense,
+				parentProduct: cusProductToProduct({
+					cusProduct: parentCustomerProduct,
+				}),
+			}),
+		);
 	}
 	const licenseProducts = Array.from(licenseProductsByDefinition.values());
 
