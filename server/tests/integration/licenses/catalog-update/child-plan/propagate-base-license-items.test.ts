@@ -156,7 +156,11 @@ test.concurrent(
 				autumnV2_2.post("/plans.get", { plan_id: monthlyParent.id }),
 				autumnV2_2.post("/plans.get", { plan_id: annualParent.id }),
 			]);
-		const newEntitlement = baseAfter.entitlements[0];
+		const newEntitlement = baseAfter.entitlements.find(
+			(entitlement) => entitlement.feature_id === TestFeature.Messages,
+		);
+		expect(newEntitlement).toBeDefined();
+		if (!newEntitlement) throw new Error("unreachable");
 
 		// Shared item refs follow the replacement base row on both links.
 		expect(newEntitlement.allowance).toBe(200);

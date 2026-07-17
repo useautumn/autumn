@@ -74,7 +74,23 @@ export const getFullSubjectRowsQuery = ({
 				)}])`
 			: sql``;
 
+	// Seats own no lifecycle: their raw status column lags until the seat-sync
+	// cron converges it, so the candidate filter/rank must check the pool
+	// parent's LIVE status (via pcp_early) instead of cp.status for those rows.
+	const effectiveStatusFilter =
+		inStatuses.length > 0
+			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])`
+			: sql``;
+
 	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
+		RELEVANT_STATUSES.map((status) => sql`${status}`),
+		sql`, `,
+	)}]) THEN 0 ELSE 1 END`;
+
+	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
 		RELEVANT_STATUSES.map((status) => sql`${status}`),
 		sql`, `,
 	)}]) THEN 0 ELSE 1 END`;
@@ -179,15 +195,31 @@ export const getFullSubjectRowsQuery = ({
 						THEN 0
 						ELSE 1
 					END AS subject_entity_priority,
-					${relevantStatusFirst} AS status_priority,
+					${effectiveRelevantStatusFirst} AS status_priority,
 					${hasCustomerPrices} AS has_customer_prices,
 					prod.is_add_on AS product_is_add_on,
 					cp.*
 				FROM customer_products cp
 				JOIN products prod
 					ON prod.internal_id = cp.internal_product_id
+				-- Seats own no lifecycle: the raw status column lags until the
+				-- seat-sync cron converges it, so the filter/rank below must
+				-- resolve the pool parent's LIVE status, not cp.status.
+				LEFT JOIN LATERAL (
+					SELECT pool.*
+					FROM customer_licenses pool
+					JOIN customer_products pool_parent
+						ON pool_parent.id = pool.parent_customer_product_id
+					WHERE cp.customer_license_link_id IS NOT NULL
+						AND pool.link_id = cp.customer_license_link_id
+					ORDER BY (pool_parent.status IN ('active', 'past_due', 'scheduled')) DESC,
+						pool.created_at DESC
+					LIMIT 1
+				) pcl_early ON true
+				LEFT JOIN customer_products pcp_early
+					ON pcp_early.id = pcl_early.parent_customer_product_id
 				WHERE ${customerProductSubjectPredicate}
-					${statusFilter}
+					${effectiveStatusFilter}
 			) cp_candidates ON true
 		),
 

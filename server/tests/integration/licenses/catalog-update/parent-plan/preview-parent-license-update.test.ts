@@ -37,15 +37,20 @@ test.concurrent(
 		const { autumnV2_3, ctx } = await initScenario({
 			customerId,
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [parent, license] }),
 			],
 			actions: [
-				s.billing.attach({ productId: parent.id }),
+				// Link before attach: linking after a customer already exists would
+				// itself trigger a version bump, leaving the customer pinned to v1.
 				s.licenses.link({
 					parentProductId: parent.id,
 					licenseProductId: license.id,
 					included: 0,
+				}),
+				s.billing.attach({
+					productId: parent.id,
+					licenseQuantities: [{ licenseProductId: license.id, quantity: 1 }],
 				}),
 			],
 		});

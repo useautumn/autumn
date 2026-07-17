@@ -10,15 +10,14 @@ import { pairCustomerLicensesByLicensePlan } from "./pairCustomerLicensesByLicen
 
 /** A successor row already matching what it would adopt (same-product
  * updates) produces nothing to write — dropped so callers can wire
- * unconditionally. */
+ * unconditionally. Compares by content, not plan_license_id: parent
+ * version bumps always fork a new catalog row (schema-scoped per version),
+ * even when the license definition itself didn't change. */
 const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
-	const { outgoingCustomerLicense, incomingCustomerLicense, updates } =
-		transition;
+	const { incomingCustomerLicense, updates } = transition;
 	return (
 		transition.priceTransitions.length === 0 &&
 		transition.entitlementTransitions.length === 0 &&
-		outgoingCustomerLicense.plan_license_id ===
-			incomingCustomerLicense.plan_license_id &&
 		updates.linkId === incomingCustomerLicense.link_id &&
 		updates.granted === incomingCustomerLicense.granted &&
 		updates.remaining === incomingCustomerLicense.remaining &&
