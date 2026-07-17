@@ -846,7 +846,9 @@ const getOrBuildWarmParent = async ({
 	);
 	const warmRun = await runStreaming(
 		warm,
-		["bash", WARMUP_SCRIPT, ref],
+		// Pass the resolved sha so warmup.sh hard-fails instead of silently
+		// building the warm on a stale checkout (the image is NAMED after it).
+		["bash", WARMUP_SCRIPT, ref, sha],
 		(text) => sink(text),
 		{ signal, swallowStreamClose: true },
 	);

@@ -226,6 +226,54 @@ const lookupPublishedWarmImage = async (
 	}
 };
 
+/**
+ * A published warm image is only trustworthy if its baked repo HEAD matches the
+ * sha it's named after — a warm built from a stale checkout otherwise gets
+ * reused silently forever. Errors count as verified (don't block on infra).
+ */
+const verifyWarmImageHead = async (
+	image: Image,
+	sha12: string,
+	v2: boolean,
+): Promise<boolean> => {
+	const verifyName = `${WARM_SANDBOX_PREFIX}-${sha12}-verify`;
+	let sandbox: Sandbox | undefined;
+	try {
+		sandbox = await createFromImage(
+			image,
+			{
+				name: verifyName,
+				env: {},
+				tags: { kind: "bun-tw-warm-verify", sha: sha12 },
+				cpu: WORKER_CPU,
+				memoryMiB: WORKER_MEMORY_MIB,
+				timeout: 120_000,
+			},
+			v2,
+		);
+		const proc = await sandbox.exec(
+			["bash", "-lc", `git -C ${MODAL_REPO_ROOT} rev-parse HEAD`],
+			{ stdout: "pipe", stderr: "pipe", workdir: "/" },
+		);
+		let out = "";
+		await pumpStream(proc.stdout, (text) => {
+			out += text;
+		});
+		await proc.wait();
+		return out.trim().startsWith(sha12);
+	} catch {
+		return true;
+	} finally {
+		if (sandbox) {
+			liveSandboxes.delete(verifyName);
+			liveSandboxes.delete(sandbox.sandboxId);
+			await sandbox.terminate().catch(() => {
+				/* best-effort */
+			});
+		}
+	}
+};
+
 /** Publish the warm image under its sha tag AND as the rolling `:latest`. */
 const publishWarmImage = async (image: Image, sha12: string): Promise<void> => {
 	try {
@@ -696,6 +744,14 @@ const makeModalProvider = (v2: boolean): ProviderImpl => {
 			if (sha12) {
 				const exact = await lookupPublishedWarmImage(sha12);
 				if (exact) {
+					if (!(await verifyWarmImageHead(exact, sha12, v2))) {
+						narrate(
+							chalk.yellow(
+								`[modal] warm cache POISONED (${WARM_IMAGE_REPO}:${sha12} repo HEAD mismatch) — rebuilding warm`,
+							),
+						);
+						return undefined;
+					}
 					warmImageByName.set(name, exact);
 					narrate(
 						chalk.magenta(

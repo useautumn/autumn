@@ -32,6 +32,9 @@ BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 # The ref under test. Defaults to current HEAD when not passed (plan §8.6:
 # --ref defaults to HEAD). First positional arg or TW_REF env.
 REF="${1:-${TW_REF:-HEAD}}"
+# The commit the caller resolved REF to (the warm image is named after it).
+# When set, checkout MUST land on it — a mismatch aborts the whole warm build.
+EXPECTED_HEAD="${2:-${TW_EXPECTED_HEAD:-}}"
 
 export PATH="$HOME/.bun/bin:$BIN_DIR:$PATH"
 command -v bun >/dev/null 2>&1 || die "bun not on PATH (run build-base.sh)"
@@ -68,23 +71,39 @@ cd "$REPO_ROOT"
 # ---------------------------------------------------------------------------
 # 1. git checkout <ref>
 # ---------------------------------------------------------------------------
-log "Ensuring working tree is at ref: $REF"
-git fetch --quiet --all --tags 2>/dev/null \
-  || log "WARN: git fetch failed (offline / shallow clone) — using what's checked out"
-# Vercel clones the `revision` in a DETACHED state with no local branch, so a
-# plain `git checkout <branch>` fails ("pathspec did not match"). Resolve the ref
-# however it exists; if it's not a local branch/tag/remote ref, the clone is
-# already AT it (Vercel checked out the revision at create) — just proceed.
-if git rev-parse --verify --quiet "refs/heads/$REF" >/dev/null 2>&1; then
-  git checkout --quiet --force "$REF"
-elif git rev-parse --verify --quiet "refs/remotes/origin/$REF" >/dev/null 2>&1; then
-  git checkout --quiet --force -B "$REF" "origin/$REF"
-elif git rev-parse --verify --quiet "$REF" >/dev/null 2>&1; then
-  git checkout --quiet --force "$REF"
+log "Ensuring working tree is at ref: $REF${EXPECTED_HEAD:+ (expect $EXPECTED_HEAD)}"
+if [ -n "$EXPECTED_HEAD" ] \
+  && [ "$(git rev-parse HEAD | cut -c1-${#EXPECTED_HEAD})" = "$EXPECTED_HEAD" ]; then
+  # The provider's fast-forward checkout already put us on the exact commit;
+  # re-resolving the branch here could revert onto a stale local ref.
+  log "working tree already at expected commit — skipping checkout"
 else
-  log "ref '$REF' is not a local branch/tag — assuming the clone is already at it"
+  git fetch --quiet --all --tags \
+    || log "WARN: git fetch failed (offline / shallow clone) — using what's checked out"
+  # Prefer origin's tip: fast-forward base images carry a STALE local branch,
+  # so refs/heads/$REF can be behind origin/$REF and must not win.
+  # Vercel clones the `revision` in a DETACHED state with no local branch, so a
+  # plain `git checkout <branch>` fails ("pathspec did not match"). Resolve the ref
+  # however it exists; if it's not a branch/tag/remote ref, the clone is
+  # already AT it (Vercel checked out the revision at create) — just proceed.
+  if git rev-parse --verify --quiet "refs/remotes/origin/$REF" >/dev/null 2>&1; then
+    git checkout --quiet --force -B "$REF" "origin/$REF"
+  elif git rev-parse --verify --quiet "refs/heads/$REF" >/dev/null 2>&1; then
+    git checkout --quiet --force "$REF"
+  elif git rev-parse --verify --quiet "$REF" >/dev/null 2>&1; then
+    git checkout --quiet --force "$REF"
+  else
+    log "ref '$REF' is not a local branch/tag — assuming the clone is already at it"
+  fi
 fi
 log "HEAD at $(git rev-parse --short HEAD)"
+if [ -n "$EXPECTED_HEAD" ]; then
+  ACTUAL_HEAD="$(git rev-parse HEAD)"
+  case "$ACTUAL_HEAD" in
+    "$EXPECTED_HEAD"*) ;;
+    *) die "HEAD $ACTUAL_HEAD != expected $EXPECTED_HEAD — refusing to build a stale warm" ;;
+  esac
+fi
 
 # ---------------------------------------------------------------------------
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)

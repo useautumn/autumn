@@ -206,7 +206,7 @@ const refreshModalWarm = async ({
 		const warmup = await timed(
 			"warmup.sh (checkout → install → migrate → seed)",
 			() =>
-				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha], (text) =>
+				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha, sha], (text) =>
 					process.stdout.write(text),
 				),
 		);
@@ -291,7 +291,7 @@ export const refreshWarm = async (args: string[]): Promise<number> => {
 		const warmup = await timed(
 			"warmup.sh (checkout → install → migrate → seed)",
 			() =>
-				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha], (text) =>
+				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha, sha], (text) =>
 					process.stdout.write(text),
 				),
 		);
