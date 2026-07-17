@@ -374,10 +374,9 @@ test.concurrent(`${chalk.yellowBright("source: customer discount applies to new 
 		options: [{ feature_id: TestFeature.Credits, quantity: 8 * billingUnits }],
 	});
 
-	// Upgrade generates: refund (-$40 for 4 units) + charge ($160 for 8 units)
-	// Since product2 was added after the discount was applied to product1's subscription,
-	// the behavior depends on whether they share the same subscription
-	// No discount applied: -$40 + $160 = $120
-	const expectedTotal = -(20 * 4) + 0.75 * (20 * 8); // -80 + 120 = 40
+	// Upgrade generates: refund (-$80 for 4 units) + charge ($160 for 8 units)
+	// The coupon predates product2's credited period, so the refund is
+	// discounted along with the charge: -80*0.75 + 160*0.75 = 60
+	const expectedTotal = 0.75 * -(20 * 4) + 0.75 * (20 * 8); // -60 + 120 = 60
 	expect(preview.total).toBe(expectedTotal);
 });
