@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { ApiVersion } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	ApiVersion,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -370,6 +375,144 @@ test.concurrent(
 			remaining: 0,
 			usage: 125,
 			breakdownLength: 1,
+		});
+	},
+);
+
+// Rollover funding is gated by metered window limits too; overflow must
+// bypass the rollover-phase gate while the counter still records full usage.
+test.concurrent(
+	`${chalk.yellowBright("track-overage-overflow7: overflow bypasses the usage-limit gate on rollover-funded tracks")}`,
+	async () => {
+		const messagesItem = items.monthlyMessagesWithRollover({
+			includedUsage: 100,
+			rolloverConfig: {
+				max: 100,
+				length: 1,
+				duration: RolloverExpiryDurationType.Month,
+			},
+		});
+		const customerProduct = products.base({
+			id: "overage-overflow-rollover",
+			items: [messagesItem],
+		});
+
+		const customerId = "overage-overflow-rollover-1";
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [
+				s.billing.attach({ productId: customerProduct.id }),
+				s.track({ featureId: TestFeature.Messages, value: 40, timeout: 2000 }),
+				// Cron-path reset: unused 60 rolls over, fresh 100 -> remaining 160.
+				s.resetFeature({
+					featureId: TestFeature.Messages,
+					timeout: 4000,
+				}),
+			],
+		});
+
+		const afterReset =
+			await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer: afterReset,
+			featureId: TestFeature.Messages,
+			remaining: 160,
+			rollovers: [{ balance: 60 }],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 3,
+		});
+
+		// 3 of 5 used: an overflow track of 10 (rollover-funded) applies all 10.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 10,
+			overage_behavior: "overflow",
+		});
+		await expectCustomerBalance({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 147,
+			usage: 13,
+		});
+		await expectCustomerUsageLimit({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			usage: 13,
+			limit: 5,
+		});
+
+		// Exhausted window still clamps cap-mode tracks, rollover funds or not.
+		await autumnV2_3.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 2,
+		});
+		await expectCustomerBalance({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.Messages,
+			remaining: 147,
+			usage: 13,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-overage-overflow8: track_tokens with overflow deducts the full token cost past zero")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 0.1,
+		});
+		const customerProduct = products.base({
+			id: "overage-overflow-tokens",
+			items: [aiCreditsItem],
+		});
+
+		const customerId = "overage-overflow-tokens-1";
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.attach({ productId: customerProduct.id })],
+		});
+
+		// Cost 0.125 exceeds the 0.1 balance: overflow applies it in full.
+		await autumnV2_2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "custom/internal-model",
+			input_tokens: 10_000,
+			output_tokens: 5000,
+			overage_behavior: "overflow",
+		});
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.AiCredits,
+			remaining: 0,
+			usage: 0.125,
 		});
 	},
 );
