@@ -92,7 +92,8 @@ test.concurrent(
 		expect(Math.abs(creditTotal)).toBeLessThan(40);
 
 		for (const creditLine of creditLines) {
-			expect(creditLine.discounts ?? []).toHaveLength(0);
+			// Stored coupon surfaces as metadata; no additional discount is applied.
+			expect(creditLine.discounts ?? []).toHaveLength(1);
 		}
 
 		const result = await autumnV2_2.billing.attach({

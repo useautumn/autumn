@@ -24,6 +24,19 @@ const discountWasActiveForCreditedPeriod = ({
 	return discountEndedAt === undefined || discountEndedAt > creditedPeriodStart;
 };
 
+// Invoice-matched credits are prorated from the stored (already discounted)
+// charge; a stored entry for this coupon means its amount is already net of it.
+const discountAlreadyBakedIntoAmount = ({
+	discount,
+	lineItem,
+}: {
+	discount: StripeDiscountWithCoupon;
+	lineItem: LineItem;
+}): boolean =>
+	(lineItem.discounts ?? []).some(
+		(existing) => existing.stripeCouponId === discount.source.coupon.id,
+	);
+
 /**
  * Checks if a discount applies to a specific line item based on applies_to.products
  */
@@ -35,11 +48,13 @@ export const discountAppliesToLineItem = ({
 	lineItem: LineItem;
 }): boolean => {
 	const isProrationCredit = lineItem.context.direction === "refund";
-	if (
-		isProrationCredit &&
-		!discountWasActiveForCreditedPeriod({ discount, lineItem })
-	) {
-		return false;
+	if (isProrationCredit) {
+		if (discountAlreadyBakedIntoAmount({ discount, lineItem })) {
+			return false;
+		}
+		if (!discountWasActiveForCreditedPeriod({ discount, lineItem })) {
+			return false;
+		}
 	}
 
 	const appliesToProducts = discount.source.coupon.applies_to?.products;

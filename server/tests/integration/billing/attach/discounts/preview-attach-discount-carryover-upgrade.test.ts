@@ -132,19 +132,15 @@ test.concurrent(
 		// New plan charge is discounted — already correct today.
 		expect(premiumLine?.discounts.length).toBeGreaterThan(0);
 
-		// Outgoing credit must carry the same carried-over discount so the
-		// customer isn't refunded more than they paid.
+		// The credit sources from the stored discounted renewal charge ($16), so it
+		// is already net: subtotal = total = -16·(P-15)/P → between -8.26 and -7.43.
 		expect(proLine?.discounts.length).toBe(1);
-		expect(proLine?.discounts[0]?.amount_off).toBeCloseTo(
-			Math.abs(proLine?.subtotal ?? 0) * DISCOUNT_RATE,
-			0,
-		);
+		// The surfaced metadata is the stored full-cycle coupon: 20% of $20 = $4.
+		expect(proLine?.discounts[0]?.amount_off).toBeCloseTo(20 * DISCOUNT_RATE, 1);
 
-		// Discounted credit is smaller in magnitude than the full-price credit.
-		expect(proLine?.total).toBeGreaterThan(proLine?.subtotal ?? 0);
-		expect(Math.abs(proLine?.total ?? 0)).toBeLessThan(
-			Math.abs(proLine?.subtotal ?? 0),
-		);
+		expect(proLine?.total).toBeCloseTo(proLine?.subtotal ?? 0, 2);
+		expect(proLine?.total).toBeGreaterThan(-8.3);
+		expect(proLine?.total).toBeLessThan(-7.4);
 
 		// Total is the sum of the discounted credit and the discounted charge.
 		expect(preview.total).toBeCloseTo(

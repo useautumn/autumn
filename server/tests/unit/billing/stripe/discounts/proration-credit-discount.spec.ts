@@ -118,6 +118,37 @@ describe(chalk.yellowBright("proration credit discounting"), () => {
 			expect(result.discounts[0].percentOff).toBe(20);
 		});
 
+		test("does not re-discount an invoice-matched credit that already embeds the coupon", () => {
+			const discount = establishedDiscount({
+				percentOff: 20,
+				startMs: PERIOD_START_MS - ONE_DAY_MS,
+			});
+			// Credit sourced from a stored discounted charge: amount is already net.
+			const lineItem = lineItemFixtures.refund({
+				amount: 16,
+				discounts: [
+					{
+						amountOff: 4,
+						percentOff: 20,
+						stripeCouponId: discount.source.coupon.id,
+						couponName: "20% off",
+					},
+				],
+			});
+			lineItem.context.billingPeriod = {
+				start: PERIOD_START_MS,
+				end: PERIOD_END_MS,
+			};
+
+			const [result] = applyPercentOffDiscountToLineItems({
+				lineItems: [lineItem],
+				discount,
+			});
+
+			expect(result.amountAfterDiscounts).toBe(-16);
+			expect(result.discounts).toHaveLength(1);
+		});
+
 		test("leaves the credit at full price when the discount started at/after the credited period start", () => {
 			const lineItem = creditLine({ amount: 20 });
 			const discount = establishedDiscount({

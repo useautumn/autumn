@@ -102,8 +102,10 @@ test.concurrent(
 		const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 
 		expect(preview.total).toBeLessThan(0);
-		expect(preview.total).toBeGreaterThan(-16);
-		expect(preview.total).toBeLessThanOrEqual(-7);
+		// Credit = -16·(P-19)/P: stored $16 renewal charge (20% off $20), 4d invoice
+		// finalize + 15d elapsed of a 28-31 day period → between -6.20 and -5.14.
+		expect(preview.total).toBeGreaterThan(-6.5);
+		expect(preview.total).toBeLessThanOrEqual(-5);
 
 		await autumnV1.subscriptions.update(cancelParams);
 
@@ -257,7 +259,9 @@ test.concurrent(
 		const refundAmount = preview.refund!.amount;
 		expect(refundAmount).toBeGreaterThan(0);
 		expect(refundAmount).toBeLessThanOrEqual(16);
-		expect(refundAmount).toBeGreaterThanOrEqual(7);
+		// Refund = 16·(P-19)/P of the $16 invoice (4d invoice finalize + 15d elapsed
+		// of a 28-31 day period) → between 5.14 and 6.20.
+		expect(refundAmount).toBeGreaterThanOrEqual(5);
 
 		expect(preview.refund!.invoice.total).toBe(16);
 

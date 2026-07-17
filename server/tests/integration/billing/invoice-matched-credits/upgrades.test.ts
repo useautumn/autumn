@@ -76,11 +76,15 @@ test.concurrent(
 		expect(creditLines.length).toBeGreaterThan(0);
 
 		const creditTotal = creditLines.reduce((sum, li) => sum + li.total, 0);
-		expect(creditTotal).toBeCloseTo(-8, 0);
+		// Credit = -16·(P-19)/P: stored $16 renewal charge (20% off $20), 4d invoice
+		// finalize + 15d elapsed of a 28-31 day period → between -6.20 and -5.14.
+		expect(creditTotal).toBeLessThan(-5);
+		expect(creditTotal).toBeGreaterThan(-6.5);
 
 		for (const creditLine of creditLines) {
 			const discounts = creditLine.discounts ?? [];
-			expect(discounts.length).toBe(0);
+			// Stored coupon surfaces as metadata; no additional discount is applied.
+			expect(discounts.length).toBe(1);
 		}
 
 		const result = await autumnV2_2.billing.attach({
