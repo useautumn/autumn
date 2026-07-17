@@ -1530,7 +1530,8 @@
  ],
  "open_collateral": [
   "mrp2ud8n: scheduled-switch-consumable EXONERATED \u2014 reproduced green 3 ways at the red-tip commit; run-level webhook-saturation victim (rotating-victim class). Proposed per-test fix: pollUntil on its advanceToNextInvoice sites \u2014 HELD until the E5-surface verdict lands.",
-  "mrp2ud8n: update-plan-migration-drafts (1) + update-plan-op-paid-features (2) newly red on the 27a29cd63 surface \u2014 regression-vs-contract-vs-flake investigation in flight.",
+  "mrp2ud8n VERDICT: update-plan-migration-drafts = genuine behavior change from 27a29cd63 (bisect-confirmed): update_variant_ids alone yields no variantUpdate so the disable_version pin misses, ladder falls to hasPlanCustomers, and getVersioningUsage counts the variant's CUSTOM cusProduct as versionable -> variant versions v1->v2 and versionedPlanFilter splits the draft filter. Candidate fix (is_custom exclusion in getVersioningUsage) parked in TEAM_CHOICES #5 \u2014 same helper feeds base-plan versioning, needs the team call.",
+  "mrp2ud8n VERDICT: update-plan-op-paid-features (2) = pre-existing flake, NOT a regression \u2014 signature appears in mrnswqxc pre-D3; code path (runOnServer:false migrateCustomer) never touches the 27a29cd63 surface. Root cause: D3 poll watched the cache-side customers.get while migrateCustomer reads Postgres. FIXED: polls re-pointed at skip_cache read, timeout 6s->15s.",
   "TREND: ingress dropped webhook forwards grew 9 -> 281 -> 522 across the last three full runs \u2014 worker webhook delivery saturating; plausibly amplified by archived suites now actually running. Needs an infra look (ingress capacity / retry budget) before it mints more rotating victims."
  ]
 }

@@ -52,10 +52,25 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
   satisfy at most two of the three suites.
 - **Also:** `previewAffectedVariants` still reports `versionable: false` where
   apply now versions (preview/apply inconsistency, untested combination).
+- **Update (bisect-confirmed):** `27a29cd63` also broke
+  `update-plan-migration-drafts.test.ts` ("variant custom plans follow
+  include_custom") — its variant's only customer is a **custom** cusProduct, and
+  `getVersioningUsage` counts custom cusProducts as versionable, so the variant
+  versions when the test expects it pinned. **Candidate resolution that
+  satisfies every currently-green suite plus this one:** exclude
+  `is_custom = true` cusProducts from the versionable count in
+  `server/src/internal/customers/cusProducts/repos/getVersioningUsage.ts:40`.
+  Rationale: migration drafts default to `custom: false` targeting, and custom
+  cusProducts carry frozen per-customer config that in-place edits don't govern.
+  Caveat before applying: the same helper feeds base-plan versioning via
+  `setupUpdateProductContext` — a base whose only customers are custom would
+  then edit in place. This does NOT resolve axis (a) for
+  variant-independent-versioning; that conflict stands.
 - **Decision needed:** define the actual contract for (a) does base versioning
   propagate versioning to customer-bearing variants, and (b) what does
-  request-level `disable_version` scope to. Then one suite gets rewritten and
-  preview gets aligned.
+  request-level `disable_version` scope to — and whether custom-only customers
+  count as versionable usage (candidate above). Then one suite gets rewritten
+  and preview gets aligned.
 
 ### 6. `created_at` stamped from the billing clock
 - **What happened:** billing v2 sets `customer_products.created_at` from the

@@ -74,12 +74,17 @@ test.concurrent(
 			value: messagesUsage,
 		});
 
-		// Ensure tracked usage has landed before the migration snapshots balances
+		// Ensure tracked usage has landed before the migration snapshots balances.
+		// skip_cache forces the Postgres read — the surface migrateCustomer reads;
+		// the cache-side read can be ahead of the DB sync under load.
 		await pollUntil({
-			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			fetch: () =>
+				autumnV1.customers.get<ApiCustomerV3>(customerId, {
+					skip_cache: "true",
+				}),
 			until: (c) =>
 				c.features?.[TestFeature.Messages]?.usage === messagesUsage,
-			timeoutMs: 6000,
+			timeoutMs: 15_000,
 			intervalMs: 2000,
 		});
 
@@ -172,11 +177,16 @@ test.concurrent(
 			],
 		});
 
-		// Ensure tracked usage has landed before the migration snapshots balances
+		// Ensure tracked usage has landed before the migration snapshots balances.
+		// skip_cache forces the Postgres read — the surface migrateCustomer reads;
+		// the cache-side read can be ahead of the DB sync under load.
 		const customerBeforeMigration = await pollUntil({
-			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			fetch: () =>
+				autumnV1.customers.get<ApiCustomerV3>(customerId, {
+					skip_cache: "true",
+				}),
 			until: (c) => c.features?.[TestFeature.Users]?.usage === usersUsage,
-			timeoutMs: 6000,
+			timeoutMs: 15_000,
 			intervalMs: 2000,
 		});
 		const invoiceCountBefore = customerBeforeMigration.invoices?.length ?? 0;
