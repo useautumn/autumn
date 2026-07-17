@@ -2,6 +2,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { withMigrationCustomerLock } from "@/internal/migrations/v2/run/migrateCustomer/withMigrationCustomerLock.js";
 
@@ -87,6 +88,51 @@ describeWithRedis("migration customer lock", () => {
 		} finally {
 			releaseFirst.resolve();
 			await first;
+		}
+	});
+
+	test("honors a caller-specific wait budget", async () => {
+		const customerId = `migration-lock-wait-budget-${randomUUID()}`;
+		const firstEntered = createDeferred();
+		const releaseFirst = createDeferred();
+
+		const first = withMigrationCustomerLock({
+			ctx,
+			customerId,
+			run: async () => {
+				firstEntered.resolve();
+				await releaseFirst.promise;
+			},
+		});
+		await firstEntered.promise;
+
+		const followerArgs = {
+			ctx,
+			customerId,
+			maxWaitMs: 50,
+			run: async () => "follower",
+		};
+		const follower = withMigrationCustomerLock(followerArgs);
+
+		try {
+			const outcome = await Promise.race([
+				follower.then(
+					(value) => ({ type: "ran" as const, value }),
+					(error: unknown) => ({ type: "rejected" as const, error }),
+				),
+				timeout(500).then(() => ({ type: "still-waiting" as const })),
+			]);
+
+			expect(outcome.type).toBe("rejected");
+			if (outcome.type === "rejected") {
+				expect(outcome.error).toBeInstanceOf(RecaseError);
+				expect((outcome.error as RecaseError).code).toBe(
+					ErrCode.LockAlreadyExists,
+				);
+			}
+		} finally {
+			releaseFirst.resolve();
+			await Promise.allSettled([first, follower]);
 		}
 	});
 });

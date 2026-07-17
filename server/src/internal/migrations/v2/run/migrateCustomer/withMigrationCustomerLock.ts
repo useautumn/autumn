@@ -6,7 +6,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { timeout } from "@/utils/genUtils.js";
 
 const LOCK_TTL_MS = 15 * 60 * 1000;
-const MAX_WAIT_MS = 10 * 60 * 1000;
+const DEFAULT_MAX_WAIT_MS = 10 * 60 * 1000;
 const RETRY_MIN_MS = 75;
 const RETRY_JITTER_MS = 50;
 
@@ -40,17 +40,19 @@ const releaseMigrationCustomerLock = async ({
 export const withMigrationCustomerLock = async <T>({
 	ctx,
 	customerId,
+	maxWaitMs = DEFAULT_MAX_WAIT_MS,
 	run,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	maxWaitMs?: number;
 	run: () => Promise<T>;
 }): Promise<T> => {
 	if (!hasRedisConfig) return run();
 
 	const lockKey = buildMigrationCustomerLockKey({ ctx, customerId });
 	const ownerToken = randomUUID();
-	const waitDeadline = Date.now() + MAX_WAIT_MS;
+	const waitDeadline = Date.now() + maxWaitMs;
 
 	while (true) {
 		let result: "OK" | null;

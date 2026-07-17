@@ -31,12 +31,14 @@ export const migrateCustomer = async ({
 	migration,
 	preview = false,
 	hooks,
+	migrationCustomerLockMaxWaitMs,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	migration: MigrationRuntime;
 	preview?: boolean;
 	hooks?: MigrationHooks;
+	migrationCustomerLockMaxWaitMs?: number;
 }): Promise<MigrateCustomerResult> => {
 	const migrationCtx = createMigrateCustomerRunContext({
 		ctx,
@@ -134,6 +136,7 @@ export const migrateCustomer = async ({
 	return withMigrationCustomerLock({
 		ctx: migrationCtx,
 		customerId,
+		maxWaitMs: migrationCustomerLockMaxWaitMs,
 		run: migrate,
 	});
 };
