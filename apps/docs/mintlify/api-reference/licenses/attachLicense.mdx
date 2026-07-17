@@ -1,0 +1,36 @@
+---
+title: "Attach License"
+openapi: "openapi POST /v1/licenses.attach"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required />
+
+<DynamicParamField body="plan_id" type="string" required />
+
+<DynamicParamField body="entities" type="object[]" required>
+  <Expandable title="properties">
+    <DynamicParamField body="entity_id" type="string" required>
+      The ID of the entity to assign the license to.
+    </DynamicParamField>
+
+    <DynamicParamField body="name" type="string | null">
+      The name of the entity, used when creating it.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_id" type="string">
+      The feature the entity is associated with. Required when the entity does not exist yet.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />

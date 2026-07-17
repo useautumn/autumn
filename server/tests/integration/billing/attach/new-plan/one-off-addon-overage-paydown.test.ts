@@ -1,5 +1,5 @@
-// Red: a direct one-off add-on leaves recurring overage untouched and grants the full purchased balance.
-// Green: the purchase clears that overage first and grants only the remainder on the add-on.
+// With persist_free_overage: true, a one-off add-on purchase clears recurring overage
+// first and grants only the remainder. Without it, overage stays on the recurring balance.
 
 import { expect, test } from "bun:test";
 import type {
@@ -72,6 +72,11 @@ test.concurrent(
 		const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
 			customerId: "one-off-overage-paydown",
 			setup: [
+				s.platform.create({
+					userEmail: `one-off-overage-paydown-${Math.random().toString(36).slice(2)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [recurringPlan, oneOffAddOn] }),
 			],
@@ -184,6 +189,11 @@ test.concurrent(
 		const { customerId, autumnV2_2, ctx } = await initScenario({
 			customerId: "one-off-included-and-prepaid-paydown",
 			setup: [
+				s.platform.create({
+					userEmail: `one-off-included-prepaid-${Math.random().toString(36).slice(2)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [recurringPlan, oneOffAddOn] }),
 			],
@@ -240,17 +250,12 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("one-off add-on overage paydown: persisted overage remains separate")}`,
+	`${chalk.yellowBright("one-off add-on overage paydown: without persist_free_overage, overage remains separate")}`,
 	async () => {
 		const { recurringPlan, oneOffAddOn } = buildScenarioProducts();
 		const { customerId, autumnV2_2, ctx } = await initScenario({
-			customerId: "one-off-persisted-overage",
+			customerId: "one-off-no-persist-overage",
 			setup: [
-				s.platform.create({
-					userEmail: `one-off-overage-${Math.random().toString(36).slice(2)}@autumn.test`,
-					configOverrides: { persist_free_overage: true },
-					setupDefaultFeatures: true,
-				}),
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [recurringPlan, oneOffAddOn] }),
 			],
@@ -312,6 +317,11 @@ test.concurrent(
 		const { customerId, autumnV2_2, ctx } = await initScenario({
 			customerId: "one-off-overage-immediate-checkout",
 			setup: [
+				s.platform.create({
+					userEmail: `one-off-immediate-${Math.random().toString(36).slice(2)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [recurringPlan, oneOffAddOn] }),
 			],
@@ -371,6 +381,11 @@ test.concurrent(
 		const { customerId, autumnV2_2, ctx } = await initScenario({
 			customerId: "one-off-overage-deferred-checkout",
 			setup: [
+				s.platform.create({
+					userEmail: `one-off-deferred-${Math.random().toString(36).slice(2)}@autumn.test`,
+					configOverrides: { persist_free_overage: true },
+					setupDefaultFeatures: true,
+				}),
 				s.customer({ paymentMethod: "success" }),
 				s.products({ list: [recurringPlan, oneOffAddOn] }),
 			],

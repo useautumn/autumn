@@ -1,0 +1,127 @@
+---
+title: "List Invoices"
+openapi: "openapi POST /v1/invoices.list"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="start_cursor" type="string">
+  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+</DynamicParamField>
+
+<DynamicParamField body="limit" type="integer">
+  Number of items to return. Default 50, hard ceiling 5000.
+</DynamicParamField>
+
+<DynamicParamField body="customer_id" type="string">
+  Filter invoices to a single customer by ID.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer.
+</DynamicParamField>
+
+<DynamicParamField body="status" type="('draft' | 'open' | 'void' | 'paid' | 'uncollectible')[]">
+  Filter by invoice status (draft, open, paid, void, uncollectible).
+</DynamicParamField>
+
+<DynamicParamField body="processor_types" type="('stripe' | 'revenuecat')[]">
+  Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="list" type="object[]">
+  Items for current page.
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_ids" type="string[]">
+      Array of plan IDs included in this invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string">
+      The status of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The currency code for the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when the invoice was created
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the Stripe-hosted invoice page
+    </DynamicResponseField>
+
+    <DynamicResponseField name="id" type="string">
+      The Autumn invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string | null">
+      The ID of the customer this invoice belongs to. Null for customers created without an ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The ID of the entity this invoice belongs to, if entity-scoped
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_paid" type="number | null">
+      The amount paid on the invoice. Null on invoices recorded before amounts paid were tracked.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="refunded_amount" type="number">
+      The total amount refunded on the invoice
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="next_cursor" type="string | null">
+  Opaque cursor for the next page. Null when there are no more results.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "list": [
+    {
+      "id": "inv_2b3c4d5e6f7g8h",
+      "customer_id": "cus_123",
+      "entity_id": null,
+      "plan_ids": [
+        "pro_plan"
+      ],
+      "stripe_id": "in_1A2B3C4D5E6F7G8H",
+      "processor_type": "stripe",
+      "status": "paid",
+      "total": 29.99,
+      "amount_paid": 29.99,
+      "refunded_amount": 0,
+      "currency": "usd",
+      "created_at": 1759247877000,
+      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_123/test_456"
+    }
+  ],
+  "next_cursor": null
+}
+```
+</ResponseExample>

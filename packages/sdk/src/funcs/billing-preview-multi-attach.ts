@@ -41,6 +41,7 @@ import { Result } from "../types/fp.js";
  * @param entityId - The ID of the entity to attach the plans to. (optional)
  * @param plans - The list of plans to attach to the customer.
  * @param freeTrial - Free trial configuration applied to all plans. Pass an object to set a custom trial, or null to remove any trial. (optional)
+ * @param currency - Currency to bill this multi-attach in (e.g. usd, eur). Must match the customer's currency if they are already locked to one, and every plan must offer a paid price in it. Defaults to the customer's currency, then the org default. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. (optional)
  * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
  * @param successUrl - URL to redirect to after successful checkout. (optional)

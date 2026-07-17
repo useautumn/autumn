@@ -23,7 +23,7 @@ export const computeOneOffPurchaseRebalance = ({
 	ctx: AutumnContext;
 	newCustomerProduct: FullCusProduct;
 }): OneOffPurchaseRebalance | undefined => {
-	if (orgPersistFreeOverage({ org: ctx.org })) return undefined;
+	if (!orgPersistFreeOverage({ org: ctx.org })) return undefined;
 	if (!isCustomerProductAddOn(newCustomerProduct)) return undefined;
 	if (!isCustomerProductOneOff(newCustomerProduct)) return undefined;
 	if (!customerProductHasActiveStatus(newCustomerProduct)) return undefined;

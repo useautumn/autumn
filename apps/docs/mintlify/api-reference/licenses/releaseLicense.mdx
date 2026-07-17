@@ -1,0 +1,23 @@
+---
+title: "Release License"
+openapi: "openapi POST /v1/licenses.release"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required />
+
+<DynamicParamField body="license_plan_id" type="string">
+  Scopes the release when an entity holds licenses of multiple plans.
+</DynamicParamField>
+
+<DynamicParamField body="entity_ids" type="string[]" required />
+
+
+### Response
+
+<DynamicResponseField name="success" type="boolean" />
