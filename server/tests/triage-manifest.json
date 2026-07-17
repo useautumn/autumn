@@ -1,12 +1,13 @@
 {
  "_doc": "Root-cause manifest for the 100%-green test campaign. Regenerate the diff against a new run's failures file, then update statuses here. Statuses: open-bug (product defect), open-harness (test needs rewrite), infra-flake (load/timing collateral), needs-team-call (product decision required), roadmap-todo (feature unbuilt, tests todo'd), untriaged.",
- "updated": "2026-07-17 (post infra-flake sprint)",
+ "updated": "2026-07-17 (post deterministic queue, run mrp2ud8n)",
  "verified_against": {
   "baseline": "mrnswqxc-f9fnrq @ 72cd1d280",
   "control": "mroteobc-tsc05k @ 72cd1d280 (same code \u2014 noise-floor measurement)",
   "fixed": "mrovccnd-s972n7 @ 363a8a301",
   "infra_sprint_regression": "mrox2ax0-o33whl @ 9bb24d446 (429-wrapper asyncIterator bug + global cushion overreach \u2014 both reverted/fixed)",
-  "infra_sprint_clean": "mroxq7b1-fx2vx7 @ a61f02925 (278 deduped / 185 files \u2014 flat vs fixed run within noise)"
+  "infra_sprint_clean": "mroxq7b1-fx2vx7 @ a61f02925 (278 deduped / 185 files \u2014 flat vs fixed run within noise)",
+  "deterministic_queue": "mrp2ud8n-3irxmb @ 885f1a872 \u2014 217 deduped / 155 files; 75 cleared, 14 appeared"
  },
  "noise_floor": {
   "tests": "~35",
@@ -23,7 +24,7 @@
   {
    "tag": "attach-body-products-field-removed-stale-multiattach-helper",
    "classification": "HARNESS",
-   "status": "open-harness",
+   "status": "partially-fixed",
    "test_count": 22,
    "files": {
     "server/tests/archives/multiAttach/multiAttach1.test.ts": [
@@ -66,12 +67,15 @@
      "multiUpgrade1: Testing multi attach and upgrade > should transfer to entity and have correct sub",
      "multiUpgrade1: Testing multi attach and upgrade > should upgrade entity's sub to premium"
     ]
-   }
+   },
+   "notes": [
+    "25->11; setup tests migrated to /billing.multi_attach; remainder = quantity-multiplier todos awaiting team call (#8) + honest deeper failures"
+   ]
   },
   {
    "tag": "variant-version-not-bumping-haspancustomers-filter",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 12,
    "files": {
     "server/tests/integration/crud/plans/variants/interval-family.test.ts": [
@@ -92,7 +96,10 @@
      "rollover filter precision: same feature_id different interval, only targeted item changes",
      "rollover propagate: variant strip preserved across propagation"
     ]
-   }
+   },
+   "notes": [
+    "cluster 16->1; survivor is the opt-out team call; NOTE collateral: variant-independent-versioning suite (3 tests) holds a contradicting contract \u2014 see TEAM_CHOICES_TW.md #5"
+   ]
   },
   {
    "tag": "playwright-checkout-flow-fails-under-pool-contention",
@@ -153,7 +160,7 @@
   {
    "tag": "oneoff-cleanup-never-expires",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 9,
    "files": {
     "server/tests/integration/cron/one-off-cleanup/cleanup-one-off-edge-cases.test.ts": [
@@ -173,12 +180,15 @@
     "server/tests/integration/cron/one-off-cleanup/one-off-cleanup-with-others.test.ts": [
      "cleanup: oneoff-prepaid-boolean-only-latest"
     ]
-   }
+   },
+   "notes": [
+    "9->0 in mrp2ud8n"
+   ]
   },
   {
    "tag": "discount-aware-invoice-matched-credit-miscalc",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 7,
    "files": {
     "server/tests/integration/billing/invoice-matched-credits/additional-coverage.test.ts": [
@@ -196,7 +206,10 @@
      "invoice-matched-credits upgrade 1: percent-off forever discount \u2014 credit reflects discounted price",
      "invoice-matched-credits upgrade 3: amount-off coupon \u2014 credit reflects discounted price"
     ]
-   }
+   },
+   "notes": [
+    "8->0; root cause was double-discounting of stored credits (PR #1815 semantic merge conflict) \u2014 prod make-good assessment pending"
+   ]
   },
   {
    "tag": "license-pool-convergence-on-parent-end",
@@ -219,7 +232,7 @@
   {
    "tag": "pathindex-lua-undeclared-key",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 6,
    "files": {
     "server/tests/perf/v2CachePerf.test.ts": [
@@ -230,7 +243,10 @@
      "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (5 ent) \u2014 Bounded FullCustomer",
      "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (5 ent) \u2014 FullEntity"
     ]
-   }
+   },
+   "notes": [
+    "6->0 in mrp2ud8n"
+   ]
   },
   {
    "tag": "stripe-subscription-verify-mismatch-under-load",
@@ -269,7 +285,7 @@
   {
    "tag": "legacy-migrate-endpoint-requires-session-auth-not-apikey",
    "classification": "HARNESS",
-   "status": "open-harness",
+   "status": "fixed-verified",
    "test_count": 4,
    "files": {
     "server/tests/archives/migrations/migration4.test.ts": [
@@ -284,7 +300,10 @@
     "server/tests/archives/migrations/migration7.test.ts": [
      "migrations7: Testing migration for premium v1 -> premium v2 after cancellation at cycle end > should migrate premium v1 to premium v2 and preserve cancellation"
     ]
-   }
+   },
+   "notes": [
+    "5->0 on v2 RPC"
+   ]
   },
   {
    "tag": "free-trial-override-preview-double-proration-refund",
@@ -1267,24 +1286,30 @@
   {
    "tag": "variant-preview-response-shape-wrong",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 1,
    "files": {
     "server/tests/integration/crud/plans/variants/feature-drop-propagation.test.ts": [
      "feature-drop preview: feature-add item changes list stripped variant"
     ]
-   }
+   },
+   "notes": [
+    "cleared in mrp2ud8n"
+   ]
   },
   {
    "tag": "variant-preview-update-missing-validation",
    "classification": "BUG",
-   "status": "open-bug",
+   "status": "fixed-verified",
    "test_count": 1,
    "files": {
     "server/tests/integration/crud/plans/variants/reset-tier-ladder.test.ts": [
      "reset-tier: preview_update rejects variant id \u2192 cannot_preview_on_variant"
     ]
-   }
+   },
+   "notes": [
+    "guard added, cleared"
+   ]
   },
   {
    "tag": "rc-sync-teststore-price-call-mismatch",
@@ -1502,5 +1527,8 @@
   "3 poll conversions reverted after repeat failures (invoice-created-multi-interval, create-entity-paid, update-prepaid-overage); other 26 files held",
   "TEST_FILE_CONCURRENCY must never be set suite-wide (mrox2ax0: +23 files); pad specific tests only",
   "duration tail: 6m+ bucket eliminated by wave C; 4-6m band (~10 files) persists \u2014 usage meter poll likely falling back to fixed loop"
+ ],
+ "open_collateral": [
+  "mrp2ud8n: scheduled-switch-consumable.test.ts 5 tests newly red (never failed in 5 prior runs) \u2014 under investigation, prime suspect 809d08fb3 discount gate"
  ]
 }

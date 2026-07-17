@@ -41,13 +41,21 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
 - **Decision needed:** does opting out preserve the old pin (and if so, always, or
   only when the variant will never receive the diff)? One test red until decided.
 
-### 5. Preview/apply inconsistency for `disable_version` on variants
-- **What happened:** after the versioning-ladder fix (`27a29cd63`), apply versions a
-  customer-bearing variant on bare propagation even under request-level
-  `disable_version`, but `previewAffectedVariants` still reports
-  `versionable: false` for that case. No test covers the combination.
-- **Decision needed:** which behavior is intended; then align the other side and
-  add the missing test.
+### 5. Variant versioning: THREE suites, three contracts (escalated)
+- **What happened:** the versioning-ladder fix (`27a29cd63`) reconciled the
+  catalog and lifecycle/interval-family suites — and run mrp2ud8n then revealed a
+  THIRD suite, `crud/plans/versioning/variant-independent-versioning.test.ts`
+  (3 tests newly red), expecting the opposite on both axes: variants edited
+  IN PLACE when only the base has customers (vs lifecycle demanding they
+  version), and request-level `disable_version` pinning bare propagation (vs
+  lifecycle demanding it not). Mutually incompatible expectations; code can
+  satisfy at most two of the three suites.
+- **Also:** `previewAffectedVariants` still reports `versionable: false` where
+  apply now versions (preview/apply inconsistency, untested combination).
+- **Decision needed:** define the actual contract for (a) does base versioning
+  propagate versioning to customer-bearing variants, and (b) what does
+  request-level `disable_version` scope to. Then one suite gets rewritten and
+  preview gets aligned.
 
 ### 6. `created_at` stamped from the billing clock
 - **What happened:** billing v2 sets `customer_products.created_at` from the
