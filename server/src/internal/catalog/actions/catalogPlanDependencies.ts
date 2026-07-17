@@ -1,4 +1,9 @@
-import { type CatalogPlanParams, ErrCode, RecaseError } from "@autumn/shared";
+import {
+	type CatalogPlanParams,
+	ErrCode,
+	type FullProduct,
+	RecaseError,
+} from "@autumn/shared";
 
 const referenceKey = (id: string, version?: number) =>
 	version === undefined ? id : `${id}@${version}`;
@@ -36,6 +41,12 @@ export const sortCatalogPlansByDependencies = (
 		}
 		if (visited.has(key)) return;
 		visiting.add(key);
+		if (plan.version !== undefined && plan.version > 1) {
+			const previous = byReference.get(
+				referenceKey(plan.plan_id, plan.version - 1),
+			);
+			if (previous) visit(previous);
+		}
 		for (const reference of dependenciesForPlan(plan)) {
 			const dependency =
 				byReference.get(referenceKey(reference.id, reference.version)) ??
@@ -48,4 +59,42 @@ export const sortCatalogPlansByDependencies = (
 	};
 	for (const plan of plans) visit(plan);
 	return sorted;
+};
+
+export const validateCatalogPlanVersionTargets = ({
+	plans,
+	products,
+}: {
+	plans: CatalogPlanParams[];
+	products: FullProduct[];
+}) => {
+	const existing = new Set(
+		products.map((product) => referenceKey(product.id, product.version)),
+	);
+	const latestById = new Map<string, number>();
+	for (const product of products) {
+		latestById.set(
+			product.id,
+			Math.max(latestById.get(product.id) ?? 0, product.version),
+		);
+	}
+
+	for (const plan of sortCatalogPlansByDependencies(plans)) {
+		if (
+			plan.version === undefined ||
+			existing.has(referenceKey(plan.plan_id, plan.version))
+		) {
+			continue;
+		}
+		const expected = (latestById.get(plan.plan_id) ?? 0) + 1;
+		if (plan.version !== expected) {
+			throw new RecaseError({
+				message: `Plan ${plan.plan_id} version must be ${expected}, received ${plan.version}.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		existing.add(referenceKey(plan.plan_id, plan.version));
+		latestById.set(plan.plan_id, plan.version);
+	}
 };

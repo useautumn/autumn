@@ -6,7 +6,6 @@ import {
 	type CreateProductV2Params,
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
-	ProductNotFoundError,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -170,9 +169,6 @@ const upsertPlans = async ({
 							allowNotFound: true,
 						});
 			if (latest) {
-				if (version !== latest.version + 1) {
-					throw new ProductNotFoundError({ productId: plan_id, version });
-				}
 				const updates = apiPlan.map.paramsV1ToProductV2({
 					ctx,
 					currentFullProduct: latest,

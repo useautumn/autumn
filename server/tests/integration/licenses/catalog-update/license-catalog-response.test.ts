@@ -117,14 +117,14 @@ test.concurrent(
 				name: "Parent",
 				licenses: [{ license_plan_id: childId, version: 2, included: 2 }],
 			},
-		];
+		].reverse();
 
 		const preview = (await autumnV2_2.post("/catalog.preview_update", {
 			expand: ["plan_changes.plan"],
 			plans,
 		})) as CatalogPreviewUpdateResponse;
 		expect(preview.plan_changes).toHaveLength(4);
-		expect(preview.plan_changes[3]?.plan?.licenses).toEqual([
+		expect(preview.plan_changes[0]?.plan?.licenses).toEqual([
 			{
 				license_plan_id: childId,
 				version: 2,
@@ -157,6 +157,14 @@ test.concurrent(
 				prepaid_only: true,
 			},
 		]);
+
+		for (const route of ["/catalog.preview_update", "/catalog.update"]) {
+			await expect(
+				autumnV2_2.post(route, {
+					plans: [{ plan_id: `${childId}_gap`, version: 2, name: "Gap" }],
+				}),
+			).rejects.toThrow("version must be 1, received 2");
+		}
 	},
 );
 

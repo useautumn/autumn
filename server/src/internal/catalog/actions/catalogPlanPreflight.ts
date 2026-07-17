@@ -9,7 +9,10 @@ import {
 	validatePlanLicenseUpdate,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { sortCatalogPlansByDependencies } from "./catalogPlanDependencies.js";
+import {
+	sortCatalogPlansByDependencies,
+	validateCatalogPlanVersionTargets,
+} from "./catalogPlanDependencies.js";
 
 const virtualProduct = ({
 	current,
@@ -49,6 +52,7 @@ const preflightCatalogLicenses = async ({
 		env: ctx.env,
 		returnAll: true,
 	});
+	validateCatalogPlanVersionTargets({ plans, products: persistedProducts });
 	const currentById = new Map<string, FullProduct>();
 	for (const product of persistedProducts) {
 		const current = currentById.get(product.id);
