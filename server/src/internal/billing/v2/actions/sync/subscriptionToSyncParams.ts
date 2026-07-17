@@ -43,6 +43,7 @@ const matchedPlanToSyncPlan = ({
 		: matchedPlan.customize;
 	return {
 		plan_id: matchedPlan.product.id,
+		version: matchedPlan.product.version,
 		quantity: matchedPlan.quantity,
 		customize,
 		expire_previous: true,
