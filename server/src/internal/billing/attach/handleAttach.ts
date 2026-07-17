@@ -84,6 +84,8 @@ export const handleAttach = createRoute({
 			useCheckout: config.onlyCheckout,
 		});
 
+		ctx.assertLockOwned?.();
+
 		await insertCustomItems({
 			db: ctx.db,
 			customPrices: customPrices || [],

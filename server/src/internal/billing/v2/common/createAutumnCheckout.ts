@@ -45,6 +45,8 @@ export async function createAutumnCheckout<
 	billingPlan: BillingPlan;
 	expiresInMs?: number;
 }): Promise<CreateAutumnCheckoutResult<T>> {
+	ctx.assertLockOwned?.();
+
 	const { checkout } = await billingPlanToAutumnCheckout({
 		ctx,
 		action,

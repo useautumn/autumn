@@ -43,6 +43,8 @@ export const executeMultiSubscriptionBillingPlan = async ({
 	onStripeResult?: (result: StripeBillingPlanResult) => void;
 	awaitBillingUpdatedWebhook?: boolean;
 }): Promise<StripeBillingPlanResult[]> => {
+	ctx.assertLockOwned?.();
+
 	const stripeResults: StripeBillingPlanResult[] = [];
 	for (const subscriptionPlan of stripeBillingPlans) {
 		const result = await executeStripeBillingPlan({

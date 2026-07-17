@@ -94,7 +94,6 @@ export const migrateCustomer = async ({
 					billingPlan,
 					billingContexts,
 				});
-				assertLockOwned();
 			}
 
 			const response = {

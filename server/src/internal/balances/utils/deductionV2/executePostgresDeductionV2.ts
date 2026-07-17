@@ -19,8 +19,8 @@ import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
-import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -85,7 +85,11 @@ export const executePostgresDeductionV2 = async ({
 		});
 	}
 
-	const executeDeduction = async (): Promise<{
+	const executeDeduction = async ({
+		assertLockOwned = () => undefined,
+	}: {
+		assertLockOwned?: () => void;
+	} = {}): Promise<{
 		updates: Record<string, DeductionUpdate>;
 		mutationLogs: MutationLogItem[];
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
@@ -95,6 +99,7 @@ export const executePostgresDeductionV2 = async ({
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
 		const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
+		assertLockOwned();
 
 		for (const deduction of deductions) {
 			const {
@@ -146,8 +151,8 @@ export const executePostgresDeductionV2 = async ({
 				continue;
 			}
 
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
 				// No usage_window_limits here: the hard usage cap is enforced only on the
@@ -169,7 +174,7 @@ export const executePostgresDeductionV2 = async ({
 				feature_id: feature.id,
 			})}::jsonb
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
-		);
+			);
 
 			const resultJson = result[0]?.deduct_from_cus_ents as {
 				updates: Record<string, DeductionUpdate>;
@@ -326,11 +331,11 @@ export const executePostgresDeductionV2 = async ({
 
 	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
-			lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-			ttlMs: 60000,
-			errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
-			fn: executeDeduction,
-		})
+				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+				ttlMs: 60000,
+				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+				fn: executeDeduction,
+			})
 		: await executeDeduction();
 
 	return {

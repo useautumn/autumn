@@ -24,6 +24,7 @@ export const releaseLicense = async ({
 	logReleaseLicensePlan({ ctx, context });
 
 	// 4. Execute
+	ctx.assertLockOwned?.();
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
 	// Response shape is undecided; callers only get an acknowledgement.

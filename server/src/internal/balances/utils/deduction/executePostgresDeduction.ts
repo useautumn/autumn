@@ -86,13 +86,18 @@ export const executePostgresDeduction = async ({
 		});
 	}
 
-	const executeDeduction = async (): Promise<{
+	const executeDeduction = async ({
+		assertLockOwned = () => undefined,
+	}: {
+		assertLockOwned?: () => void;
+	} = {}): Promise<{
 		updates: Record<string, DeductionUpdate>;
 		mutationLogs: MutationLogItem[];
 	}> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
+		assertLockOwned();
 
 		// Need to deduct from customer entitlement...
 		for (const deduction of deductions) {
@@ -133,9 +138,9 @@ export const executePostgresDeduction = async ({
 				continue;
 			}
 
-		// Call the stored function to deduct from entitlements with credit costs
-		const result = await db.execute(
-			sql`SELECT * FROM deduct_from_cus_ents(
+			// Call the stored function to deduct from entitlements with credit costs
+			const result = await db.execute(
+				sql`SELECT * FROM deduct_from_cus_ents(
 			${JSON.stringify({
 				sorted_entitlements: customerEntitlementDeductions,
 				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
@@ -154,7 +159,7 @@ export const executePostgresDeduction = async ({
 				feature_id: feature.id,
 			})}::jsonb
 		) ${planetScaleTag({ query: "deductFromCusEnts" })}`,
-		);
+			);
 
 			// Parse the JSONB result
 			const resultJson = result[0]?.deduct_from_cus_ents as {

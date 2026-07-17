@@ -40,6 +40,9 @@ export type RequestContext = {
 	 *  middleware/worker via resolveRedisV2. Never import the singleton directly
 	 *  in request-path code. */
 	redisV2: Redis;
+	/** Ownership check injected by createRoute for lock-protected handlers.
+	 * Call immediately before the first irreversible operation. */
+	assertLockOwned?: () => void;
 
 	// Info
 	id: string;

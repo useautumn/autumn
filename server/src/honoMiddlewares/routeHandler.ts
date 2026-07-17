@@ -317,7 +317,14 @@ export function createRoute<
 			ttlMs: opts.lock.ttlMs,
 			errorMessage: opts.lock.errorMessage,
 			failOpen: opts.lock.failOpen,
-			fn: executeHandler,
+			fn: async ({ assertLockOwned }) => {
+				c.set("ctx", {
+					...c.get("ctx"),
+					assertLockOwned,
+				});
+				assertLockOwned();
+				return executeHandler();
+			},
 		});
 	};
 

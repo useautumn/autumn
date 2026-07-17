@@ -27,7 +27,8 @@ const createEntities = async ({
 	customerData,
 	createEntityData,
 	withAutumnId = false,
-}: BatchCreateEntitiesParams) => {
+	assertLockOwned = () => undefined,
+}: BatchCreateEntitiesParams & { assertLockOwned?: () => void }) => {
 	const { db, org, env, features } = ctx;
 
 	// 1. Get data
@@ -42,6 +43,7 @@ const createEntities = async ({
 		customerData,
 		createEntityData,
 	});
+	assertLockOwned();
 
 	for (const cusProduct of cusProducts) {
 		await createEntityForCusProduct({
@@ -132,6 +134,6 @@ export const batchCreateEntities = async (
 		lockKey: `lock:create-entity-request:${org.id}:${env}:${customerId}`,
 		errorMessage:
 			"Entity creation already in progress for this customer, try again in a few seconds",
-		fn: () => createEntities(params),
+		fn: ({ assertLockOwned }) => createEntities({ ...params, assertLockOwned }),
 	});
 };

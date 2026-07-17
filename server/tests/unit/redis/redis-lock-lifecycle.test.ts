@@ -253,6 +253,58 @@ describe("Redis lock lifecycle", () => {
 		expect(redisClient.value).toBeNull();
 	});
 
+	test("bounds a stalled acquisition by the waiting deadline and cleans up a late lease", async () => {
+		const redisClient = new FakeRedisLockClient();
+		redisClient.setImplementation = async (lockValue) => {
+			await timeout(200);
+			redisClient.value = lockValue;
+			return "OK";
+		};
+		let callbackRan = false;
+		const startedAtMs = Date.now();
+
+		await expect(
+			withWaitingLock({
+				lockKey: "lock:stalled-acquisition",
+				ttlMs: 1_000,
+				maxWaitMs: 25,
+				redisInstance: asRedis(redisClient),
+				fn: async () => {
+					callbackRan = true;
+				},
+			}),
+		).rejects.toMatchObject({ code: ErrCode.LockAlreadyExists });
+
+		expect(Date.now() - startedAtMs).toBeLessThan(125);
+		expect(callbackRan).toBeFalse();
+
+		await timeout(250);
+		expect(redisClient.value).toBeNull();
+	});
+
+	test("does not report ownership loss after the callback has committed", async () => {
+		const redisClient = new FakeRedisLockClient();
+		let committed = false;
+
+		await expect(
+			withLock({
+				lockKey: "lock:post-commit-ownership-loss",
+				ttlMs: 90,
+				redisInstance: asRedis(redisClient),
+				fn: async () => {
+					redisClient.value = "replacement-owner";
+					await timeout(50);
+					expect(redisClient.renewalCalls).toBeGreaterThan(0);
+					committed = true;
+					return "committed";
+				},
+			}),
+		).resolves.toBe("committed");
+
+		expect(committed).toBeTrue();
+		expect(redisClient.value).toBe("replacement-owner");
+	});
+
 	test("renews ordinary route-style locks while their callback is running", async () => {
 		const redisClient = new FakeRedisLockClient();
 

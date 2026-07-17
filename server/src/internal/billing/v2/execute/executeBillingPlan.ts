@@ -17,12 +17,18 @@ export const executeBillingPlan = async ({
 	billingContext,
 	billingPlan,
 	checkoutLockParamsHash,
+	assertLockOwned,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 	checkoutLockParamsHash?: string;
+	assertLockOwned?: () => void;
 }): Promise<BillingResult> => {
+	// Setup and plan evaluation are intentionally outside the commit boundary.
+	// Fence the first Stripe/DB mutation against an expired or replaced lease.
+	(assertLockOwned ?? ctx.assertLockOwned)?.();
+
 	const stripeBillingResult: StripeBillingPlanResult =
 		billingContext.skipBillingChanges
 			? {}

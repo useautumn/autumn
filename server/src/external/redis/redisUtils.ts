@@ -29,7 +29,7 @@ type LockRuntime = {
 	redisInstance?: Redis;
 };
 
-type OwnedLockContext = {
+export type OwnedLockContext = {
 	assertLockOwned: () => void;
 };
 
@@ -46,6 +46,13 @@ const LOCK_RETRY_JITTER_MS = 50;
 const LOCK_RELEASE_MAX_WAIT_MS = 500;
 const LOCK_RELEASE_ATTEMPT_TIMEOUT_MS = 100;
 const LOCK_RELEASE_RETRY_DELAY_MS = 25;
+
+class RedisLockOperationTimeoutError extends Error {
+	constructor() {
+		super("Redis lock operation timed out");
+		this.name = "RedisLockOperationTimeoutError";
+	}
+}
 
 const resolveRedisConfigured = ({
 	redisConfigured,
@@ -106,7 +113,7 @@ const runWithTimeout = async <T>({
 			operation(),
 			new Promise<never>((_resolve, reject) => {
 				timeoutId = setTimeout(
-					() => reject(new Error("Redis lock operation timed out")),
+					() => reject(new RedisLockOperationTimeoutError()),
 					timeoutMs,
 				);
 			}),
@@ -204,12 +211,14 @@ const tryAcquireLock = async ({
 	lockKey,
 	ttlMs,
 	errorMessage,
+	deadlineMs,
 	redisConfigured,
 	redisInstance,
 }: {
 	lockKey: string;
 	ttlMs: number;
 	errorMessage: string;
+	deadlineMs?: number;
 	redisConfigured: boolean;
 	redisInstance: Redis;
 }): Promise<LockAcquisition> => {
@@ -227,16 +236,30 @@ const tryAcquireLock = async ({
 	};
 	const lockValue = JSON.stringify(lockData);
 	const acquisitionStartedAtMs = Date.now();
+	if (deadlineMs !== undefined && acquisitionStartedAtMs >= deadlineMs) {
+		return {
+			status: "unavailable",
+			error: new RedisLockOperationTimeoutError(),
+		};
+	}
+
+	const acquisitionPromise = runRedisOp({
+		operation: () =>
+			redisInstance.set(lockKey, lockValue, "PX", ttlMs, "NX") as Promise<
+				"OK" | null
+			>,
+		source: "acquireLock",
+		redisInstance,
+	});
 
 	try {
-		const result = await runRedisOp({
-			operation: () =>
-				redisInstance.set(lockKey, lockValue, "PX", ttlMs, "NX") as Promise<
-					"OK" | null
-				>,
-			source: "acquireLock",
-			redisInstance,
-		});
+		const result =
+			deadlineMs === undefined
+				? await acquisitionPromise
+				: await runWithTimeout({
+						operation: () => acquisitionPromise,
+						timeoutMs: Math.max(1, deadlineMs - acquisitionStartedAtMs),
+					});
 
 		if (result === null) return { status: "contended" };
 		return {
@@ -245,6 +268,29 @@ const tryAcquireLock = async ({
 			leaseExpiresAtMs: acquisitionStartedAtMs + ttlMs,
 		};
 	} catch (error) {
+		if (error instanceof RedisLockOperationTimeoutError) {
+			// Redis commands cannot be cancelled. Keep the owner token and clean up
+			// asynchronously if this SET lands after the caller's wait deadline.
+			void (async () => {
+				try {
+					const result = await acquisitionPromise;
+					if (result === null) return;
+				} catch {
+					// A rejected reply is ambiguous: SET may still have landed server-side.
+				}
+
+				await releaseOwnedLock({
+					lockKey,
+					lockValue,
+					redisConfigured,
+					redisInstance,
+					retryWhenNotOwned: true,
+				});
+			})().catch(() => undefined);
+
+			return { status: "unavailable", error };
+		}
+
 		// SET NX may have landed even when its reply was lost. Retain the owner
 		// token and make bounded, owner-safe cleanup attempts before returning.
 		await releaseOwnedLock({
@@ -469,9 +515,9 @@ const runWithOwnedLock = async <T>({
 	})();
 
 	try {
-		const result = await fn({ assertLockOwned });
-		assertLockOwned();
-		return result;
+		// The callback owns its safe-point checks. An implicit check after it
+		// returns could turn already-committed billing work into a retryable 423.
+		return await fn({ assertLockOwned });
 	} finally {
 		renewalController.abort();
 		await renewalPromise;
@@ -583,18 +629,26 @@ export const withWaitingLock = async <T>({
 			lockKey,
 			ttlMs,
 			errorMessage,
+			deadlineMs,
 			redisConfigured: resolvedRedisConfigured,
 			redisInstance,
 		});
 
+		if (
+			acquisition.status === "unavailable" &&
+			acquisition.error instanceof RedisLockOperationTimeoutError
+		) {
+			throw createLockWaitTimeoutError({ maxWaitMs });
+		}
+
 		if (acquisition.status === "acquired") {
 			if (Date.now() >= deadlineMs) {
-				await releaseOwnedLock({
+				void releaseOwnedLock({
 					lockKey,
 					lockValue: acquisition.lockValue,
 					redisConfigured: resolvedRedisConfigured,
 					redisInstance,
-				});
+				}).catch(() => undefined);
 				throw createLockWaitTimeoutError({ maxWaitMs });
 			}
 			return runWithOwnedLock({

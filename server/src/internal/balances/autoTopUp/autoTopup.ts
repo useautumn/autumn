@@ -56,7 +56,11 @@ export const autoTopup = async ({
 		});
 	};
 
-	const executeAutoTopup = async () => {
+	const executeAutoTopup = async ({
+		assertLockOwned,
+	}: {
+		assertLockOwned: () => void;
+	}) => {
 		const start = performance.now();
 
 		logger.info(
@@ -112,6 +116,7 @@ export const autoTopup = async ({
 			ctx,
 			billingContext: autoTopupContext,
 			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
+			assertLockOwned,
 		});
 
 		logStripeBillingResult({ ctx, result: billingResult.stripe });

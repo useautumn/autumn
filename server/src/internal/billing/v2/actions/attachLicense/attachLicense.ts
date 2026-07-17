@@ -25,6 +25,7 @@ export const attachLicense = async ({
 
 	// 4. Execute: entity upserts + capacity take + provision inserts +
 	// license lifecycle (converge + cache) all run inside the shared executor
+	ctx.assertLockOwned?.();
 	await executeAutumnBillingPlan({ ctx, autumnBillingPlan: plan.billingPlan });
 
 	// Response shape is undecided; callers only get an acknowledgement.
