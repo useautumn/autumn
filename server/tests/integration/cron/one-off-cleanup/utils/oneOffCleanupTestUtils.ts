@@ -47,9 +47,14 @@ export const expectProductStatusesByOrder = ({
 	productId: string;
 	expectedStatuses: CusProductStatus[];
 }): void => {
+	// created_at can tie (billing-clock stamped); KSUID ids break ties in insertion order
 	const cusProducts = fullCus.customer_products
 		.filter((cp) => cp.product.id === productId)
-		.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+		.sort(
+			(a, b) =>
+				(a.created_at ?? 0) - (b.created_at ?? 0) ||
+				(a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+		);
 
 	expect(cusProducts.length).toBe(expectedStatuses.length);
 

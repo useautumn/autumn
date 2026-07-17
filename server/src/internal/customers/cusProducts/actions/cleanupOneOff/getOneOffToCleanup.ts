@@ -110,7 +110,11 @@ export const getOneOffCustomerProductsToCleanup = async ({
 				  	OR cp2.internal_entity_id = oo.internal_entity_id
 				  )
 				  AND prod2.id = prod1.id
-				  AND cp2.created_at > oo.created_at
+				  -- created_at ties (billing-clock stamped, second precision); KSUID ids break ties in insertion order
+				  AND (
+				  	cp2.created_at > oo.created_at
+				  	OR (cp2.created_at = oo.created_at AND cp2.id > oo.id)
+				  )
 				  AND cp2.status IN ('${CusProductStatus.Active}', '${CusProductStatus.PastDue}')
 				  AND cp2.id != oo.id
 				  -- Ensure all boolean features from original exist in newer product

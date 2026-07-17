@@ -171,10 +171,14 @@ test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entit
 	// The product on Entity 1 stays active (different entity)
 	const fullCus = await getFullCustomerWithExpired(customerId);
 
-	// Get customer products for this product, sorted by created_at
+	// created_at can tie (billing-clock stamped); KSUID ids break ties in insertion order
 	const cusProducts = fullCus.customer_products
 		.filter((cp) => cp.product.id === oneOff.id)
-		.sort((a, b) => (a.created_at ?? 0) - (b.created_at ?? 0));
+		.sort(
+			(a, b) =>
+				(a.created_at ?? 0) - (b.created_at ?? 0) ||
+				(a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+		);
 
 	// Should have 3 customer products total
 	expect(cusProducts.length).toBe(3);
