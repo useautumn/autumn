@@ -22,7 +22,6 @@ import {
 	handleNewFreeTrial,
 	validateOneOffTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { prepareProductLicenseSync } from "@/internal/products/handlers/handleUpdatePlan/prepareProductLicenseSync.js";
 import { handleUpdateProductDetails } from "@/internal/products/handlers/handleUpdatePlan/updateProductDetails.js";
 import { handleVersionProductV2 } from "@/internal/products/handlers/handleVersionProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -31,6 +30,7 @@ import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { applyOtherProductVersions } from "./updateProduct/applyOtherProductVersions.js";
+import { prepareProductLicenseSync } from "./updateProduct/licenses/prepareProductLicenseSync.js";
 import { setupUpdateProductContext } from "./updateProduct/setupUpdateProductContext.js";
 import { shouldApplyVariantUpdates } from "./updateProduct/shouldApplyVariantUpdates.js";
 import { updateProductItems } from "./updateProduct/updateProductItems.js";

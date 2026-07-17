@@ -34,6 +34,12 @@ export const composeFullProductQuery = ({
 			product: {
 				with: composeProductItems(),
 			},
+			entitlementRefs: {
+				with: {
+					entitlement: { with: { feature: true as const } },
+				},
+			},
+			priceRefs: { with: { price: true as const } },
 		},
 	},
 	// Reverse direction: links where this product IS the license. Indexed by
@@ -44,14 +50,30 @@ export const composeFullProductQuery = ({
 			parentProduct: {
 				with: composeProductItems(),
 			},
+			priceRefs: { with: { price: true as const } },
 		},
 	},
 });
 
 export type ProductWithLicenseRelations = FullProductWithoutLicenses & {
-	licenses?: Array<DbPlanLicense & { product: FullProductWithoutLicenses }>;
+	licenses?: Array<
+		DbPlanLicense & {
+			product: FullProductWithoutLicenses;
+			entitlementRefs: Array<{
+				entitlement: FullProductWithoutLicenses["entitlements"][number];
+			}>;
+			priceRefs: Array<{
+				price: FullProductWithoutLicenses["prices"][number];
+			}>;
+		}
+	>;
 	parent_plan_licenses?: Array<
-		DbPlanLicense & { parentProduct: FullProductWithoutLicenses }
+		DbPlanLicense & {
+			parentProduct: FullProductWithoutLicenses;
+			priceRefs: Array<{
+				price: FullProductWithoutLicenses["prices"][number];
+			}>;
+		}
 	>;
 };
 
@@ -67,6 +89,27 @@ const normalizeLinkProduct = <T extends DbPlanLicense>(
 	},
 });
 
+const normalizeLicenseProduct = (
+	link: NonNullable<ProductWithLicenseRelations["licenses"]>[number],
+) => {
+	const baseLink = normalizeLinkProduct(link, link.product);
+	return {
+		...normalizeLinkProduct(
+			link,
+			link.customized
+				? {
+						...link.product,
+						prices: link.priceRefs.map(({ price }) => price),
+						entitlements: link.entitlementRefs.map(
+							({ entitlement }) => entitlement,
+						),
+					}
+				: link.product,
+		),
+		...(link.customized ? { base_product: baseLink.product } : {}),
+	};
+};
+
 export const normalizeFullProductLicenses = ({
 	product,
 }: {
@@ -76,11 +119,13 @@ export const normalizeFullProductLicenses = ({
 	return {
 		...rest,
 		licenses: product.licenses?.map(
-			(link): FullPlanLicense => normalizeLinkProduct(link, link.product),
+			(link): FullPlanLicense => normalizeLicenseProduct(link),
 		),
 		parent_plan_licenses: parent_plan_licenses?.map(
-			({ parentProduct, ...link }): ParentPlanLicense =>
-				normalizeLinkProduct(link, parentProduct),
+			({ parentProduct, priceRefs, ...link }): ParentPlanLicense => ({
+				...normalizeLinkProduct(link, parentProduct),
+				license_prices: priceRefs.map(({ price }) => price),
+			}),
 		),
 	};
 };

@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 import {
+	type Price,
+	PriceSchema,
+} from "../productModels/priceModels/priceModels";
+import {
 	type FullProductWithoutLicenses,
 	FullProductWithoutLicensesSchema,
 } from "../productModels/productModels";
@@ -7,6 +11,7 @@ import type { DbPlanLicense } from "./planLicenseTable";
 
 export type FullPlanLicense = DbPlanLicense & {
 	product: FullProductWithoutLicenses;
+	base_product?: FullProductWithoutLicenses;
 };
 
 export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
@@ -22,12 +27,17 @@ export const FullPlanLicenseSchema: z.ZodType<FullPlanLicense> = z.object({
 	updated_at: z.number(),
 	// Defers module initialization only; the product shape cannot nest licenses.
 	product: z.lazy(() => FullProductWithoutLicensesSchema),
+	base_product: z.lazy(() => FullProductWithoutLicensesSchema).optional(),
 });
 /** The same catalog link seen from the license side: product is the PARENT
  * plan offering this license. */
 export type ParentPlanLicense = DbPlanLicense & {
 	product: FullProductWithoutLicenses;
+	license_prices: Price[];
 };
 
 export const ParentPlanLicenseSchema: z.ZodType<ParentPlanLicense> =
-	FullPlanLicenseSchema;
+	z.intersection(
+		FullPlanLicenseSchema,
+		z.object({ license_prices: z.array(PriceSchema) }),
+	);

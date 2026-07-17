@@ -54,7 +54,11 @@ import {
 	licensePrices,
 	planLicenses,
 } from "../models/licenseModels/licenseTable.js";
-import { planLicenseRelations } from "../models/licenseModels/planLicenseRelations.js";
+import {
+	licenseEntitlementRelations,
+	licensePriceRelations,
+	planLicenseRelations,
+} from "../models/licenseModels/planLicenseRelations.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -67,9 +71,9 @@ import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js"
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
 import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
-import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
+import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
 import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
@@ -184,6 +188,8 @@ export {
 	transitionRules,
 	// Tables
 	organizations,
+	licenseEntitlementRelations,
+	licensePriceRelations,
 	planLicenses,
 	planLicenseRelations,
 	passkey,

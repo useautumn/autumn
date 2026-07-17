@@ -217,6 +217,9 @@ export const productItemsToPlanItemsV1 = ({
 
 			rollover,
 			proration,
+			entity_feature_id: item.entity_feature_id ?? undefined,
+			entitlement_id: item.entitlement_id ?? undefined,
+			price_id: item.price_id ?? undefined,
 
 			display: getProductItemDisplay({ item, features, currency }),
 		});

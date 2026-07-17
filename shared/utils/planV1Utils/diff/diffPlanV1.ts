@@ -38,6 +38,10 @@ type BasePriceInput = {
 	additional_currencies?: AdditionalCurrencyInput[] | null;
 };
 
+type PlanParamsMapperOptions = {
+	includeInternalIds?: boolean;
+};
+
 // Adding or removing a catalog currency doesn't change what existing
 // customers pay (their prices are snapshots), so neither forces a version or
 // migration; only changed amounts for a currency present on both sides do.
@@ -58,6 +62,7 @@ const additionalCurrenciesCompatible = (
 
 export const toBasePriceParams = (
 	price: NonNullable<ApiPlanV1["price"]>,
+	{ includeInternalIds = false }: PlanParamsMapperOptions = {},
 ): BasePriceParams => ({
 	amount: price.amount,
 	interval: price.interval,
@@ -67,14 +72,25 @@ export const toBasePriceParams = (
 	...(price.additional_currencies?.length
 		? { additional_currencies: price.additional_currencies }
 		: {}),
+	...(includeInternalIds && price.entitlement_id !== undefined
+		? { entitlement_id: price.entitlement_id }
+		: {}),
+	...(includeInternalIds && price.price_id !== undefined
+		? { price_id: price.price_id }
+		: {}),
 });
 
 export const toCreatePlanItemParams = (
 	item: ApiPlanItem,
+	{ includeInternalIds = false }: PlanParamsMapperOptions = {},
 ): CreatePlanItemParamsV1 => {
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
+	if (includeInternalIds && item.entitlement_id !== undefined)
+		out.entitlement_id = item.entitlement_id;
+	if (includeInternalIds && item.price_id !== undefined)
+		out.price_id = item.price_id;
 	if (item.included !== undefined && item.included !== null)
 		out.included = item.included;
 	if (item.unlimited !== undefined && item.unlimited !== null)

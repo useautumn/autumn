@@ -68,17 +68,21 @@ export const licenseItemsWithCustomize = ({
 	return [priceItem, ...featureItems];
 };
 
-/**
- * Build the catalog `licenses[]` entry for a card from its drafted link
- * config. The license plan's items are saved on the license plan itself, not
- * through the parent.
- */
+/** Builds one parent `licenses[]` entry, including its item diff when edited. */
 export const buildPlanLicenseParams = ({
+	product,
 	planLicense,
 	license,
+	features,
+	currency,
+	itemsChanged,
 }: {
+	product: FrontendProduct;
 	planLicense: PlanLicense;
 	license: ProductV2;
+	features: Feature[];
+	currency?: string;
+	itemsChanged: boolean;
 }): PlanLicenseParams => {
 	// Read the drafts imperatively at save time so editing them doesn't
 	// re-render callers on every keystroke.
@@ -87,14 +91,21 @@ export const buildPlanLicenseParams = ({
 		license_plan_id: license.id,
 		included: draft?.included ?? planLicense.included,
 		prepaid_only: planLicense.prepaid_only,
+		...(itemsChanged
+			? {
+					customize: productToLicenseCustomize({
+						product,
+						license,
+						features,
+						currency,
+					}),
+				}
+			: {}),
 	};
 };
 
-/**
- * Diff the edited license product against the stock license plan — the
- * customize payload carries only what changed.
- */
-const productToLicenseCustomize = ({
+/** Returns the item diff against the supplied base, or null to clear it. */
+export const productToLicenseCustomize = ({
 	product,
 	license,
 	features,
@@ -104,7 +115,7 @@ const productToLicenseCustomize = ({
 	license: ProductV2;
 	features: Feature[];
 	currency?: string;
-}): LicenseCustomize => {
+}): LicenseCustomize | null => {
 	const base = productV2ToApiPlanV1({ product: license, features, currency });
 	const edited = productV2ToApiPlanV1({
 		product: product as unknown as ProductV2,
@@ -112,21 +123,17 @@ const productToLicenseCustomize = ({
 		currency,
 	});
 	const diff = diffPlanV1({ from: base, to: edited });
-	return {
+	const customize = {
 		...(diff.price !== undefined ? { price: diff.price } : {}),
 		...(diff.add_items !== undefined ? { add_items: diff.add_items } : {}),
 		...(diff.remove_items !== undefined
 			? { remove_items: diff.remove_items }
 			: {}),
 	};
+	return Object.keys(customize).length > 0 ? customize : null;
 };
 
-/**
- * Build the customer-level `add_licenses` entry from the edited card state
- * (drafted quantity + edited items). Used by the attach/update customize
- * collector; untouched items stay un-customized so the license's own items
- * keep flowing through.
- */
+/** Builds a customer-level `add_licenses` entry from the edited card state. */
 export const buildCustomizePlanLicense = ({
 	product,
 	planLicense,

@@ -175,6 +175,12 @@ export const ApiPlanItemV1Schema = z
 		entity_feature_id: z.string().optional().meta({
 			internal: true,
 		}),
+		entitlement_id: z.string().optional().meta({
+			internal: true,
+		}),
+		price_id: z.string().optional().meta({
+			internal: true,
+		}),
 	})
 	.check((ctx) => {
 		const resetInterval = ctx.value.reset?.interval;

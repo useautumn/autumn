@@ -2,6 +2,7 @@ import type { FullProduct } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullLicenseProduct } from "../../licenseUtils.js";
+import { licenseItemRepo } from "../../repos/licenseItemRepo.js";
 import { planLicenseRepo } from "../../repos/planLicenseRepo.js";
 import { validateLicenseLink } from "./validateLicenseLink.js";
 
@@ -62,7 +63,7 @@ export const copyPlanLicensesToNewVersion = async ({
 	await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
 		for (const row of planLicenseRows) {
-			await planLicenseRepo.upsert({
+			const copied = await planLicenseRepo.upsert({
 				db: txDb,
 				parentInternalProductId: toInternalProductId,
 				licenseInternalProductId: row.license_internal_product_id,
@@ -70,6 +71,14 @@ export const copyPlanLicensesToNewVersion = async ({
 				prepaidOnly: row.prepaid_only,
 				metadata: row.metadata ?? {},
 			});
+			if (row.customized) {
+				await licenseItemRepo.cloneItems({
+					db: txDb,
+					fromPlanLicenseId: row.id,
+					toPlanLicenseId: copied.id,
+					customized: true,
+				});
+			}
 		}
 	});
 };

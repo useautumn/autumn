@@ -20,15 +20,13 @@ export function LicensePlanCardEditor({
 	planLicense,
 	license,
 	buildEntry,
-	saveItems,
 	buildCustomize,
 	isPendingLink,
 	isLast,
 }: {
 	planLicense: PlanLicense;
 	license: ProductV2;
-	buildEntry: () => PlanLicenseParams;
-	saveItems: (snapshot: LicenseEditSnapshot) => Promise<boolean>;
+	buildEntry: (snapshot: LicenseEditSnapshot) => PlanLicenseParams;
 	buildCustomize: (snapshot: LicenseEditSnapshot) => CustomizePlanLicense;
 	isPendingLink: boolean;
 	isLast: boolean;
@@ -38,7 +36,6 @@ export function LicensePlanCardEditor({
 		planLicense,
 		license,
 		buildEntry,
-		saveItems,
 		buildCustomize,
 		isPendingLink,
 	});

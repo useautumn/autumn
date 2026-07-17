@@ -1,8 +1,10 @@
 import {
+	BillingType,
 	type CustomerLicenseTransition,
 	type FullProductWithoutLicenses,
 	findEntitlementSuccessor,
 	findPriceSuccessor,
+	getBillingType,
 } from "@autumn/shared";
 
 type ItemSuccessorMatches = Pick<
@@ -10,13 +12,28 @@ type ItemSuccessorMatches = Pick<
 	"priceTransitions" | "entitlementTransitions"
 >;
 
-/**
- * Matches the outgoing definition's ITEMS to their successors. An item is a
- * price, an entitlement, or a paid-feature pair of both — the price and
- * entitlement finders share their key's feature + interval components, so a
- * paired item's two halves match the same successor item independently.
- * Strict 1:1: ambiguous keys transition nothing.
- */
+const findCrossIntervalFixedPriceSuccessor = ({
+	sourcePrice,
+	candidatePrices,
+	excludedPriceIds,
+}: {
+	sourcePrice: FullProductWithoutLicenses["prices"][number];
+	candidatePrices: FullProductWithoutLicenses["prices"];
+	excludedPriceIds: Set<string>;
+}) => {
+	if (getBillingType(sourcePrice.config) !== BillingType.FixedCycle) {
+		return undefined;
+	}
+
+	const matches = candidatePrices.filter(
+		(candidatePrice) =>
+			!excludedPriceIds.has(candidatePrice.id) &&
+			getBillingType(candidatePrice.config) === BillingType.FixedCycle,
+	);
+	return matches.length === 1 ? matches[0] : undefined;
+};
+
+/** Matches outgoing items to unique successors; ambiguous matches do not transition. */
 export const matchItemSuccessors = ({
 	fromProduct,
 	toProduct,
@@ -28,11 +45,17 @@ export const matchItemSuccessors = ({
 	const claimedPriceIds = new Set<string>();
 
 	for (const sourcePrice of fromProduct.prices) {
-		const successor = findPriceSuccessor({
-			sourcePrice,
-			candidatePrices: toProduct.prices,
-			excludedPriceIds: claimedPriceIds,
-		});
+		const successor =
+			findPriceSuccessor({
+				sourcePrice,
+				candidatePrices: toProduct.prices,
+				excludedPriceIds: claimedPriceIds,
+			}) ??
+			findCrossIntervalFixedPriceSuccessor({
+				sourcePrice,
+				candidatePrices: toProduct.prices,
+				excludedPriceIds: claimedPriceIds,
+			});
 		if (!successor || successor.id === sourcePrice.id) continue;
 
 		claimedPriceIds.add(successor.id);
