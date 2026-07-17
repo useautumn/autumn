@@ -36,7 +36,7 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 
 	timestamp: TrackTimestampSchema.optional(),
 
-	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
+	overage_behavior: z.enum(["cap", "reject", "overflow"]).optional().meta({
 		internal: true,
 	}),
 

@@ -48,7 +48,7 @@ export const TrackTokensParamsSchema = z.object({
 		internal: true,
 	}),
 	timestamp: TrackTimestampSchema.optional(),
-	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
+	overage_behavior: z.enum(["cap", "reject", "overflow"]).optional().meta({
 		internal: true,
 	}),
 	customer_data: CustomerDataSchema.optional().meta({
