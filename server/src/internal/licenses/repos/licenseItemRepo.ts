@@ -129,10 +129,12 @@ const replaceItems = async ({
 	db,
 	planLicenseId,
 	items,
+	customized = items.length > 0,
 }: {
 	db: DrizzleCli;
 	planLicenseId: string;
 	items: LicenseItemPair[];
+	customized?: boolean;
 }) => {
 	const now = Date.now();
 	const previous = await listByPlanLicenseIds({
@@ -188,70 +190,10 @@ const replaceItems = async ({
 		priceIds: previous.prices.map((row) => row.id),
 	});
 
-	// The flag mirrors ref existence and is only ever written here, so the
-	// two can never disagree.
 	await db
 		.update(planLicenses)
-		.set({ customized: items.length > 0, updated_at: now })
+		.set({ customized, updated_at: now })
 		.where(eq(planLicenses.id, planLicenseId));
-};
-
-const listRefsByEntitlementIds = async ({
-	db,
-	entitlementIds,
-}: {
-	db: DrizzleCli;
-	entitlementIds: string[];
-}) => {
-	if (entitlementIds.length === 0) return [];
-	return await db
-		.select()
-		.from(licenseEntitlements)
-		.where(inArray(licenseEntitlements.entitlement_id, entitlementIds));
-};
-
-const listRefsByPriceIds = async ({
-	db,
-	priceIds,
-}: {
-	db: DrizzleCli;
-	priceIds: string[];
-}) => {
-	if (priceIds.length === 0) return [];
-	return await db
-		.select()
-		.from(licensePrices)
-		.where(inArray(licensePrices.price_id, priceIds));
-};
-
-const setEntitlementRef = async ({
-	db,
-	refId,
-	entitlementId,
-}: {
-	db: DrizzleCli;
-	refId: string;
-	entitlementId: string;
-}) => {
-	await db
-		.update(licenseEntitlements)
-		.set({ entitlement_id: entitlementId })
-		.where(eq(licenseEntitlements.id, refId));
-};
-
-const setPriceRef = async ({
-	db,
-	refId,
-	priceId,
-}: {
-	db: DrizzleCli;
-	refId: string;
-	priceId: string;
-}) => {
-	await db
-		.update(licensePrices)
-		.set({ price_id: priceId })
-		.where(eq(licensePrices.id, refId));
 };
 
 const listReferencedEntitlementIds = async ({
@@ -289,10 +231,12 @@ const cloneItems = async ({
 	db,
 	fromPlanLicenseId,
 	toPlanLicenseId,
+	customized,
 }: {
 	db: DrizzleCli;
 	fromPlanLicenseId: string;
 	toPlanLicenseId: string;
+	customized?: boolean;
 }) => {
 	const existing = await listByPlanLicenseIds({
 		db,
@@ -326,16 +270,21 @@ const cloneItems = async ({
 			})),
 		);
 	}
+	await db
+		.update(planLicenses)
+		.set({
+			customized:
+				customized ??
+				(existing.entitlements.length > 0 || existing.prices.length > 0),
+			updated_at: now,
+		})
+		.where(eq(planLicenses.id, toPlanLicenseId));
 };
 
 export const licenseItemRepo = {
 	listByPlanLicenseIds,
 	replaceItems,
 	cloneItems,
-	listRefsByEntitlementIds,
-	listRefsByPriceIds,
-	setEntitlementRef,
-	setPriceRef,
 	listReferencedEntitlementIds,
 	listReferencedPriceIds,
 } as const;

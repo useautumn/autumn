@@ -1,153 +1,210 @@
+// TDD contract: quarterly Pro has 3 paid seats, 0 included, and 2 assignments.
+// Its annual upgrade keeps both entities on one annual pool sharing the Stripe product.
 import { expect, test } from "bun:test";
-import type {
-	ApiCustomerV5,
-	ApiEntityV2,
-	AttachParamsV1Input,
+import {
+	type ApiCustomerV5,
+	ApiVersion,
+	type AttachParamsV1Input,
+	BillingInterval,
 } from "@autumn/shared";
+import {
+	getBaseStripePriceId,
+	getProductStripeProductId,
+} from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
 import { listLicenseAssignments } from "@tests/integration/licenses/licenseTestUtils";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
-import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
+import { ProductService } from "@/internal/products/ProductService";
 
-const DEV_SEAT_PRICE = 20;
-const DEV_SEAT_MESSAGES = 500;
-const DEV_SEAT_QUANTITY = 2;
+const SEAT_QUANTITY = 3;
+const INCLUDED_SEATS = 0;
 
-test.skip(`${chalk.yellowBright("license attach immediate switch: assigned seats move from Pro to Premium")}`, async () => {
-	const customerId = "license-attach-immediate-switch";
-	const pro = products.pro({
-		id: "license-switch-pro",
+test(`${chalk.yellowBright("license attach immediate switch: quarterly Pro upgrades to annual with annual seats")}`, async () => {
+	const customerId = "license-attach-immediate-switch-variants";
+	const quarterlyPro = products.base({
+		id: "license-switch-pro-quarterly",
 		items: [items.dashboard()],
 	});
-	const premium = products.premium({
-		id: "license-switch-premium",
-		items: [items.dashboard()],
-	});
-	const devSeat = products.base({
-		id: "license-switch-dev-seat",
-		group: "license-switch-dev-seat-group",
+	const quarterlySeat = products.base({
+		id: "license-switch-dev-seat-quarterly",
+		group: "license-switch-dev-seat-variants",
 		items: [
-			items.monthlyPrice({ price: DEV_SEAT_PRICE }),
-			items.monthlyMessages({ includedUsage: DEV_SEAT_MESSAGES }),
+			constructPriceItem({
+				price: 20,
+				interval: BillingInterval.Quarter,
+			}),
+			items.monthlyMessages({ includedUsage: 500 }),
 		],
 	});
 
-	const { ctx, entities, licenseAssignments, autumnV2_3 } = await initScenario({
+	const { ctx, entities, autumnV2_3 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
-			s.products({ list: [pro, premium, devSeat] }),
+			s.products({ list: [quarterlyPro, quarterlySeat] }),
 		],
-		actions: [
-			s.licenses.link({
-				parentProductId: pro.id,
-				licenseProductId: devSeat.id,
-				included: 0,
-			}),
-			s.licenses.link({
-				parentProductId: premium.id,
-				licenseProductId: devSeat.id,
-				included: 0,
-			}),
-			s.billing.attach({
-				productId: pro.id,
-				licenseQuantities: [
-					{
-						licenseProductId: devSeat.id,
-						quantity: DEV_SEAT_QUANTITY,
-					},
-				],
-			}),
-			s.licenses.assign({
-				licenseProductId: devSeat.id,
-				parentProductId: pro.id,
-				entityIndex: 0,
-			}),
-			s.licenses.assign({
-				licenseProductId: devSeat.id,
-				parentProductId: pro.id,
-				entityIndex: 1,
-			}),
+		actions: [],
+	});
+	const rpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	const annualProId = `${quarterlyPro.id}-annual`;
+	const annualSeatId = `${quarterlySeat.id}-annual`;
+
+	await createVariantPlan({
+		rpc,
+		basePlanId: quarterlyPro.id,
+		variantPlanId: annualProId,
+		name: "Pro Annual",
+	});
+	await createVariantPlan({
+		rpc,
+		basePlanId: quarterlySeat.id,
+		variantPlanId: annualSeatId,
+		name: "Pro Annual Dev Seat",
+	});
+	await rpc.post("/plans.update", {
+		plan_id: annualSeatId,
+		price: { amount: 200, interval: BillingInterval.Year },
+		disable_version: true,
+	});
+	await rpc.post("/plans.update", {
+		plan_id: quarterlyPro.id,
+		licenses: [
+			{ license_plan_id: quarterlySeat.id, included: INCLUDED_SEATS },
 		],
 	});
+	await rpc.post("/plans.update", {
+		plan_id: annualProId,
+		licenses: [{ license_plan_id: annualSeatId, included: INCLUDED_SEATS }],
+	});
 
-	expect(licenseAssignments).toHaveLength(DEV_SEAT_QUANTITY);
+	const quarterlySeatFull = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: quarterlySeat.id,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	const annualSeatFull = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: annualSeatId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	expect(
+		getProductStripeProductId({ fullProduct: annualSeatFull }),
+	).toBe(getProductStripeProductId({ fullProduct: quarterlySeatFull }));
+	expect(getBaseStripePriceId({ fullProduct: annualSeatFull })).not.toBe(
+		getBaseStripePriceId({ fullProduct: quarterlySeatFull }),
+	);
 
 	await autumnV2_3.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
-		plan_id: premium.id,
+		plan_id: quarterlyPro.id,
 		redirect_mode: "if_required",
 		license_quantities: [
-			{ license_plan_id: devSeat.id, quantity: DEV_SEAT_QUANTITY },
+			{ license_plan_id: quarterlySeat.id, quantity: SEAT_QUANTITY },
 		],
 	});
+	await autumnV2_3.licenses.attach({
+		customer_id: customerId,
+		plan_id: quarterlySeat.id,
+		entities: entities.map((entity) => ({ entity_id: entity.id })),
+	});
 
-	const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+	let customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
 	await expectCustomerProducts({
 		customer,
-		active: [premium.id],
-		notPresent: [pro.id, devSeat.id],
+		active: [quarterlyPro.id],
+		notPresent: [annualProId, quarterlySeat.id, annualSeatId],
 	});
 	expectCustomerLicenses({
 		customer,
 		count: 1,
 		licenses: [
 			{
-				license_plan_id: devSeat.id,
-				parent_plan_id: premium.id,
-				granted: DEV_SEAT_QUANTITY,
-				usage: DEV_SEAT_QUANTITY,
-				remaining: 0,
-				paid_quantity: DEV_SEAT_QUANTITY,
+				license_plan_id: quarterlySeat.id,
+				parent_plan_id: quarterlyPro.id,
+				paid_quantity: SEAT_QUANTITY,
+				granted: SEAT_QUANTITY,
+				usage: entities.length,
+				remaining: SEAT_QUANTITY - entities.length,
 			},
 		],
 	});
-
-	const assignments = await listLicenseAssignments({
+	const quarterlyAssignments = await listLicenseAssignments({
 		autumn: autumnV2_3,
 		customerId,
-		licensePlanId: devSeat.id,
+		licensePlanId: quarterlySeat.id,
 		active: true,
 	});
-	expect(assignments).toHaveLength(DEV_SEAT_QUANTITY);
-	expect(assignments).toEqual(
+	expect(quarterlyAssignments).toHaveLength(entities.length);
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+
+	await autumnV2_3.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: annualProId,
+		redirect_mode: "if_required",
+		license_quantities: [
+			{ license_plan_id: annualSeatId, quantity: SEAT_QUANTITY },
+		],
+	});
+
+	customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({
+		customer,
+		active: [annualProId],
+		notPresent: [quarterlyPro.id, quarterlySeat.id, annualSeatId],
+	});
+	expectCustomerLicenses({
+		customer,
+		count: 1,
+		licenses: [
+			{
+				license_plan_id: annualSeatId,
+				parent_plan_id: annualProId,
+				paid_quantity: SEAT_QUANTITY,
+				granted: SEAT_QUANTITY,
+				usage: entities.length,
+				remaining: SEAT_QUANTITY - entities.length,
+			},
+		],
+	});
+	const annualAssignments = await listLicenseAssignments({
+		autumn: autumnV2_3,
+		customerId,
+		licensePlanId: annualSeatId,
+		active: true,
+	});
+	expect(annualAssignments).toHaveLength(entities.length);
+	expect(annualAssignments).toEqual(
 		expect.arrayContaining(
-			licenseAssignments.map((assignment) =>
+			entities.map((entity) =>
 				expect.objectContaining({
-					id: assignment.id,
-					entity_id: assignment.entity_id,
-					license_plan_id: devSeat.id,
+					entity_id: entity.id,
+					license_plan_id: annualSeatId,
 					ended_at: null,
 				}),
 			),
 		),
 	);
-
-	for (const entity of entities) {
-		const apiEntity = await autumnV2_3.entities.get<ApiEntityV2>(
-			customerId,
-			entity.id,
-		);
-		await expectCustomerProducts({
-			customer: apiEntity,
-			active: [devSeat.id],
-		});
-		expectBalanceCorrect({
-			customer: apiEntity,
-			featureId: TestFeature.Messages,
-			planId: devSeat.id,
-			granted: DEV_SEAT_MESSAGES,
-			remaining: DEV_SEAT_MESSAGES,
-			usage: 0,
-		});
-	}
-
+	const activeQuarterlyAssignments = await listLicenseAssignments({
+		autumn: autumnV2_3,
+		customerId,
+		licensePlanId: quarterlySeat.id,
+		active: true,
+	});
+	expect(activeQuarterlyAssignments).toHaveLength(0);
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

@@ -28,7 +28,9 @@ import { ItemChangeList } from "@/components/v2/ItemChangeList";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useLicenseProductsQuery } from "@/hooks/queries/useLicenseProductsQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { usePlanLicensesQuery } from "@/hooks/queries/usePlanLicensesQuery";
 import { usePlanUpdatePreview } from "@/hooks/queries/usePlanUpdatePreview";
 import { usePlanVariants } from "@/hooks/queries/usePlanVariants";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -156,6 +158,9 @@ export default function PlanChangeDialog({
 	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
+	const { invalidate: invalidateLicenseProducts } = useLicenseProductsQuery();
+	const { planLicenses, invalidate: invalidatePlanLicenses } =
+		usePlanLicensesQuery(product.id);
 	const { invalidate: invalidateMigrations } = useMigrationsQuery();
 	const { org } = useOrg();
 
@@ -398,7 +403,18 @@ export default function PlanChangeDialog({
 			);
 			// The save bar early-returns into this dialog, so dirty licenses are
 			// persisted here too (failures toast their own error).
-			const licensesSaved = await saveAllLicenses();
+			const licensesSaved = await saveAllLicenses({
+				axiosInstance,
+				parentPlanId: product.id,
+				persistedLinks: planLicenses,
+				onSuccess: () =>
+					Promise.all([
+						invalidatePlanLicenses(),
+						invalidateProduct(),
+						invalidateLicenseProducts(),
+						invalidateProducts(),
+					]),
+			});
 			if (!licensesSaved) {
 				toast.error("Some license changes failed to save");
 				return;

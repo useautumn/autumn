@@ -14,11 +14,6 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type { Logger } from "@server/external/logtail/logtailUtils.js";
 import { FeatureService } from "@server/internal/features/FeatureService.js";
-import {
-	findBaseSlotReplacementPrice,
-	findEntitlementFollowingFeature,
-	findPriceFollowingEntitlementFeature,
-} from "@server/internal/licenses/actions/links/licenseItemRepointMatchers.js";
 import { licenseItemRepo } from "@server/internal/licenses/repos/licenseItemRepo.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@server/internal/products/prices/PriceService.js";
@@ -68,85 +63,11 @@ const updateDbPricesAndEnts = async ({
 		}),
 	]);
 
-	await repointLicenseItems({
-		db,
-		deletedEnts,
-		deletedPrices,
-		replacementEnts: [...newEnts, ...updatedEnts],
-		replacementPrices: [...newPrices, ...updatedPrices],
-	});
 	await deletePricesKeepingLicenseReferenced({
 		db,
 		deletedPriceIds: deletedPrices.map((price) => price.id),
 	});
 	await deleteEntsKeepingReferenced({ db, deletedEnts });
-};
-
-/** A replaced base row's license item refs follow the replacement (matched
- * by feature; base price by the null-feature slot) so base edits propagate. */
-const repointLicenseItems = async ({
-	db,
-	deletedEnts,
-	deletedPrices,
-	replacementEnts,
-	replacementPrices,
-}: {
-	db: DrizzleCli;
-	deletedEnts: Entitlement[];
-	deletedPrices: Price[];
-	replacementEnts: Entitlement[];
-	replacementPrices: Price[];
-}) => {
-	const entitlementRefs = await licenseItemRepo.listRefsByEntitlementIds({
-		db,
-		entitlementIds: deletedEnts.map((ent) => ent.id),
-	});
-	for (const ref of entitlementRefs) {
-		const previousEntitlement = deletedEnts.find(
-			(ent) => ent.id === ref.entitlement_id,
-		);
-		const replacement = findEntitlementFollowingFeature({
-			internalFeatureId: previousEntitlement?.internal_feature_id,
-			replacementEntitlements: replacementEnts,
-		});
-		if (!replacement) continue;
-		await licenseItemRepo.setEntitlementRef({
-			db,
-			refId: ref.id,
-			entitlementId: replacement.id,
-		});
-	}
-
-	const entitlementFeatureId = (entitlementId: string | null | undefined) => {
-		if (!entitlementId) return null;
-		const entitlement = [...deletedEnts, ...replacementEnts].find(
-			(candidate) => candidate.id === entitlementId,
-		);
-		return entitlement?.internal_feature_id ?? null;
-	};
-	const priceRefs = await licenseItemRepo.listRefsByPriceIds({
-		db,
-		priceIds: deletedPrices.map((price) => price.id),
-	});
-	for (const ref of priceRefs) {
-		const previousPrice = deletedPrices.find(
-			(price) => price.id === ref.price_id,
-		);
-		const replacement = previousPrice?.entitlement_id
-			? findPriceFollowingEntitlementFeature({
-					internalFeatureId: entitlementFeatureId(previousPrice.entitlement_id),
-					replacementPrices,
-					featureInternalIdOfPrice: (price) =>
-						entitlementFeatureId(price.entitlement_id),
-				})
-			: findBaseSlotReplacementPrice({ replacementPrices, previousPrice });
-		if (!replacement) continue;
-		await licenseItemRepo.setPriceRef({
-			db,
-			refId: ref.id,
-			priceId: replacement.id,
-		});
-	}
 };
 
 /** Base rows still referenced by a license link are relabeled is_custom and

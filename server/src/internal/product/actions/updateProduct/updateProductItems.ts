@@ -5,6 +5,10 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	applyCatalogPlanLicenseRebases,
+	prepareCatalogPlanLicenseRebases,
+} from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import {
@@ -46,6 +50,11 @@ export const updateProductItems = async ({
 			db: tx,
 			currentFullProduct,
 		});
+		const preparedLicenseRebases = await prepareCatalogPlanLicenseRebases({
+			ctx,
+			db: tx,
+			baseProduct: currentFullProduct,
+		});
 		const shouldUseInPlaceEdit =
 			useInPlaceEdit ||
 			(await productItemsHaveCustomerReferences({
@@ -53,37 +62,42 @@ export const updateProductItems = async ({
 				currentFullProduct,
 			}));
 
-		if (!shouldUseInPlaceEdit) {
-			await handleNewProductItems({
-				db: tx,
-				curPrices: currentFullProduct.prices,
-				curEnts: currentFullProduct.entitlements,
-				newItems,
-				features,
-				product: currentFullProduct,
-				logger: ctx.logger,
-				isCustom: false,
-				multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
-			});
-			return;
-		}
-
-		const inPlace = await resolveInPlaceEdit({
-			db: tx,
-			items: newItems,
-			currentFullProduct,
-			features,
-		});
+		const preparedItems = shouldUseInPlaceEdit
+			? await resolveInPlaceEdit({
+					db: tx,
+					items: newItems,
+					currentFullProduct,
+					features,
+				})
+			: {
+					curPrices: currentFullProduct.prices,
+					curEnts: currentFullProduct.entitlements,
+					items: newItems,
+				};
 		await handleNewProductItems({
 			db: tx,
-			curPrices: inPlace.curPrices,
-			curEnts: inPlace.curEnts,
-			newItems: inPlace.items,
+			curPrices: preparedItems.curPrices,
+			curEnts: preparedItems.curEnts,
+			newItems: preparedItems.items,
 			features,
 			product: currentFullProduct,
 			logger: ctx.logger,
 			isCustom: false,
 			multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+		});
+		if (preparedLicenseRebases.length === 0) return;
+		const newBaseProduct = await ProductService.getFull({
+			db: tx,
+			idOrInternalId: currentFullProduct.internal_id,
+			orgId: currentFullProduct.org_id,
+			env: currentFullProduct.env,
+			version: currentFullProduct.version,
+		});
+		await applyCatalogPlanLicenseRebases({
+			ctx,
+			db: tx,
+			newBaseProduct,
+			prepared: preparedLicenseRebases,
 		});
 	});
 };

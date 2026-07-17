@@ -4,6 +4,7 @@ import {
 	type FullProduct,
 	type LicenseCustomize,
 	type Price,
+	toBasePriceParams,
 	toCreatePlanItemParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -16,9 +17,7 @@ export type LicenseCustomizeComputation = {
 	customEntitlements: Entitlement[];
 };
 
-/** Junction rows for a customized link: every price (+ its entitlement) and
- * every price-less entitlement of the effective product. Unchanged items keep
- * their stock row ids — only diffed items point at custom rows. */
+/** Builds the complete junction item set; unchanged definitions retain their stock ids. */
 export const derivePlanLicenseItemRefs = (effectiveProduct: FullProduct) => {
 	const priceReferencedEntitlementIds = new Set(
 		effectiveProduct.prices
@@ -36,8 +35,7 @@ export const derivePlanLicenseItemRefs = (effectiveProduct: FullProduct) => {
 	];
 };
 
-/** Applies a diff-style license customize onto the base license product and
- * materializes custom rows for the changed items only. */
+/** Applies a license diff while retaining stock row ids for reuse. */
 export const computeLicenseCustomize = async ({
 	ctx,
 	licenseProduct,
@@ -53,26 +51,22 @@ export const computeLicenseCustomize = async ({
 		features: ctx.features,
 	});
 	const applied = applyDiff({ base: basePlan, diff: customize });
-
 	const custom = await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: licenseProduct,
 		customizePlan: {
 			price: applied.price
-				? {
-						amount: applied.price.amount,
-						interval: applied.price.interval,
-						...(applied.price.interval_count != null
-							? { interval_count: applied.price.interval_count }
-							: {}),
-					}
+				? toBasePriceParams(applied.price, { includeInternalIds: true })
 				: null,
-			items: applied.items.map(toCreatePlanItemParams),
+			items: applied.items.map((item) =>
+				toCreatePlanItemParams(item, { includeInternalIds: true }),
+			),
 		},
 	});
+
 	return {
 		effectiveProduct: custom.fullProduct,
-		customPrices: custom.customPrices as Price[],
-		customEntitlements: custom.customEnts as Entitlement[],
+		customPrices: custom.customPrices,
+		customEntitlements: custom.customEnts,
 	};
 };

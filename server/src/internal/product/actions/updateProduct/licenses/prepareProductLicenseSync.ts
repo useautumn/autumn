@@ -10,12 +10,6 @@ import { validateCopiedPlanLicenses } from "@/internal/licenses/actions/links/co
 import { preparePlanLicenseSync } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { buildFullProductFromV2 } from "@/internal/products/productUtils/productV2Utils/buildFullProductFromV2.js";
 
-/**
- * Parent-side link guard: the plan's outgoing license links must still satisfy
- * the link rules against its NEW item state before it is persisted — otherwise
- * an interval change silently invalidates a link. Runs for both versioning and
- * in-place edits.
- */
 export const prepareProductLicenseSync = async ({
 	ctx,
 	fromInternalProductId,

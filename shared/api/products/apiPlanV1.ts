@@ -1,5 +1,6 @@
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
+import { LicenseCustomizeSchema } from "@models/licenseModels/licenseModels.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
@@ -77,6 +78,10 @@ export const ApiPlanLicenseV1Schema = z.object({
 		description:
 			"Assignments are capped at the included quantity. Must be true for now; overflow billing (false) is not yet available.",
 	}),
+	customize: LicenseCustomizeSchema.optional().meta({
+		internal: true,
+		description: "The item and price diff applied to this parent-plan link.",
+	}),
 });
 
 export type ApiPlanLicenseV1 = z.infer<typeof ApiPlanLicenseV1Schema>;
@@ -125,6 +130,12 @@ export const ApiPlanV1Schema = z.object({
 			}),
 			interval_count: z.number().optional().meta({
 				description: "Number of intervals per billing cycle. Defaults to 1.",
+			}),
+			entitlement_id: z.string().optional().meta({
+				internal: true,
+			}),
+			price_id: z.string().optional().meta({
+				internal: true,
 			}),
 			display: DisplaySchema.optional().meta({
 				description: "Display text for showing this price in pricing pages.",

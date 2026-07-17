@@ -20,7 +20,6 @@ import {
 	useLicenseCollectorStore,
 } from "@/views/products/plan/components/plan-licenses/LicenseCustomizeCollector";
 import { LicensePlanCards } from "@/views/products/plan/components/plan-licenses/LicensePlanCards";
-import { LinkLicenseButton } from "@/views/products/plan/components/plan-licenses/LinkLicenseButton";
 import {
 	PendingLicenseLinksProvider,
 	usePendingLicenseLinks,
@@ -152,12 +151,7 @@ function InlinePlanEditorContent({
 						<div className="flex flex-col w-full h-fit items-center justify-start pt-20 px-10 gap-4">
 							<CustomerPlanInfoBox />
 							<PlanCard />
-							{enableLicenseEditing && (
-								<>
-									<LicensePlanCards />
-									<LinkLicenseButton />
-								</>
-							)}
+							{enableLicenseEditing && <LicensePlanCards />}
 						</div>
 						{!sheetType && (
 							<PlanEditorBar>

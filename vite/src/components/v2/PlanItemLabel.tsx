@@ -1,4 +1,5 @@
 import {
+	type Feature,
 	formatAmount,
 	formatInterval,
 	formatTiers,
@@ -22,10 +23,17 @@ export const CustomDotIcon = () => (
 );
 
 /** The left/dot/right feature icon trio. Shared so every item row renders the
- * same glyphs, including non-label rows like the migration filter rows. */
-export const FeatureIconCluster = ({ item }: { item: ProductItem }) => (
+ * same glyphs, including non-label rows like the migration filter rows.
+ * `leftIcon` overrides the feature-type glyph for synthetic rows (e.g. a license). */
+export const FeatureIconCluster = ({
+	item,
+	leftIcon,
+}: {
+	item: ProductItem;
+	leftIcon?: ReactNode;
+}) => (
 	<div className="flex flex-row items-center gap-1 shrink-0 pointer-events-auto">
-		<PlanFeatureIcon item={item} position="left" />
+		{leftIcon ?? <PlanFeatureIcon item={item} position="left" />}
 		<CustomDotIcon />
 		<PlanFeatureIcon item={item} position="right" />
 	</div>
@@ -298,6 +306,11 @@ interface PlanItemLabelProps {
 	compact?: boolean;
 	/** Display currency for amounts; defaults to the org default. */
 	currency?: string;
+	/** Resolve the item against this feature instead of the features query — for
+	 * synthetic rows (e.g. a license) whose "feature" isn't in the catalog. */
+	feature?: Feature;
+	/** Overrides the left feature-type glyph in the icon cluster. */
+	featureIcon?: ReactNode;
 }
 
 /** Feature icon cluster + label text + rollover indicator. Shared by the plan
@@ -308,9 +321,12 @@ export function PlanItemLabel({
 	unnamedText = "Name your feature",
 	compact = false,
 	currency: currencyOverride,
+	feature: featureOverride,
+	featureIcon,
 }: PlanItemLabelProps) {
 	const { org } = useOrg();
-	const { features } = useFeaturesQuery();
+	const { features: queriedFeatures } = useFeaturesQuery();
+	const features = featureOverride ? [featureOverride] : queriedFeatures;
 	const currency = currencyOverride || org?.default_currency || "USD";
 
 	const display = getProductItemDisplay({
@@ -326,7 +342,7 @@ export function PlanItemLabel({
 	const displayText = hasFeatureName ? display.primary_text : unnamedText;
 	const rollover = itemCanRollOver(item) ? item.config?.rollover : undefined;
 
-	const icons = <FeatureIconCluster item={item} />;
+	const icons = <FeatureIconCluster item={item} leftIcon={featureIcon} />;
 
 	return (
 		<>

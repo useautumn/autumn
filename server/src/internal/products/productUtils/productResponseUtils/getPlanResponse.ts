@@ -17,7 +17,7 @@ import {
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { toApiPlanLicenses } from "@/internal/licenses/licenseUtils.js";
+import { toApiPlanLicenseWithCustomize } from "@/internal/licenses/actions/customize/toApiPlanLicenseWithCustomize.js";
 
 import { ProductService } from "../../ProductService.js";
 import { mapToProductItems } from "../../productV2Utils.js";
@@ -88,6 +88,7 @@ export const getPlanResponse = async ({
 					itemToBillingIntervalCount({ item: basePriceItem }) !== 1
 						? itemToBillingIntervalCount({ item: basePriceItem })
 						: undefined,
+				price_id: basePriceItem.price_id ?? undefined,
 				display: getProductItemDisplay({
 					item: basePriceItem,
 					features,
@@ -123,6 +124,23 @@ export const getPlanResponse = async ({
 		fullCus,
 		fullProduct: product,
 	});
+	const apiLicenses = product.licenses?.length
+		? await Promise.all(
+				product.licenses.map((license) =>
+					toApiPlanLicenseWithCustomize({
+						license,
+						resolvePlan: (licenseProduct) =>
+							getPlanResponse({
+								product: licenseProduct,
+								features,
+								expand,
+								currency,
+								resolveBaseFullProduct: false,
+							}),
+					}),
+				),
+			)
+		: undefined;
 
 	// 9. Build Plan response
 	const plan = {
@@ -137,9 +155,7 @@ export const getPlanResponse = async ({
 
 		price: basePrice,
 		items: planItems ?? [],
-		licenses: product.licenses?.length
-			? toApiPlanLicenses(product.licenses)
-			: undefined,
+		licenses: apiLicenses,
 		free_trial: freeTrial,
 
 		created_at: product.created_at,
