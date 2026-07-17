@@ -23,10 +23,10 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
-import { timeout } from "@/utils/genUtils";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Upgrade from trialing pro to premium with trial (fresh trial)
@@ -343,10 +343,15 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 3: non-trialing pro to prem
 		resetsAt: advancedTo + ms.days(14),
 	});
 
-	await timeout(4000);
 	// Verify invoices: pro charge ($20) + refund (-$20)
+	const customerWithInvoices = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) => c.invoices?.length === 3,
+		timeoutMs: 12_000,
+		intervalMs: 2000,
+	});
 	await expectCustomerInvoiceCorrect({
-		customer,
+		customer: customerWithInvoices,
 		count: 3,
 		invoiceIndex: 1,
 		latestTotal: -20,
@@ -439,8 +444,12 @@ test.concurrent(`${chalk.yellowBright("trial-upgrade 4: mid-trial upgrade to pre
 		redirect_mode: "if_required",
 	});
 
-	await timeout(4000);
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) => c.invoices?.length === 2,
+		timeoutMs: 12_000,
+		intervalMs: 2000,
+	});
 
 	// Verify product states
 	await expectCustomerProducts({

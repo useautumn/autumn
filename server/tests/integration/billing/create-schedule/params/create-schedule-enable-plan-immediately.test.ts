@@ -28,6 +28,7 @@ import { expectCustomerProducts } from "@tests/integration/billing/utils/expectC
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
+import { pollUntil } from "@tests/utils/genUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -139,10 +140,31 @@ test.concurrent(
 
 		// Post-completion: subscription_ids patched on the immediate row,
 		// schedule + phases rows now exist.
-		const cusProductsAfter = await CusProductService.list({
-			db: ctx.db,
-			internalCustomerId,
-			inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+		const { cusProductsAfter } = await pollUntil({
+			fetch: async () => {
+				const list = await CusProductService.list({
+					db: ctx.db,
+					internalCustomerId,
+					inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+				});
+				const scheduleRows = await ctx.db
+					.select()
+					.from(schedules)
+					.where(eq(schedules.internal_customer_id, internalCustomerId));
+				return { cusProductsAfter: list, scheduleRows };
+			},
+			until: ({ cusProductsAfter: list, scheduleRows }) => {
+				const proRow = list.find((cp) => cp.product.id === pro.id);
+				const growthRow = list.find((cp) => cp.product.id === growth.id);
+				return (
+					(proRow?.subscription_ids ?? []).length === 1 &&
+					(proRow?.scheduled_ids ?? []).length === 1 &&
+					(growthRow?.scheduled_ids ?? []).length === 1 &&
+					scheduleRows.length === 1
+				);
+			},
+			timeoutMs: 45_000,
+			intervalMs: 2000,
 		});
 		const proAfter = cusProductsAfter.find((cp) => cp.product.id === pro.id);
 		const growthAfter = cusProductsAfter.find(

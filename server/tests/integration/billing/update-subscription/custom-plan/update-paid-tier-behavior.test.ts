@@ -7,6 +7,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -172,18 +173,19 @@ test.concurrent(`${chalk.yellowBright("p2p: volume prepaid to graduated tiered c
 
 	// Track some usage (600 of 800 = 200 remaining)
 	const messagesUsage = 600;
-	await autumnV1.track(
-		{
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: messagesUsage,
-		},
-		{ timeout: 2000 },
-	);
+	await autumnV1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: messagesUsage,
+	});
 
-	// Verify customer has usage tracked
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// Verify customer has usage tracked (poll until track has landed)
+	const customerBefore = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) => c.features?.[TestFeature.Messages]?.usage === messagesUsage,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 	expect(customerBefore.features[TestFeature.Messages].usage).toBe(
 		messagesUsage,
 	);

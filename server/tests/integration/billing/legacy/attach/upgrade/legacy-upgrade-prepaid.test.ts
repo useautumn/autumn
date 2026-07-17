@@ -21,6 +21,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -244,11 +245,13 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade-prepaid 2: prepaid message
 		value: 100,
 	});
 
-	await new Promise((r) => setTimeout(r, 2000));
-
-	// Verify state before upgrade
-	const customerBeforeUpgrade =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// Verify state before upgrade (poll until track has landed)
+	const customerBeforeUpgrade = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) => c.features?.[TestFeature.Messages]?.balance === 200,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 
 	expectCustomerFeatureCorrect({
 		customer: customerBeforeUpgrade,

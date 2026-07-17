@@ -12,7 +12,8 @@
  *   - Dragonfly  → /opt/autumn-tw/bin/dragonfly
  *   - goaws (native Go SQS, via crane) → /opt/autumn-tw/bin/goaws
  *   - goaws config → /opt/autumn-tw/goaws/goaws.yaml (port 9324, AccountId
- *     "000000000000", EnableDuplicates env-level, queues autumn.fifo + autumn-track.fifo)
+ *     "000000000000", EnableDuplicates env-level, queues autumn.fifo +
+ *     autumn-track.fifo + autumn-track-async.fifo)
  *   - bun (pinned to .bun-version) → /usr/local/bin/bun, with `node` symlinked
  *     to bun so the whole image runs on one runtime (ingress + native installs)
  *
@@ -149,6 +150,7 @@ export const buildBaseImage = (
 				"'  Port: 9324' '  Region: us-east-1' '  AccountId: \"000000000000\"' " +
 				"'  LogToFile: false' '  LogLevel: warn' '  EnableDuplicates: true' " +
 				"'  Queues:' '    - Name: autumn.fifo' '    - Name: autumn-track.fifo' " +
+				"'    - Name: autumn-track-async.fifo' " +
 				`> ${TW_PREFIX}/goaws/goaws.yaml`,
 		])
 		// 6. bun → /usr/local/bin/bun (pinned to .bun-version, so `bun` resolves for

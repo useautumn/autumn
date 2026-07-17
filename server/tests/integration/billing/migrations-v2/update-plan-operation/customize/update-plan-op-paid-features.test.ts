@@ -27,6 +27,7 @@ import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService";
@@ -67,14 +68,20 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		await autumnV1.track(
-			{
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				value: messagesUsage,
-			},
-			{ timeout: 2000 },
-		);
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: messagesUsage,
+		});
+
+		// Ensure tracked usage has landed before the migration snapshots balances
+		await pollUntil({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			until: (c) =>
+				c.features?.[TestFeature.Messages]?.usage === messagesUsage,
+			timeoutMs: 6000,
+			intervalMs: 2000,
+		});
 
 		await runUpdatePlanMigration({
 			ctx,
@@ -161,14 +168,18 @@ test.concurrent(
 				s.track({
 					featureId: TestFeature.Users,
 					value: usersUsage,
-					timeout: 2000,
 				}),
 			],
 		});
 
-		const invoiceCountBefore =
-			(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
-				?.length ?? 0;
+		// Ensure tracked usage has landed before the migration snapshots balances
+		const customerBeforeMigration = await pollUntil({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			until: (c) => c.features?.[TestFeature.Users]?.usage === usersUsage,
+			timeoutMs: 6000,
+			intervalMs: 2000,
+		});
+		const invoiceCountBefore = customerBeforeMigration.invoices?.length ?? 0;
 
 		await runUpdatePlanMigration({
 			ctx,
@@ -325,14 +336,21 @@ test.concurrent(
 		expect(usersPriceConfig?.allocated_billing_behavior).toBeUndefined();
 		expect(usersPriceConfig?.should_prorate).toBe(true);
 
-		await autumnV1.track(
-			{
-				customer_id: customerId,
-				feature_id: TestFeature.Users,
-				value: 2,
-			},
-			{ timeout: 2000 },
-		);
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Users,
+			value: 2,
+		});
+
+		// Ensure tracked usage and its proration invoice have landed
+		await pollUntil({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			until: (c) =>
+				c.features?.[TestFeature.Users]?.usage === 2 &&
+				(c.invoices?.length ?? 0) === invoiceCountBeforeMigration + 1,
+			timeoutMs: 6000,
+			intervalMs: 2000,
+		});
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, active: [pro.id] });

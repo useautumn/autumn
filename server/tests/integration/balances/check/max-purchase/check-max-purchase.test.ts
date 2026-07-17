@@ -8,6 +8,7 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
@@ -363,13 +364,20 @@ test.concurrent(`${chalk.yellowBright("check-max-purchase-prepaid-consumable: /c
 	// Verify skip_cache returns correct response (tests postgres sync)
 	// ─────────────────────────────────────────────────────────────────
 
-	await new Promise((resolve) => setTimeout(resolve, 4000));
-
-	const resSkipCache = (await autumnV2.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		skip_cache: true,
-	})) as unknown as CheckResponseV2;
+	// Poll skip_cache until postgres sync has caught up with the tracked usage
+	const resSkipCache = await pollUntil({
+		fetch: async () =>
+			(await autumnV2.check({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				skip_cache: true,
+			})) as unknown as CheckResponseV2,
+		until: (res) =>
+			res.balance?.usage === 1100 &&
+			res.balance?.purchased_balance === prepaidQuantity + 300,
+		timeoutMs: 12_000,
+		intervalMs: 2000,
+	});
 
 	// Note: not asserting `allowed` here - the skip_cache test is primarily
 	// verifying that postgres sync returns correct balance data

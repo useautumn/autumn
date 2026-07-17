@@ -35,7 +35,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { listLicenseLinks } from "../licenseTestUtils.js";
+import { assignLicense, listLicenseLinks } from "../licenseTestUtils.js";
 
 const assignedGrant = async ({
 	autumn,
@@ -48,11 +48,12 @@ const assignedGrant = async ({
 	entityId: string;
 	licensePlanId: string;
 }) => {
-	const { assignment } = (await autumn.post("/licenses.attach", {
-		customer_id: customerId,
-		entity_id: entityId,
-		plan_id: licensePlanId,
-	})) as { assignment: { id: string } };
+	const assignment = await assignLicense({
+		autumn,
+		customerId,
+		entityId,
+		licensePlanId,
+	});
 	const check = await autumn.check<CheckResponseV3>({
 		customer_id: customerId,
 		entity_id: entityId,
@@ -315,10 +316,10 @@ test.concurrent(
 		});
 
 		// ── Contract: unassign, then licenses[].version repoints the link ────
-		await autumnV2_2.post("/licenses.update", {
+		await autumnV2_2.post("/licenses.release", {
 			customer_id: customerId,
-			assignment_id: beforeRelink.assignmentId,
-			cancel_action: "cancel_immediately",
+			entity_ids: [entities[0].id],
+			license_plan_id: license.id,
 		});
 		await autumnV2_2.post("/plans.update", {
 			plan_id: parent.id,

@@ -17,7 +17,10 @@ import { constructRawProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
 import { AutumnCli } from "../../cli/AutumnCli.js";
-import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
+import {
+	advanceClockForInvoice,
+	buildMeterUpdatePoll,
+} from "../../utils/stripeUtils.js";
 
 const testCase = "usage1";
 
@@ -135,10 +138,21 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
 
 	// Check invoice
 	test("should advance stripe test clock and wait for event", async () => {
+		const pollUntil = await buildMeterUpdatePoll({
+			stripeCli,
+			testClockId,
+			customerId,
+			productId: proWithOverage.id,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
+		});
+
 		await advanceClockForInvoice({
 			stripeCli,
 			testClockId,
 			waitForMeterUpdate: true,
+			pollUntil,
 		});
 	});
 

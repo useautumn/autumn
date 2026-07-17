@@ -24,6 +24,7 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -113,16 +114,19 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-per-entity 1: upgrade wi
 				featureId: TestFeature.Workflows,
 				value: 8,
 				entityIndex: 1,
-				timeout: 2000,
 			}),
 		],
 	});
 
-	// Verify entity balances before upgrade
-	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
+	// Verify entity balances before upgrade (poll until tracks have landed)
+	const entity1Before = await pollUntil({
+		fetch: () => autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id),
+		until: (e) =>
+			e.features?.[TestFeature.Messages]?.balance === 300 &&
+			e.features?.[TestFeature.Workflows]?.balance === 5,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 	expectCustomerFeatureCorrect({
 		customer: entity1Before,
 		featureId: TestFeature.Messages,
@@ -138,10 +142,14 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-per-entity 1: upgrade wi
 		usage: 5,
 	});
 
-	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
+	const entity2Before = await pollUntil({
+		fetch: () => autumnV1.entities.get<ApiEntityV0>(customerId, entities[1].id),
+		until: (e) =>
+			e.features?.[TestFeature.Messages]?.balance === 200 &&
+			e.features?.[TestFeature.Workflows]?.balance === 2,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 	expectCustomerFeatureCorrect({
 		customer: entity2Before,
 		featureId: TestFeature.Messages,
@@ -315,16 +323,17 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-per-entity 2: upgrade wi
 				featureId: TestFeature.Messages,
 				value: 200, // 100 overage
 				entityIndex: 1,
-				timeout: 2000,
 			}),
 		],
 	});
 
-	// Verify overage before upgrade
-	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[0].id,
-	);
+	// Verify overage before upgrade (poll until tracks have landed)
+	const entity1Before = await pollUntil({
+		fetch: () => autumnV1.entities.get<ApiEntityV0>(customerId, entities[0].id),
+		until: (e) => e.features?.[TestFeature.Messages]?.balance === -50,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 	expectCustomerFeatureCorrect({
 		customer: entity1Before,
 		featureId: TestFeature.Messages,
@@ -333,10 +342,12 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-per-entity 2: upgrade wi
 		usage: 150,
 	});
 
-	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
-		customerId,
-		entities[1].id,
-	);
+	const entity2Before = await pollUntil({
+		fetch: () => autumnV1.entities.get<ApiEntityV0>(customerId, entities[1].id),
+		until: (e) => e.features?.[TestFeature.Messages]?.balance === -100,
+		timeoutMs: 6000,
+		intervalMs: 2000,
+	});
 	expectCustomerFeatureCorrect({
 		customer: entity2Before,
 		featureId: TestFeature.Messages,

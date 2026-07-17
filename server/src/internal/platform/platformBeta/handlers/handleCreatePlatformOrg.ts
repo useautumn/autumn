@@ -60,8 +60,16 @@ export const handleCreatePlatformOrg = createRoute({
 					banExpires: null,
 					createdBy: masterOrg.id,
 				})
+				.onConflictDoNothing()
 				.returning();
 
+			// Lost a concurrent-create race — the row exists now, adopt it.
+			user ??= await UserService.getByEmail({ db, email: user_email });
+			if (!user) {
+				throw new RecaseError({
+					message: `Failed to create or find user with email ${user_email}`,
+				});
+			}
 			logger.info(`Created new user: ${user.id} (${user_email})`);
 		} else {
 			logger.info(

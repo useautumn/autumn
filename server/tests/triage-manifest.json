@@ -1,0 +1,1474 @@
+{
+ "_doc": "Root-cause manifest for the 100%-green test campaign. Regenerate the diff against a new run's failures file, then update statuses here. Statuses: open-bug (product defect), open-harness (test needs rewrite), infra-flake (load/timing collateral), needs-team-call (product decision required), roadmap-todo (feature unbuilt, tests todo'd), untriaged.",
+ "updated": "2026-07-17",
+ "verified_against": {
+  "baseline": "mrnswqxc-f9fnrq @ 72cd1d280",
+  "control": "mroteobc-tsc05k @ 72cd1d280 (same code \u2014 noise-floor measurement)",
+  "fixed": "mrovccnd-s972n7 @ 363a8a301"
+ },
+ "noise_floor": {
+  "tests": "~35",
+  "files": "~16",
+  "basis": "diff between the two identical-code runs"
+ },
+ "totals": {
+  "stable_failures_before": 343,
+  "cleared_verified": 94,
+  "persisting": 249,
+  "new_since_fixes": 9
+ },
+ "clusters": [
+  {
+   "tag": "attach-body-products-field-removed-stale-multiattach-helper",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 22,
+   "files": {
+    "server/tests/archives/multiAttach/multiAttach1.test.ts": [
+     "multiAttach1: Testing multi attach for trial products and update product quantities mid trial > should advance clock and update premium & growth while trialing",
+     "multiAttach1: Testing multi attach for trial products and update product quantities mid trial > should run multi attach through checkout and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiAttach2.test.ts": [
+     "multiAttach2: Testing multi attach for trial products and update product quantities mid trial > should advance clock and update premium & growth while trialing",
+     "multiAttach2: Testing multi attach for trial products and update product quantities mid trial > should run multi attach through checkout and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiAttach3.test.ts": [
+     "multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities... > should advance test clock to end of trial and have correct sub",
+     "multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities... > should cancel one entity's sub at end of cycle and have correct schedule...",
+     "multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities... > should cancel one entity's sub immediately",
+     "multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities... > should run multi attach through checkout and have correct sub",
+     "multiAttach3: Testing multi attach for trial products transfer to entity, then cancel products on entities... > should transfer to entity and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiAttach4.test.ts": [
+     "multiAttach4: Testing multi attach for annual products... > should run multi attach through checkout and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiInvoice/multiInvoice1.test.ts": [
+     "multiInvoice1: Testing multi attach through invoice flow > should run multi attach through invoice checkout flow",
+     "multiInvoice1: Testing multi attach through invoice flow > should update premium & pro while trialing"
+    ],
+    "server/tests/archives/multiAttach/multiReward/multiReward1.test.ts": [
+     "multiReward1: Testing multi attach with rewards > should run multi attach through checkout and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiReward/multiReward2.test.ts": [
+     "multiReward2: Testing multi attach with rewards -- delete reward and prorate > should delete discounts from subscription and prorate correctly",
+     "multiReward2: Testing multi attach with rewards -- delete reward and prorate > should run multi attach through checkout and have correct sub",
+     "multiReward2: Testing multi attach with rewards -- delete reward and prorate > should update pro quantity and have correct checkout amount"
+    ],
+    "server/tests/archives/multiAttach/multiReward/multiReward3.test.ts": [
+     "multiReward3: Testing multi attach with rewards -- advance clock and update pro quantity > should advance clock and update pro quantity",
+     "multiReward3: Testing multi attach with rewards -- advance clock and update pro quantity > should advance to trial end and have correct quantity",
+     "multiReward3: Testing multi attach with rewards -- advance clock and update pro quantity > should run multi attach through checkout and have correct sub"
+    ],
+    "server/tests/archives/multiAttach/multiUpgrade/multiUpgrade1.test.ts": [
+     "multiUpgrade1: Testing multi attach and upgrade > should run multi attach through checkout and have correct sub",
+     "multiUpgrade1: Testing multi attach and upgrade > should transfer to entity and have correct sub",
+     "multiUpgrade1: Testing multi attach and upgrade > should upgrade entity's sub to premium"
+    ]
+   }
+  },
+  {
+   "tag": "variant-version-not-bumping-haspancustomers-filter",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 12,
+   "files": {
+    "server/tests/integration/crud/plans/variants/interval-family.test.ts": [
+     "interval-family preview: returns all 5 variants, versionable=false",
+     "interval-family propagate: customer on base \u2014 base v2 + all 5 variants v2, pin to new base v2 internal_id",
+     "interval-family propagate: customer on one variant \u2014 that one versions, other 4 patch in place",
+     "interval-family stripe: carry-forward \u2014 variant v2 retains stripe_price_id from v1 for unchanged prices"
+    ],
+    "server/tests/integration/crud/plans/variants/lifecycle.test.ts": [
+     "variants opt-out: omit propagate \u2192 base versions, variant stays at v1 pinned to old base",
+     "variants preview_update: happy path \u2014 response shape correct, no DB writes",
+     "variants preview_update: rejects on variant \u2192 400 cannot_preview_on_variant",
+     "variants propagate: base patches in place \u2192 customer-bearing variant versions",
+     "variants propagate: both version when base has customers \u2014 variant v2 base_internal_product_id = base v2 internal_id"
+    ],
+    "server/tests/integration/crud/plans/variants/rollover-disambiguation.test.ts": [
+     "rollover base+variant version: customer on base triggers both versioning",
+     "rollover filter precision: same feature_id different interval, only targeted item changes",
+     "rollover propagate: variant strip preserved across propagation"
+    ]
+   }
+  },
+  {
+   "tag": "playwright-checkout-flow-fails-under-pool-contention",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 10,
+   "files": {
+    "server/tests/integration/billing/attach/invoice/attach-invoice-draft-deferred.test.ts": [
+     "attach-invoice-draft-def 1: new plan",
+     "attach-invoice-draft-def 2: upgrade",
+     "attach-invoice-draft-def 3: new plan no pm",
+     "attach-invoice-draft-def 4: one-off"
+    ],
+    "server/tests/integration/billing/attach/invoice/attach-invoice-finalized-deferred.test.ts": [
+     "attach-invoice-fin-def 1: new plan",
+     "attach-invoice-fin-def 2: upgrade",
+     "attach-invoice-fin-def 3: free to paid",
+     "attach-invoice-fin-def 4: one-off",
+     "attach-invoice-fin-def 5: one-off addon"
+    ],
+    "server/tests/integration/billing/attach/invoice/payment-failure/no-payment-method.test.ts": [
+     "no-pm 2: upgrade"
+    ]
+   }
+  },
+  {
+   "tag": "invoice-checkout-browser-pool-contention",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 10,
+   "files": {
+    "server/tests/integration/billing/legacy/attach/invoice/legacy-attach-invoice-mode-advanced.test.ts": [
+     "legacy-inv-mode-adv 1: /checkout endpoint new subscription",
+     "legacy-inv-mode-adv 3: one-off add-on with quantity via /checkout",
+     "legacy-inv-mode-adv 4: separate subs due to invoice checkout"
+    ],
+    "server/tests/integration/billing/legacy/attach/invoice/legacy-attach-invoice-mode.test.ts": [
+     "legacy-inv-mode 1: new subscription",
+     "legacy-inv-mode 2: merged add-on",
+     "legacy-inv-mode 4: upgrade"
+    ],
+    "server/tests/integration/billing/legacy/attach/invoice/payment-failure/legacy-attach-payment-failed.test.ts": [
+     "legacy-fail 1: new subscription",
+     "legacy-fail 5: new subscription, recover via invoice checkout",
+     "legacy-fail 6: one-off product, recover via invoice checkout"
+    ],
+    "server/tests/integration/billing/legacy/attach/separate/legacy-separate.test.ts": [
+     "legacy-separate 1: separate subs via invoice checkout"
+    ]
+   }
+  },
+  {
+   "tag": "oneoff-cleanup-never-expires",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 9,
+   "files": {
+    "server/tests/integration/cron/one-off-cleanup/cleanup-one-off-edge-cases.test.ts": [
+     "cleanup: boolean-coverage-same-product-all-covered",
+     "cleanup: entity-isolation-only-same-entity-expires"
+    ],
+    "server/tests/integration/cron/one-off-cleanup/one-off-cleanup-expires.test.ts": [
+     "cleanup: base-oneoff-prepaid-depleted",
+     "cleanup: oneoff-depleted-newer-active",
+     "cleanup: oneoff-lifetime-messages-only-latest",
+     "cleanup: oneoff-prepaid-then-attach-again",
+     "cleanup: two-oneoff-both-depleted"
+    ],
+    "server/tests/integration/cron/one-off-cleanup/one-off-cleanup-stays-active.test.ts": [
+     "cleanup: three-oneoff-all-depleted"
+    ],
+    "server/tests/integration/cron/one-off-cleanup/one-off-cleanup-with-others.test.ts": [
+     "cleanup: oneoff-prepaid-boolean-only-latest"
+    ]
+   }
+  },
+  {
+   "tag": "discount-aware-invoice-matched-credit-miscalc",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 7,
+   "files": {
+    "server/tests/integration/billing/invoice-matched-credits/additional-coverage.test.ts": [
+     "invoice-matched-credits additional 1: amount-off coupon cancel \u2014 refund based on discounted invoice",
+     "invoice-matched-credits additional 3: scheduled upgrade with discount \u2014 credit reflects discounted charge"
+    ],
+    "server/tests/integration/billing/invoice-matched-credits/cancel.test.ts": [
+     "invoice-matched-credits cancel 1: cancel immediately with discount \u2014 credit reflects stored charge",
+     "invoice-matched-credits cancel 3: cancel with refund_last_payment prorated \u2014 refund reflects discounted invoice"
+    ],
+    "server/tests/integration/billing/invoice-matched-credits/create-schedule.test.ts": [
+     "invoice-matched-credits create-schedule: immediate phase pro + addon \u2014 credits from stored discounted charges"
+    ],
+    "server/tests/integration/billing/invoice-matched-credits/upgrades.test.ts": [
+     "invoice-matched-credits upgrade 1: percent-off forever discount \u2014 credit reflects discounted price",
+     "invoice-matched-credits upgrade 3: amount-off coupon \u2014 credit reflects discounted price"
+    ]
+   }
+  },
+  {
+   "tag": "license-pool-convergence-on-parent-end",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 6,
+   "files": {
+    "server/tests/integration/licenses/license-lifecycle.test.ts": [
+     "licenses-lifecycle: cancelling the parent ends assignments and revokes entity access",
+     "licenses-lifecycle: end-of-cycle cancel and uncancel preserve assignments until expiry",
+     "licenses-lifecycle: plain upgrade re-parents assignments onto the new plan's pools",
+     "licenses-lifecycle: trial expiry ends assignments on a license parent"
+    ],
+    "server/tests/integration/licenses/license-migration.test.ts": [
+     "licenses migration: customized license set is not reverted by version migration",
+     "licenses migration: inherited assignments move to the new version exactly once"
+    ]
+   }
+  },
+  {
+   "tag": "pathindex-lua-undeclared-key",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 6,
+   "files": {
+    "server/tests/perf/v2CachePerf.test.ts": [
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (1 ent) \u2014 Bounded FullCustomer",
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (1 ent) \u2014 FullEntity",
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (10 ent) \u2014 Bounded FullCustomer",
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (10 ent) \u2014 FullEntity",
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (5 ent) \u2014 Bounded FullCustomer",
+     "V2 Cache Performance: Bounded FullCustomer vs FullEntity > deductFromCustomerEntitlements (5 ent) \u2014 FullEntity"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-subscription-verify-mismatch-under-load",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 5,
+   "files": {
+    "server/tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity.test.ts": [
+     "multi-entity-quantity: different products per entity",
+     "multi-entity-quantity: entity 1 increases quantity",
+     "multi-entity-quantity: entity 2 decreases quantity",
+     "multi-entity-quantity: mixed changes across entities",
+     "multi-entity-quantity: multiple features per entity"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-429-default-trial-attach-failure",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 4,
+   "files": {
+    "server/tests/advanced/defaultTrial/defaultTrial2.test.ts": [
+     "advanced/defaultTrial2: ensure trial transitions into full product if payment method is valid > should be active after 7 days",
+     "advanced/defaultTrial2: ensure trial transitions into full product if payment method is valid > should create a customer with the paid default trial"
+    ],
+    "server/tests/advanced/defaultTrial/defaultTrial3.test.ts": [
+     "advanced/defaultTrial3: ensure trials cancel with bad payment method > should cancel after 7 days",
+     "advanced/defaultTrial3: ensure trials cancel with bad payment method > should create a customer with the paid default trial"
+    ]
+   }
+  },
+  {
+   "tag": "legacy-migrate-endpoint-requires-session-auth-not-apikey",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 4,
+   "files": {
+    "server/tests/archives/migrations/migration4.test.ts": [
+     "migrations4: Testing migration for pro -> pro with trial (should not start trial) > should attach track usage and get correct balance"
+    ],
+    "server/tests/archives/migrations/migration5.test.ts": [
+     "migrations5: Testing migration for prepaid seats -> pay_per_use seats > should update product to new version"
+    ],
+    "server/tests/archives/migrations/migration6.test.ts": [
+     "migrations6: Testing migration for premium v1 -> premium v2 after downgrade to pro > should migrate premium v1 to premium v2 after downgrade"
+    ],
+    "server/tests/archives/migrations/migration7.test.ts": [
+     "migrations7: Testing migration for premium v1 -> premium v2 after cancellation at cycle end > should migrate premium v1 to premium v2 and preserve cancellation"
+    ]
+   }
+  },
+  {
+   "tag": "free-trial-override-preview-double-proration-refund",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 4,
+   "files": {
+    "server/tests/integration/billing/attach/free-trial/override/trial-override-entity.test.ts": [
+     "trial-override-entity 1: entity attach with free_trial to active sub",
+     "trial-override-entity 3: entity upgrade with free_trial override"
+    ],
+    "server/tests/integration/billing/attach/free-trial/override/trial-override-merge.test.ts": [
+     "trial-override-merge 1: add-on with free_trial override to active sub",
+     "trial-override-merge 3: add-on with free_trial override replaces existing trial"
+    ]
+   }
+  },
+  {
+   "tag": "next-cycle-preview-starts-at-wrong-expectation",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 4,
+   "files": {
+    "server/tests/integration/billing/attach/free-trial/trial-entity-upgrade.test.ts": [
+     "trial-entity-upgrade 1: entity upgrade to product with trial",
+     "trial-entity-upgrade 3: entity downgrade during trial (scheduled)",
+     "trial-entity-upgrade 4: mixed products after entity upgrade",
+     "trial-entity-upgrade 5: both entities upgrade proTrial \u2192 premiumTrial"
+    ]
+   }
+  },
+  {
+   "tag": "invoice-checkout-completion-not-applied",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 4,
+   "files": {
+    "server/tests/integration/billing/update-subscription/invoice/update-action-required-subscription.test.ts": [
+     "subscription-create: no payment method"
+    ],
+    "server/tests/integration/billing/update-subscription/invoice/update-invoice-deferred-price.test.ts": [
+     "invoice-deferred: increase price (draft, deferred)",
+     "invoice-deferred: increase price (finalized, deferred)"
+    ],
+    "server/tests/integration/billing/update-subscription/invoice/update-invoice-deferred-trial.test.ts": [
+     "invoice-deferred: remove trial (draft, deferred)"
+    ]
+   }
+  },
+  {
+   "tag": "full-subject-scenario-insert-read-race-under-db-load",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 4,
+   "files": {
+    "server/tests/integration/db/full-subject/full-subject-aggregates.test.ts": [
+     "fullSubject aggregates > customer-scoped: aggregated feature balances sum allowance_total and per-entity balance fields",
+     "fullSubject aggregates > customer-scoped: entity-scoped loose entitlements are aggregated and excluded from top-level extras"
+    ],
+    "server/tests/integration/db/full-subject/full-subject-ordering.test.ts": [
+     "fullSubject ordering and limits > orders and limits customer products and loose entitlements per subject"
+    ],
+    "server/tests/integration/db/full-subject/full-subject-query-row.test.ts": [
+     "fullSubject raw query row > entity-scoped row includes parent plus selected entity products"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-429-beforeall-cascade",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 3,
+   "files": {
+    "server/tests/archives/multiAttach/multiUpgrade/multiUpgrade2.test.ts": [
+     "multiUpgrade2: Testing multi attach and update quantities downward > should run multi attach through checkout and have correct sub",
+     "multiUpgrade2: Testing multi attach and update quantities downward > should transfer to entity and have correct sub",
+     "multiUpgrade2: Testing multi attach and update quantities downward > should update premium and pro quantities downward"
+    ]
+   }
+  },
+  {
+   "tag": "removed-prepaid-options-validation",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 3,
+   "files": {
+    "server/tests/integration/billing/update-subscription/errors/update-feature-quantity-errors.test.ts": [
+     "error: add prepaid feature without options",
+     "error: update quantity for non-existent feature",
+     "error: update with prepaid but missing options"
+    ]
+   }
+  },
+  {
+   "tag": "playwright-pool-stale-iframe",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 3,
+   "files": {
+    "server/tests/integration/billing/update-subscription/invoice/update-invoice-deferred-plan.test.ts": [
+     "invoice-deferred: free \u2192 paid (draft, deferred)",
+     "invoice-deferred: free \u2192 paid (finalized, deferred)"
+    ],
+    "server/tests/integration/billing/update-subscription/invoice/update-quantity-invoice-mode.test.ts": [
+     "update-quantity: entitlements after payment via checkout"
+    ]
+   }
+  },
+  {
+   "tag": "license-duplicate-assign-idempotency",
+   "classification": "BUG",
+   "status": "needs-team-call",
+   "test_count": 3,
+   "notes": [
+    "no idempotent short-circuit in redesigned attach; regression or new contract?"
+   ],
+   "files": {
+    "server/tests/integration/licenses/license-edge-cases.test.ts": [
+     "licenses-custom: attach transition moves assignments to custom pool",
+     "licenses-edge: duplicate assign is idempotent and does not double grant",
+     "licenses-edge: non-license assign and priced customize are rejected"
+    ]
+   }
+  },
+  {
+   "tag": "rate-limit-timing-under-swarm-contention",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 3,
+   "files": {
+    "server/tests/integration/others/rate-limits/rate-limit-list-products.test.ts": [
+     "rate-limit-list-products"
+    ],
+    "server/tests/integration/others/rate-limits/rate-limit-overrides.test.ts": [
+     "rate-limit-overrides: orgSlug fallback resolves the override",
+     "rate-limit-overrides: override lowers effective limit for the org"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-429-generic-test-failure-cascade",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/advanced/customInterval/customInterval2.test.ts": [
+     "customInterval2: Testing custom interval on arrear prorated price > should attach pro product",
+     "customInterval2: Testing custom interval on arrear prorated price > should upgrade to premium product and have correct invoice next cycle"
+    ]
+   }
+  },
+  {
+   "tag": "wallclock-drift-from-whole-file-retry",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/advanced/customInterval/reset1.test.ts": [
+     "reset1: Testing custom reset intervals > should reset messages feature and have correct next reset at",
+     "reset1: Testing custom reset intervals > should reset words feature and have correct next reset at"
+    ]
+   }
+  },
+  {
+   "tag": "db-pool-timing-assertion-flaky-under-load",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/infra/criticalDbTimeout.test.ts": [
+     "critical DB pool is usable after a query timeout",
+     "critical DB pool times out slow queries while general pool does not"
+    ]
+   }
+  },
+  {
+   "tag": "debug-router-not-mounted",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/infra/pgFailover.test.ts": [
+     "pg failover: critical endpoints failover to replica under sustained DB load"
+    ],
+    "server/tests/infra/poolIsolation.test.ts": [
+     "pool isolation: critical endpoints work while general pool is under CPU load"
+    ]
+   }
+  },
+  {
+   "tag": "tinybird-clickhouse-not-configured",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/analytics/aggregate/uuid-group-by-fallback.test.ts": [
+     "aggregate uuid-group-by: group_by on a UUID-valued property returns grouped data"
+    ],
+    "server/tests/integration/balances/track/track-tinybird-migration.test.ts": [
+     "tinybird migration - dual write"
+    ]
+   }
+  },
+  {
+   "tag": "test-pool-timeout-contention",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/balances/track/basic/track-event-name.test.ts": [
+     "track-event-name1: track with event_name instead of feature_id",
+     "track-event-name3: idempotency key prevents duplicate multi-feature track"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-429-unwrapped-non-autumn-error",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/attach/checkout/stripe-checkout-lock/checkout-lock-basic.test.ts": [
+     "checkout-lock C: pending checkout blocks non-checkout re-attach"
+    ],
+    "server/tests/integration/billing/attach/checkout/stripe-checkout-lock/checkout-lock-replace.test.ts": [
+     "checkout-lock F: non-checkout blocked even for different entity"
+    ]
+   }
+  },
+  {
+   "tag": "free-to-free-trial-status-not-refreshed",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/attach/free-trial/trial-free-product.test.ts": [
+     "trial-free-product 6: free to different free with trial",
+     "trial-free-product 7: entity pro isolated from customer-level free trial"
+    ]
+   }
+  },
+  {
+   "tag": "entity-track-read-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/attach/immediate-switch/entities/immediate-switch-per-entity.test.ts": [
+     "immediate-switch-per-entity 1: upgrade with consumable RESETS, allocated CARRIES OVER",
+     "immediate-switch-per-entity 2: upgrade with overage mid-cycle - overage billed"
+    ]
+   }
+  },
+  {
+   "tag": "preview-line-items-sum-mismatch-custom-items",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/create-schedule/preview/create-schedule-preview.test.ts": [
+     "create-schedule preview 10: customize.items uses custom prepaid and one-off prices",
+     "create-schedule preview 15: invoice excludes unrelated pending Stripe invoice items"
+    ]
+   }
+  },
+  {
+   "tag": "allocated-fixture-proration-rejected-by-public-api",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/misc/reuse-stripe-prices-custom-plan.test.ts": [
+     "custom plan: change proration_config on allocated \u2192 stripe_price_id NOT reused",
+     "custom plan: paid feature shapes unchanged \u2192 all Stripe IDs reused"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-checkout-browser-automation-flake",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/setup-payment/setup-payment-with-plan.test.ts": [
+     "setup-payment: attach plan with feature_quantities (prepaid)"
+    ],
+    "server/tests/integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts": [
+     "customer.subscription.created auto-sync: links product after external Stripe checkout completion"
+    ]
+   }
+  },
+  {
+   "tag": "attach-setup-rate-limited",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/stripe-webhooks/test-clock-ready/test-clock-ready-expires-trial.test.ts": [
+     "test-clock-ready 1: standard entitlement-only trial expires from webhook alone, free default activated",
+     "test-clock-ready 2: revert trial expires from webhook alone, previous paused plan restored"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-clock-advance-rate-limit",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/update-subscription/cancel/end-of-cycle/cancel-end-of-cycle-consumable.test.ts": [
+     "cancel end of cycle consumable: entity + customer - cancel customer (no double billing)",
+     "cancel end of cycle consumable: entity - track overage \u2192 cancel \u2192 advance"
+    ]
+   }
+  },
+  {
+   "tag": "backsync-carry-usage-regression",
+   "classification": "BUG",
+   "status": "needs-team-call",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/update-subscription/entities/per-entity-rollover-carry.test.ts": [
+     "entity rollover carry: direct updateSubscription with productContext override to premium carries rollovers",
+     "entity rollover carry: prepaid 50% max_percentage rollover + overage without rollover survives version update"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-call-before-update-quantity-validation",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/update-subscription/errors/update-checkout-errors.test.ts": [
+     "update-checkout error: no changes with redirect mode",
+     "update-checkout error: prepaid no changes with redirect mode"
+    ]
+   }
+  },
+  {
+   "tag": "oneoff-prepaid-carryover-quantity-reset",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/update-subscription/errors/update-one-off-errors.test.ts": [
+     "error: one-off item quantity update on recurring product",
+     "one-off: update prepaid item included usage"
+    ]
+   }
+  },
+  {
+   "tag": "prorate-next-cycle-preview-not-deferred",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/billing/update-subscription/update-quantity/multi-entity-quantity-proration.test.ts": [
+     "multi-entity-proration: ProrateNextCycle decrease \u2014 immediate balance, deferred credit",
+     "multi-entity-proration: ProrateNextCycle increase \u2014 balance now, billing deferred"
+    ]
+   }
+  },
+  {
+   "tag": "tinybird-ingest-wait-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/crud/events/list-events-v22-vs-v23-parity.test.ts": [
+     "events-list-v22-vs-v23-parity: V2.2 offset and V2.3 cursor return identical list[] for the same customer",
+     "events-list-v22-vs-v23-parity: V2.3 cursor round-trip returns disjoint pages"
+    ]
+   }
+  },
+  {
+   "tag": "plans-preview-variant-missing-in-response",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/crud/plans/variants/variant-conflicts.test.ts": [
+     "variant conflicts: variant holds Messages yearly, base edits monthly \u2192 different_interval conflict",
+     "variant conflicts: variant shares Messages monthly interval \u2192 no conflict"
+    ]
+   }
+  },
+  {
+   "tag": "fullsubject-redis-cache-timing-flake",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/db/full-subject-cache/full-subject-cache-rollout.test.ts": [
+     "fullSubject cache rollout staleness > stale subject is evicted when rollout routing changes"
+    ],
+    "server/tests/integration/db/full-subject-cache/full-subject-cache-roundtrip.test.ts": [
+     "fullSubject cache roundtrip > entity cache fill preserves existing shared balance fields and never creates a meta key"
+    ]
+   }
+  },
+  {
+   "tag": "copy-products-stale-cache",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/licenses/catalog-update/license-sandbox-copy.test.ts": [
+     "sandboxes.copy: copy plans + features between two sandbox sub-orgs > copies the source sandbox's features + product into the target sandbox",
+     "sandboxes.copy: edge cases > overwrites matching-id items in the target and re-copy is idempotent"
+    ]
+   }
+  },
+  {
+   "tag": "customize-entitlement-row-reuse",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "notes": [
+    "also: prepaid_only:false failure cause unexplained (source still rejects; test matches source)"
+   ],
+   "files": {
+    "server/tests/integration/licenses/license-customize-setup.test.ts": [
+     "licenses-customize-setup: prepaid_only false rejects",
+     "licenses-customize-setup: price-only diff reuses unchanged entitlement rows"
+    ]
+   }
+  },
+  {
+   "tag": "license-trialing-parent-loses-grants",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/licenses/license-status-integration.test.ts": [
+     "licenses status: past-due retains grants but blocks new assignments until recovery",
+     "licenses status: true trialing parent retains grants but is not assignable"
+    ]
+   }
+  },
+  {
+   "tag": "customer-jwt-secret-env-misconfigured",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/others/customer-jwt/customer-jwt-adversarial.test.ts": [
+     "customer-jwt adversarial: forgery / escalation / cross-customer / reuse"
+    ],
+    "server/tests/integration/others/customer-jwt/customer-jwt-contract.test.ts": [
+     "customer-jwt: mint/scope/allowlist/refresh/revoke contract"
+    ]
+   }
+  },
+  {
+   "tag": "refresh-cache-epoch-key-hardcoded-assertion",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 2,
+   "files": {
+    "server/tests/integration/others/refresh-cache/refresh-cache-routes.test.ts": [
+     "refreshCacheMiddleware routes > POST /licenses.attach invalidates the expected caches",
+     "refreshCacheMiddleware routes > POST /licenses.release invalidates the expected caches"
+    ]
+   }
+  },
+  {
+   "tag": "checkout-direct-db-update-not-visible-to-lookup",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 2,
+   "files": {
+    "server/tests/scenarios/checkout/invalid-checkout/completed-checkout-scenario.test.ts": [
+     "autumn-checkout: invalid - completed checkout"
+    ],
+    "server/tests/scenarios/checkout/invalid-checkout/expired-checkout-scenario.test.ts": [
+     "autumn-checkout: invalid - expired checkout"
+    ]
+   }
+  },
+  {
+   "tag": "sync-v2-entity-id-not-propagated-to-cusproduct",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/_temp/sync-v2-entity-binding.test.ts": [
+     "sync-v2 entity binding: plan.internal_entity_id must propagate to inserted customer product"
+    ]
+   }
+  },
+  {
+   "tag": "commented-out-totalusage-accumulator-stale-expected-balance",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/advanced/multiFeature/multiFeature1.test.ts": [
+     "multiFeature1: Testing prepaid + pay per use -> prepaid + pay per use > should have correct usage / invoice after upgrade"
+    ]
+   }
+  },
+  {
+   "tag": "referral-reward-not-deferred-by-trial",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/advanced/referrals/referrals4.test.ts": [
+     "referrals4: free product referrals delayed by trial"
+    ]
+   }
+  },
+  {
+   "tag": "arrear-usage-missing-from-invoice",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "notes": [
+    "also credit-event-negative-value-drift; potential undercharging"
+   ],
+   "files": {
+    "server/tests/advanced/usage/usage2.test.ts": [
+     "usage2: Testing basic usage product > should have correct invoice amount / updated meter balance"
+    ]
+   }
+  },
+  {
+   "tag": "legacy-migrations-endpoint-requires-session-auth",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/archives/migrations/migration8.test.ts": [
+     "migrations8: Testing migration with entities - one cancelled, one active > should migrate premium v1 to premium v2"
+    ]
+   }
+  },
+  {
+   "tag": "track-async-sqs-queue-not-configured",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/balances/track/track-async.test.ts": [
+     "track-async: async=true returns 202 > POST /v1/track with async=true returns 202 success"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-test-clock-proration-drift",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/balances/legacy/legacy-set-usage.test.ts": [
+     "legacy-set-usage2: ProrateNextCycle sub quantity and upcoming items"
+    ]
+   }
+  },
+  {
+   "tag": "sqs-lock-expiry-worker-contention",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/balances/lock/check-with-lock-expiry.test.ts": [
+     "check-with-lock-expiry 1: /check with lock, expires at works (SQS)"
+    ]
+   }
+  },
+  {
+   "tag": "entity-spillover-not-synced-immediately-after-finalize",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/balances/lock/entities/check-lock-entity-product.test.ts": [
+     "lock-entity-prod EQ-2: [mixed] entity lock=30 on ent-1 confirm=80 \u2014 spills into customer bucket, ent-2 untouched"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-metadata-missing-on-proration-invoice",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/attach-metadata.test.ts": [
+     "metadata: passthrough to proration invoice on upgrade"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-metadata-missing-on-checkout-subscription",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/attach-misc.test.ts": [
+     "checkout_session_params: subscription_data.metadata passthrough"
+    ]
+   }
+  },
+  {
+   "tag": "discount-not-deduplicated-on-carryover",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/discounts/preview-attach-discount-carryover-upgrade.test.ts": [
+     "preview-attach-discount-carryover-upgrade: a discount active for the credited period must reduce the outgoing plan credit, not only the new plan charge"
+    ]
+   }
+  },
+  {
+   "tag": "v1-v2-prepaid-quantity-update-item-mismatch",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/edge-cases/v1-v2-compatibility/prepaid/v1-attach-v2-update-quantity.test.ts": [
+     "v1\u2192v2 compat: increment quantity (multi billing units)"
+    ]
+   }
+  },
+  {
+   "tag": "oneoff-balance-not-dropped-on-feature-switch",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/immediate-switch/immediate-switch-recurring-oneoff.test.ts": [
+     "immediate-switch-recurring-oneoff 3: one-off balance lost on upgrade"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-webhook-payment-confirmation-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/invoice-line-items/invoice-deferred-line-items.test.ts": [
+     "deferred-line-items A: invoice mode (finalized, deferred)"
+    ]
+   }
+  },
+  {
+   "tag": "checkout-completion-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/multi-currency-currency-lock-e2e.test.ts": [
+     "mc currency lock 4b: deferred invoice attach with currency=cny locks after invoice paid"
+    ]
+   }
+  },
+  {
+   "tag": "missing-track-wait-before-balance-assertion",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/params/carry-over-balances/carry-over-balance-per-entity-features.test.ts": [
+     "carry-over-balance-per-entity 1: per-entity remaining balances carried independently as loose entitlements"
+    ]
+   }
+  },
+  {
+   "tag": "processor-subscription-id-attach-races-with-auto-sync-webhook",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/params/processor-subscription-id.test.ts": [
+     "processor_subscription_id: attach with existing stripe subscription anchors reset cycle"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-preview-invoice-rate-limited",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/preview/attach-preview.test.ts": [
+     "attach preview: scheduled switch"
+    ]
+   }
+  },
+  {
+   "tag": "scheduled-switch-mixed-product-oneoff-not-cleared-on-downgrade",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/scheduled-switch/prepaid/scheduled-switch-prepaid-advanced.test.ts": [
+     "scheduled-switch-prepaid-advanced 2: mixed product downgrade, no options"
+    ]
+   }
+  },
+  {
+   "tag": "entity-scoped-mixed-interval-scheduled-switch-transition-bug",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/scheduled-switch/scheduled-switch-entities-cross.test.ts": [
+     "scheduled-switch-entities-cross 4: entity 1 premiumAnnual to pro, entity 2 premium to pro, advance cycle, upgrade entity 2 to premium"
+    ]
+   }
+  },
+  {
+   "tag": "customize-items-proration-validation-rejects-allocated-feature",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/attach/v2-params/v2-customize.test.ts": [
+     "v2-customize attach: paid feature mix (consumable + prepaid + allocated)"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-subscription-schedule-state-drift",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/create-schedule/params/create-schedule-customize.test.ts": [
+     "create-schedule: supports a customized free phase between paid phases"
+    ]
+   }
+  },
+  {
+   "tag": "checkout-flow-generic-failure-insufficient-detail",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/create-schedule/phases/create-schedule-phases-checkout.test.ts": [
+     "create-schedule: invoice mode can collect payment without an attached payment method"
+    ]
+   }
+  },
+  {
+   "tag": "playwright-locator-strict-mode-multiple-iframes-browserpool",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/legacy/attach/attach-edge-cases.test.ts": [
+     "attach: pro then upgrade to premium with alipay"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-invoice-not-finalized-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/legacy/attach/new/legacy-new-oneoff-zero-decimal.test.ts": [
+     "legacy one-off rwf: prepaid one-off charges major units, not x100"
+    ]
+   }
+  },
+  {
+   "tag": "migration-concurrent-lock-race-timing",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/migrations-v2/controls/idempotency/migration-idempotency.test.ts": [
+     "migrations idempotency: run API rejects concurrent migration runs per org"
+    ]
+   }
+  },
+  {
+   "tag": "plan-change-item-changes-not-empty-on-version-update",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/migrations-v2/update-plan-operation/previews/versioning-preview.test.ts": [
+     "migrations preview version: emits plan, balance, and flag changes"
+    ]
+   }
+  },
+  {
+   "tag": "sync-shared-price-currency-match",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/sync/sync-multi-currency.test.ts": [
+     "sync multi-currency: shared USD Price imports its EUR option with provenance"
+    ]
+   }
+  },
+  {
+   "tag": "test-expected-tax-sum-then-round-vs-impl-round-per-line",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/tax/preview-attach-discount-tax.test.ts": [
+     "preview_attach downgrade tax: includes negative tax on credit invoice"
+    ]
+   }
+  },
+  {
+   "tag": "usage-not-carried-on-update-subscription",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/custom-plan/update-paid-prepaid.test.ts": [
+     "prepaid: free to paid with zero quantity"
+    ]
+   }
+  },
+  {
+   "tag": "base-price-line-item-duplication",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/invoice-line-items/remove-trial-line-items.test.ts": [
+     "update-trial-line-items 1: remove trial multi-entity with all feature types - line items persisted"
+    ]
+   }
+  },
+  {
+   "tag": "prepaid-refund-ignores-proration-config",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/invoice-line-items/update-quantity-line-items.test.ts": [
+     "update-quantity-line-items 3: prorate next cycle increase - deferred proration on renewal"
+    ]
+   }
+  },
+  {
+   "tag": "browser-checkout-webhook-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/invoice/update-action-required-invoice.test.ts": [
+     "invoice-action: no payment method"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-rate-limit-subscription-lookup-undefined",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/multi-product/multi-entity-from-free.test.ts": [
+     "multi-entity-free-to-paid: base + consumable + prepaid"
+    ]
+   }
+  },
+  {
+   "tag": "processor-subscription-id-customize-not-merged",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/params/update-processor-subscription-id.test.ts": [
+     "update processor_subscription_id: with customize leaves stripe subscription unchanged"
+    ]
+   }
+  },
+  {
+   "tag": "cancel-eoc-preview-incoming-free-canceled-at-not-null",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/preview/update-subscription-preview.test.ts": [
+     "update-subscription preview: cancel end of cycle with default free"
+    ]
+   }
+  },
+  {
+   "tag": "timestamp-drift-hardcoded-date",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/separate-intervals/annual-prepaid-monthly-reset-update.test.ts": [
+     "separate intervals: update monthly prepaid volume to annual monthly reset"
+    ]
+   }
+  },
+  {
+   "tag": "invoice-created-resets-separate-interval-entitlement",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/update-quantity/separate-reset-price-intervals.test.ts": [
+     "split-interval prepaid: quarterly invoice.created does not reset monthly entitlement"
+    ]
+   }
+  },
+  {
+   "tag": "version-skip-preview-uses-stale-base-price",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/billing/update-subscription/version-update/version-multi-version.test.ts": [
+     "version-multi: skip v2 go to v3"
+    ]
+   }
+  },
+  {
+   "tag": "async-usage-processing-timeout-under-load",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/entities/create-entity/create-entity-paid.test.ts": [
+     "create-entity-paid: entity4 - per entity features"
+    ]
+   }
+  },
+  {
+   "tag": "stripe-attach-collateral-missing-period-fields",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/entities/get-entity.test.ts": [
+     "get-entity: entity inheriting customer-level product returns correct balances across versions"
+    ]
+   }
+  },
+  {
+   "tag": "test-pool-org-contention-wrong-product-lookup",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/plans/create-plan-basic.test.ts": [
+     "create: enterprise plan with all features"
+    ]
+   }
+  },
+  {
+   "tag": "hardcoded-plan-id-collision-under-retry",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/plans/plan-metadata.test.ts": [
+     "plan metadata: items-unchanged update returns fresh metadata"
+    ]
+   }
+  },
+  {
+   "tag": "variant-preview-response-shape-wrong",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/plans/variants/feature-drop-propagation.test.ts": [
+     "feature-drop preview: feature-add item changes list stripped variant"
+    ]
+   }
+  },
+  {
+   "tag": "variant-preview-update-missing-validation",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/crud/plans/variants/reset-tier-ladder.test.ts": [
+     "reset-tier: preview_update rejects variant id \u2192 cannot_preview_on_variant"
+    ]
+   }
+  },
+  {
+   "tag": "rc-sync-teststore-price-call-mismatch",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/external-psps/revenuecat-product-sync.test.ts": [
+     "rc sync: test_store app gets subscription params on create and no store push"
+    ]
+   }
+  },
+  {
+   "tag": "rc-migrate-session-auth-missing",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/external-psps/revenuecat/revenuecat.test.ts": [
+     "revenuecat 2: customer migration v1 to v2"
+    ]
+   }
+  },
+  {
+   "tag": "licenses-list-tombstone-not-filtered",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/licenses/catalog-update/license-tombstone-response.test.ts": [
+     "licenses-bug: B2 included:0 tombstone shows in plans.get but is omitted from licenses.list"
+    ]
+   }
+  },
+  {
+   "tag": "license-known-bug-repros",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "notes": [
+    "file is deliberate known-bug repro suite"
+   ],
+   "files": {
+    "server/tests/integration/licenses/license-known-bugs.test.ts": [
+     "licenses lifecycle: trial revert reparents assignments and heals inventory"
+    ]
+   }
+  },
+  {
+   "tag": "shared-global-featureflag-s3-config-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/org-config/disable-overage-billing-edge-config-e2e.test.ts": [
+     "disable overage billing: edge config disables Stripe overage and resets"
+    ]
+   }
+  },
+  {
+   "tag": "shared-org-config-race-under-concurrent-tests",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/org-config/disable-stripe-writes.test.ts": [
+     "disable stripe writes"
+    ]
+   }
+  },
+  {
+   "tag": "global-batching-manager-cross-file-shared-state",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/others/refresh-entity-aggregate/refresh-entity-aggregate-track-dedup.test.ts": [
+     "refresh-dedup-track: 20 concurrent tracks across 3s \u2192 exactly 1 RefreshEntityAggregate enqueue"
+    ]
+   }
+  },
+  {
+   "tag": "revenuecat-oauth-client-credentials-not-configured",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/platform/link-revenuecat.test.ts": [
+     "POST /v1/platform.link_revenuecat > returns an RC authorize URL and persists the OAuth state"
+    ]
+   }
+  },
+  {
+   "tag": "sandbox-copy-concurrent-product-list-race",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/integration/sandbox/copy-master-to-sandbox.test.ts": [
+     "copy a plan from the master org into a named sandbox > re-copy overwrites a matching-id plan in the target (upsert, not duplicate)"
+    ]
+   }
+  },
+  {
+   "tag": "checkout-confirm-free-product-not-attached",
+   "classification": "BUG",
+   "status": "open-bug",
+   "test_count": 1,
+   "notes": [
+    "next-layer bug exposed after payment_url fix"
+   ],
+   "files": {
+    "server/tests/scenarios/checkout/confirm/confirm-free-product-scenario.test.ts": [
+     "autumn-checkout: confirm free product - No payment needed"
+    ]
+   }
+  },
+  {
+   "tag": "checkout-response-field-renamed-checkout-url-to-payment-url",
+   "classification": "HARNESS",
+   "status": "open-harness",
+   "test_count": 1,
+   "files": {
+    "server/tests/scenarios/checkout/confirm/confirm-paid-with-pm-scenario.test.ts": [
+     "autumn-checkout: confirm paid (with PM) - Invoice created"
+    ]
+   }
+  },
+  {
+   "tag": "swarm-retry-timeout-collateral",
+   "classification": "INFRA_FLAKE",
+   "status": "infra-flake",
+   "test_count": 1,
+   "files": {
+    "server/tests/scenarios/migrations/users-usage-scenario.test.ts": [
+     "migration-setup: users included with usage"
+    ]
+   }
+  }
+ ],
+ "untriaged": {
+  "server/tests/integration/licenses/catalog-update/license-catalog-edit-guards.test.ts": [
+   "licenses catalog update: versioning a license product rolls links and pools forward"
+  ],
+  "server/tests/integration/licenses/catalog-update/license-catalog-response.test.ts": [
+   "licenses: plan license included updates in place, assignments grant stock items"
+  ],
+  "server/tests/integration/licenses/catalog-update/license-child-plan-versioning.test.ts": [
+   "licenses child-versioning: active assignments version the license, parent link stays pinned to v1",
+   "licenses child-versioning: licenses[].version re-links the parent to a chosen license version"
+  ],
+  "server/tests/integration/licenses/license-attach-edge-cases.test.ts": [
+   "licenses-attach-edge: raised catalog grant is assignable before any reconcile"
+  ],
+  "server/tests/integration/licenses/license-basic.test.ts": [
+   "licenses: assignment lazily provisions entity-scoped grant"
+  ],
+  "server/tests/integration/licenses/license-billing-integration.test.ts": [
+   "licenses billing: concurrent duplicate assignment is idempotent without leaking capacity"
+  ],
+  "server/tests/integration/licenses/license-priced-attach.test.ts": [
+   "licenses-priced: priced license requires customer-level attach first"
+  ],
+  "server/tests/integration/licenses/license-reconcile-coverage.test.ts": [
+   "licenses-reconcile: partial successor re-parents the linked license and ends the unlinked one"
+  ],
+  "server/tests/integration/licenses/license-validation-coverage.test.ts": [
+   "licenses: capacity-conflict rejects lowering below active assignments",
+   "licenses: list_assignments active flag hides ended assignments by default"
+  ]
+ },
+ "new_since_fixes": [
+  [
+   "server/tests/integration/billing/migrations-v2/add-plan-operation/add-plan-op-preview.test.ts",
+   "add_plan preview: emits activated plan_change"
+  ],
+  [
+   "server/tests/integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+   "setup-payment: attach plan with custom price"
+  ],
+  [
+   "server/tests/integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+   "setup-payment: custom items + price + feature_quantities"
+  ],
+  [
+   "server/tests/integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+   "setup-payment: custom items override"
+  ],
+  [
+   "server/tests/integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+   "setup-payment: discount"
+  ],
+  [
+   "server/tests/integration/billing/setup-payment/setup-payment-with-customize.test.ts",
+   "setup-payment: specific version"
+  ],
+  [
+   "server/tests/integration/billing/update-subscription/custom-plan-patch/patch-update-items-carry-usage.test.ts",
+   "patch update items carry usage: replacing messages keeps words usage unchanged"
+  ],
+  [
+   "server/tests/integration/licenses/license-edge-cases.test.ts",
+   "licenses-custom: updateSubscription applies upsert_licenses"
+  ],
+  [
+   "server/tests/integration/org-config/update-org-config.test.ts",
+   "org config: toggling off preserves other fields"
+  ]
+ ]
+}

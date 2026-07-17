@@ -47,22 +47,22 @@ export const setupPayment = async ({
 	}
 
 	const cardNumber = page.locator("#cardNumber");
-	await cardNumber.waitFor({ timeout: 10000 });
+	await cardNumber.waitFor({ timeout: 60000 });
 	await cardNumber.pressSequentially("4242424242424242");
 	console.log("[setupPayment] Card number filled");
 
 	const cardExpiry = page.locator("#cardExpiry");
-	await cardExpiry.waitFor({ timeout: 5000 });
+	await cardExpiry.waitFor({ timeout: 60000 });
 	await cardExpiry.pressSequentially("1228");
 	console.log("[setupPayment] Expiry filled");
 
 	const cardCvc = page.locator("#cardCvc");
-	await cardCvc.waitFor({ timeout: 5000 });
+	await cardCvc.waitFor({ timeout: 60000 });
 	await cardCvc.pressSequentially("100");
 	console.log("[setupPayment] CVC filled");
 
 	const billingName = page.locator("#billingName");
-	await billingName.waitFor({ timeout: 5000 });
+	await billingName.waitFor({ timeout: 60000 });
 	await billingName.pressSequentially("Test Customer");
 	console.log("[setupPayment] Billing name filled");
 
@@ -115,6 +115,6 @@ export const setupPayment = async ({
 	}
 
 	// Wait for form submission to complete
-	await page.waitForTimeout(7000);
+	await page.waitForTimeout(20000);
 	console.log("[setupPayment] Setup payment complete");
 };

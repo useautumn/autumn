@@ -162,11 +162,18 @@ export const advanceToNextInvoice = async ({
 	testClockId,
 	currentEpochMs,
 	withPause = false,
+	waitForSeconds,
+	pollUntil,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	currentEpochMs?: number;
 	withPause?: boolean;
+	// Overrides only the final post-advance wait; callers must poll for readiness.
+	waitForSeconds?: number;
+	// Replaces only the final post-advance wait with a 2s poll of the same deadline.
+	// The withPause first pause stays fixed: it covers draft line-item injection pre-finalization.
+	pollUntil?: () => Promise<boolean>;
 }): Promise<number> => {
 	const baseTime = currentEpochMs ? new Date(currentEpochMs) : new Date();
 	const parallel = isParallelRun();
@@ -183,7 +190,8 @@ export const advanceToNextInvoice = async ({
 			stripeCli,
 			testClockId,
 			advanceTo: addHours(newUnix, hoursToFinalizeInvoice).getTime(),
-			waitForSeconds: 30,
+			waitForSeconds: waitForSeconds ?? 30,
+			pollUntil,
 		});
 
 		return newUnix;
@@ -196,6 +204,7 @@ export const advanceToNextInvoice = async ({
 			addMonths(baseTime, 1),
 			hoursToFinalizeInvoice,
 		).getTime(),
-		waitForSeconds: 30,
+		waitForSeconds: waitForSeconds ?? 30,
+		pollUntil,
 	});
 };

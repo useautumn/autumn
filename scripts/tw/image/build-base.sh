@@ -190,8 +190,9 @@ Local:
   Queues:
     - Name: autumn.fifo
     - Name: autumn-track.fifo
+    - Name: autumn-track-async.fifo
 EOF
-log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo, dedup on)"
+log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track[-async].fifo, dedup on)"
 
 # ---------------------------------------------------------------------------
 # 5. ClickHouse (optional — only when analytics tests are in scope).

@@ -18,6 +18,7 @@ import {
 	REDIS_URL,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
@@ -122,6 +123,7 @@ const buildWarmEnv = (): Record<string, string> => ({
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	AUTUMN_DB_DIRECT: "1",
 	TW_WORKER_MODE: "1",
 	TW_SKIP_STRIPE_ACCOUNT: "1",
@@ -169,8 +171,7 @@ const waitForReadySnapshot = async (
 
 // ---- modal path --------------------------------------------------------------
 /**
- * Modal refresh: exact-published-image check via the provider's own lookup
- * (TW_MODAL_NO_STALE keeps stale `:latest` hits from masquerading as fresh),
+ * Modal refresh: exact-published-image check via the provider's own lookup,
  * then the normal warm flow — snapshotAndStop publishes `tw-warm:<sha12>`.
  */
 const refreshModalWarm = async ({
@@ -184,8 +185,6 @@ const refreshModalWarm = async ({
 	warmName: string;
 	totalStartedAt: number;
 }): Promise<number> => {
-	// Must be set BEFORE setProvider dynamically imports modal.ts (module-load read).
-	process.env.TW_MODAL_NO_STALE = "1";
 	await setProvider(provider);
 
 	const existing = await timed("check for an exact published warm image", () =>
@@ -209,7 +208,7 @@ const refreshModalWarm = async ({
 		const warmup = await timed(
 			"warmup.sh (checkout → install → migrate → seed)",
 			() =>
-				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha], (text) =>
+				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha, sha], (text) =>
 					process.stdout.write(text),
 				),
 		);
@@ -294,7 +293,7 @@ export const refreshWarm = async (args: string[]): Promise<number> => {
 		const warmup = await timed(
 			"warmup.sh (checkout → install → migrate → seed)",
 			() =>
-				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha], (text) =>
+				runStreaming(warm, ["bash", WARMUP_SCRIPT, sha, sha], (text) =>
 					process.stdout.write(text),
 				),
 		);

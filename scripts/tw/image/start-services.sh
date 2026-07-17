@@ -127,6 +127,13 @@ wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
 
+# Queues added after a base/warm snapshot was baked are missing from its
+# goaws.yaml — CreateQueue is idempotent, so ensure them on every boot.
+for queue in autumn.fifo autumn-track.fifo autumn-track-async.fifo; do
+  curl -s -o /dev/null --data "Action=CreateQueue&QueueName=$queue&Version=2012-11-05" \
+    "http://localhost:$ELASTICMQ_PORT/" || log "WARN: CreateQueue $queue failed"
+done
+
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
 # ---------------------------------------------------------------------------

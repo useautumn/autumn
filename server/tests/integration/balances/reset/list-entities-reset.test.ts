@@ -99,16 +99,15 @@ test.concurrent(`${chalk.yellowBright("list entities reset: queues stale entity 
 		actions: [],
 	});
 
-	await Promise.all(
-		ENTITY_IDS.map((entityId) =>
-			autumnV2_1.entitiesV2.create({
-				customer_id: CUSTOMER_ID,
-				entity_id: entityId,
-				feature_id: TestFeature.Users,
-				name: entityId,
-			}),
-		),
-	);
+	// Entity creation is serialized per customer by a lock — create sequentially.
+	for (const entityId of ENTITY_IDS) {
+		await autumnV2_1.entitiesV2.create({
+			customer_id: CUSTOMER_ID,
+			entity_id: entityId,
+			feature_id: TestFeature.Users,
+			name: entityId,
+		});
+	}
 
 	await Promise.all(
 		ENTITY_IDS.map((entityId) =>

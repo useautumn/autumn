@@ -129,8 +129,8 @@ const printWarmSection = (
 		case "stale":
 			warnLine(
 				status.behind !== undefined
-					? `stale warm hit: tw-warm:latest @ ${status.sha12} (${status.behind} commit(s) behind) — workers fast-forward at boot`
-					: `stale warm hit: tw-warm:latest exists but its sha is not in the last ${REV_WALK_LIMIT} commits (off-branch or far behind) — workers fast-forward at boot`,
+					? `warm cache behind: tw-warm:latest @ ${status.sha12} (${status.behind} commit(s) behind) — next run fast-forwards it inline (checkout + migrate + seed) before forking`
+					: `warm cache behind: tw-warm:latest exists but its sha is not in the last ${REV_WALK_LIMIT} commits (off-branch or far behind) — next run fast-forwards it inline (checkout + migrate + seed) before forking`,
 			);
 			break;
 		case "cold":

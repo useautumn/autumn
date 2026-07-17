@@ -80,7 +80,9 @@ export const createEdgeConfigStore = <T>({
 
 	// When the base64 test override is present, seed this store's config from it
 	// (or its default) once and operate fully in-memory — no S3, no polling.
-	const override = getEdgeConfigOverride();
+	// An explicitly injected s3Client (e.g. a unit test's mock) always wins over
+	// the override — that's an explicit request to exercise the real S3 path.
+	const override = injectedS3Client ? null : getEdgeConfigOverride();
 	if (override) {
 		const raw = override[s3Key];
 		try {

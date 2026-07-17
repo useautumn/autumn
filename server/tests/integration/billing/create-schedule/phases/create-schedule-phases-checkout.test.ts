@@ -21,7 +21,7 @@ import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/uti
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq, inArray } from "drizzle-orm";
@@ -186,9 +186,14 @@ test.concurrent(
 		expect(response.phases).toEqual([]);
 
 		await completeStripeCheckoutForm({ url: response.payment_url! });
-		await timeout(4000);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await pollUntil({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			until: (c) =>
+				c.invoices?.length === 1 && c.invoices[0]?.status === "paid",
+			timeoutMs: 12_000,
+			intervalMs: 2000,
+		});
 
 		await expectCustomerInvoiceCorrect({
 			customer,
@@ -409,10 +414,13 @@ test.concurrent(
 		});
 
 		await completeInvoiceCheckout({ url: response.payment_url! });
-		await timeout(4000);
 
-		const customerAfter =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customerAfter = await pollUntil({
+			fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+			until: (c) => c.invoices?.[0]?.status === "paid",
+			timeoutMs: 12_000,
+			intervalMs: 2000,
+		});
 
 		await expectCustomerInvoiceCorrect({
 			customer: customerAfter,

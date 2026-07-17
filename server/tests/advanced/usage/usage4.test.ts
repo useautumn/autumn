@@ -21,7 +21,10 @@ import {
 	checkCreditBalance,
 	checkUsageInvoiceAmountV2,
 } from "../../utils/advancedUsageUtils.js";
-import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
+import {
+	advanceClockForInvoice,
+	buildMeterUpdatePoll,
+} from "../../utils/stripeUtils.js";
 
 const testCase = "usage4";
 
@@ -153,10 +156,21 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 	});
 
 	test("should have invoice after a month and correct balance", async () => {
+		const pollUntil = await buildMeterUpdatePoll({
+			stripeCli,
+			testClockId,
+			customerId,
+			productId: gpuStarterAnnual.id,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
+		});
+
 		await advanceClockForInvoice({
 			stripeCli,
 			testClockId,
 			waitForMeterUpdate: true,
+			pollUntil,
 		});
 
 		// await advanceTestClock({

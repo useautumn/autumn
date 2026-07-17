@@ -48,7 +48,9 @@ import {
 	REGISTRY_DIR,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	TRACK_SQS_QUEUE_URL,
+	TW_CUSTOMER_JWT_SECRET,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 	WORKER_VCPUS,
@@ -642,6 +644,16 @@ const buildWorkerEnv = ({
 		CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 		SQS_QUEUE_URL_V2,
 		TRACK_SQS_QUEUE_URL,
+		TRACK_ASYNC_SQS_QUEUE_URL,
+		CUSTOMER_JWT_SECRET: TW_CUSTOMER_JWT_SECRET,
+		// NOTE: TEST_FILE_CONCURRENCY is deliberately NOT set here. Setting it flips
+		// every concurrency-keyed cushion suite-wide (attach sleeps, post-checkout
+		// waits, withPause pauses) — measured +23 failing files and a slower wall
+		// clock. Pad specific flaky tests individually instead.
+		// link_revenuecat builds its PKCE authorize URL locally (no RC HTTP call),
+		// so dummy creds satisfy getRcOAuthClient in the harness.
+		REVENUECAT_OAUTH_CLIENT_ID: "tw-dummy-rc-client-id",
+		REVENUECAT_OAUTH_CLIENT_SECRET: "tw-dummy-rc-client-secret",
 		// baked secrets (every worker).
 		ENCRYPTION_IV: requireSecret("ENCRYPTION_IV"),
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
@@ -734,6 +746,7 @@ const buildWarmEnv = (): Record<string, string> => ({
 	CACHE_V2_DRAGONFLY_URL: REDIS_URL,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
+	TRACK_ASYNC_SQS_QUEUE_URL,
 	AUTUMN_DB_DIRECT: "1",
 	TW_WORKER_MODE: "1",
 	TW_SKIP_STRIPE_ACCOUNT: "1",
@@ -846,7 +859,9 @@ const getOrBuildWarmParent = async ({
 	);
 	const warmRun = await runStreaming(
 		warm,
-		["bash", WARMUP_SCRIPT, ref],
+		// Pass the resolved sha so warmup.sh hard-fails instead of silently
+		// building the warm on a stale checkout (the image is NAMED after it).
+		["bash", WARMUP_SCRIPT, ref, sha],
 		(text) => sink(text),
 		{ signal, swallowStreamClose: true },
 	);

@@ -11,7 +11,12 @@ import Stripe from "stripe";
 import { buildSecretKeyCacheKey } from "./clientCache/cacheKeyUtils.js";
 import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { orgToAccountId, shouldUseMaster } from "./connectUtils.js";
-import { initMasterStripe, initPlatformStripe } from "./initStripeCli.js";
+import {
+	initMasterStripe,
+	initPlatformStripe,
+	stripeRetryOptions,
+} from "./initStripeCli.js";
+import { withTwStripeRateLimitRetry } from "./twStripeRateLimitRetry.js";
 
 export const createStripeCli = ({
 	org,
@@ -58,8 +63,11 @@ export const createStripeCli = ({
 						? // biome-ignore lint/suspicious/noExplicitAny: Need to cast to any to avoid type error
 							("2025-02-24.acacia" as any)
 						: undefined,
+					...stripeRetryOptions(),
 				});
-				return skipInstrumentation ? client : instrumentStripe({ client });
+				return withTwStripeRateLimitRetry(
+					skipInstrumentation ? client : instrumentStripe({ client }),
+				);
 			},
 		});
 	}

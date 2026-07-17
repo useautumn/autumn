@@ -7,7 +7,10 @@ import {
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectCustomerV0Correct } from "@tests/utils/expectUtils/expectCustomerV0Correct.js";
 import { getExpectedInvoiceTotal } from "@tests/utils/expectUtils/expectInvoiceUtils.js";
-import { advanceClockForInvoice } from "@tests/utils/stripeUtils.js";
+import {
+	advanceClockForInvoice,
+	buildMeterUpdatePoll,
+} from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -151,10 +154,21 @@ describe(`${chalk.yellowBright("usage2: Testing basic usage product")}`, () => {
 
 	// Check invoice.created event
 	test("should have correct invoice amount / updated meter balance", async () => {
+		const pollUntil = await buildMeterUpdatePoll({
+			stripeCli,
+			testClockId,
+			customerId,
+			productId: gpuSystemStarter.id,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
+		});
+
 		await advanceClockForInvoice({
 			stripeCli,
 			testClockId,
 			waitForMeterUpdate: ASSERT_INVOICE_AMOUNT,
+			pollUntil,
 		});
 
 		const cusRes = await AutumnCli.getCustomer(customerId);

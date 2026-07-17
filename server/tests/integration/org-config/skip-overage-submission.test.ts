@@ -80,6 +80,14 @@ const runOverageRenewal = async ({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClockId!,
 			withPause: true,
+			pollUntil: async () => {
+				const customer =
+					await autumnV1.customers.get<ApiCustomerV3>(customerId);
+				return (
+					customer.invoices?.length === 2 &&
+					customer.features[TestFeature.Messages]?.balance === 100
+				);
+			},
 		});
 
 		const customerAfterRenewal =

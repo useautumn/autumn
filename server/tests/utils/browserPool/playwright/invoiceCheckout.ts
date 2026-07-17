@@ -17,7 +17,7 @@ export const invoiceCheckout = async ({
 	page: Page;
 	url: string;
 }) => {
-	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[invoiceCheckout] Page loaded");
 
 	// Wait for the page to fully render — Stripe hosted invoice pages load JS dynamically
@@ -32,7 +32,9 @@ export const invoiceCheckout = async ({
 	// Use a specific selector to avoid matching the bank search results iframe
 	try {
 		await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
-		paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
+		paymentFrame = page
+			.frameLocator('#payment-element iframe[title="Secure payment input frame"]')
+			.first();
 		console.log("[invoiceCheckout] Found #payment-element iframe");
 	} catch {
 		// Fallback: try first iframe in #payment-element
@@ -106,7 +108,9 @@ export const invoiceCheckout = async ({
 		// Now try to find the payment frame again
 		try {
 			await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
-			paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
+			paymentFrame = page
+			.frameLocator('#payment-element iframe[title="Secure payment input frame"]')
+			.first();
 			console.log(
 				"[invoiceCheckout] Found #payment-element iframe after card click",
 			);
@@ -178,7 +182,7 @@ export const invoiceCheckout = async ({
 			'input[name="number"], input[data-elements-stable-field-name="cardNumber"], input[placeholder*="1234"], input[aria-label*="Card number"]',
 		)
 		.first();
-	await cardInput.waitFor({ timeout: 15000 });
+	await cardInput.waitFor({ timeout: 60000 });
 	await cardInput.click();
 	await cardInput.fill("4242424242424242");
 	console.log("[invoiceCheckout] Card number filled");

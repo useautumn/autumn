@@ -23,6 +23,7 @@ import {
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
+import { pollUntil } from "@tests/utils/genUtils";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -117,11 +118,14 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel via Stripe CLI (can
 	});
 
 	// Wait for webhook to process
-	await timeout(10000);
-
-	// Verify pro is active (no longer canceling)
-	const customerAfterUncancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterUncancel = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) =>
+			c.products.some((p) => p.id === pro.id && p.canceled_at == null) &&
+			!c.products.some((p) => p.id === free.id),
+		timeoutMs: 30_000,
+		intervalMs: 2000,
+	});
 
 	await expectProductActive({
 		customer: customerAfterUncancel,
@@ -226,11 +230,18 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel pro with add-on via
 		cancel_at_period_end: true,
 	});
 
-	await timeout(10000);
-
-	// Verify pro is canceling, addon is active, free is scheduled
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	// Wait for cancel webhook to process
+	const customerAfterCancel = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) =>
+			c.products.some((p) => p.id === pro.id && p.canceled_at != null) &&
+			c.products.some((p) => p.id === addon.id && p.canceled_at != null) &&
+			c.products.some(
+				(p) => p.id === free.id && String(p.status) === "scheduled",
+			),
+		timeoutMs: 30_000,
+		intervalMs: 2000,
+	});
 
 	await expectProductCanceling({
 		customer: customerAfterCancel,
@@ -251,11 +262,15 @@ test.concurrent(`${chalk.yellowBright("sub.updated: uncancel pro with add-on via
 	});
 
 	// Wait for webhook to process
-	await timeout(10000);
-
-	// Verify pro is active (no longer canceling), addon still active
-	const customerAfterUncancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterUncancel = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) =>
+			c.products.some((p) => p.id === pro.id && p.canceled_at == null) &&
+			c.products.some((p) => p.id === addon.id && p.canceled_at == null) &&
+			!c.products.some((p) => p.id === free.id),
+		timeoutMs: 30_000,
+		intervalMs: 2000,
+	});
 
 	await expectCustomerProducts({
 		customer: customerAfterUncancel,
@@ -334,11 +349,16 @@ test.concurrent(`${chalk.yellowBright("sub.updated: cancel pro then uncancel pro
 	});
 
 	// Wait for webhook to process
-	await timeout(5000);
-
-	// Verify pro is canceling and free is scheduled
-	const customerAfterCancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterCancel = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) =>
+			c.products.some((p) => p.id === pro.id && p.canceled_at != null) &&
+			c.products.some(
+				(p) => p.id === free.id && String(p.status) === "scheduled",
+			),
+		timeoutMs: 15_000,
+		intervalMs: 2000,
+	});
 	await expectProductCanceling({
 		customer: customerAfterCancel,
 		productId: pro.id,
@@ -354,11 +374,14 @@ test.concurrent(`${chalk.yellowBright("sub.updated: cancel pro then uncancel pro
 	});
 
 	// Wait for webhook to process
-	await timeout(5000);
-
-	// Verify pro is active (no longer canceling)
-	const customerAfterUncancel =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customerAfterUncancel = await pollUntil({
+		fetch: () => autumnV1.customers.get<ApiCustomerV3>(customerId),
+		until: (c) =>
+			c.products.some((p) => p.id === pro.id && p.canceled_at == null) &&
+			!c.products.some((p) => p.id === free.id),
+		timeoutMs: 15_000,
+		intervalMs: 2000,
+	});
 
 	await expectProductActive({
 		customer: customerAfterUncancel,

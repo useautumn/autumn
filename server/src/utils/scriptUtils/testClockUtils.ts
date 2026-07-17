@@ -9,6 +9,30 @@ import {
 import type { Stripe } from "stripe";
 import { timeout } from "../genUtils.js";
 
+// Deadline mirrors the fixed sleep it replaces: on expiry or poll error we proceed, never throw.
+export const pollWithDeadline = async ({
+	pollUntil,
+	deadlineMs,
+	intervalMs = 2000,
+}: {
+	pollUntil: () => Promise<boolean>;
+	deadlineMs: number;
+	intervalMs?: number;
+}): Promise<boolean> => {
+	const deadline = Date.now() + deadlineMs;
+	while (Date.now() < deadline) {
+		try {
+			if (await pollUntil()) return true;
+		} catch {
+			// Treat poll errors as "not ready yet" and keep waiting.
+		}
+		const remainingMs = deadline - Date.now();
+		if (remainingMs <= 0) break;
+		await timeout(Math.min(intervalMs, remainingMs));
+	}
+	return false;
+};
+
 export const advanceTestClock = async ({
 	stripeCli,
 	testClockId,
@@ -19,6 +43,7 @@ export const advanceTestClock = async ({
 	numberOfMonths,
 	advanceTo,
 	waitForSeconds,
+	pollUntil,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
@@ -29,6 +54,7 @@ export const advanceTestClock = async ({
 	numberOfMonths?: number;
 	advanceTo?: number;
 	waitForSeconds?: number;
+	pollUntil?: () => Promise<boolean>;
 }) => {
 	if (!startingFrom) {
 		startingFrom = new Date();
@@ -60,7 +86,11 @@ export const advanceTestClock = async ({
 	});
 
 	if (waitForSeconds) {
-		await timeout(waitForSeconds * 1000);
+		if (pollUntil) {
+			await pollWithDeadline({ pollUntil, deadlineMs: waitForSeconds * 1000 });
+		} else {
+			await timeout(waitForSeconds * 1000);
+		}
 	}
 
 	return advanceTo;

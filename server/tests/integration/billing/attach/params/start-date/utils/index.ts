@@ -83,7 +83,10 @@ export const triggerSubscriptionCreated = async ({
 		object: "subscription",
 		created: getUnixTime(subscriptionCreatedAtMs ?? Date.now()),
 		schedule: scheduleId ?? null,
-	} as Stripe.Subscription;
+		// Autumn-created subs carry this stamp; auto-sync skips on it before
+		// making any real Stripe call for this fabricated subscription id.
+		metadata: { autumn_managed_source: "attach" },
+	} as unknown as Stripe.Subscription;
 	const retrieveSubscription: Stripe.SubscriptionsResource["retrieve"] =
 		async () =>
 			stripeResponse({ object: subscription, requestId: `req_${stripeSubId}` });

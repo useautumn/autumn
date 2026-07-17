@@ -3,6 +3,7 @@ import type { CheckResponseV1 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -113,7 +114,6 @@ test.concurrent(`${chalk.yellowBright("check-credit-system3: use credits and hav
 			s.track({
 				featureId: TestFeature.Action1,
 				value: 50,
-				timeout: 3000,
 			}),
 		],
 	});
@@ -124,9 +124,16 @@ test.concurrent(`${chalk.yellowBright("check-credit-system3: use credits and hav
 		.sub(creditUsage)
 		.toNumber();
 
-	const creditsCheck = await autumnV1.check<CheckResponseV1>({
-		customer_id: customerId,
-		feature_id: TestFeature.Credits,
+	// Poll until the credit deduction has propagated
+	const creditsCheck = await pollUntil({
+		fetch: () =>
+			autumnV1.check<CheckResponseV1>({
+				customer_id: customerId,
+				feature_id: TestFeature.Credits,
+			}),
+		until: (res) => res.balance === creditBalance,
+		timeoutMs: 9000,
+		intervalMs: 2000,
 	});
 
 	expect(creditsCheck.balance).toBe(creditBalance);

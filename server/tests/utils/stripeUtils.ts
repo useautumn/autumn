@@ -1,9 +1,13 @@
 import "dotenv/config";
 
 import {
+	type AppEnv,
 	BillingInterval,
 	type Customer,
+	cusProductToPrices,
 	type FullProduct,
+	type Organization,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import {
 	addDays,
@@ -14,6 +18,9 @@ import {
 	format,
 } from "date-fns";
 import type { Stripe } from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { pollWithDeadline } from "@/utils/scriptUtils/testClockUtils.js";
+import { getSubsFromCusId } from "./expectUtils/expectSubUtils.js";
 import { timeout } from "./genUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
@@ -232,18 +239,96 @@ export const waitForMeterUpdate = async () => {
 	}
 };
 
+// Autumn submits a single meter event per usage price at renewal, so a nonzero
+// aggregate for this customer/meter means Stripe finished ingesting it.
+export const meterEventsAggregated = async ({
+	stripeCli,
+	meterId,
+	stripeCustomerId,
+}: {
+	stripeCli: Stripe;
+	meterId: string;
+	stripeCustomerId: string;
+}): Promise<boolean> => {
+	try {
+		const hourSeconds = 3600;
+		const nowSeconds = Math.floor(Date.now() / 1000);
+		const startTime = Math.floor(nowSeconds / hourSeconds) * hourSeconds;
+		const endTime =
+			Math.floor(
+				addMonths(new Date(), 2).getTime() / 1000 / hourSeconds,
+			) * hourSeconds;
+		const summaries = await stripeCli.billing.meters.listEventSummaries(
+			meterId,
+			{
+				customer: stripeCustomerId,
+				start_time: startTime,
+				end_time: endTime,
+			},
+		);
+		return summaries.data.some((summary) => summary.aggregated_value > 0);
+	} catch {
+		return false;
+	}
+};
+
+// Returns undefined when the meter or customer can't be resolved (callers fall back to the fixed wait).
+export const buildMeterUpdatePoll = async ({
+	stripeCli,
+	testClockId,
+	customerId,
+	productId,
+	db,
+	org,
+	env,
+}: {
+	stripeCli: Stripe;
+	testClockId: string;
+	customerId: string;
+	productId: string;
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+}): Promise<(() => Promise<boolean>) | undefined> => {
+	try {
+		const { cusProduct } = await getSubsFromCusId({
+			stripeCli,
+			customerId,
+			productId,
+			db,
+			org,
+			env,
+		});
+		const meterId = cusProductToPrices({ cusProduct })
+			.map((price) => (price.config as UsagePriceConfig).stripe_meter_id)
+			.find((id) => id);
+		const clockCustomers = await stripeCli.customers.list({
+			test_clock: testClockId,
+			limit: 1,
+		});
+		const stripeCustomerId = clockCustomers.data[0]?.id;
+
+		if (!(meterId && stripeCustomerId)) return undefined;
+		return () => meterEventsAggregated({ stripeCli, meterId, stripeCustomerId });
+	} catch {
+		return undefined;
+	}
+};
+
 export const advanceClockForInvoice = async ({
 	stripeCli,
 	testClockId,
 	waitForMeterUpdate = false,
 	numberOfDays,
 	startingFrom,
+	pollUntil,
 }: {
 	stripeCli: Stripe;
 	testClockId: string;
 	waitForMeterUpdate?: boolean;
 	numberOfDays?: number;
 	startingFrom?: Date;
+	pollUntil?: () => Promise<boolean>;
 }) => {
 	let advanceTo: number;
 
@@ -271,9 +356,16 @@ export const advanceClockForInvoice = async ({
 
 	if (waitForMeterUpdate) {
 		const timeoutSeconds = 200;
-		for (let i = 0; i < timeoutSeconds; i += 10) {
-			console.log(`   - ${i} / ${timeoutSeconds}`);
-			await timeout(10000);
+		if (pollUntil) {
+			await pollWithDeadline({
+				pollUntil,
+				deadlineMs: timeoutSeconds * 1000,
+			});
+		} else {
+			for (let i = 0; i < timeoutSeconds; i += 10) {
+				console.log(`   - ${i} / ${timeoutSeconds}`);
+				await timeout(10000);
+			}
 		}
 	} else {
 		await timeout(STRIPE_TEST_CLOCK_TIMING);

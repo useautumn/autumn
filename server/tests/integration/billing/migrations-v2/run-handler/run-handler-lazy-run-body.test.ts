@@ -72,12 +72,13 @@ test.concurrent(
 		const response = await autumnV2_2.migrationsV2.run({
 			id: migration.id,
 			lazy_run: true,
-			concurrency: 7,
+			// Non-superuser callers are capped at MAX_CONCURRENCY = 5.
+			concurrency: 5,
 		});
 
 		expect(response.migration_id).toBe(migration.id);
 		expect(response.lazy_run).toBe(true);
-		expect(response.concurrency).toBe(7);
+		expect(response.concurrency).toBe(5);
 
 		const updatedMigration = await migrationRepo.find({
 			ctx,

@@ -12,12 +12,7 @@ export const cusEntMatchesEntity = ({
 	entity?: Entity;
 	features?: Feature[];
 }) => {
-	if (!entity) {
-		return (
-			nullish(cusEnt.customer_product?.internal_entity_id) &&
-			nullish(cusEnt.internal_entity_id)
-		);
-	}
+	if (!entity) return true;
 
 	let cusProductMatch = true;
 	if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
