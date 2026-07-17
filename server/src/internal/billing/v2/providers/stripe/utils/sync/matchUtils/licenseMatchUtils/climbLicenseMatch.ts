@@ -1,9 +1,4 @@
-import {
-	type FullProduct,
-	type ParentPlanLicense,
-	type Price,
-	productToBasePrice,
-} from "@autumn/shared";
+import type { FullProduct } from "@autumn/shared";
 import type { ItemMatch } from "@/internal/billing/v2/actions/sync/detect/types";
 import type { StripeItemSnapshot } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeItemSnapshot/types";
 import {
@@ -11,7 +6,7 @@ import {
 	isAutumnPriceMatch,
 	matchesOnBasePrice,
 } from "../classifyItemMatch";
-import { stripeItemMatchesBasePrice } from "../findProductLevelMatchForStripeItem";
+import { findShapeMatchedLicenseLinks } from "./findLicenseMatchForStripeItem";
 
 /** Multiple parents require exactly one effective base-price shape match. */
 const findShapeMatchedLink = ({
@@ -19,27 +14,15 @@ const findShapeMatchedLink = ({
 	licenseProduct,
 	item,
 }: {
-	links: ParentPlanLicense[];
+	links: NonNullable<FullProduct["parent_plan_licenses"]>;
 	licenseProduct: FullProduct;
 	item: StripeItemSnapshot;
-}): { link: ParentPlanLicense; price: Price } | null => {
-	const matches: { link: ParentPlanLicense; price: Price }[] = [];
-	for (const link of links) {
-		const effectiveProduct = link.customized
-			? { ...licenseProduct, prices: link.license_prices }
-			: licenseProduct;
-		const price = productToBasePrice({ product: effectiveProduct });
-		if (
-			price &&
-			stripeItemMatchesBasePrice({
-				item,
-				basePrice: price,
-				stripeProductId: item.stripe_product_id,
-			})
-		) {
-			matches.push({ link, price });
-		}
-	}
+}) => {
+	const matches = findShapeMatchedLicenseLinks({
+		links,
+		licenseProduct,
+		item,
+	});
 	return matches.length === 1 ? matches[0] : null;
 };
 
