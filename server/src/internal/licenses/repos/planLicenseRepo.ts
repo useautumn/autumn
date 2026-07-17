@@ -178,6 +178,30 @@ const listCatalogByOrgEnv = async ({
 	return rows.map(({ row }) => row);
 };
 
+const listProductsByInternalIds = async ({
+	db,
+	orgId,
+	env,
+	internalProductIds,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	internalProductIds: string[];
+}) => {
+	if (internalProductIds.length === 0) return [];
+	return await db
+		.select({ id: products.id })
+		.from(products)
+		.where(
+			and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				inArray(products.internal_id, internalProductIds),
+			),
+		);
+};
+
 const insertMany = async ({
 	db,
 	rows,
@@ -201,6 +225,7 @@ export const planLicenseRepo = {
 	listCatalogByLicenseInternalProductIds,
 	listWithLicensePlanIdByParents,
 	listCatalogByOrgEnv,
+	listProductsByInternalIds,
 	insertMany,
 	deleteByIds,
 } as const;
