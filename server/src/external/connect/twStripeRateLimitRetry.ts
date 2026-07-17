@@ -47,6 +47,15 @@ const wrapFn = (
 		if (!(first && typeof (first as Promise<unknown>).then === "function")) {
 			return first;
 		}
+		// Stripe list results are async-iterable (`for await` auto-pagination);
+		// rewrapping into a plain promise strips that protocol — pass through
+		// unwrapped and un-retried rather than break iteration.
+		if (
+			typeof (first as AsyncIterable<unknown>)[Symbol.asyncIterator] ===
+			"function"
+		) {
+			return first;
+		}
 		return (async () => {
 			let attempt = 0;
 			let pending = first as Promise<unknown>;
