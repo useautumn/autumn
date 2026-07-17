@@ -74,7 +74,7 @@ const preflightCatalogLicenses = async ({
 				? previews[index]?.versionable
 					? (latest?.version ?? current.version) + 1
 					: current.version
-				: 1,
+				: (plan.version ?? 1),
 			archived: plan.archived,
 		});
 	});

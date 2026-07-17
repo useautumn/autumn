@@ -66,6 +66,100 @@ test.concurrent(
 	},
 );
 
+/** Fresh explicit versions must resolve and persist same-batch pinned license versions. */
+test.concurrent(
+	`${chalk.yellowBright("licenses: catalog creates fresh explicit versions with pinned dependencies")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const { autumnV2_2 } = await initScenario({
+			customerId: `license-catalog-fresh-versions-${suffix}`,
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+		const parentId = `license_catalog_fresh_parent_${suffix}`;
+		const childId = `license_catalog_fresh_child_${suffix}`;
+		const plans = [
+			{
+				plan_id: childId,
+				version: 1,
+				name: "Child",
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 10,
+						reset: { interval: "month" as const },
+					},
+				],
+				licenses: [],
+			},
+			{
+				plan_id: parentId,
+				version: 1,
+				name: "Parent",
+				licenses: [{ license_plan_id: childId, version: 1, included: 1 }],
+			},
+			{
+				plan_id: childId,
+				version: 2,
+				name: "Child",
+				items: [
+					{
+						feature_id: TestFeature.Messages,
+						included: 20,
+						reset: { interval: "month" as const },
+					},
+				],
+				licenses: [],
+			},
+			{
+				plan_id: parentId,
+				version: 2,
+				name: "Parent",
+				licenses: [{ license_plan_id: childId, version: 2, included: 2 }],
+			},
+		];
+
+		const preview = (await autumnV2_2.post("/catalog.preview_update", {
+			expand: ["plan_changes.plan"],
+			plans,
+		})) as CatalogPreviewUpdateResponse;
+		expect(preview.plan_changes).toHaveLength(4);
+		expect(preview.plan_changes[3]?.plan?.licenses).toEqual([
+			{
+				license_plan_id: childId,
+				version: 2,
+				included: 2,
+				prepaid_only: true,
+			},
+		]);
+
+		await autumnV2_2.post("/catalog.update", { plans });
+		const [parentV1, parentV2, childV1, childV2] = await Promise.all([
+			autumnV2_2.post("/plans.get", { plan_id: parentId, version: 1 }),
+			autumnV2_2.post("/plans.get", { plan_id: parentId, version: 2 }),
+			autumnV2_2.post("/plans.get", { plan_id: childId, version: 1 }),
+			autumnV2_2.post("/plans.get", { plan_id: childId, version: 2 }),
+		]);
+		expect([
+			parentV1.version,
+			parentV2.version,
+			childV1.version,
+			childV2.version,
+		]).toEqual([1, 2, 1, 2]);
+		expect(childV1.items[0]?.included).toBe(10);
+		expect(childV2.items[0]?.included).toBe(20);
+		expect(parentV1.licenses[0]?.version).toBe(1);
+		expect(parentV2.licenses).toEqual([
+			{
+				license_plan_id: childId,
+				version: 2,
+				included: 2,
+				prepaid_only: true,
+			},
+		]);
+	},
+);
+
 test.concurrent(
 	`${chalk.yellowBright("licenses: same-batch historical versioning resolves from the latest version")}`,
 	async () => {
