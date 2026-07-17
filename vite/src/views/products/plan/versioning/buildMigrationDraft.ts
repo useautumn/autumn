@@ -5,6 +5,7 @@ import type {
 	FrontendProduct,
 	MigrationFilter,
 	Operations,
+	PlanLicenseParams,
 	ProductItem,
 	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
@@ -116,10 +117,12 @@ export function buildInPlaceUpdatePlanParams({
 	baseProduct,
 	editedProduct,
 	features,
+	licenses,
 }: {
 	baseProduct: FrontendProduct;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
 }): UpdatePlanParamsV2Input {
 	const plan = frontendProductToApiPlanV1(
 		{
@@ -144,6 +147,7 @@ export function buildInPlaceUpdatePlanParams({
 		free_trial: plan.free_trial ?? null,
 		config: plan.config,
 		billing_controls: plan.billing_controls,
+		...(licenses !== undefined ? { licenses } : {}),
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
 }
@@ -154,19 +158,43 @@ export function buildPreviewUpdatePlanParams({
 	baseProduct,
 	editedProduct,
 	features,
+	licenses,
 }: {
 	baseProduct: FrontendProduct | null;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	licenses?: PlanLicenseParams[];
 }): UpdatePlanParamsV2Input {
 	const params = buildInPlaceUpdatePlanParams({
 		baseProduct: baseProduct ?? editedProduct,
 		editedProduct,
 		features,
+		licenses,
 	});
 	delete params.disable_version;
 	params.include_versions = true;
 	params.include_variants = true;
+	return params;
+}
+
+export function buildVersionUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+	licenses,
+}: {
+	baseProduct: FrontendProduct;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+	licenses?: PlanLicenseParams[];
+}): UpdatePlanParamsV2Input {
+	const params = buildInPlaceUpdatePlanParams({
+		baseProduct,
+		editedProduct,
+		features,
+		licenses,
+	});
+	delete params.disable_version;
 	return params;
 }
 

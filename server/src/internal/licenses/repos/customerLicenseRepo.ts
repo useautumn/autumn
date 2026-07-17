@@ -87,6 +87,25 @@ const listByParentCustomerProductIds = async ({
 	});
 };
 
+const listReferencedPlanLicenseIds = async ({
+	db,
+	planLicenseIds,
+}: {
+	db: DrizzleCli;
+	planLicenseIds: string[];
+}): Promise<Set<string>> => {
+	if (planLicenseIds.length === 0) return new Set();
+	const rows = await db
+		.select({ planLicenseId: customerLicenses.plan_license_id })
+		.from(customerLicenses)
+		.where(inArray(customerLicenses.plan_license_id, planLicenseIds));
+	return new Set(
+		rows.flatMap(({ planLicenseId }) =>
+			planLicenseId === null ? [] : [planLicenseId],
+		),
+	);
+};
+
 /** Idempotent ensure + granted sync for a (parent, license) balance row.
  * Stamps plan_license_id when provided so stale links converge too. */
 const upsertGranted = async ({
@@ -330,6 +349,7 @@ export const customerLicenseRepo = {
 	getByParentAndLicense,
 	listByInternalCustomerId,
 	listByParentCustomerProductIds,
+	listReferencedPlanLicenseIds,
 	listBillingPriceRows,
 	update,
 	deleteByIds,

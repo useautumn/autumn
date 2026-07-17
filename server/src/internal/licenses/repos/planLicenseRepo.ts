@@ -76,6 +76,21 @@ const getCatalogByParentAndLicense = async ({
 		),
 	});
 
+const retireCatalogById = async ({
+	db,
+	id,
+}: {
+	db: DrizzleCli;
+	id: string;
+}) => {
+	const [retired] = await db
+		.update(planLicenses)
+		.set({ is_custom: true, updated_at: Date.now() })
+		.where(and(eq(planLicenses.id, id), eq(planLicenses.is_custom, false)))
+		.returning();
+	return retired;
+};
+
 const listCatalogByLicenseInternalProductIds = async ({
 	db,
 	licenseInternalProductIds,
@@ -178,25 +193,14 @@ const deleteByIds = async ({ db, ids }: { db: DrizzleCli; ids: string[] }) => {
 	await db.delete(planLicenses).where(inArray(planLicenses.id, ids));
 };
 
-const listProductsByInternalIds = async ({
-	db,
-	internalProductIds,
-}: {
-	db: DrizzleCli;
-	internalProductIds: string[];
-}) =>
-	await db.query.products.findMany({
-		where: inArray(products.internal_id, internalProductIds),
-	});
-
 export const planLicenseRepo = {
 	upsert,
 	getCatalogByParentAndLicense,
+	retireCatalogById,
 	listCatalogByParentInternalProductIds,
 	listCatalogByLicenseInternalProductIds,
 	listWithLicensePlanIdByParents,
 	listCatalogByOrgEnv,
 	insertMany,
 	deleteByIds,
-	listProductsByInternalIds,
 } as const;

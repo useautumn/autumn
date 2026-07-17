@@ -27,17 +27,18 @@ export const planWouldVersion = ({
 
 	const itemsExist = notNullish(updates.items) || "price" in updates;
 	const freeTrialProvided = "free_trial" in updates;
+	const licensesProvided = updates.licenses !== undefined;
 
 	// Billing controls (like other settings) patch in place across all versions
 	// and never version on their own.
-	if (itemsExist || freeTrialProvided) {
+	if (itemsExist || freeTrialProvided || licensesProvided) {
 		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: incoming,
 			curProductV1: current,
 			features: ctx.features,
 		});
 
-		return !(itemsSame && freeTrialsSame);
+		return licensesProvided || !(itemsSame && freeTrialsSame);
 	}
 
 	return false;
