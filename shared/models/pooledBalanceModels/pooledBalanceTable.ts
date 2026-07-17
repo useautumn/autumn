@@ -99,6 +99,7 @@ export const pooledBalances = pgTable(
 		unique("unique_pooled_balance_customer_entitlement").on(
 			table.customer_entitlement_id,
 		),
+		index("idx_pooled_balances_org").on(table.org_id).concurrently(),
 		index("idx_pooled_balances_reset_mode")
 			.on(table.internal_customer_id, table.reset_mode)
 			.concurrently(),

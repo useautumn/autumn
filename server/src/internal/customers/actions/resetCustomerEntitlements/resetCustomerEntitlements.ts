@@ -9,14 +9,12 @@ import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
-import {
-	type PooledCustomerEntitlementReset,
-	resetPooledCustomerEntitlements,
-} from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
+import { resetPooledCustomerEntitlements } from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
 import { executeResetCache } from "./executeResetCache.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
+import { pooledResetToProcessResetResult } from "./pooledResetToProcessResetResult.js";
 import { type ProcessResetResult, processReset } from "./processReset.js";
 
 /** Maps a processReset result into the JSONB shape for the SQL function. */
@@ -38,25 +36,6 @@ const toResetParam = ({
 		entities: updates.entities,
 		next_reset_at: updates.next_reset_at,
 		rollover_insert: firstRollover,
-	};
-};
-
-const pooledResetToProcessResetResult = ({
-	pooledReset,
-}: {
-	pooledReset: PooledCustomerEntitlementReset;
-}): ProcessResetResult => {
-	return {
-		updates: {
-			balance: pooledReset.balance,
-			additional_balance: 0,
-			adjustment: pooledReset.adjustment,
-			entities: null,
-			next_reset_at: pooledReset.nextResetAt,
-		},
-		...(pooledReset.rolloverInsert
-			? { rolloverInsert: pooledReset.rolloverInsert }
-			: {}),
 	};
 };
 

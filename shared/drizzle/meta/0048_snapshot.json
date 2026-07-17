@@ -1,5 +1,5 @@
 {
-  "id": "c19ec9d8-8063-4a90-8bad-7440098f8445",
+  "id": "219960ae-fcd8-4a2b-aac9-c04a0efe0ca9",
   "prevId": "03964f11-b411-4f28-b390-229a38510898",
   "version": "7",
   "dialect": "postgresql",
@@ -7827,6 +7827,21 @@
         }
       },
       "indexes": {
+        "idx_pooled_balances_org": {
+          "name": "idx_pooled_balances_org",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
         "idx_pooled_balances_reset_mode": {
           "name": "idx_pooled_balances_reset_mode",
           "columns": [

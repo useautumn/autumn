@@ -352,6 +352,18 @@ export const processPrepaidPricesForInvoiceCreatedWithDependencies = async ({
 			internalCustomerId: eventContext.fullCustomer.internal_id,
 			callback: async ({ db }) => {
 				const transactionContext = { ...ctx, db };
+				const pooledResets = await dependencies.resetPooledBalancesByResetOwner(
+					{
+						ctx: transactionContext,
+						customerId,
+						internalCustomerId: eventContext.fullCustomer.internal_id,
+						resetOwnerType: PooledBalanceResetOwnerType.Subscription,
+						resetOwnerId: eventContext.stripeSubscriptionId,
+						now: eventContext.nowMs,
+						subscriptionNextResetAt: secondsToMs(subscriptionPeriod.end),
+						balanceSyncDb: db,
+					},
+				);
 				for (const entitlementUpdate of pooledEntitlementUpdateById.values()) {
 					await dependencies.updateCustomerEntitlement({
 						ctx: transactionContext,
@@ -366,18 +378,6 @@ export const processPrepaidPricesForInvoiceCreatedWithDependencies = async ({
 						updates: { options: optionsUpdate.options },
 					});
 				}
-				const pooledResets = await dependencies.resetPooledBalancesByResetOwner(
-					{
-						ctx: transactionContext,
-						customerId,
-						internalCustomerId: eventContext.fullCustomer.internal_id,
-						resetOwnerType: PooledBalanceResetOwnerType.Subscription,
-						resetOwnerId: eventContext.stripeSubscriptionId,
-						now: eventContext.nowMs,
-						subscriptionNextResetAt: secondsToMs(subscriptionPeriod.end),
-						balanceSyncDb: db,
-					},
-				);
 				const preparedCutover = await dependencies.executePooledBalanceOps({
 					ctx: transactionContext,
 					customerId,
@@ -404,7 +404,6 @@ export const processPrepaidPricesForInvoiceCreatedWithDependencies = async ({
 			ctx,
 			customerId,
 			source: "pooled-invoice-reset",
-			flushBalances: true,
 		});
 	}
 };

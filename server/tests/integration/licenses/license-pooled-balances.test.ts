@@ -415,20 +415,20 @@ test.concurrent(
 					list: [firstParent, secondParent, firstLicense, secondLicense],
 				}),
 			],
-				actions: [
-					s.licenses.link({
-						parentProductId: firstParent.id,
-						licenseProductId: firstLicense.id,
-						included: 1,
-					}),
-					s.licenses.link({
-						parentProductId: secondParent.id,
-						licenseProductId: secondLicense.id,
-						included: 1,
-					}),
-					s.billing.attach({ productId: firstParent.id }),
-					s.billing.attach({ productId: secondParent.id }),
-				],
+			actions: [
+				s.licenses.link({
+					parentProductId: firstParent.id,
+					licenseProductId: firstLicense.id,
+					included: 1,
+				}),
+				s.licenses.link({
+					parentProductId: secondParent.id,
+					licenseProductId: secondLicense.id,
+					included: 1,
+				}),
+				s.billing.attach({ productId: firstParent.id }),
+				s.billing.attach({ productId: secondParent.id }),
+			],
 		});
 
 		const internalCustomer = await ctx.db.query.customers.findFirst({
@@ -462,11 +462,11 @@ test.concurrent(
 		await Promise.all([
 			ctx.db
 				.update(customerProducts)
-				.set({ billing_cycle_anchor: firstAnchor })
+				.set({ starts_at: firstAnchor })
 				.where(eq(customerProducts.id, firstParentCustomerProduct.id)),
 			ctx.db
 				.update(customerProducts)
-				.set({ billing_cycle_anchor: secondAnchor })
+				.set({ starts_at: secondAnchor })
 				.where(eq(customerProducts.id, secondParentCustomerProduct.id)),
 		]);
 		await deleteCachedFullCustomer({

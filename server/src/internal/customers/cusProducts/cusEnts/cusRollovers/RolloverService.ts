@@ -161,6 +161,6 @@ export class RolloverService {
 
 	static async delete({ db, ids }: { db: RolloverDb; ids: string[] }) {
 		if (ids.length === 0) return;
-		await db.delete(rollovers).where(inArray(rollovers.id, ids));
+		const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
 	}
 }

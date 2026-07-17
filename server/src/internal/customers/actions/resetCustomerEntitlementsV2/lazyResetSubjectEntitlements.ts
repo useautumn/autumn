@@ -12,10 +12,8 @@ import {
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
 import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
-import {
-	type PooledCustomerEntitlementReset,
-	resetPooledCustomerEntitlements,
-} from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
+import { resetPooledCustomerEntitlements } from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
+import { pooledResetToProcessResetResult } from "../resetCustomerEntitlements/pooledResetToProcessResetResult.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
 import {
@@ -43,25 +41,6 @@ const toResetParam = ({
 		entities: updates.entities,
 		next_reset_at: updates.next_reset_at,
 		rollover_insert: firstRollover,
-	};
-};
-
-const pooledResetToProcessResetResult = ({
-	pooledReset,
-}: {
-	pooledReset: PooledCustomerEntitlementReset;
-}): ProcessResetResult => {
-	return {
-		updates: {
-			balance: pooledReset.balance,
-			additional_balance: 0,
-			adjustment: pooledReset.adjustment,
-			entities: null,
-			next_reset_at: pooledReset.nextResetAt,
-		},
-		...(pooledReset.rolloverInsert
-			? { rolloverInsert: pooledReset.rolloverInsert }
-			: {}),
 	};
 };
 

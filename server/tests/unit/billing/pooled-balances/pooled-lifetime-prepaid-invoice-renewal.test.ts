@@ -318,6 +318,96 @@ test("applies the final lifetime cutover after reset and outer transaction commi
 	]);
 });
 
+test("captures a recurring pooled reset before advancing the source reset timestamp", async () => {
+	const previousResetAt = 1_000_000;
+	const nextResetAt = 2_000_000;
+	const transactionDatabase = {};
+	const events: string[] = [];
+	const operationDatabases: unknown[] = [];
+	const cacheInvalidationFlushes: Array<boolean | undefined> = [];
+	let sourceResetAt = previousResetAt;
+
+	const recurringSource = createLifetimePooledSource({
+		id: "recurring_source",
+		quantity: 2,
+		upcomingQuantity: 2,
+	});
+	recurringSource.customer_entitlements[0]!.entitlement.interval =
+		EntInterval.Month;
+	recurringSource.customer_entitlements[0]!.next_reset_at = previousResetAt;
+	recurringSource.options[0]!.upcoming_quantity = undefined;
+
+	const dependencies = {
+		...createDependencies(),
+		withCustomerBalanceSyncLock: async ({
+			callback,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["withCustomerBalanceSyncLock"]
+		>[0]) => callback({ db: transactionDatabase as never }),
+		updateCustomerEntitlement: async ({
+			ctx,
+			updates,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["updateCustomerEntitlement"]
+		>[0]) => {
+			events.push("source reset timestamp update");
+			operationDatabases.push(ctx.db);
+			sourceResetAt = updates.next_reset_at as number;
+		},
+		resetPooledBalancesByResetOwner: async ({
+			ctx,
+			balanceSyncDb,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["resetPooledBalancesByResetOwner"]
+		>[0]) => {
+			events.push("strict pooled reset capture");
+			operationDatabases.push(balanceSyncDb ?? ctx.db);
+			if (sourceResetAt !== previousResetAt) {
+				throw new Error("RESET_AT_MISMATCH");
+			}
+			return [{ applied: true }] as never;
+		},
+		executePooledBalanceOps: async ({
+			ctx,
+			balanceSyncDb,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["executePooledBalanceOps"]
+		>[0]) => {
+			events.push("pooled balance operations");
+			operationDatabases.push(balanceSyncDb ?? ctx.db);
+		},
+		deleteCachedFullCustomer: async ({
+			flushBalances,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["deleteCachedFullCustomer"]
+		>[0]) => {
+			events.push("post-reset cache cleanup");
+			cacheInvalidationFlushes.push(flushBalances);
+		},
+	} as unknown as ProcessPrepaidPricesDependencies;
+
+	await processPrepaidPricesForInvoiceCreatedWithDependencies({
+		ctx: createContext(),
+		dependencies,
+		eventContext: createEventContext({
+			customerProducts: [recurringSource],
+		}),
+	});
+
+	expect(sourceResetAt).toBe(nextResetAt);
+	expect(events).toEqual([
+		"strict pooled reset capture",
+		"source reset timestamp update",
+		"pooled balance operations",
+		"post-reset cache cleanup",
+	]);
+	expect(cacheInvalidationFlushes).toEqual([undefined]);
+	expect(operationDatabases).toHaveLength(3);
+	expect(
+		operationDatabases.every((database) => database === transactionDatabase),
+	).toBe(true);
+});
+
 type RenewalTransactionState = {
 	sourceBalance: number;
 	sourceAdjustment: number;
@@ -420,14 +510,14 @@ test("rolls back source zeroing, contribution, and option promotion when the poo
 			}
 			return [{ applied: true }];
 		},
-			deleteCachedFullCustomer: async ({
-				flushBalances,
-			}: Parameters<
-				ProcessPrepaidPricesDependencies["deleteCachedFullCustomer"]
-			>[0]) => {
-				cacheInvalidations += 1;
-				cacheInvalidationFlushes.push(flushBalances);
-			},
+		deleteCachedFullCustomer: async ({
+			flushBalances,
+		}: Parameters<
+			ProcessPrepaidPricesDependencies["deleteCachedFullCustomer"]
+		>[0]) => {
+			cacheInvalidations += 1;
+			cacheInvalidationFlushes.push(flushBalances);
+		},
 	} as unknown as ProcessPrepaidPricesDependencies;
 	const runRenewal = () =>
 		processPrepaidPricesForInvoiceCreatedWithDependencies({
@@ -458,7 +548,7 @@ test("rolls back source zeroing, contribution, and option promotion when the poo
 	});
 	expect(transactionCalls).toBe(2);
 	expect(cacheInvalidations).toBe(2);
-	expect(cacheInvalidationFlushes).toEqual([true, true]);
+	expect(cacheInvalidationFlushes).toEqual([true, undefined]);
 	expect(operationDatabases).toHaveLength(4);
 	expect(operationDatabases.every((db) => db === operationDatabases[0])).toBe(
 		true,
