@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { CustomerProductKind } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/pollUntil.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -25,20 +26,39 @@ const addOn = products.recurringAddOn({
 
 const PRODUCT_COUNT = 4;
 
-const setupCustomer = async (customerId: string) =>
-	initScenario({
+const setupCustomer = async (customerId: string) => {
+	const scenario = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [sub1, oneOff1, oneOff2, addOn] }),
 		],
 		actions: [
-			s.billing.attach({ productId: sub1.id }),
-			s.billing.attach({ productId: oneOff1.id }),
-			s.billing.attach({ productId: oneOff2.id }),
-			s.billing.attach({ productId: addOn.id, newBillingSubscription: true }),
+			s.billing.attach({ productId: sub1.id, timeout: 500 }),
+			s.billing.attach({ productId: oneOff1.id, timeout: 500 }),
+			s.billing.attach({ productId: oneOff2.id, timeout: 500 }),
+			s.billing.attach({
+				productId: addOn.id,
+				newBillingSubscription: true,
+				timeout: 500,
+			}),
 		],
 	});
+
+	await pollUntil(
+		async () => {
+			const page = await CusService.getProductsPage({
+				ctx: scenario.ctx,
+				idOrInternalId: customerId,
+				params: defaultParams,
+			});
+			return page.total_count === PRODUCT_COUNT;
+		},
+		{ deadlineMs: 30_000 },
+	);
+
+	return scenario;
+};
 
 const defaultParams = {
 	start_cursor: "",

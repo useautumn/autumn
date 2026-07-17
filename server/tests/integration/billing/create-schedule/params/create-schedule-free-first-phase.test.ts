@@ -14,6 +14,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import globalCtx from "@tests/utils/testInitUtils/createTestContext";
+import { pollUntil } from "@tests/utils/pollUntil";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { addMonths } from "date-fns";
 import { and, eq } from "drizzle-orm";
@@ -342,15 +343,26 @@ test.concurrent(
 			],
 		});
 
+		const stripeCustomerId = customer.processor?.id;
+		expect(stripeCustomerId).toBeDefined();
+
 		await advanceTestClock({
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: badQuarterlyStartsAt,
-			waitForSeconds: 30,
+			waitForSeconds: 2,
 		});
+		await pollUntil(
+			async () => {
+				const invoices = await ctx.stripeCli.invoices.list({
+					customer: stripeCustomerId!,
+					limit: 20,
+				});
+				return invoices.data.some((invoice) => invoice.total === 67391);
+			},
+			{ deadlineMs: 30_000 },
+		);
 
-		const stripeCustomerId = customer.processor?.id;
-		expect(stripeCustomerId).toBeDefined();
 		const invoicesAfterBadCharge = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId!,
 			limit: 20,
@@ -394,8 +406,26 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: postCorrectionPreviewAt,
-			waitForSeconds: 30,
+			waitForSeconds: 2,
 		});
+		// Wait until the corrected schedule left the subscription fully free.
+		await pollUntil(
+			async () => {
+				const subs = await ctx.stripeCli.subscriptions.list({
+					customer: stripeCustomerId!,
+					status: "all",
+					limit: 10,
+				});
+				const scheduledSub = subs.data.find((sub) => sub.schedule);
+				return (
+					!!scheduledSub &&
+					scheduledSub.items.data.every(
+						(item) => item.price.unit_amount === 0,
+					)
+				);
+			},
+			{ deadlineMs: 30_000 },
+		);
 
 		await previewCreateSchedule({
 			autumnV1,
@@ -458,8 +488,24 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: noChargeCheckAt,
-			waitForSeconds: 30,
+			waitForSeconds: 2,
 		});
+		// Wait until the August renewal invoice shows up before asserting on it.
+		await pollUntil(
+			async () => {
+				const invoices = await ctx.stripeCli.invoices.list({
+					customer: stripeCustomerId!,
+					limit: 20,
+				});
+				return (
+					newInvoices({
+						beforeIds: invoiceIdsBeforeAugust,
+						invoices: invoices.data,
+					}).length > 0
+				);
+			},
+			{ deadlineMs: 30_000 },
+		);
 		const invoicesAfterAugust = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId!,
 			limit: 20,
@@ -477,8 +523,22 @@ test.concurrent(
 			stripeCli: ctx.stripeCli,
 			testClockId: testClock.id,
 			advanceTo: paidStartsAt,
-			waitForSeconds: 30,
+			waitForSeconds: 2,
 		});
+		// Wait until the October quarterly charge is invoiced before asserting.
+		await pollUntil(
+			async () => {
+				const invoices = await ctx.stripeCli.invoices.list({
+					customer: stripeCustomerId!,
+					limit: 20,
+				});
+				return newInvoices({
+					beforeIds: invoiceIdsBeforeOctober,
+					invoices: invoices.data,
+				}).some((invoice) => invoice.total === 200000);
+			},
+			{ deadlineMs: 30_000 },
+		);
 		const invoicesAfterOctober = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId!,
 			limit: 20,

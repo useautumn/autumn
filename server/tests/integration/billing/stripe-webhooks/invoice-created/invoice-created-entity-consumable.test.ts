@@ -24,6 +24,7 @@ import { expectStripeInvoiceLineItemPeriodCorrect } from "@tests/integration/bil
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/pollUntil";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -80,7 +81,20 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: regular renewal -
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		withPause: true,
+		waitForSeconds: 2,
 	});
+	// Wait for the renewal invoice and the entity balance reset.
+	await pollUntil(
+		async () => {
+			const entity = await autumnV1.entities.get(customerId, entityId);
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (
+				entity.features[TestFeature.Messages]?.balance === 100 &&
+				(c.invoices?.length ?? 0) >= 2
+			);
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Verify product still active
 	const entityFinal = await autumnV1.entities.get(customerId, entityId);
@@ -189,7 +203,22 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: billing units - e
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		withPause: true,
+		waitForSeconds: 2,
 	});
+	// Wait for the renewal invoice and both entity balance resets.
+	await pollUntil(
+		async () => {
+			const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
+			const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (
+				entity1.features[TestFeature.Messages]?.balance === 100 &&
+				entity2.features[TestFeature.Messages]?.balance === 100 &&
+				(c.invoices?.length ?? 0) >= 3
+			);
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Verify entities still active with reset balances
 	const entity1Final = await autumnV1.entities.get(customerId, entities[0].id);
@@ -313,7 +342,22 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: 2 entities, 2 dif
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		withPause: true,
+		waitForSeconds: 2,
 	});
+	// Wait for the renewal invoice and both entity balance resets.
+	await pollUntil(
+		async () => {
+			const entity1 = await autumnV1.entities.get(customerId, entities[0].id);
+			const entity2 = await autumnV1.entities.get(customerId, entities[1].id);
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (
+				entity1.features[TestFeature.Messages]?.balance === 100 &&
+				entity2.features[TestFeature.Messages]?.balance === 200 &&
+				(c.invoices?.length ?? 0) >= 3
+			);
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Verify entities still active with reset balances
 	const entity1Final = await autumnV1.entities.get(customerId, entities[0].id);
@@ -455,7 +499,28 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: 4 entities, 2 pro
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		withPause: true,
+		waitForSeconds: 2,
 	});
+	// Wait for the renewal invoice and all four entity balance resets.
+	await pollUntil(
+		async () => {
+			const balances = await Promise.all(
+				entities.map(async (entity) => {
+					const e = await autumnV1.entities.get(customerId, entity.id);
+					return e.features[TestFeature.Messages]?.balance;
+				}),
+			);
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (
+				balances[0] === 100 &&
+				balances[1] === 100 &&
+				balances[2] === 200 &&
+				balances[3] === 200 &&
+				(c.invoices?.length ?? 0) >= 5
+			);
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Verify all entities still active with reset balances
 	const entity1Final = await autumnV1.entities.get(customerId, entities[0].id);

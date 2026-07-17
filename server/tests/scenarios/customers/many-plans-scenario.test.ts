@@ -1,6 +1,8 @@
 import { test } from "bun:test";
+import type { ApiCustomerV3 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/pollUntil";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
@@ -58,19 +60,35 @@ test(`${chalk.yellowBright("scenario: customer with many plans (all types)")}`, 
 		...oneOffAddOns,
 	];
 
-	await initScenario({
+	// Short per-attach waits; the poll below waits for webhook settling once.
+	const fastAttach = { timeout: 500, clientTimeout: 0 };
+
+	const { autumnV1 } = await initScenario({
 		customerId: "many-plans",
 		setup: [
 			s.customer({ paymentMethod: "success", testClock: false }),
 			s.products({ list: allProducts, prefix: "mp" }),
 		],
 		actions: [
-			s.attach({ productId: subscription.id }),
-			...oneOffs.map((p) => s.attach({ productId: p.id })),
+			s.attach({ productId: subscription.id, ...fastAttach }),
+			...oneOffs.map((p) => s.attach({ productId: p.id, ...fastAttach })),
 			...recurringAddOns.map((p) =>
-				s.attach({ productId: p.id, newBillingSubscription: true }),
+				s.attach({
+					productId: p.id,
+					newBillingSubscription: true,
+					...fastAttach,
+				}),
 			),
-			...oneOffAddOns.map((p) => s.attach({ productId: p.id })),
+			...oneOffAddOns.map((p) => s.attach({ productId: p.id, ...fastAttach })),
 		],
 	});
+
+	await pollUntil(
+		async () => {
+			const customer =
+				await autumnV1.customers.get<ApiCustomerV3>("many-plans");
+			return (customer.products?.length ?? 0) >= allProducts.length;
+		},
+		{ deadlineMs: 30_000 },
+	);
 });

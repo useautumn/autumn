@@ -113,6 +113,7 @@ type AttachAction = {
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
 	timeout?: number;
+	clientTimeout?: number;
 };
 
 type CancelAction = {
@@ -465,6 +466,7 @@ const attach = ({
 	options,
 	newBillingSubscription,
 	timeout,
+	clientTimeout,
 }: {
 	productId: string;
 	customerId?: string;
@@ -472,6 +474,8 @@ const attach = ({
 	options?: FeatureOption[];
 	newBillingSubscription?: boolean;
 	timeout?: number;
+	// Overrides the AutumnInt.attach built-in post-attach sleep (unset = client default).
+	clientTimeout?: number;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 4000;
@@ -487,6 +491,7 @@ const attach = ({
 				options,
 				newBillingSubscription,
 				timeout: timeout ?? defaultTimeout,
+				clientTimeout,
 			},
 		],
 	});
@@ -1497,13 +1502,16 @@ export async function initScenario({
 				entityId = generatedEntities[action.entityIndex].id;
 			}
 
-			await autumnV1.attach({
-				customer_id: targetCustomerId,
-				product_id: prefixedProductId,
-				entity_id: entityId,
-				options: action.options,
-				new_billing_subscription: action.newBillingSubscription,
-			});
+			await autumnV1.attach(
+				{
+					customer_id: targetCustomerId,
+					product_id: prefixedProductId,
+					entity_id: entityId,
+					options: action.options,
+					new_billing_subscription: action.newBillingSubscription,
+				},
+				{ timeout: action.clientTimeout },
+			);
 			if (action.timeout) {
 				await new Promise((resolve) => setTimeout(resolve, action.timeout));
 			}

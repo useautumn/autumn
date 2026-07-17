@@ -19,7 +19,7 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil, timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
@@ -61,13 +61,20 @@ test(
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
+		const expectedRemaining = new Decimal(100).sub(85).add(100).toNumber();
+		const after = await pollUntil({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			until: (customer) =>
+				customer.balances[TestFeature.Messages]?.remaining ===
+					expectedRemaining && customer.invoices?.length === 2,
+			timeoutMs: AUTO_TOPUP_WAIT_MS,
+			intervalMs: 2000,
+		});
 
-		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
 			featureId: TestFeature.Messages,
-			remaining: new Decimal(100).sub(85).add(100).toNumber(),
+			remaining: expectedRemaining,
 		});
 		await expectCustomerInvoiceCorrect({
 			customerId,
@@ -114,14 +121,20 @@ test(
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
 
 		// 100 - 85 + 300 = 315 (customer quantity, not the plan's 100 -> 115).
-		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const expectedRemaining = new Decimal(100).sub(85).add(300).toNumber();
+		const after = await pollUntil({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			until: (customer) =>
+				customer.balances[TestFeature.Messages]?.remaining === expectedRemaining,
+			timeoutMs: AUTO_TOPUP_WAIT_MS,
+			intervalMs: 2000,
+		});
 		expectBalanceCorrect({
 			customer: after,
 			featureId: TestFeature.Messages,
-			remaining: new Decimal(100).sub(85).add(300).toNumber(),
+			remaining: expectedRemaining,
 		});
 	},
 );
@@ -165,13 +178,19 @@ test(
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const expectedRemaining = new Decimal(100).sub(85).add(100).toNumber();
+		const after = await pollUntil({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			until: (customer) =>
+				customer.balances[TestFeature.Messages]?.remaining === expectedRemaining,
+			timeoutMs: AUTO_TOPUP_WAIT_MS,
+			intervalMs: 2000,
+		});
 		expectBalanceCorrect({
 			customer: after,
 			featureId: TestFeature.Messages,
-			remaining: new Decimal(100).sub(85).add(100).toNumber(),
+			remaining: expectedRemaining,
 		});
 	},
 );
@@ -218,14 +237,20 @@ test(
 			feature_id: TestFeature.Messages,
 			value: 85,
 		});
-		await timeout(AUTO_TOPUP_WAIT_MS);
 
 		// 100 - 85 + 300 = 315 (most recent plan's quantity, not the base's 100).
-		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const expectedRemaining = new Decimal(100).sub(85).add(300).toNumber();
+		const after = await pollUntil({
+			fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+			until: (customer) =>
+				customer.balances[TestFeature.Messages]?.remaining === expectedRemaining,
+			timeoutMs: AUTO_TOPUP_WAIT_MS,
+			intervalMs: 2000,
+		});
 		expectBalanceCorrect({
 			customer: after,
 			featureId: TestFeature.Messages,
-			remaining: new Decimal(100).sub(85).add(300).toNumber(),
+			remaining: expectedRemaining,
 		});
 	},
 );

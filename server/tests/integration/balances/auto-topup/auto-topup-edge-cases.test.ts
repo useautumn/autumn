@@ -8,7 +8,7 @@ import { expectCustomerProductOptions } from "@tests/integration/utils/expectCus
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { timeout } from "@tests/utils/genUtils.js";
+import { pollUntil, timeout } from "@tests/utils/genUtils.js";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -56,11 +56,15 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec1: disabling config prevents
 		value: 180,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	const expectedMid = new Decimal(200).sub(180).add(100).toNumber();
+	const mid = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === expectedMid,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
+	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	expect(midBalance).toBe(expectedMid);
 
 	// Disable auto top-up between rounds
@@ -120,9 +124,13 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec2: balance depleted to exact
 		value: 100,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const after = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === 100,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
 	expect(after.balances[TestFeature.Messages].remaining).toBe(100);
 });
 
@@ -166,11 +174,15 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec3: quantity < threshold — 
 		value: 170,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	const expectedMid = new Decimal(200).sub(170).add(100).toNumber();
+	const mid = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === expectedMid,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
+	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	expect(midBalance).toBe(expectedMid);
 
 	// Round 2: Track just 1 → balance=79 → still below threshold 100 → ANOTHER top-up fires
@@ -180,11 +192,15 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec3: quantity < threshold — 
 		value: 1,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	const afterBalance = after.balances[TestFeature.Messages].remaining;
 	const expectedAfter = new Decimal(130).sub(1).add(100).toNumber();
+	const after = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === expectedAfter,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
+	const afterBalance = after.balances[TestFeature.Messages].remaining;
 	expect(afterBalance).toBe(expectedAfter);
 });
 
@@ -241,15 +257,19 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec4: pro consumable + one-off 
 		value: firstTrackedUsage,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const customerAfterAutoTopup =
-		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const expectedBalanceAfterAutoTopup = new Decimal(monthlyIncludedMessages)
 		.add(initialOneOffQuantity)
 		.sub(firstTrackedUsage)
 		.add(autoTopupQuantity)
 		.toNumber();
+	const customerAfterAutoTopup = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining ===
+				expectedBalanceAfterAutoTopup && customer.invoices?.length === 2,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
 	expectBalanceCorrect({
 		customer: customerAfterAutoTopup,
 		featureId: TestFeature.Messages,
@@ -383,11 +403,15 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec5: lowered threshold respect
 		value: 160,
 	});
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	const expectedMid = new Decimal(200).sub(160).add(100).toNumber();
+	const mid = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === expectedMid,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
+	const midBalance = mid.balances[TestFeature.Messages].remaining;
 	expect(midBalance).toBe(expectedMid);
 
 	// Lower threshold to 10 between rounds
@@ -457,9 +481,14 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec6: tiered one-off — tier 1
 	});
 	// balance = 150 - 130 = 20 → below threshold → auto top-up fires (100 units)
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const after1 = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const after1 = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === 120 &&
+			customer.invoices?.length === 2,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
 	expectBalanceCorrect({
 		customer: after1,
 		featureId: TestFeature.Messages,
@@ -493,9 +522,14 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec6: tiered one-off — tier 1
 	});
 	// balance = 120 - 100 = 20 → below threshold → auto top-up fires (300 units)
 
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const after2 = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const after2 = await pollUntil({
+		fetch: () => autumnV2_1.customers.get<ApiCustomerV5>(customerId),
+		until: (customer) =>
+			customer.balances[TestFeature.Messages]?.remaining === 320 &&
+			customer.invoices?.length === 3,
+		timeoutMs: AUTO_TOPUP_WAIT_MS,
+		intervalMs: 2000,
+	});
 	expectBalanceCorrect({
 		customer: after2,
 		featureId: TestFeature.Messages,

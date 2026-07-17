@@ -13,6 +13,7 @@ import { calculateProratedDiff } from "@tests/integration/billing/utils/proratio
 import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { pollUntil } from "@tests/utils/pollUntil.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
@@ -100,7 +101,15 @@ test(`${chalk.yellowBright("prorate-nc1: mid-cycle overage creates no immediate 
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		waitForSeconds: 2,
 	});
+	await pollUntil(
+		async () => {
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (c.invoices?.length ?? 0) >= 2;
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Next cycle invoice: renewal (3 seats × $50) + prorated overage
 	const renewalAmount = 2 * PRICE_PER_SEAT + BASE_PRICE;
@@ -180,7 +189,15 @@ test(`${chalk.yellowBright("prorate-nc2: mid-cycle decrease creates no immediate
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		waitForSeconds: 2,
 	});
+	await pollUntil(
+		async () => {
+			const c = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+			return (c.invoices?.length ?? 0) >= 2;
+		},
+		{ deadlineMs: 30_000 },
+	);
 
 	// Next cycle invoice: renewal (2 seats × $50) + initial increase charge + prorated credit
 	const renewalAmount = 1 * PRICE_PER_SEAT + BASE_PRICE;
