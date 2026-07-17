@@ -100,6 +100,9 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
   tag them so the suite's green-definition excludes them.
 
 ## Follow-ups flagged, no decision required (FYI)
+- Ingress webhook-forward drops trending up sharply across runs (9 -> 281 -> 522) —
+  saturation is now minting rotating-victim failures in webhook-dependent tests;
+  needs an infra look at ingress capacity/retry budget.
 - `lock_receipt_key` accessed from ARGV in the deduction Lua lock flows — same bug
   class as the fixed pathidx key; needs its own careful pass.
 - `prepaid_only: false` license test failed in baseline while matching source —
