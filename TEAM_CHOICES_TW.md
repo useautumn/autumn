@@ -115,9 +115,12 @@ Cross-reference: `server/tests/triage-manifest.json` for cluster-level status.
   tag them so the suite's green-definition excludes them.
 
 ## Follow-ups flagged, no decision required (FYI)
-- Ingress webhook-forward drops trending up sharply across runs (9 -> 281 -> 522) —
-  saturation is now minting rotating-victim failures in webhook-dependent tests;
-  needs an infra look at ingress capacity/retry budget.
+- Ingress drop mystery SOLVED (run mrp6o292, first with forward-retry): all 716
+  drops targeted just 3 of 401 workers with zero retry recoveries — dead tunnels
+  from crashed workers, not saturation. Fallout is confined to the crashed
+  workers' own tests. Remaining question: what crashes those workers (crash
+  files cluster on archives/contUse + archives/newVersion, all red pre-crash —
+  possibly OOM on 4 GiB). Compute bump not indicated for drops.
 - `lock_receipt_key` accessed from ARGV in the deduction Lua lock flows — same bug
   class as the fixed pathidx key; needs its own careful pass.
 - `prepaid_only: false` license test failed in baseline while matching source —

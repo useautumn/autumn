@@ -24,8 +24,38 @@ import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect"
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { pollUntil } from "@tests/utils/genUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import type { AutumnInt } from "@/external/autumn/autumnCli";
+
+// The fixed post-advance waits in advanceToNextInvoice can undershoot webhook
+// latency under swarm load; poll until the scheduled switch lands before asserting.
+const pollUntilSwitched = ({
+	autumn,
+	customerId,
+	activeProductId,
+	removedProductId,
+}: {
+	autumn: AutumnInt;
+	customerId: string;
+	activeProductId: string;
+	removedProductId: string;
+}) =>
+	pollUntil({
+		fetch: () => autumn.customers.get<ApiCustomerV3>(customerId),
+		until: (customer) => {
+			const customerProducts = customer.products ?? [];
+			const target = customerProducts.find((p) => p.id === activeProductId);
+			const removed = customerProducts.find((p) => p.id === removedProductId);
+			return (
+				(target?.status === "active" || target?.status === "trialing") &&
+				!removed
+			);
+		},
+		timeoutMs: 60_000,
+		intervalMs: 3000,
+	});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Pro with consumable, usage under limit, to free
@@ -150,8 +180,12 @@ test.concurrent(
 			],
 		});
 
-		const customerAfterCycle =
-			await autumnV1After.customers.get<ApiCustomerV3>(customerId);
+		const customerAfterCycle = await pollUntilSwitched({
+			autumn: autumnV1After,
+			customerId,
+			activeProductId: free.id,
+			removedProductId: pro.id,
+		});
 
 		// After cycle: free active, pro removed
 		await expectCustomerProducts({
@@ -246,7 +280,12 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(5);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await pollUntilSwitched({
+			autumn: autumnV1,
+			customerId,
+			activeProductId: free.id,
+			removedProductId: pro.id,
+		});
 
 		// After cycle: free active, pro removed
 		await expectCustomerProducts({
@@ -335,6 +374,13 @@ test.concurrent(
 			],
 		});
 
+		const customer = await pollUntilSwitched({
+			autumn: autumnV1,
+			customerId,
+			activeProductId: pro.id,
+			removedProductId: premium.id,
+		});
+
 		// Verify Stripe subscription after all operations
 		await expectSubToBeCorrect({
 			db: ctx.db,
@@ -350,8 +396,6 @@ test.concurrent(
 			options: { includeFixed: false, onlyArrear: true },
 		});
 		expect(expectedOverage).toBe(10);
-
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// After cycle: pro active, premium removed
 		await expectCustomerProducts({
@@ -445,6 +489,13 @@ test.concurrent(
 			],
 		});
 
+		const customer = await pollUntilSwitched({
+			autumn: autumnV1,
+			customerId,
+			activeProductId: pro.id,
+			removedProductId: premium.id,
+		});
+
 		// Verify Stripe subscription after all operations
 		await expectSubToBeCorrect({
 			db: ctx.db,
@@ -460,8 +511,6 @@ test.concurrent(
 			options: { includeFixed: false, onlyArrear: true },
 		});
 		expect(expectedOverage).toBe(10);
-
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
 		// After cycle: pro active, premium removed
 		await expectCustomerProducts({
@@ -557,7 +606,12 @@ test.concurrent(
 		});
 		expect(expectedOverage).toBe(15);
 
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await pollUntilSwitched({
+			autumn: autumnV1,
+			customerId,
+			activeProductId: free.id,
+			removedProductId: premium.id,
+		});
 
 		// After cycle: free active, premium removed
 		await expectCustomerProducts({
