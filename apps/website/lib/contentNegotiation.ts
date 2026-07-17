@@ -49,10 +49,12 @@ function specificity(
 	return NO_MATCH;
 }
 
-function qualityForMostSpecificMatch(
+type Match = { quality: number; specificity: number };
+
+function mostSpecificMatch(
 	entries: AcceptEntry[],
 	mediaType: string,
-): number | null {
+): Match | null {
 	const [wantType = "", wantSubtype = ""] = mediaType.toLowerCase().split("/");
 	let bestSpecificity = NO_MATCH;
 	let quality: number | null = null;
@@ -70,7 +72,7 @@ function qualityForMostSpecificMatch(
 		}
 	}
 
-	return quality;
+	return quality === null ? null : { quality, specificity: bestSpecificity };
 }
 
 export type Negotiation = "markdown" | "html" | "not-acceptable";
@@ -79,17 +81,23 @@ export function negotiate(acceptHeader: string | null): Negotiation {
 	if (!acceptHeader) return "html";
 
 	const entries = parseAcceptHeader(acceptHeader);
-	const markdownQuality = qualityForMostSpecificMatch(entries, MARKDOWN_TYPE);
-	const htmlQuality = qualityForMostSpecificMatch(entries, HTML_TYPE);
+	const markdown = mostSpecificMatch(entries, MARKDOWN_TYPE);
+	const html = mostSpecificMatch(entries, HTML_TYPE);
 
-	const markdownAcceptable = markdownQuality !== null && markdownQuality > 0;
-	const htmlAcceptable = htmlQuality !== null && htmlQuality > 0;
+	const markdownAcceptable = markdown !== null && markdown.quality > 0;
+	const htmlAcceptable = html !== null && html.quality > 0;
 
 	if (!(markdownAcceptable || htmlAcceptable)) return "not-acceptable";
+	if (!markdownAcceptable) return "html";
+	if (!htmlAcceptable) return "markdown";
 
+	// A bare `*/*` matches both at equal (full-wildcard) specificity — that is no
+	// preference, so default to HTML. Serve markdown only when it is asked for
+	// more specifically, or at equal specificity with strictly higher quality.
 	if (
-		markdownAcceptable &&
-		(!htmlAcceptable || markdownQuality >= htmlQuality)
+		markdown.specificity > html.specificity ||
+		(markdown.specificity === html.specificity &&
+			markdown.quality > html.quality)
 	) {
 		return "markdown";
 	}
