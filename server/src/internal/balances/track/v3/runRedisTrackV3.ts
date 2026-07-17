@@ -104,7 +104,7 @@ export const runRedisTrackV3 = async ({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	featureDeductions: FeatureDeduction[];
-	overageBehavior: "cap" | "reject";
+	overageBehavior: "cap" | "reject" | "overflow";
 	body: TrackParams;
 	idempotencyKey?: string;
 }): Promise<TrackResponseV3> => {

@@ -10,7 +10,10 @@ import {
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
 import { previewAffectedLicenses } from "@/internal/product/actions/previewUpdatePlan/previewAffectedLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { sortCatalogPlansByDependencies } from "./catalogPlanDependencies.js";
+import {
+	sortCatalogPlansByDependencies,
+	validateCatalogPlanVersionTargets,
+} from "./catalogPlanDependencies.js";
 
 const virtualProduct = ({
 	current,
@@ -50,6 +53,7 @@ const preflightCatalogLicenses = async ({
 		env: ctx.env,
 		returnAll: true,
 	});
+	validateCatalogPlanVersionTargets({ plans, products: persistedProducts });
 	const currentById = new Map<string, FullProduct>();
 	for (const product of persistedProducts) {
 		const current = currentById.get(product.id);
@@ -74,7 +78,7 @@ const preflightCatalogLicenses = async ({
 				? previews[index]?.versionable
 					? (latest?.version ?? current.version) + 1
 					: current.version
-				: 1,
+				: (plan.version ?? 1),
 			archived: plan.archived,
 		});
 	});
