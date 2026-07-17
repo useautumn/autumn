@@ -16,6 +16,7 @@ import {
 } from "./clientCache/cacheKeyUtils.js";
 import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { getConnectWebhookSecret } from "./connectUtils.js";
+import { withTwStripeRateLimitRetry } from "./twStripeRateLimitRetry.js";
 
 // tw-swarm seam: a forked worker can't change its snapshotted process env, so
 // its per-worker pool key is read from a file written at fork-bind time.
@@ -98,7 +99,9 @@ export const initMasterStripe = (params?: {
 					: undefined,
 				...stripeRetryOptions(),
 			});
-			return params?.skipInstrumentation ? client : instrumentStripe({ client });
+			return withTwStripeRateLimitRetry(
+				params?.skipInstrumentation ? client : instrumentStripe({ client }),
+			);
 		},
 	});
 };
@@ -158,7 +161,9 @@ export const initPlatformStripe = ({
 				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
 				...stripeRetryOptions(),
 			});
-			return skipInstrumentation ? client : instrumentStripe({ client });
+			return withTwStripeRateLimitRetry(
+				skipInstrumentation ? client : instrumentStripe({ client }),
+			);
 		},
 	});
 };

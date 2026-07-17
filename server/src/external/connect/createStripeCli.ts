@@ -16,6 +16,7 @@ import {
 	initPlatformStripe,
 	stripeRetryOptions,
 } from "./initStripeCli.js";
+import { withTwStripeRateLimitRetry } from "./twStripeRateLimitRetry.js";
 
 export const createStripeCli = ({
 	org,
@@ -64,7 +65,9 @@ export const createStripeCli = ({
 						: undefined,
 					...stripeRetryOptions(),
 				});
-				return skipInstrumentation ? client : instrumentStripe({ client });
+				return withTwStripeRateLimitRetry(
+					skipInstrumentation ? client : instrumentStripe({ client }),
+				);
 			},
 		});
 	}
