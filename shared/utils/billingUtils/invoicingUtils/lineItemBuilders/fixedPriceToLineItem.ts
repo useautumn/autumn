@@ -13,10 +13,13 @@ export const fixedPriceToLineItem = ({
 	currency,
 	quantity = 1,
 	context,
+	includeQuantityInDescription = false,
 }: {
 	currency?: string;
 	quantity?: number;
 	context: LineItemContext;
+	/** License lines show the quantity like feature-usage lines do. */
+	includeQuantityInDescription?: boolean;
 }): LineItem => {
 	const { price, product } = context;
 	const billingCurrency = currency ?? context.currency;
@@ -30,6 +33,7 @@ export const fixedPriceToLineItem = ({
 		price,
 		currency,
 		context,
+		quantity: includeQuantityInDescription ? quantity : undefined,
 	});
 
 	const stripePriceId = billingCurrency

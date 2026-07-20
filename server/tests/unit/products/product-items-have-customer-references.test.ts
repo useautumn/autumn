@@ -14,7 +14,15 @@ afterEach(() => {
 	mock.restore();
 });
 
+const mockNoLicenseItemReferences = () => {
+	spyOn(licenseItemRepo, "listReferencedPriceIds").mockResolvedValue(new Set());
+	spyOn(licenseItemRepo, "listReferencedEntitlementIds").mockResolvedValue(
+		new Set(),
+	);
+};
+
 test("product item references: detects customer entitlements without direct customer products", async () => {
+	mockNoLicenseItemReferences();
 	const db = {} as DrizzleCli;
 	const currentFullProduct = {
 		entitlements: [{ id: "ent_cross_version" }],
@@ -43,6 +51,7 @@ test("product item references: detects customer entitlements without direct cust
 });
 
 test("product item references: detects customer prices without direct customer products", async () => {
+	mockNoLicenseItemReferences();
 	const db = {} as DrizzleCli;
 	const currentFullProduct = {
 		entitlements: [{ id: "ent_unreferenced" }],
@@ -57,6 +66,7 @@ test("product item references: detects customer prices without direct customer p
 });
 
 test("product item references: leaves unreferenced product items on the fast path", async () => {
+	mockNoLicenseItemReferences();
 	const db = {} as DrizzleCli;
 	const currentFullProduct = {
 		entitlements: [{ id: "ent_unreferenced" }],
@@ -138,10 +148,11 @@ test("product item references: reloads current rows under the product lock", asy
 		planLicenseRepo,
 		"listCatalogByLicenseInternalProductIds",
 	).mockResolvedValue([]);
-	spyOn(licenseItemRepo, "listReferencedPriceIds").mockResolvedValue(new Set());
-	spyOn(licenseItemRepo, "listReferencedEntitlementIds").mockResolvedValue(
-		new Set(),
-	);
+	spyOn(
+		planLicenseRepo,
+		"listCustomerReferencedByLicenseInternalProductIds",
+	).mockResolvedValue([]);
+	mockNoLicenseItemReferences();
 	const priceReferenceSpy = spyOn(
 		CusPriceService,
 		"hasAnyPriceReferences",

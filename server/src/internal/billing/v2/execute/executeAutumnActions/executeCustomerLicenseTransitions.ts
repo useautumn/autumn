@@ -1,19 +1,12 @@
 import type { CustomerLicenseTransition } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
-import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo";
-import { enqueueRepointSeatEntitlements } from "@/trigger/licenses/repointSeatEntitlementsTask";
+import { generateId } from "@/utils/genUtils";
 
-/**
- * Executes license transitions from the plan.
- * Pool half: same-row transitions converge the surviving row in place;
- * cross-row successors already persisted through their insert.
- * Seat half: prices repoint inline (they must land with the Stripe update);
- * entitlement repoints are heavy on the fat cusEnts table and don't bill,
- * so they converge in the background. Every mapping is logged so a bad
- * transition is reversible by swapping from/to.
- */
+/** Converges license pools and their assigned seat definitions.
+ * Persists pre-existing successor pools during scheduled activation. */
 export const executeCustomerLicenseTransitions = async ({
 	ctx,
 	customerLicenseTransitions,
@@ -47,34 +40,29 @@ export const executeCustomerLicenseTransitions = async ({
 					},
 				},
 			);
-		}
-
-		for (const priceTransition of transition.priceTransitions) {
-			const repointedRows = await licenseAssignmentRepo.repointSeatPrices({
+		} else {
+			await customerLicenseRepo.carryCustomerLicenseState({
 				db: ctx.db,
-				customerLicenseLinkId: updates.linkId,
-				fromPriceId: priceTransition.fromPriceId,
-				toPriceId: priceTransition.toPriceId,
+				customerLicenseId: incomingCustomerLicense.id,
+				linkId: updates.linkId,
+				granted: updates.granted,
+				remaining: updates.remaining,
+				paidQuantity: updates.paidQuantity,
 			});
-			ctx.logger.info(
-				`[licenseTransitions] repointed seat prices link=${updates.linkId} from=${priceTransition.fromPriceId} to=${priceTransition.toPriceId} rows=${repointedRows}`,
-				{
-					data: {
-						customerLicenseLinkId: updates.linkId,
-						...priceTransition,
-						repointedRows,
-					},
-				},
-			);
 		}
 
-		if (transition.entitlementTransitions.length > 0) {
-			await enqueueRepointSeatEntitlements({
-				ctx,
-				customerLicenseLinkId: updates.linkId,
-				entitlementTransitions: transition.entitlementTransitions,
-				source: "license-transition",
-			});
-		}
+		await batchTransitionTask.trigger(
+			{
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: ctx.customerId,
+				transition,
+				executionScope: {
+					batchTransitionId: generateId("batch_transition"),
+					assignmentCutoffMs: Date.now(),
+				},
+			},
+			{ concurrencyKey: updates.linkId },
+		);
 	}
 };

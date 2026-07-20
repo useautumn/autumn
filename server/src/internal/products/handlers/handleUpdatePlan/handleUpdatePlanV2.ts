@@ -31,6 +31,7 @@ export const handleUpdatePlanV2 = createRoute({
 			migration,
 			version,
 			update_variant_ids,
+			update_license_parents,
 			variants,
 			...planParams
 		} = body;
@@ -87,6 +88,7 @@ export const handleUpdatePlanV2 = createRoute({
 			updates: updateProductV2Params,
 			initialFullProduct,
 			propagateToVariants: update_variant_ids ?? [],
+			licenseParentUpdates: update_license_parents,
 			variantUpdates,
 		});
 

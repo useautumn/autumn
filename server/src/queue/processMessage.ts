@@ -28,7 +28,7 @@ import { detectBaseVariant } from "@/internal/products/productUtils/detectProduc
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
-import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import { logContextExtras } from "@/utils/logging/logContextExtras.js";
 import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
@@ -377,19 +377,8 @@ export const processMessage = async ({
 			});
 		}
 	} finally {
-		if (workerCtx && Object.keys(workerCtx.extraLogs).length > 0) {
-			const maskedLogs = maskExtraLogs(workerCtx.extraLogs);
-			const finalLogger = workerCtx.logger ?? workerLogger;
-			finalLogger.info(`[${job.name}] Finished`, {
-				extras: maskedLogs,
-				done: true,
-			});
-
-			if (process.env.NODE_ENV === "development") {
-				finalLogger.debug(
-					`FINISHED PROCESSING JOB ${job.name}, EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`,
-				);
-			}
+		if (workerCtx) {
+			logContextExtras({ ctx: workerCtx, message: `[${job.name}] Finished` });
 		}
 	}
 };

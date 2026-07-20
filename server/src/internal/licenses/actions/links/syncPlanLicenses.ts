@@ -54,6 +54,7 @@ export type ResolvedPlanLicenseLink = {
 export type PreparedPlanLicenseSync = {
 	parentProduct: FullProduct;
 	resolved: ResolvedPlanLicenseLink[];
+	successors: DbPlanLicense[];
 	removed: Awaited<
 		ReturnType<typeof planLicenseRepo.listCatalogByParentInternalProductIds>
 	>;
@@ -116,7 +117,6 @@ const resolveLink = async ({
 	parentProduct,
 	entry,
 	licenseProducts,
-	pinnedInternalIdByPublicId,
 	sourceLinkByLicenseInternalId,
 	sourceProductByLicenseInternalId,
 }: {
@@ -124,32 +124,20 @@ const resolveLink = async ({
 	parentProduct: FullProduct;
 	entry: PlanLicenseParams;
 	licenseProducts?: FullProduct[];
-	pinnedInternalIdByPublicId: Map<string, string>;
 	sourceLinkByLicenseInternalId: Map<
 		string,
 		PreparedPlanLicenseSync["removed"][number]
 	>;
 	sourceProductByLicenseInternalId: Map<string, FullProduct>;
 }): Promise<ResolvedPlanLicenseLink> => {
-	const pinnedInternalId =
-		entry.version === undefined
-			? pinnedInternalIdByPublicId.get(entry.license_plan_id)
-			: undefined;
 	const virtualCandidates = licenseProducts
-		?.filter(
-			(product) =>
-				product.id === entry.license_plan_id &&
-				(entry.version === undefined || product.version === entry.version),
-		)
+		?.filter((product) => product.id === entry.license_plan_id)
 		.sort((a, b) => b.version - a.version);
 	const licenseProduct =
-		(pinnedInternalId
-			? await getFullLicenseProduct({ ctx, idOrInternalId: pinnedInternalId })
-			: virtualCandidates?.[0]) ??
+		virtualCandidates?.[0] ??
 		(await getFullLicenseProduct({
 			ctx,
 			idOrInternalId: entry.license_plan_id,
-			version: entry.version,
 		}));
 
 	const sourceLink = sourceLinkByLicenseInternalId.get(
@@ -292,12 +280,6 @@ export const preparePlanLicenseSync = async ({
 			db: ctx.db,
 			parentInternalProductIds: [fromInternalProductId],
 		}));
-	const pinnedInternalIdByPublicId = new Map(
-		(parentProduct.licenses ?? []).map((link) => [
-			link.product.id,
-			link.license_internal_product_id,
-		]),
-	);
 	const sourceLinkByLicenseInternalId = new Map(
 		sourceLinks.map((link) => [link.license_internal_product_id, link]),
 	);
@@ -314,7 +296,6 @@ export const preparePlanLicenseSync = async ({
 				parentProduct,
 				entry,
 				licenseProducts,
-				pinnedInternalIdByPublicId,
 				sourceLinkByLicenseInternalId,
 				sourceProductByLicenseInternalId,
 			}),
@@ -326,9 +307,22 @@ export const preparePlanLicenseSync = async ({
 
 	// Removals + capacity reductions must clear the active-assignment guard.
 	const existingLinks = newParentVersion ? [] : sourceLinks;
-	const removed = existingLinks.filter(
-		(link) => !keepInternalIds.has(link.license_internal_product_id),
+	const resolvedPublicIds = new Set(
+		resolved.map((link) => link.licenseProduct.id),
 	);
+	const successors: DbPlanLicense[] = [];
+	const removed: DbPlanLicense[] = [];
+	for (const link of existingLinks) {
+		if (keepInternalIds.has(link.license_internal_product_id)) continue;
+		const sourceProduct = sourceProductByLicenseInternalId.get(
+			link.license_internal_product_id,
+		);
+		if (sourceProduct && resolvedPublicIds.has(sourceProduct.id)) {
+			successors.push(link);
+		} else {
+			removed.push(link);
+		}
+	}
 	await Promise.all(
 		removed.map(async (link) => {
 			const licenseProduct = await getFullLicenseProduct({
@@ -363,7 +357,7 @@ export const preparePlanLicenseSync = async ({
 		),
 	);
 
-	return { parentProduct, resolved, removed };
+	return { parentProduct, resolved, successors, removed };
 };
 
 export const applyPreparedPlanLicenseSync = async ({
@@ -375,7 +369,7 @@ export const applyPreparedPlanLicenseSync = async ({
 	prepared: PreparedPlanLicenseSync;
 	parentInternalProductId?: string;
 }) => {
-	const { parentProduct, resolved, removed } = prepared;
+	const { parentProduct, resolved, successors, removed } = prepared;
 
 	logLicenseAction({
 		ctx,
@@ -383,6 +377,7 @@ export const applyPreparedPlanLicenseSync = async ({
 		details: {
 			parent: parentProduct.id,
 			links: resolved.length,
+			successors: successors.length,
 			removed: removed.length,
 		},
 	});
@@ -394,10 +389,11 @@ export const applyPreparedPlanLicenseSync = async ({
 				? [sourcePlanLicense]
 				: [],
 		);
+		const referenceCandidates = [...sourcePlanLicenses, ...successors];
 		const referencedPlanLicenseIds =
 			await customerLicenseRepo.listReferencedPlanLicenseIds({
 				db: txDb,
-				planLicenseIds: sourcePlanLicenses.map(({ id }) => id),
+				planLicenseIds: referenceCandidates.map(({ id }) => id),
 			});
 		const sourceLinkByLicenseInternalId = new Map(
 			sourcePlanLicenses.map((link) => [
@@ -459,8 +455,17 @@ export const applyPreparedPlanLicenseSync = async ({
 				});
 			}
 		}
-		if (removed.length > 0) {
-			for (const link of removed) {
+		const replacedWithoutCustomers: DbPlanLicense[] = [];
+		for (const link of successors) {
+			if (referencedPlanLicenseIds.has(link.id)) {
+				await planLicenseRepo.retireCatalogById({ db: txDb, id: link.id });
+			} else {
+				replacedWithoutCustomers.push(link);
+			}
+		}
+		const deleted = [...replacedWithoutCustomers, ...removed];
+		if (deleted.length > 0) {
+			for (const link of deleted) {
 				if (!link.customized) continue;
 				await licenseItemRepo.replaceItems({
 					db: txDb,
@@ -470,7 +475,7 @@ export const applyPreparedPlanLicenseSync = async ({
 			}
 			await planLicenseRepo.deleteByIds({
 				db: txDb,
-				ids: removed.map((link) => link.id),
+				ids: deleted.map((link) => link.id),
 			});
 		}
 	});

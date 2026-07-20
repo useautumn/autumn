@@ -55,6 +55,34 @@ const baseParams: Omit<
 	currency: null,
 };
 
+describe("buildAttachRequestBody — license quantity handling", () => {
+	const product = makeProduct({ items: [] });
+
+	test("omits untouched zero-display license quantities", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			licenseQuantities: { seat: undefined },
+		});
+
+		expect(result?.license_quantities).toBeUndefined();
+	});
+
+	test("preserves an explicitly entered zero quantity", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			licenseQuantities: { seat: 0 },
+		});
+
+		expect(result?.license_quantities).toEqual([
+			{ license_plan_id: "seat", quantity: 0 },
+		]);
+	});
+});
+
 describe("buildAttachRequestBody — billing_units handling", () => {
 	test("should pass display quantities through as-is, not multiply by billing_units", () => {
 		const product = makeProduct({

@@ -13,6 +13,7 @@ import {
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
+import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
 import { useOnboarding3QueryState } from "@/views/onboarding3/hooks/useOnboarding3QueryState";
 import { useOnboardingStore } from "@/views/onboarding3/store/useOnboardingStore";
 import { OnboardingStep } from "@/views/onboarding3/utils/onboardingUtils";
@@ -79,60 +80,6 @@ export const PlanFeatureRow = ({
 		}
 	};
 
-	const adminHoverText = () => {
-		return [
-			...(item.entitlement_id
-				? [
-						{
-							key: "Entitlement ID",
-							value: item.entitlement_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_id
-				? [
-						{
-							key: "Price ID",
-							value: item.price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_price_id
-				? [
-						{
-							key: "Stripe Price ID",
-							value: item.price_config?.stripe_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_empty_price_id
-				? [
-						{
-							key: "Stripe Empty Price ID",
-							value: item.price_config?.stripe_empty_price_id || "N/A",
-						},
-					]
-				: []),
-			...(item.price_config?.stripe_product_id
-				? [
-						{
-							key: "Stripe Product ID",
-							value: item.price_config?.stripe_product_id || "N/A",
-						},
-					]
-				: []),
-
-			...(item.price_config?.stripe_prepaid_price_v2_id
-				? [
-						{
-							key: "Stripe Prepaid Price V2 ID",
-							value: item.price_config?.stripe_prepaid_price_v2_id || "N/A",
-						},
-					]
-				: []),
-		];
-	};
-
 	const renderContent = (contentRef?: React.Ref<HTMLDivElement>) => (
 		<div
 			ref={contentRef}
@@ -178,7 +125,9 @@ export const PlanFeatureRow = ({
 					item={item}
 					currency={currency}
 					wrapIcons={(icons) => (
-						<AdminHover texts={adminHoverText()}>{icons}</AdminHover>
+						<AdminHover texts={getProductItemHoverTexts({ item })}>
+							{icons}
+						</AdminHover>
 					)}
 				/>
 

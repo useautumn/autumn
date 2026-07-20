@@ -8,8 +8,10 @@ import type { FixedPriceConfig } from "../../models/productModels/priceModels/pr
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
 import type {
 	FullProduct,
+	FullProductWithoutLicenses,
 	Product,
 } from "../../models/productModels/productModels.js";
+import type { EntitlementPrice } from "./entitlementPriceUtils/entitlementPriceTypes.js";
 import { isFixedPrice } from "./priceUtils/classifyPriceUtils.js";
 
 export const entToPrice = ({
@@ -24,6 +26,21 @@ export const entToPrice = ({
 			price.entitlement_id === ent.id &&
 			price.internal_product_id === ent.internal_product_id,
 	);
+};
+
+export const productToEntitlementPrices = ({
+	product,
+}: {
+	product: FullProductWithoutLicenses;
+}): EntitlementPrice[] => {
+	const entitlementPrices: EntitlementPrice[] = [];
+	for (const entitlement of product.entitlements) {
+		entitlementPrices.push({
+			entitlement,
+			price: entToPrice({ ent: entitlement, prices: product.prices }),
+		});
+	}
+	return entitlementPrices;
 };
 
 export function priceToEnt(params: {

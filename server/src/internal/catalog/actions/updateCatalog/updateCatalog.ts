@@ -131,7 +131,6 @@ const upsertPlans = async ({
 			!skipPlanIds.has(plan.plan_id) &&
 			(!plan.new_plan_id || !skipPlanIds.has(plan.new_plan_id)),
 	);
-
 	for (const planParams of sortCatalogPlansByDependencies(activePlans)) {
 		const {
 			plan_id,
@@ -141,10 +140,12 @@ const upsertPlans = async ({
 			migration,
 			force_version,
 			update_variant_ids,
+			update_license_parents,
 			variants,
 			version,
 			include_versions: _includeVersions,
 			include_variants: _includeVariants,
+			include_license_parents: _includeLicenseParents,
 			...rest
 		} = planParams;
 		const current = await ProductService.getFull({
@@ -277,6 +278,7 @@ const upsertPlans = async ({
 			updates: updateParams,
 			initialFullProduct: current,
 			propagateToVariants: update_variant_ids ?? [],
+			licenseParentUpdates: update_license_parents,
 			variantUpdates,
 		});
 

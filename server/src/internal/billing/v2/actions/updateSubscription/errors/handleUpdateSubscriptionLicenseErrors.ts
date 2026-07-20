@@ -1,5 +1,4 @@
 import {
-	type AutumnBillingPlan,
 	CusProductStatus,
 	customerLicenseToUsage,
 	ErrCode,
@@ -8,7 +7,6 @@ import {
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
 
 const throwInvalidRequest = (message: string): never => {
 	throw new RecaseError({
@@ -58,11 +56,9 @@ const handleLicenseQuantityErrors = ({
  * execute on updates, pools may only ride when nothing would strand. */
 const handleUpdatePlanLicenseErrors = ({
 	billingContext,
-	autumnBillingPlan,
 	params,
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
-	autumnBillingPlan: AutumnBillingPlan;
 	params: UpdateSubscriptionV1Params;
 }) => {
 	const { customerProduct, patchContext, fullProducts } = billingContext;
@@ -101,17 +97,13 @@ const handleUpdatePlanLicenseErrors = ({
 			);
 		}
 	}
-
-	handleLicenseTransitionErrors({ autumnBillingPlan });
 };
 
 export const handleUpdateSubscriptionLicenseErrors = ({
 	billingContext,
-	autumnBillingPlan,
 	params,
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
-	autumnBillingPlan: AutumnBillingPlan;
 	params: UpdateSubscriptionV1Params;
 }) => {
 	const touchesLicenseParams =
@@ -132,7 +124,6 @@ export const handleUpdateSubscriptionLicenseErrors = ({
 	if (billingContext.intent === UpdateSubscriptionIntent.UpdatePlan)
 		handleUpdatePlanLicenseErrors({
 			billingContext,
-			autumnBillingPlan,
 			params,
 		});
 };

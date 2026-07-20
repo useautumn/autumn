@@ -40,7 +40,12 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
-import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
+import { ReadOnlyPlanItems } from "./ReadOnlyPlanItems";
+import {
+	cusProductLicenses,
+	SubscriptionDetailLicenses,
+} from "./SubscriptionDetailLicenses";
+import { SubscriptionLicenseRow } from "./SubscriptionLicenseRow";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
@@ -105,6 +110,8 @@ export function SubscriptionDetailSheet() {
 
 	const canCancel = !isExpired;
 	const canUpdate = !isExpired && !isScheduled;
+	const hasPlanItems = (displayItems?.length ?? 0) > 0;
+	const licenseRows = cusProductLicenses(cusProduct);
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
 		backendOptions: cusProduct.options,
 		prepaidItems,
@@ -152,15 +159,26 @@ export function SubscriptionDetailSheet() {
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			{productV2 && displayItems && displayItems.length > 0 && (
-				<SubscriptionDetailItems
-					items={displayItems}
-					product={{ ...productV2, items: displayItems }}
-					prepaidDisplayQuantities={prepaidDisplayQuantities}
-					adminIds={adminIds}
-					currency={displayCurrency}
-				/>
+			{productV2 && (hasPlanItems || licenseRows.length > 0) && (
+				<SheetSection>
+					{hasPlanItems && displayItems && (
+						<ReadOnlyPlanItems
+							items={displayItems}
+							product={{ ...productV2, items: displayItems }}
+							prepaidDisplayQuantities={prepaidDisplayQuantities}
+							adminIds={adminIds}
+							currency={displayCurrency}
+						/>
+					)}
+					{licenseRows.map(({ customerLicense, planLicense }) => (
+						<SubscriptionLicenseRow
+							key={customerLicense.id}
+							planLicense={planLicense}
+						/>
+					))}
+				</SheetSection>
 			)}
+			<SubscriptionDetailLicenses cusProduct={cusProduct} />
 
 			<SheetSection withSeparator={true}>
 				<div className="flex gap-2 justify-between overflow-hidden">

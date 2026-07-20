@@ -13,6 +13,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { resolveCustomerLicenseProduct } from "../customer-licenses/resolveCustomerLicenseProduct";
 import { useCustomerLicenseBalances } from "../customer-licenses/useCustomerLicenseBalances";
+import { LicenseAssignedEntities } from "./LicenseAssignedEntities";
 import { SubscriptionDetailItems } from "./SubscriptionDetailItems";
 
 const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
@@ -121,6 +122,11 @@ export function LicenseDetailSheet() {
 					/>
 				</div>
 			</SheetSection>
+
+			<LicenseAssignedEntities
+				licensePlanId={pool.license_plan_id}
+				excludeEntityId={assignment.entity_id}
+			/>
 
 			<div className="sticky bottom-0 p-4 flex gap-2 bg-card mt-auto">
 				<Button

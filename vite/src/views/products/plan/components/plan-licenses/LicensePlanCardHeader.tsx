@@ -16,6 +16,7 @@ import {
 import { EllipsisVerticalIcon } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import {
 	useCurrentItem,
 	useProduct,
@@ -27,12 +28,7 @@ import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { usePendingLicenseLinks } from "./PendingLicenseLinksContext";
 import { useLicenseDraft, useLicenseDraftStore } from "./useLicenseDraftStore";
 
-/**
- * Compact header for a license card: identity, link config (included quantity),
- * and actions in one row — slimmer than the plan card's header so the card
- * reads as a child of the plan. A staged removal keeps the card mounted
- * (greyed) with an Undo, so its config survives until the plan is saved.
- */
+/** Staged removals stay mounted so their edited configuration survives until save. */
 export function LicensePlanCardHeader({
 	planLicense,
 	license,
@@ -52,6 +48,31 @@ export function LicensePlanCardHeader({
 
 	const draft = useLicenseDraft(license.id);
 	const removed = draft?.removed ?? false;
+	const licenseName = (
+		<AdminHover
+			hide={isPendingLink}
+			side="top"
+			texts={[
+				license.internal_id
+					? {
+							key: "internal_product_id",
+							value: license.internal_id,
+						}
+					: undefined,
+				{ key: "version", value: license.version.toString() },
+			]}
+			triggerClassName="min-w-0 max-w-full"
+		>
+			<span
+				className={cn(
+					"font-medium truncate",
+					removed && "line-through text-tertiary-foreground",
+				)}
+			>
+				{license.name ?? license.id}
+			</span>
+		</AdminHover>
+	);
 
 	const openSettings = () => {
 		if (item && !checkItemIsValid(item)) return;
@@ -72,9 +93,7 @@ export function LicensePlanCardHeader({
 			<CardHeader className="px-3">
 				<div className="flex items-center justify-between w-full gap-2 min-w-0">
 					<div className="flex items-center gap-2 text-xs min-w-0">
-						<span className="font-medium truncate line-through text-tertiary-foreground">
-							{license.name ?? license.id}
-						</span>
+						{licenseName}
 						<span className="shrink-0 text-tertiary-foreground">
 							Removed on save
 						</span>
@@ -96,9 +115,7 @@ export function LicensePlanCardHeader({
 		<CardHeader className="px-3">
 			<div className="flex items-center justify-between w-full gap-2 min-w-0">
 				<div className="flex items-center gap-2 text-xs min-w-0">
-					<span className="font-medium truncate">
-						{license.name ?? license.id}
-					</span>
+					{licenseName}
 				</div>
 				<div className="flex items-center gap-1 shrink-0">
 					<DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

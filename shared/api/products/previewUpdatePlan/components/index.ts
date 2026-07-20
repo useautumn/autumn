@@ -1,6 +1,7 @@
 export * from "./corePlanUpdatePreview.js";
 export * from "./planUpdatePreviewChanges.js";
 export * from "./planUpdatePreviewLicense.js";
+export * from "./planUpdatePreviewLicenseParent.js";
 export * from "./planUpdatePreviewOtherVersion.js";
 export * from "./planUpdatePreviewPlanChanges.js";
 export * from "./planUpdatePreviewVariant.js";

@@ -62,6 +62,7 @@ const previewMsgMonthBump = (rpc: AutumnRpcCli, baseId: string) =>
 		plan_id: baseId,
 		items: [msgMonth(200)],
 		price: monthlyPrice,
+		include_variants: true,
 	}) as Promise<PlanUpdatePreview>;
 
 // ═════════════════════════════════════════════════════════════════

@@ -12,6 +12,7 @@ import {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
+import { hasStagedLicenseQuantityChanges } from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 
 type PrepaidChangeItem = {
@@ -46,6 +47,7 @@ export function shouldCountPrepaidChange({
 export function useHasSubscriptionChanges({
 	formValues,
 	initialPrepaidOptions,
+	initialLicenseQuantities,
 	initialBillingBehavior,
 	prepaidItems,
 	customerProduct,
@@ -55,6 +57,7 @@ export function useHasSubscriptionChanges({
 }: {
 	formValues: UpdateSubscriptionForm;
 	initialPrepaidOptions: Record<string, number | undefined>;
+	initialLicenseQuantities?: Record<string, number>;
 	initialBillingBehavior: BillingBehavior | null;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;
@@ -67,6 +70,14 @@ export function useHasSubscriptionChanges({
 		if (formValues.resetBillingCycle) return true;
 		if (formValues.noBillingChanges) return true;
 		if (formValues.addLicenses !== null) return true;
+
+		if (
+			hasStagedLicenseQuantityChanges({
+				licenseQuantities: formValues.licenseQuantities,
+				initialLicenseQuantities,
+			})
+		)
+			return true;
 
 		if (formValues.discounts?.length > 0) return true;
 
@@ -134,7 +145,9 @@ export function useHasSubscriptionChanges({
 		formValues.items,
 		formValues.addLicenses,
 		formValues.prepaidOptions,
+		formValues.licenseQuantities,
 		initialPrepaidOptions,
+		initialLicenseQuantities,
 		prepaidItems,
 		customerProduct,
 		currentVersion,
