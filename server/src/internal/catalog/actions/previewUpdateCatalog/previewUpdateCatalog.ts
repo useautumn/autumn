@@ -44,7 +44,7 @@ const productUsesFeature = ({
 }) =>
 	(product.entitlements ?? []).some(
 		(entitlement) => entitlement.feature.id === featureId,
-	) || product.prices.some((price) => price.config?.feature_id === featureId);
+	) || (product.prices ?? []).some((price) => price.config?.feature_id === featureId);
 
 const productsForFeatureRemovalPreview = ({
 	featureId,

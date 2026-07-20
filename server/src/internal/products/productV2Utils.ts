@@ -23,6 +23,8 @@ export const mapToProductItems = ({
 	allowFeatureMatch?: boolean;
 }): ProductItem[] => {
 	const items: ProductItem[] = [];
+	prices ??= [];
+	entitlements ??= [];
 
 	for (const ent of entitlements) {
 		const relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
@@ -60,16 +62,18 @@ export const mapToProductV2 = ({
 	features: Feature[];
 }): ProductV2 => {
 	const items: ProductItem[] = [];
+	const prices = product.prices ?? [];
+	const entitlements = product.entitlements ?? [];
 	// console.log("Prices:", product.prices);
 	// console.log("Entitlements:", product.entitlements);
 
-	for (const ent of product.entitlements) {
-		const relatedPrice = getEntRelatedPrice(ent, product.prices);
+	for (const ent of entitlements) {
+		const relatedPrice = getEntRelatedPrice(ent, prices);
 		items.push(toProductItem({ ent, price: relatedPrice }));
 	}
 
-	for (const price of product.prices) {
-		const relatedEnt = getPriceEntitlement(price, product.entitlements);
+	for (const price of prices) {
+		const relatedEnt = getPriceEntitlement(price, entitlements);
 
 		// console.log("Price:", price.id);
 		// console.log("Related ent:", relatedEnt);

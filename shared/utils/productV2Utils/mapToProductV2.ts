@@ -19,6 +19,8 @@ export const mapToProductItems = ({
 	features: Feature[];
 }): ProductItem[] => {
 	const items: ProductItem[] = [];
+	prices ??= [];
+	entitlements ??= [];
 
 	for (const ent of entitlements) {
 		// const relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
