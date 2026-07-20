@@ -3,6 +3,7 @@ import {
 	findMainScheduledCustomerProductByGroup,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductPaid,
+	isCustomerProductScheduled,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
@@ -13,14 +14,7 @@ import {
 } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
-/**
- * Handles customer product state changes when a subscription is deleted.
- *
- * For each customer product on the deleted subscription:
- * 1. Expire the customer product and activate default if needed
- * 2. Delete any scheduled main customer product in the same group
- * 3. Cache expired products so invoice.created can access them
- */
+/** Expires live products, then activates or removes their scheduled successors. */
 export const expireAndActivateCustomerProducts = async ({
 	ctx,
 	eventContext,
@@ -36,13 +30,10 @@ export const expireAndActivateCustomerProducts = async ({
 	);
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
-	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
-	// default product, and `trackCustomerProductDeletion` below splices the
-	// paid scheduled product out. Both mutate `customerProducts` in place,
-	// which would otherwise invalidate the for-of cursor and cause elements to
-	// be skipped or re-iterated (see the add-on skip bug in the renewal
-	// handler).
-	for (const customerProduct of [...customerProducts]) {
+	const liveCustomerProducts = customerProducts.filter(
+		(customerProduct) => !isCustomerProductScheduled(customerProduct),
+	);
+	for (const customerProduct of liveCustomerProducts) {
 		// 1. If not on stripe subscription, skip
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
 			customerProduct,
@@ -84,10 +75,7 @@ export const expireAndActivateCustomerProducts = async ({
 		}
 	}
 
-	/**
-	 * Need to cache expired customer products to invoice.created can access them
-	 * invoice.created creates a final invoice for usage-based prices
-	 */
+	// invoice.created needs the expired snapshots for final usage billing.
 	await customerProductActions.expiredCache.set({
 		stripeSubscriptionId: stripeSubscription.id,
 		customerProducts: expiredCustomerProducts,

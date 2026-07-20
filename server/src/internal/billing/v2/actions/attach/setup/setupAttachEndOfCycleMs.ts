@@ -9,14 +9,7 @@ import type Stripe from "stripe";
 import { getLatestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
 import { getLargestInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils";
 
-/**
- * Computes the end of cycle timestamp for scheduled product attachments.
- * Used for:
- * - Downgrades (transition from existing product)
- * - Merged subscription scheduling (entity joins existing subscription at renewal)
- *
- * Returns undefined if planTiming is "immediate" or no billing cycle can be determined.
- */
+/** Resolves a scheduled attachment's cycle boundary from Autumn or Stripe. */
 export const setupAttachEndOfCycleMs = ({
 	planTiming,
 	currentCustomerProduct,
@@ -45,17 +38,16 @@ export const setupAttachEndOfCycleMs = ({
 			excludeOneOff: true,
 		});
 
-		if (!largestInterval) {
-			return undefined;
+		if (largestInterval) {
+			return getCycleEnd({
+				anchor: billingCycleAnchorMs,
+				interval: largestInterval.interval,
+				intervalCount: largestInterval.intervalCount,
+				now: currentEpochMs,
+				floor:
+					billingCycleAnchorMs === "now" ? undefined : billingCycleAnchorMs,
+			});
 		}
-
-		return getCycleEnd({
-			anchor: billingCycleAnchorMs,
-			interval: largestInterval.interval,
-			intervalCount: largestInterval.intervalCount,
-			now: currentEpochMs,
-			floor: billingCycleAnchorMs === "now" ? undefined : billingCycleAnchorMs,
-		});
 	}
 
 	const latestPeriodEndSeconds = getLatestPeriodEnd({

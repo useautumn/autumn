@@ -1,12 +1,11 @@
 import {
 	type AttachBillingContext,
-	type AutumnBillingPlan,
 	customerLicenseToUsage,
 	ErrCode,
 	type FullCustomerLicense,
 	RecaseError,
 } from "@autumn/shared";
-import { matchCustomerLicenseSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors.js";
+import { matchCustomerLicensePlanSuccessors } from "@/internal/billing/v2/compute/customerLicenseTransitions/matchCustomerLicenseSuccessors.js";
 
 const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
@@ -17,19 +16,15 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
  * match) on the incoming plan. */
 export const handleDroppedLicenseErrors = ({
 	billingContext,
-	autumnBillingPlan,
 }: {
 	billingContext: AttachBillingContext;
-	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const { currentCustomerProduct, planTiming } = billingContext;
 	if (planTiming !== "immediate" || !currentCustomerProduct) return;
 
-	const { unmatched } = matchCustomerLicenseSuccessors({
+	const { unmatched } = matchCustomerLicensePlanSuccessors({
 		outgoingCustomerLicenses: currentCustomerProduct.customer_licenses ?? [],
-		incomingCustomerLicenses: (
-			autumnBillingPlan.insertCustomerProducts ?? []
-		).flatMap((customerProduct) => customerProduct.customer_licenses ?? []),
+		incomingPlanLicenses: billingContext.attachProduct.licenses ?? [],
 	});
 
 	for (const { outgoingCustomerLicense, reason, group } of unmatched) {

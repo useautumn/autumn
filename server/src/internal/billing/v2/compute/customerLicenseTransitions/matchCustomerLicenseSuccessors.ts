@@ -1,4 +1,4 @@
-import type { FullCustomerLicense } from "@autumn/shared";
+import type { FullCustomerLicense, FullPlanLicense } from "@autumn/shared";
 
 export type CustomerLicenseSuccessorMatch = {
 	outgoingCustomerLicense: FullCustomerLicense;
@@ -11,6 +11,11 @@ export type UnmatchedOutgoingCustomerLicense = {
 	group?: string;
 };
 
+export type CustomerLicensePlanSuccessorMatch = {
+	outgoingCustomerLicense: FullCustomerLicense;
+	incomingPlanLicense: FullPlanLicense;
+};
+
 const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
 	customerLicense.license_internal_product_id;
@@ -20,12 +25,102 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 const licenseGroupOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.group || null;
 
-/**
- * Ranked successor selection for license pools across a parent plan
- * transition: the same license plan id always wins; otherwise pools pair by
- * their license plan's group, but only when the group resolves 1:1 among the
- * pools no id claimed. Several candidates on either side match nothing.
- */
+type LicenseCandidate<T> = {
+	value: T;
+	licensePlanId: string;
+	group: string | null;
+};
+
+const matchLicenseSuccessorCandidates = <Outgoing, Incoming>({
+	outgoingCandidates,
+	incomingCandidates,
+}: {
+	outgoingCandidates: LicenseCandidate<Outgoing>[];
+	incomingCandidates: LicenseCandidate<Incoming>[];
+}) => {
+	const incomingByLicensePlanId = new Map<string, LicenseCandidate<Incoming>>();
+	for (const incoming of incomingCandidates) {
+		if (!incomingByLicensePlanId.has(incoming.licensePlanId)) {
+			incomingByLicensePlanId.set(incoming.licensePlanId, incoming);
+		}
+	}
+
+	const idClaimedIncoming = new Set<Incoming>();
+	for (const outgoing of outgoingCandidates) {
+		const claimed = incomingByLicensePlanId.get(outgoing.licensePlanId);
+		if (claimed) idClaimedIncoming.add(claimed.value);
+	}
+
+	const incomingByGroup = new Map<string, LicenseCandidate<Incoming>[]>();
+	for (const incoming of incomingCandidates) {
+		if (idClaimedIncoming.has(incoming.value)) continue;
+		const group = incoming.group;
+		if (!group) continue;
+		const rows = incomingByGroup.get(group);
+		if (rows) rows.push(incoming);
+		else incomingByGroup.set(group, [incoming]);
+	}
+
+	const outgoingGroupCounts = new Map<string, number>();
+	for (const outgoing of outgoingCandidates) {
+		if (incomingByLicensePlanId.has(outgoing.licensePlanId)) continue;
+		const group = outgoing.group;
+		if (!group) continue;
+		outgoingGroupCounts.set(group, (outgoingGroupCounts.get(group) ?? 0) + 1);
+	}
+
+	const matches: { outgoing: Outgoing; incoming: Incoming }[] = [];
+	const unmatched: {
+		outgoing: Outgoing;
+		reason: "dropped" | "ambiguous";
+		group?: string;
+	}[] = [];
+	for (const outgoing of outgoingCandidates) {
+		const idMatch = incomingByLicensePlanId.get(outgoing.licensePlanId);
+		if (idMatch) {
+			matches.push({ outgoing: outgoing.value, incoming: idMatch.value });
+			continue;
+		}
+
+		const group = outgoing.group;
+		const candidates = group ? (incomingByGroup.get(group) ?? []) : [];
+		if (candidates.length === 0) {
+			unmatched.push({ outgoing: outgoing.value, reason: "dropped" });
+			continue;
+		}
+		const ambiguous =
+			candidates.length > 1 || (outgoingGroupCounts.get(group ?? "") ?? 0) > 1;
+		if (ambiguous) {
+			unmatched.push({
+				outgoing: outgoing.value,
+				reason: "ambiguous",
+				group: group ?? undefined,
+			});
+			continue;
+		}
+		matches.push({ outgoing: outgoing.value, incoming: candidates[0].value });
+	}
+
+	return { matches, unmatched };
+};
+
+const customerLicenseToCandidate = (
+	customerLicense: FullCustomerLicense,
+): LicenseCandidate<FullCustomerLicense> => ({
+	value: customerLicense,
+	licensePlanId: licensePlanIdOf(customerLicense),
+	group: licenseGroupOf(customerLicense),
+});
+
+const planLicenseToCandidate = (
+	planLicense: FullPlanLicense,
+): LicenseCandidate<FullPlanLicense> => ({
+	value: planLicense,
+	licensePlanId: planLicense.product.id,
+	group: planLicense.product.group || null,
+});
+
+/** Matches pools by exact license plan, then by an unambiguous 1:1 group. */
 export const matchCustomerLicenseSuccessors = ({
 	outgoingCustomerLicenses,
 	incomingCustomerLicenses,
@@ -36,71 +131,61 @@ export const matchCustomerLicenseSuccessors = ({
 	matches: CustomerLicenseSuccessorMatch[];
 	unmatched: UnmatchedOutgoingCustomerLicense[];
 } => {
-	const incomingByLicensePlanId = new Map<string, FullCustomerLicense>();
-	for (const incoming of incomingCustomerLicenses) {
-		const licensePlanId = licensePlanIdOf(incoming);
-		if (!incomingByLicensePlanId.has(licensePlanId)) {
-			incomingByLicensePlanId.set(licensePlanId, incoming);
-		}
-	}
+	const { matches, unmatched } = matchLicenseSuccessorCandidates({
+		outgoingCandidates: outgoingCustomerLicenses.map(
+			customerLicenseToCandidate,
+		),
+		incomingCandidates: incomingCustomerLicenses.map(
+			customerLicenseToCandidate,
+		),
+	});
 
-	const idClaimedIncoming = new Set<FullCustomerLicense>();
-	for (const outgoing of outgoingCustomerLicenses) {
-		const claimed = incomingByLicensePlanId.get(licensePlanIdOf(outgoing));
-		if (claimed) idClaimedIncoming.add(claimed);
-	}
-
-	const incomingByGroup = new Map<string, FullCustomerLicense[]>();
-	for (const incoming of incomingCustomerLicenses) {
-		if (idClaimedIncoming.has(incoming)) continue;
-		const group = licenseGroupOf(incoming);
-		if (!group) continue;
-		const rows = incomingByGroup.get(group);
-		if (rows) rows.push(incoming);
-		else incomingByGroup.set(group, [incoming]);
-	}
-
-	const outgoingGroupCounts = new Map<string, number>();
-	for (const outgoing of outgoingCustomerLicenses) {
-		if (incomingByLicensePlanId.has(licensePlanIdOf(outgoing))) continue;
-		const group = licenseGroupOf(outgoing);
-		if (!group) continue;
-		outgoingGroupCounts.set(group, (outgoingGroupCounts.get(group) ?? 0) + 1);
-	}
-
-	const matches: CustomerLicenseSuccessorMatch[] = [];
-	const unmatched: UnmatchedOutgoingCustomerLicense[] = [];
-	for (const outgoing of outgoingCustomerLicenses) {
-		const idMatch = incomingByLicensePlanId.get(licensePlanIdOf(outgoing));
-		if (idMatch) {
-			matches.push({
-				outgoingCustomerLicense: outgoing,
-				incomingCustomerLicense: idMatch,
-			});
-			continue;
-		}
-
-		const group = licenseGroupOf(outgoing);
-		const candidates = group ? (incomingByGroup.get(group) ?? []) : [];
-		if (candidates.length === 0) {
-			unmatched.push({ outgoingCustomerLicense: outgoing, reason: "dropped" });
-			continue;
-		}
-		const ambiguous =
-			candidates.length > 1 || (outgoingGroupCounts.get(group ?? "") ?? 0) > 1;
-		if (ambiguous) {
-			unmatched.push({
-				outgoingCustomerLicense: outgoing,
-				reason: "ambiguous",
-				group: group ?? undefined,
-			});
-			continue;
-		}
-		matches.push({
+	return {
+		matches: matches.map(({ outgoing, incoming }) => ({
 			outgoingCustomerLicense: outgoing,
-			incomingCustomerLicense: candidates[0],
-		});
-	}
+			incomingCustomerLicense: incoming,
+		})),
+		unmatched: unmatched.map(({ outgoing, reason, group }) => ({
+			outgoingCustomerLicense: outgoing,
+			reason,
+			group,
+		})),
+	};
+};
 
-	return { matches, unmatched };
+export const matchCustomerLicensePlanSuccessors = ({
+	outgoingCustomerLicenses,
+	incomingPlanLicenses,
+}: {
+	outgoingCustomerLicenses: FullCustomerLicense[];
+	incomingPlanLicenses: FullPlanLicense[];
+}): {
+	matches: CustomerLicensePlanSuccessorMatch[];
+	unmatched: UnmatchedOutgoingCustomerLicense[];
+} => {
+	const { matches, unmatched } = matchLicenseSuccessorCandidates({
+		outgoingCandidates: outgoingCustomerLicenses.map(
+			customerLicenseToCandidate,
+		),
+		incomingCandidates: incomingPlanLicenses.map(planLicenseToCandidate),
+	});
+
+	return {
+		matches: matches.map(({ outgoing, incoming }) => ({
+			outgoingCustomerLicense: outgoing,
+			incomingPlanLicense: incoming,
+		})),
+		unmatched: unmatched.map(({ outgoing, reason, group }) => ({
+			outgoingCustomerLicense: outgoing,
+			reason,
+			group,
+		})),
+	};
+};
+
+export const matchCustomerLicensesToPlanLicenses = (params: {
+	outgoingCustomerLicenses: FullCustomerLicense[];
+	incomingPlanLicenses: FullPlanLicense[];
+}): CustomerLicensePlanSuccessorMatch[] => {
+	return matchCustomerLicensePlanSuccessors(params).matches;
 };

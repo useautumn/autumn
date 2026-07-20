@@ -44,9 +44,9 @@ import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorr
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
+import { pollUntil } from "@tests/utils/genUtils";
 import chalk from "chalk";
 import { inArray } from "drizzle-orm";
-import { runRepointSeatEntitlements } from "@/trigger/licenses/repointSeatEntitlementsTask";
 
 const CATALOG_SEAT_PRICE = 20;
 const CUSTOM_SEAT_PRICE = 40;
@@ -402,8 +402,7 @@ test.concurrent(
 			updateParams,
 		);
 
-		// ── DB: definition repointed; seat cusEnt refs converge via the
-		// trigger.dev task (asserted below by running the worker's runner) ──
+		// ── DB: definition and inherited seat entitlements converge inline ──
 		const pool = await expectLicenseDefinitionCorrect({
 			ctx: scenario.ctx,
 			customerId,
@@ -430,6 +429,7 @@ test.concurrent(
 				.select({
 					entitlementId: customerEntitlements.entitlement_id,
 					featureId: customerEntitlements.internal_feature_id,
+					balance: customerEntitlements.balance,
 				})
 				.from(customerEntitlements)
 				.where(
@@ -444,38 +444,20 @@ test.concurrent(
 			);
 		};
 
-		// Ent repoints are QUEUED (trigger.dev), not inline — refs still carry
-		// the outgoing definition immediately after the update.
-		const queuedRows = await readSeatMessageRows();
-		expect(queuedRows).toHaveLength(ASSIGNED_SEATS);
-		const outgoingEntitlementIds = [
-			...new Set(queuedRows.map((row) => row.entitlementId)),
-		];
-		expect(outgoingEntitlementIds).toHaveLength(1);
-		expect(outgoingEntitlementIds[0]).not.toBe(customMessagesEntitlement?.id);
-
-		// Run the worker's runner directly (idempotent) and assert convergence.
-		await runRepointSeatEntitlements({
-			ctx: scenario.ctx as unknown as Parameters<
-				typeof runRepointSeatEntitlements
-			>[0]["ctx"],
-			customerLicenseLinkId: pool.link_id,
-			entitlementTransitions: [
-				{
-					fromEntitlementId: outgoingEntitlementIds[0] ?? "",
-					toEntitlementId: customMessagesEntitlement?.id ?? "",
-				},
-			],
-			source: "integration-test",
+		const convergedRows = await pollUntil({
+			fetch: readSeatMessageRows,
+			until: (rows) =>
+				rows.length === ASSIGNED_SEATS &&
+				rows.every(
+					(row) => row.entitlementId === customMessagesEntitlement?.id,
+				),
+			timeoutMs: 10_000,
+			intervalMs: 250,
 		});
-
-		const convergedRows = await readSeatMessageRows();
 		expect(convergedRows).toHaveLength(ASSIGNED_SEATS);
 		for (const row of convergedRows) {
 			expect(row.entitlementId).toBe(customMessagesEntitlement?.id ?? "");
+			expect(row.balance).toBe(CUSTOM_SEAT_MESSAGES);
 		}
-
-		// Balance carry semantics on allowance changes are deliberately NOT
-		// asserted — refs repoint only; balances stay untouched for now.
 	},
 );

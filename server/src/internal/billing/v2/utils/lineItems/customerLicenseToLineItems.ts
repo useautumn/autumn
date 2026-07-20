@@ -9,11 +9,7 @@ import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPre
 import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem";
 import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition";
 
-/**
- * Line items for one customer license: the context's seat rows keyed to THIS
- * row's id (persisted snapshots for outgoing rows, transitioned copies for
- * planted successors) plus the in-memory unassigned buffer.
- */
+/** Builds one license pool's assigned and unused prepaid line items. */
 export const customerLicenseToLineItems = ({
 	ctx,
 	billingContext,
@@ -34,6 +30,9 @@ export const customerLicenseToLineItems = ({
 	const seatRows = (
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
+	const projectedPlanLicenseIds =
+		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ??
+		new Set<string>();
 
 	// Seats bill through THIS side's definition: refunds get the outgoing
 	// pool's terms, charges the incoming — mirroring the repoint executor.
@@ -41,9 +40,19 @@ export const customerLicenseToLineItems = ({
 		...resolveLicenseBillingRowsThroughDefinition({
 			licenseBillingRows: seatRows,
 			planLicense,
+			projectedPlanLicenseIds,
 		}),
-		...customerLicenseToUnusedPrepaidRows({ customerLicense }),
 	];
+	const billableAssignedQuantity = licenseBillingRows.reduce(
+		(total, row) => total + row.quantity,
+		0,
+	);
+	licenseBillingRows.push(
+		...customerLicenseToUnusedPrepaidRows({
+			customerLicense,
+			billableAssignedQuantity,
+		}),
+	);
 
 	return licenseBillingRows.map((licenseBillingRow) =>
 		licenseBillingRowToLineItem({
