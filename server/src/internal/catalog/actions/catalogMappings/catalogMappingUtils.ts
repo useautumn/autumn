@@ -156,8 +156,8 @@ export const buildProductMappingContext = ({
 	currency: string;
 }): ProductMappingContext => {
 	const rawItems = mapToProductItems({
-		prices: product.prices,
-		entitlements: product.entitlements,
+		prices: product.prices ?? [],
+		entitlements: product.entitlements ?? [],
 		features,
 	});
 	const sortedItems = sortProductItems(rawItems, features);
@@ -165,7 +165,7 @@ export const buildProductMappingContext = ({
 		product: { items: sortedItems } as any,
 	});
 	const basePrice = basePriceItem?.price_id
-		? product.prices.find((price) => price.id === basePriceItem.price_id)
+		? (product.prices ?? []).find((price) => price.id === basePriceItem.price_id)
 		: undefined;
 
 	const featureItems = productV2ToFeatureItems({
@@ -175,7 +175,7 @@ export const buildProductMappingContext = ({
 	const itemPrices = featureItems
 		.filter((item) => item.price_id && isFeaturePriceItem(item))
 		.map((item) => {
-			const price = product.prices.find((p) => p.id === item.price_id);
+			const price = (product.prices ?? []).find((p) => p.id === item.price_id);
 			const apiItem = productItemsToPlanItemsV1({
 				items: [item],
 				features,
@@ -246,6 +246,6 @@ export const productHasStripeProductId = ({
 	stripeProductId: string;
 }) =>
 	product.processor?.id === stripeProductId ||
-	product.prices.some(
+	(product.prices ?? []).some(
 		(price) => price.config.stripe_product_id === stripeProductId,
 	);
