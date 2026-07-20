@@ -21,7 +21,9 @@ import {
 	type ApiPlanV1,
 	ApiVersion,
 	BillingInterval,
+	type FullProduct,
 	ResetInterval,
+	resetIntvToEntIntv,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -31,11 +33,11 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import {
 	expectStripeResourcesCarriedToVariant,
 	expectVariantProductCorrect,
 } from "./utils/expectVariantProductCorrect.js";
-import { expectPreviewVariantsCorrect } from "./utils/expectVariantPreviewCorrect.js";
 import { readableVariantTestId } from "./utils/readableVariantTestId.js";
 import { createVariantPlan } from "./utils/variantTestPlanUtils.js";
 
@@ -181,22 +183,28 @@ const updateVariantInterval = async (
 };
 
 const getMsgAllowance = (full: any) =>
-	full.entitlements.find(
-		(e: any) => e.feature_id === TestFeature.Messages,
-	)?.allowance;
+	full.entitlements.find((e: any) => e.feature_id === TestFeature.Messages)
+		?.allowance;
 
 // Different intervals don't merge: a variant can carry more than one Messages
 // entitlement (one per interval) once the base propagates a new-interval item
 // alongside an existing one, so lookups here must disambiguate by interval.
-const getMsgAllowanceForInterval = (full: any, interval: ResetInterval) =>
-	full.entitlements.find(
-		(e: any) => e.feature_id === TestFeature.Messages && e.interval === interval,
+const getMsgAllowanceForInterval = (
+	full: FullProduct,
+	interval: ResetInterval,
+) => {
+	// One-off resets persist as lifetime entitlements.
+	const entInterval = resetIntvToEntIntv({ resetIntv: interval });
+	return full.entitlements.find(
+		(entitlement) =>
+			entitlement.feature_id === TestFeature.Messages &&
+			entitlement.interval === entInterval,
 	)?.allowance;
+};
 
 const getUsersAllowance = (full: any) =>
-	full.entitlements.find(
-		(e: any) => e.feature_id === TestFeature.Users,
-	)?.allowance;
+	full.entitlements.find((e: any) => e.feature_id === TestFeature.Users)
+		?.allowance;
 
 const getStripeProductId = (full: any) =>
 	full.prices.find((p: any) => p.config?.type === "fixed")?.config
@@ -213,10 +221,7 @@ test.concurrent(
 	`${chalk.yellowBright("interval-family create: 5 variants — all get base_internal_product_id, version=1, share stripe_product_id")}`,
 	async () => {
 		const cid = readableVariantTestId("if_create_family");
-		const { ctx, rpc, baseId } = await setupBase(
-			cid,
-			`iv_base_${cid}`,
-		);
+		const { ctx, rpc, baseId } = await setupBase(cid, `iv_base_${cid}`);
 
 		const variantIds = await create5Variants(rpc, baseId, cid);
 		const baseFull = await getFull(ctx, baseId);
@@ -322,7 +327,7 @@ test.concurrent(
 // 5. base disable_version cascades: no targeted variant versions,
 //    all patch in place regardless of their own customer status
 // ═════════════════════════════════════════════════════════════════
-	test.concurrent(
+test.concurrent(
 	`${chalk.yellowBright("interval-family propagate: base disable_version cascades — all 5 variants patch in place, none version")}`,
 	async () => {
 		const cid = readableVariantTestId("if_variant_customer");
@@ -522,12 +527,7 @@ test.concurrent(
 		const variantIds = await create5Variants(rpc, baseId, cid);
 
 		const err = await catchErr(() =>
-			createVariant(
-				rpc,
-				variantIds[0],
-				`iv_nested_${cid}`,
-				"Nested",
-			),
+			createVariant(rpc, variantIds[0], `iv_nested_${cid}`, "Nested"),
 		);
 
 		expect(err).not.toBeNull();
@@ -538,7 +538,7 @@ test.concurrent(
 // ═════════════════════════════════════════════════════════════════
 // 11. Stripe carry-forward — variant v2 retains stripe_price_id from v1
 // ═════════════════════════════════════════════════════════════════
-	test.concurrent(
+test.concurrent(
 	`${chalk.yellowBright("interval-family stripe: carry-forward — variant v2 retains stripe_price_id from v1 for unchanged prices")}`,
 	async () => {
 		const cid = readableVariantTestId("if_stripe_price");
