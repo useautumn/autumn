@@ -179,7 +179,7 @@ export const getProductResponse = async ({
 	// 1. Get items with display
 	const rawItems = mapToProductItems({
 		prices: product.prices,
-		entitlements: product.entitlements,
+		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 
