@@ -191,7 +191,11 @@ export const getPlanResponse = async ({
 			})
 		: undefined;
 	const customize = basePlan
-		? diffPlanV1({ from: basePlan, to: plan })
+		? diffPlanV1({
+				from: basePlan,
+				to: plan,
+				includeCurrencyListChanges: true,
+			})
 		: undefined;
 	const hasCustomize = customize && Object.keys(customize).length > 0;
 

@@ -62,6 +62,30 @@ test("returns null when an edit restores the base license", () => {
 	).toBeNull();
 });
 
+test("builds a parent-link diff for an added currency", () => {
+	const edited = productV2ToFrontendProduct({ product: license });
+	edited.items = [
+		{
+			...edited.items[0],
+			additional_currencies: [{ currency: "gbp", amount: 18 }],
+		},
+	];
+
+	expect(
+		productToLicenseCustomize({
+			product: edited,
+			license,
+			features: [],
+		}),
+	).toEqual({
+		price: {
+			amount: 20,
+			interval: ProductItemInterval.Month,
+			additional_currencies: [{ currency: "gbp", amount: 18 }],
+		},
+	});
+});
+
 test("reports an incomplete base price without leaking a Zod error", () => {
 	const edited = productV2ToFrontendProduct({
 		product: { ...license, items: [] },

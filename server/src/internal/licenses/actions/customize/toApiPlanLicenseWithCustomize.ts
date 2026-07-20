@@ -13,7 +13,11 @@ export const diffLicensePlanCustomize = ({
 	basePlan: ApiPlanV1;
 	effectivePlan: ApiPlanV1;
 }): LicenseCustomize | undefined => {
-	const diff = diffPlanV1({ from: basePlan, to: effectivePlan });
+	const diff = diffPlanV1({
+		from: basePlan,
+		to: effectivePlan,
+		includeCurrencyListChanges: true,
+	});
 	const customize = {
 		...(diff.price !== undefined ? { price: diff.price } : {}),
 		...(diff.add_items !== undefined ? { add_items: diff.add_items } : {}),
