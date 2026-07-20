@@ -3,7 +3,6 @@ import {
 	cusProductsToCusEnts,
 	customerEntitlements,
 	type FullCustomer,
-	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
