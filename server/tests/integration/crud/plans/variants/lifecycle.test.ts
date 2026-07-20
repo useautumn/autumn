@@ -21,7 +21,6 @@
  */
 
 import { expect, test } from "bun:test";
-import { expectPreviewUpdatePlanCorrect } from "../previewUpdate/utils/expectPreviewUpdatePlanCorrect.js";
 import {
 	type ApiPlanV1,
 	ApiVersion,
@@ -36,6 +35,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { expectPreviewUpdatePlanCorrect } from "../previewUpdate/utils/expectPreviewUpdatePlanCorrect.js";
 import {
 	expectEntitlementAllowanceMatches,
 	expectStripeResourcesCarriedToVariant,
@@ -300,12 +300,14 @@ test.concurrent(
 );
 
 // ───────────────────────────────────────────────────────────────────
-// 6. preview_update rejects on variant
+// 6. preview_update supported on variant
+// (the cannot_preview_on_variant guard was removed when variant
+// previews shipped — previews on a variant now resolve normally)
 // ───────────────────────────────────────────────────────────────────
 test.concurrent(
-	`${chalk.yellowBright("variants preview_update: rejects on variant → 400 cannot_preview_on_variant")}`,
+	`${chalk.yellowBright("variants preview_update: supported on variant, previews its own changes")}`,
 	async () => {
-		const cid = readableVariantTestId("lc_preview_variant_err");
+		const cid = readableVariantTestId("lc_preview_variant_ok");
 		const base = baseProduct(`lc_base_${cid}`);
 
 		const { ctx } = await initScenario({
@@ -326,15 +328,13 @@ test.concurrent(
 			name: "Variant",
 		});
 
-		const err = await catchErr(() =>
-			rpc.post("/plans.preview_update", {
-				plan_id: variantId,
-				items: [monthlyItem(200)],
-			}),
-		);
+		const preview = (await rpc.post("/plans.preview_update", {
+			plan_id: variantId,
+			items: [monthlyItem(200)],
+		})) as { versionable: boolean };
 
-		expect(err).not.toBeNull();
-		expect(err?.code).toBe("cannot_preview_on_variant");
+		// Customer-less variant patches in place.
+		expect(preview.versionable).toBe(false);
 	},
 );
 
@@ -445,7 +445,10 @@ test.concurrent(
 
 		const { autumnV2_2, ctx } = await initScenario({
 			customerId: cid,
-			setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [base] })],
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base] }),
+			],
 			actions: [],
 		});
 

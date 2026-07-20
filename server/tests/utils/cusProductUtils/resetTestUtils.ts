@@ -1,4 +1,6 @@
 import {
+	CusProductStatus,
+	cusProductsToCusEnts,
 	customerEntitlements,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
@@ -213,9 +215,12 @@ export const expireAllCusEntsForReset = async ({
 		idOrInternalId: customerId,
 	});
 
-	const cusEnts = fullCustomerToCustomerEntitlements({
-		fullCustomer,
-		featureId,
+	// cusProductsToCusEnts skips the entity scoping filter — "ALL" here
+	// includes entity-scoped products' entitlements.
+	const cusEnts = cusProductsToCusEnts({
+		cusProducts: fullCustomer.customer_products,
+		featureIds: [featureId],
+		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
 	if (cusEnts.length === 0) {

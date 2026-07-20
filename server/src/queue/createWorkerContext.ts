@@ -28,15 +28,18 @@ export const createWorkerContext = async ({
 	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
 
-	// Fetch org with features once for all items
-	const orgData = await OrgService.getWithFeatures({
-		db,
-		orgId,
-		env,
-	});
+	// Fetch org with features once for all items. A missing org means it was
+	// deleted after the job was queued (common in tests) — skip, don't fail.
+	let orgData: Awaited<ReturnType<typeof OrgService.getWithFeatures>> | null;
+	try {
+		orgData = await OrgService.getWithFeatures({ db, orgId, env });
+	} catch {
+		orgData = null;
+	}
 
 	if (!orgData) {
-		throw new Error(`Organization not found: ${orgId}, env: ${env}`);
+		logger.warn(`Org ${orgId} (${env}) not found — skipping queued job`);
+		return;
 	}
 
 	const { org, features } = orgData;

@@ -19,8 +19,8 @@ export const setupCustomerLicenseBillingContext = async ({
 	if (customerLicenses.length === 0) {
 		return {
 			licenseBillingPriceRows: [],
-			assignedSeatCountByCustomerLicenseId: new Map(),
-			projectedPlanLicenseIds: new Set(),
+			assignedSeatCountByCustomerLicenseId: {},
+			projectedPlanLicenseIds: [],
 		};
 	}
 
@@ -37,7 +37,7 @@ export const setupCustomerLicenseBillingContext = async ({
 				),
 			}),
 		]);
-	const assignedSeatCountByCustomerLicenseId = new Map(
+	const assignedSeatCountByCustomerLicenseId = Object.fromEntries(
 		customerLicenses.map((customerLicense) => [
 			customerLicense.id,
 			assignedSeatCountByLinkId.get(customerLicense.link_id) ?? 0,
@@ -47,6 +47,6 @@ export const setupCustomerLicenseBillingContext = async ({
 	return {
 		licenseBillingPriceRows,
 		assignedSeatCountByCustomerLicenseId,
-		projectedPlanLicenseIds: new Set(),
+		projectedPlanLicenseIds: [],
 	};
 };

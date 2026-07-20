@@ -50,8 +50,7 @@ export const customerLicenseToLineItems = ({
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
 	const projectedPlanLicenseIds =
-		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ??
-		new Set<string>();
+		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ?? [];
 
 	// Seats bill through THIS side's definition: refunds get the outgoing
 	// pool's terms, charges the incoming — mirroring the repoint executor.
