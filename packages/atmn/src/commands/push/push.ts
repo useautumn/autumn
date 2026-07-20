@@ -179,9 +179,19 @@ export async function checkFeatureDeleteInfo(
 	}
 
 	// Check API for product references
-	const response = await getFeatureDeletionInfo({ secretKey, featureId });
+	let response;
+	try {
+		response = await getFeatureDeletionInfo({ secretKey, featureId });
+	} catch {
+		return {
+			id: featureId,
+			canDelete: false,
+			reason: "deletion_check_failed",
+			featureType,
+		};
+	}
 
-	if (response && response.totalCount > 0) {
+		if (response && response.totalCount > 0) {
 		return {
 			id: featureId,
 			canDelete: false,
@@ -204,22 +214,27 @@ export async function checkFeatureDeleteInfo(
 // Check if a plan can be deleted
 async function checkPlanDeleteInfo(planId: string): Promise<PlanDeleteInfo> {
 	const secretKey = getSecretKey();
-	const response = await getPlanDeletionInfo({ secretKey, planId });
+	try {
+		const response = await getPlanDeletionInfo({ secretKey, planId });
 
-	if (response && response.totalCount > 0) {
+ 		if (response && response.totalCount > 0) {
+			return {
+				id: planId,
+				canDelete: false,
+				customerCount: response.totalCount,
+				firstCustomerName: response.customerName,
+			};
+		}
+
+		return { id: planId, canDelete: true, customerCount: 0 };
+	} catch {
 		return {
 			id: planId,
 			canDelete: false,
-			customerCount: response.totalCount,
-			firstCustomerName: response.customerName,
+			customerCount: 0,
+			deletionCheckFailed: true,
 		};
 	}
-
-	return {
-		id: planId,
-		canDelete: true,
-		customerCount: 0,
-	};
 }
 
 // Check if updating a plan will create a new version
@@ -572,6 +587,8 @@ function normalizePlanForCompare(
 			version:
 				license.version ?? licenseVersionFallbacks?.get(license.licensePlanId),
 			included: license.included ?? 0,
+			prepaidOnly: license.prepaidOnly ?? true,
+			customize: license.customize,
 		}));
 
 	return result;
@@ -644,6 +661,12 @@ function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
 								...(customize.price.intervalCount !== undefined
 									? { interval_count: customize.price.intervalCount }
 									: {}),
+								...(customize.price.additionalCurrencies
+									? {
+											additional_currencies:
+												customize.price.additionalCurrencies,
+										}
+									: {}),
 							}
 						: null,
 				}
@@ -668,6 +691,15 @@ function toApiCustomizePlan(customize: CustomizePlan): Record<string, unknown> {
 						: null,
 				}
 			: {}),
+		...(customize.upsertLicenses !== undefined
+			? {
+					upsert_licenses: transformPlanToApi({
+						id: "license-customize",
+						name: "License customize",
+						licenses: customize.upsertLicenses,
+					}).licenses,
+				}
+			: {}),
 	};
 }
 
@@ -678,6 +710,7 @@ function toCatalogVariantParams(
 ): Record<string, unknown> {
 	return {
 		variant_plan_id: variant.id,
+		...(variant.version !== undefined ? { version: variant.version } : {}),
 		name: variant.name,
 		customize: toApiCustomizePlan(variant.customize ?? {}),
 		...(intent === "create_version" ? { force_version: true } : {}),
