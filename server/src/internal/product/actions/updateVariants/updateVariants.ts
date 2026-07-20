@@ -49,6 +49,19 @@ const buildVariantUpdateIndex = (variantUpdates: UpdateVariantParams[]) =>
 		]),
 	);
 
+// The base plan's rows belong to a different product; carrying their ids into
+// the variant would insert entitlements/prices that collide with the base's.
+const stripBasePlanRowIds = (plan: ApiPlanV1): ApiPlanV1 => ({
+	...plan,
+	price: plan.price
+		? (({ entitlement_id: _entitlementId, price_id: _priceId, ...rest }) =>
+				rest)(plan.price)
+		: plan.price,
+	items: plan.items.map(
+		({ entitlement_id: _entitlementId, price_id: _priceId, ...rest }) => rest,
+	),
+});
+
 const buildVariantTargetPlan = ({
 	incomingBasePlan,
 	variant,
@@ -58,10 +71,12 @@ const buildVariantTargetPlan = ({
 	variant: FullProduct;
 	variantUpdate: UpdateVariantParams;
 }): ApiPlanV1 => ({
-	...applyDiffToVariantPlan({
-		plan: incomingBasePlan,
-		diff: variantUpdate.customize,
-	}),
+	...stripBasePlanRowIds(
+		applyDiffToVariantPlan({
+			plan: incomingBasePlan,
+			diff: variantUpdate.customize,
+		}),
+	),
 	id: variant.id,
 	name: variantUpdate.name ?? variant.name,
 });
