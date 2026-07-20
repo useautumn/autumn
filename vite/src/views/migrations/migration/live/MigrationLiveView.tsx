@@ -102,7 +102,6 @@ import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
 type AdminRunControls = {
-	lazyRun: boolean;
 	retryErrored: boolean;
 	retrySkipped: boolean;
 	concurrency: string;
@@ -294,7 +293,6 @@ export function MigrationLiveView({
 	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 	const [runControls, setRunControls] = useState<AdminRunControls>({
-		lazyRun: true,
 		retryErrored: false,
 		retrySkipped: false,
 		concurrency: String(MAX_CONCURRENCY),
@@ -312,7 +310,6 @@ export function MigrationLiveView({
 	const maxConcurrency = isAdmin ? ADMIN_MAX_CONCURRENCY : MAX_CONCURRENCY;
 
 	const resolvedRunControls = {
-		lazyRun: runControls.lazyRun,
 		retryItemStatuses: buildRetryItemStatuses(runControls),
 		concurrency: parseConcurrency({
 			value: runControls.concurrency,
@@ -734,7 +731,6 @@ export function MigrationLiveView({
 								onChange={setRunControls}
 								invalidConcurrency={invalidConcurrency}
 								maxConcurrency={maxConcurrency}
-								lazyDisabled={sample.mode === "select"}
 								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 							/>
@@ -948,7 +944,6 @@ function MigrationRunControls({
 	onChange,
 	invalidConcurrency = false,
 	maxConcurrency = MAX_CONCURRENCY,
-	lazyDisabled = false,
 	hasFailedItems = false,
 	hasSkippedItems = false,
 }: {
@@ -956,33 +951,12 @@ function MigrationRunControls({
 	onChange: (value: AdminRunControls) => void;
 	invalidConcurrency?: boolean;
 	maxConcurrency?: number;
-	lazyDisabled?: boolean;
 	hasFailedItems?: boolean;
 	hasSkippedItems?: boolean;
 }) {
 	return (
 		<div className="flex flex-col gap-3">
 			<Separator />
-			<div
-				className={cn(
-					"flex items-center justify-between gap-4",
-					lazyDisabled && "opacity-50",
-				)}
-			>
-				<div className="flex flex-col gap-0.5">
-					<span className="text-sm font-medium text-foreground">Lazy run</span>
-					<span className="text-xs text-tertiary-foreground">
-						Remaining customers migrate when queried.
-					</span>
-				</div>
-				<Switch
-					checked={value.lazyRun && !lazyDisabled}
-					disabled={lazyDisabled}
-					onCheckedChange={(checked) =>
-						onChange({ ...value, lazyRun: checked === true })
-					}
-				/>
-			</div>
 			<div className="flex items-center justify-between gap-4">
 				<div className="flex flex-col gap-0.5">
 					<span className="text-sm font-medium text-foreground">
