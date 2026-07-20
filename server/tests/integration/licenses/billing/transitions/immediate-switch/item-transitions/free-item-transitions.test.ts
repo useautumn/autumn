@@ -1,12 +1,16 @@
-/** Contract: replacements preserve usage/reset state; additions initialize and removals disappear.
+/** Contract: replacements preserve usage/reset state; additions inherit Stripe cycles.
  * Mixed metered/boolean transitions repoint assignments and keep Stripe converged. */
 import { expect, test } from "bun:test";
 import type { ApiEntityV2 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
+import { getStripeSubscription } from "@tests/integration/billing/utils/stripeSubscriptionUtils";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import chalk from "chalk";
+import { addDays } from "date-fns";
+import { expectAssignmentEntitlementCyclesMatchStripe } from "../../utils/expectAssignmentEntitlementCyclesMatchStripe";
 import {
 	completeImmediateItemTransition,
 	ITEM_TRANSITION_ENTITY_USAGES,
@@ -181,5 +185,48 @@ test.concurrent(
 				present: false,
 			});
 		}
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license item transition: anchors a mid-cycle addition to the existing subscription")}`,
+	async () => {
+		const scenario = await setupItemTransitionScenario({
+			idPrefix: "license-item-anchor-add",
+			fromItems: [
+				items.monthlyMessages({ includedUsage: FROM_MESSAGES }),
+			],
+			toItems: [
+				items.monthlyMessages({ includedUsage: TO_MESSAGES }),
+				items.monthlyWords({ includedUsage: WORDS }),
+			],
+			fromParentPrice: 20,
+			toParentPrice: 50,
+			testClock: true,
+		});
+		if (!scenario.testClockId) throw new Error("Expected a test clock");
+
+		await advanceTestClock({
+			stripeCli: scenario.ctx.stripeCli,
+			testClockId: scenario.testClockId,
+			advanceTo: addDays(new Date(scenario.advancedTo), 10).getTime(),
+			waitForSeconds: 5,
+		});
+		const { subscription: subscriptionBefore } = await getStripeSubscription({
+			customerId: scenario.customerId,
+		});
+		const assignments = await completeImmediateItemTransition({ scenario });
+
+		const { subscription: subscriptionAfter } =
+			await expectAssignmentEntitlementCyclesMatchStripe({
+				ctx: scenario.ctx,
+				customerId: scenario.customerId,
+				assignmentIds: assignments.map((assignment) => assignment.id),
+				featureId: TestFeature.Words,
+			});
+		expect(subscriptionAfter.id).toBe(subscriptionBefore.id);
+		expect(subscriptionAfter.billing_cycle_anchor).toBe(
+			subscriptionBefore.billing_cycle_anchor,
+		);
 	},
 );

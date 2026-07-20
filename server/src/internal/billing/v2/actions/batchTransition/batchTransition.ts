@@ -8,6 +8,7 @@ import {
 	type BasePriceOperationResult,
 	executeBasePriceOperation,
 } from "./execute/executeBasePriceOperation";
+import { executeCustomerEntitlementCycleOperations } from "./execute/executeCustomerEntitlementCycleOperations";
 import { executeCustomerEntitlementOperations } from "./execute/executeCustomerEntitlementOperations";
 import { executeCustomerProductTransition } from "./execute/executeCustomerProductTransition";
 import { logBatchTransitionContext } from "./logs/logBatchTransitionContext";
@@ -70,6 +71,7 @@ export const batchTransition = async ({
 		added: 0,
 		removed: 0,
 	};
+	let customerEntitlementCyclesAligned = 0;
 	if (hasBatchOperations) {
 		const batchTransitionContext = await setupBatchTransitionContext({
 			ctx,
@@ -94,6 +96,11 @@ export const batchTransition = async ({
 			batchTransition: computedBatchTransition,
 			operation: computedBatchTransition.operations.basePrice,
 		});
+		customerEntitlementCyclesAligned =
+			await executeCustomerEntitlementCycleOperations({
+				ctx,
+				batchTransition: computedBatchTransition,
+			});
 
 		if (hasEntitlementPriceTransitions) {
 			entitlementResult = await executeCustomerEntitlementOperations({
@@ -115,6 +122,7 @@ export const batchTransition = async ({
 		customerLicenseLinkId: transition.updates.linkId,
 		result: {
 			customerEntitlements: entitlementResult,
+			customerEntitlementCyclesAligned,
 			basePrices: basePriceResult,
 			customerProductsUpdated,
 		},

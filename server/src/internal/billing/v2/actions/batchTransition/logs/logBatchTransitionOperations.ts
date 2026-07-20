@@ -80,6 +80,8 @@ export const logBatchTransitionOperations = ({
 				basePrice: basePriceOperationToLog({
 					operation: batchTransition.operations.basePrice,
 				}),
+				customerEntitlementCycles:
+					batchTransition.operations.customerEntitlementCycles,
 				entitlementPrices: entitlementPriceOperations,
 				unhandledTransitions: batchTransition.unhandledTransitions,
 			},

@@ -1,5 +1,6 @@
 import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import type { BasePriceOperation } from "./basePriceOperationTypes";
+import type { CustomerEntitlementCycleOperation } from "./customerEntitlementCycleOperationTypes";
 import type { EntitlementPriceOperation } from "./entitlementPriceOperationTypes";
 
 export type BatchTransitionContext = {
@@ -11,6 +12,7 @@ export type BatchTransitionContext = {
 
 export type BatchTransitionOperations = {
 	basePrice: BasePriceOperation | undefined;
+	customerEntitlementCycles: CustomerEntitlementCycleOperation[];
 	entitlementPrices: EntitlementPriceOperation[];
 };
 

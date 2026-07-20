@@ -476,6 +476,7 @@ const runDirectionBreakdown = async ({
 							customerLicenseLinkId: linkId,
 							operations: {
 								basePrice: undefined,
+								customerEntitlementCycles: [],
 								entitlementPrices: [operation],
 							},
 							unhandledTransitions: [],

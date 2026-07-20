@@ -40,6 +40,7 @@ export const setupCustomerEntitlementBatchTransition = async ({
 			customerLicenseLinkId: transition.updates.linkId,
 			operations: {
 				basePrice: undefined,
+				customerEntitlementCycles: [],
 				entitlementPrices: [],
 			},
 			unhandledTransitions: [],
@@ -51,9 +52,11 @@ export const setupCustomerEntitlementBatchTransition = async ({
 		entitlementPriceTransitions.transitions.length > 0 ||
 		entitlementPriceTransitions.added.length > 0 ||
 		entitlementPriceTransitions.deleted.length > 0;
+	const shouldReanchorCustomerEntitlements =
+		productTransitions.basePrice?.type === "add";
 	const [candidateOutgoingEntitlements, candidateOutgoingBasePrices] =
 		await Promise.all([
-			hasEntitlementPriceTransitions
+			hasEntitlementPriceTransitions || shouldReanchorCustomerEntitlements
 				? listDistinctEntitlementsByCustomerLicense({
 						db: ctx.db,
 						customerLicenseLinkId: transition.updates.linkId,
