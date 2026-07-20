@@ -139,10 +139,11 @@ export function ProductListTable() {
 		() =>
 			createProductListColumns({
 				showGroup: hasAnyGroup,
+				isCountsLoading,
 				onDeleteClick: handleDeleteClick,
 				sandboxes,
 			}),
-		[hasAnyGroup, handleDeleteClick, sandboxes],
+		[hasAnyGroup, isCountsLoading, handleDeleteClick, sandboxes],
 	);
 
 	const recurringBaseTable = useProductTable({
@@ -213,7 +214,6 @@ export function ProductListTable() {
 								table: recurringBaseTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: isCountsLoading,
 								getRowHref,
 								getRowClassName: (product: ProductWithCounts) =>
 									product.base_id
@@ -241,7 +241,6 @@ export function ProductListTable() {
 									table: recurringAddOnTable,
 									numberOfColumns: columns.length,
 									enableSorting,
-									isLoading: isCountsLoading,
 									getRowHref,
 									rowClassName: "h-10",
 								}}
@@ -261,7 +260,6 @@ export function ProductListTable() {
 								table: oneTimeTable,
 								numberOfColumns: columns.length,
 								enableSorting,
-								isLoading: isCountsLoading,
 								getRowHref,
 								emptyStateText:
 									"One-time prices for top-ups or lifetime purchases",

@@ -1,5 +1,5 @@
 import type { ProductV2 } from "@autumn/shared";
-import { MiniCopyButton } from "@autumn/ui";
+import { MiniCopyButton, Skeleton } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import type { SandboxSummary } from "@/hooks/queries/useSandboxesQuery";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
@@ -9,10 +9,12 @@ import { ProductNameCell } from "./ProductNameCell";
 
 export const createProductListColumns = ({
 	showGroup = false,
+	isCountsLoading = false,
 	onDeleteClick,
 	sandboxes = [],
 }: {
 	showGroup?: boolean;
+	isCountsLoading?: boolean;
 	onDeleteClick?: (product: ProductV2) => void;
 	sandboxes?: SandboxSummary[];
 } = {}) => [
@@ -63,7 +65,14 @@ export const createProductListColumns = ({
 		cell: ({ row }: { row: Row<ProductV2 & { active_count?: number }> }) => {
 			return (
 				<div className="text-muted-foreground">
-					<ProductCountsTooltip product={row.original} />
+					{isCountsLoading ? (
+						<Skeleton
+							aria-label="Loading customer count"
+							className="h-4 w-14"
+						/>
+					) : (
+						<ProductCountsTooltip product={row.original} />
+					)}
 				</div>
 			);
 		},
