@@ -7,6 +7,7 @@ type BatchTransitionResult = {
 	customerEntitlements: Awaited<
 		ReturnType<typeof executeCustomerEntitlementOperations>
 	>;
+	customerEntitlementCyclesAligned: number;
 	basePrices: BasePriceOperationResult;
 	customerProductsUpdated: number;
 };

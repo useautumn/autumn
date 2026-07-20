@@ -1,9 +1,9 @@
+/** Base-price transitions keep assignment pricing and Stripe-linked cycles consistent. */
 import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
 	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
-import { customerEntitlements } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect/expectStripeSubscriptionCorrect";
 import { setupLicenseUpdateScenario } from "@tests/integration/licenses/billing/update/setupLicenseUpdateScenario";
@@ -11,11 +11,11 @@ import { expectLicenseUpdatePreviewCorrect } from "@tests/integration/licenses/u
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import chalk from "chalk";
-import { inArray } from "drizzle-orm";
 import {
 	expectAssignmentBasePrices,
 	licensePricePatch,
 } from "../../utils/basePriceTransitionTestUtils";
+import { expectAssignmentEntitlementCyclesMatchStripe } from "../../utils/expectAssignmentEntitlementCyclesMatchStripe";
 
 const SEAT_COUNT = 2;
 const OLD_PRICE = 20;
@@ -189,31 +189,14 @@ test.concurrent(
 			customerId,
 		});
 
+		await expectAssignmentEntitlementCyclesMatchStripe({
+			ctx: scenario.ctx,
+			customerId,
+			assignmentIds: assignments.map((assignment) => assignment.id),
+			featureId: TestFeature.Messages,
+		});
 		const customer =
 			await scenario.autumnV1.customers.get<ApiCustomerV3>(customerId);
-		const stripeSubscriptions = await scenario.ctx.stripeCli.subscriptions.list(
-			{
-				customer: customer.stripe_id!,
-				status: "active",
-			},
-		);
-		const subscription = stripeSubscriptions.data[0];
-		if (!subscription) throw new Error("Expected a Stripe subscription");
-		const resetAt = subscription.items.data[0]?.current_period_end;
-		if (!resetAt) throw new Error("Expected a Stripe billing period");
-		const balances = await scenario.ctx.db
-			.select({ nextResetAt: customerEntitlements.next_reset_at })
-			.from(customerEntitlements)
-			.where(
-				inArray(
-					customerEntitlements.customer_product_id,
-					assignments.map((assignment) => assignment.id),
-				),
-			);
-		expect(balances).toHaveLength(SEAT_COUNT);
-		for (const balance of balances) {
-			expect(balance.nextResetAt).toBe(resetAt * 1000);
-		}
 		expect(customer.features[TestFeature.Messages]).toBeUndefined();
 	},
 );

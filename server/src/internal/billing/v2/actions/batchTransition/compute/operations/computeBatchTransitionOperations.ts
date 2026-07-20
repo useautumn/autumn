@@ -11,6 +11,7 @@ import type {
 } from "../../types/types";
 import type { ProductTransitions } from "../transitions/computeProductTransitions";
 import { computeBasePriceOperation } from "./basePriceOperations/computeBasePriceOperation";
+import { computeCustomerEntitlementCycleOperations } from "./customerEntitlementCycleOperations/computeCustomerEntitlementCycleOperations";
 import { computeEntitlementPriceOperations } from "./entitlementPriceOperations/computeEntitlementPriceOperations";
 
 export const computeBatchTransitionOperations = ({
@@ -40,8 +41,15 @@ export const computeBatchTransitionOperations = ({
 		basePriceTransition: productTransitions.basePrice,
 		candidateOutgoingBasePrices,
 	});
+	const customerEntitlementCycles = computeCustomerEntitlementCycleOperations({
+		basePriceOperation,
+		candidateOutgoingEntitlements,
+		initContext: customerEntitlementInitContext,
+		initOptions: customerEntitlementInitOptions,
+	});
 	const operations: BatchTransitionOperations = {
 		basePrice: basePriceOperation,
+		customerEntitlementCycles,
 		entitlementPrices: entitlementPriceOperations,
 	};
 	const unhandledTransitions: EntitlementIdTransition[] =

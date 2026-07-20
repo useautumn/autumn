@@ -208,4 +208,5 @@ export const completeImmediateItemTransition = async ({
 		count: ITEM_TRANSITION_ENTITY_COUNT,
 	});
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
+	return assignmentsAfter;
 };
