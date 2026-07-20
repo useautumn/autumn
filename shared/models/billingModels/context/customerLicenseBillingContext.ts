@@ -1,11 +1,11 @@
 import type { LicenseBillingPriceRow } from "../licenseBillingPriceRow.js";
 
-/** License billing state loaded once at setup (the facts that cost a DB
- * read); computes stay pure. Grows a sibling field per future fact. */
+/** License billing state loaded once; JSON-safe because deferred plans persist
+ * this context to metadata JSONB. */
 export type CustomerLicenseBillingContext = {
 	// Assigned seats' snapshot charges as (price × count), the free
 	// `included` seats already excluded.
 	licenseBillingPriceRows: LicenseBillingPriceRow[];
-	assignedSeatCountByCustomerLicenseId: Map<string, number>;
-	projectedPlanLicenseIds: Set<string>;
+	assignedSeatCountByCustomerLicenseId: Record<string, number>;
+	projectedPlanLicenseIds: string[];
 };
