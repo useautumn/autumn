@@ -684,6 +684,7 @@ export default function PlanChangeDialog({
 															</div>
 														)}
 														<MigrateTargetsStep
+															features={features}
 															showCustomers={migrateNeeded}
 															showSettings={false}
 															targets={migrateTargets}

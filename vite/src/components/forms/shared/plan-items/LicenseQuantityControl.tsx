@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
+import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { QuantityEditControl } from "./QuantityEditControl";
 
 export interface LicenseQuantityEditor {
-	form: UseAttachForm;
+	form: UseAttachForm | UseUpdateSubscriptionForm;
 	quantities: Record<string, number | undefined>;
 }
 

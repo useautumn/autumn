@@ -1,10 +1,13 @@
 import type {
+	Feature,
 	PlanUpdatePreview,
 	PlanUpdatePreviewItemChange,
+	PlanUpdatePreviewLicenseChange,
 	PlanUpdatePreviewVariantConflict,
 } from "@autumn/shared";
 import { UsersIcon, WarningIcon } from "@phosphor-icons/react";
 import { ItemChangeList } from "@/components/v2/ItemChangeList";
+import { LicenseChangeList } from "./LicenseChangeList";
 import {
 	previousAttributesToSettingChanges,
 	type SettingChange,
@@ -16,6 +19,7 @@ export type MigrateTargetRow = {
 	isCurrent: boolean;
 	isNew: boolean;
 	itemChanges: PlanUpdatePreviewItemChange[];
+	licenseChanges: PlanUpdatePreviewLicenseChange[];
 	hasPriceChange: boolean;
 	settingChanges: SettingChange[];
 	customerCount: number;
@@ -54,6 +58,7 @@ export function buildMigrateTargets({
 			isCurrent: !baseCreatesNewVersion,
 			isNew: baseCreatesNewVersion,
 			itemChanges: preview.item_changes ?? [],
+			licenseChanges: preview.license_changes ?? [],
 			hasPriceChange: preview.price_change !== undefined,
 			settingChanges: previousAttributesToSettingChanges(
 				preview.previous_attributes,
@@ -67,6 +72,7 @@ export function buildMigrateTargets({
 					isCurrent: false,
 					isNew: false,
 					itemChanges: version.item_changes ?? [],
+					licenseChanges: [],
 					hasPriceChange: version.price_change !== undefined,
 					settingChanges: previousAttributesToSettingChanges(
 						version.previous_attributes,
@@ -109,6 +115,7 @@ export function buildMigrateTargets({
 					isCurrent: isLatest && !createsNewVersion,
 					isNew: createsNewVersion,
 					itemChanges: entry.item_changes ?? [],
+					licenseChanges: [],
 					hasPriceChange: entry.price_change !== undefined,
 					settingChanges: previousAttributesToSettingChanges(
 						entry.previous_attributes,
@@ -164,15 +171,18 @@ function VersionStatusBadges({
 function VersionBody({
 	row,
 	showSettings,
+	features,
 }: {
 	row: MigrateTargetRow;
 	showSettings: boolean;
+	features?: Feature[];
 }) {
 	// Settings (config, billing controls, …) are a global metadata patch shared by
 	// every version, so the mixed-change view surfaces them once above the targets.
 	const settingChanges = showSettings ? row.settingChanges : [];
 	const hasChanges =
 		row.itemChanges.length > 0 ||
+		row.licenseChanges.length > 0 ||
 		row.hasPriceChange ||
 		settingChanges.length > 0;
 	return (
@@ -180,6 +190,7 @@ function VersionBody({
 			{row.itemChanges.length > 0 && (
 				<ItemChangeList itemChanges={row.itemChanges} />
 			)}
+			<LicenseChangeList changes={row.licenseChanges} features={features} />
 			{row.hasPriceChange && (
 				<span className="text-tertiary-foreground text-xs">
 					Base price change
@@ -212,10 +223,12 @@ export function MigrateTargetsStep({
 	targets,
 	showCustomers = true,
 	showSettings = true,
+	features,
 }: {
 	targets: MigrateTarget[];
 	showCustomers?: boolean;
 	showSettings?: boolean;
+	features?: Feature[];
 }) {
 	if (targets.length === 0) {
 		return (
@@ -247,7 +260,11 @@ export function MigrateTargetsStep({
 							</div>
 						</div>
 						{singleRow ? (
-							<VersionBody row={target.rows[0]} showSettings={showSettings} />
+							<VersionBody
+								row={target.rows[0]}
+								showSettings={showSettings}
+								features={features}
+							/>
 						) : (
 							<div className="flex flex-col gap-2">
 								{target.rows.map((row) => (
@@ -256,7 +273,11 @@ export function MigrateTargetsStep({
 											row={row}
 											showCustomers={showCustomers}
 										/>
-										<VersionBody row={row} showSettings={showSettings} />
+										<VersionBody
+											row={row}
+											showSettings={showSettings}
+											features={features}
+										/>
 									</div>
 								))}
 							</div>
