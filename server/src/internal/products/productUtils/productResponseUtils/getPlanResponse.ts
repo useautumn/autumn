@@ -65,7 +65,7 @@ export const getPlanResponse = async ({
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
 		prices: product.prices,
-		entitlements: product.entitlements,
+		entitlements: product.entitlements ?? [],
 		features: features,
 	});
 
