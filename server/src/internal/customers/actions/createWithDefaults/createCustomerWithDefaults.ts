@@ -1,4 +1,8 @@
-import type { CustomerData, FullCustomer } from "@autumn/shared";
+import {
+	type CustomerData,
+	type FullCustomer,
+	hasActivePaidSubscription,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
@@ -14,6 +18,7 @@ import {
 } from "./logs/logCreateCustomer.js";
 import { setupCreateCustomer } from "./setup/setupCreateCustomer.js";
 import { setupCreateCustomerBillingContext } from "./setup/setupCreateCustomerBillingContext.js";
+import { syncCreatedCustomerFromStripe } from "./syncCreatedCustomerFromStripe.js";
 
 /**
  * Create a customer and attach default products.
@@ -72,12 +77,22 @@ export const createCustomerWithDefaults = async ({
 	// drop the webhooks — a client retry lands on the "existing" path above and
 	// would never emit them.
 	try {
+		context.fullCustomer = await syncCreatedCustomerFromStripe({
+			ctx,
+			fullCustomer: context.fullCustomer,
+			stripeCustomerId: customerData?.stripe_id,
+		});
+
 		// 4. Setup billing context (creates Stripe customer)
 
 		const shouldCreateStripeCustomer =
 			customerData?.create_in_stripe || context.hasPaidProducts;
 
-		const shouldAttachPaidDefaults = context.hasPaidProducts;
+		const shouldAttachPaidDefaults =
+			context.hasPaidProducts &&
+			!hasActivePaidSubscription({
+				customerProducts: context.fullCustomer.customer_products,
+			});
 
 		if (!shouldCreateStripeCustomer) return context.fullCustomer;
 
