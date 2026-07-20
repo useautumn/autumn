@@ -1,4 +1,8 @@
-import type { CustomerData, FullCustomer } from "@autumn/shared";
+import {
+	type CustomerData,
+	type FullCustomer,
+	hasActivePaidSubscription,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
@@ -84,7 +88,11 @@ export const createCustomerWithDefaults = async ({
 		const shouldCreateStripeCustomer =
 			customerData?.create_in_stripe || context.hasPaidProducts;
 
-		const shouldAttachPaidDefaults = context.hasPaidProducts;
+		const shouldAttachPaidDefaults =
+			context.hasPaidProducts &&
+			!hasActivePaidSubscription({
+				customerProducts: context.fullCustomer.customer_products,
+			});
 
 		if (!shouldCreateStripeCustomer) return context.fullCustomer;
 

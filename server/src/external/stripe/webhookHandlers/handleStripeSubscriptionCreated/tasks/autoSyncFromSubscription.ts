@@ -17,7 +17,7 @@ type AutoSyncFromSubscriptionParams = {
 	subscriptionCreatedContext: StripeSubscriptionCreatedContext;
 };
 
-const autoSyncFromSubscriptionUnlocked = async ({
+const autoSyncFromSubscription = async ({
 	ctx,
 	subscriptionCreatedContext,
 }: AutoSyncFromSubscriptionParams) => {
@@ -66,7 +66,7 @@ const autoSyncFromSubscriptionUnlocked = async ({
 	await billingActions.syncV2({ ctx, params });
 };
 
-export const autoSyncFromSubscription = async (
+export const autoSyncFromSubscriptionWithLock = async (
 	params: AutoSyncFromSubscriptionParams,
 ) => {
 	const { ctx, subscriptionCreatedContext } = params;
@@ -76,6 +76,6 @@ export const autoSyncFromSubscription = async (
 	await withStripeSyncCustomerLock({
 		ctx,
 		customerId,
-		run: () => autoSyncFromSubscriptionUnlocked(params),
+		run: () => autoSyncFromSubscription(params),
 	});
 };

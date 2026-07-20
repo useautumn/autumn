@@ -86,16 +86,192 @@ const createAutumnCustomer = ({
 	autumnV1,
 	customerId,
 	stripeCustomerId,
+	disableDefaults = true,
+	defaultGroup,
 }: {
 	autumnV1: Awaited<ReturnType<typeof initScenario>>["autumnV1"];
 	customerId: string;
-	stripeCustomerId: string;
+	stripeCustomerId?: string;
+	disableDefaults?: boolean;
+	defaultGroup?: string;
 }) =>
 	autumnV1.customers.create({
 		id: customerId,
 		stripe_id: stripeCustomerId,
-		internalOptions: { disable_defaults: true },
+		internalOptions: disableDefaults
+			? { disable_defaults: true }
+			: defaultGroup
+				? { default_group: defaultGroup }
+				: undefined,
 	});
+
+test(`${chalk.yellowBright("customers stripe sync: no stripe id preserves normal creation")}`, async () => {
+	const customerId = `create-stripe-sync-none-${runId}`;
+	const defaultGroup = `create-stripe-sync-none-group-${runId}`;
+	const freeDefault = products.base({
+		id: `create-stripe-sync-free-${runId}`,
+		items: [items.monthlyMessages({ includedUsage: 50 })],
+		isDefault: true,
+		group: defaultGroup,
+	});
+	const { autumnV1, ctx } = await initScenario({
+		setup: [
+			s.deleteCustomer({ customerId }),
+			s.products({ list: [freeDefault] }),
+		],
+		actions: [],
+	});
+
+	const created = await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		disableDefaults: false,
+		defaultGroup,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	expect(created.stripe_id).toBeNull();
+	await expectProductActive({ customer: created, productId: freeDefault.id });
+	expectCustomerFeatureCorrect({
+		customer: created,
+		featureId: TestFeature.Messages,
+		balance: 50,
+		usage: 0,
+	});
+	expect(fullCustomer.customer_products).toHaveLength(1);
+});
+
+test(`${chalk.yellowBright("customers stripe sync: empty stripe customer preserves defaults")}`, async () => {
+	const customerId = `create-stripe-sync-empty-${runId}`;
+	const defaultGroup = `create-stripe-sync-empty-group-${runId}`;
+	const freeDefault = products.base({
+		id: `create-stripe-sync-empty-free-${runId}`,
+		items: [items.monthlyMessages({ includedUsage: 75 })],
+		isDefault: true,
+		group: defaultGroup,
+	});
+	const { autumnV1, ctx } = await initScenario({
+		setup: [
+			s.deleteCustomer({ customerId }),
+			s.products({ list: [freeDefault] }),
+		],
+		actions: [],
+	});
+	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
+
+	const created = await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+		disableDefaults: false,
+		defaultGroup,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	expect(created.stripe_id).toBe(stripeCustomer.id);
+	await expectProductActive({ customer: created, productId: freeDefault.id });
+	expectCustomerFeatureCorrect({
+		customer: created,
+		featureId: TestFeature.Messages,
+		balance: 75,
+		usage: 0,
+	});
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.subscription_ids ?? []).toEqual([]);
+});
+
+test(`${chalk.yellowBright("customers stripe sync: existing stripe subscription is not duplicated by a paid default")}`, async () => {
+	const customerId = `create-stripe-sync-paid-default-${runId}`;
+	const defaultGroup = `create-stripe-sync-paid-default-group-${runId}`;
+	const paidDefault = {
+		...products.defaultTrial({
+			id: `create-stripe-sync-paid-default-plan-${runId}`,
+			items: [items.monthlyMessages({ includedUsage: 125 })],
+			trialDays: 14,
+			cardRequired: false,
+		}),
+		group: defaultGroup,
+	};
+	const { autumnV1, ctx } = await initScenario({
+		setup: [
+			s.deleteCustomer({ customerId }),
+			s.products({ list: [paidDefault] }),
+		],
+		actions: [],
+	});
+	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
+	const stripeSubscription = await createSubscription({
+		ctx,
+		stripeCustomerId: stripeCustomer.id,
+		items: [
+			{
+				price: await getBasePriceId({ ctx, productId: paidDefault.id }),
+			},
+		],
+	});
+
+	await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+		disableDefaults: false,
+		defaultGroup,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const subscriptions = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomer.id,
+		status: "all",
+	});
+
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.subscription_ids).toEqual([
+		stripeSubscription.id,
+	]);
+	expect(subscriptions.data.map(({ id }) => id)).toEqual([
+		stripeSubscription.id,
+	]);
+});
+
+test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is not imported on retry")}`, async () => {
+	const customerId = `create-stripe-sync-existing-${runId}`;
+	const pro = products.pro({
+		id: `create-stripe-sync-existing-pro-${runId}`,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const { autumnV1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId }), s.products({ list: [pro] })],
+		actions: [],
+	});
+	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
+	await createSubscription({
+		ctx,
+		stripeCustomerId: stripeCustomer.id,
+		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
+	});
+	await createAutumnCustomer({ autumnV1, customerId });
+
+	const retried = await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	expect(retried.stripe_id).toBeNull();
+	expect(fullCustomer.customer_products).toHaveLength(0);
+});
 
 test(`${chalk.yellowBright("customers stripe sync: imports once across sequential and concurrent retries")}`, async () => {
 	const customerId = `create-stripe-sync-basic-${runId}`;

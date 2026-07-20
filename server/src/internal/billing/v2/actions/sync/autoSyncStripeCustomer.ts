@@ -4,7 +4,7 @@ import { prepareAutoSyncStripeCustomer } from "./setup/prepareAutoSyncStripeCust
 import { syncV2 } from "./syncV2";
 import { withStripeSyncCustomerLock } from "./utils/withStripeSyncCustomerLock";
 
-const autoSyncStripeCustomerUnlocked = async ({
+const autoSyncStripeCustomer = async ({
 	ctx,
 	customerId,
 	stripeCustomerId,
@@ -30,7 +30,7 @@ const autoSyncStripeCustomerUnlocked = async ({
 	}
 };
 
-export const autoSyncStripeCustomer = (params: {
+export const autoSyncStripeCustomerWithLock = (params: {
 	ctx: AutumnContext;
 	customerId: string;
 	stripeCustomerId: string;
@@ -39,6 +39,6 @@ export const autoSyncStripeCustomer = (params: {
 	return withStripeSyncCustomerLock({
 		ctx,
 		customerId,
-		run: () => autoSyncStripeCustomerUnlocked(params),
+		run: () => autoSyncStripeCustomer(params),
 	});
 };

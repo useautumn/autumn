@@ -13,7 +13,6 @@ import { releaseLicense } from "@/internal/billing/v2/actions/releaseLicense/rel
 import { previewRestore } from "@/internal/billing/v2/actions/restore/previewRestore";
 import { restore } from "@/internal/billing/v2/actions/restore/restore";
 import { setupPayment } from "@/internal/billing/v2/actions/setupPayment/setupPayment";
-import { autoSyncStripeCustomer } from "@/internal/billing/v2/actions/sync/autoSyncStripeCustomer";
 import { sync } from "@/internal/billing/v2/actions/sync/sync";
 import { syncProposals } from "@/internal/billing/v2/actions/sync/syncProposals";
 import { syncProposalsV2 } from "@/internal/billing/v2/actions/sync/syncProposalsV2";
@@ -34,7 +33,6 @@ export const billingActions = {
 	migrate: migrate,
 	restore: restore,
 	previewRestore: previewRestore,
-	autoSyncStripeCustomer,
 	sync: sync,
 	syncV2: syncV2,
 	syncProposals: syncProposals,

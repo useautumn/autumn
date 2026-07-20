@@ -1,6 +1,6 @@
 import { CustomerExpand, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { billingActions } from "@/internal/billing/v2/actions/index.js";
+import { autoSyncStripeCustomerWithLock } from "@/internal/billing/v2/actions/sync/autoSyncStripeCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
 export const syncCreatedCustomerFromStripe = async ({
@@ -15,7 +15,7 @@ export const syncCreatedCustomerFromStripe = async ({
 	if (!stripeCustomerId) return fullCustomer;
 
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
-	await billingActions.autoSyncStripeCustomer({
+	await autoSyncStripeCustomerWithLock({
 		ctx,
 		customerId,
 		stripeCustomerId,
