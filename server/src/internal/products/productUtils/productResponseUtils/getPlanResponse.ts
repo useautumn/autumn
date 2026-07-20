@@ -64,7 +64,7 @@ export const getPlanResponse = async ({
 }): Promise<ApiPlanV1> => {
 	// 1. Convert prices/entitlements to items
 	const rawItems = mapToProductItems({
-		prices: product.prices,
+		prices: product.prices ?? [],
 		entitlements: product.entitlements ?? [],
 		features: features,
 	});
