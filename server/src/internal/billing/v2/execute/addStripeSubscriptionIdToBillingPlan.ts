@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import { cp } from "@autumn/shared";
+import { getPatchedCustomerProductUpdates } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
 /**
@@ -22,5 +23,11 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 		}
 
 		customerProduct.subscription_ids = [stripeSubscriptionId];
+	}
+
+	for (const update of getPatchedCustomerProductUpdates({
+		autumnBillingPlan,
+	})) {
+		update.updates.subscription_ids = [stripeSubscriptionId];
 	}
 };

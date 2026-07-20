@@ -1,17 +1,14 @@
 import type { Price } from "@models/productModels/priceModels/priceModels";
+import { getBillingType } from "@utils/productUtils/priceUtils.js";
 
-/** The identity a price is matched on across definitions (mirrors
- * diffPlanV1's composeMatchKey): feature + billing method + interval. */
+/** Matches by feature, derived billing type, interval, and interval count. */
 const priceMatchKey = (price: Price): string => {
 	const interval = price.config.interval ?? "";
 	const intervalCount = interval ? (price.config.interval_count ?? 1) : "";
-	return `${price.config.feature_id ?? ""}|${price.billing_type ?? ""}|${interval}|${intervalCount}`;
+	return `${price.config.feature_id ?? ""}|${getBillingType(price.config)}|${interval}|${intervalCount}`;
 };
 
-/**
- * Strict 1:1 successor: exactly one unclaimed candidate shares the source's
- * match key, else undefined — ambiguous (0 or 2+) matches never guess.
- */
+/** Returns a unique unclaimed successor; ambiguous matches return undefined. */
 export const findPriceSuccessor = ({
 	sourcePrice,
 	candidatePrices,

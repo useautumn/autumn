@@ -113,7 +113,6 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// Successor pools now exist; adopted seats converge onto their definitions.
 	await executeCustomerLicenseTransitions({
 		ctx,
 		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,

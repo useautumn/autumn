@@ -23,7 +23,6 @@ import { handleLicenseAttachTargetErrors } from "@/internal/billing/v2/common/er
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
-import { handleLicenseErrors } from "./handleLicenseErrors/handleLicenseErrors";
 import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
@@ -119,6 +118,4 @@ export const handleAttachV2Errors = async ({
 	handleRevertTrialErrors({ billingContext });
 
 	handleStripeBillingPlanErrors({ ctx, billingContext, billingPlan });
-
-	handleLicenseErrors({ billingContext, autumnBillingPlan });
 };

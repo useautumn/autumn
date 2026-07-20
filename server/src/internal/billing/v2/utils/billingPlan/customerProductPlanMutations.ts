@@ -30,6 +30,21 @@ export const getPatchCustomerProducts = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => autumnBillingPlan.patchCustomerProducts ?? [];
 
+export const getPatchedCustomerProductUpdates = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}) => {
+	const patchedCustomerProductIds = new Set(
+		getPatchCustomerProducts({ autumnBillingPlan }).map(
+			({ customerProduct }) => customerProduct.id,
+		),
+	);
+	return getUpdateCustomerProducts({ autumnBillingPlan }).filter(
+		({ customerProduct }) => patchedCustomerProductIds.has(customerProduct.id),
+	);
+};
+
 export const applyCustomerProductUpdate = ({
 	customerProduct,
 	updates,

@@ -37,10 +37,11 @@ export const customerEntitlements = pgTable(
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
 
-		// New field, free_balance: how much balance can be deducted
+		/** @deprecated Legacy free-balance field. */
 		additional_balance: numeric({ mode: "number" }).notNull().default(0),
 
-		// Need to work on free balance...
+		/** @deprecated Still used by the legacy entityFeatureId flow.
+		 * New features should not read or write this field. */
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
 
 		// Expiry for loose entitlements (entitlements without reset intervals)

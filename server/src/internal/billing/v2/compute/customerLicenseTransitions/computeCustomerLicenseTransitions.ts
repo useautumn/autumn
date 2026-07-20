@@ -3,21 +3,32 @@ import type {
 	CustomerLicenseTransition,
 	FullCusProduct,
 } from "@autumn/shared";
+import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
 import { pairCustomerProducts } from "../pairCustomerProducts.js";
 import { applyCustomerLicenseTransitions } from "./applyCustomerLicenseTransitions.js";
 import { customerLicensePairToTransition } from "./customerLicensePairToTransition.js";
 import { pairCustomerLicensesByLicensePlan } from "./pairCustomerLicensesByLicensePlan.js";
 
-/** A successor row already matching what it would adopt (same-product
- * updates) produces nothing to write — dropped so callers can wire
- * unconditionally. Compares by content, not plan_license_id: parent
- * version bumps always fork a new catalog row (schema-scoped per version),
- * even when the license definition itself didn't change. */
+/** Drops successors already converged by content; parent version bumps still transition. */
 const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 	const { incomingCustomerLicense, updates } = transition;
+	const fromProduct = transition.outgoingCustomerLicense.planLicense?.product;
+	const toProduct = transition.incomingCustomerLicense.planLicense?.product;
+	const productTransitions =
+		fromProduct && toProduct
+			? computeProductTransitions({ fromProduct, toProduct })
+			: undefined;
+	const entitlementPriceTransitions = productTransitions?.entitlementPrices;
+	const hasEntitlementChanges = Boolean(
+		entitlementPriceTransitions &&
+			(entitlementPriceTransitions.transitions.length > 0 ||
+				entitlementPriceTransitions.added.length > 0 ||
+				entitlementPriceTransitions.deleted.length > 0),
+	);
 	return (
-		transition.priceTransitions.length === 0 &&
-		transition.entitlementTransitions.length === 0 &&
+		!productTransitions?.basePrice &&
+		!productTransitions?.customerProduct &&
+		!hasEntitlementChanges &&
 		updates.linkId === incomingCustomerLicense.link_id &&
 		updates.granted === incomingCustomerLicense.granted &&
 		updates.remaining === incomingCustomerLicense.remaining &&
@@ -25,16 +36,18 @@ const isNoopTransition = (transition: CustomerLicenseTransition): boolean => {
 	);
 };
 
-/** Computes license transitions across customer product transitions.
- * Catalog edits do not call this, preserving assignment snapshots. */
+/** Computes license transitions across customer products.
+ * Carrying pool state is independent from billing projection. */
 export const computeCustomerLicenseTransitions = ({
 	outgoingCustomerProducts,
 	incomingCustomerProducts,
 	customerLicenseBillingContext,
+	carryCustomerLicenseState = true,
 }: {
 	outgoingCustomerProducts: FullCusProduct[];
 	incomingCustomerProducts: FullCusProduct[];
 	customerLicenseBillingContext?: CustomerLicenseBillingContext;
+	carryCustomerLicenseState?: boolean;
 }): CustomerLicenseTransition[] => {
 	const customerLicenseTransitions: CustomerLicenseTransition[] = [];
 
@@ -60,10 +73,11 @@ export const computeCustomerLicenseTransitions = ({
 		}
 	}
 
-	// Always applied: successor rows are in-memory planted state, and every
-	// downstream compute expects them converged.
+	// Billing always projects; live pool state carries only when requested.
 	applyCustomerLicenseTransitions({
-		customerProducts: incomingCustomerProducts,
+		customerProductsToMutate: carryCustomerLicenseState
+			? incomingCustomerProducts
+			: [],
 		customerLicenseTransitions,
 		customerLicenseBillingContext,
 	});

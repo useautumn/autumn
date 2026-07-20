@@ -37,12 +37,6 @@ export const CustomerLicenseTransitionSchema = z.object({
 		remaining: z.number(),
 		paidQuantity: z.number(),
 	}),
-	priceTransitions: z.array(
-		z.object({ fromPriceId: z.string(), toPriceId: z.string() }),
-	),
-	entitlementTransitions: z.array(
-		z.object({ fromEntitlementId: z.string(), toEntitlementId: z.string() }),
-	),
 });
 export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema

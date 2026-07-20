@@ -1,16 +1,5 @@
-/**
- * Benchmark: seat half of a license definition transition at scale.
- *
- * Seeds 100k live seat customer_products (each 1 customer_price + 5
- * customer_entitlements) anchored to one pool link, then times:
- *   - repointDefinition (pool half, 1 row)
- *   - repointSeatPrices (1 mapping x 100k rows)
- *   - repointSeatEntitlements (5 mappings x 100k rows each)
- * Verifies converged counts, then cleans everything up.
- *
- * Run: ENV_FILE=.env infisical run --env=dev --recursive -- \
- *        bun tests/perf/licenseSeatRepointBench.ts
- */
+/** Benchmarks a pool definition and 100k assigned-seat price repoints.
+ * Run with `bun tests/perf/licenseSeatRepointBench.ts`. */
 
 import {
 	AppEnv,
@@ -18,19 +7,16 @@ import {
 	customerLicenses,
 	customerProducts,
 	customers,
-	entitlements,
-	features,
 	planLicenses,
 	prices,
 	products,
 } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
 import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo";
 
 const SEATS = 100_000;
-const ENTS_PER_SEAT = 5;
 const ORG_SLUG = "unit-test-org";
 const ENV = AppEnv.Sandbox;
 
@@ -51,16 +37,6 @@ const main = async () => {
 			whereEq(organizations.slug, ORG_SLUG),
 	});
 	if (!org) throw new Error(`Org ${ORG_SLUG} not found`);
-
-	const orgFeatures = await db
-		.select({ internal_id: features.internal_id })
-		.from(features)
-		.where(and(eq(features.org_id, org.id), eq(features.env, ENV)))
-		.limit(ENTS_PER_SEAT);
-	if (orgFeatures.length < ENTS_PER_SEAT)
-		throw new Error(
-			`Need ${ENTS_PER_SEAT} features, got ${orgFeatures.length}`,
-		);
 
 	const run = `bench_${Date.now()}`;
 	const now = Date.now();
@@ -85,7 +61,7 @@ const main = async () => {
 		internal_product_id: id("prod_license"),
 		created_at: now,
 		config: {
-			type: "fixed",
+			type: "fixed" as const,
 			amount,
 			interval: BillingInterval.Month,
 			interval_count: 1,
@@ -94,18 +70,6 @@ const main = async () => {
 		},
 	});
 	await db.insert(prices).values([priceRow("old", 20), priceRow("new", 30)]);
-
-	const entitlementRows = (kind: "old" | "new") =>
-		orgFeatures.map((feature, index) => ({
-			id: id(`ent_${kind}`, index),
-			created_at: now,
-			internal_feature_id: feature.internal_id,
-			internal_product_id: id("prod_license"),
-			org_id: org.id,
-		}));
-	await db
-		.insert(entitlements)
-		.values([...entitlementRows("old"), ...entitlementRows("new")]);
 
 	await db.insert(planLicenses).values(
 		(["old", "new"] as const).map((kind) => ({
@@ -186,20 +150,6 @@ const main = async () => {
 		`),
 	);
 
-	for (let entIndex = 0; entIndex < ENTS_PER_SEAT; entIndex++) {
-		await time(`seed ${SEATS} customer_entitlements [${entIndex}]`, () =>
-			db.execute(sql`
-				INSERT INTO customer_entitlements
-					(id, customer_product_id, entitlement_id, internal_customer_id,
-					 internal_feature_id, balance, created_at)
-				SELECT ${run} || '_ce_' || ${sql.raw(String(entIndex))} || '_' || i,
-					${run} || '_seat_' || i, ${id("ent_old", entIndex)}, ${id("cus")},
-					${orgFeatures[entIndex].internal_id}, 100, ${now}
-				FROM generate_series(1, ${sql.raw(String(SEATS))}) AS i
-			`),
-		);
-	}
-
 	// ── The executor under test ───────────────────────────────────────────
 	console.log("\n── executor ──");
 
@@ -222,33 +172,17 @@ const main = async () => {
 		}),
 	);
 
-	await time(
-		`seat half: repointSeatEntitlements single pass (${ENTS_PER_SEAT}x${SEATS} rows)`,
-		() =>
-			licenseAssignmentRepo.repointSeatEntitlements({
-				db,
-				customerLicenseLinkId: linkId,
-				entitlementTransitions: orgFeatures.map((_, entIndex) => ({
-					fromEntitlementId: id("ent_old", entIndex),
-					toEntitlementId: id("ent_new", entIndex),
-				})),
-			}),
-	);
-
 	// ── Verify convergence ────────────────────────────────────────────────
 	console.log("\n── verify ──");
 	const [{ count: priceCount }] = (await db.execute(
 		sql`SELECT count(*)::int AS count FROM customer_prices WHERE price_id = ${id("price_new")}`,
-	)) as unknown as [{ count: number }];
-	const [{ count: entCount }] = (await db.execute(
-		sql`SELECT count(*)::int AS count FROM customer_entitlements WHERE entitlement_id = ${id("ent_new", 0)}`,
 	)) as unknown as [{ count: number }];
 	const [pool] = await db
 		.select()
 		.from(customerLicenses)
 		.where(eq(customerLicenses.id, id("pool")));
 	console.log(
-		`prices converged: ${priceCount}/${SEATS} | ents[0] converged: ${entCount}/${SEATS} | pool def: ${pool.plan_license_id === id("plan_license_new") ? "repointed" : "STALE"}`,
+		`prices converged: ${priceCount}/${SEATS} | pool def: ${pool.plan_license_id === id("plan_license_new") ? "repointed" : "STALE"}`,
 	);
 
 	// ── Cleanup ───────────────────────────────────────────────────────────
@@ -256,11 +190,6 @@ const main = async () => {
 	await time("delete customer_prices", () =>
 		db.execute(
 			sql`DELETE FROM customer_prices WHERE internal_customer_id = ${id("cus")}`,
-		),
-	);
-	await time("delete customer_entitlements", () =>
-		db.execute(
-			sql`DELETE FROM customer_entitlements WHERE internal_customer_id = ${id("cus")}`,
 		),
 	);
 	await time("delete seats + parent", () =>

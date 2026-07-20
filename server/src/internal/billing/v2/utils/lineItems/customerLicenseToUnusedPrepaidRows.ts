@@ -1,26 +1,24 @@
 import {
-	customerLicenseToUsage,
 	type FullCustomerLicense,
 	isFixedPrice,
 	type LicenseBillingPriceRow,
 } from "@autumn/shared";
 
-/**
- * The unassigned paid buffer, priced in-memory at the current plan license
- * definition — it has no seat rows by design. Empty when the link is broken
- * (reconcile owns those) or nothing paid remains unassigned.
- */
+/** Prices the paid seat quantity without persisted assignment rows. */
 export const customerLicenseToUnusedPrepaidRows = ({
 	customerLicense,
+	billableAssignedQuantity,
 }: {
 	customerLicense: FullCustomerLicense;
+	billableAssignedQuantity: number;
 }): LicenseBillingPriceRow[] => {
 	const { planLicense } = customerLicense;
 	if (!planLicense) return [];
 
-	const used = customerLicenseToUsage({ customerLicense });
-	const billableUsed = Math.max(0, used - planLicense.included);
-	const quantity = Math.max(0, customerLicense.paid_quantity - billableUsed);
+	const quantity = Math.max(
+		0,
+		customerLicense.paid_quantity - billableAssignedQuantity,
+	);
 	if (quantity === 0) return [];
 
 	// License plans carry a single fixed price for now.

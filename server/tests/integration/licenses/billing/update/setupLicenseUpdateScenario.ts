@@ -17,7 +17,7 @@ export const setupLicenseUpdateScenario = async ({
 	customerId: string;
 	idPrefix: string;
 	parentItems?: ProductItem[];
-	seatPrice: number;
+	seatPrice?: number;
 	/** Extra seat items beyond the monthly base price (e.g. a usage grant). */
 	seatItems?: ProductItem[];
 	includedSeats: number;
@@ -29,7 +29,12 @@ export const setupLicenseUpdateScenario = async ({
 	});
 	const devSeat = products.base({
 		id: `${idPrefix}-dev-seat`,
-		items: [items.monthlyPrice({ price: seatPrice }), ...(seatItems ?? [])],
+		items: [
+			...(seatPrice === undefined
+				? []
+				: [items.monthlyPrice({ price: seatPrice })]),
+			...(seatItems ?? []),
+		],
 		group: `${idPrefix}-dev-seat-licenses`,
 	});
 
