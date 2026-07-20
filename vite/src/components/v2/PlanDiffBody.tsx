@@ -7,6 +7,10 @@ import {
 	type PlanUpdatePreviewPriceChange,
 } from "@autumn/shared";
 import {
+	AdditionalCurrenciesHint,
+	getCurrencyChangeStates,
+} from "@/views/products/plan/components/plan-card/AdditionalCurrenciesHint";
+import {
 	PlanSettingsChanges,
 	previousAttributesToSettingChanges,
 } from "@/views/products/plan/versioning/PlanSettingsChanges";
@@ -58,6 +62,21 @@ export function PlanDiffBody({
 			</span>
 		);
 	}
+	const previousCurrencies =
+		plan.price_change?.previous?.additional_currencies ?? [];
+	const currentCurrencies =
+		plan.price_change?.current?.additional_currencies ?? [];
+	const previousCurrencyStates = getCurrencyChangeStates({
+		entries: previousCurrencies,
+		others: currentCurrencies,
+		missingState: "removed",
+	});
+	const currentCurrencyStates = getCurrencyChangeStates({
+		entries: currentCurrencies,
+		others: previousCurrencies,
+		missingState: "added",
+	});
+
 	return (
 		<div className="flex flex-col gap-2">
 			<ItemChangeList
@@ -70,10 +89,22 @@ export function PlanDiffBody({
 					<span className="text-tertiary-foreground">
 						{priceText(plan.price_change.previous)}
 					</span>
+					{previousCurrencies.length > 0 && (
+						<AdditionalCurrenciesHint
+							changeStates={previousCurrencyStates}
+							currencies={previousCurrencies}
+						/>
+					)}
 					<span className="text-subtle">-&gt;</span>
 					<span className="font-medium text-foreground">
 						{priceText(plan.price_change.current)}
 					</span>
+					{currentCurrencies.length > 0 && (
+						<AdditionalCurrenciesHint
+							changeStates={currentCurrencyStates}
+							currencies={currentCurrencies}
+						/>
+					)}
 				</div>
 			)}
 			<PlanSettingsChanges
