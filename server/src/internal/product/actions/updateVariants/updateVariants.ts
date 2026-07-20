@@ -15,6 +15,7 @@ import {
 	getApiPlanDiff,
 	getVariantSettingsPatch,
 	omitVariantOwnedSettings,
+	stripPlanRowIds,
 	variantSettingsPatchHasValues,
 } from "../common/planTransformUtils.js";
 import { createVariant } from "../createVariant/createVariant.js";
@@ -59,7 +60,7 @@ const buildVariantTargetPlan = ({
 	variantUpdate: UpdateVariantParams;
 }): ApiPlanV1 => ({
 	...applyDiffToVariantPlan({
-		plan: incomingBasePlan,
+		plan: stripPlanRowIds({ plan: incomingBasePlan }),
 		diff: variantUpdate.customize,
 	}),
 	id: variant.id,
