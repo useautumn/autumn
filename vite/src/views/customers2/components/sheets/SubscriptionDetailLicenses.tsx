@@ -3,6 +3,7 @@ import {
 	mapToProductV2,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
+import { AdminHover } from "@/components/general/AdminHover";
 import { LicenseIcon } from "@/components/v2/icons/LicenseIcon";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerDisplayCurrency } from "@/hooks/common/useCustomerDisplayCurrency";
@@ -44,9 +45,17 @@ export function SubscriptionDetailLicenses({
 						title={
 							<span className="flex items-center gap-2 min-w-0 text-sm">
 								<LicenseIcon size={14} className="shrink-0" />
-								<span className="truncate">
-									{product.name ?? planLicense.product.id}
-								</span>
+								<AdminHover
+									side="top"
+									texts={[
+										{ key: "Plan License ID", value: planLicense.id },
+									]}
+									triggerClassName="min-w-0"
+								>
+									<span className="truncate">
+										{product.name ?? planLicense.product.id}
+									</span>
+								</AdminHover>
 							</span>
 						}
 					>

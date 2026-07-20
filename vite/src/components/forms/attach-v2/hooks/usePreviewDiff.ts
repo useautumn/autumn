@@ -1,6 +1,10 @@
 import type { ProductItem } from "@autumn/shared";
 import { useEffect, useMemo, useState } from "react";
-import { outgoingToProductItems } from "../utils/attachDiffUtils";
+import type { VersionedPlanLicense } from "@/hooks/queries/usePlanLicensesQuery";
+import {
+	outgoingToPlanLicenses,
+	outgoingToProductItems,
+} from "../utils/attachDiffUtils";
 import type { UseAttachPreviewReturn } from "./useAttachPreview";
 
 /**
@@ -31,7 +35,9 @@ export function usePreviewDiff({
 	const [diffState, setDiffState] = useState<{
 		key: string;
 		items: ProductItem[];
-	}>({ key: "", items: [] });
+		licenses: VersionedPlanLicense[];
+		hasOutgoing: boolean;
+	}>({ key: "", items: [], licenses: [], hasOutgoing: false });
 
 	const outgoing = previewQuery.data?.outgoing;
 	const isLoading = previewQuery.isLoading;
@@ -43,12 +49,16 @@ export function usePreviewDiff({
 				items: outgoing
 					? outgoingToProductItems({ outgoing, incomingItems })
 					: [],
+				licenses: outgoingToPlanLicenses({ outgoing }),
+				hasOutgoing: (outgoing?.length ?? 0) > 0,
 			});
 		}
 	}, [isLoading, outgoing, planConfigKey, incomingItems]);
 
 	return {
 		outgoingItems: diffState.items,
+		outgoingLicenses: diffState.licenses,
+		hasOutgoingPlans: diffState.hasOutgoing,
 		isDiffLoading: diffState.key !== planConfigKey,
 	};
 }

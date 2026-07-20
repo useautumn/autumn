@@ -2,12 +2,31 @@ import type {
 	BillingContext,
 	FullCusProduct,
 	FullCustomerLicense,
+	LicenseBillingPriceRow,
 	LineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerLicenseToUnusedPrepaidRows } from "./customerLicenseToUnusedPrepaidRows";
 import { licenseBillingRowToLineItem } from "./licenseBillingRowToLineItem";
 import { resolveLicenseBillingRowsThroughDefinition } from "./resolveLicenseBillingRowsThroughDefinition";
+
+/** One row per price with summed quantities, so a direction bills its full
+ * quantity picture as a single line (mirroring feature-quantity updates). */
+const mergeLicenseBillingRowsByPrice = (
+	licenseBillingRows: LicenseBillingPriceRow[],
+): LicenseBillingPriceRow[] => {
+	const mergedByPriceId = new Map<string, LicenseBillingPriceRow>();
+	for (const row of licenseBillingRows) {
+		const existing = mergedByPriceId.get(row.price.id);
+		mergedByPriceId.set(
+			row.price.id,
+			existing
+				? { ...existing, quantity: existing.quantity + row.quantity }
+				: row,
+		);
+	}
+	return [...mergedByPriceId.values()];
+};
 
 /** Builds one license pool's assigned and unused prepaid line items. */
 export const customerLicenseToLineItems = ({
@@ -54,14 +73,15 @@ export const customerLicenseToLineItems = ({
 		}),
 	);
 
-	return licenseBillingRows.map((licenseBillingRow) =>
-		licenseBillingRowToLineItem({
-			ctx,
-			billingContext,
-			licenseBillingRow,
-			licenseProduct,
-			customerProduct,
-			direction,
-		}),
+	return mergeLicenseBillingRowsByPrice(licenseBillingRows).map(
+		(licenseBillingRow) =>
+			licenseBillingRowToLineItem({
+				ctx,
+				billingContext,
+				licenseBillingRow,
+				licenseProduct,
+				customerProduct,
+				direction,
+			}),
 	);
 };

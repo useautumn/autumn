@@ -3,11 +3,14 @@
 import {
 	type PlanLicense,
 	type ProductV2,
+	productV2ToBasePrice,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { UserFocusIcon } from "@phosphor-icons/react";
+import { AdminHover } from "@/components/general/AdminHover";
 import { PlanItemLabel } from "@/components/v2/PlanItemLabel";
 import { cn } from "@/lib/utils";
+import { getProductItemHoverTexts } from "@/views/admin/adminUtils";
 import { licenseToFeature, licenseToItem } from "./licenseItemDisplay";
 import { useLicenseDraft } from "./useLicenseDraftStore";
 import { useLicenseRowStore, useLicenseRowSummary } from "./useLicenseRowStore";
@@ -34,6 +37,7 @@ export function LicensePlanRow({
 	const included = draft?.included ?? planLicense.included;
 	const priceProduct =
 		summary?.product ?? productV2ToFrontendProduct({ product: license });
+	const basePrice = productV2ToBasePrice({ product: priceProduct });
 	const item = licenseToItem({ license, included, priceProduct });
 	const feature = licenseToFeature(license);
 
@@ -59,6 +63,11 @@ export function LicensePlanRow({
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<PlanItemLabel
 					feature={feature}
+					wrapIcons={(icons) => (
+						<AdminHover texts={getProductItemHoverTexts({ item: basePrice })}>
+							{icons}
+						</AdminHover>
+					)}
 					featureIcon={
 						<UserFocusIcon
 							className="text-blue-500"

@@ -6,6 +6,7 @@ import type {
 	FullCustomerEntitlement,
 	Invoice,
 	Product,
+	ProductItem,
 	ProductV2,
 	Rollover,
 } from "@autumn/shared";
@@ -182,6 +183,38 @@ export const getFeatureHoverTexts = ({ feature }: { feature: Feature }) => {
 
 	return hoverTexts;
 };
+
+export const getProductItemHoverTexts = ({
+	item,
+}: {
+	item: ProductItem | null | undefined;
+}) => [
+	item?.entitlement_id
+		? { key: "Entitlement ID", value: item.entitlement_id }
+		: undefined,
+	item?.price_id ? { key: "Price ID", value: item.price_id } : undefined,
+	item?.price_config?.stripe_price_id
+		? { key: "Stripe Price ID", value: item.price_config.stripe_price_id }
+		: undefined,
+	item?.price_config?.stripe_empty_price_id
+		? {
+				key: "Stripe Empty Price ID",
+				value: item.price_config.stripe_empty_price_id,
+			}
+		: undefined,
+	item?.price_config?.stripe_product_id
+		? {
+				key: "Stripe Product ID",
+				value: item.price_config.stripe_product_id,
+			}
+		: undefined,
+	item?.price_config?.stripe_prepaid_price_v2_id
+		? {
+				key: "Stripe Prepaid Price V2 ID",
+				value: item.price_config.stripe_prepaid_price_v2_id,
+			}
+		: undefined,
+];
 
 export const getPlanHoverTexts = ({ plan }: { plan: Product | ProductV2 }) => {
 	const hoverTexts = [

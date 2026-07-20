@@ -47,5 +47,6 @@ export const licenseBillingRowToLineItem = ({
 	return fixedPriceToLineItem({
 		context,
 		quantity: licenseBillingRow.quantity,
+		includeQuantityInDescription: true,
 	});
 };

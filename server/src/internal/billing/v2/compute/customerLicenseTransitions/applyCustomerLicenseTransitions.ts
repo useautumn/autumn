@@ -33,6 +33,12 @@ export const applyCustomerLicenseTransitions = ({
 			customerLicense.granted = transition.updates.granted;
 			customerLicense.remaining = transition.updates.remaining;
 			customerLicense.paid_quantity = transition.updates.paidQuantity;
+			// Repoint the definition too: unassigned buffer seats must bill at
+			// the incoming (possibly customized) price, not the stock one.
+			customerLicense.plan_license_id =
+				transition.incomingCustomerLicense.plan_license_id;
+			customerLicense.planLicense =
+				transition.incomingCustomerLicense.planLicense;
 		}
 	}
 
