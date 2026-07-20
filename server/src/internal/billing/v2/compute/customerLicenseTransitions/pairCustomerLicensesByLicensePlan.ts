@@ -3,6 +3,7 @@ import type {
 	FullCustomerLicense,
 	FullPlanLicense,
 } from "@autumn/shared";
+import { matchCustomerLicenseSuccessors } from "./matchCustomerLicenseSuccessors.js";
 
 /** A pair always carries both effective licenses — rows with a dead link
  * never pair, so consumers need no null handling. The parent customer
@@ -16,13 +17,9 @@ export type CustomerLicensePair = {
 	incomingPlanLicense: FullPlanLicense;
 };
 
-type CustomerLicenseWithPlanLicense = {
-	customerLicense: FullCustomerLicense;
-	planLicense: FullPlanLicense;
-};
-
-/** Pairs customer licenses within an already-known customer product transition.
- * Public product ids survive license-plan version changes. */
+/** Pairs customer licenses within an already-known customer product
+ * transition. Same license plan ids pair first (public ids survive version
+ * changes); cross-plan pools pair 1:1 by license plan group. */
 export const pairCustomerLicensesByLicensePlan = ({
 	outgoingCustomerProduct,
 	incomingCustomerProduct,
@@ -30,46 +27,27 @@ export const pairCustomerLicensesByLicensePlan = ({
 	outgoingCustomerProduct: FullCusProduct;
 	incomingCustomerProduct: FullCusProduct;
 }): CustomerLicensePair[] => {
-	const incomingByLicensePlanId = new Map<
-		string,
-		CustomerLicenseWithPlanLicense
-	>();
+	const { matches } = matchCustomerLicenseSuccessors({
+		outgoingCustomerLicenses: outgoingCustomerProduct.customer_licenses ?? [],
+		incomingCustomerLicenses: incomingCustomerProduct.customer_licenses ?? [],
+	});
 
-	const incomingCustomerLicenses =
-		incomingCustomerProduct.customer_licenses ?? [];
-	const outgoingCustomerLicenses =
-		outgoingCustomerProduct.customer_licenses ?? [];
+	return matches.flatMap(
+		({ outgoingCustomerLicense, incomingCustomerLicense }) => {
+			const outgoingPlanLicense = outgoingCustomerLicense.planLicense;
+			const incomingPlanLicense = incomingCustomerLicense.planLicense;
+			if (!outgoingPlanLicense || !incomingPlanLicense) return [];
 
-	for (const customerLicense of incomingCustomerLicenses) {
-		const planLicense = customerLicense.planLicense;
-		if (!planLicense) continue;
-
-		const licensePlanId = planLicense.product.id;
-		if (incomingByLicensePlanId.has(licensePlanId)) continue;
-
-		incomingByLicensePlanId.set(licensePlanId, {
-			customerLicense,
-			planLicense,
-		});
-	}
-
-	const pairs: CustomerLicensePair[] = [];
-	for (const customerLicense of outgoingCustomerLicenses) {
-		const planLicense = customerLicense.planLicense;
-		if (!planLicense) continue;
-
-		const incoming = incomingByLicensePlanId.get(planLicense.product.id);
-		if (!incoming) continue;
-
-		pairs.push({
-			outgoingCustomerProduct,
-			incomingCustomerProduct,
-			outgoingCustomerLicense: customerLicense,
-			incomingCustomerLicense: incoming.customerLicense,
-			outgoingPlanLicense: planLicense,
-			incomingPlanLicense: incoming.planLicense,
-		});
-	}
-
-	return pairs;
+			return [
+				{
+					outgoingCustomerProduct,
+					incomingCustomerProduct,
+					outgoingCustomerLicense,
+					incomingCustomerLicense,
+					outgoingPlanLicense,
+					incomingPlanLicense,
+				},
+			];
+		},
+	);
 };

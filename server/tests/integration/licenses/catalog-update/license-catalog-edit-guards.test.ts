@@ -4,6 +4,7 @@ import {
 	type CheckResponseV3,
 	ErrCode,
 } from "@autumn/shared";
+import { listLicenseAssignments } from "@tests/integration/licenses/licenseTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -58,11 +59,18 @@ test.concurrent(
 			items: [items.monthlyMessages({ includedUsage: 50 })],
 		});
 
-		const { assignment } = (await autumnV2_2.post("/licenses.attach", {
+		await autumnV2_2.post("/licenses.attach", {
 			customer_id: customerId,
-			entity_id: entities[1].id,
 			plan_id: license.id,
-		})) as { assignment: { entity_id: string; ended_at: number | null } };
+			entities: [{ entity_id: entities[1].id }],
+		});
+		const [assignment] = await listLicenseAssignments({
+			autumn: autumnV2_2,
+			customerId,
+			licensePlanId: license.id,
+			entityId: entities[1].id,
+			active: true,
+		});
 		expect(assignment).toMatchObject({
 			entity_id: entities[1].id,
 			ended_at: null,

@@ -5,9 +5,6 @@ import type {
 import type { PlanVariant } from "@/services/products/ProductService";
 
 export interface VariantConflictInfo {
-	// Only `id`/`name` are read by PropagateVariantsStep/PlanChangeDialog, so
-	// any source that can name a variant (dashboard's PlanVariant, or the
-	// catalog preview's PlanUpdatePreviewVariant) can populate this.
 	variant: Pick<PlanVariant, "id" | "name">;
 	conflicts: PlanUpdatePreviewVariantConflict[];
 	itemChanges: PlanUpdatePreviewItemChange[];

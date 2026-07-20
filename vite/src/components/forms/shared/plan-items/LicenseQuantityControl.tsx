@@ -1,10 +1,15 @@
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
+import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { QuantityEditControl } from "./QuantityEditControl";
 
 export interface LicenseQuantityEditor {
-	form: UseAttachForm;
+	form: UseAttachForm | UseUpdateSubscriptionForm;
 	quantities: Record<string, number | undefined>;
+	/** Current purchased totals per license (update flow) shown when unstaged. */
+	existingQuantities?: Record<string, number>;
+	/** Display staged totals without allowing edits (review stage). */
+	readOnly?: boolean;
 }
 
 /** Edits the total seats purchased for a license (sent as license_quantities).
@@ -19,13 +24,12 @@ export function LicenseQuantityControl({
 	includedQuantity: number;
 }) {
 	const [isEditing, setIsEditing] = useState(false);
-	const { form, quantities } = editor;
+	const { form, quantities, existingQuantities, readOnly = false } = editor;
 	const stagedQuantity = quantities[licensePlanId];
 	const totalQuantity = Math.max(
-		stagedQuantity ?? includedQuantity,
+		stagedQuantity ?? existingQuantities?.[licensePlanId] ?? includedQuantity,
 		includedQuantity,
 	);
-	const paidQuantity = totalQuantity - includedQuantity;
 
 	const handleEditingChange = (editing: boolean) => {
 		if (editing && stagedQuantity !== totalQuantity) {
@@ -35,28 +39,17 @@ export function LicenseQuantityControl({
 	};
 
 	return (
-		<div className="flex items-center gap-2 shrink-0">
-			{paidQuantity > 0 && (
-				<span className="text-tertiary-foreground">
-					{includedQuantity} included + {paidQuantity} paid
-				</span>
-			)}
-			<QuantityEditControl
-				readOnly={false}
-				displayText={paidQuantity > 0 ? undefined : `x${totalQuantity}`}
-				isEditing={isEditing}
-				onEditingChange={handleEditingChange}
-			>
-				<form.AppField name={`licenseQuantities.${licensePlanId}`}>
-					{(field) => (
-						<field.QuantityField
-							label=""
-							min={includedQuantity}
-							hideFieldInfo
-						/>
-					)}
-				</form.AppField>
-			</QuantityEditControl>
-		</div>
+		<QuantityEditControl
+			readOnly={readOnly}
+			displayText={`x${totalQuantity}`}
+			isEditing={isEditing}
+			onEditingChange={handleEditingChange}
+		>
+			<form.AppField name={`licenseQuantities.${licensePlanId}`}>
+				{(field) => (
+					<field.QuantityField label="" min={includedQuantity} hideFieldInfo />
+				)}
+			</form.AppField>
+		</QuantityEditControl>
 	);
 }

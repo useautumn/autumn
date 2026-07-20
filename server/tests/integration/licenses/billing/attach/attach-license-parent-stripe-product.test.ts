@@ -1,13 +1,14 @@
-/** Contract: only custom fixed license prices inherit their parent Stripe Product.
- * Ordinary and feature-only links retain the shared child base price resources. */
+/** Contract: license prices always use the license plan's Stripe Product.
+ * This holds for custom attach/update prices and shared catalog resources. */
 import { expect, test } from "bun:test";
 import {
 	type AttachParamsV1Input,
 	BillingInterval,
 	type FullProduct,
 	productToBasePrice,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
-import { getFullLicenseProduct } from "@tests/integration/crud/plans/licenses/utils/getFullLicenseProduct";
+import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -37,7 +38,7 @@ const expectLicenseProductStripeResourcesUnchanged = ({
 };
 
 test.concurrent(
-	`${chalk.yellowBright("license attach: custom base price is created under the parent Stripe product")}`,
+	`${chalk.yellowBright("license attach: custom base price stays under the license Stripe product")}`,
 	async () => {
 		const customerId = "attach-license-parent-stripe-product";
 		const parent = products.base({
@@ -77,10 +78,11 @@ test.concurrent(
 				env: scenario.ctx.env,
 			}),
 		]);
-		const parentStripeProductId = parentBefore.processor?.id;
-		if (!parentStripeProductId) {
-			throw new Error(`Parent ${parent.id} has no Stripe product`);
+		const licenseStripeProductId = childBefore.processor?.id;
+		if (!licenseStripeProductId) {
+			throw new Error(`License ${teamSeat.id} has no Stripe product`);
 		}
+		expect(parentBefore.processor?.id).not.toBe(licenseStripeProductId);
 
 		await scenario.autumnV2_3.billing.attach<AttachParamsV1Input>({
 			customer_id: customerId,
@@ -112,7 +114,103 @@ test.concurrent(
 				amount: 25,
 				interval: BillingInterval.Month,
 				isCustom: true,
-				stripeProductId: parentStripeProductId,
+				stripeProductId: licenseStripeProductId,
+			},
+		});
+
+		const childAfter = await ProductService.getFull({
+			db: scenario.ctx.db,
+			idOrInternalId: teamSeat.id,
+			orgId: scenario.ctx.org.id,
+			env: scenario.ctx.env,
+		});
+		expectLicenseProductStripeResourcesUnchanged({
+			before: childBefore,
+			after: childAfter,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license update: custom base price stays under the license Stripe product")}`,
+	async () => {
+		const customerId = "update-license-parent-stripe-product";
+		const parent = products.base({
+			id: `${customerId}-parent`,
+			items: [items.dashboard()],
+		});
+		const teamSeat = products.base({
+			id: `${customerId}-seat`,
+			items: [items.monthlyPrice({ price: 10 })],
+			group: `${customerId}-licenses`,
+		});
+		const scenario = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [parent, teamSeat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: teamSeat.id,
+					included: 0,
+				}),
+				s.billing.attach({
+					productId: parent.id,
+					licenseQuantities: [{ licenseProductId: teamSeat.id, quantity: 2 }],
+				}),
+			],
+		});
+		const [parentBefore, childBefore] = await Promise.all([
+			ProductService.getFull({
+				db: scenario.ctx.db,
+				idOrInternalId: parent.id,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+			}),
+			ProductService.getFull({
+				db: scenario.ctx.db,
+				idOrInternalId: teamSeat.id,
+				orgId: scenario.ctx.org.id,
+				env: scenario.ctx.env,
+			}),
+		]);
+		const licenseStripeProductId = childBefore.processor?.id;
+		if (!licenseStripeProductId) {
+			throw new Error(`License ${teamSeat.id} has no Stripe product`);
+		}
+		expect(parentBefore.processor?.id).not.toBe(licenseStripeProductId);
+
+		await scenario.autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			customize: {
+				upsert_licenses: [
+					{
+						license_plan_id: teamSeat.id,
+						customize: {
+							price: {
+								amount: 30,
+								interval: BillingInterval.Month,
+							},
+						},
+					},
+				],
+			},
+		});
+
+		await expectLicenseDefinitionCorrect({
+			ctx: scenario.ctx,
+			customerId,
+			parentPlanId: parent.id,
+			isCustom: true,
+			isCustomized: true,
+			basePrice: {
+				amount: 30,
+				interval: BillingInterval.Month,
+				isCustom: true,
+				stripeProductId: licenseStripeProductId,
 			},
 		});
 

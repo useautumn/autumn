@@ -16,15 +16,7 @@ import { computeOneOffPurchaseRebalance } from "./computeOneOffPurchaseRebalance
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
-/**
- * Computes the billing plan for attaching a product.
- *
- * Scenarios:
- * - Add-on/One-time (no currentCustomerProduct): Just insert new product
- * - First main product (no currentCustomerProduct): Just insert new product
- * - Upgrade (currentCustomerProduct exists, planTiming=immediate): Expire current, insert new active
- * - Downgrade (currentCustomerProduct exists, planTiming=end_of_cycle): Cancel current at end of cycle, insert new scheduled
- */
+/** Computes new attachments and immediate or scheduled product transitions. */
 export const computeAttachPlan = ({
 	ctx,
 	attachBillingContext,
@@ -60,15 +52,17 @@ export const computeAttachPlan = ({
 
 	// Customer licenses follow the incoming definitions on immediate swaps;
 	// scheduled swaps transition at activation instead.
+	const computedCustomerLicenseTransitions = currentCustomerProduct
+		? computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [currentCustomerProduct],
+				incomingCustomerProducts: [newCustomerProduct],
+				customerLicenseBillingContext:
+					attachBillingContext.customerLicenseBillingContext,
+				carryCustomerLicenseState: planTiming === "immediate",
+			})
+		: [];
 	const customerLicenseTransitions =
-		planTiming === "immediate" && currentCustomerProduct
-			? computeCustomerLicenseTransitions({
-					outgoingCustomerProducts: [currentCustomerProduct],
-					incomingCustomerProducts: [newCustomerProduct],
-					customerLicenseBillingContext:
-						attachBillingContext.customerLicenseBillingContext,
-				})
-			: [];
+		planTiming === "immediate" ? computedCustomerLicenseTransitions : [];
 
 	const {
 		entitlements: carriedOverEntitlements,

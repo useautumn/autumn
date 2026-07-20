@@ -3,20 +3,15 @@ import type {
 	CustomerLicenseTransition,
 	FullCusProduct,
 } from "@autumn/shared";
-import { isSameRowTransition } from "./isSameRowTransition.js";
 import { transitionLicenseBillingPriceRows } from "./transitionLicenseBillingPriceRows.js";
 
-/**
- * In-memory twin of transition execution: each planted successor row adopts
- * the outgoing pool's link and carried counters, so downstream computes
- * (line items, final-state customer) read post-transition state directly.
- */
+/** Mirrors pool transitions in memory for downstream billing computation. */
 export const applyCustomerLicenseTransitions = ({
-	customerProducts,
+	customerProductsToMutate,
 	customerLicenseTransitions,
 	customerLicenseBillingContext,
 }: {
-	customerProducts: FullCusProduct[];
+	customerProductsToMutate: FullCusProduct[];
 	customerLicenseTransitions: CustomerLicenseTransition[];
 	customerLicenseBillingContext?: CustomerLicenseBillingContext;
 }): void => {
@@ -29,7 +24,7 @@ export const applyCustomerLicenseTransitions = ({
 		]),
 	);
 
-	for (const customerProduct of customerProducts) {
+	for (const customerProduct of customerProductsToMutate) {
 		for (const customerLicense of customerProduct.customer_licenses ?? []) {
 			const transition = transitionByIncomingId.get(customerLicense.id);
 			if (!transition) continue;
@@ -38,24 +33,35 @@ export const applyCustomerLicenseTransitions = ({
 			customerLicense.granted = transition.updates.granted;
 			customerLicense.remaining = transition.updates.remaining;
 			customerLicense.paid_quantity = transition.updates.paidQuantity;
+			// Repoint the definition too: unassigned buffer seats must bill at
+			// the incoming (possibly customized) price, not the stock one.
+			customerLicense.plan_license_id =
+				transition.incomingCustomerLicense.plan_license_id;
+			customerLicense.planLicense =
+				transition.incomingCustomerLicense.planLicense;
 		}
 	}
 
 	if (!customerLicenseBillingContext) return;
 
-	// Successor seat rows append; the outgoing rows stay untouched so refund
-	// paths keep reading pristine persisted state. Same-row transitions
-	// append nothing — their single row set projects per direction through
-	// resolveLicenseBillingRowsThroughDefinition instead.
+	// Projected rows append so refund paths can keep reading persisted state.
 	const persistedRows = [
 		...customerLicenseBillingContext.licenseBillingPriceRows,
 	];
 	for (const customerLicenseTransition of customerLicenseTransitions) {
-		if (isSameRowTransition(customerLicenseTransition)) continue;
+		const planLicenseId =
+			customerLicenseTransition.incomingCustomerLicense.planLicense?.id;
+		if (planLicenseId) {
+			customerLicenseBillingContext.projectedPlanLicenseIds.add(planLicenseId);
+		}
 		customerLicenseBillingContext.licenseBillingPriceRows.push(
 			...transitionLicenseBillingPriceRows({
 				licenseBillingPriceRows: persistedRows,
 				customerLicenseTransition,
+				assignedSeatCount:
+					customerLicenseBillingContext.assignedSeatCountByCustomerLicenseId.get(
+						customerLicenseTransition.outgoingCustomerLicense.id,
+					) ?? 0,
 			}),
 		);
 	}

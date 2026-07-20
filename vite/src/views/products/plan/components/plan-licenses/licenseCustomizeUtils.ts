@@ -69,6 +69,38 @@ export const licenseItemsWithCustomize = ({
 	return [priceItem, ...featureItems];
 };
 
+/** The license's effective items (base price included): stock items with the
+ * saved catalog customize applied, then any staged patch on top. */
+export const layeredLicenseItems = ({
+	license,
+	catalogCustomize,
+	patchCustomize,
+	features,
+	currency,
+}: {
+	license: ProductV2;
+	catalogCustomize: LicenseCustomize | null | undefined;
+	patchCustomize?: LicenseCustomize | null;
+	features: Feature[];
+	currency?: string;
+}): ProductItem[] => {
+	const catalogItems = catalogCustomize
+		? licenseItemsWithCustomize({
+				license,
+				customize: catalogCustomize,
+				features,
+				currency,
+			})
+		: planLicenseItems({ license });
+	if (!patchCustomize) return catalogItems;
+	return licenseItemsWithCustomize({
+		license: { ...license, items: catalogItems },
+		customize: patchCustomize,
+		features,
+		currency,
+	});
+};
+
 /** Builds one parent `licenses[]` entry, including its item diff when edited. */
 export const buildPlanLicenseParams = ({
 	product,

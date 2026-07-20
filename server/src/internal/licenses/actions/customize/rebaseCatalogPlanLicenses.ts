@@ -9,6 +9,7 @@ import {
 	InternalError,
 	itemsEqual,
 	type Price,
+	type UpdateLicenseParentParams,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -20,14 +21,43 @@ import {
 } from "@/internal/product/actions/common/planTransformUtils.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
+import { derivePlanLicenseItemRefs } from "./computeLicenseCustomize.js";
 
 type PreparedLinkRebase = {
 	link: DbPlanLicense;
 	customize: DiffedCustomizePlanV1;
 	previousEffectivePlan: ApiPlanV1;
+	propagate: boolean;
 };
 
 export type PreparedCatalogPlanLicenseRebases = PreparedLinkRebase[];
+
+export const materializeCustomerPlanLicenseSnapshots = async ({
+	db,
+	baseProduct,
+}: {
+	db: DrizzleCli;
+	baseProduct: FullProduct;
+}) => {
+	const referenced =
+		await planLicenseRepo.listCustomerReferencedByLicenseInternalProductIds({
+			db,
+			licenseInternalProductIds: [baseProduct.internal_id],
+		});
+	const items = derivePlanLicenseItemRefs(baseProduct);
+	let materialized = false;
+	for (const planLicense of referenced) {
+		if (planLicense.customized) continue;
+		await licenseItemRepo.replaceItems({
+			db,
+			planLicenseId: planLicense.id,
+			items,
+			customized: true,
+		});
+		materialized = true;
+	}
+	return materialized;
+};
 
 const productToPlan = ({
 	ctx,
@@ -73,18 +103,27 @@ export const prepareCatalogPlanLicenseRebases = async ({
 	ctx,
 	db,
 	baseProduct,
+	propagateToParents = [],
 }: {
 	ctx: AutumnContext;
 	db: DrizzleCli;
 	baseProduct: FullProduct;
+	propagateToParents?: UpdateLicenseParentParams[];
 }): Promise<PreparedCatalogPlanLicenseRebases> => {
-	const links = (
-		await planLicenseRepo.listCatalogByLicenseInternalProductIds({
-			db,
-			licenseInternalProductIds: [baseProduct.internal_id],
-		})
-	).filter((link) => link.customized);
+	const links = await planLicenseRepo.listCatalogByLicenseInternalProductIds({
+		db,
+		licenseInternalProductIds: [baseProduct.internal_id],
+	});
 	if (links.length === 0) return [];
+	const parentByLinkId = new Map(
+		(baseProduct.parent_plan_licenses ?? []).map((link) => [
+			link.id,
+			link.product,
+		]),
+	);
+	const propagatedTargets = new Set(
+		propagateToParents.map(({ plan_id, version }) => `${plan_id}@${version}`),
+	);
 
 	const [basePlan, rows] = await Promise.all([
 		productToPlan({ ctx, product: baseProduct }),
@@ -96,18 +135,24 @@ export const prepareCatalogPlanLicenseRebases = async ({
 
 	return Promise.all(
 		links.map(async (link) => {
-			const previousEffectivePlan = await productToPlan({
-				ctx,
-				product: composeEffectiveProduct({
-					baseProduct,
-					planLicenseId: link.id,
-					rows,
-					features: ctx.features,
-				}),
-			});
+			const previousEffectivePlan = link.customized
+				? await productToPlan({
+						ctx,
+						product: composeEffectiveProduct({
+							baseProduct,
+							planLicenseId: link.id,
+							rows,
+							features: ctx.features,
+						}),
+					})
+				: basePlan;
+			const parent = parentByLinkId.get(link.id);
 			return {
 				link,
 				previousEffectivePlan,
+				propagate: parent
+					? propagatedTargets.has(`${parent.id}@${parent.version}`)
+					: false,
 				customize: getApiPlanDiff({
 					from: basePlan,
 					to: previousEffectivePlan,
@@ -117,7 +162,7 @@ export const prepareCatalogPlanLicenseRebases = async ({
 	);
 };
 
-const applyLicenseCustomize = ({
+export const applyLicenseCustomizeToBasePlan = ({
 	basePlan,
 	customize,
 }: {
@@ -206,39 +251,43 @@ export const applyCatalogPlanLicenseRebases = async ({
 	const newBasePlan = await productToPlan({ ctx, product: newBaseProduct });
 
 	await Promise.all(
-		prepared.map(async ({ link, customize, previousEffectivePlan }) => {
-			const targetPlan = applyLicenseCustomize({
-				basePlan: newBasePlan,
-				customize,
-			});
-			const rebasedCustomize = getApiPlanDiff({
-				from: newBasePlan,
-				to: targetPlan,
-			});
+		prepared.map(
+			async ({ link, customize, previousEffectivePlan, propagate }) => {
+				const targetPlan = propagate
+					? applyLicenseCustomizeToBasePlan({
+							basePlan: newBasePlan,
+							customize,
+						})
+					: previousEffectivePlan;
+				const rebasedCustomize = getApiPlanDiff({
+					from: newBasePlan,
+					to: targetPlan,
+				});
 
-			if (!hasLicenseCustomize(rebasedCustomize)) {
+				if (!hasLicenseCustomize(rebasedCustomize)) {
+					await licenseItemRepo.replaceItems({
+						db,
+						planLicenseId: link.id,
+						items: [],
+						customized: false,
+					});
+					return;
+				}
+				const canonicalTargetPlan = applyLicenseCustomizeToBasePlan({
+					basePlan: newBasePlan,
+					customize: rebasedCustomize,
+				});
+
 				await licenseItemRepo.replaceItems({
 					db,
 					planLicenseId: link.id,
-					items: [],
-					customized: false,
+					items: resolveTargetItemRefs({
+						targetPlan: canonicalTargetPlan,
+						previousEffectivePlan,
+					}),
+					customized: true,
 				});
-				return;
-			}
-			const canonicalTargetPlan = applyLicenseCustomize({
-				basePlan: newBasePlan,
-				customize: rebasedCustomize,
-			});
-
-			await licenseItemRepo.replaceItems({
-				db,
-				planLicenseId: link.id,
-				items: resolveTargetItemRefs({
-					targetPlan: canonicalTargetPlan,
-					previousEffectivePlan,
-				}),
-				customized: true,
-			});
-		}),
+			},
+		),
 	);
 };

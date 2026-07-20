@@ -25,6 +25,7 @@ import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { checkItemCurrenciesValid } from "../utils/currencyUtils";
 import { buildPreviewUpdatePlanParams } from "../versioning/buildMigrationDraft";
+import { previewHasLicenseParentTargets } from "../versioning/previewHasAffectedCustomers";
 import { PlanEditorBar } from "./PlanEditorBar";
 import {
 	discardAllLicenses,
@@ -36,10 +37,6 @@ import {
 interface SaveChangesBarProps {
 	isOnboarding?: boolean;
 }
-
-const previewHasParentCustomers = (preview: PlanUpdatePreview) =>
-	preview.has_customers ||
-	(preview.other_versions ?? []).some((version) => version.has_customers);
 
 export const SaveChangesBar = ({
 	isOnboarding = false,
@@ -118,9 +115,14 @@ export const SaveChangesBar = ({
 
 			const needsVersionChoice =
 				licenseHasChanges || (planHasChanges && !isMetadataOnlyChange);
-			const hasCustomers =
-				previewHasParentCustomers(preview) && needsVersionChoice;
-			if (hasCustomers || (planHasChanges && variants.length > 0)) {
+			const hasCustomers = preview.has_customers && needsVersionChoice;
+			const hasParentPropagationDecision =
+				planHasChanges && previewHasLicenseParentTargets(preview);
+			if (
+				hasCustomers ||
+				hasParentPropagationDecision ||
+				(planHasChanges && variants.length > 0)
+			) {
 				setShowNewVersionDialog(true);
 				return;
 			}

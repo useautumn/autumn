@@ -7,6 +7,10 @@ import type {
 import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
+import {
+	convertLicenseQuantitiesToParams,
+	customerLicenseTotals,
+} from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
@@ -147,6 +151,13 @@ export function useUpdateSubscriptionRequestBody({
 		[customerProduct.options],
 	);
 	const initialVersion = form.options.defaultValues?.version;
+	const initialLicenseQuantities = useMemo(
+		() =>
+			customerLicenseTotals({
+				customerLicenses: customerProduct.customer_licenses,
+			}),
+		[customerProduct.customer_licenses],
+	);
 	const customerProductId =
 		customerProduct.id ?? customerProduct.internal_product_id;
 
@@ -154,6 +165,7 @@ export function useUpdateSubscriptionRequestBody({
 		const formValues = form.store.state.values;
 		const {
 			prepaidOptions,
+			licenseQuantities,
 			trialLength,
 			trialDuration,
 			removeTrial,
@@ -208,6 +220,16 @@ export function useUpdateSubscriptionRequestBody({
 			initialBackendQuantities,
 		});
 
+		// Only send totals the user actually changed; omitted licenses keep
+		// their current paid quantity server-side.
+		const changedLicenseQuantities = Object.fromEntries(
+			Object.entries(licenseQuantities ?? {}).filter(
+				([licenseId, quantity]) =>
+					quantity !== undefined &&
+					quantity !== initialLicenseQuantities[licenseId],
+			),
+		);
+
 		const freeTrial = getFreeTrial({
 			removeTrial,
 			trialLength,
@@ -219,6 +241,9 @@ export function useUpdateSubscriptionRequestBody({
 		return {
 			...base,
 			options: options.length > 0 ? options : undefined,
+			license_quantities: convertLicenseQuantitiesToParams({
+				licenseQuantities: changedLicenseQuantities,
+			}),
 			free_trial: freeTrial,
 			...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
 			version: version !== initialVersion ? version : undefined,
@@ -238,6 +263,7 @@ export function useUpdateSubscriptionRequestBody({
 		currentPrepaidItems,
 		initialPrepaidOptions,
 		initialBackendQuantities,
+		initialLicenseQuantities,
 	]);
 
 	return { buildRequestBody };

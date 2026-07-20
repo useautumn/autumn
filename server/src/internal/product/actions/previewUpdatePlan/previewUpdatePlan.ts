@@ -21,6 +21,7 @@ import { buildIncomingProductV2 } from "./buildIncomingProductV2.js";
 import { getPreviewTargetProduct } from "./getPreviewTargetProduct.js";
 import { getPlanCustomerUsage } from "./hasPlanCustomers.js";
 import { planWouldVersion } from "./planWouldVersion.js";
+import { previewAffectedLicenseParents } from "./previewAffectedLicenseParents.js";
 import { previewAffectedLicenses } from "./previewAffectedLicenses.js";
 import { previewAffectedVariants } from "./previewAffectedVariants.js";
 
@@ -91,36 +92,51 @@ export const buildPlanUpdatePreview = async ({
 			(data.update_variant_ids?.length ?? 0) > 0 ||
 			(data.variants?.length ?? 0) > 0,
 	);
-	const [licenseChanges, variants, otherVersions] = await Promise.all([
-		previewAffectedLicenses({
-			ctx,
-			currentParentProduct: currentFullProduct,
-			resolved: licensePreview.prepared?.resolved ?? [],
-			structuralChanges: licensePreview.changes,
-		}),
-		shouldPreviewVariants
-			? previewAffectedVariants({
-					ctx,
-					base: currentFullProduct,
-					diff,
-					currentBasePlan: currentPlan,
-					settingsPatch,
-					editedBasePlan: previewPlan,
-					data,
-					variantUpdates,
-				})
-			: [],
-		shouldPreviewVersions
-			? previewOtherProductVersions({
-					ctx,
-					product: currentFullProduct,
-					currentPlan,
-					editedPlan: previewPlan,
-					diff,
-					settingsPatch,
-				})
-			: [],
-	]);
+	const shouldPreviewLicenseParents = Boolean(
+		data.include_license_parents ||
+			(data.update_license_parents?.length ?? 0) > 0,
+	);
+	const [licenseChanges, licenseParents, variants, otherVersions] =
+		await Promise.all([
+			previewAffectedLicenses({
+				ctx,
+				currentParentProduct: currentFullProduct,
+				resolved: licensePreview.prepared?.resolved ?? [],
+				structuralChanges: licensePreview.changes,
+			}),
+			shouldPreviewLicenseParents
+				? previewAffectedLicenseParents({
+						ctx,
+						child: currentFullProduct,
+						currentChildPlan: currentPlan,
+						editedChildPlan: previewPlan,
+						childWillVersion: versionable,
+						data,
+					})
+				: [],
+			shouldPreviewVariants
+				? previewAffectedVariants({
+						ctx,
+						base: currentFullProduct,
+						diff,
+						currentBasePlan: currentPlan,
+						settingsPatch,
+						editedBasePlan: previewPlan,
+						data,
+						variantUpdates,
+					})
+				: [],
+			shouldPreviewVersions
+				? previewOtherProductVersions({
+						ctx,
+						product: currentFullProduct,
+						currentPlan,
+						editedPlan: previewPlan,
+						diff,
+						settingsPatch,
+					})
+				: [],
+		]);
 
 	return PlanUpdatePreviewSchema.parse({
 		...buildCorePlanUpdatePreview({
@@ -133,6 +149,7 @@ export const buildPlanUpdatePreview = async ({
 			versionable,
 		}),
 		license_changes: licenseChanges,
+		license_parents: licenseParents,
 		variants,
 		other_versions: otherVersions,
 	});

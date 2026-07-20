@@ -1,5 +1,5 @@
-import { UpdatePlanParamsV2Schema } from "../crud/updatePlanParamsV1.js";
 import { z } from "zod/v4";
+import { UpdatePlanParamsV2Schema } from "../crud/updatePlanParamsV1.js";
 import { PreviewUpdatePlanExpandEnum } from "./components/previewUpdatePlanExpand.js";
 
 export const PreviewUpdatePlanDetailParamsSchema = z.object({
@@ -9,6 +9,10 @@ export const PreviewUpdatePlanDetailParamsSchema = z.object({
 	}),
 	include_variants: z.boolean().optional().meta({
 		description: "Whether to include variant previews in the response.",
+	}),
+	include_license_parents: z.boolean().optional().meta({
+		description:
+			"Whether to include parent plans that offer this plan as a license.",
 	}),
 });
 

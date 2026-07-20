@@ -25,7 +25,7 @@ import { checkStripeProductExists } from "@/internal/products/productUtils";
 import { applyStripeResourceReuseForProduct } from "@/internal/products/stripeResourceUtils/applyStripeResourceReuseForProduct";
 import { applyStripeReuseFromVariantFamilies } from "@/internal/products/stripeResourceUtils/applyStripeReuseFromVariantFamilies";
 import {
-	planLicenseToParentStripeInitProduct,
+	planLicenseToCustomStripeInitProduct,
 	planLicenseToStripeInitProduct,
 } from "./licenseStripeResourceUtils";
 
@@ -71,7 +71,7 @@ export const initStripeResourcesForProducts = async ({
 	const customLicenseProducts = products.flatMap((parentProduct) =>
 		(parentProduct.licenses ?? [])
 			.map((planLicense) =>
-				planLicenseToParentStripeInitProduct({ planLicense, parentProduct }),
+				planLicenseToCustomStripeInitProduct({ planLicense }),
 			)
 			.filter((licenseProduct) => licenseProduct !== null),
 	);
@@ -188,13 +188,12 @@ export const initStripeResourcesForBillingPlan = async ({
 		...insertCustomerProducts,
 		...fullCustomer.customer_products,
 	]) {
-		const parentProduct = cusProductToProduct({ cusProduct: customerProduct });
 		for (const customerLicense of customerProduct.customer_licenses ?? []) {
 			const planLicense = customerLicense.planLicense;
 			if (!planLicense) continue;
 			licenseProductsByDefinition.set(
 				customerLicense.plan_license_id ?? planLicense.product.internal_id,
-				planLicenseToStripeInitProduct({ planLicense, parentProduct }),
+				planLicenseToStripeInitProduct({ planLicense }),
 			);
 		}
 	}
@@ -202,23 +201,9 @@ export const initStripeResourcesForBillingPlan = async ({
 	for (const transition of autumnBillingPlan.customerLicenseTransitions ?? []) {
 		const planLicense = transition.incomingCustomerLicense.planLicense;
 		if (!planLicense) continue;
-		const parentCustomerProduct = [
-			...insertCustomerProducts,
-			...fullCustomer.customer_products,
-		].find(
-			(customerProduct) =>
-				customerProduct.id ===
-				transition.incomingCustomerLicense.parent_customer_product_id,
-		);
-		if (!parentCustomerProduct) continue;
 		licenseProductsByDefinition.set(
 			planLicense.id,
-			planLicenseToStripeInitProduct({
-				planLicense,
-				parentProduct: cusProductToProduct({
-					cusProduct: parentCustomerProduct,
-				}),
-			}),
+			planLicenseToStripeInitProduct({ planLicense }),
 		);
 	}
 	const licenseProducts = Array.from(licenseProductsByDefinition.values());

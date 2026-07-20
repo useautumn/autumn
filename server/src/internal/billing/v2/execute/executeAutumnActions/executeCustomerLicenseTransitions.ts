@@ -1,13 +1,17 @@
 import {
 	type CustomerLicenseTransition,
 	customerProductHasActiveStatus,
+	entsAreSame,
 	type FullCusProduct,
+	type InsertCustomerEntitlement,
 	InternalError,
 	type PooledBalanceOp,
 	PooledBalanceResetOwnerType,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { computeProductTransitions } from "@/internal/billing/v2/actions/batchTransition/compute/transitions/computeProductTransitions.js";
+import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask.js";
+import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition.js";
 import { executePooledBalanceOps } from "@/internal/billing/v2/execute/executeAutumnActions/executePooledBalanceOps.js";
 import { extractPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/extractPooledBalanceOps.js";
 import { pooledBalanceRepo } from "@/internal/billing/v2/pooledBalances/repos/pooledBalanceRepo.js";
@@ -15,30 +19,124 @@ import { initFullCustomerProductFromCustomerLicense } from "@/internal/billing/v
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
-import { licenseAssignmentRepo } from "@/internal/licenses/repos/licenseAssignmentRepo";
-import { enqueueRepointSeatEntitlements } from "@/trigger/licenses/repointSeatEntitlementsTask";
+import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo.js";
+import { generateId } from "@/utils/genUtils.js";
+
+type TransitionCustomerEntitlement =
+	FullCusProduct["customer_entitlements"][number];
 
 type RestoreCustomerEntitlement = {
 	id: string;
-	target: FullCusProduct["customer_entitlements"][number];
+	target: InsertCustomerEntitlement;
 };
+
+export type PreparedPooledTargetCustomerEntitlementMutation =
+	| {
+			type: "insert";
+			target: InsertCustomerEntitlement;
+	  }
+	| {
+			type: "update";
+			id: string;
+			target: InsertCustomerEntitlement;
+	  };
 
 export type PreparedCustomerLicenseTransition = {
 	transition: CustomerLicenseTransition;
 	fullCustomerId: string;
 	operations: PooledBalanceOp[];
+	pooledTargetCustomerEntitlementMutations: PreparedPooledTargetCustomerEntitlementMutation[];
 	restoredCustomerEntitlements: RestoreCustomerEntitlement[];
 };
 
-const executeTransitionRows = async ({
+const customerEntitlementToTarget = ({
+	customerEntitlement,
+	customerProductId,
+	id = customerEntitlement.id,
+}: {
+	customerEntitlement: TransitionCustomerEntitlement;
+	customerProductId: string;
+	id?: string;
+}): InsertCustomerEntitlement => ({
+	id,
+	customer_product_id: customerProductId,
+	entitlement_id: customerEntitlement.entitlement.id,
+	internal_customer_id: customerEntitlement.internal_customer_id,
+	internal_entity_id: customerEntitlement.internal_entity_id,
+	internal_feature_id: customerEntitlement.entitlement.internal_feature_id,
+	feature_id: customerEntitlement.entitlement.feature.id,
+	customer_id: customerEntitlement.customer_id,
+	created_at: customerEntitlement.created_at,
+	unlimited: customerEntitlement.unlimited,
+	balance: customerEntitlement.balance ?? 0,
+	additional_balance: customerEntitlement.additional_balance,
+	adjustment: customerEntitlement.adjustment,
+	entities: customerEntitlement.entities,
+	usage_allowed: customerEntitlement.usage_allowed,
+	separate_interval: customerEntitlement.separate_interval,
+	reset_cycle_anchor: customerEntitlement.reset_cycle_anchor,
+	next_reset_at: customerEntitlement.next_reset_at,
+	expires_at: customerEntitlement.expires_at,
+	cache_version: customerEntitlement.cache_version,
+	external_id: customerEntitlement.external_id,
+});
+
+const targetToUpdates = (target: InsertCustomerEntitlement) => {
+	const {
+		id: _id,
+		customer_product_id: _customerProductId,
+		created_at: _createdAt,
+		cache_version: _cacheVersion,
+		...updates
+	} = target;
+	return updates;
+};
+
+const findSourceCustomerEntitlement = ({
+	assignment,
+	targetCustomerEntitlement,
+	successorEntitlementIdByPreviousId,
+}: {
+	assignment: FullCusProduct;
+	targetCustomerEntitlement: TransitionCustomerEntitlement;
+	successorEntitlementIdByPreviousId: Map<string, string>;
+}) => {
+	const targetEntitlementId = targetCustomerEntitlement.entitlement.id;
+	const mappedCandidates = assignment.customer_entitlements.filter(
+		(customerEntitlement) =>
+			customerEntitlement.entitlement.id === targetEntitlementId ||
+			successorEntitlementIdByPreviousId.get(
+				customerEntitlement.entitlement.id,
+			) === targetEntitlementId,
+	);
+	if (mappedCandidates.length > 1) {
+		throw new InternalError({
+			message: `Customer entitlements for license assignment '${assignment.id}' cannot be matched unambiguously to '${targetEntitlementId}'.`,
+		});
+	}
+	if (mappedCandidates.length === 1) return mappedCandidates[0];
+
+	const matchingDefinitionCandidates = assignment.customer_entitlements.filter(
+		(customerEntitlement) =>
+			entsAreSame(
+				customerEntitlement.entitlement,
+				targetCustomerEntitlement.entitlement,
+			),
+	);
+	if (matchingDefinitionCandidates.length > 1) {
+		throw new InternalError({
+			message: `Customer entitlements for license assignment '${assignment.id}' cannot be matched unambiguously to the target definition '${targetEntitlementId}'.`,
+		});
+	}
+	return matchingDefinitionCandidates[0];
+};
+
+const executeTransitionRow = async ({
 	ctx,
 	transition,
-	repointEntitlements,
 }: {
 	ctx: AutumnContext;
 	transition: CustomerLicenseTransition;
-	repointEntitlements: boolean;
 }) => {
 	const { incomingCustomerLicense, updates } = transition;
 	const planLicense = incomingCustomerLicense.planLicense;
@@ -64,37 +162,17 @@ const executeTransitionRows = async ({
 				},
 			},
 		);
+		return;
 	}
 
-	for (const priceTransition of transition.priceTransitions) {
-		const repointedRows = await licenseAssignmentRepo.repointSeatPrices({
-			db: ctx.db,
-			customerLicenseLinkId: updates.linkId,
-			fromPriceId: priceTransition.fromPriceId,
-			toPriceId: priceTransition.toPriceId,
-		});
-		ctx.logger.info(
-			`[licenseTransitions] repointed seat prices link=${updates.linkId} from=${priceTransition.fromPriceId} to=${priceTransition.toPriceId} rows=${repointedRows}`,
-			{
-				data: {
-					customerLicenseLinkId: updates.linkId,
-					...priceTransition,
-					repointedRows,
-				},
-			},
-		);
-	}
-
-	if (repointEntitlements && transition.entitlementTransitions.length > 0) {
-		const repointedRows = await licenseAssignmentRepo.repointSeatEntitlements({
-			db: ctx.db,
-			customerLicenseLinkId: updates.linkId,
-			entitlementTransitions: transition.entitlementTransitions,
-		});
-		ctx.logger.info(
-			`[licenseTransitions] repointed seat entitlements link=${updates.linkId} rows=${repointedRows}`,
-		);
-	}
+	await customerLicenseRepo.carryCustomerLicenseState({
+		db: ctx.db,
+		customerLicenseId: incomingCustomerLicense.id,
+		linkId: updates.linkId,
+		granted: updates.granted,
+		remaining: updates.remaining,
+		paidQuantity: updates.paidQuantity,
+	});
 };
 
 const buildPooledTransitionOperations = async ({
@@ -106,12 +184,14 @@ const buildPooledTransitionOperations = async ({
 	transition: CustomerLicenseTransition;
 	pendingCustomerProducts?: FullCusProduct[];
 }): Promise<Omit<PreparedCustomerLicenseTransition, "transition">> => {
-	const { incomingCustomerLicense, updates } = transition;
+	const { incomingCustomerLicense, outgoingCustomerLicense, updates } =
+		transition;
 	const planLicense = incomingCustomerLicense.planLicense;
 	if (!planLicense) {
 		return {
 			fullCustomerId: incomingCustomerLicense.internal_customer_id,
 			operations: [],
+			pooledTargetCustomerEntitlementMutations: [],
 			restoredCustomerEntitlements: [],
 		};
 	}
@@ -137,6 +217,7 @@ const buildPooledTransitionOperations = async ({
 		return {
 			fullCustomerId: fullCustomer.id ?? fullCustomer.internal_id,
 			operations: [],
+			pooledTargetCustomerEntitlementMutations: [],
 			restoredCustomerEntitlements: [],
 		};
 	}
@@ -170,13 +251,24 @@ const buildPooledTransitionOperations = async ({
 		],
 	});
 	const poolById = new Map(pools.map((pool) => [pool.id, pool]));
+	const outgoingProduct = outgoingCustomerLicense.planLicense?.product;
+	const entitlementTransitions = outgoingProduct
+		? computeProductTransitions({
+				fromProduct: outgoingProduct,
+				toProduct: planLicense.product,
+			}).entitlementPrices.transitions
+		: [];
 	const successorEntitlementIdByPreviousId = new Map(
-		transition.entitlementTransitions.map((entitlementTransition) => [
-			entitlementTransition.fromEntitlementId,
-			entitlementTransition.toEntitlementId,
-		]),
+		entitlementTransitions.map(
+			({ fromEntitlementPrice, toEntitlementPrice }) => [
+				fromEntitlementPrice.entitlement.id,
+				toEntitlementPrice.entitlement.id,
+			],
+		),
 	);
 	const operations: PooledBalanceOp[] = [];
+	const pooledTargetCustomerEntitlementMutations: PreparedPooledTargetCustomerEntitlementMutation[] =
+		[];
 	const restoredCustomerEntitlements: RestoreCustomerEntitlement[] = [];
 	const now = Date.now();
 	const resetCycleAnchor =
@@ -185,7 +277,7 @@ const buildPooledTransitionOperations = async ({
 		now;
 
 	for (const assignment of assignments) {
-		const targetCustomerProduct = {
+		const initializedTargetCustomerProduct = {
 			...initFullCustomerProductFromCustomerLicense({
 				ctx,
 				fullCustomer,
@@ -196,11 +288,17 @@ const buildPooledTransitionOperations = async ({
 			}),
 			id: assignment.id,
 		};
-		const targetOperations = extractPooledBalanceOps({
+		const {
 			customerProduct: targetCustomerProduct,
+			pooledBalanceOps: extractedTargetOperations,
+		} = extractPooledBalanceOps({
+			customerProduct: initializedTargetCustomerProduct,
 			resetOwnerType: PooledBalanceResetOwnerType.CustomerProduct,
 			resetOwnerId: parentCustomerProduct.id,
-		}).pooledBalanceOps.filter((operation) => operation.op === "upsert_source");
+		});
+		const targetOperations = extractedTargetOperations.filter(
+			(operation) => operation.op === "upsert_source",
+		);
 		const sourceContributions = contributions.filter(
 			(contribution) =>
 				contribution.source_customer_product_id === assignment.id,
@@ -210,6 +308,42 @@ const buildPooledTransitionOperations = async ({
 		);
 
 		for (const targetOperation of targetOperations) {
+			const targetCustomerEntitlement =
+				targetCustomerProduct.customer_entitlements.find(
+					(candidate) =>
+						candidate.entitlement.id === targetOperation.sourceEntitlementId,
+				);
+			if (!targetCustomerEntitlement) {
+				throw new InternalError({
+					message: `Pooled target entitlement '${targetOperation.sourceEntitlementId}' was not found for license assignment '${assignment.id}'.`,
+				});
+			}
+			const sourceCustomerEntitlement = findSourceCustomerEntitlement({
+				assignment,
+				targetCustomerEntitlement,
+				successorEntitlementIdByPreviousId,
+			});
+			const target = customerEntitlementToTarget({
+				customerEntitlement: targetCustomerEntitlement,
+				customerProductId: assignment.id,
+				id: sourceCustomerEntitlement?.id,
+			});
+			if (!sourceCustomerEntitlement) {
+				pooledTargetCustomerEntitlementMutations.push({
+					type: "insert",
+					target,
+				});
+			} else if (
+				sourceCustomerEntitlement.entitlement.id !==
+				targetCustomerEntitlement.entitlement.id
+			) {
+				pooledTargetCustomerEntitlementMutations.push({
+					type: "update",
+					id: sourceCustomerEntitlement.id,
+					target,
+				});
+			}
+
 			let matchingContributions = sourceContributions.filter(
 				(contribution) =>
 					unmatchedContributionIds.has(contribution.id) &&
@@ -276,7 +410,11 @@ const buildPooledTransitionOperations = async ({
 				if (wasPooled && targetCustomerEntitlement) {
 					restoredCustomerEntitlements.push({
 						id: customerEntitlement.id,
-						target: targetCustomerEntitlement,
+						target: customerEntitlementToTarget({
+							customerEntitlement: targetCustomerEntitlement,
+							customerProductId: assignment.id,
+							id: customerEntitlement.id,
+						}),
 					});
 				}
 			}
@@ -286,6 +424,7 @@ const buildPooledTransitionOperations = async ({
 	return {
 		fullCustomerId: fullCustomer.id ?? fullCustomer.internal_id,
 		operations,
+		pooledTargetCustomerEntitlementMutations,
 		restoredCustomerEntitlements,
 	};
 };
@@ -324,11 +463,22 @@ export const executePreparedCustomerLicenseTransitionRows = async ({
 	preparedTransitions: PreparedCustomerLicenseTransition[];
 }) => {
 	for (const preparedTransition of preparedTransitions) {
-		await executeTransitionRows({
+		await executeTransitionRow({
 			ctx,
 			transition: preparedTransition.transition,
-			repointEntitlements: preparedTransition.operations.length > 0,
 		});
+		for (const mutation of preparedTransition.pooledTargetCustomerEntitlementMutations) {
+			if (mutation.type === "insert") {
+				await CusEntService.insert({ ctx, data: [mutation.target] });
+				continue;
+			}
+			await CusEntService.update({
+				ctx,
+				id: mutation.id,
+				updates: targetToUpdates(mutation.target),
+				incrementCacheVersion: true,
+			});
+		}
 	}
 };
 
@@ -344,52 +494,38 @@ export const restorePreparedCustomerLicenseEntitlements = async ({
 			await CusEntService.update({
 				ctx,
 				id: restoration.id,
-				updates: {
-					balance: restoration.target.balance ?? 0,
-					adjustment: restoration.target.adjustment,
-					additional_balance: restoration.target.additional_balance,
-					entities: restoration.target.entities,
-					reset_cycle_anchor: restoration.target.reset_cycle_anchor,
-					next_reset_at: restoration.target.next_reset_at,
-				},
+				updates: targetToUpdates(restoration.target),
 				incrementCacheVersion: true,
 			});
 		}
 	}
 };
 
-export const enqueuePreparedCustomerLicenseEntitlementTransitions = async ({
+export const triggerPreparedCustomerLicenseBatchTransitions = async ({
 	ctx,
 	preparedTransitions,
 }: {
 	ctx: AutumnContext;
 	preparedTransitions: PreparedCustomerLicenseTransition[];
 }) => {
-	for (const { transition, operations } of preparedTransitions) {
-		if (
-			operations.length > 0 ||
-			transition.entitlementTransitions.length === 0
-		) {
-			continue;
-		}
-		await enqueueRepointSeatEntitlements({
-			ctx,
-			customerLicenseLinkId: transition.updates.linkId,
-			entitlementTransitions: transition.entitlementTransitions,
-			source: "license-transition",
-		});
+	for (const { transition } of preparedTransitions) {
+		await batchTransitionTask.trigger(
+			{
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: ctx.customerId,
+				transition,
+				executionScope: {
+					batchTransitionId: generateId("batch_transition"),
+					assignmentCutoffMs: Date.now(),
+				},
+			},
+			{ concurrencyKey: transition.updates.linkId },
+		);
 	}
 };
 
-/**
- * Executes license transitions from the plan.
- * Pool half: same-row transitions converge the surviving row in place;
- * cross-row successors already persisted through their insert.
- * Seat half: prices repoint inline (they must land with the Stripe update);
- * entitlement repoints are heavy on the fat cusEnts table and don't bill,
- * so they converge in the background. Every mapping is logged so a bad
- * transition is reversible by swapping from/to.
- */
+/** Converges license pools synchronously, then dispatches assigned-seat transitions. */
 export const executeCustomerLicenseTransitions = async ({
 	ctx,
 	customerLicenseTransitions,
@@ -430,7 +566,7 @@ export const executeCustomerLicenseTransitions = async ({
 			preparedTransitions: [preparedTransition],
 		});
 	}
-	await enqueuePreparedCustomerLicenseEntitlementTransitions({
+	await triggerPreparedCustomerLicenseBatchTransitions({
 		ctx,
 		preparedTransitions,
 	});

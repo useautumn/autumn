@@ -3,15 +3,9 @@ import {
 	customerLicenseToGranted,
 	customerLicenseToUsage,
 } from "@autumn/shared";
-import { matchItemSuccessors } from "./matchItemSuccessors.js";
 import type { CustomerLicensePair } from "./pairCustomerLicensesByLicensePlan.js";
 
-/**
- * The full transition for one paired customer license: the planted successor
- * row adopts the outgoing pool's link (seats stay anchored to it) with
- * carried counters, and seats repoint onto the successor prices/entitlements
- * where the definitions drifted.
- */
+/** Carries the outgoing pool's link and usage counters onto its paired successor. */
 export const customerLicensePairToTransition = (
 	pair: CustomerLicensePair,
 ): CustomerLicenseTransition => {
@@ -28,12 +22,6 @@ export const customerLicensePairToTransition = (
 		planLicense: pair.incomingPlanLicense,
 	});
 
-	// 3. Where has the license definition drifted? Seats repoint per item.
-	const { priceTransitions, entitlementTransitions } = matchItemSuccessors({
-		fromProduct: pair.outgoingPlanLicense.product,
-		toProduct: pair.incomingPlanLicense.product,
-	});
-
 	return {
 		outgoingCustomerLicense,
 		incomingCustomerLicense,
@@ -43,7 +31,5 @@ export const customerLicensePairToTransition = (
 			remaining: granted - used,
 			paidQuantity: incomingCustomerLicense.paid_quantity,
 		},
-		priceTransitions,
-		entitlementTransitions,
 	};
 };

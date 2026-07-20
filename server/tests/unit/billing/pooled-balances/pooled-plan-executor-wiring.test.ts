@@ -101,8 +101,8 @@ mock.module(
 		restorePreparedCustomerLicenseEntitlements: async () => {
 			executionOrder.push("license entitlement restore");
 		},
-		enqueuePreparedCustomerLicenseEntitlementTransitions: async () => {
-			executionOrder.push("license entitlement enqueue");
+		triggerPreparedCustomerLicenseBatchTransitions: async () => {
+			executionOrder.push("license batch trigger");
 		},
 	}),
 );
@@ -247,7 +247,7 @@ test("non-pooled plans preserve the existing patch execution path", async () => 
 		"pooled lifecycle",
 		"customer license transitions",
 	]);
-	expect(reconcileCalls).toEqual([{ flushBalances: undefined }]);
+	expect(reconcileCalls).toEqual([{ flushBalances: false }]);
 });
 
 test("pooled license transition operations and row mutations share the pooled lifecycle", async () => {
@@ -263,6 +263,7 @@ test("pooled license transition operations and row mutations share the pooled li
 			transition: {} as never,
 			fullCustomerId: "customer_one",
 			operations: [transitionOperation],
+			pooledTargetCustomerEntitlementMutations: [],
 			restoredCustomerEntitlements: [],
 		},
 	];
@@ -291,13 +292,13 @@ test("pooled license transition operations and row mutations share the pooled li
 			"pooled lifecycle",
 			"license transition rows",
 			"license entitlement restore",
-			"license entitlement enqueue",
+			"license batch trigger",
 		]),
 	);
 	expect(executionOrder.indexOf("license transition rows")).toBeGreaterThan(
 		executionOrder.indexOf("pooled lifecycle"),
 	);
-	expect(executionOrder.indexOf("license entitlement enqueue")).toBeGreaterThan(
+	expect(executionOrder.indexOf("license batch trigger")).toBeGreaterThan(
 		executionOrder.indexOf("license entitlement restore"),
 	);
 	expect(reconcileCalls).toEqual([{ flushBalances: true }]);

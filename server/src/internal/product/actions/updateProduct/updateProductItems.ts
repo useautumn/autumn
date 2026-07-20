@@ -1,12 +1,14 @@
 import {
 	type FullProduct,
 	orgMultiCurrencyEnabled,
+	type UpdateLicenseParentParams,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	applyCatalogPlanLicenseRebases,
+	materializeCustomerPlanLicenseSnapshots,
 	prepareCatalogPlanLicenseRebases,
 } from "@/internal/licenses/actions/customize/rebaseCatalogPlanLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -25,6 +27,7 @@ export const updateProductItems = async ({
 	newItems,
 	features,
 	useInPlaceEdit,
+	propagateToLicenseParents,
 }: {
 	ctx: AutumnContext;
 	db: DrizzleCli;
@@ -32,6 +35,7 @@ export const updateProductItems = async ({
 	newItems: NonNullable<UpdateProductV2Params["items"]>;
 	features: AutumnContext["features"];
 	useInPlaceEdit: boolean;
+	propagateToLicenseParents?: UpdateLicenseParentParams[];
 }) => {
 	await db.transaction(async (transaction) => {
 		const tx = transaction as unknown as DrizzleCli;
@@ -52,6 +56,11 @@ export const updateProductItems = async ({
 		});
 		const preparedLicenseRebases = await prepareCatalogPlanLicenseRebases({
 			ctx,
+			db: tx,
+			baseProduct: currentFullProduct,
+			propagateToParents: propagateToLicenseParents,
+		});
+		await materializeCustomerPlanLicenseSnapshots({
 			db: tx,
 			baseProduct: currentFullProduct,
 		});

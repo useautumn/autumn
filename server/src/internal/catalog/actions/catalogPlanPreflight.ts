@@ -2,12 +2,15 @@ import type {
 	CatalogPlanParams,
 	FullProduct,
 	PlanUpdatePreview,
+	PreviewUpdatePlanParamsV2,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	previewPlanLicenseSync,
 	validatePlanLicenseUpdate,
 } from "@/internal/licenses/actions/links/syncPlanLicenses.js";
+import { buildIncomingFullProduct } from "@/internal/product/actions/previewUpdatePlan/buildIncomingFullProduct.js";
+import { buildIncomingProductV2 } from "@/internal/product/actions/previewUpdatePlan/buildIncomingProductV2.js";
 import { previewAffectedLicenses } from "@/internal/product/actions/previewUpdatePlan/previewAffectedLicenses.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
@@ -71,8 +74,22 @@ const preflightCatalogLicenses = async ({
 	const virtualParents = plans.map((plan, index) => {
 		const current = currentForPlan(plan);
 		const latest = currentById.get(plan.plan_id);
+		const incoming = current
+			? buildIncomingFullProduct({
+					ctx,
+					base: current,
+					product: buildIncomingProductV2({
+						ctx,
+						base: current,
+						data: {
+							...plan,
+							licenses: undefined,
+						} as PreviewUpdatePlanParamsV2,
+					}),
+				})
+			: undefined;
 		return virtualProduct({
-			current,
+			current: incoming,
 			id: plan.new_plan_id ?? plan.plan_id,
 			version: current
 				? previews[index]?.versionable
@@ -105,6 +122,24 @@ const preflightCatalogLicenses = async ({
 			structuralChanges: licensePreview.changes,
 		});
 		if (preview.plan) preview.plan.licenses = licensePreview.licenses;
+	}
+
+	for (const childPreview of previews) {
+		for (const parentPreview of childPreview.license_parents) {
+			const parentIndex = plans.findIndex(
+				(plan) =>
+					plan.plan_id === parentPreview.plan_id &&
+					(plan.version ?? parentPreview.version) === parentPreview.version,
+			);
+			if (parentIndex < 0) continue;
+			const directChange = previews[parentIndex]?.license_changes.find(
+				(change) => change.license_plan_id === childPreview.plan_id,
+			);
+			if (!directChange) continue;
+			parentPreview.license_changes = [directChange];
+			parentPreview.update_source = "direct";
+			parentPreview.conflicts = [];
+		}
 	}
 };
 

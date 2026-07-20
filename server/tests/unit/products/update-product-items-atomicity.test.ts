@@ -4,6 +4,8 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
+import { licenseItemRepo } from "@/internal/licenses/repos/licenseItemRepo.js";
+import { planLicenseRepo } from "@/internal/licenses/repos/planLicenseRepo.js";
 import { updateProductItems } from "@/internal/product/actions/updateProduct/updateProductItems.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 
@@ -66,6 +68,14 @@ test("plan item updates run the no-customer path in a transaction", async () => 
 	spyOn(ProductService, "getFull").mockResolvedValue(fullProduct);
 	spyOn(CusEntService, "hasAnyEntitlementReferences").mockResolvedValue(false);
 	spyOn(CusPriceService, "hasAnyPriceReferences").mockResolvedValue(false);
+	spyOn(
+		planLicenseRepo,
+		"listCustomerReferencedByLicenseInternalProductIds",
+	).mockResolvedValue([]);
+	spyOn(licenseItemRepo, "listReferencedEntitlementIds").mockResolvedValue(
+		new Set(),
+	);
+	spyOn(licenseItemRepo, "listReferencedPriceIds").mockResolvedValue(new Set());
 
 	await expect(
 		updateProductItems({

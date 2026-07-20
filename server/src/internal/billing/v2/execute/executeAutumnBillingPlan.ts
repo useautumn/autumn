@@ -4,11 +4,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import {
-	enqueuePreparedCustomerLicenseEntitlementTransitions,
 	executeCustomerLicenseTransitions,
 	executePreparedCustomerLicenseTransitionRows,
 	prepareCustomerLicenseTransitions,
 	restorePreparedCustomerLicenseEntitlements,
+	triggerPreparedCustomerLicenseBatchTransitions,
 } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
 import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
@@ -176,16 +176,15 @@ export const executeAutumnBillingPlan = async ({
 	}
 
 	// Successor pools now exist; adopted seats converge onto their definitions.
-	let executedPooledLicenseTransition = false;
+	const executedPooledLicenseTransition =
+		customerLicensePooledBalanceOps.length > 0;
 	if (executeCustomerLicenseTransitionsInPooledTransaction) {
-		executedPooledLicenseTransition =
-			customerLicensePooledBalanceOps.length > 0;
-		await enqueuePreparedCustomerLicenseEntitlementTransitions({
+		await triggerPreparedCustomerLicenseBatchTransitions({
 			ctx,
 			preparedTransitions: preparedCustomerLicenseTransitions,
 		});
 	} else {
-		executedPooledLicenseTransition = await executeCustomerLicenseTransitions({
+		await executeCustomerLicenseTransitions({
 			ctx,
 			customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
 			preparedTransitions: preparedCustomerLicenseTransitions,

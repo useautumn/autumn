@@ -6,6 +6,7 @@ import {
 import { and, eq, gte, inArray, notInArray, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
+import { carryCustomerLicenseState } from "./customerLicenseRepo/carryCustomerLicenseState.js";
 import { listBillingPriceRows } from "./customerLicenseRepo/listBillingPriceRows.js";
 
 const getByParentAndLicense = async ({
@@ -351,6 +352,7 @@ export const customerLicenseRepo = {
 	listByParentCustomerProductIds,
 	listReferencedPlanLicenseIds,
 	listBillingPriceRows,
+	carryCustomerLicenseState,
 	update,
 	deleteByIds,
 	upsertGranted,

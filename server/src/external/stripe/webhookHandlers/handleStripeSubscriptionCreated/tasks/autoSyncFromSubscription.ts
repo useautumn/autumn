@@ -3,6 +3,8 @@ import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync/index.js";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams.js";
 import { isAutumnCheckoutSubscription } from "@/internal/billing/v2/actions/sync/utils/isAutumnCheckoutSubscription.js";
+import { withStripeSyncCustomerLock } from "@/internal/billing/v2/actions/sync/utils/withStripeSyncCustomerLock.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { shouldSkipSubscriptionSync } from "../../common/subscriptionSync/shouldSkipSubscriptionSync.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
@@ -10,20 +12,26 @@ import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptio
  * Custom base prices can auto-sync; custom feature prices and unresolved items
  * still abort via canAutoSync.
  */
-export const autoSyncFromSubscription = async ({
-	ctx,
-	subscriptionCreatedContext,
-}: {
+type AutoSyncFromSubscriptionParams = {
 	ctx: StripeWebhookContext;
 	subscriptionCreatedContext: StripeSubscriptionCreatedContext;
-}) => {
+};
+
+const autoSyncFromSubscription = async ({
+	ctx,
+	subscriptionCreatedContext,
+}: AutoSyncFromSubscriptionParams) => {
 	const { logger, stripeCli } = ctx;
 	const { subscription, fullCustomer } = subscriptionCreatedContext;
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
+	const currentCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 
 	const skip = shouldSkipSubscriptionSync({
 		subscription,
-		fullCustomer,
+		fullCustomer: currentCustomer,
 		requireRecent: false,
 	});
 	if (skip.skip) {
@@ -44,7 +52,7 @@ export const autoSyncFromSubscription = async ({
 		ctx,
 		customerId,
 		subscription,
-		customerProducts: fullCustomer.customer_products,
+		customerProducts: currentCustomer.customer_products,
 	});
 
 	const eligibility = canAutoSync({ match });
@@ -56,4 +64,18 @@ export const autoSyncFromSubscription = async ({
 	}
 
 	await billingActions.syncV2({ ctx, params });
+};
+
+export const autoSyncFromSubscriptionWithLock = async (
+	params: AutoSyncFromSubscriptionParams,
+) => {
+	const { ctx, subscriptionCreatedContext } = params;
+	const customerId =
+		subscriptionCreatedContext.fullCustomer.id ??
+		subscriptionCreatedContext.fullCustomer.internal_id;
+	await withStripeSyncCustomerLock({
+		ctx,
+		customerId,
+		run: () => autoSyncFromSubscription(params),
+	});
 };

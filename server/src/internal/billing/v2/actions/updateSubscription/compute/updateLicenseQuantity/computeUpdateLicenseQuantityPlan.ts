@@ -10,8 +10,9 @@ import { customerLicenseToLineItems } from "@/internal/billing/v2/utils/lineItem
 
 /**
  * Converges pool paid counts onto the requested totals in place — the parent
- * customer product and seat anchors are untouched. Bills the delta by
- * refunding the current seat+buffer picture and charging the converged one.
+ * customer product and seat anchors are untouched. Bills a refund of the full
+ * previous quantity picture and a charge of the new one (one line per price,
+ * like feature-quantity updates); identical pairs cancel in finalizeLineItems.
  */
 export const computeUpdateLicenseQuantityPlan = ({
 	ctx,

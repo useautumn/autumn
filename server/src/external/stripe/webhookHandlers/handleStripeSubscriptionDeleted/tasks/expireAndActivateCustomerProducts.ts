@@ -5,6 +5,7 @@ import {
 	findMainScheduledCustomerProductByGroup,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductPaid,
+	isCustomerProductScheduled,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
@@ -22,14 +23,7 @@ import {
 } from "../../common";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
-/**
- * Handles customer product state changes when a subscription is deleted.
- *
- * For each customer product on the deleted subscription:
- * 1. Expire the customer product and activate default if needed
- * 2. Delete any scheduled main customer product in the same group
- * 3. Cache expired products so invoice.created can access them
- */
+/** Expires live products, then activates or removes their scheduled successors. */
 export const expireAndActivateCustomerProducts = async ({
 	ctx,
 	eventContext,
@@ -54,7 +48,10 @@ export const expireAndActivateCustomerProducts = async ({
 	// Prepare from a stable snapshot. Completion and tracking mutate both the
 	// event-context product list and FullCustomer, but only after the merged
 	// lifecycle plan has committed successfully.
-	for (const customerProduct of [...customerProducts]) {
+	const liveCustomerProducts = customerProducts.filter(
+		(customerProduct) => !isCustomerProductScheduled(customerProduct),
+	);
+	for (const customerProduct of liveCustomerProducts) {
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
 			customerProduct,
 			stripeSubscriptionId: stripeSubscription.id,
@@ -160,10 +157,7 @@ export const expireAndActivateCustomerProducts = async ({
 		}
 	}
 
-	/**
-	 * Need to cache expired customer products to invoice.created can access them
-	 * invoice.created creates a final invoice for usage-based prices
-	 */
+	// invoice.created needs the expired snapshots for final usage billing.
 	await customerProductActions.expiredCache.set({
 		stripeSubscriptionId: stripeSubscription.id,
 		customerProducts: expiredCustomerProducts,

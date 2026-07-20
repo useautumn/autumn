@@ -1,7 +1,44 @@
 import type {
 	CustomizePlanLicense,
+	FullCustomerLicense,
 	LicenseQuantityParams,
 } from "@autumn/shared";
+import { customerLicenseToGranted } from "@autumn/shared";
+
+/** Current purchased totals (included + paid) per license plan on a customer
+ * product. Keyed by the license product's public id — the DB planLicense row
+ * only carries internal ids. */
+export function customerLicenseTotals({
+	customerLicenses,
+}: {
+	customerLicenses: FullCustomerLicense[] | null | undefined;
+}): Record<string, number> {
+	const totals: Record<string, number> = {};
+	for (const customerLicense of customerLicenses ?? []) {
+		const { planLicense } = customerLicense;
+		if (!planLicense) continue;
+		totals[planLicense.product.id] = customerLicenseToGranted({
+			customerLicense,
+			planLicense,
+		});
+	}
+	return totals;
+}
+
+/** True when any staged seat total differs from the customer's current total. */
+export function hasStagedLicenseQuantityChanges({
+	licenseQuantities,
+	initialLicenseQuantities,
+}: {
+	licenseQuantities: Record<string, number | undefined> | undefined;
+	initialLicenseQuantities: Record<string, number> | undefined;
+}): boolean {
+	return Object.entries(licenseQuantities ?? {}).some(
+		([licenseId, quantity]) =>
+			quantity !== undefined &&
+			quantity !== initialLicenseQuantities?.[licenseId],
+	);
+}
 
 /**
  * Converts staged license seat totals into license_quantities params.

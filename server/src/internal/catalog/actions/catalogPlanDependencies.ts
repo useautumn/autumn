@@ -9,10 +9,7 @@ const referenceKey = (id: string, version?: number) =>
 	version === undefined ? id : `${id}@${version}`;
 
 const dependenciesForPlan = (plan: CatalogPlanParams) =>
-	(plan.licenses ?? []).map((license) => ({
-		id: license.license_plan_id,
-		version: license.version,
-	}));
+	(plan.licenses ?? []).map((license) => license.license_plan_id);
 
 export const sortCatalogPlansByDependencies = (
 	plans: CatalogPlanParams[],
@@ -48,9 +45,7 @@ export const sortCatalogPlansByDependencies = (
 			if (previous) visit(previous);
 		}
 		for (const reference of dependenciesForPlan(plan)) {
-			const dependency =
-				byReference.get(referenceKey(reference.id, reference.version)) ??
-				byReference.get(reference.id);
+			const dependency = byReference.get(reference);
 			if (dependency && dependency !== plan) visit(dependency);
 		}
 		visiting.delete(key);

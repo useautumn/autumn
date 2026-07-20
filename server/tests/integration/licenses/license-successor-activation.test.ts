@@ -249,7 +249,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses successor activation: scheduled downgrade ends an unsupported assignment at activation")}`,
+	`${chalk.yellowBright("licenses successor activation: scheduled downgrade preserves unsupported assignment history")}`,
 	async () => {
 		const {
 			customerId,
@@ -276,19 +276,14 @@ test.concurrent(
 			advancedTo,
 		});
 		const dbState = await getLicenseDbState({ db: ctx.db, customerId });
-		expect(dbState.pools).toHaveLength(0);
+		expect(dbState.pools).toHaveLength(1);
 		expect(dbState.assignments).toHaveLength(1);
-		expect(dbState.assignments[0]).toMatchObject({ status: "expired" });
+		expect(dbState.assignments[0]).toMatchObject({ status: "active" });
 
 		const pools = (await autumnV2_2.post("/licenses.list", {
 			customer_id: customerId,
 		})) as { list: ApiCustomerLicenseV0[] };
 		expect(pools.list).toHaveLength(0);
-		const assignments = (await autumnV2_2.post("/licenses.list_assignments", {
-			customer_id: customerId,
-			plan_id: license.id,
-		})) as { list: unknown[] };
-		expect(assignments.list).toHaveLength(0);
 
 		const check = await autumnV2_2.check<CheckResponseV3>({
 			customer_id: customerId,

@@ -272,7 +272,7 @@ test("automatic expiry removes the pooled source in the same lifecycle plan", as
 	]);
 });
 
-test("subscription deletion expires every pooled product in one merged lifecycle plan", async () => {
+test("subscription deletion expires only live pooled products in one merged lifecycle plan", async () => {
 	const stripeSubscriptionId = "stripe_subscription_deleted_pooled";
 	const firstCustomerProduct = createPooledCustomerProduct({
 		id: "customer_product_deleted_first",
@@ -284,8 +284,17 @@ test("subscription deletion expires every pooled product in one merged lifecycle
 		status: CusProductStatus.Active,
 		subscriptionIds: [stripeSubscriptionId],
 	});
+	const scheduledCustomerProduct = createPooledCustomerProduct({
+		id: "customer_product_deleted_scheduled",
+		status: CusProductStatus.Scheduled,
+		subscriptionIds: [stripeSubscriptionId],
+	});
 	const fullCustomer = customers.create({
-		customerProducts: [firstCustomerProduct, secondCustomerProduct],
+		customerProducts: [
+			firstCustomerProduct,
+			secondCustomerProduct,
+			scheduledCustomerProduct,
+		],
 	});
 	const eventContext = {
 		stripeSubscription: { id: stripeSubscriptionId },
@@ -314,6 +323,11 @@ test("subscription deletion expires every pooled product in one merged lifecycle
 			sourceCustomerProductId: secondCustomerProduct.id,
 		}),
 	]);
+	expect(executedPlans[0]?.pooledBalanceOps).not.toContainEqual(
+		expect.objectContaining({
+			sourceCustomerProductId: scheduledCustomerProduct.id,
+		}),
+	);
 	expect(productsUpdatedWebhookCalls).toBe(2);
 	expect(freeSuccessorCalls).toBe(2);
 	expect(expiredCacheWrites).toBe(1);

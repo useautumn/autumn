@@ -3,6 +3,7 @@ import {
 	cp,
 	PooledBalanceResetOwnerType,
 } from "@autumn/shared";
+import { getPatchedCustomerProductUpdates } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations.js";
 import { customerProductHasPaidLicenses } from "@/internal/billing/v2/utils/customerProductHasPaidLicenses.js";
 
 /**
@@ -17,6 +18,7 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionId: string;
 }) => {
+	const linkedCustomerProductIds = new Set<string>();
 	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
 		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
 
@@ -25,19 +27,30 @@ export const addStripeSubscriptionIdToBillingPlan = ({
 		}
 
 		customerProduct.subscription_ids = [stripeSubscriptionId];
-		for (const pooledBalanceOperation of autumnBillingPlan.pooledBalanceOps ??
-			[]) {
-			if (
-				(pooledBalanceOperation.op !== "upsert_source" &&
-					pooledBalanceOperation.op !== "transfer_source") ||
-				pooledBalanceOperation.sourceCustomerProductId !== customerProduct.id ||
-				pooledBalanceOperation.resetOwnerType !==
-					PooledBalanceResetOwnerType.Subscription
-			) {
-				continue;
-			}
+		linkedCustomerProductIds.add(customerProduct.id);
+	}
 
-			pooledBalanceOperation.resetOwnerId = stripeSubscriptionId;
+	for (const update of getPatchedCustomerProductUpdates({
+		autumnBillingPlan,
+	})) {
+		update.updates.subscription_ids = [stripeSubscriptionId];
+		linkedCustomerProductIds.add(update.customerProduct.id);
+	}
+
+	for (const pooledBalanceOperation of autumnBillingPlan.pooledBalanceOps ??
+		[]) {
+		if (
+			(pooledBalanceOperation.op !== "upsert_source" &&
+				pooledBalanceOperation.op !== "transfer_source") ||
+			!linkedCustomerProductIds.has(
+				pooledBalanceOperation.sourceCustomerProductId,
+			) ||
+			pooledBalanceOperation.resetOwnerType !==
+				PooledBalanceResetOwnerType.Subscription
+		) {
+			continue;
 		}
+
+		pooledBalanceOperation.resetOwnerId = stripeSubscriptionId;
 	}
 };

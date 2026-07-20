@@ -9,9 +9,11 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { isPooledSourceCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
+import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
 import { reapplyExistingUsagesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingUsagesToCustomerProduct";
 
@@ -41,18 +43,20 @@ export const prepareScheduledCustomerProductActivation = async ({
 	ctx.logger.info(
 		`[activateScheduledCustomerProduct] Activating ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 	);
-
+	const transitionSource =
+		fromCustomerProduct ??
+		findTransitionSourceCustomerProduct({ fullCustomer, customerProduct });
 	const usageSourceCustomerProduct =
 		await reapplyExistingUsagesToCustomerProduct({
 			ctx,
-			fromCustomerProduct,
+			fromCustomerProduct: transitionSource,
 			customerProduct,
 			fullCustomer,
 		});
 
 	await reapplyExistingRolloversToCustomerProduct({
 		ctx,
-		fromCustomerProduct,
+		fromCustomerProduct: transitionSource,
 		customerProduct,
 		fullCustomer,
 	});
@@ -62,6 +66,12 @@ export const prepareScheduledCustomerProductActivation = async ({
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
 	};
+	const customerLicenseTransitions = transitionSource
+		? computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [transitionSource],
+				incomingCustomerProducts: [customerProduct],
+			})
+		: [];
 	const activationCustomerProduct: FullCusProduct = {
 		...customerProduct,
 		status: CusProductStatus.Active,
@@ -122,6 +132,7 @@ export const prepareScheduledCustomerProductActivation = async ({
 					updates: updates as CustomerProductUpdate["updates"],
 				},
 			],
+			customerLicenseTransitions,
 			pooledBalanceOps,
 			updateCustomerEntitlements,
 		},

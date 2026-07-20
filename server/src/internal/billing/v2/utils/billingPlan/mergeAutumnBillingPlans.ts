@@ -44,6 +44,12 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.schedulePhaseCustomerProductReplacements,
 		getKey: (replacement) => replacement.oldCustomerProductId,
 	}),
+	customerLicenseTransitions: mergeByKey({
+		base: base.customerLicenseTransitions,
+		incoming: incoming.customerLicenseTransitions,
+		getKey: (transition) =>
+			`${transition.outgoingCustomerLicense.id}:${transition.incomingCustomerLicense.id}`,
+	}),
 	customPrices: mergeById({
 		base: base.customPrices,
 		incoming: incoming.customPrices,

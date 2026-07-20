@@ -1,5 +1,5 @@
-/** Contract: parent-customized fixed license prices use the parent Stripe Product.
- * Back-sync resolves product identity before price shape within shared products. */
+/** Contract: customized license prices use the license plan's Stripe Product.
+ * Back-sync resolves exact prices first, then unambiguous license price shapes. */
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
@@ -13,8 +13,8 @@ import {
 	expectProductActive,
 	expectProductNotPresent,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { getFullLicenseProduct } from "@tests/integration/crud/plans/licenses/utils/getFullLicenseProduct";
 import { createVariantPlan } from "@tests/integration/crud/plans/variants/utils/variantTestPlanUtils";
+import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -42,7 +42,7 @@ type Scenario = {
 const stripeProductId = ({ price }: { price: Stripe.Price }) =>
 	typeof price.product === "string" ? price.product : price.product.id;
 
-const expectCustomizedPriceUnderParent = async ({
+const expectCustomizedPriceUnderLicenseProduct = async ({
 	ctx,
 	parentPlanId,
 	licensePlanId,
@@ -51,40 +51,34 @@ const expectCustomizedPriceUnderParent = async ({
 	parentPlanId: string;
 	licensePlanId: string;
 }) => {
-	const [parent, customized] = await Promise.all([
-		ProductService.getFull({
-			db: ctx.db,
-			idOrInternalId: parentPlanId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-		}),
-		getFullLicenseProduct({ ctx, parentPlanId, licensePlanId }),
-	]);
+	const customized = await getFullLicenseProduct({
+		ctx,
+		parentPlanId,
+		licensePlanId,
+	});
 	const price = productToBasePrice({
 		product: customized.fullLicenseProduct,
 	});
-	const parentStripeProductId = parent.processor?.id;
-	if (!parentStripeProductId) {
-		throw new Error(`Parent ${parentPlanId} has no Stripe product`);
+	const licenseStripeProductId = customized.fullLicenseProduct.processor?.id;
+	if (!licenseStripeProductId) {
+		throw new Error(`License ${licensePlanId} has no Stripe product`);
 	}
 
 	expect(customized.planLicense.customized).toBe(true);
 	expect(price?.is_custom).toBe(true);
-	expect(parentStripeProductId).toBeDefined();
-	expect(price?.config.stripe_product_id).toBe(parentStripeProductId);
+	expect(price?.config.stripe_product_id).toBe(licenseStripeProductId);
 	expect(price?.config.stripe_price_id).toBeDefined();
 
 	const stripePrice = await ctx.stripeCli.prices.retrieve(
 		price!.config.stripe_price_id!,
 	);
-	expect(stripeProductId({ price: stripePrice })).toBe(parentStripeProductId);
+	expect(stripeProductId({ price: stripePrice })).toBe(licenseStripeProductId);
 
 	return {
-		parent,
 		price: price!,
 		stripePrice,
 		stripePriceId: stripePrice.id,
-		stripeProductId: parentStripeProductId,
+		stripeProductId: licenseStripeProductId,
 	};
 };
 
@@ -168,7 +162,7 @@ const createLicenseSubscription = async ({
 		items: [{ price: stripePriceId, quantity: INITIAL_PAID_SEATS }],
 	});
 
-test(`${chalk.yellowBright("license back-sync: equal shapes under different parent products select by product")}`, async () => {
+test(`${chalk.yellowBright("license back-sync: equal shapes under one license product select by exact price")}`, async () => {
 	const customerId = "sub-license-parent-product-distinct";
 	const parentA = products.base({
 		id: `${customerId}-a`,
@@ -209,29 +203,24 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under different pare
 	});
 
 	const [customA, customB] = await Promise.all([
-		expectCustomizedPriceUnderParent({
+		expectCustomizedPriceUnderLicenseProduct({
 			ctx: scenario.ctx,
 			parentPlanId: parentA.id,
 			licensePlanId: teamSeat.id,
 		}),
-		expectCustomizedPriceUnderParent({
+		expectCustomizedPriceUnderLicenseProduct({
 			ctx: scenario.ctx,
 			parentPlanId: parentB.id,
 			licensePlanId: teamSeat.id,
 		}),
 	]);
-	expect(customA.stripeProductId).not.toBe(customB.stripeProductId);
+	expect(customA.stripeProductId).toBe(customB.stripeProductId);
 	expect(customA.stripePriceId).not.toBe(customB.stripePriceId);
 
-	const externalPrice = await createStripeFixedPriceUnderProduct({
-		ctx: scenario.ctx,
-		stripeProductId: customB.stripeProductId,
-		unitAmount: 12 * 100,
-	});
 	const subscription = await createLicenseSubscription({
 		scenario,
 		customerId,
-		stripePriceId: externalPrice.id,
+		stripePriceId: customB.stripePriceId,
 	});
 	let customer = await waitForLicensePool({
 		scenario,
@@ -262,7 +251,7 @@ test(`${chalk.yellowBright("license back-sync: equal shapes under different pare
 	await expectProductActive({ customer, productId: parentB.id });
 });
 
-test(`${chalk.yellowBright("license back-sync: shared parent product selects by customized base shape")}`, async () => {
+test(`${chalk.yellowBright("license back-sync: shared license product selects by customized base shape")}`, async () => {
 	const customerId = "sub-license-parent-product-shared";
 	const pro = products.base({
 		id: `${customerId}-pro`,
@@ -329,12 +318,12 @@ test(`${chalk.yellowBright("license back-sync: shared parent product selects by 
 	});
 
 	const [monthly, annual] = await Promise.all([
-		expectCustomizedPriceUnderParent({
+		expectCustomizedPriceUnderLicenseProduct({
 			ctx: scenario.ctx,
 			parentPlanId: pro.id,
 			licensePlanId: teamSeat.id,
 		}),
-		expectCustomizedPriceUnderParent({
+		expectCustomizedPriceUnderLicenseProduct({
 			ctx: scenario.ctx,
 			parentPlanId: annualId,
 			licensePlanId: teamSeat.id,
@@ -412,7 +401,7 @@ test(`${chalk.yellowBright("license back-sync: parent and child sharing a produc
 		amount: 15,
 		interval: BillingInterval.Month,
 	});
-	const customized = await expectCustomizedPriceUnderParent({
+	const customized = await expectCustomizedPriceUnderLicenseProduct({
 		ctx: scenario.ctx,
 		parentPlanId: parent.id,
 		licensePlanId: teamSeat.id,

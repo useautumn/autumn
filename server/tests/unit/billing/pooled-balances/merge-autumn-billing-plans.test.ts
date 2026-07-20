@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import type { AutumnBillingPlan, PooledBalanceOp } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	CustomerLicenseTransition,
+	PooledBalanceOp,
+} from "@autumn/shared";
 import { mergeAutumnBillingPlans } from "@/internal/billing/v2/utils/billingPlan/mergeAutumnBillingPlans.js";
 
 const removeSource = ({
@@ -48,4 +52,50 @@ test("incoming pooled operations keep their declared order when replacing base o
 		{ sourceCustomerProductId: "source-b", effectiveAt: 2 },
 		{ sourceCustomerProductId: "source-a", effectiveAt: 2 },
 	]);
+});
+
+const licenseTransition = ({
+	outgoingId,
+	incomingId,
+	paidQuantity,
+}: {
+	outgoingId: string;
+	incomingId: string;
+	paidQuantity: number;
+}): CustomerLicenseTransition =>
+	({
+		outgoingCustomerLicense: { id: outgoingId },
+		incomingCustomerLicense: { id: incomingId },
+		updates: { paidQuantity },
+	}) as CustomerLicenseTransition;
+
+test("incoming license transitions are retained and replace the same transition", () => {
+	const retained = licenseTransition({
+		outgoingId: "outgoing-retained",
+		incomingId: "incoming-retained",
+		paidQuantity: 1,
+	});
+	const replaced = licenseTransition({
+		outgoingId: "outgoing-replaced",
+		incomingId: "incoming-replaced",
+		paidQuantity: 2,
+	});
+	const replacement = licenseTransition({
+		outgoingId: "outgoing-replaced",
+		incomingId: "incoming-replaced",
+		paidQuantity: 3,
+	});
+
+	const merged = mergeAutumnBillingPlans({
+		base: {
+			...plan([]),
+			customerLicenseTransitions: [retained, replaced],
+		},
+		incoming: {
+			...plan([]),
+			customerLicenseTransitions: [replacement],
+		},
+	});
+
+	expect(merged.customerLicenseTransitions).toEqual([retained, replacement]);
 });

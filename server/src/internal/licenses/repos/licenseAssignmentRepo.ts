@@ -291,8 +291,6 @@ const affectedRows = (result: unknown): number => {
 	return shaped.rowCount ?? shaped.count ?? 0;
 };
 
-/** One set-based repoint of every live seat's customer_prices row on the
- * link — never enumerates seats; expired seats keep historical refs. */
 const repointSeatPrices = async ({
 	db,
 	customerLicenseLinkId,
@@ -305,49 +303,16 @@ const repointSeatPrices = async ({
 	toPriceId: string;
 }): Promise<number> => {
 	const result = await db.execute(sql`
-		UPDATE customer_prices cp
+		UPDATE customer_prices AS customer_price
 		SET price_id = ${toPriceId}
-		FROM customer_products seat
-		WHERE cp.customer_product_id = seat.id
+		FROM customer_products AS seat
+		WHERE customer_price.customer_product_id = seat.id
 			AND seat.customer_license_link_id = ${customerLicenseLinkId}
 			AND seat.internal_entity_id IS NOT NULL
 			AND seat.status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
-			AND cp.price_id = ${fromPriceId}
+			AND customer_price.price_id = ${fromPriceId}
 	`);
 	return affectedRows(result);
-};
-
-/** customer_entitlements twin of repointSeatPrices. One statement per
- * mapping — benchmarked FASTER than a VALUES-join single pass (the 3-way
- * join plans badly on this fat table). Refs only — balance carry semantics
- * are deliberately not decided here. */
-const repointSeatEntitlements = async ({
-	db,
-	customerLicenseLinkId,
-	entitlementTransitions,
-}: {
-	db: DrizzleCli;
-	customerLicenseLinkId: string;
-	entitlementTransitions: {
-		fromEntitlementId: string;
-		toEntitlementId: string;
-	}[];
-}): Promise<number> => {
-	let repointedRows = 0;
-	for (const transition of entitlementTransitions) {
-		const result = await db.execute(sql`
-			UPDATE customer_entitlements ce
-			SET entitlement_id = ${transition.toEntitlementId}
-			FROM customer_products seat
-			WHERE ce.customer_product_id = seat.id
-				AND seat.customer_license_link_id = ${customerLicenseLinkId}
-				AND seat.internal_entity_id IS NOT NULL
-				AND seat.status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
-				AND ce.entitlement_id = ${transition.fromEntitlementId}
-		`);
-		repointedRows += affectedRows(result);
-	}
-	return repointedRows;
 };
 
 export const licenseAssignmentRepo = {
@@ -359,5 +324,4 @@ export const licenseAssignmentRepo = {
 	expireUnusedAssignmentsByLinkIds,
 	maxActiveCountByCatalogLink,
 	repointSeatPrices,
-	repointSeatEntitlements,
 } as const;

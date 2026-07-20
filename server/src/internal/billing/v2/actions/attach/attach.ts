@@ -7,8 +7,8 @@ import {
 import { ms } from "@shared/utils/common/unixUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
+import { handleAttachComputeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachComputeErrors";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
-import { handleCurrencyMismatchErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrencyMismatchErrors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
@@ -60,11 +60,6 @@ export async function attach({
 
 	logAttachContext({ ctx, billingContext });
 
-	// Currency guard runs here (not in handleAttachV2Errors) because
-	// evaluateStripeBillingPlan below creates Stripe prices, so the block must
-	// fire before it. Covers preview too.
-	handleCurrencyMismatchErrors({ ctx, billingContext, params });
-
 	// 2. Compute
 	const autumnBillingPlan = computeAttachPlan({
 		ctx,
@@ -73,6 +68,12 @@ export async function attach({
 	});
 
 	logAutumnBillingPlan({ ctx, plan: autumnBillingPlan, billingContext });
+	await handleAttachComputeErrors({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+		params,
+	});
 
 	// 3. Evaluate Stripe billing plan (handles checkout mode internally)
 	const stripeBillingPlan = await evaluateStripeBillingPlan({

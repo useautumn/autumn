@@ -6,4 +6,6 @@ export type CustomerLicenseBillingContext = {
 	// Assigned seats' snapshot charges as (price × count), the free
 	// `included` seats already excluded.
 	licenseBillingPriceRows: LicenseBillingPriceRow[];
+	assignedSeatCountByCustomerLicenseId: Map<string, number>;
+	projectedPlanLicenseIds: Set<string>;
 };
