@@ -158,10 +158,10 @@ export const getPlanResponse = async ({
 		licenses: apiLicenses,
 		free_trial: freeTrial,
 
-		created_at: product.created_at,
-		env: product.env,
+		created_at: product.created_at ?? 0,
+		env: product.env ?? ctx?.env ?? "sandbox",
 		archived: product.archived,
-		base_variant_id: product.base_variant_id,
+		base_variant_id: product.base_variant_id ?? null,
 
 		config: product.config ?? { ignore_past_due: false },
 		billing_controls: billingControlsFromColumns(product),
