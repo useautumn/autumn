@@ -111,7 +111,7 @@ export const diffPlanV1ItemChanges = ({
 	from: ApiPlanV1;
 	to: ApiPlanV1;
 }): PlanUpdatePreviewItemChange[] => {
-	const diff = diffPlanV1({ from, to });
+	const diff = diffPlanV1({ from, to, includeCurrencyListChanges: true });
 	const addedKeys = new Set((diff.add_items ?? []).map(composeMatchKey));
 	const removedKeys = new Set(
 		(diff.remove_items ?? []).map(planItemFilterMatchKey),
@@ -145,7 +145,11 @@ export const diffPlanV1PreviewFields = ({
 	CorePlanUpdatePreview,
 	"customize" | "previous_attributes" | "price_change" | "item_changes"
 > => {
-	const customize = diffPlanV1({ from, to });
+	const customize = diffPlanV1({
+		from,
+		to,
+		includeCurrencyListChanges: true,
+	});
 
 	return {
 		customize: Object.keys(customize).length > 0 ? customize : null,

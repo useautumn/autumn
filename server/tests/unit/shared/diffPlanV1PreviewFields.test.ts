@@ -211,6 +211,30 @@ test("diffPlanV1 does not emit internal ids with semantic changes", () => {
 	expect(diff.add_items?.[0]).not.toHaveProperty("entitlement_id");
 });
 
+test("diffPlanV1PreviewFields includes added catalog currencies", () => {
+	const from = plan({
+		price: { amount: 25, interval: BillingInterval.Month },
+	});
+	const to = plan({
+		price: {
+			amount: 25,
+			interval: BillingInterval.Month,
+			additional_currencies: [{ currency: "gbp", amount: 40 }],
+		},
+	});
+
+	const diff = diffPlanV1PreviewFields({ from, to });
+
+	expect(diff.customize?.price).toMatchObject({
+		amount: 25,
+		additional_currencies: [{ currency: "gbp", amount: 40 }],
+	});
+	expect(diff.price_change).toEqual({
+		previous: from.price,
+		current: to.price,
+	});
+});
+
 test("billing_controls: skip_overage_billing false vs unset is not a change", () => {
 	const from = plan({
 		billing_controls: {

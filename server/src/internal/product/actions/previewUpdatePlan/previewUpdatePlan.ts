@@ -78,7 +78,11 @@ export const buildPlanUpdatePreview = async ({
 		newParentVersion: versionable,
 	});
 	previewPlan.licenses = licensePreview.licenses;
-	const diff = diffPlanV1({ from: currentPlan, to: previewPlan });
+	const diff = diffPlanV1({
+		from: currentPlan,
+		to: previewPlan,
+		includeCurrencyListChanges: true,
+	});
 	const settingsPatch = getVariantSettingsPatch({
 		from: currentPlan,
 		to: previewPlan,

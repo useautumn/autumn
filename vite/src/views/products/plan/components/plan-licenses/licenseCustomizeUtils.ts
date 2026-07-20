@@ -131,7 +131,11 @@ export const productToLicenseCustomize = ({
 		features,
 		currency,
 	});
-	const diff = diffPlanV1({ from: base, to: edited });
+	const diff = diffPlanV1({
+		from: base,
+		to: edited,
+		includeCurrencyListChanges: true,
+	});
 	const customize = {
 		...(diff.price !== undefined ? { price: diff.price } : {}),
 		...(diff.add_items !== undefined ? { add_items: diff.add_items } : {}),
