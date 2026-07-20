@@ -169,6 +169,35 @@ test.concurrent(
 		expect("versionable" in basePriceLicense.plan_changes!).toBe(false);
 		expect("license_changes" in basePriceLicense.plan_changes!).toBe(false);
 
+		const currencyPreview = await autumnV2_3.plans.previewUpdate({
+			plan_id: parent.id,
+			licenses: [
+				{
+					...persistedEntry,
+					customize: {
+						...persistedEntry.customize,
+						price: {
+							amount: 25,
+							interval: BillingInterval.Month,
+							additional_currencies: [{ currency: "gbp", amount: 40 }],
+						},
+					},
+				},
+			],
+		});
+		const currencyLicense = onlyLicenseChange(currencyPreview);
+		expect(currencyLicense.customize?.price).toMatchObject({
+			amount: 25,
+			additional_currencies: [{ currency: "gbp", amount: 40 }],
+		});
+		expect(currencyLicense.plan_changes?.price_change).toMatchObject({
+			previous: { amount: 25 },
+			current: {
+				amount: 25,
+				additional_currencies: [{ currency: "gbp", amount: 40 }],
+			},
+		});
+
 		const addItemPreview = await autumnV2_3.plans.previewUpdate({
 			plan_id: parent.id,
 			licenses: [

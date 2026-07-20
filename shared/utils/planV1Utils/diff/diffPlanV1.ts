@@ -60,6 +60,23 @@ const additionalCurrenciesCompatible = (
 		);
 	});
 
+const additionalCurrencyListsEqual = (
+	from: AdditionalCurrencyInput[] | null | undefined,
+	to: AdditionalCurrencyInput[] | null | undefined,
+): boolean => {
+	if ((from?.length ?? 0) !== (to?.length ?? 0)) return false;
+	return (from ?? []).every((entry) => {
+		const match = (to ?? []).find(
+			(other) => other.currency.toLowerCase() === entry.currency.toLowerCase(),
+		);
+		return (
+			match !== undefined &&
+			(entry.amount ?? null) === (match.amount ?? null) &&
+			(entry.flat_amount ?? null) === (match.flat_amount ?? null)
+		);
+	});
+};
+
 export const toBasePriceParams = (
 	price: NonNullable<ApiPlanV1["price"]>,
 	{ includeInternalIds = false }: PlanParamsMapperOptions = {},
@@ -299,6 +316,18 @@ export const itemsEqual = (a: PlanItemInput, b: PlanItemInput): boolean => {
 	);
 };
 
+const itemCurrencyListsEqual = (a: PlanItemInput, b: PlanItemInput): boolean =>
+	additionalCurrencyListsEqual(
+		a.price?.additional_currencies,
+		b.price?.additional_currencies,
+	) &&
+	(a.price?.tiers ?? []).every((tier, index) =>
+		additionalCurrencyListsEqual(
+			tier.additional_currencies,
+			b.price?.tiers?.[index]?.additional_currencies,
+		),
+	);
+
 const removeFiltersEqual = (a: PlanItemFilter, b: PlanItemFilter): boolean =>
 	a.feature_id === b.feature_id &&
 	(a.billing_method ?? null) === (b.billing_method ?? null) &&
@@ -345,11 +374,16 @@ export const customizePlanV1DiffsEqual = ({
 
 	return (
 		pricesEqual(a.price, b.price) &&
+		additionalCurrencyListsEqual(
+			a.price?.additional_currencies,
+			b.price?.additional_currencies,
+		) &&
 		freeTrialsEqual(a.free_trial, b.free_trial) &&
 		arraysEqual({
 			left: a.add_items,
 			right: b.add_items,
-			equals: itemsEqual,
+			equals: (left, right) =>
+				itemsEqual(left, right) && itemCurrencyListsEqual(left, right),
 		}) &&
 		arraysEqual({
 			left: a.remove_items,
@@ -363,13 +397,22 @@ export const customizePlanV1DiffsEqual = ({
 export const diffPlanV1 = ({
 	from,
 	to,
+	includeCurrencyListChanges = false,
 }: {
 	from: ApiPlanV1;
 	to: ApiPlanV1;
+	includeCurrencyListChanges?: boolean;
 }): DiffedCustomizePlanV1 => {
 	const diff: DiffedCustomizePlanV1 = {};
 
-	if (!pricesEqual(from.price, to.price)) {
+	if (
+		!pricesEqual(from.price, to.price) ||
+		(includeCurrencyListChanges &&
+			!additionalCurrencyListsEqual(
+				from.price?.additional_currencies,
+				to.price?.additional_currencies,
+			))
+	) {
 		diff.price = to.price === null ? null : toBasePriceParams(to.price);
 	}
 
@@ -379,7 +422,11 @@ export const diffPlanV1 = ({
 	const addItems: CreatePlanItemParamsV1[] = [];
 	for (const toItem of to.items) {
 		const fromItem = fromByKey.get(composeMatchKey(toItem));
-		if (!fromItem || !itemsEqual(fromItem, toItem)) {
+		if (
+			!fromItem ||
+			!itemsEqual(fromItem, toItem) ||
+			(includeCurrencyListChanges && !itemCurrencyListsEqual(fromItem, toItem))
+		) {
 			addItems.push(toCreatePlanItemParams(toItem));
 		}
 	}
@@ -388,7 +435,11 @@ export const diffPlanV1 = ({
 	const removeItems: PlanItemFilter[] = [];
 	for (const fromItem of from.items) {
 		const toItem = toByKey.get(composeMatchKey(fromItem));
-		if (!toItem || !itemsEqual(fromItem, toItem)) {
+		if (
+			!toItem ||
+			!itemsEqual(fromItem, toItem) ||
+			(includeCurrencyListChanges && !itemCurrencyListsEqual(fromItem, toItem))
+		) {
 			removeItems.push(buildRemoveFilter(fromItem));
 		}
 	}

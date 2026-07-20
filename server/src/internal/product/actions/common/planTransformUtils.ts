@@ -70,7 +70,8 @@ export const getApiPlanDiff = ({
 }: {
 	from: ApiPlanV1;
 	to: ApiPlanV1;
-}): DiffedCustomizePlanV1 => diffPlanV1({ from, to });
+}): DiffedCustomizePlanV1 =>
+	diffPlanV1({ from, to, includeCurrencyListChanges: true });
 
 export const getVariantSettingsPatch = ({
 	from,
