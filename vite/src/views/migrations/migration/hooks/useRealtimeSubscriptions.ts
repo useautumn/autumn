@@ -6,6 +6,7 @@ import {
 	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr } from "@/utils/genUtils";
+import { buildRunMigrationRequest } from "./buildRunMigrationRequest";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
 
 const SETTLE_WINDOW_MS = 15000;
@@ -39,33 +40,26 @@ export function useRealtimeSubscriptions({
 		dryRun,
 		limit,
 		only,
-		lazyRun,
 		concurrency,
 		retryItemStatuses,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
-		lazyRun?: boolean;
 		concurrency?: number;
 		retryItemStatuses?: RetryableMigrationItemRunStatus[];
 	}) => {
 		try {
-			const isTargetedRun = only !== undefined && only.length > 0;
-			const retryStatuses =
-				retryItemStatuses && retryItemStatuses.length > 0
-					? retryItemStatuses
-					: undefined;
-			const result = await runMigration({
-				id: migrationId,
-				dry_run: dryRun,
-				limit,
-				only,
-				lazy_run: isTargetedRun ? false : (lazyRun ?? true),
-				concurrency,
-				retry_item_statuses:
-					retryStatuses ?? (isTargetedRun ? ["failed"] : undefined),
-			});
+			const result = await runMigration(
+				buildRunMigrationRequest({
+					migrationId,
+					dryRun,
+					limit,
+					only,
+					concurrency,
+					retryItemStatuses,
+				}),
+			);
 			if (result.trigger_run_id && result.public_access_token) {
 				setSubscriptions((prev) => [
 					...prev,
