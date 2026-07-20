@@ -9,26 +9,6 @@ import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 import { subscriptionToSyncParams } from "../subscriptionToSyncParams";
 
-const listAllStripeObjects = async <T extends { id: string }>({
-	listPage,
-}: {
-	listPage: (startingAfter?: string) => Promise<{
-		data: T[];
-		has_more: boolean;
-	}>;
-}) => {
-	const objects: T[] = [];
-	let startingAfter: string | undefined;
-	do {
-		const page = await listPage(startingAfter);
-		objects.push(...page.data);
-		startingAfter = page.has_more
-			? page.data[page.data.length - 1]?.id
-			: undefined;
-	} while (startingAfter);
-	return objects;
-};
-
 export const prepareAutoSyncStripeCustomer = async ({
 	ctx,
 	customerId,
@@ -40,23 +20,12 @@ export const prepareAutoSyncStripeCustomer = async ({
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 	const [subscriptions, schedules, customer] = await Promise.all([
-		listAllStripeObjects({
-			listPage: (startingAfter) =>
-				stripeCli.subscriptions.list({
-					customer: stripeCustomerId,
-					limit: 100,
-					starting_after: startingAfter,
-				}),
-		}),
-		listAllStripeObjects({
-			listPage: (startingAfter) =>
-				stripeCli.subscriptionSchedules.list({
-					customer: stripeCustomerId,
-					scheduled: true,
-					limit: 100,
-					starting_after: startingAfter,
-				}),
-		}),
+		stripeCli.subscriptions
+			.list({ customer: stripeCustomerId, limit: 100 })
+			.autoPagingToArray({ limit: 10_000 }),
+		stripeCli.subscriptionSchedules
+			.list({ customer: stripeCustomerId, scheduled: true, limit: 100 })
+			.autoPagingToArray({ limit: 10_000 }),
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
 	]);
 	const pendingSubscriptions = subscriptions.filter(

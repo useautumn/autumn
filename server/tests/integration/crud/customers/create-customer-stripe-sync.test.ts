@@ -273,7 +273,7 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 	expect(fullCustomer.customer_products).toHaveLength(0);
 });
 
-test(`${chalk.yellowBright("customers stripe sync: retries an incomplete initial import")}`, async () => {
+test(`${chalk.yellowBright("customers stripe sync: failed import leaves no partial products")}`, async () => {
 	const customerId = `create-stripe-sync-resume-${runId}`;
 	const pro = products.pro({
 		id: `create-stripe-sync-resume-pro-${runId}`,
@@ -284,7 +284,7 @@ test(`${chalk.yellowBright("customers stripe sync: retries an incomplete initial
 		actions: [],
 	});
 	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
-	const stripeSubscription = await createSubscription({
+	await createSubscription({
 		ctx,
 		stripeCustomerId: stripeCustomer.id,
 		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
@@ -298,22 +298,12 @@ test(`${chalk.yellowBright("customers stripe sync: retries an incomplete initial
 			internalOptions: { disable_defaults: true },
 		} as never),
 	).rejects.toThrow();
-	await autumnV1.customers.update(customerId, { currency: "usd" } as never);
-
-	await createAutumnCustomer({
-		autumnV1,
-		customerId,
-		stripeCustomerId: stripeCustomer.id,
-	});
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 
-	expect(fullCustomer.customer_products).toHaveLength(1);
-	expect(fullCustomer.customer_products[0]?.subscription_ids).toEqual([
-		stripeSubscription.id,
-	]);
+	expect(fullCustomer.customer_products).toHaveLength(0);
 });
 
 test(`${chalk.yellowBright("customers stripe sync: same-group subscriptions never remain active twice")}`, async () => {

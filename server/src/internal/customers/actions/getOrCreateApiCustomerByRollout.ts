@@ -1,14 +1,7 @@
-import {
-	type CheckParams,
-	CustomerExpand,
-	type TrackParams,
-} from "@autumn/shared";
+import type { CheckParams, TrackParams } from "@autumn/shared";
 import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { autoSyncStripeCustomerWithLock } from "@/internal/billing/v2/actions/sync/autoSyncStripeCustomer.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
-import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { getOrCreateCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
@@ -54,35 +47,6 @@ export const getOrCreateApiCustomerByRollout = async ({
 		customer: fullSubject?.customer ?? fullCustomer!,
 		customerData: params.customer_data,
 	});
-
-	const customer = fullSubject?.customer ?? fullCustomer!;
-	const stripeCustomerId = params.customer_data?.stripe_id;
-	if (stripeCustomerId && customer.processor?.id === stripeCustomerId) {
-		const customerId = customer.id ?? customer.internal_id;
-		const synced = await autoSyncStripeCustomerWithLock({
-			ctx,
-			customerId,
-			stripeCustomerId,
-		});
-
-		if (synced && fullSubject) {
-			const normalized = await getFullSubjectNormalized({
-				ctx,
-				customerId,
-				entityId: params.entity_id,
-				allowMissingEntity: true,
-			});
-			if (normalized) fullSubject = normalized.fullSubject;
-		} else if (synced) {
-			fullCustomer = await CusService.getFull({
-				ctx,
-				idOrInternalId: customerId,
-				withEntities: true,
-				withSubs: true,
-				expand: [CustomerExpand.Invoices],
-			});
-		}
-	}
 
 	if (fullSubject) return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
 

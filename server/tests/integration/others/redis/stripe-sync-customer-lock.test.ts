@@ -7,36 +7,22 @@ import { timeout } from "@/utils/genUtils.js";
 const describeWithRedis = process.env.TESTS_ORG ? describe : describe.skip;
 
 describeWithRedis("stripe sync customer lock", () => {
-	test("renews ownership while a sync exceeds the base TTL", async () => {
+	test("serializes customer syncs", async () => {
 		const customerId = `stripe-sync-lock-${randomUUID()}`;
-		const leaseMs = 100;
 		let active = 0;
 		let maxActive = 0;
 
-		const run = async ({ durationMs }: { durationMs: number }) => {
+		const run = async () => {
 			active++;
 			maxActive = Math.max(maxActive, active);
-			await timeout(durationMs);
+			await timeout(100);
 			active--;
 		};
 
-		const first = withStripeSyncCustomerLock({
-			ctx,
-			customerId,
-			leaseMs,
-			maxWaitMs: 500,
-			run: () => run({ durationMs: 150 }),
-		});
-		await timeout(20);
-		const follower = withStripeSyncCustomerLock({
-			ctx,
-			customerId,
-			leaseMs,
-			maxWaitMs: 500,
-			run: () => run({ durationMs: 20 }),
-		});
-
-		await Promise.all([first, follower]);
+		await Promise.all([
+			withStripeSyncCustomerLock({ ctx, customerId, run }),
+			withStripeSyncCustomerLock({ ctx, customerId, run }),
+		]);
 		expect(maxActive).toBe(1);
 	});
 });
