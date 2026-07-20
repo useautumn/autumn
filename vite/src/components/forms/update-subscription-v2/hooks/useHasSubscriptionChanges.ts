@@ -12,6 +12,10 @@ import {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
+import {
+	convertLicenseQuantitiesToParams,
+	customerLicensesToQuantityTotals,
+} from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
 
 type PrepaidChangeItem = {
@@ -67,6 +71,16 @@ export function useHasSubscriptionChanges({
 		if (formValues.resetBillingCycle) return true;
 		if (formValues.noBillingChanges) return true;
 		if (formValues.addLicenses !== null) return true;
+		if (
+			convertLicenseQuantitiesToParams({
+				licenseQuantities: formValues.licenseQuantities,
+				initialLicenseQuantities: customerLicensesToQuantityTotals({
+					customerLicenses: customerProduct.customer_licenses ?? [],
+				}),
+			})
+		) {
+			return true;
+		}
 
 		if (formValues.discounts?.length > 0) return true;
 
@@ -133,6 +147,7 @@ export function useHasSubscriptionChanges({
 		formValues.version,
 		formValues.items,
 		formValues.addLicenses,
+		formValues.licenseQuantities,
 		formValues.prepaidOptions,
 		initialPrepaidOptions,
 		prepaidItems,

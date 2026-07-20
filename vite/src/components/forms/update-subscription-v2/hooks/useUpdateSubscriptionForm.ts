@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { useAppForm } from "@/hooks/form/form";
+import { customerLicensesToQuantityTotals } from "@/utils/billing/licenseQuantityUtils";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import {
@@ -30,6 +31,13 @@ export function useUpdateSubscriptionForm({
 			}),
 		[customerProduct.options, prepaidItems],
 	);
+	const initialLicenseQuantities = useMemo(
+		() =>
+			customerLicensesToQuantityTotals({
+				customerLicenses: customerProduct.customer_licenses ?? [],
+			}),
+		[customerProduct.customer_licenses],
+	);
 
 	const isTrialing = isCustomerProductTrialing(customerProduct);
 	const remainingTrialDays = isTrialing
@@ -43,6 +51,7 @@ export function useUpdateSubscriptionForm({
 	return useAppForm({
 		defaultValues: {
 			prepaidOptions: initialPrepaidOptions,
+			licenseQuantities: initialLicenseQuantities,
 			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
 			trialCardRequired,

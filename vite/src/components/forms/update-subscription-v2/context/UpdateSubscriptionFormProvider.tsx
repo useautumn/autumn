@@ -29,6 +29,10 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { useHasBillingChanges } from "@/hooks/stores/useProductStore";
+import {
+	clampLicenseQuantitiesToIncluded,
+	convertLicenseQuantitiesToParams,
+} from "@/utils/billing/licenseQuantityUtils";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
 import {
 	type UseTrialStateReturn,
@@ -180,6 +184,7 @@ export function UpdateSubscriptionFormProvider({
 
 	const defaultValues = form.options.defaultValues;
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
+	const initialLicenseQuantities = defaultValues?.licenseQuantities ?? {};
 	const initialBillingBehavior = defaultValues?.billingBehavior ?? null;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
@@ -287,12 +292,19 @@ export function UpdateSubscriptionFormProvider({
 	});
 
 	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
+	const hasLicenseQuantityChanges = Boolean(
+		convertLicenseQuantitiesToParams({
+			licenseQuantities: formValues.licenseQuantities,
+			initialLicenseQuantities,
+		}),
+	);
 	const isVersionLoading = isVersionChanged && !isVersionReady;
 	const hasNoBillingChanges =
 		normalizedFormValues.noBillingChanges ||
 		(hasChanges &&
 			!hasBillingChanges &&
 			!hasPrepaidQuantityChanges &&
+			!hasLicenseQuantityChanges &&
 			!isVersionLoading &&
 			!normalizedFormValues.resetBillingCycle);
 
@@ -368,6 +380,13 @@ export function UpdateSubscriptionFormProvider({
 
 			if (editedAddLicenses) {
 				form.setFieldValue("addLicenses", editedAddLicenses);
+				form.setFieldValue(
+					"licenseQuantities",
+					clampLicenseQuantitiesToIncluded({
+						licenseQuantities: form.store.state.values.licenseQuantities,
+						upsertLicenses: editedAddLicenses,
+					}),
+				);
 			}
 
 			setShowPlanEditor(false);

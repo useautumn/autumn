@@ -7,6 +7,7 @@ import type {
 import { ProductItemFeatureType } from "@autumn/shared";
 import { useCallback, useMemo } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
+import { convertLicenseQuantitiesToParams } from "@/utils/billing/licenseQuantityUtils";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
@@ -109,12 +110,23 @@ export function buildUpdateSubscriptionOptions({
 export function buildUpdateSubscriptionCustomizationParams({
 	items,
 	addLicenses,
+	licenseQuantities,
+	initialLicenseQuantities,
 }: {
 	items: ProductItem[] | null;
 	addLicenses: CustomizePlanLicense[] | null;
-}): Pick<UpdateSubscriptionV0Params, "items" | "upsert_licenses"> {
+	licenseQuantities: Record<string, number | undefined>;
+	initialLicenseQuantities: Record<string, number | undefined>;
+}): Pick<
+	UpdateSubscriptionV0Params,
+	"items" | "license_quantities" | "upsert_licenses"
+> {
 	return {
 		items: normalizeBillingRequestItems({ items }),
+		license_quantities: convertLicenseQuantitiesToParams({
+			licenseQuantities,
+			initialLicenseQuantities,
+		}),
 		upsert_licenses: addLicenses ?? undefined,
 	};
 }
@@ -135,6 +147,10 @@ export function useUpdateSubscriptionRequestBody({
 		() => form.options.defaultValues?.prepaidOptions ?? {},
 		[form.options.defaultValues?.prepaidOptions],
 	);
+	const initialLicenseQuantities = useMemo(
+		() => form.options.defaultValues?.licenseQuantities ?? {},
+		[form.options.defaultValues?.licenseQuantities],
+	);
 	const initialBackendQuantities = useMemo(
 		() =>
 			customerProduct.options.reduce(
@@ -154,6 +170,7 @@ export function useUpdateSubscriptionRequestBody({
 		const formValues = form.store.state.values;
 		const {
 			prepaidOptions,
+			licenseQuantities,
 			trialLength,
 			trialDuration,
 			removeTrial,
@@ -220,7 +237,12 @@ export function useUpdateSubscriptionRequestBody({
 			...base,
 			options: options.length > 0 ? options : undefined,
 			free_trial: freeTrial,
-			...buildUpdateSubscriptionCustomizationParams({ items, addLicenses }),
+			...buildUpdateSubscriptionCustomizationParams({
+				items,
+				addLicenses,
+				licenseQuantities,
+				initialLicenseQuantities,
+			}),
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
@@ -238,6 +260,7 @@ export function useUpdateSubscriptionRequestBody({
 		currentPrepaidItems,
 		initialPrepaidOptions,
 		initialBackendQuantities,
+		initialLicenseQuantities,
 	]);
 
 	return { buildRequestBody };

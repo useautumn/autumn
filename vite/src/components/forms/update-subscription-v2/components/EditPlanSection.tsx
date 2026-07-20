@@ -20,7 +20,7 @@ export function EditPlanSection() {
 	} = useUpdateSubscriptionFormContext();
 
 	const { customerProduct } = formContext;
-	const { prepaidOptions } = formValues;
+	const { licenseQuantities, prepaidOptions } = formValues;
 	const isCustomized =
 		formValues.items !== null || formValues.addLicenses !== null;
 	const hasCustomizations = isCustomized || isVersionReady;
@@ -117,6 +117,7 @@ export function EditPlanSection() {
 				form={form}
 				showDiff={hasCustomizations}
 				addLicenses={formValues.addLicenses}
+				licenseQuantityEditor={{ form, quantities: licenseQuantities }}
 				currency={currency}
 				onEditPlan={handleEditPlan}
 				priceChange={priceChange}
