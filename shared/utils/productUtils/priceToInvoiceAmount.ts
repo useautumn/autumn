@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { priceAmountsForCurrency } from "../../models/productModels/priceModels/priceConfig/priceCurrencyView.js";
 import type { UsagePriceConfig } from "../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
@@ -41,9 +42,11 @@ import { getBillingType } from "./priceUtils.js";
 export const getAmountForQuantity = ({
 	price,
 	quantity,
+	currency,
 }: {
 	price: Price;
 	quantity: number;
+	currency?: string;
 }) => {
 	const config = price.config as UsagePriceConfig;
 	const billingUnits = config.billing_units || 1;
@@ -52,6 +55,7 @@ export const getAmountForQuantity = ({
 		price,
 		overage: quantity,
 		billingUnits,
+		currency,
 	});
 };
 
@@ -59,10 +63,12 @@ export const itemToInvoiceAmount = ({
 	item,
 	quantity,
 	overage,
+	currency,
 }: {
 	item: ProductItem;
 	quantity?: number;
 	overage?: number;
+	currency?: string;
 }) => {
 	let amount = 0;
 	if (isPriceItem(item)) {
@@ -89,9 +95,9 @@ export const itemToInvoiceAmount = ({
 	} as unknown as Price;
 
 	if (item.usage_model === UsageModel.Prepaid) {
-		amount = getAmountForQuantity({ price, quantity: quantity! });
+		amount = getAmountForQuantity({ price, quantity: quantity!, currency });
 	} else {
-		amount = getAmountForQuantity({ price, quantity: overage! });
+		amount = getAmountForQuantity({ price, quantity: overage!, currency });
 	}
 
 	return amount;
@@ -105,6 +111,7 @@ export const priceToInvoiceAmount = ({
 	overage,
 	proration,
 	now,
+	currency,
 }: {
 	price?: Price;
 	item?: ProductItem;
@@ -113,6 +120,7 @@ export const priceToInvoiceAmount = ({
 	overage?: number;
 	proration?: Proration;
 	now?: number;
+	currency?: string;
 }) => {
 	// 1. If fixed price, just return amount
 
@@ -120,7 +128,13 @@ export const priceToInvoiceAmount = ({
 
 	if (price) {
 		if (isFixedPrice(price)) {
-			amount = new Decimal(price.config.amount)
+			const priceAmount =
+				priceAmountsForCurrency({
+					config: price.config as UsagePriceConfig,
+					currency,
+				}).amount ?? price.config.amount;
+
+			amount = new Decimal(priceAmount)
 				.mul(productQuantity ?? 1)
 				.toNumber();
 		} else {
@@ -134,13 +148,13 @@ export const priceToInvoiceAmount = ({
 			}
 
 			if (billingType === BillingType.UsageInAdvance) {
-				amount = getAmountForQuantity({ price, quantity: quantity! });
+				amount = getAmountForQuantity({ price, quantity: quantity!, currency });
 			} else {
-				amount = getAmountForQuantity({ price, quantity: overage! });
+				amount = getAmountForQuantity({ price, quantity: overage!, currency });
 			}
 		}
 	} else {
-		amount = itemToInvoiceAmount({ item: item!, quantity, overage });
+		amount = itemToInvoiceAmount({ item: item!, quantity, overage, currency });
 	}
 
 	if (proration) {
