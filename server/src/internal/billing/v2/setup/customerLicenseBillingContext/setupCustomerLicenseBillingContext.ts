@@ -5,12 +5,9 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
+import { countActiveByCustomerLicenseLinkIds } from "@/internal/licenses/repos/customerLicenseRepo/countActiveByCustomerLicenseLinkIds";
 
-/**
- * Loads the customer's license billing state once, so every compute stays
- * pure. Action-agnostic: derives its inputs from the hydrated customer;
- * customers with no licenses pay no query.
- */
+/** Loads assigned-seat billing snapshots once for pure downstream computes. */
 export const setupCustomerLicenseBillingContext = async ({
 	ctx,
 	fullCustomer,
@@ -19,13 +16,37 @@ export const setupCustomerLicenseBillingContext = async ({
 	fullCustomer: FullCustomer;
 }): Promise<CustomerLicenseBillingContext> => {
 	const customerLicenses = fullCustomerToCustomerLicenses({ fullCustomer });
-	if (customerLicenses.length === 0) return { licenseBillingPriceRows: [] };
+	if (customerLicenses.length === 0) {
+		return {
+			licenseBillingPriceRows: [],
+			assignedSeatCountByCustomerLicenseId: new Map(),
+			projectedPlanLicenseIds: new Set(),
+		};
+	}
 
-	const licenseBillingPriceRows =
-		await customerLicenseRepo.listBillingPriceRows({
-			db: ctx.db,
-			customerLicenses,
-		});
+	const [licenseBillingPriceRows, assignedSeatCountByLinkId] =
+		await Promise.all([
+			customerLicenseRepo.listBillingPriceRows({
+				db: ctx.db,
+				customerLicenses,
+			}),
+			countActiveByCustomerLicenseLinkIds({
+				db: ctx.db,
+				customerLicenseLinkIds: customerLicenses.map(
+					(customerLicense) => customerLicense.link_id,
+				),
+			}),
+		]);
+	const assignedSeatCountByCustomerLicenseId = new Map(
+		customerLicenses.map((customerLicense) => [
+			customerLicense.id,
+			assignedSeatCountByLinkId.get(customerLicense.link_id) ?? 0,
+		]),
+	);
 
-	return { licenseBillingPriceRows };
+	return {
+		licenseBillingPriceRows,
+		assignedSeatCountByCustomerLicenseId,
+		projectedPlanLicenseIds: new Set(),
+	};
 };

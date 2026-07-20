@@ -174,6 +174,7 @@ export function buildPreviewUpdatePlanParams({
 	delete params.disable_version;
 	params.include_versions = true;
 	params.include_variants = true;
+	params.include_license_parents = true;
 	return params;
 }
 

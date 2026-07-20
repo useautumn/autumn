@@ -1,26 +1,11 @@
-import { coreAttach } from "./core/coreAttach";
 import { coreBalances } from "./core/coreBalances";
-import { coreBillingOthers } from "./core/coreBillingOthers";
-import { coreLegacy } from "./core/coreLegacy";
-import { coreMigrations } from "./core/coreMigrations";
-import { coreMultiUpdate } from "./core/coreMultiUpdate";
-import { coreStripe } from "./core/coreStripe";
-import { coreUpdateSubscription } from "./core/coreUpdateSubscription";
+import { coreBilling } from "./core/coreBilling";
 import type { TestGroup } from "./types";
 
 export const core: TestGroup = {
 	name: "core",
 	description:
-		"Critical flows that must pass: balances, attach, update-subscription, legacy, migrations, stripe webhooks",
+		"Critical flows that must pass: balances, billing, licenses, and plans CRUD",
 	tier: "core",
-	paths: [
-		...coreBalances.paths,
-		...coreLegacy.paths,
-		...coreMigrations.paths,
-		...coreStripe.paths,
-		...coreAttach.paths,
-		...coreUpdateSubscription.paths,
-		...coreMultiUpdate.paths,
-		...coreBillingOthers.paths,
-	],
+	paths: [...coreBalances.paths, ...coreBilling.paths],
 };

@@ -11,8 +11,10 @@ const EMPTY_PRODUCTS: ProductV2[] = [];
  */
 export const useLicenseProductsQuery = ({
 	enabled = true,
+	allVersions = false,
 }: {
 	enabled?: boolean;
+	allVersions?: boolean;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
@@ -21,9 +23,11 @@ export const useLicenseProductsQuery = ({
 	const { data, isLoading, error, refetch } = useQuery<{
 		products: ProductV2[];
 	}>({
-		queryKey: buildKey(["license_products"]),
+		queryKey: buildKey(["license_products", allVersions ? "all" : "latest"]),
 		queryFn: async () => {
-			const { data } = await axiosInstance.get("/products/license_products");
+			const { data } = await axiosInstance.get("/products/license_products", {
+				params: allVersions ? { all_versions: true } : undefined,
+			});
 			return data;
 		},
 		enabled,

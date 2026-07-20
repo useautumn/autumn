@@ -14,5 +14,7 @@ export type LicenseBillingPriceRow = {
 	source: {
 		type: "customer_license_seat" | "customer_license_unused_prepaid";
 		customerLicenseId: string;
+		// Present when a transition projects this row for one catalog definition.
+		planLicenseId?: string;
 	};
 };

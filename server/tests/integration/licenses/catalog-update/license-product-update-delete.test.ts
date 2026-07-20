@@ -57,7 +57,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("licenses-crud: deleting an unused linked license removes the link")}`,
+	`${chalk.yellowBright("licenses-crud: deleting an unused linked license is rejected")}`,
 	async () => {
 		const parent = products.base({
 			id: "delete-linked-parent",
@@ -82,13 +82,19 @@ test.concurrent(
 			],
 		});
 
-		await autumnV2_2.delete(`/products/${license.id}`);
+		await expect(autumnV2_2.delete(`/products/${license.id}`)).rejects.toThrow(
+			"is linked to a parent plan",
+		);
 
 		const links = await listLicenseLinks({
 			autumn: autumnV2_2,
 			parentPlanId: parent.id,
 		});
-		expect(links).toHaveLength(0);
+		expect(links).toHaveLength(1);
+		const productsAfter = (await autumnV2_2.get("/products")) as {
+			list: Array<{ id: string }>;
+		};
+		expect(productsAfter.list.some(({ id }) => id === license.id)).toBe(true);
 	},
 );
 

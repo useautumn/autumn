@@ -21,6 +21,7 @@ export const PriceSchema = z.object({
 
 	org_id: z.string().optional(),
 	created_at: z.number().optional(),
+	/** @deprecated Derive this with getBillingType(price.config). */
 	billing_type: z.nativeEnum(BillingType).nullish(),
 	tier_behavior: z.nativeEnum(TierBehavior).nullish(),
 	is_custom: z.boolean().optional(),

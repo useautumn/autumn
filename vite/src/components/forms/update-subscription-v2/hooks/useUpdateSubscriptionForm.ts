@@ -43,6 +43,7 @@ export function useUpdateSubscriptionForm({
 	return useAppForm({
 		defaultValues: {
 			prepaidOptions: initialPrepaidOptions,
+			licenseQuantities: {},
 			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
 			trialCardRequired,

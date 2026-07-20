@@ -6,6 +6,14 @@ import { CreatePlanParamsV1Schema } from "./createPlanParamsV1";
 import { MigrationParamsSchema } from "./migrationParams.js";
 import { UpdateVariantParamsSchema } from "./variants/index.js";
 
+export const UpdateLicenseParentParamsSchema = z.object({
+	plan_id: z.string().nonempty().regex(idRegex),
+	version: z.number().int().min(1),
+});
+export type UpdateLicenseParentParams = z.infer<
+	typeof UpdateLicenseParentParamsSchema
+>;
+
 // const UpdatePlanBaseFieldsSchema = z.object({
 // 	name: CreatePlanParamsV1Schema.shape.name.optional(),
 // 	description: CreatePlanParamsV1Schema.shape.description
@@ -90,6 +98,13 @@ export const UpdatePlanParamsV2Schema = z
 			description:
 				"Variant plan IDs to apply this update to. Empty or omitted means no propagation.",
 		}),
+		update_license_parents: z
+			.array(UpdateLicenseParentParamsSchema)
+			.optional()
+			.meta({
+				description:
+					"Parent plan versions that should receive this license-plan update.",
+			}),
 		variants: z.array(UpdateVariantParamsSchema).default([]).optional().meta({
 			description:
 				"Additive variant updates for this base plan. Missing variants are created when name is provided.",

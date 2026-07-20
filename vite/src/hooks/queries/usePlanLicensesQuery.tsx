@@ -7,7 +7,7 @@ export type VersionedPlanLicense = PlanLicense & { version: number };
 
 const EMPTY_PLAN_LICENSES: VersionedPlanLicense[] = [];
 
-const toPlanLicenses = ({
+export const toPlanLicenses = ({
 	parentPlanId,
 	licenses,
 }: {

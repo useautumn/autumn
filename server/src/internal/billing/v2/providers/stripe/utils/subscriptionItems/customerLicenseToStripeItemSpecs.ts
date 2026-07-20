@@ -26,6 +26,9 @@ export const customerLicenseToStripeItemSpecs = ({
 	const seatRows = (
 		billingContext.customerLicenseBillingContext?.licenseBillingPriceRows ?? []
 	).filter((row) => row.source.customerLicenseId === customerLicense.id);
+	const projectedPlanLicenseIds =
+		billingContext.customerLicenseBillingContext?.projectedPlanLicenseIds ??
+		new Set<string>();
 
 	// Desired state prices seats through the pool's (possibly repointed)
 	// definition — the read-time twin of the seat repoint executor.
@@ -33,9 +36,19 @@ export const customerLicenseToStripeItemSpecs = ({
 		...resolveLicenseBillingRowsThroughDefinition({
 			licenseBillingRows: seatRows,
 			planLicense,
+			projectedPlanLicenseIds,
 		}),
-		...customerLicenseToUnusedPrepaidRows({ customerLicense }),
 	];
+	const billableAssignedQuantity = licenseBillingRows.reduce(
+		(total, row) => total + row.quantity,
+		0,
+	);
+	licenseBillingRows.push(
+		...customerLicenseToUnusedPrepaidRows({
+			customerLicense,
+			billableAssignedQuantity,
+		}),
+	);
 
 	return licenseBillingRows.map((licenseBillingRow) =>
 		licenseBillingRowToStripeItemSpec({ licenseBillingRow }),

@@ -59,7 +59,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 4b. License errors (quantity converge + plan restructure guards)
 	handleUpdateSubscriptionLicenseErrors({
 		billingContext,
-		autumnBillingPlan,
 		params,
 	});
 

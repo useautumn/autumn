@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	customerLicenses,
 	type DbPlanLicense,
 	planLicenses,
 	products,
@@ -107,6 +108,30 @@ const listCatalogByLicenseInternalProductIds = async ({
 			eq(planLicenses.is_custom, false),
 		),
 	});
+
+const listCustomerReferencedByLicenseInternalProductIds = async ({
+	db,
+	licenseInternalProductIds,
+}: {
+	db: DrizzleCli;
+	licenseInternalProductIds: string[];
+}) => {
+	if (licenseInternalProductIds.length === 0) return [];
+	const rows = await db
+		.selectDistinct({ planLicense: planLicenses })
+		.from(planLicenses)
+		.innerJoin(
+			customerLicenses,
+			eq(customerLicenses.plan_license_id, planLicenses.id),
+		)
+		.where(
+			inArray(
+				planLicenses.license_internal_product_id,
+				licenseInternalProductIds,
+			),
+		);
+	return rows.map(({ planLicense }) => planLicense);
+};
 
 const listCatalogByParentInternalProductIds = async ({
 	db,
@@ -223,6 +248,7 @@ export const planLicenseRepo = {
 	retireCatalogById,
 	listCatalogByParentInternalProductIds,
 	listCatalogByLicenseInternalProductIds,
+	listCustomerReferencedByLicenseInternalProductIds,
 	listWithLicensePlanIdByParents,
 	listCatalogByOrgEnv,
 	listProductsByInternalIds,

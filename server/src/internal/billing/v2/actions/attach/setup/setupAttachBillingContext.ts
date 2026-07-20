@@ -149,6 +149,8 @@ export const setupAttachBillingContext = async ({
 
 	const customerLicenseQuantities = setupCustomerLicenseQuantityContext({
 		params,
+		fullProduct: attachProduct,
+		customerProduct: currentCustomerProduct,
 	});
 
 	const invoiceMode = await setupInvoiceModeContext({ ctx, params });

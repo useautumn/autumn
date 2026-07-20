@@ -1,14 +1,10 @@
-import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
-import { handleLicenseTransitionErrors } from "@/internal/billing/v2/common/errors/handleLicenseTransitionErrors";
+import type { AttachBillingContext } from "@autumn/shared";
 import { handleDroppedLicenseErrors } from "./handleDroppedLicenseErrors";
 
 export const handleLicenseErrors = ({
 	billingContext,
-	autumnBillingPlan,
 }: {
 	billingContext: AttachBillingContext;
-	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	handleLicenseTransitionErrors({ autumnBillingPlan });
-	handleDroppedLicenseErrors({ billingContext, autumnBillingPlan });
+	handleDroppedLicenseErrors({ billingContext });
 };

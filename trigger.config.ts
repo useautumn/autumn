@@ -54,7 +54,10 @@ export default defineConfig({
 			randomize: true,
 		},
 	},
-	dirs: ["server/src/trigger"],
+	dirs: [
+		"server/src/trigger",
+		"server/src/internal/billing/v2/actions/batchTransition/tasks",
+	],
 	build: {
 		// Native / heavy deps stay external — bundling them inflates the deploy
 		// and breaks platform-specific binaries (pg, ioredis, etc.).

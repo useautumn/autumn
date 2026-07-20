@@ -7,7 +7,7 @@ import {
 	type FullProduct,
 	productToBasePrice,
 } from "@autumn/shared";
-import { getFullLicenseProduct } from "@tests/integration/crud/plans/licenses/utils/getFullLicenseProduct";
+import { getFullLicenseProduct } from "@tests/integration/licenses/catalog-update/utils/getFullLicenseProduct";
 import { expectLicenseDefinitionCorrect } from "@tests/integration/licenses/utils/expectLicenseDefinitionCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
