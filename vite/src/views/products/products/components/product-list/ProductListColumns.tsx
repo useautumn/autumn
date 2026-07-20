@@ -66,10 +66,7 @@ export const createProductListColumns = ({
 			return (
 				<div className="text-muted-foreground">
 					{isCountsLoading ? (
-						<Skeleton
-							aria-label="Loading customer count"
-							className="h-4 w-14"
-						/>
+						<Skeleton aria-label="Loading" className="h-4 w-14" />
 					) : (
 						<ProductCountsTooltip product={row.original} />
 					)}

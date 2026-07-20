@@ -30,6 +30,7 @@ describe("product list customer count loading", () => {
 		const cell = renderCustomerCell({ isCountsLoading: true });
 
 		expect(cell.props.children.type).toBe(Skeleton);
+		expect(cell.props.children.props["aria-label"]).toBe("Loading");
 	});
 
 	test("shows the customer count tooltip after counts load", () => {
