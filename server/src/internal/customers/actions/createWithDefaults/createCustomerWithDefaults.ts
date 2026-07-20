@@ -14,6 +14,7 @@ import {
 } from "./logs/logCreateCustomer.js";
 import { setupCreateCustomer } from "./setup/setupCreateCustomer.js";
 import { setupCreateCustomerBillingContext } from "./setup/setupCreateCustomerBillingContext.js";
+import { syncCreatedCustomerFromStripe } from "./syncCreatedCustomerFromStripe.js";
 
 /**
  * Create a customer and attach default products.
@@ -72,6 +73,12 @@ export const createCustomerWithDefaults = async ({
 	// drop the webhooks — a client retry lands on the "existing" path above and
 	// would never emit them.
 	try {
+		context.fullCustomer = await syncCreatedCustomerFromStripe({
+			ctx,
+			fullCustomer: context.fullCustomer,
+			stripeCustomerId: customerData?.stripe_id,
+		});
+
 		// 4. Setup billing context (creates Stripe customer)
 
 		const shouldCreateStripeCustomer =
