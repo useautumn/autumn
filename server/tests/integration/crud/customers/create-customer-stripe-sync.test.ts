@@ -273,6 +273,101 @@ test(`${chalk.yellowBright("customers stripe sync: existing autumn customer is n
 	expect(fullCustomer.customer_products).toHaveLength(0);
 });
 
+test(`${chalk.yellowBright("customers stripe sync: retries an incomplete initial import")}`, async () => {
+	const customerId = `create-stripe-sync-resume-${runId}`;
+	const pro = products.pro({
+		id: `create-stripe-sync-resume-pro-${runId}`,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const { autumnV1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId }), s.products({ list: [pro] })],
+		actions: [],
+	});
+	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
+	const stripeSubscription = await createSubscription({
+		ctx,
+		stripeCustomerId: stripeCustomer.id,
+		items: [{ price: await getBasePriceId({ ctx, productId: pro.id }) }],
+	});
+
+	await expect(
+		autumnV1.customers.create({
+			id: customerId,
+			stripe_id: stripeCustomer.id,
+			currency: "eur",
+			internalOptions: { disable_defaults: true },
+		} as never),
+	).rejects.toThrow();
+	await autumnV1.customers.update(customerId, { currency: "usd" } as never);
+
+	await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.subscription_ids).toEqual([
+		stripeSubscription.id,
+	]);
+});
+
+test(`${chalk.yellowBright("customers stripe sync: same-group subscriptions never remain active twice")}`, async () => {
+	const customerId = `create-stripe-sync-same-group-${runId}`;
+	const group = `create-stripe-sync-same-group-plans-${runId}`;
+	const firstPlan = products.pro({
+		id: `create-stripe-sync-same-group-first-${runId}`,
+		group,
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const secondPlan = products.pro({
+		id: `create-stripe-sync-same-group-second-${runId}`,
+		group,
+		items: [items.monthlyMessages({ includedUsage: 200 })],
+	});
+	const { autumnV1, ctx } = await initScenario({
+		setup: [
+			s.deleteCustomer({ customerId }),
+			s.products({ list: [firstPlan, secondPlan] }),
+		],
+		actions: [],
+	});
+	const stripeCustomer = await createStripeCustomer({ ctx, key: customerId });
+	const subscriptions = await Promise.all(
+		[firstPlan, secondPlan].map(async (product) =>
+			createSubscription({
+				ctx,
+				stripeCustomerId: stripeCustomer.id,
+				items: [
+					{ price: await getBasePriceId({ ctx, productId: product.id }) },
+				],
+			}),
+		),
+	);
+
+	await createAutumnCustomer({
+		autumnV1,
+		customerId,
+		stripeCustomerId: stripeCustomer.id,
+	});
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	expect(fullCustomer.customer_products).toHaveLength(1);
+	expect(fullCustomer.customer_products[0]?.status).toBe(
+		CusProductStatus.Active,
+	);
+	expect(subscriptions.map(({ id }) => id)).toContain(
+		fullCustomer.customer_products[0]?.subscription_ids?.[0] ?? "",
+	);
+});
+
 test(`${chalk.yellowBright("customers stripe sync: imports once across sequential and concurrent retries")}`, async () => {
 	const customerId = `create-stripe-sync-basic-${runId}`;
 	const pro = products.pro({
