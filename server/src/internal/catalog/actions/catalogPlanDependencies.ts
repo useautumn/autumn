@@ -8,6 +8,8 @@ import {
 const referenceKey = (id: string, version?: number) =>
 	version === undefined ? id : `${id}@${version}`;
 
+const targetId = (plan: CatalogPlanParams) => plan.new_plan_id ?? plan.plan_id;
+
 const dependenciesForPlan = (plan: CatalogPlanParams) =>
 	(plan.licenses ?? []).map((license) => ({
 		id: license.license_plan_id,
@@ -19,8 +21,8 @@ export const sortCatalogPlansByDependencies = (
 ): CatalogPlanParams[] => {
 	const byReference = new Map<string, CatalogPlanParams>();
 	for (const plan of plans) {
-		byReference.set(referenceKey(plan.plan_id, plan.version), plan);
-		const latestKey = plan.new_plan_id ?? plan.plan_id;
+		byReference.set(referenceKey(targetId(plan), plan.version), plan);
+		const latestKey = targetId(plan);
 		const latest = byReference.get(latestKey);
 		if (!latest || (plan.version ?? 0) > (latest.version ?? 0)) {
 			byReference.set(latestKey, plan);
@@ -31,7 +33,7 @@ export const sortCatalogPlansByDependencies = (
 	const visited = new Set<string>();
 	const sorted: CatalogPlanParams[] = [];
 	const visit = (plan: CatalogPlanParams) => {
-		const key = referenceKey(plan.plan_id, plan.version);
+		const key = referenceKey(targetId(plan), plan.version);
 		if (visiting.has(key)) {
 			throw new RecaseError({
 				message: "Plan dependency cycle detected.",
@@ -43,7 +45,7 @@ export const sortCatalogPlansByDependencies = (
 		visiting.add(key);
 		if (plan.version !== undefined && plan.version > 1) {
 			const previous = byReference.get(
-				referenceKey(plan.plan_id, plan.version - 1),
+				referenceKey(targetId(plan), plan.version - 1),
 			);
 			if (previous) visit(previous);
 		}
@@ -80,21 +82,22 @@ export const validateCatalogPlanVersionTargets = ({
 	}
 
 	for (const plan of sortCatalogPlansByDependencies(plans)) {
+		const id = targetId(plan);
 		if (
 			plan.version === undefined ||
-			existing.has(referenceKey(plan.plan_id, plan.version))
+			existing.has(referenceKey(id, plan.version))
 		) {
 			continue;
 		}
-		const expected = (latestById.get(plan.plan_id) ?? 0) + 1;
+		const expected = (latestById.get(id) ?? 0) + 1;
 		if (plan.version !== expected) {
 			throw new RecaseError({
-				message: `Plan ${plan.plan_id} version must be ${expected}, received ${plan.version}.`,
+				message: `Plan ${id} version must be ${expected}, received ${plan.version}.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
-		existing.add(referenceKey(plan.plan_id, plan.version));
-		latestById.set(plan.plan_id, plan.version);
+		existing.add(referenceKey(id, plan.version));
+		latestById.set(id, plan.version);
 	}
 };
