@@ -13,14 +13,14 @@ const autoSyncStripeCustomer = async ({
 	customerId: string;
 	stripeCustomerId: string;
 }) => {
-	const drafts = await prepareAutoSyncStripeCustomer({
+	const syncCandidates = await prepareAutoSyncStripeCustomer({
 		ctx,
 		customerId,
 		stripeCustomerId,
 	});
-	for (const draft of drafts) {
-		if (!draft) continue;
-		const { match, params } = draft;
+	for (const syncCandidate of syncCandidates) {
+		if (!syncCandidate) continue;
+		const { match, params } = syncCandidate;
 		if (!canAutoSync({ match }).eligible) continue;
 		await syncV2({
 			ctx,
