@@ -32,7 +32,7 @@ export const getStripeInvoiceLineItems = async ({
 
 	// Use auto-pagination to get all line items
 	for await (const lineItem of stripeClient.invoices.listLineItems(invoiceId, {
-		expand: ["data.discounts", "data.discount_amounts.discount"],
+		expand: ["data.discounts.source.coupon", "data.discount_amounts.discount"],
 		limit: 100,
 	})) {
 		lineItems.push(lineItem as ExpandedStripeInvoiceLineItem);

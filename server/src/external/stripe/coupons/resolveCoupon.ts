@@ -14,7 +14,9 @@ export const resolveCoupon = async ({
 	couponId: string;
 }): Promise<StripeDiscountWithCoupon> => {
 	try {
-		const coupon = await stripeCli.coupons.retrieve(couponId);
+		const coupon = await stripeCli.coupons.retrieve(couponId, {
+			expand: ["applies_to"],
+		});
 
 		if (!coupon.valid) {
 			throw new RecaseError({

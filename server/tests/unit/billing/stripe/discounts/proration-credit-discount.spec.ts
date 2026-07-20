@@ -50,6 +50,28 @@ const establishedDiscount = ({
 
 describe(chalk.yellowBright("proration credit discounting"), () => {
 	describe(chalk.cyan("discountAppliesToLineItem (refund)"), () => {
+		test("does not reapply a discount to a finalized stored credit", () => {
+			const lineItem = creditLine();
+			lineItem.discountsAlreadyApplied = true;
+			const discount = establishedDiscount({
+				percentOff: 20,
+				startMs: PERIOD_START_MS - ONE_DAY_MS,
+			});
+
+			expect(discountAppliesToLineItem({ discount, lineItem })).toBe(false);
+		});
+
+		test("discountable false does not suppress Autumn's refund calculation", () => {
+			const lineItem = creditLine();
+			lineItem.context.discountable = false;
+			const discount = establishedDiscount({
+				percentOff: 20,
+				startMs: PERIOD_START_MS - ONE_DAY_MS,
+			});
+
+			expect(discountAppliesToLineItem({ discount, lineItem })).toBe(true);
+		});
+
 		test("applies when an established discount was active before the credited period", () => {
 			const lineItem = creditLine();
 			const discount = establishedDiscount({

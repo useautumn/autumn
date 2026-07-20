@@ -6,10 +6,12 @@ import {
 	customerProductToEntity,
 	type DbInvoiceLineItem,
 	type FullCusProduct,
+	type FullProductWithoutLicenses,
 	type InvoiceLineItemDiscount,
 	type LineItem,
 	type LineItemContext,
 	LineItemSchema,
+	type Price,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -20,6 +22,7 @@ export const chargeRowToRefundLineItem = ({
 	customerProduct,
 	billingContext,
 	ctx,
+	contextOverride,
 }: {
 	chargeRow: DbInvoiceLineItem;
 	creditAmount: number;
@@ -27,6 +30,10 @@ export const chargeRowToRefundLineItem = ({
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
 	ctx: AutumnContext;
+	contextOverride?: {
+		price: Price;
+		product: FullProductWithoutLicenses;
+	};
 }): LineItem => {
 	const periodStart =
 		chargeRow.effective_period_start ?? billingContext.currentEpochMs;
@@ -44,6 +51,11 @@ export const chargeRowToRefundLineItem = ({
 			(chargeRow.stripe_price_id != null &&
 				cp.price.config?.stripe_price_id === chargeRow.stripe_price_id),
 	);
+	const product = contextOverride?.product ?? customerProduct.product;
+	const price =
+		contextOverride?.price ??
+		matchingCusPrice?.price ??
+		customerProduct.customer_prices[0]?.price;
 
 	const couponNameById = new Map(
 		(billingContext.stripeDiscounts ?? []).map((discount) => [
@@ -51,8 +63,6 @@ export const chargeRowToRefundLineItem = ({
 			discount.source.coupon.name ?? discount.source.coupon.id,
 		]),
 	);
-	const price =
-		matchingCusPrice?.price ?? customerProduct.customer_prices[0]?.price;
 	const matchingCusEnt = matchingCusPrice
 		? cusPriceToCusEnt({
 				cusPrice: matchingCusPrice,
@@ -68,7 +78,7 @@ export const chargeRowToRefundLineItem = ({
 
 	const context: LineItemContext = {
 		price,
-		product: customerProduct.product,
+		product,
 		feature: matchingCusEnt?.entitlement.feature,
 		currency: billingContextToCurrency({ org: ctx.org, billingContext }),
 		billingPeriod: { start: periodStart, end: periodEnd },
@@ -85,7 +95,7 @@ export const chargeRowToRefundLineItem = ({
 
 	const description = chargeRow.description
 		? `Unused ${chargeRow.description}`
-		: `Unused ${customerProduct.product.name}`;
+		: `Unused ${product.name}`;
 
 	const lineItemData = {
 		id: generateKsuid({ prefix: "invoice_li_" }),
@@ -95,7 +105,7 @@ export const chargeRowToRefundLineItem = ({
 		context,
 		stripePriceId: chargeRow.stripe_price_id ?? undefined,
 		stripeProductId: chargeRow.stripe_product_id ?? undefined,
-		chargeImmediately: chargeRow.invoice_id === null ? false : true,
+		chargeImmediately: chargeRow.invoice_id !== null,
 		prorated: true,
 		discounts:
 			(chargeRow.discounts as InvoiceLineItemDiscount[] | null)?.map((d) => ({
@@ -106,6 +116,7 @@ export const chargeRowToRefundLineItem = ({
 					? (couponNameById.get(d.stripe_coupon_id) ?? d.stripe_coupon_id)
 					: undefined,
 			})) ?? [],
+		discountsAlreadyApplied: true,
 	};
 
 	const result = LineItemSchema.safeParse(lineItemData);

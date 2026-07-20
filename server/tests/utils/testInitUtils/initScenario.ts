@@ -6,6 +6,7 @@ import {
 	type CustomerBillingControlsParams,
 	type EntitlementDuration,
 	type OrgConfig,
+	type PlanLicenseParams,
 	type PlanTiming,
 	type ProductItem,
 	type ProductV2,
@@ -199,6 +200,7 @@ type LinkLicenseAction = {
 	licenseProductId: string;
 	included: number;
 	prepaidOnly?: boolean;
+	customize?: PlanLicenseParams["customize"];
 	metadata?: Record<string, unknown>;
 };
 
@@ -830,12 +832,14 @@ const linkLicense =
 		licenseProductId,
 		included,
 		prepaidOnly,
+		customize,
 		metadata,
 	}: {
 		parentProductId: string;
 		licenseProductId: string;
 		included: number;
 		prepaidOnly?: boolean;
+		customize?: PlanLicenseParams["customize"];
 		metadata?: Record<string, unknown>;
 	}): ConfigFn =>
 	(config) => ({
@@ -848,6 +852,7 @@ const linkLicense =
 				licenseProductId,
 				included,
 				prepaidOnly,
+				customize,
 				metadata,
 			},
 		],
@@ -1754,6 +1759,7 @@ export async function initScenario({
 				license_plan_id: `${action.licenseProductId}_${productPrefix}`,
 				included: action.included,
 				prepaid_only: action.prepaidOnly,
+				customize: action.customize,
 				metadata: action.metadata,
 			};
 			const links = (catalogLinksByParent.get(parentPlanId) ?? []).filter(
