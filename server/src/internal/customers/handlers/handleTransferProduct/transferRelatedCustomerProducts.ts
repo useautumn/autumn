@@ -1,4 +1,12 @@
-import type { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+	schedulePhases,
+	schedules,
+} from "@autumn/shared";
+import { and, arrayOverlaps, eq, exists, isNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { nullish } from "@/utils/genUtils.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
@@ -86,8 +94,9 @@ export const getTransferCustomerProducts = ({
 	fullCustomer.customer_products.filter(
 		(cusProduct) =>
 			(customerProductId
-				? cusProduct.id === customerProductId &&
-					cusProduct.product.id === product.id
+				? cusProduct.id === customerProductId ||
+					(cusProduct.status === CusProductStatus.Scheduled &&
+						matchesTransferProduct({ cusProduct, product }))
 				: matchesTransferProduct({ cusProduct, product })) &&
 			matchesTransferSource({ cusProduct, fromEntity }),
 	);
@@ -111,14 +120,41 @@ export const transferRelatedCustomerProducts = async ({
 		entity_id: toEntity?.id ?? null,
 		internal_entity_id: toEntity?.internal_id ?? null,
 	};
+	const customerProducts = getTransferCustomerProducts({
+		fullCustomer,
+		fromEntity,
+		product,
+		customerProductId,
+	});
+
+	await ctx.db
+		.update(schedules)
+		.set(updates)
+		.where(
+			and(
+				eq(schedules.internal_customer_id, fullCustomer.internal_id),
+				fromEntity
+					? eq(schedules.internal_entity_id, fromEntity.internal_id)
+					: isNull(schedules.internal_entity_id),
+				exists(
+					ctx.db
+						.select()
+						.from(schedulePhases)
+						.where(
+							and(
+								eq(schedulePhases.schedule_id, schedules.id),
+								arrayOverlaps(
+									schedulePhases.customer_product_ids,
+									customerProducts.map(({ id }) => id),
+								),
+							),
+						),
+				),
+			),
+		);
 
 	await Promise.all(
-		getTransferCustomerProducts({
-			fullCustomer,
-			fromEntity,
-			product,
-			customerProductId,
-		}).map((cusProduct) =>
+		customerProducts.map((cusProduct) =>
 			CusProductService.update({
 				ctx,
 				cusProductId: cusProduct.id,
