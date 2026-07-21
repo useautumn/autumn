@@ -348,6 +348,7 @@ const buildCustomerEntitlement = ({
 	next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
 	usage_allowed: false,
 	separate_interval: false,
+	is_pooled_balance: false,
 	reset_cycle_anchor: null,
 	adjustment: 0,
 	additional_balance: 0,

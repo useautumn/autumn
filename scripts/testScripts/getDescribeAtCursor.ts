@@ -9,9 +9,16 @@ const lines = content.split("\n");
 const MULTILINE_LOOKAHEAD = 5;
 
 const escapeRegex = (raw: string) => raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const templateToRegex = (raw: string) =>
+	raw
+		.split(/\$\{.*?\}/)
+		.map(escapeRegex)
+		.join(".*");
 
 const CHALK_PATTERN =
 	/(?:describe|test(?:\.concurrent)?)\s*\(\s*`\$\{chalk\.\w+\(["'](.*?)["']\)\}`/;
+const CHALK_TEMPLATE_PATTERN =
+	/(?:describe|test(?:\.concurrent)?)\s*\(\s*`\$\{chalk\.\w+\(`([\s\S]*?)`\)\}`/;
 const BLOCK_NAME = String.raw`(?:describe|test(?:\.concurrent)?|Eval(?:<[^>]+>)?)`;
 const SIMPLE_PATTERN = new RegExp(`${BLOCK_NAME}\\s*\\(\\s*["'\`](.*?)["'\`]`);
 const OPEN_PATTERN = new RegExp(`${BLOCK_NAME}\\s*\\(\\s*$`);
@@ -21,6 +28,12 @@ const OPEN_PATTERN = new RegExp(`${BLOCK_NAME}\\s*\\(\\s*$`);
 // next line(s) — `test.concurrent(\n\t\`${chalk.yellowBright("name")}\`,` — are matched.
 for (let i = lineNum - 1; i >= 0; i--) {
 	const line = lines[i];
+
+	const chalkTemplateMatch = line.match(CHALK_TEMPLATE_PATTERN);
+	if (chalkTemplateMatch) {
+		console.log(templateToRegex(chalkTemplateMatch[1]));
+		process.exit(0);
+	}
 
 	const chalkMatch = line.match(CHALK_PATTERN);
 	if (chalkMatch) {
@@ -38,6 +51,11 @@ for (let i = lineNum - 1; i >= 0; i--) {
 		const joined = lines
 			.slice(i, Math.min(lines.length, i + 1 + MULTILINE_LOOKAHEAD))
 			.join("\n");
+		const chalkTemplateMulti = joined.match(CHALK_TEMPLATE_PATTERN);
+		if (chalkTemplateMulti) {
+			console.log(templateToRegex(chalkTemplateMulti[1]));
+			process.exit(0);
+		}
 		const chalkMulti = joined.match(CHALK_PATTERN);
 		if (chalkMulti) {
 			console.log(escapeRegex(chalkMulti[1]));

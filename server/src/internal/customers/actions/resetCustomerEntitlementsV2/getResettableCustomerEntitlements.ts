@@ -1,8 +1,8 @@
 import {
-	cusEntToCusPrice,
 	CusProductStatus,
-	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	cusEntToCusPrice,
 	type FullCusEntWithFullCusProduct,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 } from "@autumn/shared";
 
 /**
@@ -27,6 +27,10 @@ export const getResettableCustomerEntitlements = ({
 
 	for (const cusEnt of customerEntitlements) {
 		if (!cusEnt.next_reset_at || cusEnt.next_reset_at >= now) continue;
+		// Pooled sources are normalized to zero and synthetic pools have their
+		// own reset-owner lifecycle. Neither may use the ordinary cusEnt reset.
+		if (cusEnt.is_pooled_balance || cusEnt.entitlement.pooled === true)
+			continue;
 
 		const cusProduct = cusEnt.customer_product;
 		if (cusProduct?.status === CusProductStatus.PastDue) {

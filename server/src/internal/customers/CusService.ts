@@ -62,6 +62,7 @@ import {
 	getCustomerProductsPageQuery,
 } from "./getCustomerProductsPageQuery.js";
 import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
+import { hydrateFullCustomerPooledBalances } from "./pooledBalances/hydrateFullCustomerPooledBalances.js";
 import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
@@ -280,6 +281,12 @@ export class CusService {
 						fullCustomer: fullCus,
 					});
 				}
+
+				await hydrateFullCustomerPooledBalances({
+					ctx,
+					fullCustomer: fullCus,
+					internalEntityId: entityId ? fullCus.entity?.internal_id : null,
+				});
 
 				return fullCus;
 			},

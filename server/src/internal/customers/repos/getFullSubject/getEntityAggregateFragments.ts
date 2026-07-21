@@ -207,6 +207,7 @@ export const getEntityAggregateFragments = ({
 				BOOL_OR(ce.usage_allowed) AS usage_allowed
 			FROM entity_level_cus_ents ce
 			JOIN entitlements ent ON ce.entitlement_id = ent.id
+			WHERE ent.pooled IS NOT TRUE
 			GROUP BY ce.internal_feature_id, ce.internal_customer_id
 		),
 

@@ -22,6 +22,7 @@ import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.j
 import type { DbCustomerLicense } from "../../licenseModels/customerLicenseTable.js";
 import type { FullCustomerLicense } from "../../licenseModels/fullCustomerLicense.js";
 import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
+import type { DbPooledBalance } from "../../pooledBalanceModels/pooledBalanceTable.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
 import type { DbPrice } from "../../productModels/priceModels/priceTable.js";
@@ -89,6 +90,8 @@ export type SubjectBalance = {
 	additional_balance: number;
 	usage_allowed: boolean | null;
 	separate_interval: boolean;
+	is_pooled_balance?: boolean;
+	pooled_balance?: DbPooledBalance;
 	reset_cycle_anchor: number | null;
 	next_reset_at: number | null;
 	expires_at: number | null;
