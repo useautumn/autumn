@@ -44,23 +44,6 @@ For a long-lived setup, you can also use an Autumn secret key with Bearer auth:
 ```
 
 <Tabs>
-<Tab title="Cursor">
-
-[![Install with one click](https://img.shields.io/badge/Install_with_one_click-Cursor-000000?style=flat-square&logoColor=white)](https://cursor.com/en/install-mcp?name=autumn&config=eyJuYW1lIjoiYXV0dW1uIiwidHlwZSI6Imh0dHAiLCJ1cmwiOiJodHRwczovL21jcC51c2VhdXR1bW4uY29tL21jcCJ9)
-
-Or add to `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "autumn": {
-      "url": "https://mcp.useautumn.com/mcp"
-    }
-  }
-}
-```
-
-</Tab>
 <Tab title="Claude Code">
 
 Run in terminal:
@@ -70,27 +53,6 @@ claude mcp add --transport http autumn https://mcp.useautumn.com/mcp
 ```
 
 Or add to your project's `.mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "autumn": {
-      "type": "http",
-      "url": "https://mcp.useautumn.com/mcp"
-    }
-  }
-}
-```
-
-</Tab>
-<Tab title="Claude Desktop">
-
-1. Open Claude Desktop settings.
-2. Go to **Connectors**.
-3. Click **Add custom connector**.
-4. Paste `https://mcp.useautumn.com/mcp` and sign in.
-
-Or add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
@@ -117,6 +79,44 @@ Or add to `~/.codex/config.toml`:
 ```toml
 [mcp_servers.autumn]
 url = "https://mcp.useautumn.com/mcp"
+```
+
+</Tab>
+<Tab title="Cursor">
+
+[![Install with one click](https://img.shields.io/badge/Install_with_one_click-Cursor-000000?style=flat-square&logoColor=white)](https://cursor.com/en/install-mcp?name=autumn&config=eyJuYW1lIjoiYXV0dW1uIiwidHlwZSI6Imh0dHAiLCJ1cmwiOiJodHRwczovL21jcC51c2VhdXR1bW4uY29tL21jcCJ9)
+
+Or add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Claude Desktop">
+
+1. Open Claude Desktop settings.
+2. Go to **Connectors**.
+3. Click **Add custom connector**.
+4. Paste `https://mcp.useautumn.com/mcp` and sign in.
+
+Or add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "type": "http",
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
 ```
 
 </Tab>
