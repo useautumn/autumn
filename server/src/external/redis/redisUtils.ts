@@ -29,6 +29,33 @@ export const clearLock = async ({
 	);
 };
 
+/** Extends the lease iff this holder still owns the lock. Returns false when ownership was lost. */
+export const renewLock = async ({
+	lockKey,
+	token,
+	ttlMs,
+}: {
+	lockKey: string;
+	token: string;
+	ttlMs: number;
+}): Promise<boolean> => {
+	const renewed = await tryRedisWrite(() =>
+		redis.eval(
+			`local value = redis.call("GET", KEYS[1])
+			if not value then return 0 end
+			local ok, lock = pcall(cjson.decode, value)
+			if not ok or lock.token ~= ARGV[1] then return 0 end
+			return redis.call("PEXPIRE", KEYS[1], ARGV[2])`,
+			1,
+			lockKey,
+			token,
+			ttlMs.toString(),
+		),
+	);
+
+	return renewed === 1;
+};
+
 interface LockData {
 	errorMessage: string;
 	token?: string;
