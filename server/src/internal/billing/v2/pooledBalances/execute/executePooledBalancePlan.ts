@@ -1,0 +1,118 @@
+import {
+	customerEntitlements,
+	entitlements,
+	type InsertCustomerEntitlement,
+	type InsertDbEntitlement,
+	InternalError,
+	type PooledBalancePlan,
+	pooledBalanceContributions,
+	pooledBalances,
+} from "@autumn/shared";
+import { eq, inArray, sql } from "drizzle-orm";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
+
+/** Persists a fully computed pooled-balance plan without reading or recomputing state. */
+export const executePooledBalancePlan = async ({
+	ctx,
+	pooledBalancePlan,
+}: {
+	ctx: AutumnContext;
+	pooledBalancePlan?: PooledBalancePlan;
+}) => {
+	if (
+		!pooledBalancePlan ||
+		!pooledBalancePlanHasChanges({ pooledBalancePlan })
+	) {
+		return;
+	}
+
+	await ctx.db.transaction(async (tx) => {
+		for (const fullCustomerEntitlement of pooledBalancePlan.insertPoolBalances) {
+			const {
+				entitlement: fullEntitlement,
+				replaceables: _replaceables,
+				rollovers: _rollovers,
+				pooled_balance: pooledBalance,
+				pooled_balance_contribution: _pooledBalanceContribution,
+				...customerEntitlement
+			} = fullCustomerEntitlement;
+
+			if (!pooledBalance) {
+				throw new InternalError({
+					message: `Synthetic customer entitlement '${customerEntitlement.id}' is missing its pooled balance.`,
+				});
+			}
+
+			const { feature: _feature, ...entitlement } = fullEntitlement;
+			await tx.insert(entitlements).values(entitlement as InsertDbEntitlement);
+			await tx
+				.insert(customerEntitlements)
+				.values(customerEntitlement as InsertCustomerEntitlement);
+			await tx.insert(pooledBalances).values(pooledBalance);
+		}
+
+		for (const fullCustomerEntitlement of pooledBalancePlan.updatePoolBalances) {
+			const pooledBalance = fullCustomerEntitlement.pooled_balance;
+			if (!pooledBalance) {
+				throw new InternalError({
+					message: `Synthetic customer entitlement '${fullCustomerEntitlement.id}' is missing its pooled balance.`,
+				});
+			}
+
+			await tx
+				.update(customerEntitlements)
+				.set({
+					balance: fullCustomerEntitlement.balance ?? 0,
+					adjustment: fullCustomerEntitlement.adjustment ?? 0,
+					additional_balance: fullCustomerEntitlement.additional_balance ?? 0,
+					entities: fullCustomerEntitlement.entities ?? null,
+					reset_cycle_anchor:
+						fullCustomerEntitlement.reset_cycle_anchor ?? null,
+					next_reset_at: fullCustomerEntitlement.next_reset_at,
+					cache_version: sql`${customerEntitlements.cache_version} + 1`,
+				})
+				.where(eq(customerEntitlements.id, fullCustomerEntitlement.id));
+
+			await tx
+				.update(pooledBalances)
+				.set({
+					granted: pooledBalance.granted,
+					reset_cycle_anchor: pooledBalance.reset_cycle_anchor,
+					stripe_subscription_id: pooledBalance.stripe_subscription_id,
+					customer_license_link_id: pooledBalance.customer_license_link_id,
+					last_applied_reset_at: pooledBalance.last_applied_reset_at,
+					updated_at: Date.now(),
+				})
+				.where(eq(pooledBalances.id, pooledBalance.id));
+		}
+
+		if (pooledBalancePlan.insertPoolContributions.length > 0) {
+			await tx
+				.insert(pooledBalanceContributions)
+				.values(pooledBalancePlan.insertPoolContributions);
+		}
+
+		for (const contribution of pooledBalancePlan.updatePoolContributions) {
+			await tx
+				.update(pooledBalanceContributions)
+				.set({
+					pooled_balance_id: contribution.pooled_balance_id,
+					current_contribution: contribution.current_contribution,
+					next_cycle_contribution: contribution.next_cycle_contribution,
+					effective_at: contribution.effective_at,
+					updated_at: contribution.updated_at,
+				})
+				.where(eq(pooledBalanceContributions.id, contribution.id));
+		}
+
+		const contributionIds = pooledBalancePlan.deletePoolContributions.map(
+			(contribution) => contribution.id,
+		);
+		if (contributionIds.length > 0) {
+			await tx
+				.delete(pooledBalanceContributions)
+				.where(inArray(pooledBalanceContributions.id, contributionIds));
+		}
+	});
+};

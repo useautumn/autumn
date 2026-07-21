@@ -250,20 +250,31 @@ export const getFullSubjectRowsQuery = ({
 						THEN 0
 						ELSE 1
 					END AS subject_entity_priority,
-					ce.*
+					ce.*,
+					CASE
+						WHEN pb.id IS NULL THEN NULL
+						ELSE row_to_json(pb)
+					END AS pooled_balance
 				FROM customer_entitlements ce
+				LEFT JOIN pooled_balances pb
+					ON pb.customer_entitlement_id = ce.id
 				WHERE ce.internal_customer_id = sr.internal_customer_id
 					AND ce.customer_product_id IS NULL
-					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					AND (
-						ce.balance != 0
-						OR ce.unlimited IS TRUE
-						OR EXISTS (
-							SELECT 1
-							FROM entitlements e
-							JOIN features f ON f.internal_id = e.internal_feature_id
-							WHERE e.id = ce.entitlement_id
-								AND f.type = 'boolean'
+						ce.is_pooled_balance IS TRUE
+						OR (
+							(ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+							AND (
+								ce.balance != 0
+								OR ce.unlimited IS TRUE
+								OR EXISTS (
+									SELECT 1
+									FROM entitlements e
+									JOIN features f ON f.internal_id = e.internal_feature_id
+									WHERE e.id = ce.entitlement_id
+										AND f.type = 'boolean'
+								)
+							)
 						)
 					)
 					${customerEntitlementSubjectPredicate}

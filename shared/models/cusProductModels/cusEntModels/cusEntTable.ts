@@ -33,6 +33,7 @@ export const customerEntitlements = pgTable(
 		next_reset_at: numeric({ mode: "number" }),
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
+		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),
 
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),

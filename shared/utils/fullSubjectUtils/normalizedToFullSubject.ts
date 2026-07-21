@@ -65,6 +65,8 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		additional_balance: subjectBalance.additional_balance,
 		usage_allowed: subjectBalance.usage_allowed,
 		separate_interval: subjectBalance.separate_interval,
+		is_pooled_balance: subjectBalance.is_pooled_balance,
+		pooled_balance: subjectBalance.pooled_balance,
 		reset_cycle_anchor: subjectBalance.reset_cycle_anchor,
 		next_reset_at: subjectBalance.next_reset_at,
 		adjustment: subjectBalance.adjustment,

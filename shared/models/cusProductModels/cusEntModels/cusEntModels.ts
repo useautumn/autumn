@@ -1,4 +1,8 @@
 import { z } from "zod/v4";
+import type {
+	DbPooledBalance,
+	DbPooledBalanceContribution,
+} from "../../pooledBalanceModels/pooledBalanceTable.js";
 import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
 import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 import { ReplaceableSchema } from "./replaceableSchema.js";
@@ -39,6 +43,9 @@ export const CustomerEntitlementSchema = z.object({
 
 	usage_allowed: z.boolean().nullable(),
 	separate_interval: z.boolean().default(false),
+	// Optional at the model boundary for legacy cached objects. The DB column is
+	// non-null and defaults to false.
+	is_pooled_balance: z.boolean().optional(),
 	reset_cycle_anchor: z.number().nullable().optional(),
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),
@@ -57,6 +64,10 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
 	entitlement: EntitlementWithFeatureSchema,
 	replaceables: z.array(ReplaceableSchema),
 	rollovers: z.array(RolloverSchema),
+	pooled_balance: z.custom<DbPooledBalance>().optional(),
+	pooled_balance_contribution: z
+		.custom<DbPooledBalanceContribution>()
+		.optional(),
 });
 
 export type CustomerEntitlementFilters = z.infer<

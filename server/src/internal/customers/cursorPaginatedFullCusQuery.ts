@@ -215,6 +215,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				FROM customer_entitlements ce
 				WHERE ce.internal_customer_id = cr.internal_id
 					AND ce.customer_product_id IS NULL
+					AND ce.is_pooled_balance = false
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				ORDER BY ce.id DESC
 				LIMIT 30

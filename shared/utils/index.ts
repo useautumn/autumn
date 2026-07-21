@@ -39,6 +39,7 @@ export * from "./planV1Utils/diff/applyDiff";
 // Plan V1 diff/apply utils
 export * from "./planV1Utils/diff/diffPlanV1";
 export * from "./planV1Utils/diff/diffPlanV1PreviewFields";
+export * from "./pooledBalanceUtils/index";
 export * from "./productUtils/classifyProduct/classifyProductUtils";
 export * from "./productUtils/classifyProduct/hasMissingStripeResourcesForProduct";
 export * from "./productUtils/classifyProduct/isProductPaidAndRecurring";

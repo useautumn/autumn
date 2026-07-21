@@ -28,6 +28,7 @@ import {
 	CustomerLicenseUpdateSchema,
 	InsertPlanLicenseSpecSchema,
 } from "./customerLicensePlan";
+import { PooledBalancePlanSchema } from "./pooledBalancePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
@@ -130,6 +131,7 @@ export const AutumnBillingPlanSchema = z.object({
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),
+	pooledBalancePlan: PooledBalancePlanSchema.optional(),
 
 	/**
 	 * Pre-computed auto top-up rebalance deltas. The compute step sizes paydown + prepaid

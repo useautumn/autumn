@@ -76,6 +76,10 @@ import { organizations } from "../models/orgModels/orgTable.js";
 import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
 import {
+	pooledBalanceContributionsRelations,
+	pooledBalancesRelations,
+} from "../models/pooledBalanceModels/pooledBalanceRelations.js";
+import {
 	pooledBalanceContributions,
 	pooledBalances,
 } from "../models/pooledBalanceModels/pooledBalanceTable.js";
@@ -197,7 +201,9 @@ export {
 	planLicenses,
 	planLicenseRelations,
 	pooledBalanceContributions,
+	pooledBalanceContributionsRelations,
 	pooledBalances,
+	pooledBalancesRelations,
 	passkey,
 	// Relations
 	organizationsRelations,

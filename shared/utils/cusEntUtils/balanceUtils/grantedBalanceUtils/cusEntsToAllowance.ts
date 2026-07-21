@@ -33,7 +33,8 @@ export const cusEntsToAllowance = ({
 			entityId,
 		});
 
-		const grantedBalance = cusEnt.entitlement.allowance || 0;
+		const grantedBalance =
+			cusEnt.pooled_balance?.granted ?? cusEnt.entitlement.allowance ?? 0;
 
 		const total = new Decimal(grantedBalance)
 			.mul(cusEnt.customer_product?.quantity ?? 1)

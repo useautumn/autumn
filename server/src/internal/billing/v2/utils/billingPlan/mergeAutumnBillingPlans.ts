@@ -75,6 +75,40 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.updateCustomerEntitlements,
 		getKey: (update) => update.customerEntitlement.id,
 	}),
+	pooledBalancePlan:
+		base.pooledBalancePlan || incoming.pooledBalancePlan
+			? {
+					insertPoolBalances:
+						mergeByKey({
+							base: base.pooledBalancePlan?.insertPoolBalances,
+							incoming: incoming.pooledBalancePlan?.insertPoolBalances,
+							getKey: (pooledCustomerEntitlement) =>
+								pooledCustomerEntitlement.id,
+						}) ?? [],
+					updatePoolBalances:
+						mergeByKey({
+							base: base.pooledBalancePlan?.updatePoolBalances,
+							incoming: incoming.pooledBalancePlan?.updatePoolBalances,
+							getKey: (pooledCustomerEntitlement) =>
+								pooledCustomerEntitlement.id,
+						}) ?? [],
+					insertPoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.insertPoolContributions,
+							incoming: incoming.pooledBalancePlan?.insertPoolContributions,
+						}) ?? [],
+					updatePoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.updatePoolContributions,
+							incoming: incoming.pooledBalancePlan?.updatePoolContributions,
+						}) ?? [],
+					deletePoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.deletePoolContributions,
+							incoming: incoming.pooledBalancePlan?.deletePoolContributions,
+						}) ?? [],
+				}
+			: undefined,
 	autoTopupRebalance:
 		base.autoTopupRebalance || incoming.autoTopupRebalance
 			? {
