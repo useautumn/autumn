@@ -7,19 +7,20 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withMigrationRunTracking } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
+import type { MigrationRunScheduler } from "@/internal/migrations/v2/run/types/migrationRunScheduler.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import {
+	createMigrationTaskScheduler,
+	MIGRATION_CUSTOMER_CONCURRENCY,
+	migrationTaskQueue,
+} from "@/trigger/migrations/migrationTaskQueue.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
-
-const DEFAULT_CONCURRENCY = 5;
-// Admin (superuser) runs may exceed the default cap — enforced in handleRunMigration.
-const MAX_CONCURRENCY = 100;
 
 const ControlsSchema = z
 	.object({
 		limit: z.number().int().min(1).optional(),
 		only: z.array(z.string()).optional(),
-		concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
 		retryItemStatuses: z
 			.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 			.optional(),
@@ -38,19 +39,17 @@ const PayloadSchema = z.object({
 
 export type RunMigrationPayload = z.infer<typeof PayloadSchema>;
 
-export const runMigrationTaskQueue = {
-	concurrencyLimit: 1,
-};
-
 /** Shared workload for the trigger.dev task and the local inline fallback. */
 export const executeRunMigration = async ({
 	ctx,
 	logger,
 	payload,
+	scheduler,
 }: {
 	ctx: AutumnContext;
 	logger: Logger;
 	payload: RunMigrationPayload;
+	scheduler?: MigrationRunScheduler;
 }) => {
 	const { orgId, env, migrationId, migrationRunId, dryRun, lazyRun, controls } =
 		payload;
@@ -76,7 +75,6 @@ export const executeRunMigration = async ({
 			only: controls?.only,
 			onlyCount: controls?.only?.length,
 			limit: controls?.limit,
-			concurrency: controls?.concurrency,
 			retryItemStatuses: controls?.retryItemStatuses,
 		},
 	});
@@ -90,7 +88,7 @@ export const executeRunMigration = async ({
 
 				const effectiveControls = {
 					...(controls ?? {}),
-					concurrency: controls?.concurrency ?? DEFAULT_CONCURRENCY,
+					concurrency: MIGRATION_CUSTOMER_CONCURRENCY,
 				};
 
 				logger.info("run-migration: resolved controls", {
@@ -98,7 +96,6 @@ export const executeRunMigration = async ({
 						migrationRunId,
 						noBillingChanges: migration.no_billing_changes === true,
 						concurrency: effectiveControls.concurrency,
-						concurrencyExplicit: controls?.concurrency !== undefined,
 					},
 				});
 
@@ -108,6 +105,7 @@ export const executeRunMigration = async ({
 					dryRun,
 					migrationRunId,
 					controls: effectiveControls,
+					scheduler,
 				});
 			},
 		});
@@ -132,7 +130,7 @@ export const executeRunMigration = async ({
 
 export const runMigrationTask = task({
 	id: "run-migration",
-	queue: runMigrationTaskQueue,
+	queue: migrationTaskQueue,
 	machine: "medium-1x",
 	// Trigger.dev has no true "disable" — set very high to effectively remove the timeout.
 	maxDuration: 86400,
@@ -145,6 +143,11 @@ export const runMigrationTask = task({
 			triggerCtx,
 		});
 
-		await executeRunMigration({ ctx, logger, payload });
+		await executeRunMigration({
+			ctx,
+			logger,
+			payload,
+			scheduler: createMigrationTaskScheduler({ logger }),
+		});
 	},
 });

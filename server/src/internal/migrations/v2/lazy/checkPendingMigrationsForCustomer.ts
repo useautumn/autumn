@@ -80,8 +80,6 @@ export const checkPendingMigrationsForCustomer = async ({
 		};
 
 		if (shouldRunMigrationInline()) {
-			// Inline loses trigger.dev's concurrencyKey serialization; the
-			// server-side item-run claim is the real authority either way.
 			const inlineCtx = { ...ctx, insideTriggerTask: true };
 			void executeRunMigrationCustomer({
 				ctx: inlineCtx,
@@ -98,8 +96,6 @@ export const checkPendingMigrationsForCustomer = async ({
 			continue;
 		}
 
-		await runMigrationCustomerTask.trigger(payload, {
-			concurrencyKey: `${migration.internal_id}:${fullCustomer.internal_id}`,
-		});
+		await runMigrationCustomerTask.trigger(payload);
 	}
 };

@@ -17,6 +17,7 @@ import {
 import { runScopeIteration } from "./orchestrators/runScopeIteration.js";
 import { preProcessMigration } from "./preProcess/index.js";
 import { getRunScopes } from "./types/getRunScopes.js";
+import type { MigrationRunScheduler } from "./types/migrationRunScheduler.js";
 
 /** Top-level migration run: prepare -> per-scope filter+iterate -> per-item ops. */
 export const runMigration = async ({
@@ -28,6 +29,7 @@ export const runMigration = async ({
 	controls,
 	hooks,
 	plugins,
+	scheduler,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntime;
@@ -37,6 +39,7 @@ export const runMigration = async ({
 	controls?: MigrationRunControls;
 	hooks?: RunMigrationHooks;
 	plugins?: RunMigrationPlugin[];
+	scheduler?: MigrationRunScheduler;
 }): Promise<void> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
 	const migrationHooks = composeMigrationHooks({ hooks, plugins });
@@ -73,6 +76,7 @@ export const runMigration = async ({
 			batch,
 			controls,
 			hooks: migrationHooks,
+			scheduler,
 		});
 	}
 };

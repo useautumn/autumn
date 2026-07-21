@@ -1,3 +1,4 @@
+import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
 import type { RunScopeItem } from "../types/runScope.js";
 
 export type IterateScopeItemResult<T> =
@@ -11,34 +12,27 @@ export type IterateScopeSummary<T> = {
 	results: IterateScopeItemResult<T>[];
 };
 
-/**
- * Generic iteration over any kind-tagged scope iterator. Calls `perItem`
- * for every item, collecting per-item results into a summary.
- *
- * `concurrency` (default 1): max parallel `perItem` invocations. The
- * iterator's batch boundaries are preserved — work for batch N starts
- * only after the source yields it, but within and across batches up to
- * `concurrency` items run concurrently via a sliding worker pool.
- *
- * On error: keeps going with `onError: "continue"` (default), or rethrows
- * the first error with `onError: "throw"`. Either way every visited
- * item shows up in `results` so callers see the full audit trail.
- */
+/** Iterates scope items; a scheduler forces sequential execution and may yield between items.
+ * Errors are collected by default or rethrown when `onError` is `throw`. */
 export const iterateScope = async <T>({
 	iterate,
 	perItem,
 	onError = "continue",
 	concurrency = 1,
+	scheduler,
 }: {
 	iterate: () => AsyncGenerator<RunScopeItem[]>;
 	perItem: (item: RunScopeItem) => Promise<T>;
 	onError?: "throw" | "continue";
 	concurrency?: number;
+	scheduler?: MigrationRunScheduler;
 }): Promise<IterateScopeSummary<T>> => {
 	const results: IterateScopeItemResult<T>[] = [];
 	let succeeded = 0;
 	let failed = 0;
-	const maxParallel = Math.max(1, Math.floor(concurrency));
+	const maxParallel = scheduler ? 1 : Math.max(1, Math.floor(concurrency));
+	let sliceStartedAtMs = scheduler?.now();
+	let hasProcessedScheduledItem = false;
 
 	const runItem = async (item: RunScopeItem) => {
 		try {
@@ -53,9 +47,27 @@ export const iterateScope = async <T>({
 		}
 	};
 
+	const completeScheduledSliceIfDue = async () => {
+		if (
+			!scheduler ||
+			!hasProcessedScheduledItem ||
+			sliceStartedAtMs === undefined ||
+			scheduler.now() - sliceStartedAtMs < scheduler.sliceDurationMs
+		) {
+			return;
+		}
+
+		await scheduler.onSliceComplete();
+		sliceStartedAtMs = scheduler.now();
+	};
+
 	if (maxParallel === 1) {
 		for await (const batch of iterate()) {
-			for (const item of batch) await runItem(item);
+			for (const item of batch) {
+				await completeScheduledSliceIfDue();
+				await runItem(item);
+				hasProcessedScheduledItem = true;
+			}
 		}
 		return { processed: succeeded + failed, succeeded, failed, results };
 	}
