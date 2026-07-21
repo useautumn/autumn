@@ -27,11 +27,13 @@ const createCustomerProduct = ({
 	productId = product.id,
 	internalEntityId = sourceEntity.internal_id,
 	status = CusProductStatus.Active,
+	group = product.group,
 }: {
 	id: string;
 	productId?: string;
 	internalEntityId?: string | null;
 	status?: CusProductStatus;
+	group?: string | null;
 }) =>
 	({
 		id,
@@ -40,7 +42,7 @@ const createCustomerProduct = ({
 		status,
 		product: {
 			id: productId,
-			group: product.group,
+			group,
 			is_add_on: product.is_add_on,
 		},
 	}) as FullCusProduct;
@@ -48,7 +50,11 @@ const createCustomerProduct = ({
 const fullCustomer = {
 	customer_products: [
 		createCustomerProduct({ id: "cus_prod_target" }),
-		createCustomerProduct({ id: "cus_prod_related" }),
+		createCustomerProduct({
+			id: "cus_prod_related",
+			status: CusProductStatus.Scheduled,
+		}),
+		createCustomerProduct({ id: "cus_prod_other_active" }),
 		createCustomerProduct({
 			id: "cus_prod_other_scope",
 			internalEntityId: "entity_internal_2",
@@ -91,6 +97,7 @@ describe("transfer customer product selection", () => {
 		expect(results.map((customerProduct) => customerProduct.id)).toEqual([
 			"cus_prod_target",
 			"cus_prod_related",
+			"cus_prod_other_active",
 		]);
 	});
 });
@@ -121,7 +128,6 @@ describe("transfer target collision", () => {
 				customer_products: [scheduledSource, activeAtTarget],
 			} as FullCustomer,
 			toEntity: targetEntity,
-			product,
 			transferringCustomerProducts: [scheduledSource],
 		});
 
@@ -134,7 +140,6 @@ describe("transfer target collision", () => {
 				customer_products: [scheduledSource, activeAtTarget, scheduledAtTarget],
 			} as FullCustomer,
 			toEntity: targetEntity,
-			product,
 			transferringCustomerProducts: [scheduledSource],
 		});
 
@@ -149,10 +154,35 @@ describe("transfer target collision", () => {
 				customer_products: [activeSource, scheduledAtTarget, activeAtTarget],
 			} as FullCustomer,
 			toEntity: targetEntity,
-			product,
 			transferringCustomerProducts: [activeSource],
 		});
 
 		expect(result?.id).toBe("cus_prod_target_active");
+	});
+
+	test("a cross-group scheduled successor collides at the target", () => {
+		const scheduledSuccessor = createCustomerProduct({
+			id: "cus_prod_successor",
+			productId: "premium",
+			group: "premium",
+			status: CusProductStatus.Scheduled,
+		});
+		const scheduledSuccessorAtTarget = createCustomerProduct({
+			id: "cus_prod_target_successor",
+			productId: "premium-target",
+			group: "premium",
+			internalEntityId: targetEntity.internal_id,
+			status: CusProductStatus.Scheduled,
+		});
+
+		const result = findExistingTransferTargetProduct({
+			fullCustomer: {
+				customer_products: [scheduledSuccessor, scheduledSuccessorAtTarget],
+			} as FullCustomer,
+			toEntity: targetEntity,
+			transferringCustomerProducts: [scheduledSuccessor],
+		});
+
+		expect(result?.id).toBe("cus_prod_target_successor");
 	});
 });

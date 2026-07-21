@@ -3,7 +3,11 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	isCustomerProductScheduled,
+	schedulePhases,
+	schedules,
 } from "@autumn/shared";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { nullish } from "@/utils/genUtils.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
@@ -60,39 +64,31 @@ export const findTransferCustomerProduct = ({
 			cusProduct.product.id === productId,
 	);
 
-/**
- * Only like-for-like collides: an entity may hold an active and a scheduled
- * product in the same group at once, so a scheduled transfer is not blocked by
- * the target's active product (or vice versa).
- */
+/** Active and scheduled products in the same group do not collide. */
 export const findExistingTransferTargetProduct = ({
 	fullCustomer,
 	toEntity,
-	product,
 	transferringCustomerProducts,
 }: {
 	fullCustomer: FullCustomer;
 	toEntity: Entity | null;
-	product: TransferProduct;
 	transferringCustomerProducts: FullCusProduct[];
-}) => {
-	const transferringScheduledStates = new Set(
-		transferringCustomerProducts.map((cusProduct) =>
-			isCustomerProductScheduled(cusProduct),
-		),
-	);
-
-	return fullCustomer.customer_products.find(
+}) =>
+	fullCustomer.customer_products.find(
 		(cusProduct) =>
-			matchesTransferProduct({ cusProduct, product }) &&
-			transferringScheduledStates.has(
-				isCustomerProductScheduled(cusProduct),
+			transferringCustomerProducts.some(
+				(transferringCustomerProduct) =>
+					isCustomerProductScheduled(cusProduct) ===
+						isCustomerProductScheduled(transferringCustomerProduct) &&
+					matchesTransferProduct({
+						cusProduct,
+						product: transferringCustomerProduct.product,
+					}),
 			) &&
 			(toEntity
 				? cusProduct.internal_entity_id === toEntity.internal_id
 				: nullish(cusProduct.internal_entity_id)),
 	);
-};
 
 export const getTransferCustomerProducts = ({
 	fullCustomer,
@@ -114,40 +110,106 @@ export const getTransferCustomerProducts = ({
 			matchesTransferSource({ cusProduct, fromEntity }),
 	);
 
-export const transferRelatedCustomerProducts = async ({
+export const getTransferCustomerProductState = async ({
 	ctx,
 	fullCustomer,
 	fromEntity,
-	toEntity,
 	product,
 	customerProductId,
+	includeSchedule = true,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	fromEntity: Entity | null;
-	toEntity: Entity | null;
 	product: TransferProduct;
 	customerProductId?: string | null;
+	includeSchedule?: boolean;
+}) => {
+	const selectedCustomerProducts = getTransferCustomerProducts({
+		fullCustomer,
+		fromEntity,
+		product,
+		customerProductId,
+	});
+	const selectedIds = selectedCustomerProducts.map(({ id }) => id);
+	const phases = includeSchedule
+		? await ctx.db
+				.select({
+					scheduleId: schedules.id,
+					customerProductIds: schedulePhases.customer_product_ids,
+				})
+				.from(schedules)
+				.innerJoin(schedulePhases, eq(schedulePhases.schedule_id, schedules.id))
+				.where(
+					and(
+						eq(schedules.org_id, ctx.org.id),
+						eq(schedules.env, ctx.env),
+						eq(schedules.internal_customer_id, fullCustomer.internal_id),
+						fromEntity
+							? eq(schedules.internal_entity_id, fromEntity.internal_id)
+							: isNull(schedules.internal_entity_id),
+					),
+				)
+		: [];
+	const selectedIdSet = new Set(selectedIds);
+	const scheduleIds = [
+		...new Set(
+			phases
+				.filter(({ customerProductIds }) =>
+					customerProductIds.some((id) => selectedIdSet.has(id)),
+				)
+				.map(({ scheduleId }) => scheduleId),
+		),
+	];
+	const scheduleIdSet = new Set(scheduleIds);
+	const customerProductIds = [
+		...new Set([
+			...selectedIds,
+			...phases
+				.filter(({ scheduleId }) => scheduleIdSet.has(scheduleId))
+				.flatMap(({ customerProductIds }) => customerProductIds),
+		]),
+	];
+	const customerProductIdSet = new Set(customerProductIds);
+
+	return {
+		customerProductIds,
+		customerProducts: fullCustomer.customer_products.filter(({ id }) =>
+			customerProductIdSet.has(id),
+		),
+		scheduleIds,
+	};
+};
+
+export const transferRelatedCustomerProducts = async ({
+	ctx,
+	toEntity,
+	customerProductIds,
+	scheduleIds,
+}: {
+	ctx: AutumnContext;
+	toEntity: Entity | null;
+	customerProductIds: string[];
+	scheduleIds: string[];
 }): Promise<TransferEntityUpdates> => {
 	const updates = {
 		entity_id: toEntity?.id ?? null,
 		internal_entity_id: toEntity?.internal_id ?? null,
 	};
+	await ctx.db.transaction(async (tx) => {
+		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
 
-	await Promise.all(
-		getTransferCustomerProducts({
-			fullCustomer,
-			fromEntity,
-			product,
-			customerProductId,
-		}).map((cusProduct) =>
-			CusProductService.update({
-				ctx,
-				cusProductId: cusProduct.id,
-				updates,
-			}),
-		),
-	);
+		if (scheduleIds.length > 0) {
+			await txCtx.db
+				.update(schedules)
+				.set(updates)
+				.where(inArray(schedules.id, scheduleIds));
+		}
+
+		for (const cusProductId of customerProductIds) {
+			await CusProductService.update({ ctx: txCtx, cusProductId, updates });
+		}
+	});
 
 	return updates;
 };

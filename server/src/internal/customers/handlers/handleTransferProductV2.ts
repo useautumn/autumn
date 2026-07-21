@@ -3,6 +3,7 @@ import {
 	AttachScenario,
 	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
+	isCustomerProductScheduled,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -17,7 +18,7 @@ import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreas
 import {
 	findExistingTransferTargetProduct,
 	findTransferCustomerProduct,
-	getTransferCustomerProducts,
+	getTransferCustomerProductState,
 	transferRelatedCustomerProducts,
 } from "./handleTransferProduct/transferRelatedCustomerProducts.js";
 
@@ -119,16 +120,19 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
+		const transferState = await getTransferCustomerProductState({
+			ctx,
+			fullCustomer: customer,
+			fromEntity,
+			product,
+			customerProductId: customer_product_id,
+			includeSchedule:
+				cusProduct.quantity <= 1 && !isCustomerProductScheduled(cusProduct),
+		});
 		const toCusProduct = findExistingTransferTargetProduct({
 			fullCustomer: customer,
 			toEntity,
-			product,
-			transferringCustomerProducts: getTransferCustomerProducts({
-				fullCustomer: customer,
-				fromEntity,
-				product,
-				customerProductId: customer_product_id,
-			}),
+			transferringCustomerProducts: transferState.customerProducts,
 		});
 
 		if (toCusProduct) {
@@ -150,11 +154,9 @@ export const handleTransferProductV2 = createRoute({
 		} else {
 			const updates = await transferRelatedCustomerProducts({
 				ctx,
-				fullCustomer: customer,
-				fromEntity,
 				toEntity,
-				product,
-				customerProductId: customer_product_id,
+				customerProductIds: transferState.customerProductIds,
+				scheduleIds: transferState.scheduleIds,
 			});
 
 			await addProductsUpdatedWebhookTask({
