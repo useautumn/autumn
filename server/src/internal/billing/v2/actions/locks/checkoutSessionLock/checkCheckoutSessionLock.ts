@@ -25,10 +25,10 @@ export const checkCheckoutSessionLock = async <T extends BillingContext>({
 	const customerId =
 		billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id;
 	const paramsHash = hashJson({ value: params });
+	// Entry-time snapshot wins when present; a null snapshot (e.g. caller passed
+	// internal_id, reservation keyed on public id) falls back to the canonical key.
 	const lock =
-		existingLock === undefined
-			? await checkoutSessionLock.get({ ctx, customerId })
-			: existingLock;
+		existingLock ?? (await checkoutSessionLock.get({ ctx, customerId }));
 	if (!lock) return null;
 
 	if (lock.paramsHash === paramsHash) {

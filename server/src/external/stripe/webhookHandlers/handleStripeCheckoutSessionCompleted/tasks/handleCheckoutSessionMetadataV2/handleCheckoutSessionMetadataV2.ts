@@ -37,16 +37,15 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	);
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
-	const customerId =
-		deferredData.billingContext.fullCustomer.id ??
-		deferredData.billingContext.fullCustomer.internal_id;
+	const { id, internal_id } = deferredData.billingContext.fullCustomer;
 
 	await withBillingLock({
-		lockKey: buildBillingLockKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-		}),
+		// Route locks key on whichever identifier the API caller passed — hold both.
+		lockKeys: [id, internal_id]
+			.filter((customerId): customerId is string => Boolean(customerId))
+			.map((customerId) =>
+				buildBillingLockKey({ orgId: ctx.org.id, env: ctx.env, customerId }),
+			),
 		fn: () =>
 			withClaimedCheckoutSessionMetadata({
 				ctx,
