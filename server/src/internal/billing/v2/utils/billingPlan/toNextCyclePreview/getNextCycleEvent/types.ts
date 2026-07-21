@@ -1,7 +1,4 @@
-import type {
-	BillingInterval,
-	FullCusProduct,
-} from "@autumn/shared";
+import type { BillingInterval, FullCusProduct } from "@autumn/shared";
 
 export type SmallestInterval = {
 	interval: BillingInterval;
@@ -23,6 +20,7 @@ export type NextCycleEvent =
 	| ({
 			kind: "scheduled_start";
 			startsAtMs: number;
+			resetsBillingCycle: boolean;
 			customerProducts: FullCusProduct[];
 	  } & NextCycleEventContext)
 	| ({
@@ -33,6 +31,7 @@ export type NextCycleEvent =
 	| ({
 			kind: "scheduled_change";
 			startsAtMs: number;
+			resetsBillingCycle: boolean;
 			incomingCustomerProducts: FullCusProduct[];
 			outgoingCustomerProducts: FullCusProduct[];
 	  } & NextCycleEventContext);

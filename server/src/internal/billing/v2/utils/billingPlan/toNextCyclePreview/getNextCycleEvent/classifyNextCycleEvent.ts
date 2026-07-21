@@ -10,12 +10,12 @@ import {
 	uniqueCustomerProductsById,
 } from "./customerProductDiffs";
 import { SECOND_MS, timestampsEqual } from "./timeUtils";
-import type { NextCycleEvent, SmallestInterval } from "./types";
 import {
 	getExactTransitionTimestamp,
 	hasProductTransitionAt,
 	hasTrialEndAt,
 } from "./transitionCandidates";
+import type { NextCycleEvent, SmallestInterval } from "./types";
 
 /** Classifies one candidate timestamp into the invoice event it represents. */
 export const classifyNextCycleEvent = ({
@@ -57,10 +57,14 @@ export const classifyNextCycleEvent = ({
 		};
 	}
 
-	const isAnchorReset = timestampsEqual(
-		billingContext.requestedBillingCycleAnchor,
-		startsAtMs,
-	);
+	const isAnchorReset =
+		timestampsEqual(billingContext.requestedBillingCycleAnchor, startsAtMs) ||
+		normalizedCustomerProducts.some((customerProduct) =>
+			timestampsEqual(
+				customerProduct.billing_cycle_anchor_resets_at ?? undefined,
+				startsAtMs,
+			),
+		);
 	const isProductTransition = hasProductTransitionAt({
 		customerProducts: normalizedCustomerProducts,
 		startsAtMs,
@@ -102,6 +106,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_change",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			resetsBillingCycle: isAnchorReset,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,
 		};
@@ -112,6 +117,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_start",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			resetsBillingCycle: isAnchorReset,
 			customerProducts: incomingCustomerProducts,
 		};
 	}
@@ -121,6 +127,7 @@ export const classifyNextCycleEvent = ({
 			kind: "scheduled_change",
 			smallestInterval,
 			startsAtMs: exactStartsAtMs,
+			resetsBillingCycle: isAnchorReset,
 			incomingCustomerProducts,
 			outgoingCustomerProducts,
 		};

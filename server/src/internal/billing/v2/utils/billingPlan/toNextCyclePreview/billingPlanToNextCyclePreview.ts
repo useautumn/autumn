@@ -167,7 +167,9 @@ export const billingPlanToNextCyclePreview = ({
 				{
 					customerProducts: event.incomingCustomerProducts,
 					direction: "charge",
-					billingCycleAnchorMs: anchorMs,
+					billingCycleAnchorMs: event.resetsBillingCycle
+						? event.startsAtMs
+						: anchorMs,
 					filterBillingPeriodStart: false,
 					priceFilters: { excludeOneOffPrices: true },
 				},
@@ -206,7 +208,9 @@ export const billingPlanToNextCyclePreview = ({
 			startsAtMs: event.startsAtMs - MS_PER_SECOND,
 		});
 		const billingCycleAnchorMs =
-			productsForUsageLineItems.length === 0 ? event.startsAtMs : anchorMs;
+			event.resetsBillingCycle || productsForUsageLineItems.length === 0
+				? event.startsAtMs
+				: anchorMs;
 		const lineItemsResult = billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: event.customerProducts,
