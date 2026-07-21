@@ -20,6 +20,7 @@ export const FeaturePriceItemSchema = ProductItemSchema.pick({
 	usage_limit: true,
 	config: true,
 	entity_feature_id: true,
+	pooled: true,
 }).extend({
 	feature_id: z.string().nonempty(),
 	included_usage: z.number().nonnegative().nullish(),
