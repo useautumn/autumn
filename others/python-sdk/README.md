@@ -300,6 +300,7 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 ### [Invoices](docs/sdks/invoices/README.md)
 
+* [insert](docs/sdks/invoices/README.md#insert) - Inserts or updates up to 500 historical invoices without reading or mutating the billing processor.
 * [list](docs/sdks/invoices/README.md#list) - Lists invoices with cursor pagination and optional filters (customer, entity, status, processor). Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 
 ### [Keys](docs/sdks/keys/README.md)
