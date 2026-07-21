@@ -12,7 +12,8 @@ const BILLING_LOCK_TTL_MS = 300_000;
 const BILLING_LOCK_WAIT_MS = BILLING_LOCK_TTL_MS + 5_000;
 const BILLING_LOCK_RETRY_MS = 250;
 
-/** Waits (bounded) for every key, runs fn, then releases only locks this call still owns. */
+/** Background-only (early-acked webhooks — HTTP routes 423 instantly instead of waiting).
+ * Waits (bounded) for every key, runs fn, then releases only locks this call still owns. */
 export const withBillingLock = async <T>({
 	lockKeys,
 	fn,
