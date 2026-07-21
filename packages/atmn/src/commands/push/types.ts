@@ -8,7 +8,7 @@ import type { Feature, Plan } from "../../compose/models/index.js";
 export interface FeatureDeleteInfo {
 	id: string;
 	canDelete: boolean;
-	reason?: "credit_system" | "products";
+	reason?: "credit_system" | "products" | "deletion_check_failed";
 	referencingCreditSystems?: string[]; // IDs of credit systems using this feature
 	referencingProducts?: { name: string; count: number };
 	featureType?: "boolean" | "metered" | "credit_system"; // For sorting (delete credit systems first)
@@ -20,6 +20,7 @@ export interface PlanDeleteInfo {
 	canDelete: boolean;
 	customerCount: number;
 	firstCustomerName?: string;
+	deletionCheckFailed?: boolean;
 }
 
 // Plan update info
