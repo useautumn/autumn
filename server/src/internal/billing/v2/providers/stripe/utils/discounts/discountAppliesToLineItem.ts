@@ -39,7 +39,7 @@ export const discountAppliesToLineItem = ({
 	lineItem: LineItem;
 }): boolean => {
 	const isProrationCredit = lineItem.context.direction === "refund";
-	if (lineItem.discountsAlreadyApplied) {
+	if (lineItem.amountAfterDiscountsFinalized) {
 		return false;
 	}
 	if (

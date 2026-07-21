@@ -9,6 +9,7 @@ import type {
 } from "@autumn/shared";
 import {
 	applySubscriptionDiscount,
+	createAmountCoupon,
 	createPercentCoupon,
 	getStripeSubscription,
 } from "@tests/integration/billing/utils/discounts/discountTestUtils";
@@ -111,6 +112,135 @@ test.concurrent(
 			expand: ["data.discounts.source.coupon"],
 		});
 		expect(getStripeSubscriptionCouponIds(subscription)).toContain(coupon.id);
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license discounts update: stored and fresh discounts stay on their respective sides")}`,
+	async () => {
+		const customerId = "license-discount-update-stored-and-fresh";
+		const parent = products.base({
+			id: "update-stored-and-fresh-parent",
+			items: [items.dashboard()],
+		});
+		const seat = products.base({
+			id: "update-stored-and-fresh-seat",
+			group: "update-stored-and-fresh-seat-licenses",
+			items: [items.monthlyPrice({ price: 20 })],
+		});
+		const { autumnV1, autumnV2_3, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: true }),
+				s.products({ list: [parent, seat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: parent.id,
+					licenseProductId: seat.id,
+					included: 0,
+				}),
+			],
+		});
+		const seatStripeProductId = await getPlanStripeProductId({
+			ctx,
+			planId: seat.id,
+		});
+		const [storedCoupon, freshCoupon] = await Promise.all([
+			createPercentCoupon({
+				stripeCli: ctx.stripeCli,
+				percentOff: 50,
+				appliesToProducts: [seatStripeProductId],
+			}),
+			createAmountCoupon({
+				stripeCli: ctx.stripeCli,
+				amountOffCents: 500,
+				appliesToProducts: [seatStripeProductId],
+			}),
+		]);
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: parent.id,
+			redirect_mode: "if_required",
+			license_quantities: [{ license_plan_id: seat.id, quantity: 2 }],
+			discounts: [{ reward_id: storedCoupon.id }],
+		});
+
+		const params: UpdateSubscriptionV1ParamsInput = {
+			customer_id: customerId,
+			plan_id: parent.id,
+			license_quantities: [{ license_plan_id: seat.id, quantity: 3 }],
+			discounts: [{ reward_id: freshCoupon.id }],
+		};
+		const preview =
+			await autumnV2_3.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				params,
+			);
+
+		expectLicensePreviewLineCorrect({
+			preview,
+			planId: seat.id,
+			direction: "refund",
+			subtotal: -20,
+			total: -20,
+			discounts: [
+				{
+					rewardId: storedCoupon.id,
+					percentOff: 50,
+					amountOff: 20,
+				},
+			],
+		});
+		expectLicensePreviewLineCorrect({
+			preview,
+			planId: seat.id,
+			direction: "charge",
+			subtotal: 60,
+			total: 25,
+			discounts: [
+				{
+					rewardId: storedCoupon.id,
+					percentOff: 50,
+					amountOff: 30,
+				},
+				{ rewardId: freshCoupon.id, amountOff: 5 },
+			],
+		});
+		expectLicenseDiscountPreviewCorrect({
+			preview,
+			total: 5,
+			nextCycleTotal: 25,
+		});
+
+		await autumnV2_3.billing.update<UpdateSubscriptionV1ParamsInput>(params);
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expectCustomerLicenses({
+			customer,
+			count: 1,
+			licenses: [
+				{
+					license_plan_id: seat.id,
+					parent_plan_id: parent.id,
+					granted: 3,
+					paid_quantity: 3,
+				},
+			],
+		});
+		const customerV3 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer: customerV3,
+			count: 2,
+			latestTotal: 5,
+		});
+		const { subscription } = await getStripeSubscription({
+			customerId,
+			expand: ["data.discounts.source.coupon"],
+		});
+		expect(getStripeSubscriptionCouponIds(subscription)).toEqual(
+			expect.arrayContaining([storedCoupon.id, freshCoupon.id]),
+		);
 		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );

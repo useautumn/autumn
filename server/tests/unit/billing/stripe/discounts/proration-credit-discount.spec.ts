@@ -52,7 +52,7 @@ describe(chalk.yellowBright("proration credit discounting"), () => {
 	describe(chalk.cyan("discountAppliesToLineItem (refund)"), () => {
 		test("does not reapply a discount to a finalized stored credit", () => {
 			const lineItem = creditLine();
-			lineItem.discountsAlreadyApplied = true;
+			lineItem.amountAfterDiscountsFinalized = true;
 			const discount = establishedDiscount({
 				percentOff: 20,
 				startMs: PERIOD_START_MS - ONE_DAY_MS,

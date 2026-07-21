@@ -17,11 +17,10 @@ export const LineItemSchema = z
 		discounts: z.array(LineItemDiscountSchema).default([]),
 		amountAfterDiscounts: z.number().optional(),
 		/**
-		 * The line amount already comes from a finalized post-discount source,
-		 * such as a stored invoice row's `amount_after_discounts`.
-		 * `discountAppliesToLineItem` uses this to avoid reducing that amount again.
+		 * `amountAfterDiscounts` comes from a finalized source, such as a stored
+		 * invoice row, and must not be recomputed. `discounts` remains provenance.
 		 */
-		discountsAlreadyApplied: z.boolean().optional(),
+		amountAfterDiscountsFinalized: z.boolean().optional(),
 
 		description: z.string(),
 

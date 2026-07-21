@@ -9,13 +9,19 @@
  */
 
 import { expect, test } from "bun:test";
-import type { AttachParamsV1, AttachPreviewResponse } from "@autumn/shared";
+import {
+	type AttachParamsV1,
+	type AttachPreviewResponse,
+	atmnToStripeAmount,
+	stripeToAtmnAmount,
+} from "@autumn/shared";
 import { createAmountCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils";
-import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 
 test.concurrent(
@@ -113,7 +119,26 @@ test.concurrent(
 			(sum, item) => sum + item.total,
 			0,
 		);
-		const expectedTax = Math.round(lineItemsTotal * 0.2 * 100) / 100;
+		// Stripe tax rates round tax per invoice line before summing the invoice.
+		const expectedTaxMinorUnits = preview.line_items.reduce(
+			(sum, lineItem) =>
+				sum +
+				new Decimal(
+					atmnToStripeAmount({
+						amount: lineItem.total,
+						currency: preview.tax?.currency,
+					}),
+				)
+					.times(20)
+					.div(100)
+					.round()
+					.toNumber(),
+			0,
+		);
+		const expectedTax = stripeToAtmnAmount({
+			amount: expectedTaxMinorUnits,
+			currency: preview.tax?.currency,
+		});
 
 		expect(lineItemsTotal).toBeLessThan(0);
 		expect(preview.tax).toBeDefined();

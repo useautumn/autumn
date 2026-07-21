@@ -28,6 +28,7 @@ export const expectLicenseDefinitionCorrect = async ({
 		amount: number;
 		interval: BillingInterval;
 		isCustom?: boolean;
+		stripePriceId?: string;
 		stripeProductId?: string;
 	};
 }): Promise<FullCustomerLicense> => {
@@ -68,6 +69,11 @@ export const expectLicenseDefinitionCorrect = async ({
 		expect(licenseBasePrice?.config.interval).toBe(basePrice.interval);
 		if (basePrice.isCustom !== undefined) {
 			expect(licenseBasePrice?.is_custom).toBe(basePrice.isCustom);
+		}
+		if (basePrice.stripePriceId) {
+			expect(licenseBasePrice?.config.stripe_price_id).toBe(
+				basePrice.stripePriceId,
+			);
 		}
 		if (basePrice.stripeProductId) {
 			expect(licenseBasePrice?.config.stripe_product_id).toBe(

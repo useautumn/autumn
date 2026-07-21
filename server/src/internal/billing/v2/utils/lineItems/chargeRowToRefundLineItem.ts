@@ -116,7 +116,7 @@ export const chargeRowToRefundLineItem = ({
 					? (couponNameById.get(d.stripe_coupon_id) ?? d.stripe_coupon_id)
 					: undefined,
 			})) ?? [],
-		discountsAlreadyApplied: true,
+		amountAfterDiscountsFinalized: true,
 	};
 
 	const result = LineItemSchema.safeParse(lineItemData);

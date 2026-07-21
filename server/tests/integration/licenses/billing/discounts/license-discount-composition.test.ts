@@ -268,7 +268,7 @@ test.concurrent(
 			preview,
 			planId: devSeat.id,
 			direction: "refund",
-			subtotal: -10,
+			subtotal: -20,
 			total: -20,
 		});
 		expectLicensePreviewLineCorrect({

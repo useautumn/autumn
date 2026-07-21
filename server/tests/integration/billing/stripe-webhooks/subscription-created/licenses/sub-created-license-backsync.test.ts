@@ -20,9 +20,10 @@
  *
  * Pre-impl red: auto-sync matches the license product directly and either
  * attaches it as a standalone plan or skips — no parent attach, no pool.
+ * The imported custom price also lost its source config.stripe_price_id.
  * Post-impl green: sync detection resolves license prices to the owning
- * parent link and provisions the pool with the Stripe quantity (custom
- * prices flow through customize.upsert_licenses).
+ * parent link, provisions the pool, and persists the source Stripe price ID
+ * on prices flowing through customize.upsert_licenses.
  */
 import { expect, test } from "bun:test";
 import {
@@ -230,6 +231,10 @@ test(`${chalk.yellowBright("sub.created license back-sync: custom $120/yr licens
 		parentPlanId: parent.id,
 		subscriptionId: stripeSubscription.id,
 		isCustom: true,
-		basePrice: { amount: CUSTOM_SEAT_PRICE, interval: BillingInterval.Year },
+		basePrice: {
+			amount: CUSTOM_SEAT_PRICE,
+			interval: BillingInterval.Year,
+			stripePriceId: customStripePrice.id,
+		},
 	});
 });
