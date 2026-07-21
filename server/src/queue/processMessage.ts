@@ -1,3 +1,4 @@
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
@@ -58,6 +59,12 @@ export const shouldRetrySqsJobError = ({
 			return isTransientDbError({ error });
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		// Top-up shares the customer billing lock — retry instead of dropping the job
+		// when it collides with an attach or checkout materialization.
+		case JobName.AutoTopUp:
+			return (
+				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
+			);
 		default:
 			return false;
 	}

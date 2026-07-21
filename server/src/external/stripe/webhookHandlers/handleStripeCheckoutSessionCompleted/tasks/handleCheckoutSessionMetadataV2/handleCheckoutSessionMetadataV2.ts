@@ -1,6 +1,7 @@
 import {
 	type DeferredAutumnBillingPlanData,
 	MetadataType,
+	notNullish,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
@@ -37,12 +38,12 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	);
 
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
-	const { id, internal_id } = deferredData.billingContext.fullCustomer;
+	const fullCustomer = deferredData?.billingContext?.fullCustomer;
 
 	await withBillingLock({
 		// Route locks key on whichever identifier the API caller passed — hold both.
-		lockKeys: [id, internal_id]
-			.filter((customerId): customerId is string => Boolean(customerId))
+		lockKeys: [fullCustomer?.id, fullCustomer?.internal_id]
+			.filter(notNullish)
 			.map((customerId) =>
 				buildBillingLockKey({ orgId: ctx.org.id, env: ctx.env, customerId }),
 			),

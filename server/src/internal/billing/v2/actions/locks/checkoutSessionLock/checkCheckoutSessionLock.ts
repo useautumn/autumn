@@ -1,14 +1,15 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
-import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
-	checkoutSessionLock,
 	type CheckoutSessionLockData,
+	checkoutSessionLock,
 } from "./checkoutSessionLock";
 
-/** Reuses matching Checkout sessions and prevents a payable session from racing direct billing. */
+/** Same params → reuse the pending session. Different params → expire it via Stripe
+ * and proceed, or 423 when the session already won the race (paid/completing). */
 export const checkCheckoutSessionLock = async <T extends BillingContext>({
 	ctx,
 	params,
@@ -50,35 +51,25 @@ export const checkCheckoutSessionLock = async <T extends BillingContext>({
 		};
 	}
 
-	if (billingContext.checkoutMode === "stripe_checkout") {
-		ctx.logger.info(
-			`Expiring old checkout session ${lock.checkoutSessionId} for customer ${customerId} (params changed)`,
-		);
-		await checkoutSessionLock.expireAndClearIfOwned({
-			ctx,
-			customerId,
-			checkoutSessionId: lock.checkoutSessionId,
-		});
-		return null;
-	}
+	const cleared = await checkoutSessionLock.expireAndClearIfOwned({
+		ctx,
+		customerId,
+		checkoutSessionId: lock.checkoutSessionId,
+	});
 
-	if (ctx.env === AppEnv.Sandbox) {
+	if (cleared) {
 		ctx.logger.info(
-			`Sandbox: clearing checkout session lock for customer ${customerId} (session ${lock.checkoutSessionId}) to allow non-checkout billing action`,
+			`Expired checkout session ${lock.checkoutSessionId} for customer ${customerId} (params changed)`,
 		);
-		await checkoutSessionLock.expireAndClearIfOwned({
-			ctx,
-			customerId,
-			checkoutSessionId: lock.checkoutSessionId,
-		});
 		return null;
 	}
 
 	ctx.logger.info(
-		`Blocking non-checkout billing action for customer ${customerId} — checkout session ${lock.checkoutSessionId} still active`,
+		`Blocking billing action for customer ${customerId} — checkout session ${lock.checkoutSessionId} completed and is materializing`,
 	);
 	throw new RecaseError({
-		message: "A checkout session is already in progress for this customer",
+		message:
+			"A checkout session for this customer was just completed and is still being processed",
 		code: ErrCode.LockAlreadyExists,
 		statusCode: 423,
 	});

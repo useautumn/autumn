@@ -1,8 +1,14 @@
-import { type DeferredSetupPaymentData, MetadataType } from "@autumn/shared";
+import {
+	type DeferredSetupPaymentData,
+	MetadataType,
+	notNullish,
+} from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { updateDefaultPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { setupPaymentToAttachParams } from "@/internal/billing/v2/actions/setupPayment/setupPaymentUtils";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
+import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { CheckoutSessionCompletedContext } from "../setupCheckoutSessionCompletedContext";
@@ -63,11 +69,24 @@ export const handleSetupPaymentMetadata = async ({
 			params: deferredData.params,
 		});
 
-		await billingActions.attach({
-			ctx,
-			params: attachParams,
-			preview: false,
-			skipAutumnCheckout: true,
+		// Webhook-driven direct bill — serialize with API attaches like the V2 flow.
+		await withBillingLock({
+			lockKeys: [
+				ctx.fullCustomer?.id,
+				ctx.fullCustomer?.internal_id,
+				attachParams.customer_id,
+			]
+				.filter(notNullish)
+				.map((customerId) =>
+					buildBillingLockKey({ orgId: org.id, env, customerId }),
+				),
+			fn: () =>
+				billingActions.attach({
+					ctx,
+					params: attachParams,
+					preview: false,
+					skipAutumnCheckout: true,
+				}),
 		});
 
 		logger.info(

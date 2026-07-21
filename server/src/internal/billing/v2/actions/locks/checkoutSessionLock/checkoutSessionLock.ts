@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getPrimaryRedis } from "@/external/redis/initRedis";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 
 const FALLBACK_CHECKOUT_LOCK_TTL_SECONDS = 2 * 60;
@@ -67,12 +67,17 @@ const clearIfOwned = async ({
 }): Promise<void> => {
 	try {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") return;
+		if (redis.status !== "ready") {
+			ctx.logger.warn(
+				`Redis not ready — checkout reservation for ${customerId} left to TTL`,
+			);
+			return;
+		}
 		await redis.eval(
 			`local value = redis.call("GET", KEYS[1])
 			if not value then return 0 end
-			local lock = cjson.decode(value)
-			if lock.checkoutSessionId ~= ARGV[1] then return 0 end
+			local ok, lock = pcall(cjson.decode, value)
+			if not ok or type(lock) ~= "table" or lock.checkoutSessionId ~= ARGV[1] then return 0 end
 			return redis.call("DEL", KEYS[1])`,
 			1,
 			buildKey({ ctx, customerId }),
@@ -83,7 +88,8 @@ const clearIfOwned = async ({
 	}
 };
 
-/** Expire the old Stripe Checkout session then clear its reservation. */
+/** Expires the session at Stripe then clears its reservation. False = the session
+ * won the race (paid/completing) — the caller must not proceed to bill. */
 const expireAndClearIfOwned = async ({
 	ctx,
 	customerId,
@@ -92,20 +98,34 @@ const expireAndClearIfOwned = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	checkoutSessionId: string;
-}): Promise<void> => {
+}): Promise<boolean> => {
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
 	try {
-		const stripeCli = createStripeCli({
-			org: ctx.org,
-			env: ctx.env,
-		});
 		await stripeCli.checkout.sessions.expire(checkoutSessionId);
-	} catch (error) {
-		ctx.logger.error(
-			`Failed to expire checkout session ${checkoutSessionId}: ${error}`,
-		);
+	} catch (expireError) {
+		// Stripe rejects expiring a completing/completed session — verify before dropping the guard.
+		try {
+			const checkoutSession =
+				await stripeCli.checkout.sessions.retrieve(checkoutSessionId);
+			if (checkoutSession.status !== "expired") {
+				ctx.logger.info(
+					`Checkout session ${checkoutSessionId} is ${checkoutSession.status}; keeping reservation`,
+					{ expireError },
+				);
+				return false;
+			}
+		} catch (retrieveError) {
+			ctx.logger.warn(
+				`Could not verify checkout session ${checkoutSessionId}; keeping reservation`,
+				{ expireError, retrieveError },
+			);
+			return false;
+		}
 	}
 
 	await clearIfOwned({ ctx, customerId, checkoutSessionId });
+	return true;
 };
 
 export const checkoutSessionLock = {

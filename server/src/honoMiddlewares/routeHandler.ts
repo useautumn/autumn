@@ -292,10 +292,11 @@ export function createRoute<
 
 		// Acquire lock if lock config provided
 		let lockKey: string | null = null;
-		const lockToken = crypto.randomUUID();
+		let lockToken: string | null = null;
 		if (opts.lock) {
 			lockKey = opts.lock.getKey(c);
 			if (lockKey) {
+				lockToken = crypto.randomUUID();
 				await acquireLock({
 					lockKey,
 					ttlMs: opts.lock.ttlMs,
@@ -321,7 +322,7 @@ export function createRoute<
 			}
 		} finally {
 			// Always release lock (only if this request still owns it)
-			if (lockKey) {
+			if (lockKey && lockToken) {
 				await clearLock({ lockKey, token: lockToken });
 			}
 		}

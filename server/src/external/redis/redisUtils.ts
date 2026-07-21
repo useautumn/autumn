@@ -1,8 +1,21 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { redis } from "./initRedis.js";
+import { getPrimaryRedis } from "./initRedis.js";
 
-/** With `token`, deletes only if this holder still owns the lock (expired-lease safety). */
+// Locks live on the primary Redis: regional instances are independent stores,
+// so a region-local lock would not exclude a webhook processed in another region.
+const OWNED_DELETE_SCRIPT = `local value = redis.call("GET", KEYS[1])
+if not value then return 0 end
+local ok, lock = pcall(cjson.decode, value)
+if not ok or type(lock) ~= "table" or lock.token ~= ARGV[1] then return 0 end
+return redis.call("DEL", KEYS[1])`;
+
+const OWNED_REFRESH_SCRIPT = `local value = redis.call("GET", KEYS[1])
+if not value then return 0 end
+local ok, lock = pcall(cjson.decode, value)
+if not ok or type(lock) ~= "table" or lock.token ~= ARGV[1] then return 0 end
+return redis.call("PEXPIRE", KEYS[1], ARGV[2])`;
+
+/** Best-effort: with `token`, deletes only if this holder still owns the lock; never throws (TTL reaps). */
 export const clearLock = async ({
 	lockKey,
 	token,
@@ -10,27 +23,22 @@ export const clearLock = async ({
 	lockKey: string;
 	token?: string;
 }) => {
-	if (!token) {
-		await tryRedisWrite(() => redis.del(lockKey));
-		return;
-	}
+	try {
+		const redis = getPrimaryRedis();
+		if (redis.status !== "ready") return;
 
-	await tryRedisWrite(() =>
-		redis.eval(
-			`local value = redis.call("GET", KEYS[1])
-			if not value then return 0 end
-			local ok, lock = pcall(cjson.decode, value)
-			if not ok or lock.token ~= ARGV[1] then return 0 end
-			return redis.call("DEL", KEYS[1])`,
-			1,
-			lockKey,
-			token,
-		),
-	);
+		if (token) {
+			await redis.eval(OWNED_DELETE_SCRIPT, 1, lockKey, token);
+		} else {
+			await redis.del(lockKey);
+		}
+	} catch {
+		// Release is best-effort — an uncleared lock expires by TTL.
+	}
 };
 
-/** Extends the lease iff this holder still owns the lock. Returns false when ownership was lost. */
-export const renewLock = async ({
+/** Best-effort one-shot lease extension for a still-owned lock. */
+export const refreshLockLease = async ({
 	lockKey,
 	token,
 	ttlMs,
@@ -38,22 +46,14 @@ export const renewLock = async ({
 	lockKey: string;
 	token: string;
 	ttlMs: number;
-}): Promise<boolean> => {
-	const renewed = await tryRedisWrite(() =>
-		redis.eval(
-			`local value = redis.call("GET", KEYS[1])
-			if not value then return 0 end
-			local ok, lock = pcall(cjson.decode, value)
-			if not ok or lock.token ~= ARGV[1] then return 0 end
-			return redis.call("PEXPIRE", KEYS[1], ARGV[2])`,
-			1,
-			lockKey,
-			token,
-			ttlMs.toString(),
-		),
-	);
-
-	return renewed === 1;
+}) => {
+	try {
+		const redis = getPrimaryRedis();
+		if (redis.status !== "ready") return;
+		await redis.eval(OWNED_REFRESH_SCRIPT, 1, lockKey, token, ttlMs.toString());
+	} catch {
+		// Refresh is best-effort — worst case the original lease stands.
+	}
 };
 
 interface LockData {
@@ -80,11 +80,14 @@ export const acquireLock = async ({
 	errorMessage?: string;
 	token?: string;
 }): Promise<boolean> => {
+	const redis = getPrimaryRedis();
+
 	// If Redis not ready, allow operation to proceed
 	if (redis.status !== "ready") {
 		return true;
 	}
 
+	let conflict = false;
 	try {
 		// NX = only set if key doesn't exist, PX = set expiry in milliseconds
 		// Store as JSON for future extensibility
@@ -99,6 +102,7 @@ export const acquireLock = async ({
 
 		// If result is null, lock already exists (NX failed)
 		if (result === null) {
+			conflict = true;
 			const existingData = await redis.get(lockKey);
 			const parsed = existingData
 				? (JSON.parse(existingData) as LockData)
@@ -116,6 +120,15 @@ export const acquireLock = async ({
 		// Re-throw lock conflict errors
 		if (error instanceof RecaseError) {
 			throw error;
+		}
+
+		// A known conflict must stay a conflict even if reading its message failed
+		if (conflict) {
+			throw new RecaseError({
+				message: DEFAULT_ERROR_MESSAGE,
+				code: ErrCode.LockAlreadyExists,
+				statusCode: 423,
+			});
 		}
 
 		// Redis error - allow operation to proceed

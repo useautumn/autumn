@@ -1,13 +1,18 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { acquireLock, clearLock, renewLock } from "@/external/redis/redisUtils";
+import {
+	acquireLock,
+	clearLock,
+	refreshLockLease,
+} from "@/external/redis/redisUtils";
 
-const BILLING_LOCK_TTL_MS = 120_000;
+// Bounded lease, never heartbeat-renewed: a wedged holder must not lock a customer out forever.
+// Past-lease overlap is still safe — the checkout reservation clears only after materialization.
+const BILLING_LOCK_TTL_MS = 300_000;
 const BILLING_LOCK_WAIT_MS = BILLING_LOCK_TTL_MS + 5_000;
-const BILLING_LOCK_RETRY_MS = 100;
-const BILLING_LOCK_RENEW_MS = BILLING_LOCK_TTL_MS / 3;
+const BILLING_LOCK_RETRY_MS = 250;
 
-/** Waits (bounded) for every key, runs fn under a heartbeat-renewed lease, then releases owned locks. */
+/** Waits (bounded) for every key, runs fn, then releases only locks this call still owns. */
 export const withBillingLock = async <T>({
 	lockKeys,
 	fn,
@@ -18,9 +23,10 @@ export const withBillingLock = async <T>({
 	const token = crypto.randomUUID();
 	// Sorted so concurrent multi-key holders acquire in the same order (no deadlock).
 	const sortedKeys = [...new Set(lockKeys)].sort();
+	// Outlives any legitimately-held lease, so a waiter can only time out under
+	// continuous reacquisition by others — never against a single stuck holder.
 	const deadline = Date.now() + BILLING_LOCK_WAIT_MS;
 	const heldKeys: string[] = [];
-	let heartbeat: ReturnType<typeof setInterval> | undefined;
 
 	try {
 		for (const lockKey of sortedKeys) {
@@ -38,20 +44,14 @@ export const withBillingLock = async <T>({
 			}
 		}
 
-		// Renewal keeps mutual exclusion for long-running work; the TTL still
-		// reaps locks whose holder crashed or stalled.
-		heartbeat = setInterval(() => {
-			for (const lockKey of heldKeys) {
-				void renewLock({ lockKey, token, ttlMs: BILLING_LOCK_TTL_MS }).catch(
-					() => {},
-				);
-			}
-		}, BILLING_LOCK_RENEW_MS);
-		heartbeat.unref?.();
+		// Earlier keys' leases burned down while waiting for later ones — re-arm
+		// once so every lease covers the full critical section.
+		for (const lockKey of heldKeys) {
+			await refreshLockLease({ lockKey, token, ttlMs: BILLING_LOCK_TTL_MS });
+		}
 
 		return await fn();
 	} finally {
-		if (heartbeat) clearInterval(heartbeat);
 		for (const lockKey of heldKeys) {
 			await clearLock({ lockKey, token });
 		}
