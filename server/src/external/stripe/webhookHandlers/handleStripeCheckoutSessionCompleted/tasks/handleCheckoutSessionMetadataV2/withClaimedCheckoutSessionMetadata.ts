@@ -58,7 +58,11 @@ export const withClaimedCheckoutSessionMetadata = async ({
 		throw error;
 	} finally {
 		if (lockCustomerId) {
-			await checkoutSessionLock.clear({ ctx, customerId: lockCustomerId });
+			await checkoutSessionLock.clearIfOwned({
+				ctx,
+				customerId: lockCustomerId,
+				checkoutSessionId: checkoutContext.stripeCheckoutSession.id,
+			});
 		}
 	}
 };

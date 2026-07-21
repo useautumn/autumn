@@ -12,6 +12,7 @@ import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/error
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
@@ -42,6 +43,14 @@ export async function attach({
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
+	const checkoutReservation =
+		!preview && !skipAutumnCheckout
+			? await checkoutSessionLock.get({
+					ctx,
+					customerId: params.customer_id,
+				})
+			: undefined;
+
 	params = {
 		...params,
 		carry_over_usages: await resolveCarryOverUsagesParam({
@@ -139,6 +148,7 @@ export async function attach({
 			params: autumnCheckoutParams,
 			billingContext,
 			billingPlan,
+			existingLock: checkoutReservation,
 		});
 
 		if (cachedResult) return cachedResult;

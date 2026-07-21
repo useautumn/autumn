@@ -12,6 +12,8 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
+import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -34,12 +36,29 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
 	);
 
-	await withClaimedCheckoutSessionMetadata({
-		ctx,
-		checkoutContext,
-		metadata,
-		execute: () =>
-			executeCheckoutSessionMetadataV2({ ctx, checkoutContext, metadata }),
+	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+	const customerId =
+		deferredData.billingContext.fullCustomer.id ??
+		deferredData.billingContext.fullCustomer.internal_id;
+
+	await withBillingLock({
+		lockKey: buildBillingLockKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+		}),
+		fn: () =>
+			withClaimedCheckoutSessionMetadata({
+				ctx,
+				checkoutContext,
+				metadata,
+				execute: () =>
+					executeCheckoutSessionMetadataV2({
+						ctx,
+						checkoutContext,
+						metadata,
+					}),
+			}),
 	});
 };
 
