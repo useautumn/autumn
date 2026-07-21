@@ -84,11 +84,18 @@ const stampEntityFromExistingLinks = ({
 	// product id → existing entity binding (only entity-scoped links).
 	// `entity_id` accepts either the public or internal entity id, so the
 	// internal id stored on the customer product is sufficient.
-	const entityIdByProductId = new Map<string, string>();
+	const entityIdByProductId = new Map<string, string | null>();
 	for (const customerProduct of linkedCustomerProducts) {
 		const productId = customerProduct.product?.id;
 		if (customerProduct.internal_entity_id && productId) {
-			entityIdByProductId.set(productId, customerProduct.internal_entity_id);
+			const existingEntityId = entityIdByProductId.get(productId);
+			entityIdByProductId.set(
+				productId,
+				existingEntityId === undefined ||
+					existingEntityId === customerProduct.internal_entity_id
+					? customerProduct.internal_entity_id
+					: null,
+			);
 		}
 	}
 

@@ -6,6 +6,7 @@ import {
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
@@ -37,12 +38,16 @@ export const getCachedFullSubject = async ({
 	entityId,
 	source,
 	staleWhileRevalidate = false,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
 	staleWhileRevalidate?: boolean;
+	/** Existing customer balance-sync transaction. Used by cache-miss rebuilds
+	 * so a due pooled reset does not wait on its own advisory lock. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -264,7 +269,7 @@ export const getCachedFullSubject = async ({
 		});
 
 		const fullSubject = normalizedToFullSubject({ normalized });
-		await lazyResetSubjectEntitlements({ ctx, fullSubject });
+		await lazyResetSubjectEntitlements({ ctx, fullSubject, balanceSyncDb });
 		await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 		await checkPendingMigrationsForCustomer({
 			ctx,

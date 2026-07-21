@@ -34,6 +34,7 @@ import {
 	UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
 	UPDATE_ENTITY_DATA_V2_SCRIPT,
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	UPDATE_SUBJECT_BALANCE_BATCHES_SCRIPT,
 	UPDATE_SUBJECT_BALANCES_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 	UPSTASH_KEY_LOCKING_SHEBANG,
@@ -160,6 +161,10 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("updateSubjectBalances", {
 		numberOfKeys: 1,
 		lua: prepareScript(UPDATE_SUBJECT_BALANCES_SCRIPT),
+	});
+
+	redisInstance.defineCommand("updateSubjectBalanceBatches", {
+		lua: prepareScript(UPDATE_SUBJECT_BALANCE_BATCHES_SCRIPT),
 	});
 
 	redisInstance.defineCommand("rollUsageWindows", {

@@ -85,3 +85,13 @@ export const cusProductToCusEnt = ({
 
 	return undefined;
 };
+
+export const customerProductToPooledCustomerEntitlements = ({
+	customerProduct,
+}: {
+	customerProduct?: FullCusProduct;
+}): FullCusEntWithFullCusProduct[] =>
+	customerProduct?.customer_entitlements.map((customerEntitlement) => ({
+		...customerEntitlement,
+		customer_product: customerProduct,
+	})) ?? [];

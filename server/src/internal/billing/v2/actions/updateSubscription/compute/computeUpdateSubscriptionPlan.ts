@@ -16,7 +16,10 @@ import { computeUpdateLicenseQuantityPlan } from "@/internal/billing/v2/actions/
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
-import { computeFieldUpdates } from "./computeFieldUpdates";
+import {
+	computeFieldUpdatePooledBalanceOps,
+	computeFieldUpdates,
+} from "./computeFieldUpdates";
 
 /**
  * Compute the subscription update plan
@@ -86,6 +89,31 @@ export const computeUpdateSubscriptionPlan = async ({
 			},
 		};
 	}
+	if (
+		!billingContext.cancelAction &&
+		plan.insertCustomerProducts.length === 0
+	) {
+		plan.pooledBalanceOps = [
+			...(plan.pooledBalanceOps ?? []),
+			...computeFieldUpdatePooledBalanceOps({ billingContext, params }),
+		];
+	}
+	const processorSubscriptionId = params.processor_subscription_id;
+	if (processorSubscriptionId) {
+		plan.pooledBalanceOps = plan.pooledBalanceOps?.map((operation) => {
+			if (
+				(operation.op !== "upsert_source" &&
+					operation.op !== "transfer_source") ||
+				operation.sourceCustomerProductId !==
+					billingContext.customerProduct.id ||
+				operation.stripeSubscriptionId === null
+			) {
+				return operation;
+			}
+
+			return { ...operation, stripeSubscriptionId: processorSubscriptionId };
+		});
+	}
 
 	// Apply cancel plan if cancelAction is set in context
 	plan = computeCancelPlan({ ctx, billingContext, plan });
@@ -101,11 +129,15 @@ export const computeUpdateSubscriptionPlan = async ({
 	// sub-id linkage in executeStripeSubscriptionAction never runs.
 	const existingSubscriptionId =
 		billingContext.customerProduct.subscription_ids?.[0];
+	const subscriptionIdForPlan =
+		params.processor_subscription_id !== undefined
+			? (params.processor_subscription_id ?? undefined)
+			: existingSubscriptionId;
 
-	if (billingContext.skipBillingChanges && existingSubscriptionId) {
+	if (billingContext.skipBillingChanges && subscriptionIdForPlan) {
 		addStripeSubscriptionIdToBillingPlan({
 			autumnBillingPlan: plan,
-			stripeSubscriptionId: existingSubscriptionId,
+			stripeSubscriptionId: subscriptionIdForPlan,
 		});
 	}
 

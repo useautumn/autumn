@@ -74,6 +74,10 @@ export const computeSyncPlan = ({
 				? immediate.customerLicenseUpdates
 				: undefined,
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
+		pooledBalanceOps: [
+			...immediate.pooledBalanceOps,
+			...future.pooledBalanceOps,
+		],
 		upsertSubscription,
 	};
 

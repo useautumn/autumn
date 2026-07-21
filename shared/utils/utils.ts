@@ -9,6 +9,10 @@ export const nullish = <T>(
 export const notNullish = <T>(value: T | null | undefined): value is T =>
 	value !== null && value !== undefined;
 
+/** True only for real, finite numbers — rejects null/undefined, NaN, and ±Infinity. */
+export const isFiniteNumber = (value: unknown): value is number =>
+	Number.isFinite(value);
+
 export const idRegex = /^[a-zA-Z0-9_-]+$/;
 
 export const sumValues = (vals: number[]) => {

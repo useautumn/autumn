@@ -7,6 +7,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
+import { computeAttachPooledBalancePlan } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalancePlan/computeAttachPooledBalancePlan.js";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
@@ -101,6 +102,12 @@ export const computeAttachPlan = ({
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
+	const { customerProduct: preparedCustomerProduct, pooledBalancePlan } =
+		computeAttachPooledBalancePlan({
+			customerProduct: newCustomerProduct,
+			attachBillingContext,
+		});
+
 	// Lock the customer's currency on the first paid attach (only when they have
 	// none yet). Free attaches don't commit a currency. Applied conditionally at execute.
 	const {
@@ -120,10 +127,11 @@ export const computeAttachPlan = ({
 
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",
-		insertCustomerProducts: [newCustomerProduct],
+		insertCustomerProducts: [preparedCustomerProduct],
 		lockCustomerCurrency,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
+		pooledBalancePlan,
 		customPrices,
 		customEntitlements: [
 			...(customEnts ?? []),

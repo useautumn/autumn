@@ -11,6 +11,7 @@ import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
 import {
@@ -55,6 +56,9 @@ export const lazyResetSubjectEntitlements = async ({
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	normalized?: NormalizedFullSubject;
+	/** Existing customer balance-sync transaction. Reserved for pooled resets,
+	 * which reuse this lock rather than trying to acquire it recursively. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<boolean> => {
 	if (getDbHealth() === PgHealth.Degraded) return false;
 

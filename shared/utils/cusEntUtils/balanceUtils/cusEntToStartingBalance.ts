@@ -5,8 +5,10 @@ import { getStartingBalance } from "../getStartingBalance";
 
 export const cusEntToStartingBalance = ({
 	cusEnt,
+	useUpcomingQuantity = false,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
+	useUpcomingQuantity?: boolean;
 }) => {
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	const price = cusPrice?.price;
@@ -14,10 +16,14 @@ export const cusEntToStartingBalance = ({
 		ent: cusEnt.entitlement,
 		options: cusEnt.customer_product?.options ?? [],
 	});
+	const effectiveOptions =
+		useUpcomingQuantity && options
+			? { ...options, quantity: options.upcoming_quantity ?? options.quantity }
+			: options;
 
 	return getStartingBalance({
 		entitlement: cusEnt.entitlement,
-		options,
+		options: effectiveOptions,
 		relatedPrice: price,
 		productQuantity: cusEnt.customer_product?.quantity ?? 1,
 	});

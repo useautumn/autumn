@@ -3,11 +3,18 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
-import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
+import {
+	executeCustomerLicenseTransitions,
+	executePreparedCustomerLicenseTransitionRows,
+	prepareCustomerLicenseTransitions,
+	restorePreparedCustomerLicenseEntitlements,
+	triggerPreparedCustomerLicenseBatchTransitions,
+} from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
 import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
 import { executeOneOffPurchaseRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeOneOffPurchaseRebalance";
 import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
+import { executePooledPlanCustomerProductLifecycle } from "@/internal/billing/v2/execute/executeAutumnActions/executePooledPlanCustomerProductLifecycle.js";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import {
@@ -19,6 +26,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
+import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
 import { PriceService } from "@/internal/products/prices/PriceService";
@@ -52,6 +60,38 @@ export const executeAutumnBillingPlan = async ({
 	const deleteCustomerProducts = getDeleteCustomerProducts({
 		autumnBillingPlan,
 	});
+	const preparedCustomerLicenseTransitions =
+		await prepareCustomerLicenseTransitions({
+			ctx,
+			customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
+			pendingCustomerProducts: insertCustomerProducts,
+		});
+	const customerLicensePooledBalanceOps =
+		preparedCustomerLicenseTransitions.flatMap(({ operations }) => operations);
+	const pooledAutumnBillingPlan =
+		customerLicensePooledBalanceOps.length > 0
+			? {
+					...autumnBillingPlan,
+					pooledBalanceOps: [
+						...(autumnBillingPlan.pooledBalanceOps ?? []),
+						...customerLicensePooledBalanceOps,
+					],
+				}
+			: autumnBillingPlan;
+	const hasPooledBalanceOps = Boolean(
+		pooledAutumnBillingPlan.pooledBalanceOps?.length ||
+			pooledAutumnBillingPlan.pooledBalancePlan?.removeSources?.length ||
+			pooledAutumnBillingPlan.pooledBalancePlan?.upsertSources?.length,
+	);
+	const executeCustomerLicenseTransitionsInPooledTransaction =
+		hasPooledBalanceOps && preparedCustomerLicenseTransitions.length > 0;
+	const shouldReconcileLicenseState =
+		(insertCustomerProducts?.length ?? 0) > 0 ||
+		updateCustomerProducts.length > 0 ||
+		deleteCustomerProducts.length > 0 ||
+		(autumnBillingPlan.patchCustomerProducts?.length ?? 0) > 0 ||
+		(autumnBillingPlan.customerLicenseUpdates?.length ?? 0) > 0 ||
+		(autumnBillingPlan.customerLicenseTransitions?.length ?? 0) > 0;
 
 	if (customEntitlements) {
 		await EntitlementService.insert({
@@ -86,7 +126,7 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	if (autumnBillingPlan.patchCustomerProducts) {
+	if (autumnBillingPlan.patchCustomerProducts && !hasPooledBalanceOps) {
 		// Custom prices/entitlements above must be inserted before customer rows can reference them.
 		// Patch execution only inserts/deletes customer_prices and customer_entitlements.
 		await executePatchCustomerProducts({
@@ -95,28 +135,63 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
-	await executeCustomerLicenseUpdates({
-		ctx,
-		customerLicenseUpdates: autumnBillingPlan.customerLicenseUpdates,
-	});
+	if (!hasPooledBalanceOps) {
+		await executeCustomerLicenseUpdates({
+			ctx,
+			customerLicenseUpdates: autumnBillingPlan.customerLicenseUpdates,
+		});
+	}
 
-	if (autumnBillingPlan.insertEntities?.length) {
+	if (!hasPooledBalanceOps && autumnBillingPlan.insertEntities?.length) {
 		await EntityService.insert({
 			db,
 			data: autumnBillingPlan.insertEntities,
 		});
 	}
 
-	// 2. Insert new customer products
-	await insertNewCusProducts({
-		ctx,
-		newCusProducts: insertCustomerProducts,
-	});
+	const customerProductLifecycleExecutedInPooledTransaction =
+		await executePooledPlanCustomerProductLifecycle({
+			ctx,
+			autumnBillingPlan: pooledAutumnBillingPlan,
+			afterCustomerProductInserts:
+				executeCustomerLicenseTransitionsInPooledTransaction
+					? ({ db }) =>
+							executePreparedCustomerLicenseTransitionRows({
+								ctx: { ...ctx, db },
+								preparedTransitions: preparedCustomerLicenseTransitions,
+							})
+					: undefined,
+			beforeRebalance: executeCustomerLicenseTransitionsInPooledTransaction
+				? ({ db }) =>
+						restorePreparedCustomerLicenseEntitlements({
+							ctx: { ...ctx, db },
+							preparedTransitions: preparedCustomerLicenseTransitions,
+						})
+				: undefined,
+		});
 
-	await executeCustomerLicenseTransitions({
-		ctx,
-		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
-	});
+	if (!customerProductLifecycleExecutedInPooledTransaction) {
+		await insertNewCusProducts({
+			ctx,
+			newCusProducts: insertCustomerProducts,
+		});
+	}
+
+	// Successor pools now exist; adopted seats converge onto their definitions.
+	const executedPooledLicenseTransition =
+		customerLicensePooledBalanceOps.length > 0;
+	if (executeCustomerLicenseTransitionsInPooledTransaction) {
+		await triggerPreparedCustomerLicenseBatchTransitions({
+			ctx,
+			preparedTransitions: preparedCustomerLicenseTransitions,
+		});
+	} else {
+		await executeCustomerLicenseTransitions({
+			ctx,
+			customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
+			preparedTransitions: preparedCustomerLicenseTransitions,
+		});
+	}
 
 	await replaceScheduledPhaseCustomerProductIds({
 		ctx,
@@ -135,29 +210,33 @@ export const executeAutumnBillingPlan = async ({
 	}
 
 	// 3. Update customer product (DB only)
-	for (const { customerProduct, updates } of updateCustomerProducts) {
-		// Skip empty updates — drizzle throws "No values to set" on empty SET.
-		// This happens when the billing plan registers a customer product update
-		// entry (e.g. for intent=None discount-only flows) but there are no
-		// actual DB columns to change.
-		if (!updates || Object.keys(updates).length === 0) continue;
+	if (!customerProductLifecycleExecutedInPooledTransaction) {
+		for (const { customerProduct, updates } of updateCustomerProducts) {
+			// Skip empty updates — drizzle throws "No values to set" on empty SET.
+			// This happens when the billing plan registers a customer product update
+			// entry (e.g. for intent=None discount-only flows) but there are no
+			// actual DB columns to change.
+			if (!updates || Object.keys(updates).length === 0) continue;
 
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates: updates,
-		});
+			await CusProductService.update({
+				ctx,
+				cusProductId: customerProduct.id,
+				updates: updates,
+			});
+		}
 	}
 
 	// 4. Delete scheduled customer product (e.g., when updating while canceling)
-	for (const deleteCustomerProduct of deleteCustomerProducts) {
-		ctx.logger.debug(
-			`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
-		);
-		await CusProductService.delete({
-			ctx,
-			cusProductId: deleteCustomerProduct.id,
-		});
+	if (!customerProductLifecycleExecutedInPooledTransaction) {
+		for (const deleteCustomerProduct of deleteCustomerProducts) {
+			ctx.logger.debug(
+				`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
+			);
+			await CusProductService.delete({
+				ctx,
+				cusProductId: deleteCustomerProduct.id,
+			});
+		}
 	}
 
 	// 5. Update entitlement balances
@@ -182,6 +261,17 @@ export const executeAutumnBillingPlan = async ({
 			ctx,
 			customerId: autumnBillingPlan.customerId,
 			deltas: autumnBillingPlan.autoTopupRebalance.deltas,
+		});
+	}
+
+	if (shouldReconcileLicenseState) {
+		// Reconcile from current state so retries still converge an already-applied
+		// parent mutation; ordinary customers stop at the indexed presence check.
+		await reconcileLicenseStateForCustomer({
+			ctx,
+			idOrInternalId: autumnBillingPlan.customerId,
+			deleteCache: true,
+			flushBalances: hasPooledBalanceOps || executedPooledLicenseTransition,
 		});
 	}
 

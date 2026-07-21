@@ -28,6 +28,10 @@ import {
 	CustomerLicenseUpdateSchema,
 	InsertPlanLicenseSpecSchema,
 } from "./customerLicensePlan";
+import {
+	PooledBalanceOpSchema,
+	PooledBalancePlanSchema,
+} from "./pooledBalancePlan";
 
 export const UpdateCustomerEntitlementSchema = z.object({
 	customerEntitlement: FullCustomerEntitlementSchema,
@@ -39,6 +43,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			next_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
 			adjustment: z.number().optional(),
+			additional_balance: z.number().optional(),
 			entities: z.record(z.string(), EntityBalanceSchema).optional(),
 			balance: z.number().optional(),
 		})
@@ -119,6 +124,8 @@ export const AutumnBillingPlanSchema = z.object({
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)
 		.optional(),
+	pooledBalancePlan: PooledBalancePlanSchema.optional(),
+	pooledBalanceOps: z.array(PooledBalanceOpSchema).optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

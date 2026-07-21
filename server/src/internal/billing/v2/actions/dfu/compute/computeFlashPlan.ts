@@ -3,15 +3,19 @@ import {
 	type AutumnBillingPlan,
 	BillingVersion,
 	CusProductStatus,
+	cusEntsToUsage,
 	cusProductToProcessorType,
 	type DfuFlashedPlan,
 	type FullCusProduct,
 	isProductPaidAndRecurring,
 	isResettingEntitlement,
 	nullish,
+	type PooledBalanceOp,
 	ProcessorType,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import type {
 	FlashContext,
@@ -149,6 +153,7 @@ export const computeFlashPlan = ({
 	const { currentEpochMs, fullCustomer, params } = flashContext;
 	const insertCustomerProducts: FullCusProduct[] = [];
 	const updateCustomerProducts: CustomerProductUpdate[] = [];
+	const pooledBalanceOps: PooledBalanceOp[] = [];
 	const flashed: DfuFlashedPlan[] = [];
 
 	// Desired state per addressed scope, keyed by the scope's product internal ids.
@@ -198,12 +203,56 @@ export const computeFlashPlan = ({
 				flashContext,
 				planContext,
 			});
-		insertCustomerProducts.push(customerProduct);
+		const prepared = computeAttachPooledBalanceOps({
+			customerProduct,
+			attachBillingContext: {
+				billingStartsAt: customerProduct.starts_at,
+				currentEpochMs,
+				fullCustomer,
+				planTiming: "immediate",
+				requestedBillingCycleAnchor:
+					customerProduct.billing_cycle_anchor ?? undefined,
+				skipBillingChanges: true,
+			},
+			removeCurrentSource: false,
+		});
+		const flashedUsageBySourceEntitlementId = new Map(
+			customerProduct.customer_entitlements.map((customerEntitlement) => [
+				customerEntitlement.entitlement.id,
+				cusEntsToUsage({
+					cusEnts: [
+						{
+							...customerEntitlement,
+							customer_product: customerProduct,
+						},
+					],
+				}),
+			]),
+		);
+		const preparedPooledBalanceOps = prepared.pooledBalanceOps.map(
+			(operation) => {
+				if (operation.op !== "upsert_source") return operation;
+				const usage =
+					flashedUsageBySourceEntitlementId.get(
+						operation.sourceEntitlementId,
+					) ?? 0;
+				if (!Number.isFinite(usage) || usage <= 0) return operation;
+				return {
+					...operation,
+					usageReapply: {
+						amount: usage,
+						excludedSourceCustomerProductId: prepared.customerProduct.id,
+					},
+				};
+			},
+		);
+		insertCustomerProducts.push(prepared.customerProduct);
+		pooledBalanceOps.push(...preparedPooledBalanceOps);
 
 		flashed.push({
 			plan_id: planContext.plan.plan_id,
 			processor: planContext.processor ?? "stripe",
-			customer_product_id: customerProduct.id,
+			customer_product_id: prepared.customerProduct.id,
 			status: reportStatus,
 			skipped: false,
 			...(mismatchReason && { mismatch: true, reason: mismatchReason }),
@@ -241,6 +290,11 @@ export const computeFlashPlan = ({
 				canceled_at: currentEpochMs,
 			},
 		});
+		const removalOperation = customerProductToPooledBalanceRemovalOp({
+			customerProduct,
+			effectiveAt: null,
+		});
+		if (removalOperation) pooledBalanceOps.push(removalOperation);
 
 		flashed.push({
 			plan_id: customerProduct.product_id,
@@ -259,6 +313,7 @@ export const computeFlashPlan = ({
 				flashContext.fullCustomer.id ?? flashContext.fullCustomer.internal_id,
 			insertCustomerProducts,
 			updateCustomerProducts,
+			pooledBalanceOps,
 		},
 		flashed,
 	};

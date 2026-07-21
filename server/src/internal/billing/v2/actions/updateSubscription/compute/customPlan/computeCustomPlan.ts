@@ -11,6 +11,7 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
 export const computeCustomPlan = async ({
@@ -93,10 +94,23 @@ export const computeCustomPlan = async ({
 		fullCustomer,
 		customerProduct,
 	});
+	const { customerProduct: preparedCustomerProduct, pooledBalanceOps } =
+		computeAttachPooledBalanceOps({
+			customerProduct: newFullCustomerProduct,
+			attachBillingContext: {
+				currentCustomerProduct: customerProduct,
+				currentEpochMs: updateSubscriptionContext.currentEpochMs,
+				fullCustomer,
+				planTiming: isUpdatingScheduledProduct ? "end_of_cycle" : "immediate",
+				requestedBillingCycleAnchor:
+					updateSubscriptionContext.requestedBillingCycleAnchor,
+				skipBillingChanges: updateSubscriptionContext.skipBillingChanges,
+			},
+		});
 
 	return {
 		customerId: fullCustomer?.id ?? "",
-		insertCustomerProducts: [newFullCustomerProduct],
+		insertCustomerProducts: [preparedCustomerProduct],
 		updateCustomerProduct: isUpdatingScheduledProduct
 			? undefined
 			: {
@@ -110,7 +124,7 @@ export const computeCustomPlan = async ({
 			: deleteCustomerProduct,
 		schedulePhaseCustomerProductReplacements: computeSchedulePhaseReplacements({
 			oldCustomerProduct: customerProduct,
-			newCustomerProduct: newFullCustomerProduct,
+			newCustomerProduct: preparedCustomerProduct,
 		}),
 		customPrices,
 		customEntitlements: [
@@ -120,6 +134,7 @@ export const computeCustomPlan = async ({
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: updateSubscriptionContext.insertPlanLicenses,
 		customerLicenseTransitions,
+		pooledBalanceOps,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	} satisfies AutumnBillingPlan;

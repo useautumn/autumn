@@ -7,7 +7,8 @@ export const handleAttachLicenseErrors = ({
 }: {
 	context: AttachLicenseContext;
 }) => {
-	const { customerLicense, entityParams, newEntityParams } = context;
+	const { customerLicense, entityParams, existingEntities, newEntityParams } =
+		context;
 
 	const duplicateEntityId = findDuplicate(
 		entityParams.map((entityParam) => entityParam.entity_id),
@@ -31,7 +32,9 @@ export const handleAttachLicenseErrors = ({
 		});
 	}
 
-	if (customerLicense.remaining < entityParams.length) {
+	const pendingAssignmentCount =
+		existingEntities.length + newEntityParams.length;
+	if (customerLicense.remaining < pendingAssignmentCount) {
 		throw new RecaseError({
 			message: "No available licenses for this plan.",
 			code: ErrCode.InvalidRequest,

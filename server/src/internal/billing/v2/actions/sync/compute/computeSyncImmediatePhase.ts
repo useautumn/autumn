@@ -1,15 +1,17 @@
 import {
 	type AutumnBillingPlan,
-	type CustomerLicenseUpdate,
 	CusProductStatus,
+	type CustomerLicenseUpdate,
 	type Entitlement,
 	type FullCusProduct,
 	type InsertPlanLicenseSpec,
+	type PooledBalanceOp,
 	type Price,
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
@@ -24,6 +26,7 @@ export type ImmediatePhaseResult = {
 	customEntitlements: Entitlement[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
 	customerLicenseUpdates: CustomerLicenseUpdate[];
+	pooledBalanceOps: PooledBalanceOp[];
 };
 
 const expireCustomerProduct = ({
@@ -72,6 +75,7 @@ export const computeSyncImmediatePhase = ({
 			customEntitlements: [],
 			insertPlanLicenses: [],
 			customerLicenseUpdates: [],
+			pooledBalanceOps: [],
 		};
 	}
 
@@ -81,6 +85,7 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
+	const pooledBalanceOps: PooledBalanceOp[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
@@ -115,7 +120,25 @@ export const computeSyncImmediatePhase = ({
 			existingUsagesConfig,
 		});
 
-		insertCustomerProducts.push(insertedCustomerProduct);
+		const {
+			customerProduct: preparedCustomerProduct,
+			pooledBalanceOps: computedPooledBalanceOps,
+		} = computeAttachPooledBalanceOps({
+			customerProduct: insertedCustomerProduct,
+			attachBillingContext: {
+				billingStartsAt: undefined,
+				currentCustomerProduct: productContext.currentCustomerProduct,
+				currentEpochMs,
+				fullCustomer,
+				planTiming: "immediate",
+				requestedBillingCycleAnchor:
+					insertedCustomerProduct.billing_cycle_anchor ?? undefined,
+				skipBillingChanges: true,
+			},
+		});
+
+		insertCustomerProducts.push(preparedCustomerProduct);
+		pooledBalanceOps.push(...computedPooledBalanceOps);
 		customPrices.push(...productContext.customPrices);
 		customEntitlements.push(...productContext.customEntitlements);
 		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
@@ -137,5 +160,6 @@ export const computeSyncImmediatePhase = ({
 		customEntitlements,
 		insertPlanLicenses,
 		customerLicenseUpdates,
+		pooledBalanceOps,
 	};
 };

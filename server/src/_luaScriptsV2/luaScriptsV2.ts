@@ -55,7 +55,9 @@ import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/u
 import ROLL_USAGE_WINDOWS_MAIN from "./fullSubject/rollUsageWindows/rollUsageWindows.lua";
 import APPLY_FIELD_UPDATES from "./fullSubject/updateSubjectBalances/applyFieldUpdates.lua";
 import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
+import UPDATE_SUBJECT_BALANCE_BATCHES_MAIN from "./fullSubject/updateSubjectBalances/updateSubjectBalanceBatches.lua";
 import UPDATE_SUBJECT_BALANCES_MAIN from "./fullSubject/updateSubjectBalances/updateSubjectBalances.lua";
+import VALIDATE_SUBJECT_BALANCE_UPDATE from "./fullSubject/updateSubjectBalances/validateSubjectBalanceUpdate.lua";
 
 // ============================================================================
 // FULL CUSTOMER KEY BUILDER LUA (version interpolated from TS config)
@@ -247,6 +249,14 @@ ${UPDATE_CONTEXT_UTILS}
 ${APPLY_FIELD_UPDATES}
 ${UPDATE_AGGREGATED_BALANCES}
 ${UPDATE_SUBJECT_BALANCES_MAIN}`;
+
+/** Atomically applies guarded SubjectBalance updates across feature hashes. */
+export const UPDATE_SUBJECT_BALANCE_BATCHES_SCRIPT = `${LUA_UTILS}
+${UPDATE_CONTEXT_UTILS}
+${VALIDATE_SUBJECT_BALANCE_UPDATE}
+${APPLY_FIELD_UPDATES}
+${UPDATE_AGGREGATED_BALANCES}
+${UPDATE_SUBJECT_BALANCE_BATCHES_MAIN}`;
 
 /**
  * Lua script for atomically rolling usage-window counters in a per-feature

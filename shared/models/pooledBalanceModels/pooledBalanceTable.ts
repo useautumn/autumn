@@ -16,16 +16,9 @@ import { features } from "../featureModels/featureTable.js";
 import { entitlements } from "../productModels/entModels/entTable.js";
 import type { EntInterval } from "../productModels/intervals/entitlementInterval.js";
 
-export enum PooledBalanceResetOwnerType {
-	CustomerProduct = "customer_product",
-	Subscription = "subscription",
-	Free = "free",
-}
-
 export enum PooledBalanceResetMode {
 	Lazy = "lazy",
 	Subscription = "subscription",
-	Lifetime = "lifetime",
 }
 
 export const pooledBalances = pgTable(
@@ -82,7 +75,7 @@ export const pooledBalances = pgTable(
 		),
 		check(
 			"pooled_balances_reset_mode_valid",
-			sql`${table.reset_mode} IN ('lazy', 'subscription', 'lifetime')`,
+			sql`${table.reset_mode} IN ('lazy', 'subscription')`,
 		),
 		unique("unique_pooled_balance_customer_entitlement").on(
 			table.customer_entitlement_id,
@@ -104,8 +97,10 @@ export const pooledBalanceContributions = pgTable(
 		pooled_balance_id: text().notNull(),
 		source_customer_product_id: text().notNull(),
 		source_entitlement_id: text().notNull(),
-		reset_owner_type: text().$type<PooledBalanceResetOwnerType>().notNull(),
-		reset_owner_id: text().notNull(),
+		// Who renews this contribution: a Stripe subscription, a license link
+		// (customer_licenses.link_id), or neither (free — lazy anchor resets).
+		stripe_subscription_id: text(),
+		customer_license_link_id: text(),
 		current_contribution: numeric({ mode: "number" }).notNull().default(0),
 		next_cycle_contribution: numeric({ mode: "number" }).notNull().default(0),
 		effective_at: numeric({ mode: "number" }),
@@ -137,8 +132,8 @@ export const pooledBalanceContributions = pgTable(
 			sql`${table.next_cycle_contribution} >= 0`,
 		),
 		check(
-			"pooled_balance_contributions_reset_owner_type_valid",
-			sql`${table.reset_owner_type} IN ('customer_product', 'subscription', 'free')`,
+			"pooled_balance_contributions_single_owner",
+			sql`${table.stripe_subscription_id} IS NULL OR ${table.customer_license_link_id} IS NULL`,
 		),
 		unique("unique_pooled_balance_contribution").on(
 			table.source_customer_product_id,
@@ -150,8 +145,11 @@ export const pooledBalanceContributions = pgTable(
 		index("idx_pooled_balance_contributions_source_entitlement")
 			.on(table.source_entitlement_id)
 			.concurrently(),
-		index("idx_pooled_balance_contributions_reset_owner")
-			.on(table.reset_owner_type, table.reset_owner_id, table.pooled_balance_id)
+		index("idx_pooled_balance_contributions_stripe_subscription")
+			.on(table.stripe_subscription_id, table.pooled_balance_id)
+			.concurrently(),
+		index("idx_pooled_balance_contributions_license_link")
+			.on(table.customer_license_link_id, table.pooled_balance_id)
 			.concurrently(),
 	],
 );

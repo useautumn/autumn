@@ -64,6 +64,41 @@ export const logAutumnBillingPlan = ({
 						? `${plan.customEntitlements?.length} custom ent(s)`
 						: "none",
 
+				pooledBalancePlan:
+					[
+						...(plan.pooledBalancePlan?.removeSources ?? []).map(
+							(removeSource) =>
+								`${removeSource.sourceCustomerProductId}:remove${removeSource.effectiveAt ? `@${removeSource.effectiveAt}` : ""}`,
+						),
+						...(plan.pooledBalancePlan?.upsertSources ?? []).map(
+							(upsertSource) =>
+								`${upsertSource.contribution.sourceCustomerProductId}:${upsertSource.pooledBalance.featureId}=${upsertSource.contribution.currentCycleContribution}`,
+						),
+					].join(", ") || "none",
+
+				pooledBalanceOps:
+					plan.pooledBalanceOps
+						?.map((operation) => {
+							switch (operation.op) {
+								case "upsert_source":
+									return `${operation.sourceCustomerProductId}:${operation.featureId}=${operation.currentCycleContribution}`;
+								case "remove_source":
+									return `${operation.sourceCustomerProductId}:remove${operation.effectiveAt ? `@${operation.effectiveAt}` : ""}`;
+								case "remove_contribution":
+									return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove${operation.effectiveAt ? `@${operation.effectiveAt}` : ""}`;
+								case "restore_source":
+									return `${operation.sourceCustomerProductId}:restore@${operation.expectedEffectiveAt}`;
+								case "transfer_source":
+									return `${operation.sourceCustomerProductId}:${operation.featureId}=transfer:${operation.currentCycleContribution}`;
+								case "stage_owner_removal":
+									return `owner:${operation.customerLicenseLinkId}:stage@${operation.effectiveAt}`;
+								case "restore_owner":
+									return `owner:${operation.customerLicenseLinkId}:restore@${operation.expectedEffectiveAt}`;
+							}
+							return operation satisfies never;
+						})
+						.join(", ") || "none",
+
 				trialTransition: `${isTrialing ? "trialing" : "not trialing"} -> ${willBeTrialing ? "will trial" : "no trial"}`,
 
 				updateCustomerEntitlements:

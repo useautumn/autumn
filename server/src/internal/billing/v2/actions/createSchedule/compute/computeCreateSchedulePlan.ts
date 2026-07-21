@@ -71,6 +71,10 @@ export const computeCreateSchedulePlan = ({
 		insertCustomerProducts: allInsertCustomerProducts,
 		updateCustomerProducts: immediate.updateCustomerProducts,
 		deleteCustomerProducts: scheduled.deleteCustomerProducts,
+		pooledBalanceOps: [
+			...immediate.pooledBalanceOps,
+			...scheduled.pooledBalanceOps,
+		],
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
 			...(billingContext.customEnts ?? []),

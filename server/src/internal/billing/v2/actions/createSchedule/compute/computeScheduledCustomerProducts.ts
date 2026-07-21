@@ -1,8 +1,10 @@
 import type {
 	CreateScheduleBillingContext,
 	FullCusProduct,
+	PooledBalanceOp,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
 
 /** Build scheduled customer products to insert and existing ones to delete. */
@@ -18,6 +20,7 @@ export const computeScheduledCustomerProducts = ({
 	const insertCustomerProducts: FullCusProduct[] = [];
 	const customPrices = [];
 	const customEntitlements = [];
+	const pooledBalanceOps: PooledBalanceOp[] = [];
 	const scheduledPhases: { startsAt: number; customerProductIds: string[] }[] =
 		[];
 
@@ -42,8 +45,21 @@ export const computeScheduledCustomerProducts = ({
 					productContext.customPrices.length > 0 ||
 					productContext.customEntitlements.length > 0,
 			});
-			insertCustomerProducts.push(customerProduct);
-			phaseCustomerProductIds.push(customerProduct.id);
+			const prepared = computeAttachPooledBalanceOps({
+				customerProduct,
+				attachBillingContext: {
+					billingStartsAt: phaseContext.startsAt,
+					currentEpochMs: billingContext.currentEpochMs,
+					fullCustomer: billingContext.fullCustomer,
+					planTiming: "end_of_cycle",
+					requestedBillingCycleAnchor: undefined,
+					skipBillingChanges: billingContext.skipBillingChanges,
+				},
+				removeCurrentSource: false,
+			});
+			insertCustomerProducts.push(prepared.customerProduct);
+			pooledBalanceOps.push(...prepared.pooledBalanceOps);
+			phaseCustomerProductIds.push(prepared.customerProduct.id);
 			customPrices.push(...productContext.customPrices);
 			customEntitlements.push(...productContext.customEntitlements);
 		}
@@ -59,6 +75,7 @@ export const computeScheduledCustomerProducts = ({
 		deleteCustomerProducts: existingScheduledCustomerProducts,
 		customPrices,
 		customEntitlements,
+		pooledBalanceOps,
 		scheduledPhases,
 	};
 };

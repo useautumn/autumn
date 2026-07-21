@@ -1,4 +1,8 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	PooledBalanceOp,
+	PooledBalancePlan,
+} from "@autumn/shared";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -44,6 +48,12 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.schedulePhaseCustomerProductReplacements,
 		getKey: (replacement) => replacement.oldCustomerProductId,
 	}),
+	customerLicenseTransitions: mergeByKey({
+		base: base.customerLicenseTransitions,
+		incoming: incoming.customerLicenseTransitions,
+		getKey: (transition) =>
+			`${transition.outgoingCustomerLicense.id}:${transition.incomingCustomerLicense.id}`,
+	}),
 	customPrices: mergeById({
 		base: base.customPrices,
 		incoming: incoming.customPrices,
@@ -51,6 +61,14 @@ export const mergeAutumnBillingPlans = ({
 	customEntitlements: mergeById({
 		base: base.customEntitlements,
 		incoming: incoming.customEntitlements,
+	}),
+	pooledBalancePlan: mergePooledBalancePlan({
+		base: base.pooledBalancePlan,
+		incoming: incoming.pooledBalancePlan,
+	}),
+	pooledBalanceOps: mergePooledBalanceOps({
+		base: base.pooledBalanceOps,
+		incoming: incoming.pooledBalanceOps,
 	}),
 	customFreeTrial: incoming.customFreeTrial ?? base.customFreeTrial,
 	lineItems: mergeById({
@@ -126,6 +144,104 @@ const mergeByKey = <T>({
 	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
 
 	return Array.from(itemByKey.values());
+};
+
+const pooledBalanceOperationKey = (operation: PooledBalanceOp): string => {
+	switch (operation.op) {
+		case "upsert_source":
+			return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}`;
+		case "remove_source":
+			return `${operation.sourceCustomerProductId}:remove`;
+		case "remove_contribution":
+			return `${operation.sourceCustomerProductId}:${operation.sourceEntitlementId}:remove`;
+		case "restore_source":
+			return `${operation.sourceCustomerProductId}:restore`;
+		case "transfer_source":
+			return `${operation.contributionId}:transfer`;
+		case "stage_owner_removal":
+		case "restore_owner":
+			return `owner:${operation.customerLicenseLinkId}`;
+	}
+};
+
+const keepLastOperationByKey = (
+	operations: PooledBalanceOp[],
+): PooledBalanceOp[] => {
+	const seen = new Set<string>();
+	const reversed: PooledBalanceOp[] = [];
+	for (let index = operations.length - 1; index >= 0; index -= 1) {
+		const operation = operations[index];
+		const key = pooledBalanceOperationKey(operation);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		reversed.push(operation);
+	}
+	return reversed.reverse();
+};
+
+const mergePooledBalanceOps = ({
+	base,
+	incoming,
+}: {
+	base?: PooledBalanceOp[];
+	incoming?: PooledBalanceOp[];
+}): PooledBalanceOp[] | undefined => {
+	if (!base?.length && !incoming?.length) return undefined;
+
+	const uniqueIncoming = keepLastOperationByKey(incoming ?? []);
+	const incomingKeys = new Set(uniqueIncoming.map(pooledBalanceOperationKey));
+	const uniqueBase =
+		mergeByKey({
+			base,
+			incoming: [],
+			getKey: pooledBalanceOperationKey,
+		}) ?? [];
+	const remainingBase = uniqueBase.filter(
+		(operation) => !incomingKeys.has(pooledBalanceOperationKey(operation)),
+	);
+	return [...remainingBase, ...uniqueIncoming];
+};
+
+const mergeSourcesByKey = <Source>({
+	base,
+	incoming,
+	getKey,
+}: {
+	base?: Source[];
+	incoming?: Source[];
+	getKey: (source: Source) => string;
+}): Source[] | undefined => {
+	if (!base?.length && !incoming?.length) return undefined;
+	const merged = new Map<string, Source>();
+	for (const source of [...(base ?? []), ...(incoming ?? [])]) {
+		merged.set(getKey(source), source);
+	}
+	return [...merged.values()];
+};
+
+const mergePooledBalancePlan = ({
+	base,
+	incoming,
+}: {
+	base?: PooledBalancePlan;
+	incoming?: PooledBalancePlan;
+}): PooledBalancePlan | undefined => {
+	const removeSources = mergeSourcesByKey({
+		base: base?.removeSources,
+		incoming: incoming?.removeSources,
+		getKey: (source) => source.sourceCustomerProductId,
+	});
+	const upsertSources = mergeSourcesByKey({
+		base: base?.upsertSources,
+		incoming: incoming?.upsertSources,
+		getKey: (source) =>
+			`${source.contribution.sourceCustomerProductId}:${source.contribution.sourceEntitlementId}`,
+	});
+	if (!removeSources && !upsertSources) return undefined;
+	return {
+		...(removeSources ? { removeSources } : {}),
+		...(upsertSources ? { upsertSources } : {}),
+	};
 };
 
 type PatchCustomerProduct = NonNullable<

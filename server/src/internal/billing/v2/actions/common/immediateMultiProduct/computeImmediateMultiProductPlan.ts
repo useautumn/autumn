@@ -8,6 +8,7 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 
@@ -28,7 +29,7 @@ export const computeImmediateMultiProductPlan = ({
 		transitioningProductContext?.scheduledCustomerProduct;
 
 	let transitionContext: AttachBillingContext | undefined;
-	const insertCustomerProducts = billingContext.productContexts.map(
+	const rawInsertCustomerProducts = billingContext.productContexts.map(
 		(productContext) => {
 			const attachBillingContext = productContextToAttachBillingContext({
 				billingContext,
@@ -54,7 +55,7 @@ export const computeImmediateMultiProductPlan = ({
 
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
-		newCustomerProducts: insertCustomerProducts,
+		newCustomerProducts: rawInsertCustomerProducts,
 		deletedCustomerProduct,
 		billingContext,
 		includeArrearLineItems: deletedCustomerProduct !== undefined,
@@ -66,6 +67,22 @@ export const computeImmediateMultiProductPlan = ({
 				fullCustomer: billingContext.fullCustomer,
 			})
 		: { entitlements: [], customerEntitlements: [] };
+	const preparedPooledSources = rawInsertCustomerProducts.map(
+		(customerProduct, index) =>
+			computeAttachPooledBalanceOps({
+				customerProduct,
+				attachBillingContext: productContextToAttachBillingContext({
+					billingContext,
+					productContext: billingContext.productContexts[index],
+				}),
+			}),
+	);
+	const insertCustomerProducts = preparedPooledSources.map(
+		({ customerProduct }) => customerProduct,
+	);
+	const pooledBalanceOps = preparedPooledSources.flatMap(
+		({ pooledBalanceOps }) => pooledBalanceOps,
+	);
 
 	const billingPlan: AutumnBillingPlan = {
 		customerId:
@@ -73,6 +90,7 @@ export const computeImmediateMultiProductPlan = ({
 		insertCustomerProducts,
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
+		pooledBalanceOps,
 		customPrices: billingContext.customPrices,
 		customEntitlements: [
 			...(billingContext.customEnts ?? []),

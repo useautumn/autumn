@@ -4,6 +4,8 @@ import {
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computePooledQuantityUpdateOps } from "@/internal/billing/v2/pooledBalances/compute/computePooledQuantityUpdateOps.js";
+import { isPooledSourceCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
 
 export const computeUpdateQuantityPlan = ({
@@ -38,6 +40,10 @@ export const computeUpdateQuantityPlan = ({
 	const updatedOptions = quantityUpdateDetails.map(
 		(detail) => detail.updatedOptions,
 	);
+	const pooledBalanceOps = computePooledQuantityUpdateOps({
+		customerProduct,
+		updatedOptions,
+	});
 
 	return {
 		customerId: updateSubscriptionContext.fullCustomer?.id ?? "",
@@ -51,9 +57,16 @@ export const computeUpdateQuantityPlan = ({
 			},
 		},
 
-		updateCustomerEntitlements: quantityUpdateDetails.flatMap(
-			(detail) => detail.updateCustomerEntitlements,
-		),
+		updateCustomerEntitlements: quantityUpdateDetails
+			.flatMap((detail) => detail.updateCustomerEntitlements)
+			.filter(
+				(update) =>
+					!isPooledSourceCustomerEntitlement({
+						customerEntitlement: update.customerEntitlement,
+						customerProduct,
+					}),
+			),
+		pooledBalanceOps,
 
 		lineItems,
 	};
