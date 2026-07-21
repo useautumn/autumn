@@ -28,13 +28,13 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { addMonths } from "date-fns";
+import { addMonths, addYears } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { createAmountCoupon } from "../../utils/discounts/discountTestUtils";
 import {
 	expectResetAnchoredTo,
 	getCustomerProduct,
 } from "../../attach/params/start-date/utils";
+import { createAmountCoupon } from "../../utils/discounts/discountTestUtils";
 
 const previewCreateSchedule = async ({
 	autumnV1,
@@ -270,4 +270,76 @@ test.concurrent(
 		expect(response.status).toBe("created");
 		expect(response.invoice?.total).toBe(preview.total);
 	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule backdate preview: no proration still shows the forced subscription invoice and tax")}`,
+	async () => {
+		const customerId = "create-schedule-backdate-preview-no-proration-tax";
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [items.annualPrice({ price: 8_400 })],
+		});
+		const renewal = products.base({
+			id: "enterprise-renewal",
+			items: [items.annualPrice({ price: 13_500 })],
+		});
+
+		const { autumnV1, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.platform.create({
+					configOverrides: { automatic_tax: true },
+					taxRegistrations: ["AU"],
+				}),
+				s.customer({
+					testClock: false,
+					paymentMethod: "success",
+					stripeCustomerOverrides: {
+						address: {
+							country: "AU",
+							line1: "1 Test St",
+							city: "Sydney",
+							postal_code: "2000",
+							state: "NSW",
+						},
+					},
+				}),
+				s.products({ list: [enterprise, renewal] }),
+			],
+			actions: [],
+		});
+
+		const startsAt = advancedTo - ms.days(260);
+		const params: CreateScheduleParamsV0Input = {
+			customer_id: customerId,
+			billing_behavior: "none",
+			phases: [
+				{
+					starts_at: startsAt,
+					plans: [{ plan_id: enterprise.id }],
+				},
+				{
+					starts_at: addYears(startsAt, 1).getTime(),
+					plans: [{ plan_id: renewal.id }],
+				},
+			],
+		};
+
+		const preview = await previewCreateSchedule({ autumnV1, params });
+
+		expect(preview.subtotal).toBe(8_400);
+		expect(preview.line_items).toHaveLength(1);
+		expect(preview.tax?.status).toBe("complete");
+		expect(preview.tax?.total).toBeGreaterThan(0);
+		expect(preview.total).toBeCloseTo(
+			preview.subtotal + (preview.tax?.total ?? 0),
+			2,
+		);
+
+		const response = await autumnV1.billing.createSchedule(params);
+		expect(response.invoice?.status).toBe("paid");
+		expect(response.invoice?.total).toBeCloseTo(preview.total, 2);
+	},
+	300_000,
 );
