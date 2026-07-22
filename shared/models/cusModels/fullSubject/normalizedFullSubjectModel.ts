@@ -91,6 +91,8 @@ export type SubjectBalance = {
 	usage_allowed: boolean | null;
 	separate_interval: boolean;
 	is_pooled_balance?: boolean;
+	pooled_balance_id?: string | null;
+	pooled_contribution_id?: string | null;
 	pooled_balance?: DbPooledBalance;
 	reset_cycle_anchor: number | null;
 	next_reset_at: number | null;

@@ -28,6 +28,7 @@ export const initPooledBalanceGraph = ({
 }): MutablePooledCustomerEntitlement => {
 	const entitlementId = generateId("ent");
 	const customerEntitlementId = generateId("cus_ent");
+	const pooledBalanceId = generateId("pool");
 
 	return {
 		...structuredClone(contributionCustomerEntitlement),
@@ -57,11 +58,13 @@ export const initPooledBalanceGraph = ({
 		cache_version: 0,
 		external_id: null,
 		is_pooled_balance: true,
+		pooled_balance_id: pooledBalanceId,
+		pooled_contribution_id: null,
 		replaceables: [],
 		rollovers: [],
 		pooled_balance_contribution: undefined,
 		pooled_balance: {
-			id: generateId("pool"),
+			id: pooledBalanceId,
 			org_id: ctx.org.id,
 			env: ctx.env,
 			internal_customer_id: customerProduct.internal_customer_id,

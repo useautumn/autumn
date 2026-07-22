@@ -168,12 +168,6 @@ export const subjectQueryRowToNormalized = ({
 			customerEntitlement.entitlement_id,
 		);
 		if (!catalogEntitlement) return;
-		if (
-			catalogEntitlement.pooled === true &&
-			!customerEntitlement.is_pooled_balance
-		) {
-			return;
-		}
 
 		if (catalogEntitlement.feature.type === FeatureType.Boolean) {
 			const newPriority = getFlagPriority(customerEntitlement);

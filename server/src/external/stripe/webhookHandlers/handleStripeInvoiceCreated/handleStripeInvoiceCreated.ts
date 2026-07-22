@@ -9,6 +9,7 @@ import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhook
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceCreatedContext } from "./setupInvoiceCreatedContext";
 import { processConsumablePricesForInvoiceCreated } from "./tasks/processConsumablePricesForInvoiceCreated";
+import { resetSubscriptionPooledBalances } from "./tasks/resetSubscriptionPooledBalances.js";
 
 export const handleStripeInvoiceCreated = async ({
 	ctx,
@@ -35,6 +36,7 @@ export const handleStripeInvoiceCreated = async ({
 	});
 	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
 	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
+	await resetSubscriptionPooledBalances({ ctx, eventContext });
 
 	const shouldStoreScheduleProrationInvoice =
 		eventContext.stripeInvoice.billing_reason === "subscription_update" &&

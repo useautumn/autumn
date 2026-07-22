@@ -46,6 +46,8 @@ export const CustomerEntitlementSchema = z.object({
 	// Optional at the model boundary for legacy cached objects. The DB column is
 	// non-null and defaults to false.
 	is_pooled_balance: z.boolean().optional(),
+	pooled_balance_id: z.string().nullable().optional(),
+	pooled_contribution_id: z.string().nullable().optional(),
 	reset_cycle_anchor: z.number().nullable().optional(),
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),

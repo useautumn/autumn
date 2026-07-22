@@ -1,7 +1,5 @@
-import { listPooledCustomerEntitlements } from "./listPooledCustomerEntitlements";
-import { listScopedPooledBalanceContributions } from "./listScopedPooledBalanceContributions";
+import { listPooledBalanceContributionsPage } from "./listPooledBalanceContributionsPage";
 
 export const pooledBalancesRepo = {
-	listPooledCustomerEntitlements,
-	listScopedPooledBalanceContributions,
+	listPooledBalanceContributionsPage,
 };

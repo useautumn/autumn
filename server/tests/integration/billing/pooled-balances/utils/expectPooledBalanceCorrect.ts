@@ -14,6 +14,7 @@ type PoolExpectation = {
 	resetCycleAnchor: "present" | null;
 	resetMode: PooledBalanceResetMode;
 	stripeSubscriptionId: "stripe_subscription" | null;
+	rollovers?: Array<{ balance: number; usage?: number }>;
 };
 
 type ContributionExpectation = {
@@ -61,6 +62,16 @@ export const expectPooledBalanceCorrect = async ({
 			expect(pooledCustomerEntitlement.next_reset_at).not.toBeNull();
 		} else {
 			expect(pooledCustomerEntitlement.next_reset_at).toBeNull();
+		}
+		if (pool.rollovers) {
+			expect(pooledCustomerEntitlement.rollovers).toHaveLength(
+				pool.rollovers.length,
+			);
+			for (let index = 0; index < pool.rollovers.length; index++) {
+				expect(pooledCustomerEntitlement.rollovers[index]).toMatchObject(
+					pool.rollovers[index],
+				);
+			}
 		}
 	}
 

@@ -44,11 +44,18 @@ export const executePooledBalancePlan = async ({
 				});
 			}
 
-			const { feature: _feature, ...entitlement } = fullEntitlement;
-			await tx.insert(entitlements).values(entitlement as InsertDbEntitlement);
+			const { feature: _feature, ...fullEntitlementFields } = fullEntitlement;
+			const entitlement: InsertDbEntitlement = fullEntitlementFields;
+			const syntheticCustomerEntitlement: InsertCustomerEntitlement = {
+				...customerEntitlement,
+				balance: customerEntitlement.balance ?? 0,
+				pooled_balance_id: pooledBalance.id,
+				pooled_contribution_id: null,
+			};
+			await tx.insert(entitlements).values(entitlement);
 			await tx
 				.insert(customerEntitlements)
-				.values(customerEntitlement as InsertCustomerEntitlement);
+				.values(syntheticCustomerEntitlement);
 			await tx.insert(pooledBalances).values(pooledBalance);
 		}
 
@@ -91,6 +98,18 @@ export const executePooledBalancePlan = async ({
 			await tx
 				.insert(pooledBalanceContributions)
 				.values(pooledBalancePlan.insertPoolContributions);
+
+			for (const contribution of pooledBalancePlan.insertPoolContributions) {
+				await tx
+					.update(customerEntitlements)
+					.set({ pooled_contribution_id: contribution.id })
+					.where(
+						eq(
+							customerEntitlements.id,
+							contribution.source_customer_entitlement_id,
+						),
+					);
+			}
 		}
 
 		for (const contribution of pooledBalancePlan.updatePoolContributions) {
@@ -110,6 +129,13 @@ export const executePooledBalancePlan = async ({
 			(contribution) => contribution.id,
 		);
 		if (contributionIds.length > 0) {
+			await tx
+				.update(customerEntitlements)
+				.set({ pooled_contribution_id: null })
+				.where(
+					inArray(customerEntitlements.pooled_contribution_id, contributionIds),
+				);
+
 			await tx
 				.delete(pooledBalanceContributions)
 				.where(inArray(pooledBalanceContributions.id, contributionIds));

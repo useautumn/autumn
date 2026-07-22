@@ -7,6 +7,7 @@ export type FlattenedCustomerRow = {
 	customer_products: any[];
 	customer_entitlements: any[];
 	extra_customer_entitlements: any[];
+	pooled_customer_entitlements: FlatCustomerEntitlement[];
 	customer_prices: any[];
 	entitlements: any[];
 	rollovers: any[];

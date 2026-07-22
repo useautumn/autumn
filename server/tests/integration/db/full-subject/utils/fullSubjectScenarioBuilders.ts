@@ -349,6 +349,8 @@ const buildCustomerEntitlement = ({
 	usage_allowed: false,
 	separate_interval: false,
 	is_pooled_balance: false,
+	pooled_balance_id: null,
+	pooled_contribution_id: null,
 	reset_cycle_anchor: null,
 	adjustment: 0,
 	additional_balance: 0,

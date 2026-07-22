@@ -38,6 +38,7 @@ export const getPooledBalanceDbState = async ({
 					customerEntitlements.id,
 					pools.map((pool) => pool.customer_entitlement_id),
 				),
+				with: { rollovers: true },
 			})
 		: [];
 	const contributions = pools.length

@@ -108,7 +108,9 @@ export const cusEntToEffectiveRolloverMax = ({
 	if (rolloverConfig.max_percentage == null) return rolloverConfig.max ?? null;
 
 	let startingBalance: number;
-	if (hasFullCusProduct(cusEnt)) {
+	if (cusEnt.pooled_balance) {
+		startingBalance = cusEntToStartingBalance({ cusEnt });
+	} else if (hasFullCusProduct(cusEnt)) {
 		startingBalance = cusEntToStartingBalance({ cusEnt });
 	} else {
 		const options = entToOptions({

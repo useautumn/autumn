@@ -337,6 +337,13 @@
       "when": 1784665621208,
       "tag": "0047_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1784672842480,
+      "tag": "0048_clever_professor_monster",
+      "breakpoints": true
     }
   ]
 }

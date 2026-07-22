@@ -86,6 +86,7 @@ export const applyIncomingPooledBalanceSources = ({
 		});
 		normalizePooledBalanceContributionCustomerEntitlement({
 			contributionCustomerEntitlement,
+			contribution,
 		});
 	}
 };

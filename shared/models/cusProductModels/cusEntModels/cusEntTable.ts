@@ -34,6 +34,10 @@ export const customerEntitlements = pgTable(
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
 		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),
+		/** Denormalized reverse link; pooled_balances.customer_entitlement_id is canonical. */
+		pooled_balance_id: text("pooled_balance_id"),
+		/** Denormalized reverse link; source_customer_entitlement_id is canonical. */
+		pooled_contribution_id: text("pooled_contribution_id"),
 
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
