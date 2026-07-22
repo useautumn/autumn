@@ -283,9 +283,10 @@ describe("sandboxes.copy: copy plans + features between two sandbox sub-orgs", (
 
 		const links = copied!.licenses ?? [];
 		expect(links).toHaveLength(1);
+		// DB plan licenses carry internal ids; the public id is on the product.
 		expect(links[0]).toMatchObject({
-			license_plan_id: LICENSE_ID,
 			included: 3,
+			product: expect.objectContaining({ id: LICENSE_ID }),
 		});
 		const [storedLink] =
 			await planLicenseRepo.listCatalogByParentInternalProductIds({

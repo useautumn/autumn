@@ -20,7 +20,7 @@ export const handleListAuthOrganizations = async (c: Context) => {
 	}
 
 	const orgs = await db
-		.select({
+		.selectDistinct({
 			id: organizations.id,
 			name: organizations.name,
 			slug: organizations.slug,

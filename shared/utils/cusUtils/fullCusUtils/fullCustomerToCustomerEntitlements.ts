@@ -1,4 +1,5 @@
 import { isEntityCusEnt } from "@utils/cusEntUtils/cusEntUtils.js";
+import { isCustomerProductLicenseAssignment } from "@utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
 import type { Entity } from "../../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
 import type { CustomerEntitlementFilters } from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
@@ -73,12 +74,23 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	cusEnts = cusEnts.filter((cusEnt) =>
-		cusEntMatchesEntity({
-			cusEnt: cusEnt,
-			entity,
-		}),
-	);
+	if (entity) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			cusEntMatchesEntity({
+				cusEnt: cusEnt,
+				entity,
+			}),
+		);
+	} else {
+		// License seat assignments stay invisible at the customer level — the
+		// pool parent already reports them. Other entity-scoped cusEnts pool up.
+		cusEnts = cusEnts.filter(
+			(cusEnt) =>
+				!isCustomerProductLicenseAssignment(
+					cusEnt.customer_product ?? undefined,
+				),
+		);
+	}
 
 	// Filter out expired entitlements (applies to loose entitlements with expires_at)
 	// This is necessary because cached fullCustomer may contain entitlements that have since expired
