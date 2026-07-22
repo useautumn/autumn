@@ -14,7 +14,12 @@ import {
 import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
 /**
- * Delete FullCustomer from Redis cache across ALL regions.
+ * Delete the deprecated FullCustomer cache across all regions and invalidate
+ * FullSubject for legacy callers.
+ *
+ * @deprecated New code must use the FullSubject cache APIs under
+ * `internal/customers/cache/fullSubject` directly. The FullCustomer cache is no
+ * longer part of the active customer-read path.
  * @param skipGuard - If true, skips setting the guard key. Default false (guard is set). Use skipGuard: true when deleting cache before a fresh Postgres read.
  */
 export const deleteCachedFullCustomer = async ({

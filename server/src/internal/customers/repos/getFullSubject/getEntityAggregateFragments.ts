@@ -88,7 +88,8 @@ export const getEntityAggregateFragments = ({
 			SELECT ce.*, cp.internal_entity_id AS cp_entity_key
 			FROM entity_cus_products cp
 			JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
-			WHERE 1 = 1
+			WHERE ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 				${featureFilter}
 
 			UNION ALL
@@ -98,6 +99,8 @@ export const getEntityAggregateFragments = ({
 			WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
 				AND ce.customer_product_id IS NULL
 				AND ce.internal_entity_id IS NOT NULL
+				AND ce.pooled_balance_id IS NULL
+				AND ce.pooled_contribution_id IS NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				AND (ce.balance != 0 OR ce.unlimited IS TRUE)
 				${featureFilter}

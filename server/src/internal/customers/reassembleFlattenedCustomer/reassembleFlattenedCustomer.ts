@@ -1,4 +1,7 @@
-import { CUSTOMER_PRODUCTS_DEFAULT_LIMIT, type FullCustomer } from "@autumn/shared";
+import {
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	type FullCustomer,
+} from "@autumn/shared";
 import { buildCustomerProductsSeedByCustomer } from "../cusUtils/buildCustomerProductsSeed.js";
 import { buildLookupMaps } from "./buildLookupMaps.js";
 import { compareCusProducts } from "./compareCusProducts.js";
@@ -32,6 +35,14 @@ export const reassembleFlattenedCustomer = (
 		const list = looseCesByCusId.get(ce.internal_customer_id);
 		if (list) list.push(hydrated);
 		else looseCesByCusId.set(ce.internal_customer_id, [hydrated]);
+	}
+
+	const pooledCesByCusId = new Map<string, unknown[]>();
+	for (const ce of flat.pooled_customer_entitlements) {
+		const hydrated = hydrateCustomerEntitlement(ce, maps, { normalize: false });
+		const list = pooledCesByCusId.get(ce.internal_customer_id);
+		if (list) list.push(hydrated);
+		else pooledCesByCusId.set(ce.internal_customer_id, [hydrated]);
 	}
 
 	const cpsByCusId = new Map<
@@ -78,6 +89,7 @@ export const reassembleFlattenedCustomer = (
 				total_count: 0,
 			},
 			extra_customer_entitlements: looseCesByCusId.get(internalId) ?? [],
+			pooled_customer_entitlements: pooledCesByCusId.get(internalId) ?? [],
 			subscriptions: subsByCusId.get(internalId) ?? [],
 		};
 		if (flat.entities !== undefined) {

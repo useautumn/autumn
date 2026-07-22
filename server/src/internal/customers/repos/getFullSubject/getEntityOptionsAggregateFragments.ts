@@ -12,7 +12,7 @@ import { sql } from "drizzle-orm";
  */
 export const getEntityOptionsAggregateFragments = () => {
 	const ctes = sql`
-		entity_option_rows AS (
+		entity_option_rows AS MATERIALIZED (
 			SELECT
 				ecp.internal_customer_id,
 				ecp.id AS customer_product_id,
@@ -55,8 +55,7 @@ export const getEntityOptionsAggregateFragments = () => {
 					cpr.created_at DESC
 				LIMIT 1
 			) prepaid_price ON true
-			WHERE
-				(
+			WHERE (
 					eor.option_internal_feature_id IS NOT NULL
 					AND ce.internal_feature_id = eor.option_internal_feature_id
 				)

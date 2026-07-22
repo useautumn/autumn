@@ -211,6 +211,7 @@ export const productItemsToPlanItemsV1 = ({
 			feature: apiFeature,
 			included: included,
 			unlimited: item.included_usage === Infinite,
+			pooled: item.pooled ?? false,
 
 			reset,
 			price, // V1: price can be null (no need for conditional spread)

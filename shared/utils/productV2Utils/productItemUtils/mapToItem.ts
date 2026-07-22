@@ -65,6 +65,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
 		interval_count: ent.interval_count ?? 1,
 
 		entity_feature_id: ent.entity_feature_id,
+		pooled: ent.pooled ?? false,
 		reset_usage_when_enabled: !ent.carry_from_previous,
 
 		// Include rollover config
@@ -136,6 +137,7 @@ export const toFeaturePriceItem = ({
 		tier_behavior: price.tier_behavior ?? null,
 
 		entity_feature_id: ent.entity_feature_id,
+		pooled: ent.pooled ?? false,
 		reset_usage_when_enabled: !ent.carry_from_previous,
 		usage_model:
 			config.bill_when === BillWhen.StartOfPeriod ||

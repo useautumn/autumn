@@ -28,6 +28,8 @@ export * from "./licenses/index.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
+// Pooled balances
+export * from "./pooledBalances/index.js";
 // Product
 export * from "./products/index.js";
 // Referrals

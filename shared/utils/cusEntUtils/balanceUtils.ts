@@ -3,6 +3,7 @@ import { Decimal } from "decimal.js";
 import type { FullCustomerEntitlement } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { notNullish, nullish } from "../utils.js";
+import { cusEntToStartingBalance } from "./balanceUtils/cusEntToStartingBalance.js";
 
 export const getSummedEntityBalances = ({
 	cusEnt,
@@ -128,9 +129,10 @@ export const getMaxOverage = ({
 
 	if (!cusEnt.usage_allowed) return undefined;
 
-	const maxOverage = new Decimal(usageLimit)
-		.sub(cusEnt.entitlement.allowance || 0)
-		.toNumber();
+	const includedUsage = cusEnt.pooled_balance
+		? cusEntToStartingBalance({ cusEnt })
+		: cusEnt.entitlement.allowance || 0;
+	const maxOverage = new Decimal(usageLimit).sub(includedUsage).toNumber();
 
 	return maxOverage;
 };

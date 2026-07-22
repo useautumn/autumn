@@ -30,6 +30,10 @@ const findCustomerEntitlement = ({
 		if (customerEntitlement.id === customerEntitlementId)
 			return Object.assign(customerEntitlement, { customer_product: null });
 	}
+	for (const customerEntitlement of fullSubject.pooled_customer_entitlements) {
+		if (customerEntitlement.id === customerEntitlementId)
+			return Object.assign(customerEntitlement, { customer_product: null });
+	}
 	return null;
 };
 

@@ -5,6 +5,7 @@ import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
 import type { CustomerEntitlementFilters } from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
+import { isPooledBalanceSourceCustomerEntitlement } from "../../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../../utils.js";
@@ -48,6 +49,18 @@ export const fullCustomerToCustomerEntitlements = ({
 			customer_product: null,
 		});
 	}
+
+	for (const cusEnt of fullCustomer.pooled_customer_entitlements ?? []) {
+		cusEnts.push({
+			...cusEnt,
+			customer_product: null,
+		});
+	}
+
+	cusEnts = cusEnts.filter(
+		(customerEntitlement) =>
+			!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }),
+	);
 
 	if (featureId) {
 		cusEnts = cusEnts.filter(
