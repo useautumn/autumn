@@ -9,6 +9,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 
 export const handleTrack = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -25,7 +26,7 @@ export const handleTrack = createRoute({
 
 		if (body.async === true) {
 			await runAsyncTrack({ ctx, body });
-			return c.json({ success: true }, 202);
+			return c.json(getQueuedTrackResponse({ ctx, body }), 202);
 		}
 
 		const response = await runTrackWithRollout({

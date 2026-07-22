@@ -6,6 +6,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
+import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
 
 export const handleTrackTokens = createRoute({
@@ -23,7 +24,7 @@ export const handleTrackTokens = createRoute({
 
 		if (trackBody.async === true) {
 			await runAsyncTrack({ ctx, body: trackBody });
-			return c.json({ success: true }, 202);
+			return c.json(getQueuedTrackResponse({ ctx, body: trackBody }), 202);
 		}
 
 		const response = await runTrackWithRollout({
