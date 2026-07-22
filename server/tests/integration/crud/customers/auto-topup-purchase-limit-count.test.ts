@@ -358,3 +358,211 @@ test.concurrent(
 		expect(expanded?.next_reset_at).not.toBe(staleWindowEndsAt);
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("customers.create: purchase_limit.count writes runtime state")}`,
+	async () => {
+		const customerId = "atu-pl-count-create";
+		const { autumn } = await createClients();
+
+		try {
+			await autumn.customers.delete(customerId);
+		} catch {
+			// ignore missing
+		}
+
+		await autumn.customers.create({
+			id: customerId,
+			name: customerId,
+			email: `${customerId}@example.com`,
+			billing_controls: {
+				auto_topups: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						threshold: 50,
+						quantity: 100,
+						purchase_limit: {
+							interval: PurchaseLimitInterval.Month,
+							limit: 5,
+							count: 3,
+						},
+					},
+				],
+			},
+		});
+
+		const expanded = await getExpandedPurchaseLimit({ autumn, customerId });
+		expect(expanded).toMatchObject({
+			interval: PurchaseLimitInterval.Month,
+			limit: 5,
+			count: 3,
+		});
+		expect(expanded?.next_reset_at).toBeGreaterThan(Date.now());
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("customers.update: rejected counts do not partially commit")}`,
+	async () => {
+		const customerId = "atu-pl-count-atomic";
+		const { autumn } = await createClients();
+		await ensureCustomer({ autumn, customerId });
+
+		await autumn.customers.update(customerId, {
+			billing_controls: {
+				auto_topups: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						threshold: 50,
+						quantity: 100,
+						purchase_limit: {
+							interval: PurchaseLimitInterval.Month,
+							limit: 5,
+							count: 1,
+						},
+					},
+				],
+			},
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			func: async () =>
+				await autumn.customers.update(customerId, {
+					billing_controls: {
+						auto_topups: [
+							{
+								feature_id: TestFeature.Messages,
+								enabled: true,
+								threshold: 50,
+								quantity: 100,
+								purchase_limit: {
+									interval: PurchaseLimitInterval.Month,
+									limit: 5,
+									count: 2,
+								},
+							},
+							{
+								feature_id: TestFeature.Credits,
+								enabled: true,
+								threshold: 50,
+								quantity: 100,
+								purchase_limit: {
+									interval: PurchaseLimitInterval.Month,
+									limit: 5,
+									count: 6,
+								},
+							},
+						],
+					},
+				}),
+		});
+
+		const expanded = await getExpandedPurchaseLimit({ autumn, customerId });
+		expect(expanded?.count).toEqual(1);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("customers.update: interval changes reset the purchase window")}`,
+	async () => {
+		const customerId = "atu-pl-count-interval";
+		const { autumn, ctx, org } = await createClients();
+		await ensureCustomer({ autumn, customerId });
+
+		await autumn.customers.update(customerId, {
+			billing_controls: makeAutoTopupConfig({
+				threshold: 50,
+				quantity: 100,
+				purchaseLimit: { interval: PurchaseLimitInterval.Month, limit: 5 },
+			}),
+		});
+
+		const customer = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customerId,
+			orgId: org.id,
+			env: ctx.env,
+		});
+		if (!customer) throw new Error("customer missing after create");
+
+		const now = Date.now();
+		const monthlyWindowEndsAt = now + 25 * 24 * 60 * 60 * 1000;
+		await autoTopupLimitRepo.insert({
+			ctx,
+			data: {
+				id: generateId("atlim"),
+				internal_customer_id: customer.internal_id,
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				purchase_window_ends_at: monthlyWindowEndsAt,
+				purchase_count: 1,
+				attempt_window_ends_at: now,
+				attempt_count: 0,
+				failed_attempt_window_ends_at: now,
+				failed_attempt_count: 0,
+				updated_at: now,
+			},
+		});
+
+		await autumn.customers.update(customerId, {
+			billing_controls: {
+				auto_topups: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						threshold: 50,
+						quantity: 100,
+						purchase_limit: {
+							interval: PurchaseLimitInterval.Week,
+							limit: 5,
+							count: 1,
+						},
+					},
+				],
+			},
+		});
+
+		const expanded = await getExpandedPurchaseLimit({ autumn, customerId });
+		expect(expanded?.next_reset_at).toBeGreaterThan(
+			Date.now() + 6 * 24 * 60 * 60 * 1000,
+		);
+		expect(expanded?.next_reset_at).toBeLessThan(
+			Date.now() + 8 * 24 * 60 * 60 * 1000,
+		);
+		expect(expanded?.next_reset_at).not.toEqual(monthlyWindowEndsAt);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("customers.update: duplicate auto top-up features are rejected")}`,
+	async () => {
+		const customerId = "atu-pl-count-duplicate";
+		const { autumn } = await createClients();
+		await ensureCustomer({ autumn, customerId });
+
+		await expectAutumnError({
+			func: async () =>
+				await autumn.customers.update(customerId, {
+					billing_controls: {
+						auto_topups: [
+							{
+								feature_id: TestFeature.Messages,
+								enabled: true,
+								threshold: 50,
+								quantity: 100,
+							},
+							{
+								feature_id: TestFeature.Messages,
+								enabled: true,
+								threshold: 25,
+								quantity: 50,
+							},
+						],
+					},
+				}),
+		});
+	},
+);
