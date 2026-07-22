@@ -742,10 +742,6 @@ export type CreatePlanLicense = {
   prepaidOnly?: boolean | undefined;
   customize?: CreatePlanLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
-  /**
-   * Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
-   */
-  version?: number | undefined;
 };
 
 /**
@@ -824,7 +820,7 @@ export type CreatePlanPurchaseLimitIntervalRequestBody = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type CreatePlanPurchaseLimitRequest = {
   /**
@@ -839,6 +835,10 @@ export type CreatePlanPurchaseLimitRequest = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type CreatePlanAutoTopupRequest = {
@@ -859,7 +859,7 @@ export type CreatePlanAutoTopupRequest = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: CreatePlanPurchaseLimitRequest | undefined;
   /**
@@ -1972,7 +1972,7 @@ export type CreatePlanVariantDetailsPurchaseLimitInterval = OpenEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type CreatePlanVariantDetailsPurchaseLimit = {
   /**
@@ -1987,6 +1987,10 @@ export type CreatePlanVariantDetailsPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type CreatePlanVariantDetailsAutoTopup = {
@@ -2007,7 +2011,7 @@ export type CreatePlanVariantDetailsAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: CreatePlanVariantDetailsPurchaseLimit | undefined;
   /**
@@ -3567,7 +3571,6 @@ export type CreatePlanLicense$Outbound = {
   prepaid_only?: boolean | undefined;
   customize?: CreatePlanLicenseCustomize$Outbound | null | undefined;
   metadata?: { [k: string]: any } | undefined;
-  version?: number | undefined;
 };
 
 /** @internal */
@@ -3583,7 +3586,6 @@ export const CreatePlanLicense$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => CreatePlanLicenseCustomize$outboundSchema)),
     ),
     metadata: z.optional(z.record(z.string(), z.any())),
-    version: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -3690,6 +3692,7 @@ export type CreatePlanPurchaseLimitRequest$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -3701,6 +3704,7 @@ export const CreatePlanPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
     interval: CreatePlanPurchaseLimitIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5104,6 +5108,7 @@ export const CreatePlanVariantDetailsPurchaseLimit$inboundSchema: z.ZodMiniType<
     interval: CreatePlanVariantDetailsPurchaseLimitInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
+    count: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

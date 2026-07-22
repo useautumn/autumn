@@ -767,7 +767,7 @@ export type SetupPaymentPurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type SetupPaymentPurchaseLimit = {
   /**
@@ -782,6 +782,10 @@ export type SetupPaymentPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type SetupPaymentAutoTopup = {
@@ -802,7 +806,7 @@ export type SetupPaymentAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: SetupPaymentPurchaseLimit | undefined;
   /**
@@ -2537,6 +2541,7 @@ export type SetupPaymentPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -2548,6 +2553,7 @@ export const SetupPaymentPurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: SetupPaymentPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
