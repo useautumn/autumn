@@ -76,7 +76,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -103,10 +102,16 @@ components:
                         type: number
                         minimum: 1
                         description: Maximum number of auto top-ups allowed within the interval.
+                      count:
+                        type: number
+                        minimum: 0
+                        description: Set the current window's consumed auto top-up count. Omit to leave
+                          runtime state unchanged.
                     required:
                       - interval
                       - limit
-                    description: Optional rate limit to cap how often auto top-ups occur.
+                    description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                      to set the current window's consumed top-ups.
                   invoice_mode:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -339,7 +344,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -1996,7 +2000,6 @@ components:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -2023,10 +2026,16 @@ components:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -2197,7 +2206,6 @@ components:
                     description: Whether auto top-up is enabled.
                   threshold:
                     type: number
-                    minimum: 0
                     description: When the balance drops below this threshold, an auto top-up will be
                       purchased.
                   quantity:
@@ -2831,7 +2839,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -2858,10 +2865,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -3185,7 +3198,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -4261,7 +4273,6 @@ paths:
                                     description: Whether auto top-up is enabled.
                                   threshold:
                                     type: number
-                                    minimum: 0
                                     description: When the balance drops below this threshold, an auto top-up will be
                                       purchased.
                                   quantity:
@@ -5138,7 +5149,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -5165,10 +5175,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -5404,7 +5420,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -6851,7 +6866,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -6878,10 +6892,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -7843,7 +7863,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -7870,10 +7889,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -8047,7 +8073,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -9173,7 +9198,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -9200,10 +9224,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -9377,7 +9408,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -10482,7 +10512,6 @@ paths:
                                             description: Whether auto top-up is enabled.
                                           threshold:
                                             type: number
-                                            minimum: 0
                                             description: When the balance drops below this threshold, an auto top-up will be
                                               purchased.
                                           quantity:
@@ -10509,10 +10538,17 @@ paths:
                                                 type: number
                                                 minimum: 1
                                                 description: Maximum number of auto top-ups allowed within the interval.
+                                              count:
+                                                type: number
+                                                minimum: 0
+                                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                                  runtime state unchanged.
                                             required:
                                               - interval
                                               - limit
-                                            description: Optional rate limit to cap how often auto top-ups occur.
+                                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                              to set the current window's
+                                              consumed top-ups.
                                           invoice_mode:
                                             type: boolean
                                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -10687,7 +10723,6 @@ paths:
                                     description: Whether auto top-up is enabled.
                                   threshold:
                                     type: number
-                                    minimum: 0
                                     description: When the balance drops below this threshold, an auto top-up will be
                                       purchased.
                                   quantity:
@@ -11641,7 +11676,6 @@ paths:
                             description: Whether auto top-up is enabled.
                           threshold:
                             type: number
-                            minimum: 0
                             description: When the balance drops below this threshold, an auto top-up will be
                               purchased.
                           quantity:
@@ -11668,10 +11702,16 @@ paths:
                                 type: number
                                 minimum: 1
                                 description: Maximum number of auto top-ups allowed within the interval.
+                              count:
+                                type: number
+                                minimum: 0
+                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                  runtime state unchanged.
                             required:
                               - interval
                               - limit
-                            description: Optional rate limit to cap how often auto top-ups occur.
+                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                              to set the current window's consumed top-ups.
                           invoice_mode:
                             type: boolean
                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -12241,7 +12281,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -12268,10 +12307,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -13226,7 +13272,6 @@ paths:
                                       description: Whether auto top-up is enabled.
                                     threshold:
                                       type: number
-                                      minimum: 0
                                       description: When the balance drops below this threshold, an auto top-up will be
                                         purchased.
                                     quantity:
@@ -13253,10 +13298,17 @@ paths:
                                           type: number
                                           minimum: 1
                                           description: Maximum number of auto top-ups allowed within the interval.
+                                        count:
+                                          type: number
+                                          minimum: 0
+                                          description: Set the current window's consumed auto top-up count. Omit to leave
+                                            runtime state unchanged.
                                       required:
                                         - interval
                                         - limit
-                                      description: Optional rate limit to cap how often auto top-ups occur.
+                                      description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                        to set the current window's consumed
+                                        top-ups.
                                     invoice_mode:
                                       type: boolean
                                       description: When true, auto top-up creates a send_invoice invoice instead of
@@ -13430,7 +13482,6 @@ paths:
                               description: Whether auto top-up is enabled.
                             threshold:
                               type: number
-                              minimum: 0
                               description: When the balance drops below this threshold, an auto top-up will be
                                 purchased.
                             quantity:
@@ -15422,7 +15473,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -15449,10 +15499,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -16867,7 +16923,6 @@ paths:
                                               description: Whether auto top-up is enabled.
                                             threshold:
                                               type: number
-                                              minimum: 0
                                               description: When the balance drops below this threshold, an auto top-up will be
                                                 purchased.
                                             quantity:
@@ -16894,10 +16949,17 @@ paths:
                                                   type: number
                                                   minimum: 1
                                                   description: Maximum number of auto top-ups allowed within the interval.
+                                                count:
+                                                  type: number
+                                                  minimum: 0
+                                                  description: Set the current window's consumed auto top-up count. Omit to leave
+                                                    runtime state unchanged.
                                               required:
                                                 - interval
                                                 - limit
-                                              description: Optional rate limit to cap how often auto top-ups occur.
+                                              description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                                to set the current window's
+                                                consumed top-ups.
                                             invoice_mode:
                                               type: boolean
                                               description: When true, auto top-up creates a send_invoice invoice instead of
@@ -17568,7 +17630,6 @@ paths:
                                             description: Whether auto top-up is enabled.
                                           threshold:
                                             type: number
-                                            minimum: 0
                                             description: When the balance drops below this threshold, an auto top-up will be
                                               purchased.
                                           quantity:
@@ -17595,10 +17656,17 @@ paths:
                                                 type: number
                                                 minimum: 1
                                                 description: Maximum number of auto top-ups allowed within the interval.
+                                              count:
+                                                type: number
+                                                minimum: 0
+                                                description: Set the current window's consumed auto top-up count. Omit to leave
+                                                  runtime state unchanged.
                                             required:
                                               - interval
                                               - limit
-                                            description: Optional rate limit to cap how often auto top-ups occur.
+                                            description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                              to set the current window's
+                                              consumed top-ups.
                                           invoice_mode:
                                             type: boolean
                                             description: When true, auto top-up creates a send_invoice invoice instead of
@@ -19287,7 +19355,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -19314,10 +19381,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -22078,7 +22151,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -22105,10 +22177,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -23440,7 +23518,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -23467,10 +23544,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -25924,7 +26007,6 @@ paths:
                                 description: Whether auto top-up is enabled.
                               threshold:
                                 type: number
-                                minimum: 0
                                 description: When the balance drops below this threshold, an auto top-up will be
                                   purchased.
                               quantity:
@@ -25951,10 +26033,16 @@ paths:
                                     type: number
                                     minimum: 1
                                     description: Maximum number of auto top-ups allowed within the interval.
+                                  count:
+                                    type: number
+                                    minimum: 0
+                                    description: Set the current window's consumed auto top-up count. Omit to leave
+                                      runtime state unchanged.
                                 required:
                                   - interval
                                   - limit
-                                description: Optional rate limit to cap how often auto top-ups occur.
+                                description: Optional rate limit to cap how often auto top-ups occur. Pass count
+                                  to set the current window's consumed top-ups.
                               invoice_mode:
                                 type: boolean
                                 description: When true, auto top-up creates a send_invoice invoice instead of
@@ -28079,7 +28167,6 @@ paths:
                                         description: Whether auto top-up is enabled.
                                       threshold:
                                         type: number
-                                        minimum: 0
                                         description: When the balance drops below this threshold, an auto top-up will be
                                           purchased.
                                       quantity:
@@ -28856,7 +28943,6 @@ paths:
                                         description: Whether auto top-up is enabled.
                                       threshold:
                                         type: number
-                                        minimum: 0
                                         description: When the balance drops below this threshold, an auto top-up will be
                                           purchased.
                                       quantity:

@@ -53,7 +53,7 @@ ListInvoicesStatus = Literal[
 ]
 
 
-ProcessorTypeRequest = Literal[
+ListInvoicesProcessorTypeRequest = Literal[
     "stripe",
     "revenuecat",
 ]
@@ -70,7 +70,7 @@ class ListInvoicesParamsTypedDict(TypedDict):
     r"""Filter invoices to a single entity by ID. Must be provided together with customer_id, since entity IDs are only unique per customer."""
     status: NotRequired[List[ListInvoicesStatus]]
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
-    processor_types: NotRequired[List[ProcessorTypeRequest]]
+    processor_types: NotRequired[List[ListInvoicesProcessorTypeRequest]]
     r"""Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe."""
 
 
@@ -90,7 +90,7 @@ class ListInvoicesParams(BaseModel):
     status: Optional[List[ListInvoicesStatus]] = None
     r"""Filter by invoice status (draft, open, paid, void, uncollectible)."""
 
-    processor_types: Optional[List[ProcessorTypeRequest]] = None
+    processor_types: Optional[List[ListInvoicesProcessorTypeRequest]] = None
     r"""Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe."""
 
     @model_serializer(mode="wrap")

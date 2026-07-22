@@ -896,7 +896,7 @@ export type GetPlanVariantDetailsPurchaseLimitInterval = OpenEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type GetPlanVariantDetailsPurchaseLimit = {
   /**
@@ -911,6 +911,10 @@ export type GetPlanVariantDetailsPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type GetPlanVariantDetailsAutoTopup = {
@@ -931,7 +935,7 @@ export type GetPlanVariantDetailsAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: GetPlanVariantDetailsPurchaseLimit | undefined;
   /**
@@ -2503,6 +2507,7 @@ export const GetPlanVariantDetailsPurchaseLimit$inboundSchema: z.ZodMiniType<
     interval: GetPlanVariantDetailsPurchaseLimitInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
+    count: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

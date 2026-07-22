@@ -1158,8 +1158,6 @@ class CreatePlanLicenseTypedDict(TypedDict):
     prepaid_only: NotRequired[bool]
     customize: NotRequired[Nullable[CreatePlanLicenseCustomizeTypedDict]]
     metadata: NotRequired[Dict[str, Any]]
-    version: NotRequired[int]
-    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
 
 
 class CreatePlanLicense(BaseModel):
@@ -1173,14 +1171,9 @@ class CreatePlanLicense(BaseModel):
 
     metadata: Optional[Dict[str, Any]] = None
 
-    version: Optional[int] = None
-    r"""Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(
-            ["included", "prepaid_only", "customize", "metadata", "version"]
-        )
+        optional_fields = set(["included", "prepaid_only", "customize", "metadata"])
         nullable_fields = set(["customize"])
         serialized = handler(self)
         m = {}
@@ -1304,7 +1297,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class CreatePlanPurchaseLimitRequestTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -1312,10 +1305,12 @@ class CreatePlanPurchaseLimitRequestTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class CreatePlanPurchaseLimitRequest(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreatePlanPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
@@ -1326,9 +1321,12 @@ class CreatePlanPurchaseLimitRequest(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -1353,7 +1351,7 @@ class CreatePlanAutoTopupRequestTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[CreatePlanPurchaseLimitRequestTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -1372,7 +1370,7 @@ class CreatePlanAutoTopupRequest(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[CreatePlanPurchaseLimitRequest] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
@@ -3222,7 +3220,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class CreatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreatePlanVariantDetailsPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -3230,10 +3228,12 @@ class CreatePlanVariantDetailsPurchaseLimitTypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class CreatePlanVariantDetailsPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreatePlanVariantDetailsPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
@@ -3244,9 +3244,12 @@ class CreatePlanVariantDetailsPurchaseLimit(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -3271,7 +3274,7 @@ class CreatePlanVariantDetailsAutoTopupTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[CreatePlanVariantDetailsPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -3290,7 +3293,7 @@ class CreatePlanVariantDetailsAutoTopup(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[CreatePlanVariantDetailsPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
