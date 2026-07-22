@@ -59,17 +59,6 @@ test.concurrent(
 );
 
 test.concurrent(
-	"pooled item validation: rejects prepaid feature pricing",
-	async () => {
-		await expectPooledItemRejected({
-			planId: `pooled-prepaid-${crypto.randomUUID()}`,
-			item: { ...itemsV2.prepaidMessages(), pooled: true },
-			errMessage: "Pooled items cannot use usage-based pricing",
-		});
-	},
-);
-
-test.concurrent(
 	"pooled item validation: rejects pay-per-use feature pricing",
 	async () => {
 		await expectPooledItemRejected({

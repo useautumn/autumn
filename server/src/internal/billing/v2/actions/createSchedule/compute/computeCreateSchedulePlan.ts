@@ -47,10 +47,7 @@ export const computeCreateSchedulePlan = ({
 		billingContext,
 		existingScheduledCustomerProducts,
 	});
-	const {
-		incomingCustomerProducts: immediateCustomerProducts,
-		pooledBalancePlan,
-	} = computePooledBalanceTransitionPlan({
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: billingContext.fullCustomer,
 		outgoingCustomerProducts: currentRecurringCustomerProducts,
@@ -58,6 +55,7 @@ export const computeCreateSchedulePlan = ({
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 		now: billingContext.currentEpochMs,
 	});
+	const immediateCustomerProducts = immediate.insertCustomerProducts;
 
 	const allInsertCustomerProducts = [
 		...immediateCustomerProducts,

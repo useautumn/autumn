@@ -1,17 +1,9 @@
 import type {
 	DbPooledBalanceContribution,
-	FullCustomerEntitlement,
 	InsertPooledBalanceContribution,
 	PooledBalancePlan,
 } from "@autumn/shared";
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
-
-type IncomingCustomerProductContributionLinks = {
-	customer_entitlements: Pick<
-		FullCustomerEntitlement,
-		"pooled_contribution_id"
-	>[];
-};
 
 const contributionValuesMatch = ({
 	current,
@@ -42,10 +34,8 @@ const toContributionUpdate = ({
 
 export const finalizePooledBalanceTransitionPlan = ({
 	pooledBalancePlan,
-	incomingCustomerProducts,
 }: {
 	pooledBalancePlan: PooledBalancePlan;
-	incomingCustomerProducts: IncomingCustomerProductContributionLinks[];
 }): PooledBalancePlan | undefined => {
 	const deletedContributionBySourceEntitlementId = new Map(
 		pooledBalancePlan.deletePoolContributions.map((contribution) => [
@@ -54,7 +44,6 @@ export const finalizePooledBalanceTransitionPlan = ({
 		]),
 	);
 	const reconciledDeletedContributionIds = new Set<string>();
-	const preservedContributionIdByInsertedId = new Map<string, string>();
 	const contributionUpdatesById = new Map(
 		pooledBalancePlan.updatePoolContributions.map((contribution) => [
 			contribution.id,
@@ -73,25 +62,11 @@ export const finalizePooledBalanceTransitionPlan = ({
 		}
 
 		reconciledDeletedContributionIds.add(current.id);
-		preservedContributionIdByInsertedId.set(incoming.id, current.id);
 		if (!contributionValuesMatch({ current, incoming })) {
 			contributionUpdatesById.set(
 				current.id,
 				toContributionUpdate({ current, incoming }),
 			);
-		}
-	}
-
-	for (const customerProduct of incomingCustomerProducts) {
-		for (const customerEntitlement of customerProduct.customer_entitlements) {
-			const insertedContributionId = customerEntitlement.pooled_contribution_id;
-			if (!insertedContributionId) continue;
-			const preservedContributionId = preservedContributionIdByInsertedId.get(
-				insertedContributionId,
-			);
-			if (preservedContributionId) {
-				customerEntitlement.pooled_contribution_id = preservedContributionId;
-			}
 		}
 	}
 

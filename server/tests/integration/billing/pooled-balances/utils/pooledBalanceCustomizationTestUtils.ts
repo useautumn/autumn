@@ -26,7 +26,6 @@ export type PooledCustomizationCase =
 	| "enable_pooling";
 
 export type PooledCustomizationSurface = "put" | "patch" | "migration";
-export type PooledPricingBillingMethod = "prepaid" | "usage_based";
 
 const INITIAL_GRANT = 100;
 const UPDATED_GRANT = 200;
@@ -76,15 +75,11 @@ export const buildPooledCustomization = ({
 
 export const buildRejectedPooledPricingCustomization = ({
 	surface,
-	billingMethod,
 }: {
 	surface: Exclude<PooledCustomizationSurface, "migration">;
-	billingMethod: PooledPricingBillingMethod;
 }): NonNullable<UpdateSubscriptionV1ParamsInput["customize"]> => {
 	const pooledItem = {
-		...(billingMethod === "prepaid"
-			? itemsV2.prepaidMessages({ included: INITIAL_GRANT })
-			: itemsV2.consumableMessages()),
+		...itemsV2.consumableMessages(),
 		pooled: true,
 	};
 

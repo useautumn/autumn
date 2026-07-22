@@ -1,4 +1,4 @@
-/** PUT and PATCH customization preserve valid pools while rejecting prepaid or pay-per-use pooled pricing.
+/** PUT and PATCH customization preserve valid pools while rejecting pay-per-use pooled pricing.
  * Unrelated edits preserve the pool; grant increases apply the delta; enabling pooling carries usage. */
 
 import { test } from "bun:test";
@@ -11,7 +11,6 @@ import {
 	expectPooledCustomizationResult,
 	expectPooledCustomizationUnchanged,
 	type PooledCustomizationCase,
-	type PooledPricingBillingMethod,
 	setupPooledCustomizationScenario,
 } from "../utils/pooledBalanceCustomizationTestUtils.js";
 
@@ -48,13 +47,11 @@ const runPooledCustomizationCase = async ({
 
 const runRejectedPooledPricingCase = async ({
 	surface,
-	billingMethod,
 }: {
 	surface: "put" | "patch";
-	billingMethod: PooledPricingBillingMethod;
 }) => {
 	const scenario = await setupPooledCustomizationScenario({
-		customerId: `pooled-customize-${surface}-reject-${billingMethod}`,
+		customerId: `pooled-customize-${surface}-reject-usage-based`,
 		case: "increase_grant",
 	});
 
@@ -69,7 +66,6 @@ const runRejectedPooledPricingCase = async ({
 					entity_id: scenario.entities[0].id,
 					customize: buildRejectedPooledPricingCustomization({
 						surface,
-						billingMethod,
 					}),
 				},
 			),
@@ -139,31 +135,10 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("pooled customize put: prepaid pooled pricing is rejected")}`,
-	async () => {
-		await runRejectedPooledPricingCase({
-			surface: "put",
-			billingMethod: "prepaid",
-		});
-	},
-);
-
-test.concurrent(
 	`${chalk.yellowBright("pooled customize put: pay-per-use pooled pricing is rejected")}`,
 	async () => {
 		await runRejectedPooledPricingCase({
 			surface: "put",
-			billingMethod: "usage_based",
-		});
-	},
-);
-
-test.concurrent(
-	`${chalk.yellowBright("pooled customize patch: prepaid pooled pricing is rejected")}`,
-	async () => {
-		await runRejectedPooledPricingCase({
-			surface: "patch",
-			billingMethod: "prepaid",
 		});
 	},
 );
@@ -173,7 +148,6 @@ test.concurrent(
 	async () => {
 		await runRejectedPooledPricingCase({
 			surface: "patch",
-			billingMethod: "usage_based",
 		});
 	},
 );

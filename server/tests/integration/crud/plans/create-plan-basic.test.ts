@@ -32,9 +32,7 @@ test.concurrent(
 		const productId = "min_plan";
 		try {
 			await autumnV2.products.delete(productId);
-		} catch (_error) {
-			console.log(_error);
-		}
+		} catch (_error) {}
 
 		const created = await autumnV2.products.create<
 			ApiPlan,

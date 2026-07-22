@@ -6,6 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceSources/applyIncomingPooledBalanceSources";
 import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
+import { applyPooledBalancePlanToIncomingCustomerProducts } from "./applyPooledBalancePlanToIncomingCustomerProducts";
 import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
 import { finalizePooledBalanceTransitionPlan } from "./finalizePooledBalanceTransitionPlan";
 
@@ -24,7 +25,6 @@ export const computePooledBalanceTransitionPlan = ({
 	stripeSubscriptionId?: string;
 	now: number;
 }): {
-	incomingCustomerProducts: FullCusProduct[];
 	pooledBalancePlan?: PooledBalancePlan;
 } => {
 	const incomingCustomerProducts: FullCusProduct[] = [];
@@ -32,7 +32,7 @@ export const computePooledBalanceTransitionPlan = ({
 	for (const customerProduct of inputIncomingCustomerProducts) {
 		if (incomingCustomerProductIds.has(customerProduct.id)) continue;
 		incomingCustomerProductIds.add(customerProduct.id);
-		incomingCustomerProducts.push(structuredClone(customerProduct));
+		incomingCustomerProducts.push(customerProduct);
 	}
 	const computeContext = setupPooledBalanceComputeContext({
 		pooledCustomerEntitlements: fullCustomer.pooled_customer_entitlements ?? [],
@@ -60,11 +60,13 @@ export const computePooledBalanceTransitionPlan = ({
 		});
 	}
 
-	return {
-		incomingCustomerProducts,
-		pooledBalancePlan: finalizePooledBalanceTransitionPlan({
-			pooledBalancePlan: computeContext.plan,
-			incomingCustomerProducts,
-		}),
-	};
+	const pooledBalancePlan = finalizePooledBalanceTransitionPlan({
+		pooledBalancePlan: computeContext.plan,
+	});
+	applyPooledBalancePlanToIncomingCustomerProducts({
+		customerProducts: incomingCustomerProducts,
+		pooledBalancePlan,
+	});
+
+	return { pooledBalancePlan };
 };

@@ -8,7 +8,7 @@ export const normalizePooledBalanceContributionCustomerEntitlement = ({
 	contribution,
 }: {
 	contributionCustomerEntitlement: FullCustomerEntitlement;
-	contribution: InsertPooledBalanceContribution;
+	contribution: Pick<InsertPooledBalanceContribution, "id">;
 }) => {
 	contributionCustomerEntitlement.pooled_contribution_id = contribution.id;
 	contributionCustomerEntitlement.pooled_balance_id = null;

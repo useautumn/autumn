@@ -36,15 +36,14 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 				}),
 			)
 		: plan.insertCustomerProducts;
-	const { incomingCustomerProducts, pooledBalancePlan } =
-		computePooledBalanceTransitionPlan({
-			ctx,
-			fullCustomer: billingContext.fullCustomer,
-			outgoingCustomerProducts: [billingContext.customerProduct],
-			incomingCustomerProducts: incomingCustomerProductSnapshots,
-			stripeSubscriptionId: billingContext.stripeSubscription?.id,
-			now: billingContext.currentEpochMs,
-		});
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		outgoingCustomerProducts: [billingContext.customerProduct],
+		incomingCustomerProducts: incomingCustomerProductSnapshots,
+		stripeSubscriptionId: billingContext.stripeSubscription?.id,
+		now: billingContext.currentEpochMs,
+	});
 
 	if (updatesExistingCustomerProduct) {
 		return { ...plan, pooledBalancePlan };
@@ -52,7 +51,6 @@ export const finalizeUpdateSubscriptionPooledBalancePlan = ({
 
 	return {
 		...plan,
-		insertCustomerProducts: incomingCustomerProducts,
 		pooledBalancePlan,
 	};
 };

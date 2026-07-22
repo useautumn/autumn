@@ -18,25 +18,23 @@ export const computeAttachPooledBalancePlan = ({
 	customerProduct: FullCusProduct;
 	pooledBalancePlan?: PooledBalancePlan;
 } => {
-	const customerProduct = structuredClone(newCustomerProduct);
 	if (attachBillingContext.planTiming !== "immediate") {
-		return { customerProduct };
+		return { customerProduct: newCustomerProduct };
 	}
 
-	const { incomingCustomerProducts, pooledBalancePlan } =
-		computePooledBalanceTransitionPlan({
-			ctx,
-			fullCustomer: attachBillingContext.fullCustomer,
-			outgoingCustomerProducts: attachBillingContext.currentCustomerProduct
-				? [attachBillingContext.currentCustomerProduct]
-				: [],
-			incomingCustomerProducts: [customerProduct],
-			stripeSubscriptionId: attachBillingContext.stripeSubscription?.id,
-			now: attachBillingContext.currentEpochMs,
-		});
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: attachBillingContext.fullCustomer,
+		outgoingCustomerProducts: attachBillingContext.currentCustomerProduct
+			? [attachBillingContext.currentCustomerProduct]
+			: [],
+		incomingCustomerProducts: [newCustomerProduct],
+		stripeSubscriptionId: attachBillingContext.stripeSubscription?.id,
+		now: attachBillingContext.currentEpochMs,
+	});
 
 	return {
-		customerProduct: incomingCustomerProducts[0],
+		customerProduct: newCustomerProduct,
 		pooledBalancePlan,
 	};
 };

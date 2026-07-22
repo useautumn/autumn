@@ -74,18 +74,12 @@ test("identical contribution replacement finalizes to a no-op", () => {
 			current: currentContribution(),
 			incoming: insertedContribution(),
 		}),
-		incomingCustomerProducts: [],
 	});
 
 	expect(result).toBeUndefined();
 });
 
 test("changed contribution replacement preserves the existing row", () => {
-	const incomingCustomerProducts = [
-		{
-			customer_entitlements: [{ pooled_contribution_id: "inserted" }],
-		},
-	];
 	const result = finalizePooledBalanceTransitionPlan({
 		pooledBalancePlan: transitionPlan({
 			current: currentContribution(),
@@ -95,7 +89,6 @@ test("changed contribution replacement preserves the existing row", () => {
 				next: 200,
 			}),
 		}),
-		incomingCustomerProducts,
 	});
 
 	expect(result?.insertPoolContributions).toEqual([]);
@@ -109,9 +102,6 @@ test("changed contribution replacement preserves the existing row", () => {
 			updated_at: 2,
 		},
 	]);
-	expect(
-		incomingCustomerProducts[0].customer_entitlements[0].pooled_contribution_id,
-	).toBe("current");
 });
 
 test("different sources remain independent insert and delete operations", () => {
@@ -120,7 +110,6 @@ test("different sources remain independent insert and delete operations", () => 
 			current: currentContribution({ sourceEntitlementId: "outgoing" }),
 			incoming: insertedContribution({ sourceEntitlementId: "incoming" }),
 		}),
-		incomingCustomerProducts: [],
 	});
 
 	expect(result?.insertPoolContributions).toHaveLength(1);

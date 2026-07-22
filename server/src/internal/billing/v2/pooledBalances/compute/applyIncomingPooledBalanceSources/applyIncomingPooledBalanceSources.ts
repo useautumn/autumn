@@ -11,7 +11,6 @@ import { computePooledBalanceContributionAmounts } from "./computePooledBalanceC
 import { computePooledBalanceLifecycle } from "./computePooledBalanceLifecycle";
 import { initCustomerEntitlementPooledIdentity } from "./initCustomerEntitlementPooledIdentity";
 import { initPooledBalanceContribution } from "./initPooledBalanceContribution";
-import { normalizePooledBalanceContributionCustomerEntitlement } from "./normalizePooledBalanceContributionCustomerEntitlement";
 import { upsertPooledBalance } from "./upsertPooledBalance";
 
 export const applyIncomingPooledBalanceSources = ({
@@ -82,10 +81,6 @@ export const applyIncomingPooledBalanceSources = ({
 
 		addToInsertPoolContributions({
 			pooledBalancePlan: computeContext.plan,
-			contribution,
-		});
-		normalizePooledBalanceContributionCustomerEntitlement({
-			contributionCustomerEntitlement,
 			contribution,
 		});
 	}

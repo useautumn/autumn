@@ -52,16 +52,14 @@ export const computeSyncPlan = ({
 			outgoingCustomerProducts.push(customerProduct);
 		}
 	}
-	const {
-		incomingCustomerProducts: preparedImmediateCustomerProducts,
-		pooledBalancePlan,
-	} = computePooledBalanceTransitionPlan({
+	const { pooledBalancePlan } = computePooledBalanceTransitionPlan({
 		ctx,
 		fullCustomer: syncContext.fullCustomer,
 		outgoingCustomerProducts,
 		incomingCustomerProducts: immediate.insertCustomerProducts,
 		now: syncContext.currentEpochMs,
 	});
+	const preparedImmediateCustomerProducts = immediate.insertCustomerProducts;
 
 	const upsertSubscription = syncContext.stripeSubscription
 		? initSubscriptionFromStripe({
