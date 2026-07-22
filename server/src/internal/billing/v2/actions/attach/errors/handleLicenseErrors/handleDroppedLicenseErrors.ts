@@ -36,8 +36,9 @@ export const handleDroppedLicenseErrors = ({
 		throw new RecaseError({
 			message:
 				`License changes conflict with active license assignments: ` +
-				`${used} assigned for ${licensePlanId}, but the licenses in group "${group}" ` +
-				"are not a 1:1 match on the incoming plan. Release licenses first.",
+				`${used} assigned for ${licensePlanId}, but Autumn cannot determine which ` +
+				`incoming license should receive them in group "${group}". Release the ` +
+				"assignments first, or configure a single matching license for that group.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
