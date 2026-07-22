@@ -1,7 +1,7 @@
 import {
 	type AutumnBillingPlan,
-	type CustomerLicenseUpdate,
 	CusProductStatus,
+	type CustomerLicenseUpdate,
 	type Entitlement,
 	type FullCusProduct,
 	type InsertPlanLicenseSpec,
@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
+import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
@@ -24,6 +25,9 @@ export type ImmediatePhaseResult = {
 	customEntitlements: Entitlement[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
 	customerLicenseUpdates: CustomerLicenseUpdate[];
+	releaseCustomerLicenseAssignments?: NonNullable<
+		AutumnBillingPlan["releaseCustomerLicenseAssignments"]
+	>;
 };
 
 const expireCustomerProduct = ({
@@ -81,6 +85,7 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
+	const droppedCustomerLicenseLinkIds: string[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
@@ -121,6 +126,14 @@ export const computeSyncImmediatePhase = ({
 		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
 		if (productContext.currentCustomerProduct) {
+			const release = computeCustomerLicenseReleases({
+				outgoingCustomerProduct: productContext.currentCustomerProduct,
+				incomingCustomerProduct: insertedCustomerProduct,
+				releasedAt: currentEpochMs,
+			}).releaseCustomerLicenseAssignments;
+			droppedCustomerLicenseLinkIds.push(
+				...(release?.customerLicenseLinkIds ?? []),
+			);
 			updateCustomerProducts.push(
 				expireCustomerProduct({
 					customerProduct: productContext.currentCustomerProduct,
@@ -137,5 +150,11 @@ export const computeSyncImmediatePhase = ({
 		customEntitlements,
 		insertPlanLicenses,
 		customerLicenseUpdates,
+		releaseCustomerLicenseAssignments: droppedCustomerLicenseLinkIds.length
+			? {
+					customerLicenseLinkIds: droppedCustomerLicenseLinkIds,
+					releasedAt: currentEpochMs,
+				}
+			: undefined,
 	};
 };

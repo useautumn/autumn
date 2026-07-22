@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
+import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases.js";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
@@ -65,6 +66,13 @@ export const activateScheduledCustomerProduct = async ({
 				incomingCustomerProducts: [customerProduct],
 			})
 		: [];
+	const customerLicenseReleases = transitionSource
+		? computeCustomerLicenseReleases({
+				outgoingCustomerProduct: transitionSource,
+				incomingCustomerProduct: customerProduct,
+				releasedAt: Date.now(),
+			})
+		: {};
 
 	// Executing through the shared plan runs the license lifecycle for
 	// activations that bring license-bearing parents live.
@@ -80,6 +88,8 @@ export const activateScheduledCustomerProduct = async ({
 				},
 			],
 			customerLicenseTransitions,
+			releaseCustomerLicenseAssignments:
+				customerLicenseReleases.releaseCustomerLicenseAssignments,
 		},
 	});
 

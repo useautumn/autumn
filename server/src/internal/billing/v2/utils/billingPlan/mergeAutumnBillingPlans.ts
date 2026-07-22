@@ -100,6 +100,24 @@ export const mergeAutumnBillingPlans = ({
 	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
+	releaseCustomerLicenseAssignments:
+		base.releaseCustomerLicenseAssignments ||
+		incoming.releaseCustomerLicenseAssignments
+			? {
+					customerLicenseLinkIds: [
+						...new Set([
+							...(base.releaseCustomerLicenseAssignments
+								?.customerLicenseLinkIds ?? []),
+							...(incoming.releaseCustomerLicenseAssignments
+								?.customerLicenseLinkIds ?? []),
+						]),
+					],
+					releasedAt: Math.max(
+						base.releaseCustomerLicenseAssignments?.releasedAt ?? 0,
+						incoming.releaseCustomerLicenseAssignments?.releasedAt ?? 0,
+					),
+				}
+			: undefined,
 });
 
 const mergeById = <T extends { id: string }>({

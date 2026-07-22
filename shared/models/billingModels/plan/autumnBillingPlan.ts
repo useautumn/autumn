@@ -119,6 +119,12 @@ export const AutumnBillingPlanSchema = z.object({
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)
 		.optional(),
+	releaseCustomerLicenseAssignments: z
+		.object({
+			customerLicenseLinkIds: z.array(z.string()),
+			releasedAt: z.number(),
+		})
+		.optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

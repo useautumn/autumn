@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases";
 import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
@@ -62,6 +63,14 @@ export const computeAttachPlan = ({
 		: [];
 	const customerLicenseTransitions =
 		planTiming === "immediate" ? computedCustomerLicenseTransitions : [];
+	const customerLicenseReleases =
+		planTiming === "immediate" && currentCustomerProduct
+			? computeCustomerLicenseReleases({
+					outgoingCustomerProduct: currentCustomerProduct,
+					incomingCustomerProduct: newCustomerProduct,
+					releasedAt: attachBillingContext.currentEpochMs,
+				})
+			: {};
 
 	const {
 		entitlements: carriedOverEntitlements,
@@ -133,6 +142,8 @@ export const computeAttachPlan = ({
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
 		customerLicenseTransitions,
+		releaseCustomerLicenseAssignments:
+			customerLicenseReleases.releaseCustomerLicenseAssignments,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),

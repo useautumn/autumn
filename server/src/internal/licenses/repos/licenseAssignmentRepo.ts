@@ -136,6 +136,43 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
+/** Releases dropped pools in one statement; retries only count assigned rows. */
+const releaseActiveAssignmentsByLinkIds = async ({
+	db,
+	customerLicenseLinkIds,
+	releasedAt,
+}: {
+	db: DrizzleCli;
+	customerLicenseLinkIds: string[];
+	releasedAt: number;
+}) => {
+	if (customerLicenseLinkIds.length === 0) return;
+	await db.execute(sql`
+		WITH released AS (
+			UPDATE customer_products
+			SET internal_entity_id = NULL,
+				entity_id = NULL,
+				released_at = ${releasedAt}
+			WHERE customer_license_link_id IN (${sql.join(
+				customerLicenseLinkIds.map((linkId) => sql`${linkId}`),
+				sql`, `,
+			)})
+				AND internal_entity_id IS NOT NULL
+				AND status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
+			RETURNING customer_license_link_id
+		), released_counts AS (
+			SELECT customer_license_link_id, count(*)::int AS count
+			FROM released
+			GROUP BY customer_license_link_id
+		)
+		UPDATE customer_licenses AS pool
+		SET remaining = LEAST(pool.granted, pool.remaining + released_counts.count),
+			updated_at = ${releasedAt}
+		FROM released_counts
+		WHERE pool.link_id = released_counts.customer_license_link_id
+	`);
+};
+
 /** Ends active seats anchored to no surviving pool link (unstamped or
  * dangling) — one set-based UPDATE per reconcile. */
 const expireOrphanAssignments = async ({
@@ -273,6 +310,7 @@ const repointSeatPrices = async ({
 export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
+	releaseActiveAssignmentsByLinkIds,
 	listUnusedAssignmentsByLinkId,
 	expireOrphanAssignments,
 	expireUnusedAssignmentsByLinkIds,

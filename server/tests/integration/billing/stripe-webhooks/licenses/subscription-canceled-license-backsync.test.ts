@@ -5,7 +5,9 @@ import type { ApiCustomerV5 } from "@autumn/shared";
 import { createExternalStripeSubscription } from "@tests/integration/billing/stripe-webhooks/utils/sharedStripeProductAutoSyncUtils";
 import { getBaseStripePriceId } from "@tests/integration/billing/sync/utils/syncProductHelpers";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { listLicenseAssignments } from "@tests/integration/licenses/licenseTestUtils";
 import { expectCustomerLicenses } from "@tests/integration/licenses/utils/expectCustomerLicenses";
+import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { timeout } from "@tests/utils/genUtils";
@@ -65,11 +67,12 @@ const setupBackSyncedLicenseSubscription = async ({
 		],
 	});
 
-	const { autumnV2_3 } = await initScenario({
+	const { autumnV2_3, entities } = await initScenario({
 		customerId,
 		ctx,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
 			s.products({ list: [pro, devSeat] }),
 		],
 		actions: [
@@ -119,7 +122,7 @@ const setupBackSyncedLicenseSubscription = async ({
 		},
 	});
 
-	return { autumnV2_3, pro, devSeat, stripeSubscription };
+	return { autumnV2_3, entities, pro, devSeat, stripeSubscription };
 };
 
 test(`${chalk.yellowBright("license webhook cancel: Stripe end-of-cycle is canceling in customers.get")}`, async () => {
@@ -156,11 +159,18 @@ test(`${chalk.yellowBright("license webhook cancel: Stripe end-of-cycle is cance
 
 test(`${chalk.yellowBright("license webhook cancel: Stripe immediate cancel is absent in customers.get")}`, async () => {
 	const customerId = "license-webhook-cancel-immediate";
-	const { autumnV2_3, pro, stripeSubscription } =
+	const { autumnV2_3, entities, pro, devSeat, stripeSubscription } =
 		await setupBackSyncedLicenseSubscription({
 			customerId,
 			idPrefix: "license-webhook-immediate",
 		});
+	const entity = entities[0];
+	if (!entity) throw new Error("Expected an entity");
+	await autumnV2_3.licenses.attach({
+		customer_id: customerId,
+		plan_id: devSeat.id,
+		entities: [{ entity_id: entity.id }],
+	});
 
 	await ctx.stripeCli.subscriptions.cancel(stripeSubscription.id);
 
@@ -170,6 +180,12 @@ test(`${chalk.yellowBright("license webhook cancel: Stripe immediate cancel is a
 		assertState: async (customer) => {
 			await expectCustomerProducts({ customer, notPresent: [pro.id] });
 			expectCustomerLicenses({ customer, count: 0, licenses: [] });
+			const assignments = await listLicenseAssignments({
+				autumn: autumnV2_3,
+				customerId,
+				active: true,
+			});
+			if (assignments.length > 0) throw new Error("Expected released licenses");
 		},
 	});
 });
