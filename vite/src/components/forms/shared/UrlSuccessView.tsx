@@ -46,8 +46,8 @@ export function UrlSuccessView({
 				</Button>
 				<CopyButton
 					text={url}
-					className="w-full"
-					innerClassName="text-xs text-tertiary-foreground font-mono min-w-0 flex-1"
+					className="w-full [&>span]:min-w-0 [&>span]:max-w-full"
+					innerClassName="text-xs text-tertiary-foreground font-mono min-w-0 flex-1 text-left"
 				/>
 			</SheetFooter>
 		</>
