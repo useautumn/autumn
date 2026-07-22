@@ -37,6 +37,8 @@ type VariantSetup = {
 	attachCustomer?: boolean;
 };
 
+const runSuffix = crypto.randomUUID().slice(0, 8);
+
 const monthlyMessagesItem = (included: number) => ({
 	feature_id: TestFeature.Messages,
 	included,
@@ -116,13 +118,15 @@ const getOptionalProduct = (params: {
 const setupVariantVersioning = async ({
 	testId,
 	attachBaseCustomer = false,
+	isolatedOrg = false,
 	variants,
 }: {
 	testId: string;
 	attachBaseCustomer?: boolean;
+	isolatedOrg?: boolean;
 	variants: VariantSetup[];
 }) => {
-	const customerId = `variant_versioning_${testId}`;
+	const customerId = `vv_${testId}_${runSuffix}`;
 	const variantCustomerIds = variants
 		.filter((variant) => variant.attachCustomer)
 		.map((variant) => `${customerId}_${variant.key}`);
@@ -134,6 +138,9 @@ const setupVariantVersioning = async ({
 	const { autumnV2_2, ctx } = await initScenario({
 		customerId,
 		setup: [
+			...(isolatedOrg
+				? [s.platform.create({ setupDefaultFeatures: true })]
+				: []),
 			s.customer({}),
 			s.products({ list: [base] }),
 			...(variantCustomerIds.length > 0
@@ -752,6 +759,7 @@ test.concurrent(
 		const { autumnV2_2, baseId, baseV1, ctx, rpc, variantIds } =
 			await setupVariantVersioning({
 				testId: "catalog_delete_latest_base_relink",
+				isolatedOrg: true,
 				variants: [{ key: "annual" }],
 			});
 		const variantId = variantIds.annual;

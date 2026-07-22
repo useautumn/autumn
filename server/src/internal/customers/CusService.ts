@@ -186,6 +186,7 @@ export class CusService {
 						customer_products: [],
 						customer_entitlements: [],
 						extra_customer_entitlements: [],
+						pooled_customer_entitlements: [],
 						customer_prices: [],
 						entitlements: [],
 						rollovers: [],

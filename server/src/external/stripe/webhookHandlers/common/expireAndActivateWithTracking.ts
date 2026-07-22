@@ -12,12 +12,7 @@ type SubscriptionEventContext =
 	| StripeSubscriptionUpdatedContext
 	| StripeSubscriptionDeletedContext;
 
-/**
- * Expires a customer product and activates a free successor (scheduled or default).
- * Handles all tracking for updates and insertions.
- *
- * @returns The expired customer product (with updates applied)
- */
+/** Expires a product, activates its free successor, and records both transitions. */
 export const expireAndActivateWithTracking = async ({
 	ctx,
 	eventContext,
@@ -26,7 +21,11 @@ export const expireAndActivateWithTracking = async ({
 	ctx: StripeWebhookContext;
 	eventContext: SubscriptionEventContext;
 	customerProduct: FullCusProduct;
-}): Promise<{ expiredCustomerProduct: FullCusProduct }> => {
+}): Promise<{
+	expiredCustomerProduct: FullCusProduct;
+	activatedCustomerProduct?: FullCusProduct;
+	insertedCustomerProduct?: FullCusProduct;
+}> => {
 	const { fullCustomer } = eventContext;
 
 	const { updates, activatedCustomerProduct, insertedCustomerProduct } =
@@ -60,5 +59,9 @@ export const expireAndActivateWithTracking = async ({
 		});
 	}
 
-	return { expiredCustomerProduct };
+	return {
+		expiredCustomerProduct,
+		activatedCustomerProduct,
+		insertedCustomerProduct,
+	};
 };

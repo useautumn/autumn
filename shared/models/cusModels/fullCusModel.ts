@@ -1,7 +1,10 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
 import type { CustomerProductsPage } from "../../api/customers/cusPlans/listCustomerProductsParams.js";
-import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
+import {
+	type FullCustomerEntitlement,
+	FullCustomerEntitlementSchema,
+} from "../cusProductModels/cusEntModels/cusEntModels.js";
 import {
 	CusProductSchema,
 	type FullCusProduct,
@@ -66,6 +69,9 @@ export const FullCustomerSchema = CustomerSchema.extend({
 	// hole-filling via `normalizeFromSchema`) tolerant of entries written
 	// before this field existed. Empty array also matches the SQL default.
 	migration_item_runs: z.array(MigrationItemRunSchema).optional(),
+	pooled_customer_entitlements: z
+		.array(FullCustomerEntitlementSchema)
+		.default([]),
 });
 
 export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
@@ -87,6 +93,8 @@ export type FullCustomer = Customer & {
 	extra_customer_entitlements: FullCustomerEntitlement[];
 	schedule?: FullCustomerSchedule;
 	migration_item_runs?: MigrationItemRunData[];
+	/** Hydrated by customer/subject readers; optional for legacy cached objects. */
+	pooled_customer_entitlements?: FullCustomerEntitlement[];
 };
 
 export const CustomerWithProductsSchema = CustomerSchema.extend({

@@ -1,8 +1,11 @@
 import {
-	cusEntToCusPrice,
 	CusProductStatus,
-	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	cusEntToCusPrice,
 	type FullCusEntWithFullCusProduct,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	isPooledBalanceSourceCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
+	PooledBalanceResetMode,
 } from "@autumn/shared";
 
 /**
@@ -27,6 +30,21 @@ export const getResettableCustomerEntitlements = ({
 
 	for (const cusEnt of customerEntitlements) {
 		if (!cusEnt.next_reset_at || cusEnt.next_reset_at >= now) continue;
+		if (
+			isPooledBalanceSourceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+			})
+		) {
+			continue;
+		}
+		if (
+			isSyntheticPooledBalanceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+			}) &&
+			cusEnt.pooled_balance?.reset_mode !== PooledBalanceResetMode.Lazy
+		) {
+			continue;
+		}
 
 		const cusProduct = cusEnt.customer_product;
 		if (cusProduct?.status === CusProductStatus.PastDue) {
