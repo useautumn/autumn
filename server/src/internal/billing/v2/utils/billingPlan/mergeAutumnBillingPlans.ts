@@ -104,14 +104,17 @@ export const mergeAutumnBillingPlans = ({
 		base.releaseCustomerLicenseAssignments ||
 		incoming.releaseCustomerLicenseAssignments
 			? {
-					customerLicenseLinkIds: [
-						...new Set([
-							...(base.releaseCustomerLicenseAssignments
-								?.customerLicenseLinkIds ?? []),
-							...(incoming.releaseCustomerLicenseAssignments
-								?.customerLicenseLinkIds ?? []),
-						]),
-					],
+					internalCustomerId: (incoming.releaseCustomerLicenseAssignments ??
+						base.releaseCustomerLicenseAssignments)!.internalCustomerId,
+					customerLicensePools:
+						mergeByKey({
+							base: base.releaseCustomerLicenseAssignments
+								?.customerLicensePools,
+							incoming:
+								incoming.releaseCustomerLicenseAssignments
+									?.customerLicensePools,
+							getKey: (pool) => pool.id,
+						}) ?? [],
 					releasedAt: Math.max(
 						base.releaseCustomerLicenseAssignments?.releasedAt ?? 0,
 						incoming.releaseCustomerLicenseAssignments?.releasedAt ?? 0,

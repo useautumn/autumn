@@ -121,7 +121,10 @@ export const AutumnBillingPlanSchema = z.object({
 		.optional(),
 	releaseCustomerLicenseAssignments: z
 		.object({
-			customerLicenseLinkIds: z.array(z.string()),
+			internalCustomerId: z.string(),
+			customerLicensePools: z.array(
+				z.object({ id: z.string(), linkId: z.string() }),
+			),
 			releasedAt: z.number(),
 		})
 		.optional(),

@@ -14,14 +14,25 @@ export const computeCustomerLicenseReleases = ({
 		outgoingCustomerLicenses: outgoingCustomerProduct.customer_licenses ?? [],
 		incomingCustomerLicenses: incomingCustomerProduct?.customer_licenses ?? [],
 	});
-	const customerLicenseLinkIds = unmatched.flatMap(
+	const customerLicensePools = unmatched.flatMap(
 		({ outgoingCustomerLicense, reason }) =>
-			reason === "dropped" ? [outgoingCustomerLicense.link_id] : [],
+			reason === "dropped"
+				? [
+						{
+							id: outgoingCustomerLicense.id,
+							linkId: outgoingCustomerLicense.link_id,
+						},
+					]
+				: [],
 	);
 
 	return {
-		releaseCustomerLicenseAssignments: customerLicenseLinkIds.length
-			? { customerLicenseLinkIds, releasedAt }
+		releaseCustomerLicenseAssignments: customerLicensePools.length
+			? {
+					internalCustomerId: outgoingCustomerProduct.internal_customer_id,
+					customerLicensePools,
+					releasedAt,
+				}
 			: undefined,
 	};
 };

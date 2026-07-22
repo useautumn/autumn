@@ -85,7 +85,9 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
-	const droppedCustomerLicenseLinkIds: string[] = [];
+	const droppedCustomerLicensePools: NonNullable<
+		AutumnBillingPlan["releaseCustomerLicenseAssignments"]
+	>["customerLicensePools"] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
@@ -131,8 +133,8 @@ export const computeSyncImmediatePhase = ({
 				incomingCustomerProduct: insertedCustomerProduct,
 				releasedAt: currentEpochMs,
 			}).releaseCustomerLicenseAssignments;
-			droppedCustomerLicenseLinkIds.push(
-				...(release?.customerLicenseLinkIds ?? []),
+			droppedCustomerLicensePools.push(
+				...(release?.customerLicensePools ?? []),
 			);
 			updateCustomerProducts.push(
 				expireCustomerProduct({
@@ -150,9 +152,10 @@ export const computeSyncImmediatePhase = ({
 		customEntitlements,
 		insertPlanLicenses,
 		customerLicenseUpdates,
-		releaseCustomerLicenseAssignments: droppedCustomerLicenseLinkIds.length
+		releaseCustomerLicenseAssignments: droppedCustomerLicensePools.length
 			? {
-					customerLicenseLinkIds: droppedCustomerLicenseLinkIds,
+					internalCustomerId: fullCustomer.internal_id,
+					customerLicensePools: droppedCustomerLicensePools,
 					releasedAt: currentEpochMs,
 				}
 			: undefined,

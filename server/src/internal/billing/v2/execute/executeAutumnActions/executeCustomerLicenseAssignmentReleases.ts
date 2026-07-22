@@ -10,7 +10,7 @@ export const executeCustomerLicenseAssignmentReleases = async ({
 	release: AutumnBillingPlan["releaseCustomerLicenseAssignments"];
 }) => {
 	if (!release) return;
-	await licenseAssignmentRepo.releaseActiveAssignmentsByLinkIds({
+	await licenseAssignmentRepo.releaseActiveAssignments({
 		db: ctx.db,
 		...release,
 	});

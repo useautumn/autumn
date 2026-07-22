@@ -137,40 +137,68 @@ const listActiveAssignmentsByInternalEntityId = async ({
 	});
 
 /** Releases dropped pools in one statement; retries only count assigned rows. */
-const releaseActiveAssignmentsByLinkIds = async ({
+const releaseActiveAssignments = async ({
 	db,
-	customerLicenseLinkIds,
+	internalCustomerId,
+	customerLicensePools,
 	releasedAt,
 }: {
 	db: DrizzleCli;
-	customerLicenseLinkIds: string[];
+	internalCustomerId: string;
+	customerLicensePools: { id: string; linkId: string }[];
 	releasedAt: number;
 }) => {
-	if (customerLicenseLinkIds.length === 0) return;
-	await db.execute(sql`
-		WITH released AS (
-			UPDATE customer_products
-			SET internal_entity_id = NULL,
-				entity_id = NULL,
-				released_at = ${releasedAt}
-			WHERE customer_license_link_id IN (${sql.join(
-				customerLicenseLinkIds.map((linkId) => sql`${linkId}`),
-				sql`, `,
-			)})
-				AND internal_entity_id IS NOT NULL
-				AND status IN ${sql.raw(`('${ACTIVE_STATUSES.join("','")}')`)}
-			RETURNING customer_license_link_id
-		), released_counts AS (
-			SELECT customer_license_link_id, count(*)::int AS count
-			FROM released
-			GROUP BY customer_license_link_id
-		)
-		UPDATE customer_licenses AS pool
-		SET remaining = LEAST(pool.granted, pool.remaining + released_counts.count),
-			updated_at = ${releasedAt}
-		FROM released_counts
-		WHERE pool.link_id = released_counts.customer_license_link_id
-	`);
+	if (customerLicensePools.length === 0) return;
+	const released = db.$with("released").as(
+		db
+			.update(customerProducts)
+			.set({
+				internal_entity_id: null,
+				entity_id: null,
+				released_at: releasedAt,
+			})
+			.where(
+				and(
+					eq(customerProducts.internal_customer_id, internalCustomerId),
+					inArray(
+						customerProducts.customer_license_link_id,
+						customerLicensePools.map((pool) => pool.linkId),
+					),
+					...activeAssignmentConditions(),
+				),
+			)
+			.returning({
+				customerLicenseLinkId: customerProducts.customer_license_link_id,
+			}),
+	);
+	const releasedCounts = db.$with("released_counts").as(
+		db
+			.select({
+				customerLicenseLinkId: released.customerLicenseLinkId,
+				count: sql<number>`count(*)::int`.as("count"),
+			})
+			.from(released)
+			.groupBy(released.customerLicenseLinkId),
+	);
+
+	await db
+		.with(released, releasedCounts)
+		.update(customerLicenses)
+		.set({
+			remaining: sql`LEAST(${customerLicenses.granted}, ${customerLicenses.remaining} + ${releasedCounts.count})`,
+			updated_at: releasedAt,
+		})
+		.from(releasedCounts)
+		.where(
+			and(
+				eq(customerLicenses.internal_customer_id, internalCustomerId),
+				inArray(
+					customerLicenses.id,
+					customerLicensePools.map((pool) => pool.id),
+				),
+				eq(customerLicenses.link_id, releasedCounts.customerLicenseLinkId),
+			),
+		);
 };
 
 /** Ends active seats anchored to no surviving pool link (unstamped or
@@ -310,7 +338,7 @@ const repointSeatPrices = async ({
 export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
-	releaseActiveAssignmentsByLinkIds,
+	releaseActiveAssignments,
 	listUnusedAssignmentsByLinkId,
 	expireOrphanAssignments,
 	expireUnusedAssignmentsByLinkIds,
