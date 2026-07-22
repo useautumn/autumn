@@ -119,6 +119,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		serverEnv.CACHE_V2_DRAGONFLY_URL = redisUrl;
 		serverEnv.SQS_QUEUE_URL_V2 = `http://localhost:${elasticMqPort}/000000000000/autumn.fifo`;
 		serverEnv.TRACK_SQS_QUEUE_URL = `http://localhost:${elasticMqPort}/000000000000/autumn-track.fifo`;
+		serverEnv.TRACK_ASYNC_SQS_QUEUE_URL = `http://localhost:${elasticMqPort}/000000000000/autumn-track-async.fifo`;
 	}
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;

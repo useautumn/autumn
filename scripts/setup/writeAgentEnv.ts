@@ -62,6 +62,8 @@ REDIS_URL=redis://localhost:6379
 
 # ElasticMQ (local SQS, per-agent isolated queue)
 SQS_QUEUE_URL_V2=http://localhost:9324/000000000000/autumn.fifo
+TRACK_SQS_QUEUE_URL=http://localhost:9324/000000000000/autumn-track.fifo
+TRACK_ASYNC_SQS_QUEUE_URL=http://localhost:9324/000000000000/autumn-track-async.fifo
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=x
 AWS_SECRET_ACCESS_KEY=x
