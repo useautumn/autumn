@@ -139,19 +139,25 @@ describe("runBatchTrack", () => {
 		expect(mockState.queueCommands[0]?.Entries).toHaveLength(3);
 		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
 			Id: "0",
-			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: "req_batch_1-0",
 		});
+		expect(mockState.queueCommands[0]?.Entries?.[0]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_123:none:shard-[0-7]$/,
+		);
 		expect(mockState.queueCommands[0]?.Entries?.[1]).toMatchObject({
 			Id: "1",
-			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_batch_1-1",
 		});
+		expect(mockState.queueCommands[0]?.Entries?.[1]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_123:ent_123:shard-[0-7]$/,
+		);
 		expect(mockState.queueCommands[0]?.Entries?.[2]).toMatchObject({
 			Id: "2",
-			MessageGroupId: "org_123:sandbox:cus_456:none",
 			MessageDeduplicationId: "req_batch_1-2",
 		});
+		expect(mockState.queueCommands[0]?.Entries?.[2]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_456:none:shard-[0-7]$/,
+		);
 		expect(
 			JSON.parse(mockState.queueCommands[0]?.Entries?.[1]?.MessageBody ?? "{}"),
 		).toMatchObject({
@@ -314,17 +320,29 @@ describe("runBatchTrack", () => {
 		for (const command of mockState.queueCommands) {
 			expect(command.Entries).toHaveLength(10);
 		}
+		const shardIds = new Set(
+			mockState.queueCommands
+				.flatMap((command) => command.Entries ?? [])
+				.map((entry) => entry.MessageGroupId?.split(":").pop()),
+		);
+		expect(shardIds).toEqual(
+			new Set(Array.from({ length: 8 }, (_, index) => `shard-${index}`)),
+		);
 
 		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
 			Id: "0",
-			MessageGroupId: "org_123:sandbox:cus_0:none",
 			MessageDeduplicationId: "req_batch_1-0",
 		});
+		expect(mockState.queueCommands[0]?.Entries?.[0]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_0:none:shard-[0-7]$/,
+		);
 		expect(mockState.queueCommands[99]?.Entries?.[9]).toMatchObject({
 			Id: "9",
-			MessageGroupId: "org_123:sandbox:cus_999:none",
 			MessageDeduplicationId: "req_batch_1-999",
 		});
+		expect(mockState.queueCommands[99]?.Entries?.[9]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_999:none:shard-[0-7]$/,
+		);
 	});
 
 	test("rejects empty batch body at schema parse time", () => {
