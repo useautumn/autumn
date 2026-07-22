@@ -1,8 +1,7 @@
 import {
 	type AutumnBillingPlan,
-	CusProductStatus,
-	type CustomerLicenseAssignmentRelease,
 	type CustomerLicenseUpdate,
+	CusProductStatus,
 	type Entitlement,
 	type FullCusProduct,
 	type InsertPlanLicenseSpec,
@@ -11,7 +10,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
-import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases";
 import { resolveSyncExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveSyncExistingUsagesConfig";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
@@ -26,7 +24,6 @@ export type ImmediatePhaseResult = {
 	customEntitlements: Entitlement[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
 	customerLicenseUpdates: CustomerLicenseUpdate[];
-	releaseCustomerLicenseAssignments?: CustomerLicenseAssignmentRelease;
 };
 
 const expireCustomerProduct = ({
@@ -84,8 +81,6 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
-	const droppedCustomerLicensePools: CustomerLicenseAssignmentRelease["customerLicensePools"] =
-		[];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;
@@ -126,14 +121,6 @@ export const computeSyncImmediatePhase = ({
 		insertPlanLicenses.push(...(productContext.insertPlanLicenses ?? []));
 
 		if (productContext.currentCustomerProduct) {
-			const release = computeCustomerLicenseReleases({
-				outgoingCustomerProduct: productContext.currentCustomerProduct,
-				incomingCustomerProduct: insertedCustomerProduct,
-				releasedAt: currentEpochMs,
-			});
-			if (release) {
-				droppedCustomerLicensePools.push(...release.customerLicensePools);
-			}
 			updateCustomerProducts.push(
 				expireCustomerProduct({
 					customerProduct: productContext.currentCustomerProduct,
@@ -150,12 +137,5 @@ export const computeSyncImmediatePhase = ({
 		customEntitlements,
 		insertPlanLicenses,
 		customerLicenseUpdates,
-		releaseCustomerLicenseAssignments: droppedCustomerLicensePools.length
-			? {
-					internalCustomerId: fullCustomer.internal_id,
-					customerLicensePools: droppedCustomerLicensePools,
-					releasedAt: currentEpochMs,
-				}
-			: undefined,
 	};
 };

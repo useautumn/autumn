@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { computeCustomerLicenseChanges } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseChanges.js";
+import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { findTransitionSourceCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/findTransitionSourceCustomerProduct";
 import { reapplyExistingRolloversToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/reapplyExistingRolloversToCustomerProduct";
@@ -59,17 +59,12 @@ export const activateScheduledCustomerProduct = async ({
 		subscription_ids: subscriptionIds,
 		scheduled_ids: scheduledIds,
 	};
-	const customerLicenseChanges = transitionSource
-		? computeCustomerLicenseChanges({
-				outgoingCustomerProduct: transitionSource,
-				incomingCustomerProduct: customerProduct,
-				releasedAt: Date.now(),
+	const customerLicenseTransitions = transitionSource
+		? computeCustomerLicenseTransitions({
+				outgoingCustomerProducts: [transitionSource],
+				incomingCustomerProducts: [customerProduct],
 			})
-		: undefined;
-	const customerLicenseTransitions =
-		customerLicenseChanges?.customerLicenseTransitions ?? [];
-	const releaseCustomerLicenseAssignments =
-		customerLicenseChanges?.releaseCustomerLicenseAssignments;
+		: [];
 
 	// Executing through the shared plan runs the license lifecycle for
 	// activations that bring license-bearing parents live.
@@ -85,7 +80,6 @@ export const activateScheduledCustomerProduct = async ({
 				},
 			],
 			customerLicenseTransitions,
-			releaseCustomerLicenseAssignments,
 		},
 	});
 

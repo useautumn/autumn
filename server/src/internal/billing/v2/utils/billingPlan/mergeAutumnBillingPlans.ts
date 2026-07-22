@@ -1,7 +1,4 @@
-import type {
-	AutumnBillingPlan,
-	CustomerLicenseAssignmentRelease,
-} from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -103,10 +100,6 @@ export const mergeAutumnBillingPlans = ({
 	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
-	releaseCustomerLicenseAssignments: mergeCustomerLicenseAssignmentReleases({
-		base: base.releaseCustomerLicenseAssignments,
-		incoming: incoming.releaseCustomerLicenseAssignments,
-	}),
 });
 
 const mergeById = <T extends { id: string }>({
@@ -133,28 +126,6 @@ const mergeByKey = <T>({
 	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
 
 	return Array.from(itemByKey.values());
-};
-
-const mergeCustomerLicenseAssignmentReleases = ({
-	base,
-	incoming,
-}: {
-	base?: CustomerLicenseAssignmentRelease;
-	incoming?: CustomerLicenseAssignmentRelease;
-}): CustomerLicenseAssignmentRelease | undefined => {
-	const latest = incoming ?? base;
-	if (!latest) return undefined;
-
-	return {
-		internalCustomerId: latest.internalCustomerId,
-		customerLicensePools:
-			mergeByKey({
-				base: base?.customerLicensePools,
-				incoming: incoming?.customerLicensePools,
-				getKey: (pool) => pool.id,
-			}) ?? [],
-		releasedAt: Math.max(base?.releasedAt ?? 0, incoming?.releasedAt ?? 0),
-	};
 };
 
 type PatchCustomerProduct = NonNullable<

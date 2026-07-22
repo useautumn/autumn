@@ -8,9 +8,9 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { activateFreeSuccessorProduct } from "@/internal/customers/cusProducts/actions/activateFreeSuccessorProduct";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
  * Expires a customer product and activates the default product if needed.
@@ -39,7 +39,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	activatedCustomerProduct?: FullCusProduct;
 	insertedCustomerProduct?: FullCusProduct;
 }> => {
-	const { org, env } = ctx;
+	const { db, org, env } = ctx;
 
 	// 1. Expire the product
 	const updates: Partial<InsertCustomerProduct> = {
@@ -47,6 +47,8 @@ export const expireCustomerProductAndActivateDefault = async ({
 		...extraUpdates,
 	};
 
+	// Executing through the shared plan runs the license lifecycle when the
+	// expiring product carried license state.
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
@@ -90,20 +92,6 @@ export const expireCustomerProductAndActivateDefault = async ({
 			fromCustomerProduct: customerProduct,
 			fullCustomer,
 		});
-
-	if (!activatedCustomerProduct && !insertedCustomerProduct) {
-		await executeAutumnBillingPlan({
-			ctx,
-			autumnBillingPlan: {
-				customerId: fullCustomer.id || fullCustomer.internal_id,
-				insertCustomerProducts: [],
-				releaseCustomerLicenseAssignments: computeCustomerLicenseReleases({
-					outgoingCustomerProduct: customerProduct,
-					releasedAt: Date.now(),
-				}),
-			},
-		});
-	}
 
 	return { updates, activatedCustomerProduct, insertedCustomerProduct };
 };

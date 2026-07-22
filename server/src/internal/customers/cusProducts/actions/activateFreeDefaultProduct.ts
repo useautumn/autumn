@@ -6,7 +6,6 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { computeCustomerLicenseChanges } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseChanges";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { productActions } from "@/internal/products/actions";
@@ -68,12 +67,6 @@ export const activateFreeDefaultProduct = async ({
 			},
 		},
 	});
-	const { customerLicenseTransitions, releaseCustomerLicenseAssignments } =
-		computeCustomerLicenseChanges({
-			outgoingCustomerProduct: customerProduct,
-			incomingCustomerProduct: newCustomerProduct,
-			releasedAt: Date.now(),
-		});
 
 	// 3. Execute autumn billing plan
 	await executeAutumnBillingPlan({
@@ -81,8 +74,6 @@ export const activateFreeDefaultProduct = async ({
 		autumnBillingPlan: {
 			customerId: fullCustomer?.id ?? "",
 			insertCustomerProducts: [newCustomerProduct],
-			customerLicenseTransitions,
-			releaseCustomerLicenseAssignments,
 		},
 	});
 
