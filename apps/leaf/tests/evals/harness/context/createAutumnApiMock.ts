@@ -205,6 +205,7 @@ const defaultHandlers = {
 	},
 	getAgentRules: ({ setup }) => setup.agentRules,
 	getCurrentOrganization: () => ({
+		id: "org_acme_knowledge_systems",
 		env: "sandbox",
 		name: "Acme Knowledge Systems",
 		slug: "acme-knowledge-systems",
