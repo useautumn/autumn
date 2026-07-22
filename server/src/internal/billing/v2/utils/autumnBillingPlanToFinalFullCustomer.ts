@@ -5,6 +5,7 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
+import { applyPooledBalancePlanToFullCustomer } from "@/internal/billing/v2/utils/billingPlan/applyPooledBalancePlanToFullCustomer";
 import {
 	applyCustomerProductPatch,
 	applyCustomerProductUpdate,
@@ -185,13 +186,15 @@ export const applyAutumnBillingPlanToFullCustomer = ({
 		customerProducts,
 		autumnBillingPlan,
 	});
+	finalFullCustomer.customer_products = customerProducts;
+	applyPooledBalancePlanToFullCustomer({
+		fullCustomer: finalFullCustomer,
+		pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
+	});
 
 	// 6. Return final full customer. Customer licenses otherwise need no merge
 	// — they ride each customer product (hydration-stitched or init-planned).
-	return {
-		...finalFullCustomer,
-		customer_products: customerProducts,
-	};
+	return finalFullCustomer;
 };
 
 export const autumnBillingPlanToFinalFullCustomer = ({

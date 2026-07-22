@@ -217,6 +217,7 @@ export class Plans extends ClientSDK {
    * @param allVersions - Apply the update diff to all versions of this plan. Mutually exclusive with disable_version. (optional)
    * @param forceVersion - Force versioning even when no customers exist. Mutually exclusive with disable_version. (optional)
    * @param updateVariantIds - Variant plan IDs to apply this update to. Empty or omitted means no propagation. (optional)
+   * @param updateLicenseParents - Parent plan versions that should receive this license-plan update. (optional)
    * @param variants - Additive variant updates for this base plan. Missing variants are created when name is provided. (optional)
    * @param isDefault - Whether this is the org's default plan. Cannot be true on a variant. (optional)
    *

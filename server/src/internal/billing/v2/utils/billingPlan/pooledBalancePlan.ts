@@ -28,5 +28,7 @@ export const getChangedPooledBalances = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => [
 	...(autumnBillingPlan.pooledBalancePlan?.insertPoolBalances ?? []),
-	...(autumnBillingPlan.pooledBalancePlan?.updatePoolBalances ?? []),
+	...(autumnBillingPlan.pooledBalancePlan?.updatePoolBalances ?? []).map(
+		(update) => update.pooledCustomerEntitlement,
+	),
 ];

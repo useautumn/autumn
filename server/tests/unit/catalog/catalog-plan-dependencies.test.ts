@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { CatalogPlanParams } from "@autumn/shared";
+import type { CatalogPlanParams, FullProduct } from "@autumn/shared";
 import {
 	sortCatalogPlansByDependencies,
 	validateCatalogPlanVersionTargets,
@@ -9,7 +9,8 @@ const plan = (
 	plan_id: string,
 	version?: number,
 	licenses?: CatalogPlanParams["licenses"],
-): CatalogPlanParams => ({ plan_id, version, licenses });
+	new_plan_id?: string,
+): CatalogPlanParams => ({ plan_id, version, licenses, new_plan_id });
 
 test.concurrent(
 	"unpinned dependencies select the highest batch version",
@@ -33,4 +34,16 @@ test.concurrent("fresh plans must start at version one", () => {
 			products: [],
 		}),
 	).toThrow("version must be 1, received 2");
+});
+
+test.concurrent("renamed plans sequence versions under their target id", () => {
+	const plans = [
+		plan("legacy", 2, undefined, "current"),
+		plan("legacy", 3, undefined, "current"),
+	];
+	const products = [{ id: "current", version: 1 } as FullProduct];
+
+	expect(() =>
+		validateCatalogPlanVersionTargets({ plans, products }),
+	).not.toThrow();
 });

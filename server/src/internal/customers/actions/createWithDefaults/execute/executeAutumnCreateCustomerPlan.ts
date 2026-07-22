@@ -5,6 +5,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
+import { syncAutoTopupPurchaseLimitCounts } from "@/internal/customers/actions/update/syncAutoTopupPurchaseLimitCounts.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { CusService } from "../../../CusService.js";
 
@@ -50,6 +51,12 @@ export const executeAutumnCreateCustomerPlan = async ({
 				wasUpdate = true;
 				return;
 			}
+
+			await syncAutoTopupPurchaseLimitCounts({
+				ctx: { ...ctx, db: txDb },
+				customer: fullCustomer,
+				autoTopups: context.autoTopups ?? [],
+			});
 
 			await executeAutumnBillingPlan({
 				ctx: { ...ctx, db: txDb },

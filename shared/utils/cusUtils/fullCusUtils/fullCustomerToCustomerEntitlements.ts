@@ -1,9 +1,11 @@
 import { isEntityCusEnt } from "@utils/cusEntUtils/cusEntUtils.js";
+import { isCustomerProductLicenseAssignment } from "@utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
 import type { Entity } from "../../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
 import type { CustomerEntitlementFilters } from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../../models/cusProductModels/cusProductEnums.js";
+import { isPooledBalanceSourceCustomerEntitlement } from "../../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../../utils.js";
@@ -55,6 +57,11 @@ export const fullCustomerToCustomerEntitlements = ({
 		});
 	}
 
+	cusEnts = cusEnts.filter(
+		(customerEntitlement) =>
+			!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }),
+	);
+
 	if (featureId) {
 		cusEnts = cusEnts.filter(
 			(cusEnt) => cusEnt.entitlement.feature.id === featureId,
@@ -67,12 +74,23 @@ export const fullCustomerToCustomerEntitlements = ({
 		);
 	}
 
-	cusEnts = cusEnts.filter((cusEnt) =>
-		cusEntMatchesEntity({
-			cusEnt: cusEnt,
-			entity,
-		}),
-	);
+	if (entity) {
+		cusEnts = cusEnts.filter((cusEnt) =>
+			cusEntMatchesEntity({
+				cusEnt: cusEnt,
+				entity,
+			}),
+		);
+	} else {
+		// License seat assignments stay invisible at the customer level — the
+		// pool parent already reports them. Other entity-scoped cusEnts pool up.
+		cusEnts = cusEnts.filter(
+			(cusEnt) =>
+				!isCustomerProductLicenseAssignment(
+					cusEnt.customer_product ?? undefined,
+				),
+		);
+	}
 
 	// Filter out expired entitlements (applies to loose entitlements with expires_at)
 	// This is necessary because cached fullCustomer may contain entitlements that have since expired

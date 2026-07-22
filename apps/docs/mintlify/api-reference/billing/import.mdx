@@ -982,7 +982,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             </DynamicResponseField>
 
                             <DynamicResponseField name="purchase_limit" type="object">
-                              Optional rate limit to cap how often auto top-ups occur.
+                              Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
                               <Expandable title="properties">
                                 <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
                                   The time interval for the purchase limit window.
@@ -994,6 +994,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                 <DynamicResponseField name="limit" type="number">
                                   Maximum number of auto top-ups allowed within the interval.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="count" type="number">
+                                  Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                                 </DynamicResponseField>
 
                               </Expandable>
@@ -1917,7 +1921,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                             </DynamicResponseField>
 
                             <DynamicResponseField name="purchase_limit" type="object">
-                              Optional rate limit to cap how often auto top-ups occur.
+                              Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
                               <Expandable title="properties">
                                 <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
                                   The time interval for the purchase limit window.
@@ -1929,6 +1933,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
                                 <DynamicResponseField name="limit" type="number">
                                   Maximum number of auto top-ups allowed within the interval.
+                                </DynamicResponseField>
+
+                                <DynamicResponseField name="count" type="number">
+                                  Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                                 </DynamicResponseField>
 
                               </Expandable>

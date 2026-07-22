@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getAsyncTrackMessageGroupId } from "./utils/getAsyncTrackMessageGroupId.js";
 import { queueTrack } from "./utils/queueTrack.js";
 
 const ASYNC_TRACK_UNAVAILABLE_MESSAGE =
@@ -23,11 +24,20 @@ export const runAsyncTrack = async ({
 			statusCode: 503,
 		});
 	}
+	const messageDeduplicationId = ctx.id;
 
 	const queued = await queueTrack({
 		ctx,
 		body,
 		queueUrl,
+		messageGroupId: getAsyncTrackMessageGroupId({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			messageDeduplicationId,
+		}),
+		messageDeduplicationId,
 		logFallback: false,
 		markQueuedForReplay: false,
 	});

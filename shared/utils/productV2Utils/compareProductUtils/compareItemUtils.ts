@@ -40,6 +40,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeatureItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				entIntervalsSame({
 					intervalA: {
 						interval: itemToEntInterval({ item: i }),
@@ -58,6 +59,7 @@ export const findSimilarItem = ({
 			(i) =>
 				isFeaturePriceItem(i) &&
 				i.feature_id === item.feature_id &&
+				i.entity_feature_id == item.entity_feature_id &&
 				intervalsSame({
 					intervalA: {
 						interval: itemToBillingInterval({ item: i }),

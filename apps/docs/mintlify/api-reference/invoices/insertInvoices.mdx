@@ -1,0 +1,143 @@
+---
+title: "Insert Invoices"
+openapi: "openapi POST /v1/invoices.insert"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="invoices" type="object[]" required>
+  Invoices to insert or update, in response order.
+  <Expandable title="properties">
+    <DynamicParamField body="customer_id" type="string" required>
+      The customer this invoice belongs to.
+    </DynamicParamField>
+
+    <DynamicParamField body="plan_ids" type="string[]">
+      Plan IDs represented by this invoice.
+    </DynamicParamField>
+
+    <DynamicParamField body="stripe_id" type="string" required>
+      The processor's stable invoice ID.
+    </DynamicParamField>
+
+    <DynamicParamField body="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
+    </DynamicParamField>
+
+    <DynamicParamField body="status" type="'draft' | 'open' | 'void' | 'paid' | 'uncollectible'" required>
+      The invoice status.
+    </DynamicParamField>
+
+    <DynamicParamField body="total" type="number" required>
+      The invoice total in major currency units.
+    </DynamicParamField>
+
+    <DynamicParamField body="amount_paid" type="number | null">
+      The amount paid in major currency units.
+    </DynamicParamField>
+
+    <DynamicParamField body="refunded_amount" type="number">
+      The refunded amount in major currency units.
+    </DynamicParamField>
+
+    <DynamicParamField body="currency" type="string">
+      The currency code. Defaults to the organization's default currency.
+    </DynamicParamField>
+
+    <DynamicParamField body="created_at" type="number" required>
+      The invoice creation timestamp in milliseconds.
+    </DynamicParamField>
+
+    <DynamicParamField body="hosted_invoice_url" type="string | null">
+      The hosted invoice URL, when available.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="invoices" type="object[]">
+  Inserted or updated invoices in request order.
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_ids" type="string[]">
+      Array of plan IDs included in this invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="string">
+      The status of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The currency code for the invoice
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp when the invoice was created
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the Stripe-hosted invoice page
+    </DynamicResponseField>
+
+    <DynamicResponseField name="id" type="string">
+      The Autumn invoice ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      The customer this invoice belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_paid" type="number | null">
+      The amount paid in major currency units.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="refunded_amount" type="number">
+      The refunded amount in major currency units.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "invoices": [
+    {
+      "id": "inv_2b3c4d5e6f7g8h",
+      "customer_id": "cus_123",
+      "plan_ids": [
+        "pro"
+      ],
+      "stripe_id": "in_legacy_123",
+      "processor_type": "stripe",
+      "status": "paid",
+      "total": 29.99,
+      "amount_paid": 29.99,
+      "refunded_amount": 0,
+      "currency": "usd",
+      "created_at": 1451606400000,
+      "hosted_invoice_url": "https://billing.example.com/invoices/legacy-123"
+    }
+  ]
+}
+```
+</ResponseExample>

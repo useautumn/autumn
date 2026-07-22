@@ -6,6 +6,7 @@ import {
 	isCustomerProductScheduled,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { applyPooledBalanceCustomerProductTransitions } from "@/internal/billing/v2/pooledBalances/execute/applyPooledBalanceCustomerProductTransitions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { deleteScheduledCustomerProduct } from "@/internal/customers/cusProducts/actions/deleteScheduledCustomerProduct";
 import {
@@ -30,6 +31,8 @@ export const expireAndActivateCustomerProducts = async ({
 	);
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
+	const outgoingCustomerProducts: FullCusProduct[] = [];
+	const incomingCustomerProducts: FullCusProduct[] = [];
 	const liveCustomerProducts = customerProducts.filter(
 		(customerProduct) => !isCustomerProductScheduled(customerProduct),
 	);
@@ -43,13 +46,24 @@ export const expireAndActivateCustomerProducts = async ({
 		if (!onStripeSubscription) continue;
 
 		// 2. Expire and activate free successor (with tracking)
-		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
+		const {
+			expiredCustomerProduct,
+			activatedCustomerProduct,
+			insertedCustomerProduct,
+		} = await expireAndActivateWithTracking({
 			ctx,
 			eventContext,
 			customerProduct,
 		});
 
 		expiredCustomerProducts.push(expiredCustomerProduct);
+		outgoingCustomerProducts.push(customerProduct);
+		if (activatedCustomerProduct) {
+			incomingCustomerProducts.push(activatedCustomerProduct);
+		}
+		if (insertedCustomerProduct) {
+			incomingCustomerProducts.push(insertedCustomerProduct);
+		}
 
 		// 3. Delete paid scheduled customer product for this group if it exists...
 		const scheduledCustomerProduct = findMainScheduledCustomerProductByGroup({
@@ -74,6 +88,14 @@ export const expireAndActivateCustomerProducts = async ({
 			});
 		}
 	}
+
+	await applyPooledBalanceCustomerProductTransitions({
+		ctx,
+		fullCustomer,
+		outgoingCustomerProducts,
+		incomingCustomerProducts,
+		now: eventContext.nowMs,
+	});
 
 	// invoice.created needs the expired snapshots for final usage billing.
 	await customerProductActions.expiredCache.set({

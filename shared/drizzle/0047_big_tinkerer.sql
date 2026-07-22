@@ -51,6 +51,8 @@ CREATE TABLE "pooled_balances" (
 );
 --> statement-breakpoint
 ALTER TABLE "customer_entitlements" ADD COLUMN "is_pooled_balance" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "customer_entitlements" ADD COLUMN "pooled_balance_id" text;--> statement-breakpoint
+ALTER TABLE "customer_entitlements" ADD COLUMN "pooled_contribution_id" text;--> statement-breakpoint
 ALTER TABLE "entitlements" ADD COLUMN "pooled" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "pooled_balance_contributions" ADD CONSTRAINT "pooled_balance_contributions_pool_fkey" FOREIGN KEY ("pooled_balance_id") REFERENCES "public"."pooled_balances"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "pooled_balance_contributions" ADD CONSTRAINT "pooled_balance_contributions_customer_product_fkey" FOREIGN KEY ("source_customer_product_id") REFERENCES "public"."customer_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -64,4 +66,5 @@ CREATE INDEX CONCURRENTLY "idx_pooled_balances_org" ON "pooled_balances" USING b
 CREATE INDEX CONCURRENTLY "idx_pooled_balances_reset_mode" ON "pooled_balances" USING btree ("internal_customer_id","reset_mode");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_pooled_balances_feature" ON "pooled_balances" USING btree ("internal_feature_id");--> statement-breakpoint
 CREATE INDEX CONCURRENTLY "idx_pooled_balances_stripe_subscription" ON "pooled_balances" USING btree ("internal_customer_id","stripe_subscription_id") WHERE "pooled_balances"."stripe_subscription_id" IS NOT NULL;--> statement-breakpoint
-CREATE INDEX CONCURRENTLY "idx_pooled_balances_customer_license" ON "pooled_balances" USING btree ("internal_customer_id","customer_license_link_id") WHERE "pooled_balances"."customer_license_link_id" IS NOT NULL;
+CREATE INDEX CONCURRENTLY "idx_pooled_balances_customer_license" ON "pooled_balances" USING btree ("internal_customer_id","customer_license_link_id") WHERE "pooled_balances"."customer_license_link_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_entitlements_pooled_contribution" ON "customer_entitlements" USING btree ("pooled_contribution_id") WHERE "customer_entitlements"."pooled_contribution_id" IS NOT NULL;

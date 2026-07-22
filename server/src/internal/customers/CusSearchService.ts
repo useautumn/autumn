@@ -64,26 +64,45 @@ const productFields = {
 	is_add_on: products.is_add_on,
 };
 
-const dashboardProductFilterToDrizzleSql = (
-	filter: DashboardProductVersionFilter,
-) =>
+const dashboardProductFilterToDrizzleSql = ({
+	filter,
+	orgId,
+	env,
+}: {
+	filter: DashboardProductVersionFilter;
+	orgId: string;
+	env: AppEnv;
+}) =>
 	and(
 		isCustomDashboardProductFilter(filter)
 			? and(
 					eq(customerProducts.product_id, filter.productId),
 					eq(customerProducts.is_custom, true),
 				)
-			: and(eq(products.id, filter.productId), eq(products.version, filter.version)),
+			: and(
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+					eq(products.id, filter.productId),
+					eq(products.version, filter.version),
+				),
 	);
 
-const dashboardProductFilterToRawSql = (
-	filter: DashboardProductVersionFilter,
-) =>
+const dashboardProductFilterToRawSql = ({
+	filter,
+	orgId,
+	env,
+}: {
+	filter: DashboardProductVersionFilter;
+	orgId: string;
+	env: AppEnv;
+}) =>
 	isCustomDashboardProductFilter(filter)
 		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
-		: sql`(${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+		: sql`(${products.org_id} = ${orgId} AND ${products.env} = ${env} AND ${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
 
-const dashboardIntervalFilterToRawSql = (intervals: DashboardIntervalFilter[]) =>
+const dashboardIntervalFilterToRawSql = (
+	intervals: DashboardIntervalFilter[],
+) =>
 	sql`EXISTS (
 		SELECT 1
 		FROM customer_prices cpr_interval
@@ -195,7 +214,9 @@ export class CusSearchService {
 			// New product:version filtering
 			productVersionFilters.length > 0
 				? or(
-						...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
+						...productVersionFilters.map((filter) =>
+							dashboardProductFilterToDrizzleSql({ filter, orgId, env }),
+						),
 					)
 				: undefined,
 			// Legacy product filtering (fallback)
@@ -1032,7 +1053,9 @@ const buildSearchPredicates = ({
 	const versionRaw =
 		productVersionFilters.length > 0
 			? sql`(${sql.join(
-					productVersionFilters.map(dashboardProductFilterToRawSql),
+					productVersionFilters.map((filter) =>
+						dashboardProductFilterToRawSql({ filter, orgId, env }),
+					),
 					sql` OR `,
 				)})`
 			: null;
@@ -1068,7 +1091,9 @@ const buildSearchPredicates = ({
 	const filtersDrizzle = and(
 		productVersionFilters.length > 0
 			? or(
-					...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
+					...productVersionFilters.map((filter) =>
+						dashboardProductFilterToDrizzleSql({ filter, orgId, env }),
+					),
 				)
 			: undefined,
 		intervalFilters.length > 0

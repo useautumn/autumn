@@ -20,6 +20,15 @@ export const validateLicenseLink = ({
 	if (prepaidOnly !== undefined) {
 		validateLicenseBillingMode({ prepaidOnly });
 	}
+	for (const entitlement of licenseProduct.entitlements) {
+		if (!entitlement.pooled) continue;
+
+		throw new RecaseError({
+			message: `Pooled items are not supported for plan licenses (${licensePlanId ?? licenseProduct.id}).`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 	if (licensePlanId && licenseProduct.archived) {
 		throw new RecaseError({
 			message: `License plan ${licensePlanId} is archived and cannot be linked.`,

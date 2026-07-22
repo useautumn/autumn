@@ -1123,6 +1123,7 @@ export class AutumnInt {
 			dry_run?: boolean;
 			only?: string[];
 			limit?: number;
+			/** @deprecated Migration concurrency is fleet-managed. */
 			concurrency?: number;
 			lazy_run?: boolean;
 			retry_item_statuses?: ("failed" | "skipped")[];

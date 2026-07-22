@@ -59,7 +59,11 @@ export const executePooledBalancePlan = async ({
 			await tx.insert(pooledBalances).values(pooledBalance);
 		}
 
-		for (const fullCustomerEntitlement of pooledBalancePlan.updatePoolBalances) {
+		for (const {
+			pooledCustomerEntitlement: fullCustomerEntitlement,
+			balanceDelta,
+			grantedDelta,
+		} of pooledBalancePlan.updatePoolBalances) {
 			const pooledBalance = fullCustomerEntitlement.pooled_balance;
 			if (!pooledBalance) {
 				throw new InternalError({
@@ -70,13 +74,7 @@ export const executePooledBalancePlan = async ({
 			await tx
 				.update(customerEntitlements)
 				.set({
-					balance: fullCustomerEntitlement.balance ?? 0,
-					adjustment: fullCustomerEntitlement.adjustment ?? 0,
-					additional_balance: fullCustomerEntitlement.additional_balance ?? 0,
-					entities: fullCustomerEntitlement.entities ?? null,
-					reset_cycle_anchor:
-						fullCustomerEntitlement.reset_cycle_anchor ?? null,
-					next_reset_at: fullCustomerEntitlement.next_reset_at,
+					balance: sql`COALESCE(${customerEntitlements.balance}, 0) + ${balanceDelta}`,
 					cache_version: sql`${customerEntitlements.cache_version} + 1`,
 				})
 				.where(eq(customerEntitlements.id, fullCustomerEntitlement.id));
@@ -84,11 +82,10 @@ export const executePooledBalancePlan = async ({
 			await tx
 				.update(pooledBalances)
 				.set({
-					granted: pooledBalance.granted,
+					granted: sql`COALESCE(${pooledBalances.granted}, 0) + ${grantedDelta}`,
 					reset_cycle_anchor: pooledBalance.reset_cycle_anchor,
 					stripe_subscription_id: pooledBalance.stripe_subscription_id,
 					customer_license_link_id: pooledBalance.customer_license_link_id,
-					last_applied_reset_at: pooledBalance.last_applied_reset_at,
 					updated_at: Date.now(),
 				})
 				.where(eq(pooledBalances.id, pooledBalance.id));
@@ -102,7 +99,14 @@ export const executePooledBalancePlan = async ({
 			for (const contribution of pooledBalancePlan.insertPoolContributions) {
 				await tx
 					.update(customerEntitlements)
-					.set({ pooled_contribution_id: contribution.id })
+					.set({
+						pooled_contribution_id: contribution.id,
+						pooled_balance_id: null,
+						balance: 0,
+						adjustment: 0,
+						additional_balance: 0,
+						entities: null,
+					})
 					.where(
 						eq(
 							customerEntitlements.id,

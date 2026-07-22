@@ -3,6 +3,7 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import { isPooledBalanceSourceCustomerEntitlement } from "../cusEntUtils/classifyCusEnt/isPooledBalanceCustomerEntitlement.js";
 import { cusEntMatchesEntity } from "../cusEntUtils/filterCusEntUtils.js";
 import { sortCusEntsForDeduction } from "../cusEntUtils/sortCusEntsForDeduction.js";
 import { notNullish } from "../utils.js";
@@ -46,6 +47,11 @@ export const fullSubjectToCustomerEntitlements = ({
 			customer_product: null,
 		});
 	}
+
+	customerEntitlements = customerEntitlements.filter(
+		(customerEntitlement) =>
+			!isPooledBalanceSourceCustomerEntitlement({ customerEntitlement }),
+	);
 
 	if (featureIds) {
 		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>

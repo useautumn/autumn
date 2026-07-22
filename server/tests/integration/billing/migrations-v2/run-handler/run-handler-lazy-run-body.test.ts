@@ -12,6 +12,7 @@
  *     background-only shape (`lazy_run = false`).
  *   - The response echoes the requested `lazy_run` value alongside
  *     `dry_run` and `run_id`.
+ *   - Legacy concurrency input is accepted but effective concurrency is `1`.
  */
 
 import { expect, test } from "bun:test";
@@ -77,7 +78,7 @@ test.concurrent(
 
 		expect(response.migration_id).toBe(migration.id);
 		expect(response.lazy_run).toBe(true);
-		expect(response.concurrency).toBe(7);
+		expect(response.concurrency).toBe(1);
 
 		const updatedMigration = await migrationRepo.find({
 			ctx,
