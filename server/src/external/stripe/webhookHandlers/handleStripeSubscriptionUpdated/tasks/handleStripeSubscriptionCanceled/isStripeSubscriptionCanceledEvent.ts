@@ -1,3 +1,4 @@
+import { getEarliestPeriodEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
 import { nullish } from "@/utils/genUtils";
 import type { SubscriptionPreviousAttributes } from "../../stripeSubscriptionUpdatedContext";
@@ -49,14 +50,18 @@ export const isStripeSubscriptionCanceledEvent = ({
 
 	const canceled =
 		cancelAtPeriodEndChanged || cancelAtChanged || canceledAtChanged;
+	const cancelsAtSeconds =
+		stripeSubscription.cancel_at ??
+		(stripeSubscription.cancel_at_period_end &&
+		stripeSubscription.items.data.length > 0
+			? getEarliestPeriodEnd({ sub: stripeSubscription })
+			: null);
 
 	return {
 		canceled: !!canceled,
 		canceledAtMs: stripeSubscription.canceled_at
 			? stripeSubscription.canceled_at * 1000
 			: Date.now(),
-		cancelsAtMs: stripeSubscription.cancel_at
-			? stripeSubscription.cancel_at * 1000
-			: null,
+		cancelsAtMs: cancelsAtSeconds === null ? null : cancelsAtSeconds * 1000,
 	};
 };

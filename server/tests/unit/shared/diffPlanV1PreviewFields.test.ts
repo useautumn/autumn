@@ -211,6 +211,63 @@ test("diffPlanV1 does not emit internal ids with semantic changes", () => {
 	expect(diff.add_items?.[0]).not.toHaveProperty("entitlement_id");
 });
 
+test("diffPlanV1 preserves pooled true in emitted item params", () => {
+	const from = plan({ items: [] });
+	const to = plan({
+		items: [
+			{
+				feature_id: "messages",
+				included: 100,
+				unlimited: false,
+				reset: { interval: ResetInterval.Month },
+				price: null,
+				pooled: true,
+			},
+		],
+	});
+
+	const diff = diffPlanV1({ from, to });
+
+	// Red before the fix: toCreatePlanItemParams drops the pooled flag.
+	// Green after the fix: consumers receive the requested pooled semantics.
+	expect(diff.add_items?.[0]).toMatchObject({
+		feature_id: "messages",
+		pooled: true,
+	});
+});
+
+test("diffPlanV1 treats a pooled flip as a semantic item change", () => {
+	const item = {
+		feature_id: "messages",
+		included: 100,
+		unlimited: false,
+		reset: { interval: ResetInterval.Month },
+		price: null,
+	};
+	const from = plan({ items: [{ ...item, pooled: true }] });
+	const to = plan({ items: [{ ...item, pooled: false }] });
+
+	const diff = diffPlanV1({ from, to });
+
+	// Red before the fix: itemsEqual ignores pooled and returns an empty diff.
+	// Green after the fix: the flip is represented as the standard remove + add.
+	expect(diff.remove_items).toEqual([
+		{
+			feature_id: "messages",
+			interval: ResetInterval.Month,
+			interval_count: 1,
+		},
+	]);
+	expect(diff.add_items).toEqual([
+		{
+			feature_id: "messages",
+			included: 100,
+			unlimited: false,
+			reset: { interval: ResetInterval.Month },
+		},
+	]);
+});
+
 test("billing_controls: skip_overage_billing false vs unset is not a change", () => {
 	const from = plan({
 		billing_controls: {

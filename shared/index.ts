@@ -76,6 +76,7 @@ export * from "./models/licenseModels/fullCustomerLicense";
 export * from "./models/licenseModels/fullPlanLicenseModel";
 export * from "./models/licenseModels/licenseModels";
 export * from "./models/licenseModels/licenseTable";
+export * from "./models/pooledBalanceModels/pooledBalanceTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";
 export * from "./utils/chatState";

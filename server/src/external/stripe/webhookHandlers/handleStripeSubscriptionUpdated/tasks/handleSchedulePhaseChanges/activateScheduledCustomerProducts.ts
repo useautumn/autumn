@@ -5,35 +5,29 @@ import {
 	isCustomerProductOnStripeSubscriptionSchedule,
 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import {
+	completeScheduledCustomerProductActivation,
+	type PreparedScheduledCustomerProductActivation,
+	prepareScheduledCustomerProductActivation,
+} from "@/internal/customers/cusProducts/actions/activateScheduled.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
-import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
-import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
+import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate.js";
+import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext.js";
 
-/**
- * Activates scheduled customer products that should now be active.
- *
- * Filters by:
- * 1. hasCustomerProductStarted (scheduled + starts_at reached)
- * 2. canActivate (free OR on this subscription OR on this schedule)
- *
- * For free products: uses empty subscription/schedule IDs
- * For paid products: uses IDs from stripeSubscription
- */
-export const activateScheduledCustomerProducts = async ({
+export const prepareScheduledCustomerProducts = async ({
 	ctx,
 	eventContext,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
-}): Promise<void> => {
+}): Promise<PreparedScheduledCustomerProductActivation[]> => {
 	const { logger } = ctx;
 	const { fullCustomer, stripeSubscription, nowMs } = eventContext;
-
+	const preparedActivations: PreparedScheduledCustomerProductActivation[] = [];
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
 	for (const customerProduct of fullCustomer.customer_products) {
-		// Check if can activate: free OR on this subscription OR on this schedule
 		const hasStarted = hasCustomerProductStarted(customerProduct, { nowMs });
 		const canActivate = cp(customerProduct)
 			.free()
@@ -61,7 +55,6 @@ export const activateScheduledCustomerProducts = async ({
 			`Activating scheduled product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		// Free products get empty IDs, paid products get IDs from stripe subscription
 		const subscriptionIds = isFree ? [] : [stripeSubscription.id];
 		const scheduledIds = isFree
 			? []
@@ -73,18 +66,92 @@ export const activateScheduledCustomerProducts = async ({
 				? [stripeSubscriptionSchedule.id]
 				: [];
 
-		const { updates } = await customerProductActions.activateScheduled({
+		preparedActivations.push(
+			await prepareScheduledCustomerProductActivation({
+				ctx,
+				customerProduct,
+				fullCustomer,
+				subscriptionIds,
+				scheduledIds,
+				currentEpochMs: nowMs,
+			}),
+		);
+	}
+
+	return preparedActivations;
+};
+
+export const completeScheduledCustomerProducts = async ({
+	ctx,
+	eventContext,
+	preparedActivations,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+	preparedActivations: PreparedScheduledCustomerProductActivation[];
+}): Promise<void> => {
+	for (const preparedActivation of preparedActivations) {
+		await completeScheduledCustomerProductActivation({
 			ctx,
-			customerProduct,
-			fullCustomer,
-			subscriptionIds,
-			scheduledIds,
+			customerProduct: preparedActivation.customerProduct,
+			fullCustomer: eventContext.fullCustomer,
 		});
 
 		trackCustomerProductUpdate({
 			eventContext,
-			customerProduct,
-			updates,
+			customerProduct: preparedActivation.customerProduct,
+			updates: preparedActivation.updates,
 		});
 	}
 };
+
+type ActivateScheduledCustomerProductsDependencies = {
+	prepareScheduledCustomerProducts: typeof prepareScheduledCustomerProducts;
+	executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+	completeScheduledCustomerProducts: typeof completeScheduledCustomerProducts;
+};
+
+const defaultActivateScheduledCustomerProductsDependencies: ActivateScheduledCustomerProductsDependencies =
+	{
+		prepareScheduledCustomerProducts,
+		executeAutumnBillingPlan,
+		completeScheduledCustomerProducts,
+	};
+
+export const activateScheduledCustomerProductsWithDependencies = async ({
+	ctx,
+	eventContext,
+	dependencies = defaultActivateScheduledCustomerProductsDependencies,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+	dependencies?: ActivateScheduledCustomerProductsDependencies;
+}): Promise<void> => {
+	const preparedActivations =
+		await dependencies.prepareScheduledCustomerProducts({
+			ctx,
+			eventContext,
+		});
+
+	for (const preparedActivation of preparedActivations) {
+		await dependencies.executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: preparedActivation.autumnBillingPlan,
+		});
+		await dependencies.completeScheduledCustomerProducts({
+			ctx,
+			eventContext,
+			preparedActivations: [preparedActivation],
+		});
+	}
+};
+
+/** Activates scheduled products whose start time and subscription ownership match. */
+export const activateScheduledCustomerProducts = async ({
+	ctx,
+	eventContext,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+}): Promise<void> =>
+	activateScheduledCustomerProductsWithDependencies({ ctx, eventContext });

@@ -2,10 +2,13 @@ import type {
 	AutumnBillingPlan,
 	CreateScheduleBillingContext,
 	FullCusProduct,
+	PooledBalanceOp,
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/attach/compute/computeAttachNewCustomerProduct";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
+import { customerProductToPooledBalanceRemovalOp } from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 import { applyScheduleTimingToCustomerProductPlan } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
@@ -41,8 +44,14 @@ const insertImmediateCustomerProducts = ({
 	billingContext: CreateScheduleBillingContext;
 	expiredCustomerProducts: FullCusProduct[];
 	nextPhaseStartsAt: number | undefined;
-}): FullCusProduct[] =>
-	billingContext.productContexts.map((productContext) => {
+}): {
+	insertCustomerProducts: FullCusProduct[];
+	pooledBalanceOps: PooledBalanceOp[];
+} => {
+	const insertCustomerProducts: FullCusProduct[] = [];
+	const pooledBalanceOps: PooledBalanceOp[] = [];
+
+	for (const productContext of billingContext.productContexts) {
 		const expiredSameProduct = expiredCustomerProducts.find(
 			(customerProduct) =>
 				customerProduct.product.id === productContext.fullProduct.id,
@@ -68,8 +77,17 @@ const insertImmediateCustomerProducts = ({
 			endedAt: nextPhaseStartsAt ?? null,
 		});
 
-		return newCustomerProduct;
-	});
+		const prepared = computeAttachPooledBalanceOps({
+			customerProduct: newCustomerProduct,
+			attachBillingContext,
+			removeCurrentSource: false,
+		});
+		insertCustomerProducts.push(prepared.customerProduct);
+		pooledBalanceOps.push(...prepared.pooledBalanceOps);
+	}
+
+	return { insertCustomerProducts, pooledBalanceOps };
+};
 
 /** Compute the immediate-phase customer product expirations and insertions. */
 export const computeImmediatePhaseCustomerProducts = ({
@@ -88,12 +106,25 @@ export const computeImmediatePhaseCustomerProducts = ({
 		currentEpochMs: billingContext.currentEpochMs,
 	});
 
-	const insertCustomerProducts = insertImmediateCustomerProducts({
+	const inserted = insertImmediateCustomerProducts({
 		ctx,
 		billingContext,
 		expiredCustomerProducts: currentRecurringCustomerProducts,
 		nextPhaseStartsAt,
 	});
+	const removalOperations = currentRecurringCustomerProducts.flatMap(
+		(customerProduct) => {
+			const operation = customerProductToPooledBalanceRemovalOp({
+				customerProduct,
+				effectiveAt: null,
+			});
+			return operation ? [operation] : [];
+		},
+	);
 
-	return { insertCustomerProducts, updateCustomerProducts };
+	return {
+		insertCustomerProducts: inserted.insertCustomerProducts,
+		updateCustomerProducts,
+		pooledBalanceOps: [...removalOperations, ...inserted.pooledBalanceOps],
+	};
 };

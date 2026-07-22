@@ -13,6 +13,10 @@ import {
 	subjectBalanceToSyncEntry,
 } from "./flushSubjectBalancesToDb.js";
 import { logSyncItem } from "./logs/logSyncItem";
+import {
+	type CustomerBalanceSyncDb,
+	withCustomerBalanceSyncLock,
+} from "./withCustomerBalanceSyncLock.js";
 
 export type {
 	RolloverSyncEntry,
@@ -76,33 +80,34 @@ interface SyncItemV4 {
 }
 
 /** Sync cached subject balances to Postgres using targeted hash reads. */
-export const syncItemV4 = async ({
+const syncItemV4WithDb = async ({
 	ctx,
 	payload,
+	db,
+	getFeatureBalance,
 }: {
 	ctx: AutumnContext;
 	payload: SyncItemV4;
+	db: CustomerBalanceSyncDb;
+	getFeatureBalance: typeof getCachedFeatureBalance;
 }): Promise<void> => {
 	const {
 		customerId,
-		entityId,
 		rolloverIds,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
 	} = payload;
-	const { db } = ctx;
-
 	// Read targeted balance hashes
 	let allSubjectBalances: SubjectBalance[] = [];
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
-		const outcome = await getCachedFeatureBalance({
+		const outcome = await getFeatureBalance({
 			ctx,
 			customerId,
 			featureId,
 			customerEntitlementIds,
-			// readMaster: true,
+			readMaster: true,
 		});
 
 		if (outcome.kind !== "ok") {
@@ -165,25 +170,13 @@ export const syncItemV4 = async ({
 		return;
 	}
 
-	const { data: result, error } = await tryCatch(
-		db.execute(
-			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
-				customer_entitlement_updates: entries,
-				rollover_updates: rolloverEntries,
-				usage_window_updates: usageWindowEntries,
-			})}::jsonb) ${planetScaleTag({ query: "syncItemV4" })}`,
-		),
+	const result = await db.execute(
+		sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
+			customer_entitlement_updates: entries,
+			rollover_updates: rolloverEntries,
+			usage_window_updates: usageWindowEntries,
+		})}::jsonb) ${planetScaleTag({ query: "syncItemV4" })}`,
 	);
-
-	if (error) {
-		await handleSyncPostgresError({
-			error,
-			customerId,
-			entityId,
-			ctx,
-		});
-		return;
-	}
 
 	const syncResult = result[0]?.sync_balances_v2 as
 		| {
@@ -227,3 +220,42 @@ export const syncItemV4 = async ({
 		});
 	}
 };
+
+export const syncItemV4WithDependencies = async ({
+	ctx,
+	payload,
+	getFeatureBalance,
+}: {
+	ctx: AutumnContext;
+	payload: SyncItemV4;
+	getFeatureBalance: typeof getCachedFeatureBalance;
+}): Promise<void> => {
+	const { error } = await tryCatch(
+		withCustomerBalanceSyncLock({
+			ctx,
+			customerId: payload.customerId,
+			callback: ({ db }) =>
+				syncItemV4WithDb({ ctx, payload, db, getFeatureBalance }),
+		}),
+	);
+	if (!error) return;
+	await handleSyncPostgresError({
+		error,
+		customerId: payload.customerId,
+		entityId: payload.entityId,
+		ctx,
+	});
+};
+
+export const syncItemV4 = async ({
+	ctx,
+	payload,
+}: {
+	ctx: AutumnContext;
+	payload: SyncItemV4;
+}): Promise<void> =>
+	syncItemV4WithDependencies({
+		ctx,
+		payload,
+		getFeatureBalance: getCachedFeatureBalance,
+	});

@@ -1,14 +1,20 @@
 import {
 	AttachScenario,
+	type AutumnBillingPlan,
 	cp,
 	type FullCusProduct,
 	notNullish,
+	type PooledBalanceOp,
 } from "@autumn/shared";
 import { msToSeconds } from "@shared/utils/common/unixUtils";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import {
+	customerProductToPooledBalanceOwnerRemovalOp,
+	customerProductToPooledBalanceRemovalOp,
+} from "@/internal/billing/v2/pooledBalances/compute/customerProductToPooledBalanceRemovalOp.js";
 import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { isStripeSubscriptionCanceledEvent } from "./isStripeSubscriptionCanceledEvent";
@@ -24,12 +30,26 @@ import { scheduleDefaultProducts } from "./scheduleDefaultProducts";
  * 4. Schedules default products for non-add-on groups
  * 5. Sends cancel webhooks (after defaults are scheduled)
  */
-export const handleStripeSubscriptionCanceled = async ({
+export type HandleStripeSubscriptionCanceledDependencies = {
+	getStripeSubscriptionLock: typeof getStripeSubscriptionLock;
+	executeAutumnBillingPlan: typeof executeAutumnBillingPlan;
+	scheduleDefaultProducts: typeof scheduleDefaultProducts;
+	addProductsUpdatedWebhookTask: typeof addProductsUpdatedWebhookTask;
+};
+
+export const handleStripeSubscriptionCanceledWithDependencies = async ({
 	ctx,
 	subscriptionUpdatedContext,
+	dependencies = {
+		getStripeSubscriptionLock,
+		executeAutumnBillingPlan,
+		scheduleDefaultProducts,
+		addProductsUpdatedWebhookTask,
+	},
 }: {
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	dependencies?: HandleStripeSubscriptionCanceledDependencies;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 	const {
@@ -49,7 +69,7 @@ export const handleStripeSubscriptionCanceled = async ({
 	if (!canceled) return;
 
 	// 2. Check lock - if Autumn initiated this cancellation, skip
-	const lock = await getStripeSubscriptionLock({
+	const lock = await dependencies.getStripeSubscriptionLock({
 		stripeSubscriptionId: stripeSubscription.id,
 	});
 
@@ -65,6 +85,10 @@ export const handleStripeSubscriptionCanceled = async ({
 	// PASS 1: Update cancellation status
 	const allCanceledProducts: FullCusProduct[] = [];
 	const canceledNonAddonProducts: FullCusProduct[] = [];
+	const pooledBalanceOps: PooledBalanceOp[] = [];
+	const updateCustomerProducts: NonNullable<
+		AutumnBillingPlan["updateCustomerProducts"]
+	> = [];
 
 	for (const customerProduct of customerProducts) {
 		const { valid: isActiveRecurringAndOnSub } = cp(customerProduct)
@@ -87,33 +111,55 @@ export const handleStripeSubscriptionCanceled = async ({
 			ended_at: cancelsAtMs ?? undefined,
 		};
 
-		await CusProductService.update({
-			ctx,
-			cusProductId: customerProduct.id,
-			updates,
-		});
-
-		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-			updates,
-		});
-
-		logger.info(
-			`[handleStripeSubscriptionCanceled] Marked ${customerProduct.product.name} as canceled`,
-		);
+		updateCustomerProducts.push({ customerProduct, updates });
 
 		allCanceledProducts.push(customerProduct);
+		const pooledSourceRemoval = customerProductToPooledBalanceRemovalOp({
+			customerProduct,
+			effectiveAt: typeof cancelsAtMs === "number" ? cancelsAtMs : null,
+		});
+		if (pooledSourceRemoval) pooledBalanceOps.push(pooledSourceRemoval);
+		if (typeof cancelsAtMs === "number") {
+			pooledBalanceOps.push(
+				customerProductToPooledBalanceOwnerRemovalOp({
+					customerProduct,
+					effectiveAt: cancelsAtMs,
+				}),
+			);
+		}
 
 		if (!customerProduct.product.is_add_on) {
 			canceledNonAddonProducts.push(customerProduct);
 		}
 	}
+	if (updateCustomerProducts.length > 0) {
+		await dependencies.executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: {
+				customerId: fullCustomer.id ?? fullCustomer.internal_id,
+				insertCustomerProducts: [],
+				updateCustomerProducts,
+				pooledBalanceOps:
+					pooledBalanceOps.length > 0 ? pooledBalanceOps : undefined,
+			},
+		});
+	}
+
+	for (const { customerProduct, updates } of updateCustomerProducts) {
+		trackCustomerProductUpdate({
+			eventContext: subscriptionUpdatedContext,
+			customerProduct,
+			updates,
+		});
+		logger.info(
+			`[handleStripeSubscriptionCanceled] Marked ${customerProduct.product.name} as canceled`,
+		);
+	}
 
 	// PASS 2: Schedule default products
 	let scheduledByGroup = new Map<string, FullCusProduct>();
 	if (org.config.sync_status && canceledNonAddonProducts.length > 0) {
-		scheduledByGroup = await scheduleDefaultProducts({
+		scheduledByGroup = await dependencies.scheduleDefaultProducts({
 			ctx,
 			subscriptionUpdatedContext,
 			canceledCustomerProducts: canceledNonAddonProducts,
@@ -126,7 +172,7 @@ export const handleStripeSubscriptionCanceled = async ({
 			customerProduct.product.group,
 		);
 
-		await addProductsUpdatedWebhookTask({
+		await dependencies.addProductsUpdatedWebhookTask({
 			ctx,
 			internalCustomerId: fullCustomer.internal_id,
 			org,
@@ -138,3 +184,15 @@ export const handleStripeSubscriptionCanceled = async ({
 		});
 	}
 };
+
+export const handleStripeSubscriptionCanceled = async ({
+	ctx,
+	subscriptionUpdatedContext,
+}: {
+	ctx: StripeWebhookContext;
+	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+}): Promise<void> =>
+	handleStripeSubscriptionCanceledWithDependencies({
+		ctx,
+		subscriptionUpdatedContext,
+	});

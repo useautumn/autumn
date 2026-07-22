@@ -73,25 +73,27 @@ export const applyResetResultsToFullSubject = async ({
 		if (updates.entities !== null) original.entities = updates.entities;
 		original.next_reset_at = updates.next_reset_at;
 
-		if (!result.rolloverInsert) continue;
-
-		if (!skippedSet.has(customerEntitlementId)) {
-			const { rollovers, deletedIds, overwrites } =
-				await RolloverService.clearExcessRollovers({
-					ctx: generalCtx,
-					newRows: result.rolloverInsert.rows,
-					fullCusEnt: original,
-				});
-			original.rollovers = rollovers;
-
-			if (deletedIds.length > 0 || overwrites.length > 0) {
-				clearingMap[customerEntitlementId] = { deletedIds, overwrites };
-			}
-		} else {
+		if (skippedSet.has(customerEntitlementId)) {
 			original.rollovers = await RolloverService.getCurrentRollovers({
 				ctx: generalCtx,
 				cusEntID: customerEntitlementId,
 			});
+			continue;
+		}
+
+		if (!result.rolloverInsert) continue;
+
+		const { rollovers, deletedIds, overwrites } =
+			await RolloverService.clearExcessRollovers({
+				ctx: generalCtx,
+				newRows: result.rolloverInsert.rows,
+				fullCusEnt: original,
+				startingBalanceOverride: result.rolloverInsert.startingBalanceOverride,
+			});
+		original.rollovers = rollovers;
+
+		if (deletedIds.length > 0 || overwrites.length > 0) {
+			clearingMap[customerEntitlementId] = { deletedIds, overwrites };
 		}
 	}
 

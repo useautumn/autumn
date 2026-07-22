@@ -3,13 +3,15 @@ import {
 	customers,
 	ErrCode,
 	member,
-	organizations,
 	type Organization,
+	organizations,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import { and, eq } from "drizzle-orm";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { pooledBalanceRepo } from "@/internal/billing/v2/pooledBalances/repos/pooledBalanceRepo.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import {
 	deleteStripeAccounts,
 	deleteStripeWebhooks,
@@ -57,15 +59,24 @@ export const deletePlatformSubOrg = async ({
 	await deleteStripeAccounts({ org, logger });
 
 	logger.info("4. Deleting sandbox customers");
-	await db
-		.delete(customers)
-		.where(
-			and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
-		);
+	await CusService.deleteByOrgId({
+		db,
+		orgId: org.id,
+		env: AppEnv.Sandbox,
+	});
 
-	logger.info("5. Deleting org memberships");
-	await db.delete(member).where(eq(member.organizationId, org.id));
+	await db.transaction(async (transaction) => {
+		if (skipLiveCustomerCheck) {
+			await pooledBalanceRepo.deleteGraphsByOrgId({
+				db: transaction,
+				orgId: org.id,
+			});
+		}
 
-	logger.info("6. Deleting organization");
-	await db.delete(organizations).where(eq(organizations.id, org.id));
+		logger.info("5. Deleting org memberships");
+		await transaction.delete(member).where(eq(member.organizationId, org.id));
+
+		logger.info("6. Deleting organization");
+		await transaction.delete(organizations).where(eq(organizations.id, org.id));
+	});
 };

@@ -4,7 +4,6 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { getOrInitFullSubjectViewEpoch } from "@/internal/customers/cache/fullSubject/actions/invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
-import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
@@ -14,6 +13,7 @@ import {
 	invalidateCachedFullSubject,
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
+import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { fullSubjectToComparableSubject } from "../full-subject/utils/buildComparableFullSubject.js";
 import {
@@ -210,7 +210,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 		});
 	});
 
-	test("entity cache fill preserves existing shared balance fields and never creates a meta key", async () => {
+	test("same-epoch entity cache fill preserves live shared balance fields and never creates a meta key", async () => {
 		const scenario = buildEntitySubjectScenario({
 			ctx,
 			name: "fullsubject-cache-shared-balance-upsert",
@@ -270,19 +270,11 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					),
 				).toBe(0);
 
-				await invalidateCachedFullSubject({
-					ctx,
-					customerId,
-					source: "integration-test-overwrite",
-				});
-
 				expect(
 					await setCachedFullSubject({
 						ctx,
 						normalized: entityNormalized!,
-						fetchedSubjectViewEpoch: await getCurrentViewEpoch({
-							customerId,
-						}),
+						fetchedSubjectViewEpoch,
 					}),
 				).toBe("OK");
 
@@ -300,6 +292,89 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 						`{${customerId}}:${ctx.org.id}:${ctx.env}:full_subject:shared_balances`,
 					),
 				).toBe(0);
+
+				await cleanupKeys({ customerId });
+				await cleanupKeys({ customerId, entityId });
+			},
+		});
+	});
+
+	test("new-epoch entity cache fill replaces stale shared balance fields", async () => {
+		const scenario = buildEntitySubjectScenario({
+			ctx,
+			name: "fullsubject-cache-shared-balance-new-epoch",
+		});
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const customerId = scenario.ids.customerId;
+				const entityId = scenario.ids.entityIds[0]!;
+				const { normalized: customerNormalized } =
+					(await getFullSubjectNormalized({
+						ctx,
+						customerId,
+					}))!;
+				const { normalized: entityNormalized } =
+					(await getFullSubjectNormalized({
+						ctx,
+						customerId,
+						entityId,
+					}))!;
+
+				expect(customerNormalized).toBeDefined();
+				expect(entityNormalized).toBeDefined();
+
+				const overlappingFeatureId =
+					entityNormalized!.customer_entitlements.find((entityCusEnt) =>
+						customerNormalized!.customer_entitlements.some(
+							(customerCusEnt) => customerCusEnt.id === entityCusEnt.id,
+						),
+					)?.feature_id;
+
+				expect(overlappingFeatureId).toBeDefined();
+
+				const initialEpoch = await getCurrentViewEpoch({ customerId });
+				expect(
+					await setCachedFullSubject({
+						ctx,
+						normalized: customerNormalized!,
+						fetchedSubjectViewEpoch: initialEpoch,
+					}),
+				).toBe("OK");
+
+				const balanceKey = buildSharedFullSubjectBalanceKey({
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId,
+					featureId: overlappingFeatureId!,
+				});
+				await ctx.redisV2.hset(balanceKey, "stale-field", "stale-value");
+
+				await invalidateCachedFullSubject({
+					ctx,
+					customerId,
+					entityId,
+					source: "integration-test-new-epoch",
+				});
+
+				const nextEpoch = await getCurrentViewEpoch({ customerId });
+				expect(nextEpoch).toBe(initialEpoch + 1);
+				expect(
+					await setCachedFullSubject({
+						ctx,
+						normalized: entityNormalized!,
+						fetchedSubjectViewEpoch: nextEpoch,
+					}),
+				).toBe("OK");
+
+				const rebuiltHash = await getSharedBalanceHash({
+					customerId,
+					featureId: overlappingFeatureId!,
+				});
+				expect(rebuiltHash["stale-field"]).toBeUndefined();
+				expect(rebuiltHash._subject_view_epoch).toBe(String(nextEpoch));
 
 				await cleanupKeys({ customerId });
 				await cleanupKeys({ customerId, entityId });
@@ -348,13 +423,14 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					entityId,
 					source: "integration-test",
 				});
-				const { fullSubject: partialCached } = await getCachedPartialFullSubject({
-					ctx,
-					customerId: scenario.ids.customerId,
-					entityId,
-					featureIds: ["messages", "users"],
-					source: "integration-test",
-				});
+				const { fullSubject: partialCached } =
+					await getCachedPartialFullSubject({
+						ctx,
+						customerId: scenario.ids.customerId,
+						entityId,
+						featureIds: ["messages", "users"],
+						source: "integration-test",
+					});
 
 				expect(cached).toBeUndefined();
 				expect(partialCached).toBeUndefined();
@@ -363,6 +439,71 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					customerId: scenario.ids.customerId,
 					entityId,
 				});
+			},
+		});
+	});
+
+	test("stale subject cache writes create neither a subject nor shared balance fields", async () => {
+		const scenario = buildCustomerMeteredScenario({
+			ctx,
+			name: "fullsubject-cache-stale-write-zero-mutation",
+		});
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const customerId = scenario.ids.customerId;
+				const { normalized } = (await getFullSubjectNormalized({
+					ctx,
+					customerId,
+				}))!;
+				expect(normalized).toBeDefined();
+
+				const staleEpoch = await getCurrentViewEpoch({ customerId });
+				await ctx.redisV2.incr(
+					buildFullSubjectViewEpochKey({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						customerId,
+					}),
+				);
+
+				expect(
+					await setCachedFullSubject({
+						ctx,
+						normalized: normalized!,
+						fetchedSubjectViewEpoch: staleEpoch,
+					}),
+				).toBe("STALE_WRITE");
+				expect(
+					await ctx.redisV2.exists(
+						buildFullSubjectKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId,
+						}),
+					),
+				).toBe(0);
+
+				for (const featureId of new Set(
+					normalized!.customer_entitlements.map(
+						(customerEntitlement) => customerEntitlement.feature_id,
+					),
+				)) {
+					expect(
+						await ctx.redisV2.exists(
+							buildSharedFullSubjectBalanceKey({
+								orgId: ctx.org.id,
+								env: ctx.env,
+								customerId,
+								featureId,
+							}),
+						),
+					).toBe(0);
+				}
+
+				await cleanupKeys({ customerId });
 			},
 		});
 	});

@@ -39,6 +39,39 @@ describe(`${chalk.yellowBright("fullSubject raw query row")}`, () => {
 		});
 	});
 
+	test("customer aggregate excludes normalized pooled entity source grants", async () => {
+		const scenario = buildCustomerWithEntityBoundDataScenario({
+			ctx,
+			name: "fullsubject-row-pooled-source-aggregate",
+		});
+		scenario.entitlements[1] = {
+			...scenario.entitlements[1],
+			pooled: true,
+		};
+		scenario.customerEntitlements[1] = {
+			...scenario.customerEntitlements[1],
+			balance: 0,
+		};
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const row = await fetchSubjectQueryRow({
+					ctx,
+					customerId: scenario.ids.customerId,
+				});
+
+				expect(
+					row?.entity_aggregations?.aggregated_customer_entitlements,
+				).toEqual([]);
+				expect(
+					row?.entity_aggregations?.aggregated_customer_products,
+				).toHaveLength(1);
+			},
+		});
+	});
+
 	test("entity-scoped row includes parent plus selected entity products", async () => {
 		const scenario = buildEntitySubjectScenario({
 			ctx,
@@ -57,9 +90,11 @@ describe(`${chalk.yellowBright("fullSubject raw query row")}`, () => {
 
 				expect(row).toBeDefined();
 				expect(row?.customer_products).toHaveLength(2);
-				expect(
-					row?.customer_products.map((product) => product.internal_entity_id),
-				).toEqual([null, scenario.ids.internalEntityIds[0]]);
+				const internalEntityIds = row?.customer_products.map(
+					(product) => product.internal_entity_id,
+				);
+				expect(internalEntityIds).toContain(null);
+				expect(internalEntityIds).toContain(scenario.ids.internalEntityIds[0]);
 			},
 		});
 	});

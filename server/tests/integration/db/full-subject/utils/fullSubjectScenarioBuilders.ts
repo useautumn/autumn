@@ -190,6 +190,7 @@ const buildEntitlement = ({
 	interval_count: 1,
 	carry_from_previous: false,
 	entity_feature_id: entityFeatureId,
+	pooled: false,
 	org_id: ctx.org.id,
 	feature_id: feature.id,
 	usage_limit: null,

@@ -29,6 +29,7 @@ export type ProcessResetResult = {
 	rolloverInsert?: {
 		rows: Rollover[];
 		fullCusEnt: FullCusEntWithProduct;
+		startingBalanceOverride?: number;
 	};
 };
 

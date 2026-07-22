@@ -18,6 +18,12 @@ import {
 	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
+import { getCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getCachedFullSubject.js";
+import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
@@ -93,6 +99,10 @@ const queueEvent = ({
 	);
 };
 
+const isSubjectBalanceNotFound = (error: Error | null): boolean =>
+	error instanceof RedisDeductionError &&
+	error.code === RedisDeductionErrorCode.SubjectBalanceNotFound;
+
 export const runRedisTrackV3 = async ({
 	ctx,
 	fullSubject,
@@ -108,11 +118,37 @@ export const runRedisTrackV3 = async ({
 	body: TrackParams;
 	idempotencyKey?: string;
 }): Promise<TrackResponseV3> => {
-	const { data: result, error } = await tryCatch(
+	let deductionSubject = fullSubject;
+	const refreshDeductionSubject = async (): Promise<FullSubject> => {
+		await getOrSetCachedFullSubject({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			source: "runRedisTrackV3:subject-balance-not-found",
+			staleWhileRevalidate: false,
+		});
+		const { fullSubject: verifiedSubject } = await getCachedFullSubject({
+			ctx,
+			customerId: body.customer_id,
+			entityId: body.entity_id,
+			source: "runRedisTrackV3:verify-subject-balance-refresh",
+			staleWhileRevalidate: false,
+		});
+		if (!verifiedSubject) {
+			throw new RedisDeductionError({
+				message: "Refreshed FullSubject balance cache could not be verified",
+				code: RedisDeductionErrorCode.SubjectBalanceNotFound,
+			});
+		}
+		deductionSubject = verifiedSubject;
+		return deductionSubject;
+	};
+
+	const executeRedisDeduction = (subject: FullSubject) =>
 		executeRedisDeductionV2({
 			ctx,
-			fullSubject,
-			entityId: fullSubject.entity?.id ?? undefined,
+			fullSubject: subject,
+			entityId: subject.entity?.id ?? undefined,
 			deductions: featureDeductions,
 			idempotencyKey,
 			deductionOptions: {
@@ -120,17 +156,33 @@ export const runRedisTrackV3 = async ({
 				triggerAutoTopUp: true,
 				eventProperties: body.properties,
 			},
-		}),
+			onSubjectBalanceNotFound: refreshDeductionSubject,
+		});
+
+	const { data: result, error } = await tryCatch(
+		executeRedisDeduction(deductionSubject),
 	);
+
+	if (isSubjectBalanceNotFound(error)) {
+		ctx.logger.warn(
+			featureDeductions.length > 1
+				? "[runRedisTrackV3] Refreshed multi-feature subject balance is still missing; failing without Postgres fallback because an earlier feature may already have applied."
+				: "[runRedisTrackV3] Refreshed subject balance is still missing; failing without Postgres fallback so Redis and the enclosing database transaction cannot diverge.",
+		);
+		throw error;
+	}
 
 	if (error) {
 		return handleRedisTrackErrorV3({
 			ctx,
 			error,
 			body,
-			fullSubject,
+			fullSubject: deductionSubject,
 			featureDeductions,
 		});
+	}
+	if (!result) {
+		throw new Error("Redis track deduction completed without a result");
 	}
 
 	const {

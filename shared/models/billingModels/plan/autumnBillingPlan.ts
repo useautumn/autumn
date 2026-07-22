@@ -16,10 +16,13 @@ import {
 	type InsertInvoice,
 	PriceSchema,
 	ReplaceableSchema,
+	RolloverConfigSchema,
 	SubscriptionSchema,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { InsertReplaceable } from "../../cusProductModels/cusEntModels/replaceableTable";
+import { PooledBalanceResetOwnerType } from "../../pooledBalanceModels/pooledBalanceTable.js";
+import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
@@ -39,6 +42,7 @@ export const UpdateCustomerEntitlementSchema = z.object({
 			next_reset_at: z.number().optional(),
 			reset_cycle_anchor: z.number().nullable().optional(),
 			adjustment: z.number().optional(),
+			additional_balance: z.number().optional(),
 			entities: z.record(z.string(), EntityBalanceSchema).optional(),
 			balance: z.number().optional(),
 		})
@@ -81,6 +85,93 @@ export const PatchCustomerProductSchema = z.object({
 	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
+const PooledBalanceSourceSchema = z.object({
+	internalCustomerId: z.string(),
+	sourceCustomerProductId: z.string(),
+});
+
+export const UpsertPooledBalanceSourceOpSchema =
+	PooledBalanceSourceSchema.extend({
+		op: z.literal("upsert_source"),
+		featureId: z.string(),
+		internalFeatureId: z.string(),
+		interval: z.nativeEnum(EntInterval),
+		intervalCount: z.number().int().positive(),
+		resetCycleAnchor: z.number().nullable(),
+		nextResetAt: z.number().nullable(),
+		rollover: RolloverConfigSchema.nullish().default(null),
+		resetOwnerType: z.enum(PooledBalanceResetOwnerType),
+		resetOwnerId: z.string(),
+		priceId: z.string().nullable(),
+		sourceEntitlementId: z.string(),
+		currentCycleContribution: z.number().nonnegative(),
+		nextCycleContribution: z.number().nonnegative(),
+		usageReapply: z
+			.object({
+				amount: z.number().positive(),
+				excludedSourceCustomerProductId: z.string(),
+			})
+			.optional(),
+	});
+
+export const RemovePooledBalanceSourceOpSchema =
+	PooledBalanceSourceSchema.extend({
+		op: z.literal("remove_source"),
+		effectiveAt: z.number().nullable(),
+	});
+
+export const RemovePooledBalanceContributionOpSchema =
+	PooledBalanceSourceSchema.extend({
+		op: z.literal("remove_contribution"),
+		sourceEntitlementId: z.string(),
+		effectiveAt: z.number().nullable(),
+	});
+
+export const RestorePooledBalanceSourceOpSchema =
+	PooledBalanceSourceSchema.extend({
+		op: z.literal("restore_source"),
+		expectedEffectiveAt: z.number(),
+	});
+
+const PooledBalanceOwnerSchema = z.object({
+	internalCustomerId: z.string(),
+	resetOwnerType: z.enum(PooledBalanceResetOwnerType),
+	resetOwnerId: z.string(),
+});
+
+export const StagePooledBalanceOwnerRemovalOpSchema =
+	PooledBalanceOwnerSchema.extend({
+		op: z.literal("stage_owner_removal"),
+		effectiveAt: z.number(),
+	});
+
+export const RestorePooledBalanceOwnerOpSchema =
+	PooledBalanceOwnerSchema.extend({
+		op: z.literal("restore_owner"),
+		expectedEffectiveAt: z.number(),
+	});
+
+export const TransferPooledBalanceSourceOpSchema =
+	UpsertPooledBalanceSourceOpSchema.omit({
+		op: true,
+		usageReapply: true,
+	}).extend({
+		op: z.literal("transfer_source"),
+		contributionId: z.string(),
+		expectedPooledBalanceId: z.string(),
+	});
+
+export const PooledBalanceOpSchema = z.discriminatedUnion("op", [
+	UpsertPooledBalanceSourceOpSchema,
+	RemovePooledBalanceSourceOpSchema,
+	RemovePooledBalanceContributionOpSchema,
+	RestorePooledBalanceSourceOpSchema,
+	StagePooledBalanceOwnerRemovalOpSchema,
+	RestorePooledBalanceOwnerOpSchema,
+	TransferPooledBalanceSourceOpSchema,
+]);
+export type PooledBalanceOp = z.infer<typeof PooledBalanceOpSchema>;
+
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	// Inserted before customer products — provisioned rows may reference them.
@@ -119,6 +210,7 @@ export const AutumnBillingPlanSchema = z.object({
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)
 		.optional(),
+	pooledBalanceOps: z.array(PooledBalanceOpSchema).optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

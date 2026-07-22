@@ -15,12 +15,16 @@ local function apply_balance_and_adjustment_update(params)
 
   if not is_absent(update.balance) then
     subject_balance.balance = update.balance
+  elseif not is_absent(update.balance_delta) then
+    subject_balance.balance = old_balance + safe_number(update.balance_delta)
   end
   if not is_absent(update.additional_balance) then
     subject_balance.additional_balance = update.additional_balance
   end
   if not is_absent(update.adjustment) then
     subject_balance.adjustment = update.adjustment
+  elseif not is_absent(update.adjustment_delta) then
+    subject_balance.adjustment = old_adjustment + safe_number(update.adjustment_delta)
   end
 
   if subject_balance.isEntityLevel then

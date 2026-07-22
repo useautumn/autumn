@@ -4,6 +4,7 @@ import {
 	fullSubjectToCustomerEntitlements,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isSyntheticPooledBalanceCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 import { type BatchResetCusEntsPayload, workflows } from "@/queue/workflows.js";
 import { getResettableCustomerEntitlements } from "./getResettableCustomerEntitlements.js";
 
@@ -26,15 +27,30 @@ export const triggerBatchResetSubjectEntitlements = async ({
 			customerEntitlements,
 			now,
 		});
+		const syntheticPooledBalancesNeedingReset = customerEntitlements.filter(
+			(customerEntitlement) =>
+				customerEntitlement.next_reset_at != null &&
+				customerEntitlement.next_reset_at < now &&
+				isSyntheticPooledBalanceCustomerEntitlement({
+					customerEntitlement,
+					customerProduct: customerEntitlement.customer_product,
+				}),
+		);
+		const customerEntitlementsTriggeringReset = [
+			...cusEntsNeedingReset,
+			...syntheticPooledBalancesNeedingReset,
+		];
 
-		if (cusEntsNeedingReset.length === 0) continue;
+		if (customerEntitlementsTriggeringReset.length === 0) continue;
 
 		resets.push({
 			internalCustomerId: fullSubject.internalCustomerId,
 			customerId: fullSubject.customerId,
 			internalEntityId: fullSubject.internalEntityId,
 			entityId: fullSubject.entityId,
-			cusEntIds: cusEntsNeedingReset.map((cusEnt) => cusEnt.id),
+			cusEntIds: customerEntitlementsTriggeringReset.map(
+				(customerEntitlement) => customerEntitlement.id,
+			),
 		});
 	}
 

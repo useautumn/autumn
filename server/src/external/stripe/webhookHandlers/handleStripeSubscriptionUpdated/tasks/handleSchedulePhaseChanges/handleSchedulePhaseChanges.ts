@@ -2,21 +2,13 @@ import { formatMs, notNullish } from "@autumn/shared";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
-import { addBillingChangeTag } from "../../../common";
-import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
-import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts";
-import { expireEndedCustomerProducts } from "./expireEndedCustomerProducts";
-import { releaseScheduleIfLastPhase } from "./releaseScheduleIfLastPhase";
+import { addBillingChangeTag } from "../../../common/index.js";
+import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext.js";
+import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts.js";
+import { releaseScheduleIfLastPhase } from "./releaseScheduleIfLastPhase.js";
+import { transitionSchedulePhaseCustomerProducts } from "./transitionSchedulePhaseCustomerProducts.js";
 
-/**
- * Handles schedule phase changes for a subscription.
- *
- * This task:
- * 1. Activates scheduled customer products that should now be active
- * 2. Expires customer products that have ended (with default product fallback)
- * 3. Releases the subscription schedule if it's at its last phase
- */
+/** Activates and expires a subscription schedule boundary, then releases its final phase. */
 export const handleSchedulePhaseChanges = async ({
 	ctx,
 	eventContext,
@@ -41,19 +33,15 @@ export const handleSchedulePhaseChanges = async ({
 	const updatesBefore = eventContext.updatedCustomerProducts.length;
 	const insertsBefore = eventContext.insertedCustomerProducts.length;
 
-	// Step 1: Activate scheduled products; checkout trial-end updates have no schedule phase change.
-	await activateScheduledCustomerProducts({ ctx, eventContext });
-
 	// Check if phase possibly changed (items changed and schedule exists)
 	const phasePossiblyChanged =
 		notNullish(previousAttributes?.items) &&
 		notNullish(stripeSubscription.schedule);
 
-	// `activateScheduledCustomerProducts` can still mutate cusProducts on
-	// non-phase-change events (e.g. checkout trial-end flows). Those are
-	// NOT phase changes — only tag `phase_changed` once the canonical
-	// Stripe-schedule advance signal is confirmed below.
-	if (!phasePossiblyChanged) return;
+	if (!phasePossiblyChanged) {
+		await activateScheduledCustomerProducts({ ctx, eventContext });
+		return;
+	}
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
@@ -66,10 +54,8 @@ export const handleSchedulePhaseChanges = async ({
 		`[handleSchedulePhaseChanges] sub: ${stripeSubscription.id}, now: ${formatMs(nowMs)}, currentPhase: ${currentPhaseIndex + 1}/${stripeSubscriptionSchedule.phases.length}`,
 	);
 
-	// Step 2: Expire ended customer products (uses updated customerProducts)
-	await expireEndedCustomerProducts({ ctx, eventContext });
+	await transitionSchedulePhaseCustomerProducts({ ctx, eventContext });
 
-	// Step 3: Release schedule if at last phase
 	await releaseScheduleIfLastPhase({ ctx, eventContext });
 
 	if (
@@ -77,14 +63,5 @@ export const handleSchedulePhaseChanges = async ({
 		eventContext.insertedCustomerProducts.length > insertsBefore
 	) {
 		addBillingChangeTag(eventContext, "phase_changed");
-
-		// Phase transitions swap license parents outside any billing action —
-		// converge now instead of on the customer's next read. No route
-		// middleware here, so reconcile owns the cache drop.
-		await reconcileLicenseStateForCustomer({
-			ctx,
-			idOrInternalId: eventContext.fullCustomer.internal_id,
-			deleteCache: true,
-		});
 	}
 };

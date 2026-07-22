@@ -1,9 +1,10 @@
 import {
-	cusEntToCusPrice,
 	CusProductStatus,
-	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	cusEntToCusPrice,
 	type FullCusEntWithFullCusProduct,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 } from "@autumn/shared";
+import { isManagedPooledCustomerEntitlement } from "@/internal/billing/v2/pooledBalances/utils/pooledCustomerEntitlementClassification.js";
 
 /**
  * Filters customer entitlements to those needing reset:
@@ -27,6 +28,13 @@ export const getResettableCustomerEntitlements = ({
 
 	for (const cusEnt of customerEntitlements) {
 		if (!cusEnt.next_reset_at || cusEnt.next_reset_at >= now) continue;
+		if (
+			isManagedPooledCustomerEntitlement({
+				customerEntitlement: cusEnt,
+				customerProduct: cusEnt.customer_product,
+			})
+		)
+			continue;
 
 		const cusProduct = cusEnt.customer_product;
 		if (cusProduct?.status === CusProductStatus.PastDue) {

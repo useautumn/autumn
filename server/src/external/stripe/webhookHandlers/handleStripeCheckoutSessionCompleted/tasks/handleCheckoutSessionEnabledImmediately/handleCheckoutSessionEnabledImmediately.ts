@@ -93,6 +93,10 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 	const updatedAutumnPlan = updatedDeferredData.billingPlan.autumn;
 	const updateCustomerProducts = existingCusProducts.map((customerProduct) => {
 		const { valid: isPaidRecurring } = cp(customerProduct).paid().recurring();
+		const intendedCustomerProduct =
+			updatedAutumnPlan.insertCustomerProducts.find(
+				(candidate) => candidate.id === customerProduct.id,
+			);
 
 		const subscriptionIds = stripeSubscription
 			? Array.from(
@@ -106,6 +110,12 @@ export const handleCheckoutSessionEnabledImmediately = async ({
 		return {
 			customerProduct,
 			updates: {
+				...(intendedCustomerProduct
+					? {
+							status: intendedCustomerProduct.status,
+							ended_at: intendedCustomerProduct.ended_at ?? null,
+						}
+					: {}),
 				...(subscriptionIds !== undefined
 					? { subscription_ids: subscriptionIds }
 					: {}),

@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import {
 	BillingInterval,
 	BillWhen,
@@ -7,6 +7,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	type FullProduct,
+	type FullSubject,
 	PriceType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
@@ -14,6 +15,8 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { getResettableCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/getResettableCustomerEntitlements.js";
+import { triggerBatchResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/triggerBatchResetSubjectEntitlements.js";
+import { workflows } from "@/queue/workflows.js";
 
 const FEATURE_ID = "messages";
 const NOW = 1_700_000_000_000;
@@ -26,6 +29,8 @@ const buildCusEnt = ({
 	productStatus,
 	ignorePastDue = false,
 	nextResetAt,
+	pooled = false,
+	entityAttached = false,
 	withMatchingPrice = false,
 	withSeparateIntervalPrice = false,
 	withCustomerProduct = true,
@@ -33,6 +38,8 @@ const buildCusEnt = ({
 	productStatus?: CusProductStatus;
 	ignorePastDue?: boolean;
 	nextResetAt: number | null;
+	pooled?: boolean;
+	entityAttached?: boolean;
 	withMatchingPrice?: boolean;
 	withSeparateIntervalPrice?: boolean;
 	withCustomerProduct?: boolean;
@@ -46,6 +53,10 @@ const buildCusEnt = ({
 		customerProductId: withCustomerProduct ? CUS_PROD_ID : undefined,
 		interval: withSeparateIntervalPrice ? EntInterval.Month : null,
 	});
+	cusEnt.entitlement = {
+		...cusEnt.entitlement,
+		pooled,
+	};
 
 	if (!withCustomerProduct) {
 		return {
@@ -97,6 +108,8 @@ const buildCusEnt = ({
 		customerPrices,
 		status: productStatus,
 		product,
+		internalEntityId: entityAttached ? "internal_entity_one" : undefined,
+		entityId: entityAttached ? "entity_one" : undefined,
 	});
 
 	return {
@@ -159,9 +172,9 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product?.status).toBe(CusProductStatus.PastDue);
-		expect(
-			result[0].customer_product?.product?.config?.ignore_past_due,
-		).toBe(true);
+		expect(result[0].customer_product?.product?.config?.ignore_past_due).toBe(
+			true,
+		);
 	});
 
 	test("only gates past-due status and leaves other upstream statuses to the caller", () => {
@@ -276,5 +289,115 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product).toBeNull();
+	});
+
+	test("returns an overdue customer-level item whose catalog entitlement is pooled", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				pooled: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].customer_product?.internal_entity_id).toBeNull();
+	});
+
+	test("skips an overdue pooled source owned by an entity-attached product", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				pooled: true,
+				entityAttached: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("skips an overdue synthetic pooled balance", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				nextResetAt: PAST,
+				pooled: true,
+				withCustomerProduct: false,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("queues an overdue synthetic pooled balance to trigger pooled rehydration", async () => {
+		const source = buildCusEnt({
+			productStatus: CusProductStatus.Active,
+			nextResetAt: PAST,
+			pooled: true,
+			entityAttached: true,
+		});
+		const synthetic = buildCusEnt({
+			nextResetAt: PAST,
+			pooled: true,
+			withCustomerProduct: false,
+		});
+		synthetic.id = "synthetic-pooled-balance";
+		const fullSubject = {
+			subjectType: "entity",
+			customerId: "customer-one",
+			internalCustomerId: "internal-customer-one",
+			entityId: "entity-one",
+			internalEntityId: "internal-entity-one",
+			customer: { config: {} },
+			entity: { id: "entity-one", internal_id: "internal-entity-one" },
+			customer_products: [source.customer_product],
+			extra_customer_entitlements: [synthetic],
+			invoices: [],
+		} as unknown as FullSubject;
+		const trigger = spyOn(
+			workflows,
+			"triggerBatchResetCusEnts",
+		).mockResolvedValue(undefined);
+
+		try {
+			await triggerBatchResetSubjectEntitlements({
+				ctx: {
+					org: { id: "org-one" },
+					env: "sandbox",
+				} as never,
+				fullSubjects: [fullSubject],
+			});
+
+			expect(trigger).toHaveBeenCalledWith({
+				orgId: "org-one",
+				env: "sandbox",
+				resets: [
+					{
+						internalCustomerId: "internal-customer-one",
+						customerId: "customer-one",
+						internalEntityId: "internal-entity-one",
+						entityId: "entity-one",
+						cusEntIds: ["synthetic-pooled-balance"],
+					},
+				],
+			});
+		} finally {
+			trigger.mockRestore();
+		}
 	});
 });

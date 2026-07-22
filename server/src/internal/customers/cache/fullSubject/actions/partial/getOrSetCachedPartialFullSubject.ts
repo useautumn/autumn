@@ -6,8 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
-import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
-import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
+import { rebuildFullSubjectCacheAfterMiss } from "../rebuildFullSubjectCacheAfterMiss.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
 
 export const getOrSetCachedPartialFullSubject = async ({
@@ -26,21 +25,14 @@ export const getOrSetCachedPartialFullSubject = async ({
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
 
-	let fetchedSubjectViewEpoch = 0;
-
 	if (useRedis) {
-		// Pipeline inside getCachedPartialFullSubject already fetches the
-		// epoch, so we reuse it on miss.
-		const { fullSubject: cached, subjectViewEpoch } =
-			await getCachedPartialFullSubject({
-				ctx,
-				customerId,
-				entityId,
-				featureIds,
-				source,
-			});
-		fetchedSubjectViewEpoch = subjectViewEpoch;
-
+		const { fullSubject: cached } = await getCachedPartialFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			featureIds,
+			source,
+		});
 		if (cached) {
 			logger.debug(
 				`[getOrSetCachedPartialFullSubject] Subject hit for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
@@ -53,40 +45,37 @@ export const getOrSetCachedPartialFullSubject = async ({
 		`[getOrSetCachedPartialFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
 
-	const result = await getFullSubjectNormalized({
-		ctx,
-		customerId,
-		entityId,
-	});
-
-	if (!result) {
+	if (!useRedis) {
+		const result = await getFullSubjectNormalized({
+			ctx,
+			customerId,
+			entityId,
+		});
+		if (result) {
+			return filterFullSubjectByFeatureIds({
+				fullSubject: result.fullSubject,
+				featureIds,
+			});
+		}
 		if (entityId) throw new EntityNotFoundError({ entityId });
 		throw new CustomerNotFoundError({ customerId });
 	}
 
-	const { normalized, fullSubject } = result;
-
-	if (useRedis) {
-		await setCachedFullSubject({
-			ctx,
-			normalized,
-			fetchedSubjectViewEpoch,
-		});
-
-		// We just wrote the subject blob ourselves — skip re-reading it. Only
-		// the balance hashes need a fresh read to preserve any HSETNX-skipped
-		// in-flight Lua deduction patches. One RTT instead of two.
-		const withLiveBalances = await rehydrateWithLiveBalances({
-			ctx,
-			normalized,
-		});
-		if (withLiveBalances) {
-			return filterFullSubjectByFeatureIds({
-				fullSubject: withLiveBalances,
+	const fullSubject = await rebuildFullSubjectCacheAfterMiss({
+		ctx,
+		customerId,
+		entityId,
+		source,
+		readCachedSubject: ({ balanceSyncDb, source: cacheReadSource }) =>
+			getCachedPartialFullSubject({
+				ctx,
+				customerId,
+				entityId,
 				featureIds,
-			});
-		}
-	}
+				source: cacheReadSource,
+				balanceSyncDb,
+			}),
+	});
 
 	return filterFullSubjectByFeatureIds({
 		fullSubject,

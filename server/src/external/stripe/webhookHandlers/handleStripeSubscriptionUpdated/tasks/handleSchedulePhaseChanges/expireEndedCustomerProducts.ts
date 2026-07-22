@@ -1,31 +1,33 @@
-import { type FullCusProduct, hasCustomerProductEnded } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	hasCustomerProductEnded,
+} from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { expireAndActivateWithTracking } from "../../../common";
-import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
+import {
+	completeCustomerProductExpiry,
+	type PreparedCustomerProductExpiry,
+	prepareCustomerProductExpiry,
+} from "@/internal/customers/cusProducts/actions/expireAndActivateDefault.js";
+import {
+	trackCustomerProductInsertion,
+	trackCustomerProductUpdate,
+} from "../../../common/trackCustomerProductUpdate.js";
+import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext.js";
 
-/**
- * Expires customer products that have ended (based on ended_at time).
- * Also activates default product if no other active product exists in the same group.
- * Caches expired products so invoice.created can access them for usage-based billing.
- */
-export const expireEndedCustomerProducts = async ({
+export const prepareEndedCustomerProducts = async ({
 	ctx,
 	eventContext,
 }: {
 	ctx: StripeWebhookContext;
 	eventContext: StripeSubscriptionUpdatedContext;
-}): Promise<void> => {
+}): Promise<PreparedCustomerProductExpiry[]> => {
 	const { logger } = ctx;
-	const { customerProducts, stripeSubscription, nowMs, fullCustomer } =
-		eventContext;
+	const { customerProducts, nowMs, fullCustomer } = eventContext;
+	const preparedExpirations: PreparedCustomerProductExpiry[] = [];
 
-	const expiredCustomerProducts: FullCusProduct[] = [];
-
-	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
-	// default product (via `trackCustomerProductInsertion`), which `push`es
-	// onto `customerProducts`. Without the snapshot the for-of would then
-	// iterate the newly inserted default product as an extra pass.
 	for (const customerProduct of [...customerProducts]) {
 		const shouldExpire = hasCustomerProductEnded(customerProduct, { nowMs });
 
@@ -35,11 +37,6 @@ export const expireEndedCustomerProducts = async ({
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
 
-		// Auto-preserve remaining one-off prepaid balances as lifetime cusEnts
-		// before the product is expired. Billing-action flows already do this
-		// at compute time; this is the webhook-driven equivalent for scheduled
-		// phase transitions. The eventContext entry is consumed by
-		// logCustomerProductUpdates so the structured summary lands in one place.
 		const carryOver = await customerProductActions.preserveOneOffPrepaid({
 			ctx,
 			customerProduct,
@@ -54,20 +51,88 @@ export const expireEndedCustomerProducts = async ({
 			});
 		}
 
-		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
-			ctx,
-			eventContext,
-			customerProduct,
-		});
-
-		expiredCustomerProducts.push(expiredCustomerProduct);
+		preparedExpirations.push(
+			prepareCustomerProductExpiry({ customerProduct, fullCustomer }),
+		);
 	}
 
-	// Cache expired products so invoice.created can access them for usage-based billing
+	return preparedExpirations;
+};
+
+export const completeEndedCustomerProducts = async ({
+	ctx,
+	eventContext,
+	preparedExpirations,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+	preparedExpirations: PreparedCustomerProductExpiry[];
+}): Promise<void> => {
+	const expiredCustomerProducts: FullCusProduct[] = [];
+
+	for (const preparedExpiry of preparedExpirations) {
+		const { activatedCustomerProduct, insertedCustomerProduct } =
+			await completeCustomerProductExpiry({
+				ctx,
+				customerProduct: preparedExpiry.customerProduct,
+				fullCustomer: eventContext.fullCustomer,
+				updates: preparedExpiry.updates,
+			});
+
+		const expiredCustomerProduct = trackCustomerProductUpdate({
+			eventContext,
+			customerProduct: preparedExpiry.customerProduct,
+			updates: preparedExpiry.updates,
+		});
+		expiredCustomerProducts.push(expiredCustomerProduct);
+
+		if (activatedCustomerProduct) {
+			trackCustomerProductUpdate({
+				eventContext,
+				customerProduct: activatedCustomerProduct,
+				updates: { status: CusProductStatus.Active },
+			});
+		}
+
+		if (insertedCustomerProduct) {
+			trackCustomerProductInsertion({
+				eventContext,
+				customerProduct: insertedCustomerProduct,
+			});
+		}
+	}
+
 	if (expiredCustomerProducts.length > 0) {
 		await customerProductActions.expiredCache.set({
-			stripeSubscriptionId: stripeSubscription.id,
+			stripeSubscriptionId: eventContext.stripeSubscription.id,
 			customerProducts: expiredCustomerProducts,
 		});
 	}
+};
+
+/** Expires ended products, evaluates free successors, and caches usage products. */
+export const expireEndedCustomerProducts = async ({
+	ctx,
+	eventContext,
+}: {
+	ctx: StripeWebhookContext;
+	eventContext: StripeSubscriptionUpdatedContext;
+}): Promise<void> => {
+	const preparedExpirations = await prepareEndedCustomerProducts({
+		ctx,
+		eventContext,
+	});
+
+	for (const preparedExpiry of preparedExpirations) {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: preparedExpiry.autumnBillingPlan,
+		});
+	}
+
+	await completeEndedCustomerProducts({
+		ctx,
+		eventContext,
+		preparedExpirations,
+	});
 };

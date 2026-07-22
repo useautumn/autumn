@@ -41,6 +41,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 		entityFeatureId:
 			normalizeOptionalId(ent1.entity_feature_id) !==
 			normalizeOptionalId(ent2.entity_feature_id),
+		pooled: (ent1.pooled ?? false) !== (ent2.pooled ?? false),
 		usageLimit: ent1.usage_limit != ent2.usage_limit,
 		rollover: !rolloversAreSame({
 			rollover1: ent1.rollover,

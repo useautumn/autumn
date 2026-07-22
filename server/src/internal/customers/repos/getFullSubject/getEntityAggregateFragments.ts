@@ -88,7 +88,8 @@ export const getEntityAggregateFragments = ({
 			SELECT ce.*, cp.internal_entity_id AS cp_entity_key
 			FROM entity_cus_products cp
 			JOIN customer_entitlements ce ON ce.customer_product_id = cp.id
-			WHERE 1 = 1
+			JOIN entitlements source_entitlement ON source_entitlement.id = ce.entitlement_id
+			WHERE source_entitlement.pooled IS NOT TRUE
 				${featureFilter}
 
 			UNION ALL

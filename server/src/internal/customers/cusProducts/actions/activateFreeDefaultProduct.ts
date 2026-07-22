@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { productActions } from "@/internal/products/actions";
 
@@ -47,15 +48,17 @@ export const activateFreeDefaultProduct = async ({
 	if (!freeDefaultProduct) return;
 
 	// 2. Initialise customer product
+	const currentEpochMs = Date.now();
+	const fullCustomerForEntity = enrichFullCustomerWithEntity({
+		fullCustomer,
+		internalEntityId: customerProduct.internal_entity_id ?? null,
+	});
 	const newCustomerProduct = initFullCustomerProductFromProduct({
 		ctx,
 		initContext: {
-			fullCustomer: enrichFullCustomerWithEntity({
-				fullCustomer,
-				internalEntityId: customerProduct.internal_entity_id ?? null,
-			}),
+			fullCustomer: fullCustomerForEntity,
 			fullProduct: freeDefaultProduct,
-			currentEpochMs: Date.now(),
+			currentEpochMs,
 			featureQuantities: [],
 
 			existingUsagesConfig: {
@@ -67,15 +70,28 @@ export const activateFreeDefaultProduct = async ({
 			},
 		},
 	});
+	const prepared = computeAttachPooledBalanceOps({
+		customerProduct: newCustomerProduct,
+		attachBillingContext: {
+			billingStartsAt: currentEpochMs,
+			currentEpochMs,
+			fullCustomer: fullCustomerForEntity,
+			planTiming: "immediate",
+			requestedBillingCycleAnchor: undefined,
+			skipBillingChanges: true,
+		},
+		removeCurrentSource: false,
+	});
 
 	// 3. Execute autumn billing plan
 	await executeAutumnBillingPlan({
 		ctx,
 		autumnBillingPlan: {
-			customerId: fullCustomer?.id ?? "",
-			insertCustomerProducts: [newCustomerProduct],
+			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+			insertCustomerProducts: [prepared.customerProduct],
+			pooledBalanceOps: prepared.pooledBalanceOps,
 		},
 	});
 
-	return newCustomerProduct;
+	return prepared.customerProduct;
 };

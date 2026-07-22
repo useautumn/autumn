@@ -11,6 +11,9 @@ import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
+import type { CustomerBalanceSyncDb } from "@/internal/balances/utils/sync/withCustomerBalanceSyncLock.js";
+import { resetPooledCustomerEntitlements } from "@/internal/billing/v2/pooledBalances/reset/resetPooledCustomerEntitlements.js";
+import { pooledResetToProcessResetResult } from "../resetCustomerEntitlements/pooledResetToProcessResetResult.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
 import {
@@ -51,10 +54,14 @@ export const lazyResetSubjectEntitlements = async ({
 	ctx,
 	fullSubject,
 	normalized,
+	balanceSyncDb,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	normalized?: NormalizedFullSubject;
+	/** Existing customer balance-sync transaction. A cache rebuild already
+	 * holding this lock must pass it through to avoid a nested advisory wait. */
+	balanceSyncDb?: CustomerBalanceSyncDb;
 }): Promise<boolean> => {
 	if (getDbHealth() === PgHealth.Degraded) return false;
 
@@ -67,16 +74,28 @@ export const lazyResetSubjectEntitlements = async ({
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
-	const customerEntitlementsNeedingReset = getResettableCustomerEntitlements({
-		customerEntitlements: allCustomerEntitlements,
-		now,
-	});
-
-	if (customerEntitlementsNeedingReset.length === 0) return false;
-
 	try {
+		const pooledResets = await resetPooledCustomerEntitlements({
+			ctx,
+			customerId,
+			customerEntitlements: allCustomerEntitlements,
+			now,
+			balanceSyncDb,
+		});
+		const customerEntitlementsNeedingReset = getResettableCustomerEntitlements({
+			customerEntitlements: allCustomerEntitlements,
+			now,
+		});
+
+		if (
+			customerEntitlementsNeedingReset.length === 0 &&
+			pooledResets.length === 0
+		) {
+			return false;
+		}
+
 		logger.info(
-			`[lazyResetSubjectEntitlements] customer: ${customerId}, needing reset: ${customerEntitlementsNeedingReset.length}`,
+			`[lazyResetSubjectEntitlements] customer: ${customerId}, needing reset: ${customerEntitlementsNeedingReset.length + pooledResets.length}`,
 		);
 
 		const computed: Array<{
@@ -96,30 +115,48 @@ export const lazyResetSubjectEntitlements = async ({
 			});
 		}
 
-		if (computed.length === 0) return false;
-
-		const resets = computed.map(({ customerEntitlementId, result }) =>
+		const standardResets = computed.map(({ customerEntitlementId, result }) =>
+			toResetParam({ customerEntitlementId, result }),
+		);
+		const { applied, skipped } =
+			standardResets.length > 0
+				? await resetCusEnts({ ctx, resets: standardResets })
+				: { applied: {}, skipped: [] };
+		const pooledComputed = pooledResets.map((pooledReset) => ({
+			customerEntitlementId: pooledReset.customerEntitlementId,
+			result: pooledResetToProcessResetResult({ pooledReset }),
+		}));
+		const allComputed = [...computed, ...pooledComputed];
+		if (allComputed.length === 0) return false;
+		const allSkipped = [
+			...skipped,
+			...pooledResets
+				.filter((pooledReset) => !pooledReset.applied)
+				.map((pooledReset) => pooledReset.customerEntitlementId),
+		];
+		const resets = allComputed.map(({ customerEntitlementId, result }) =>
 			toResetParam({ customerEntitlementId, result }),
 		);
 
-		const { applied, skipped } = await resetCusEnts({ ctx, resets });
-
 		logger.info(
-			`[lazyResetSubjectEntitlements] customer: ${customerId}, applied: ${Object.keys(applied).length}, skipped: ${skipped.length}`,
+			`[lazyResetSubjectEntitlements] customer: ${customerId}, applied: ${Object.keys(applied).length + pooledResets.filter((pooledReset) => pooledReset.applied).length}, skipped: ${allSkipped.length}`,
 		);
 
 		const clearingMap = await applyResetResultsToFullSubject({
 			ctx,
 			fullSubject,
-			computed,
-			skipped,
+			computed: allComputed,
+			skipped: allSkipped,
 		});
 
 		if (normalized) {
-			applyResetResultsToNormalized({ normalized, computed });
+			applyResetResultsToNormalized({ normalized, computed: allComputed });
 		}
 
-		if (Object.keys(applied).length > 0) {
+		if (
+			Object.keys(applied).length > 0 ||
+			pooledResets.some((pooledReset) => pooledReset.applied)
+		) {
 			const oldNextResetAts: Record<string, number> = {};
 			const customerEntitlementFeatureIds: Record<string, string> = {};
 
@@ -130,6 +167,12 @@ export const lazyResetSubjectEntitlements = async ({
 				}
 				customerEntitlementFeatureIds[customerEntitlement.id] =
 					customerEntitlement.feature_id;
+			}
+			for (const pooledReset of pooledResets) {
+				oldNextResetAts[pooledReset.customerEntitlementId] =
+					pooledReset.resetAt;
+				customerEntitlementFeatureIds[pooledReset.customerEntitlementId] =
+					pooledReset.featureId;
 			}
 
 			await resetSubjectCache({

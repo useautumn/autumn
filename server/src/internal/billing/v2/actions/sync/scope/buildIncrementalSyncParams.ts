@@ -69,15 +69,18 @@ const linkedAddOnInstances = ({
 			: !linkedProduct.internal_entity_id;
 	});
 
-/** Current API-side prepaid totals (packs × billing_units + allowance). */
-const linkedPrepaidFeatureTotals = ({
+/** Current API-side prepaid packs and totals (packs × billing_units + allowance). */
+const linkedPrepaidFeatureQuantities = ({
 	linkedProduct,
 	matchedPlan,
 }: {
 	linkedProduct: FullCusProduct;
 	matchedPlan: MatchedPlan;
-}): Map<string, number> => {
-	const totals = new Map<string, number>();
+}): Map<string, { purchasedPacks: number; total: number }> => {
+	const quantities = new Map<
+		string,
+		{ purchasedPacks: number; total: number }
+	>();
 	for (const price of matchedPlan.product.prices) {
 		if (!isPrepaidPrice(price)) continue;
 		const entitlement = priceToEnt({
@@ -92,9 +95,12 @@ const linkedPrepaidFeatureTotals = ({
 		const packs = option?.quantity ?? 0;
 		const billingUnits = price.config.billing_units ?? 1;
 		const allowance = entitlement.allowance ?? 0;
-		totals.set(entitlement.feature.id, packs * billingUnits + allowance);
+		quantities.set(entitlement.feature.id, {
+			purchasedPacks: packs,
+			total: packs * billingUnits + allowance,
+		});
 	}
-	return totals;
+	return quantities;
 };
 
 const prepaidQuantitiesDrifted = ({
@@ -106,17 +112,19 @@ const prepaidQuantitiesDrifted = ({
 	matchedPlan: MatchedPlan;
 	syncPlan: SyncPlanInstance;
 }): boolean => {
-	const currentTotals = linkedPrepaidFeatureTotals({
+	const currentQuantities = linkedPrepaidFeatureQuantities({
 		linkedProduct,
 		matchedPlan,
 	});
-	if (currentTotals.size === 0) return false;
+	if (currentQuantities.size === 0) return false;
 
-	for (const [featureId, currentTotal] of currentTotals) {
+	for (const [featureId, current] of currentQuantities) {
 		const desired = syncPlan.feature_quantities?.find(
 			(fq) => fq.feature_id === featureId,
 		);
-		if ((desired?.quantity ?? 0) !== currentTotal) return true;
+		const desiredQuantity = desired?.quantity ?? 0;
+		if (desiredQuantity === 0 && current.purchasedPacks === 0) continue;
+		if (desiredQuantity !== current.total) return true;
 	}
 	return false;
 };
@@ -184,6 +192,20 @@ export const buildIncrementalSyncParams = ({
 		// from the base item's Stripe quantity, never from prepaid items —
 		// prepaid pack counts live in syncPlan.feature_quantities instead).
 		if (matchedPlan.product.is_add_on === true) {
+			if (
+				!syncPlan.entity_id &&
+				linkedCustomerProducts.some(
+					(linkedProduct) =>
+						isCustomerProductAddOn(linkedProduct) &&
+						linkedProduct.product.id === syncPlan.plan_id &&
+						Boolean(linkedProduct.internal_entity_id),
+				)
+			) {
+				return {
+					shouldSync: false,
+					reason: "ambiguous_linked_targets",
+				};
+			}
 			const linkedInstances = linkedAddOnInstances({
 				linkedCustomerProducts,
 				syncPlan,
@@ -211,8 +233,23 @@ export const buildIncrementalSyncParams = ({
 			continue;
 		}
 
-		// Main plans re-sync only when the linked target's product id changed
-		// (upgrade/downgrade); prepaid drift is not checked for them here.
+		// Main plans re-sync when the linked product or version changes, or its
+		// prepaid quantities drift from Stripe.
+		if (
+			!syncPlan.entity_id &&
+			linkedCustomerProducts.some(
+				(linkedProduct) =>
+					!isCustomerProductAddOn(linkedProduct) &&
+					Boolean(linkedProduct.internal_entity_id) &&
+					(linkedProduct.product.group ?? "") ===
+						(matchedPlan.product.group ?? ""),
+			)
+		) {
+			return {
+				shouldSync: false,
+				reason: "ambiguous_linked_targets",
+			};
+		}
 		const target = matchedPlanToTargetGroupLink({ matchedPlan, syncPlan });
 		if (!target) {
 			return {
@@ -228,7 +265,8 @@ export const buildIncrementalSyncParams = ({
 		if (
 			!linkedProduct ||
 			linkedProduct.product.id !== target.productId ||
-			versionChanged
+			versionChanged ||
+			prepaidQuantitiesDrifted({ linkedProduct, matchedPlan, syncPlan })
 		) {
 			changedPlans.push(syncPlan);
 			continue;

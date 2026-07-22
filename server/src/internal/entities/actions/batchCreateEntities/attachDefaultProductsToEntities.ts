@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { computeAttachPooledBalanceOps } from "@/internal/billing/v2/pooledBalances/compute/computeAttachPooledBalanceOps.js";
 import { initFullCustomerProductFromProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProductFromProduct";
 import { setupDefaultProductsContext } from "@/internal/customers/actions/createWithDefaults/setup/setupDefaultProductsContext";
 
@@ -35,25 +36,43 @@ export const attachDefaultProductsToEntities = async ({
 
 	const currentEpochMs = Date.now();
 	for (const entity of entities) {
-		const insertCustomerProducts = freeDefaultProducts.map((product) =>
-			initFullCustomerProductFromProduct({
+		const fullCustomerForEntity = {
+			...fullCustomer,
+			entity,
+		};
+		const preparedCustomerProducts = freeDefaultProducts.map((product) => {
+			const customerProduct = initFullCustomerProductFromProduct({
 				ctx,
 				initContext: {
-					fullCustomer: {
-						...fullCustomer,
-						entity: entity,
-					},
+					fullCustomer: fullCustomerForEntity,
 					fullProduct: product,
 					currentEpochMs,
 				},
-			}),
-		);
+			});
+			return computeAttachPooledBalanceOps({
+				customerProduct,
+				attachBillingContext: {
+					billingStartsAt: currentEpochMs,
+					currentEpochMs,
+					fullCustomer: fullCustomerForEntity,
+					planTiming: "immediate",
+					requestedBillingCycleAnchor: undefined,
+					skipBillingChanges: true,
+				},
+				removeCurrentSource: false,
+			});
+		});
 
 		await executeAutumnBillingPlan({
 			ctx,
 			autumnBillingPlan: {
-				customerId: fullCustomer.id ?? "",
-				insertCustomerProducts,
+				customerId: fullCustomer.id ?? fullCustomer.internal_id,
+				insertCustomerProducts: preparedCustomerProducts.map(
+					({ customerProduct }) => customerProduct,
+				),
+				pooledBalanceOps: preparedCustomerProducts.flatMap(
+					({ pooledBalanceOps }) => pooledBalanceOps,
+				),
 			},
 		});
 	}

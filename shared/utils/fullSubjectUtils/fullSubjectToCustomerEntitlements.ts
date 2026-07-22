@@ -40,6 +40,14 @@ export const fullSubjectToCustomerEntitlements = ({
 		});
 	}
 
+	customerEntitlements = customerEntitlements.filter(
+		(customerEntitlement) =>
+			!(
+				customerEntitlement.entitlement.pooled &&
+				notNullish(customerEntitlement.customer_product?.internal_entity_id)
+			),
+	);
+
 	if (featureIds) {
 		customerEntitlements = customerEntitlements.filter((customerEntitlement) =>
 			featureIds.includes(customerEntitlement.entitlement.feature.id),

@@ -60,6 +60,30 @@ describe("handleRedisTrackErrorV3", () => {
 
 		expect(mockState.postgresCalls).toHaveLength(0);
 	});
+
+	test("does not fall back after an earlier Redis feature already mutated", async () => {
+		const error = new RedisDeductionError({
+			message: "Refreshed paid allocated state after a partial Redis deduction",
+			code: RedisDeductionErrorCode.PaidAllocated,
+			fallbackAllowed: false,
+		});
+
+		await expect(
+			handleRedisTrackErrorV3({
+				ctx,
+				error,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 1,
+				},
+				fullSubject: {} as never,
+				featureDeductions: [],
+			}),
+		).rejects.toBe(error);
+
+		expect(mockState.postgresCalls).toHaveLength(0);
+	});
 });
 
 afterAll(() => {

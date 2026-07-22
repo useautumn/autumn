@@ -75,6 +75,10 @@ import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { transitionRules } from "../models/orgModels/transitionRules/transitionRulesTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
+import {
+	pooledBalanceContributions,
+	pooledBalances,
+} from "../models/pooledBalanceModels/pooledBalanceTable.js";
 import { revenuecatMappings } from "../models/processorModels/revenuecatModels/revenuecatMappingsTable.js";
 import { vercelResources } from "../models/processorModels/vercelModels/vercelResourcesTable.js";
 // Product Relations
@@ -192,6 +196,8 @@ export {
 	licensePriceRelations,
 	planLicenses,
 	planLicenseRelations,
+	pooledBalanceContributions,
+	pooledBalances,
 	passkey,
 	// Relations
 	organizationsRelations,

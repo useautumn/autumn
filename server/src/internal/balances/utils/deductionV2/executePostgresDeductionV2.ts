@@ -22,6 +22,7 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
+import { mergeDeductionUpdates } from "./mergeDeductionUpdates.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
@@ -192,7 +193,6 @@ export const executePostgresDeductionV2 = async ({
 				updates,
 				source: "executePostgresDeductionV2",
 			});
-			allUpdates = { ...allUpdates, ...updates };
 			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
 			if (rollover_updates?.length > 0) {
 				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
@@ -278,6 +278,11 @@ export const executePostgresDeductionV2 = async ({
 				});
 				throw error;
 			}
+
+			allUpdates = mergeDeductionUpdates({
+				accumulatedUpdates: allUpdates,
+				currentUpdates: updates,
+			});
 
 			const featuresFromMutationLogs = mutationLogsToFeaturesV2({
 				fullSubject,

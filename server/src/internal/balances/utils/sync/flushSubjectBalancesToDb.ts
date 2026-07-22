@@ -6,6 +6,7 @@ import type {
 import { tryCatch } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 
@@ -39,6 +40,39 @@ export interface RolloverSyncEntry {
 	usage: number;
 	entities: Record<string, EntityRolloverBalance> | null;
 }
+
+export type FlushSubjectBalancesResult =
+	| "noop"
+	| "flushed"
+	| "conflict"
+	| "failed";
+
+export const writeSubjectBalancesToDb = async ({
+	db,
+	subjectBalances,
+	usageWindowUpdates = [],
+	queryName,
+}: {
+	db: DrizzleCli;
+	subjectBalances: SubjectBalance[];
+	usageWindowUpdates?: UsageWindowUpdate[];
+	queryName: string;
+}) => {
+	const entries = subjectBalances.map((subjectBalance) =>
+		subjectBalanceToSyncEntry({ subjectBalance }),
+	);
+	const rolloverEntries = subjectBalancesToRolloverEntries({ subjectBalances });
+
+	const result = await db.execute(
+		sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
+			customer_entitlement_updates: entries,
+			rollover_updates: rolloverEntries,
+			usage_window_updates: usageWindowUpdates,
+		})}::jsonb) ${planetScaleTag({ query: queryName })}`,
+	);
+
+	return { result, entries, rolloverEntries };
+};
 
 export const subjectBalanceToSyncEntry = ({
 	subjectBalance,
@@ -86,46 +120,45 @@ export const flushSubjectBalancesToDb = async ({
 	subjectBalances,
 	usageWindowUpdates = [],
 	source,
+	db = ctx.db,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	subjectBalances: SubjectBalance[];
 	usageWindowUpdates?: UsageWindowUpdate[];
 	source: string;
-}): Promise<void> => {
-	if (subjectBalances.length === 0 && usageWindowUpdates.length === 0) return;
+	db?: DrizzleCli;
+}): Promise<FlushSubjectBalancesResult> => {
+	if (subjectBalances.length === 0 && usageWindowUpdates.length === 0) {
+		return "noop";
+	}
 
-	const { db, logger } = ctx;
-	const entries = subjectBalances.map((subjectBalance) =>
-		subjectBalanceToSyncEntry({ subjectBalance }),
-	);
-	const rolloverEntries = subjectBalancesToRolloverEntries({ subjectBalances });
-
-	const { error } = await tryCatch(
-		db.execute(
-			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
-				customer_entitlement_updates: entries,
-				rollover_updates: rolloverEntries,
-				usage_window_updates: usageWindowUpdates,
-			})}::jsonb) ${planetScaleTag({ query: "flushSubjectBalancesToDb" })}`,
-		),
+	const { logger } = ctx;
+	const { data, error } = await tryCatch(
+		writeSubjectBalancesToDb({
+			db,
+			subjectBalances,
+			usageWindowUpdates,
+			queryName: "flushSubjectBalancesToDb",
+		}),
 	);
 
 	if (!error) {
 		logger.info(
-			`[flushSubjectBalancesToDb] ${customerId}: flushed ${entries.length} balances, ${usageWindowUpdates.length} usage windows, source: ${source}`,
+			`[flushSubjectBalancesToDb] ${customerId}: flushed ${data.entries.length} balances, ${usageWindowUpdates.length} usage windows, source: ${source}`,
 		);
-		return;
+		return "flushed";
 	}
 
 	if (isSyncConflictError(error)) {
 		logger.warn(
 			`[flushSubjectBalancesToDb] ${customerId}: sync conflict during flush (Postgres ahead), source: ${source}, error: ${error.message}`,
 		);
-		return;
+		return "conflict";
 	}
 
 	logger.error(
 		`[flushSubjectBalancesToDb] ${customerId}: flush failed, unsynced balances lost, source: ${source}, error: ${error}`,
 	);
+	return "failed";
 };
