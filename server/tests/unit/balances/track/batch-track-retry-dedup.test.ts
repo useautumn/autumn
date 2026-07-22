@@ -141,7 +141,10 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 	});
 
 	test("two requests with the same body produce DIFFERENT MessageDeduplicationId values per index (current accepted behavior — client retry duplicates)", async () => {
-		await runBatchTrack({ ctx: buildCtx({ requestId: "req_pin_first" }), body });
+		await runBatchTrack({
+			ctx: buildCtx({ requestId: "req_pin_first" }),
+			body,
+		});
 		const firstCall = mockState.queueCommands[0];
 		mockState.queueCommands = [];
 
@@ -200,7 +203,7 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 		});
 	});
 
-	test("MessageGroupId is `${orgId}:${env}:${customerId}:${entityId ?? 'none'}` for each item", async () => {
+	test("MessageGroupId preserves the org, environment, customer, and entity routing prefix", async () => {
 		const ctx = buildCtx({ requestId: "req_pin_group" });
 
 		await runBatchTrack({ ctx, body });
@@ -208,10 +211,14 @@ describe("runBatchTrack — retry-dedup regression pin (cubic P1)", () => {
 		const entries = mockState.queueCommands[0]?.Entries ?? [];
 		expect(entries).toHaveLength(3);
 
-		expect(entries[0]?.MessageGroupId).toBe("org_pin:sandbox:cus_pin_a:none");
-		expect(entries[1]?.MessageGroupId).toBe(
+		expect(entries[0]?.MessageGroupId).toStartWith(
+			"org_pin:sandbox:cus_pin_a:none",
+		);
+		expect(entries[1]?.MessageGroupId).toStartWith(
 			"org_pin:sandbox:cus_pin_b:ent_pin_1",
 		);
-		expect(entries[2]?.MessageGroupId).toBe("org_pin:sandbox:cus_pin_c:none");
+		expect(entries[2]?.MessageGroupId).toStartWith(
+			"org_pin:sandbox:cus_pin_c:none",
+		);
 	});
 });

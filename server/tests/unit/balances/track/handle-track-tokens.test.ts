@@ -1,16 +1,9 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	mock,
-	test,
-} from "bun:test";
-import {
-	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
 	FeatureType,
+	LATEST_VERSION,
 } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
@@ -114,7 +107,7 @@ const createCtx = (): AutumnContext =>
 		id: "req_track_tokens_1",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
-		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+		apiVersion: new ApiVersionClass(LATEST_VERSION),
 		features: [{ id: "ai_credits", type: FeatureType.AiCreditSystem }],
 		extraLogs: {},
 		scopes: [],
