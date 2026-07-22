@@ -220,6 +220,17 @@ describe("buildAttachRequestBody — starts_at handling", () => {
 		],
 	});
 
+	/** Pre-fix omitted the selected default; post-fix sends "immediate" to keep the preview aligned with the UI. */
+	test("defaults plan_schedule to immediate", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+		});
+
+		expect(result?.plan_schedule).toBe("immediate");
+	});
+
 	test("sends starts_at instead of silently falling back to plan_schedule", () => {
 		const startDate = addDays(Date.now(), 1).getTime();
 
