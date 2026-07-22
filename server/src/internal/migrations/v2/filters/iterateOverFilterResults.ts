@@ -13,12 +13,14 @@ export async function* iterateOverFilterResults<
 	db,
 	buildSelect,
 	batchSize = DEFAULT_BATCH_SIZE,
+	afterInternalId,
 }: {
 	db: { execute: (query: SQL) => Promise<unknown> };
 	buildSelect: (args: { limit: number; afterInternalId?: string }) => SQL;
 	batchSize?: number;
+	afterInternalId?: string;
 }): AsyncGenerator<TRow[]> {
-	let cursor: string | undefined;
+	let cursor = afterInternalId;
 	while (true) {
 		const query = buildSelect({ limit: batchSize, afterInternalId: cursor });
 		const rows = (await db.execute(query)) as unknown as TRow[];
