@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import { ApiVersionClass, AppEnv, LATEST_VERSION } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -20,7 +20,7 @@ const createCtx = (): AutumnContext =>
 		id: "req_track_1",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
-		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+		apiVersion: new ApiVersionClass(LATEST_VERSION),
 		features: [{ id: "messages" }],
 		extraLogs: {},
 		scopes: [],
