@@ -100,27 +100,10 @@ export const mergeAutumnBillingPlans = ({
 	upsertSubscription: incoming.upsertSubscription ?? base.upsertSubscription,
 	upsertInvoice: incoming.upsertInvoice ?? base.upsertInvoice,
 	refundPlan: incoming.refundPlan ?? base.refundPlan,
-	releaseCustomerLicenseAssignments:
-		base.releaseCustomerLicenseAssignments ||
-		incoming.releaseCustomerLicenseAssignments
-			? {
-					internalCustomerId: (incoming.releaseCustomerLicenseAssignments ??
-						base.releaseCustomerLicenseAssignments)!.internalCustomerId,
-					customerLicensePools:
-						mergeByKey({
-							base: base.releaseCustomerLicenseAssignments
-								?.customerLicensePools,
-							incoming:
-								incoming.releaseCustomerLicenseAssignments
-									?.customerLicensePools,
-							getKey: (pool) => pool.id,
-						}) ?? [],
-					releasedAt: Math.max(
-						base.releaseCustomerLicenseAssignments?.releasedAt ?? 0,
-						incoming.releaseCustomerLicenseAssignments?.releasedAt ?? 0,
-					),
-				}
-			: undefined,
+	releaseCustomerLicenseAssignments: mergeCustomerLicenseAssignmentReleases({
+		base: base.releaseCustomerLicenseAssignments,
+		incoming: incoming.releaseCustomerLicenseAssignments,
+	}),
 });
 
 const mergeById = <T extends { id: string }>({
@@ -147,6 +130,32 @@ const mergeByKey = <T>({
 	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
 
 	return Array.from(itemByKey.values());
+};
+
+type CustomerLicenseAssignmentRelease = NonNullable<
+	AutumnBillingPlan["releaseCustomerLicenseAssignments"]
+>;
+
+const mergeCustomerLicenseAssignmentReleases = ({
+	base,
+	incoming,
+}: {
+	base?: CustomerLicenseAssignmentRelease;
+	incoming?: CustomerLicenseAssignmentRelease;
+}): CustomerLicenseAssignmentRelease | undefined => {
+	const latest = incoming ?? base;
+	if (!latest) return undefined;
+
+	return {
+		internalCustomerId: latest.internalCustomerId,
+		customerLicensePools:
+			mergeByKey({
+				base: base?.customerLicensePools,
+				incoming: incoming?.customerLicensePools,
+				getKey: (pool) => pool.id,
+			}) ?? [],
+		releasedAt: Math.max(base?.releasedAt ?? 0, incoming?.releasedAt ?? 0),
+	};
 };
 
 type PatchCustomerProduct = NonNullable<

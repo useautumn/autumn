@@ -6,8 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
-import { computeCustomerLicenseReleases } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseReleases";
-import { computeCustomerLicenseTransitions } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseTransitions";
+import { computeCustomerLicenseChanges } from "@/internal/billing/v2/compute/customerLicenseTransitions/computeCustomerLicenseChanges";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
@@ -52,25 +51,21 @@ export const computeAttachPlan = ({
 
 	// Customer licenses follow the incoming definitions on immediate swaps;
 	// scheduled swaps transition at activation instead.
-	const computedCustomerLicenseTransitions = currentCustomerProduct
-		? computeCustomerLicenseTransitions({
-				outgoingCustomerProducts: [currentCustomerProduct],
-				incomingCustomerProducts: [newCustomerProduct],
-				customerLicenseBillingContext:
-					attachBillingContext.customerLicenseBillingContext,
-				carryCustomerLicenseState: planTiming === "immediate",
-			})
-		: [];
-	const customerLicenseTransitions =
-		planTiming === "immediate" ? computedCustomerLicenseTransitions : [];
-	const customerLicenseReleases =
+	const customerLicenseChanges =
 		planTiming === "immediate" && currentCustomerProduct
-			? computeCustomerLicenseReleases({
+			? computeCustomerLicenseChanges({
 					outgoingCustomerProduct: currentCustomerProduct,
 					incomingCustomerProduct: newCustomerProduct,
+					customerLicenseBillingContext:
+						attachBillingContext.customerLicenseBillingContext,
+					carryCustomerLicenseState: planTiming === "immediate",
 					releasedAt: attachBillingContext.currentEpochMs,
 				})
-			: {};
+			: undefined;
+	const customerLicenseTransitions =
+		customerLicenseChanges?.customerLicenseTransitions ?? [];
+	const releaseCustomerLicenseAssignments =
+		customerLicenseChanges?.releaseCustomerLicenseAssignments;
 
 	const {
 		entitlements: carriedOverEntitlements,
@@ -142,8 +137,7 @@ export const computeAttachPlan = ({
 		customFreeTrial: trialContext?.customFreeTrial,
 		insertPlanLicenses: attachBillingContext.insertPlanLicenses,
 		customerLicenseTransitions,
-		releaseCustomerLicenseAssignments:
-			customerLicenseReleases.releaseCustomerLicenseAssignments,
+		releaseCustomerLicenseAssignments,
 		lineItems,
 		insertCustomerEntitlements: [
 			...(carriedOverCustomerEntitlements ?? []),

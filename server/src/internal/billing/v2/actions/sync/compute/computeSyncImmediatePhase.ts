@@ -132,10 +132,10 @@ export const computeSyncImmediatePhase = ({
 				outgoingCustomerProduct: productContext.currentCustomerProduct,
 				incomingCustomerProduct: insertedCustomerProduct,
 				releasedAt: currentEpochMs,
-			}).releaseCustomerLicenseAssignments;
-			droppedCustomerLicensePools.push(
-				...(release?.customerLicensePools ?? []),
-			);
+			});
+			if (release) {
+				droppedCustomerLicensePools.push(...release.customerLicensePools);
+			}
 			updateCustomerProducts.push(
 				expireCustomerProduct({
 					customerProduct: productContext.currentCustomerProduct,

@@ -97,7 +97,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 			autumnBillingPlan: {
 				customerId: fullCustomer.id || fullCustomer.internal_id,
 				insertCustomerProducts: [],
-				...computeCustomerLicenseReleases({
+				releaseCustomerLicenseAssignments: computeCustomerLicenseReleases({
 					outgoingCustomerProduct: customerProduct,
 					releasedAt: Date.now(),
 				}),
