@@ -136,6 +136,71 @@ const listActiveAssignmentsByInternalEntityId = async ({
 		),
 	});
 
+/** Releases dropped pools in one statement; retries only count assigned rows. */
+const releaseActiveAssignments = async ({
+	db,
+	internalCustomerId,
+	customerLicensePools,
+	releasedAt,
+}: {
+	db: DrizzleCli;
+	internalCustomerId: string;
+	customerLicensePools: { id: string; linkId: string }[];
+	releasedAt: number;
+}) => {
+	if (customerLicensePools.length === 0) return;
+	const released = db.$with("released").as(
+		db
+			.update(customerProducts)
+			.set({
+				internal_entity_id: null,
+				entity_id: null,
+				released_at: releasedAt,
+			})
+			.where(
+				and(
+					eq(customerProducts.internal_customer_id, internalCustomerId),
+					inArray(
+						customerProducts.customer_license_link_id,
+						customerLicensePools.map((pool) => pool.linkId),
+					),
+					...activeAssignmentConditions(),
+				),
+			)
+			.returning({
+				customerLicenseLinkId: customerProducts.customer_license_link_id,
+			}),
+	);
+	const releasedCounts = db.$with("released_counts").as(
+		db
+			.select({
+				customerLicenseLinkId: released.customerLicenseLinkId,
+				count: sql<number>`count(*)::int`.as("count"),
+			})
+			.from(released)
+			.groupBy(released.customerLicenseLinkId),
+	);
+
+	await db
+		.with(released, releasedCounts)
+		.update(customerLicenses)
+		.set({
+			remaining: sql`LEAST(${customerLicenses.granted}, ${customerLicenses.remaining} + ${releasedCounts.count})`,
+			updated_at: releasedAt,
+		})
+		.from(releasedCounts)
+		.where(
+			and(
+				eq(customerLicenses.internal_customer_id, internalCustomerId),
+				inArray(
+					customerLicenses.id,
+					customerLicensePools.map((pool) => pool.id),
+				),
+				eq(customerLicenses.link_id, releasedCounts.customerLicenseLinkId),
+			),
+		);
+};
+
 /** Ends active seats anchored to no surviving pool link (unstamped or
  * dangling) — one set-based UPDATE per reconcile. */
 const expireOrphanAssignments = async ({
@@ -273,6 +338,7 @@ const repointSeatPrices = async ({
 export const licenseAssignmentRepo = {
 	listAssignmentsWithEntityAndProductByCustomer,
 	listActiveAssignmentsByInternalEntityId,
+	releaseActiveAssignments,
 	listUnusedAssignmentsByLinkId,
 	expireOrphanAssignments,
 	expireUnusedAssignmentsByLinkIds,

@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { EntityService } from "@/internal/api/entities/EntityService";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executeCustomerLicenseAssignmentReleases } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseAssignmentReleases";
 import { executeCustomerLicenseTransitions } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseTransitions";
 import { executeCustomerLicenseUpdates } from "@/internal/billing/v2/execute/executeAutumnActions/executeCustomerLicenseUpdates";
 import { executeInsertPlanLicenses } from "@/internal/billing/v2/execute/executeAutumnActions/executeInsertPlanLicenses";
@@ -116,6 +117,10 @@ export const executeAutumnBillingPlan = async ({
 	await executeCustomerLicenseTransitions({
 		ctx,
 		customerLicenseTransitions: autumnBillingPlan.customerLicenseTransitions,
+	});
+	await executeCustomerLicenseAssignmentReleases({
+		ctx,
+		release: autumnBillingPlan.releaseCustomerLicenseAssignments,
 	});
 
 	await replaceScheduledPhaseCustomerProductIds({
