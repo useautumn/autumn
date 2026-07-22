@@ -1,18 +1,13 @@
-// Contract: all migration tasks share one queue; contention checkpoints, while an idle queue continues immediately.
-// Queue inspection failure is conservative and checkpoints rather than monopolising migration execution.
+// Contract: finite customer tasks share one queue; coordinators do not sleep while holding its only slot.
 import { describe, expect, test } from "bun:test";
 import {
-	createMigrationTaskScheduler,
+	createMigrationChunkScheduler,
 	getMigrationTriggerOptions,
+	MIGRATION_CHUNK_FETCH_SIZE,
 	MIGRATION_SLICE_DURATION_MS,
-	MIGRATION_YIELD_SECONDS,
+	MIGRATION_TASK_RETRY,
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
-
-const logger = {
-	info: () => {},
-	warn: () => {},
-};
 
 describe("migration task scheduler", () => {
 	test("defines one fleet-wide queue with a conservative initial limit", () => {
@@ -20,11 +15,13 @@ describe("migration task scheduler", () => {
 		expect(migrationTaskQueue.concurrencyLimit).toBe(1);
 	});
 
-	test("keeps the active slice longer than the checkpoint wait", () => {
-		expect(MIGRATION_YIELD_SECONDS).toBeGreaterThan(5);
-		expect(MIGRATION_SLICE_DURATION_MS).toBeGreaterThan(
-			MIGRATION_YIELD_SECONDS * 1000,
-		);
+	test("uses a bounded customer-work slice", () => {
+		expect(MIGRATION_SLICE_DURATION_MS).toBe(10_000);
+		expect(MIGRATION_CHUNK_FETCH_SIZE).toBe(100);
+	});
+
+	test("does not automatically retry checkpointed migration tasks", () => {
+		expect(MIGRATION_TASK_RETRY).toEqual({ maxAttempts: 1 });
 	});
 
 	test("does not partition migration runs into per-org queues", () => {
@@ -34,50 +31,11 @@ describe("migration task scheduler", () => {
 		});
 	});
 
-	test("continues without checkpointing when no other migration work is queued", async () => {
-		let checkpointCount = 0;
-		const scheduler = createMigrationTaskScheduler({
-			logger,
-			getQueuedCount: async () => 0,
-			checkpoint: async () => {
-				checkpointCount++;
-			},
-		});
+	test("creates a pure clock-based scheduler with no in-task wait", () => {
+		const scheduler = createMigrationChunkScheduler({ now: () => 123 });
 
-		await scheduler.onSliceComplete();
-
-		expect(checkpointCount).toBe(0);
-	});
-
-	test("checkpoints when another migration task is queued", async () => {
-		let checkpointCount = 0;
-		const scheduler = createMigrationTaskScheduler({
-			logger,
-			getQueuedCount: async () => 1,
-			checkpoint: async () => {
-				checkpointCount++;
-			},
-		});
-
-		await scheduler.onSliceComplete();
-
-		expect(checkpointCount).toBe(1);
-	});
-
-	test("checkpoints when queue inspection fails", async () => {
-		let checkpointCount = 0;
-		const scheduler = createMigrationTaskScheduler({
-			logger,
-			getQueuedCount: async () => {
-				throw new Error("queue unavailable");
-			},
-			checkpoint: async () => {
-				checkpointCount++;
-			},
-		});
-
-		await scheduler.onSliceComplete();
-
-		expect(checkpointCount).toBe(1);
+		expect(scheduler.sliceDurationMs).toBe(MIGRATION_SLICE_DURATION_MS);
+		expect(scheduler.batchSize).toBe(MIGRATION_CHUNK_FETCH_SIZE);
+		expect(scheduler.now()).toBe(123);
 	});
 });

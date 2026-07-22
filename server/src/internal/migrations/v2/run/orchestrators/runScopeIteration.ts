@@ -28,6 +28,8 @@ export const runScopeIteration = async ({
 	controls,
 	hooks,
 	scheduler,
+	includeFilterCount,
+	afterInternalId,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -38,6 +40,8 @@ export const runScopeIteration = async ({
 	controls?: MigrationRunControls;
 	hooks?: MigrationHooks;
 	scheduler?: MigrationRunScheduler;
+	includeFilterCount?: boolean;
+	afterInternalId?: string;
 }) => {
 	const { count, iterate } = await runFilter({
 		ctx,
@@ -46,6 +50,9 @@ export const runScopeIteration = async ({
 		dryRun,
 		kind,
 		controls,
+		includeCount: includeFilterCount,
+		afterInternalId,
+		batchSize: scheduler?.batchSize,
 	});
 	ctx.logger.info(`run-migration: iterating scope`, {
 		data: { kind, count, dryRun },
@@ -124,6 +131,7 @@ export const runScopeIteration = async ({
 			perItem: (item) => perItem({ item, itemCtx: ctx }),
 			concurrency: controls?.concurrency,
 			scheduler,
+			shouldStop: () => cancelRequested,
 		});
 	}
 
