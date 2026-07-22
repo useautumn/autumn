@@ -42,4 +42,9 @@ export const applyRolloverUpdatesToFullSubject = ({
 		fullSubjectCustomerEntitlements: fullSubject.extra_customer_entitlements,
 		rolloverUpdates,
 	});
+
+	applyRolloverUpdate({
+		fullSubjectCustomerEntitlements: fullSubject.pooled_customer_entitlements,
+		rolloverUpdates,
+	});
 };
