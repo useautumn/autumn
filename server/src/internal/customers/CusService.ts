@@ -62,7 +62,6 @@ import {
 	getCustomerProductsPageQuery,
 } from "./getCustomerProductsPageQuery.js";
 import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
-import { hydrateFullCustomerPooledBalances } from "./pooledBalances/hydrateFullCustomerPooledBalances.js";
 import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
@@ -187,6 +186,7 @@ export class CusService {
 						customer_products: [],
 						customer_entitlements: [],
 						extra_customer_entitlements: [],
+						pooled_customer_entitlements: [],
 						customer_prices: [],
 						entitlements: [],
 						rollovers: [],
@@ -281,12 +281,6 @@ export class CusService {
 						fullCustomer: fullCus,
 					});
 				}
-
-				await hydrateFullCustomerPooledBalances({
-					ctx,
-					fullCustomer: fullCus,
-					internalEntityId: entityId ? fullCus.entity?.internal_id : null,
-				});
 
 				return fullCus;
 			},

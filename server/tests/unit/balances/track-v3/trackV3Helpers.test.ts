@@ -162,6 +162,7 @@ const buildFullSubject = ({
 				entities,
 			}),
 		],
+		pooled_customer_entitlements: [],
 		subscriptions: [],
 		invoices: [],
 		aggregated_customer_products: undefined,

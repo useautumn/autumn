@@ -25,6 +25,8 @@ export const fullCustomerToFullSubject = ({
 		entity: fullCustomer.entity,
 		customer_products: fullCustomer.customer_products,
 		extra_customer_entitlements: fullCustomer.extra_customer_entitlements ?? [],
+		pooled_customer_entitlements:
+			fullCustomer.pooled_customer_entitlements ?? [],
 		subscriptions: fullCustomer.subscriptions,
 		invoices: fullCustomer.invoices ?? [],
 		aggregated_customer_products: undefined,

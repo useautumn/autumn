@@ -1,9 +1,10 @@
 import {
 	AllowanceType,
 	addCusProductToCusEnt,
+	cusEntToStartingBalance,
 	EntInterval,
-	getStartingBalance,
 	isCustomerEntitlementPrepaidWithSeparateResetInterval,
+	PooledBalanceResetMode,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
@@ -18,7 +19,6 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils";
 import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService.js";
-import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 import type { CronContext } from "../utils/CronContext";
 import { getStripeSubscriptionAnchor } from "./getStripeSubscriptionAnchor";
@@ -56,6 +56,12 @@ const resetCustomerEntitlementInDb = async ({
 
 	try {
 		const ent = cusEnt.entitlement;
+		if (
+			cusEnt.pooled_balance &&
+			cusEnt.pooled_balance.reset_mode !== PooledBalanceResetMode.Lazy
+		) {
+			return;
+		}
 		const shortDurationInterval = ent.interval;
 
 		if (
@@ -72,41 +78,37 @@ const resetCustomerEntitlementInDb = async ({
 
 		// Fetch related price. Normal paid entitlements reset from
 		// invoice.created; split prepaid reset intervals reset here.
-		let relatedCusPrice = null;
+		let customerEntitlementForReset = cusEnt;
 		if (cusEnt.customer_product_id) {
 			const cusPrices = await CusPriceService.getByCustomerProductId({
 				db: ctx.db,
 				customerProductId: cusEnt.customer_product_id,
 			});
-			relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-			const customerEntitlementWithPrices = cusEnt.customer_product
-				? addCusProductToCusEnt({
-						cusEnt,
-						cusProduct: {
-							...cusEnt.customer_product,
-							customer_prices: cusPrices,
-						},
-					})
-				: null;
-			const resetsViaInvoice =
-				(cusEnt.customer_product?.subscription_ids?.length ?? 0) > 0;
-			if (
-				resetsViaInvoice &&
-				relatedCusPrice &&
-				(!customerEntitlementWithPrices ||
+			if (cusEnt.customer_product) {
+				const customerEntitlementWithPrices = addCusProductToCusEnt({
+					cusEnt,
+					cusProduct: {
+						...cusEnt.customer_product,
+						customer_prices: cusPrices,
+					},
+				});
+				customerEntitlementForReset = customerEntitlementWithPrices;
+
+				const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+				const resetsViaInvoice =
+					(cusEnt.customer_product.subscription_ids?.length ?? 0) > 0;
+				if (
+					resetsViaInvoice &&
+					relatedCusPrice &&
 					!isCustomerEntitlementPrepaidWithSeparateResetInterval({
 						customerEntitlement: customerEntitlementWithPrices,
 						customerPrice: relatedCusPrice,
-					}))
-			) {
-				return;
+					})
+				) {
+					return;
+				}
 			}
 		}
-
-		const entOptions = getEntOptions(
-			cusEnt.customer_product?.options ?? [],
-			cusEnt.entitlement,
-		);
 
 		// Handle if entitlement changed to unlimited...
 		const entitlement = cusEnt.entitlement;
@@ -141,11 +143,8 @@ const resetCustomerEntitlementInDb = async ({
 			return;
 		}
 
-		const resetBalance = getStartingBalance({
-			entitlement: cusEnt.entitlement,
-			options: entOptions || undefined,
-			relatedPrice: relatedCusPrice?.price,
-			productQuantity: cusEnt.customer_product?.quantity ?? 1,
+		const resetBalance = cusEntToStartingBalance({
+			cusEnt: customerEntitlementForReset,
 		});
 
 		if (!cusEnt.next_reset_at) return;

@@ -53,6 +53,10 @@ export const filterFullSubjectByFeatureIds = ({
 			(customerEntitlement) =>
 				featureIdSet.has(customerEntitlement.entitlement.feature.id),
 		),
+		pooled_customer_entitlements:
+			fullSubject.pooled_customer_entitlements.filter((customerEntitlement) =>
+				featureIdSet.has(customerEntitlement.entitlement.feature.id),
+			),
 		aggregated_customer_entitlements:
 			fullSubject.aggregated_customer_entitlements?.filter((balance) =>
 				featureIdSet.has(balance.feature_id),

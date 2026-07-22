@@ -18,7 +18,9 @@ import {
 	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
+	EXTRA_CUSTOMER_ENTITLEMENT_LIMIT,
 	getCustomerListFilterSql,
+	POOLED_CUSTOMER_ENTITLEMENT_LIMIT,
 } from "./getFullCusQuery.js";
 
 export type CursorPaginatedFullCusQueryArgs = {
@@ -165,6 +167,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				cp.internal_entity_id,
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
@@ -186,6 +189,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
+				cp.internal_entity_id,
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
@@ -203,9 +207,24 @@ export const getCursorPaginatedFullCusQuery = ({
 			GROUP BY internal_customer_id
 		),
 		ces_bound AS MATERIALIZED (
-			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
+			SELECT
+				ce.id,
+				ce.entitlement_id,
+				(
+					row_to_json(ce)::jsonb
+					|| CASE
+						WHEN pbc.id IS NULL THEN '{}'::jsonb
+						ELSE jsonb_build_object(
+							'pooled_balance_contribution',
+							to_jsonb(pbc)
+						)
+					END
+				)::json AS row_json
 			FROM cps_ranked
 			JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
+			LEFT JOIN pooled_balance_contributions pbc
+				ON pbc.id = ce.pooled_contribution_id
+				AND cps_ranked.internal_entity_id IS NULL
 		),
 		ces_loose AS MATERIALIZED (
 			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
@@ -215,16 +234,40 @@ export const getCursorPaginatedFullCusQuery = ({
 				FROM customer_entitlements ce
 				WHERE ce.internal_customer_id = cr.internal_id
 					AND ce.customer_product_id IS NULL
-					AND ce.is_pooled_balance = false
+					AND ce.pooled_balance_id IS NULL
+					AND ce.pooled_contribution_id IS NULL
 					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				ORDER BY ce.id DESC
-				LIMIT 30
+				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
 			) ce ON true
+		),
+		ces_pooled AS MATERIALIZED (
+			SELECT
+				ce.id,
+				ce.entitlement_id,
+				(
+					row_to_json(ce)::jsonb
+					|| jsonb_build_object('pooled_balance', to_jsonb(pb))
+				)::json AS row_json
+			FROM cr
+			JOIN LATERAL (
+				SELECT ce.*
+				FROM customer_entitlements ce
+				WHERE ce.internal_customer_id = cr.internal_id
+					AND ce.customer_product_id IS NULL
+					AND ce.pooled_balance_id IS NOT NULL
+					AND ce.pooled_contribution_id IS NULL
+				ORDER BY ce.id DESC
+				LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
+			) ce ON true
+			JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 		),
 		ces_all AS MATERIALIZED (
 			SELECT id, entitlement_id FROM ces_bound
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_loose
+			UNION ALL
+			SELECT id, entitlement_id FROM ces_pooled
 		),
 		${productsSeedCte}
 		${entitiesCte}
@@ -236,6 +279,7 @@ export const getCursorPaginatedFullCusQuery = ({
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
+			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_pooled) AS pooled_customer_entitlements,
 			(SELECT COALESCE(json_agg(row_to_json(cpr)::jsonb || jsonb_build_object('price', row_to_json(p))), '[]'::json)
 				FROM cps_ranked
 				JOIN customer_prices cpr ON cpr.customer_product_id = cps_ranked.id

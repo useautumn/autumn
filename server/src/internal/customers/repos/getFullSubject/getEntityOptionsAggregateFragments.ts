@@ -55,8 +55,7 @@ export const getEntityOptionsAggregateFragments = () => {
 					cpr.created_at DESC
 				LIMIT 1
 			) prepaid_price ON true
-			WHERE ent.pooled IS NOT TRUE
-				AND (
+			WHERE (
 					eor.option_internal_feature_id IS NOT NULL
 					AND ce.internal_feature_id = eor.option_internal_feature_id
 				)

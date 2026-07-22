@@ -3,10 +3,12 @@ import {
 	BillingInterval,
 	BillWhen,
 	CusProductStatus,
+	type DbPooledBalance,
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	type FullProduct,
+	PooledBalanceResetMode,
 	PriceType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
@@ -106,6 +108,44 @@ const buildCusEnt = ({
 	};
 };
 
+const buildSyntheticPooledCustomerEntitlement = ({
+	resetMode,
+}: {
+	resetMode: PooledBalanceResetMode;
+}): FullCusEntWithFullCusProduct => {
+	const customerEntitlement = buildCusEnt({
+		nextResetAt: PAST,
+		withCustomerProduct: false,
+	});
+	const pooledBalance = {
+		id: "pool_test",
+		org_id: "org_test",
+		env: "test",
+		internal_customer_id: customerEntitlement.internal_customer_id,
+		internal_feature_id: customerEntitlement.internal_feature_id,
+		granted: 300,
+		interval: EntInterval.Month,
+		interval_count: 1,
+		reset_cycle_anchor: PAST,
+		reset_mode: resetMode,
+		stripe_subscription_id:
+			resetMode === PooledBalanceResetMode.Subscription ? "sub_test" : null,
+		customer_license_link_id: null,
+		rollover_signature: "none",
+		customer_entitlement_id: customerEntitlement.id,
+		last_applied_reset_at: null,
+		created_at: PAST,
+		updated_at: PAST,
+	} satisfies DbPooledBalance;
+
+	return {
+		...customerEntitlement,
+		is_pooled_balance: true,
+		entitlement: { ...customerEntitlement.entitlement, pooled: true },
+		pooled_balance: pooledBalance,
+	};
+};
+
 describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 	test("returns active cusEnt when ignore_past_due is false", () => {
 		const customerEntitlements = [
@@ -159,9 +199,9 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product?.status).toBe(CusProductStatus.PastDue);
-		expect(
-			result[0].customer_product?.product?.config?.ignore_past_due,
-		).toBe(true);
+		expect(result[0].customer_product?.product?.config?.ignore_past_due).toBe(
+			true,
+		);
 	});
 
 	test("only gates past-due status and leaves other upstream statuses to the caller", () => {
@@ -276,5 +316,51 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product).toBeNull();
+	});
+
+	test("returns an overdue lazy synthetic pooled customer entitlement", () => {
+		const customerEntitlement = buildSyntheticPooledCustomerEntitlement({
+			resetMode: PooledBalanceResetMode.Lazy,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [customerEntitlement],
+			now: NOW,
+		});
+
+		expect(result.map((candidate) => candidate.id)).toEqual([
+			customerEntitlement.id,
+		]);
+	});
+
+	test("skips subscription and lifetime synthetic pooled customer entitlements", () => {
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [
+				buildSyntheticPooledCustomerEntitlement({
+					resetMode: PooledBalanceResetMode.Subscription,
+				}),
+				buildSyntheticPooledCustomerEntitlement({
+					resetMode: PooledBalanceResetMode.Lifetime,
+				}),
+			],
+			now: NOW,
+		});
+
+		expect(result).toEqual([]);
+	});
+
+	test("skips pooled source customer entitlements", () => {
+		const customerEntitlement = buildCusEnt({
+			productStatus: CusProductStatus.Active,
+			nextResetAt: PAST,
+		});
+		customerEntitlement.entitlement.pooled = true;
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [customerEntitlement],
+			now: NOW,
+		});
+
+		expect(result).toEqual([]);
 	});
 });
