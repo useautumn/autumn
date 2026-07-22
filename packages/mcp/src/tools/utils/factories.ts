@@ -24,6 +24,17 @@ const getRequest = (input: unknown): unknown =>
 const signalOf = (context: { mcp?: { extra?: { signal?: AbortSignal } } }) =>
 	context?.mcp?.extra?.signal;
 
+const withExpand = ({
+	request,
+	expand,
+}: {
+	request: unknown;
+	expand?: string[];
+}) =>
+	expand?.length && request && typeof request === "object"
+		? { ...request, expand }
+		: request;
+
 /** Builds a `{ id: tool }` record from a list of configs. */
 export const toTools = <Config extends { id: string }>(
 	configs: Config[],
@@ -36,6 +47,7 @@ export const operationTool = ({
 	description,
 	schema,
 	endpoint,
+	expand,
 	destructive = false,
 	idempotent = false,
 }: OperationToolConfig) =>
@@ -48,7 +60,10 @@ export const operationTool = ({
 			callAutumn({
 				auth: getAutumnAuth(context),
 				endpoint,
-				request: schema.parse(getRequest(input)),
+				request: withExpand({
+					request: schema.parse(getRequest(input)),
+					expand,
+				}),
 				signal: signalOf(context),
 			}),
 	});
@@ -59,6 +74,7 @@ export const agentBillingPreviewTool = ({
 	description,
 	schema,
 	previewEndpoint,
+	expand,
 	writeToolName,
 }: BillingPreviewToolConfig) =>
 	createTool({
@@ -73,7 +89,7 @@ export const agentBillingPreviewTool = ({
 			const preview = await callAutumn({
 				auth,
 				endpoint: previewEndpoint,
-				request: parsedRequest,
+				request: withExpand({ request: parsedRequest, expand }),
 				signal: signalOf(context),
 			});
 			await createPendingAction({
