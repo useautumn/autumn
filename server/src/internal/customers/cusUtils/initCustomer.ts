@@ -5,6 +5,7 @@ import {
 	type FullCustomer,
 	orgMultiCurrencyEnabled,
 	RecaseError,
+	stripAutoTopupCountsForStorage,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -61,7 +62,9 @@ const initCustomer = ({
 		processors: customerData?.processors ?? null,
 		send_email_receipts: customerData?.send_email_receipts ?? false,
 		currency: customerData?.currency?.toLowerCase() || null,
-		auto_topups: customerData?.billing_controls?.auto_topups,
+		auto_topups: stripAutoTopupCountsForStorage(
+			customerData?.billing_controls?.auto_topups,
+		),
 		spend_limits: customerData?.billing_controls?.spend_limits,
 		usage_limits: customerData?.billing_controls?.usage_limits,
 		usage_alerts: customerData?.billing_controls?.usage_alerts,
