@@ -4,12 +4,19 @@
  *
  * Context: we are seeing production events with empty/null deductions and
  * wanted to rule out "async track inserts the event optimistically before
- * processing".
+ * processing". Live check confirmed request-path insert does NOT happen;
+ * empty deductions still appear *after* the worker when there is nothing to
+ * deduct (e.g. no entitlements) — same as sync track. See also
+ * track-unlimited-cusEnt-attribution for another empty-deductions path.
  *
- * Expected (current) behavior:
+ * Expected (current) behavior with an attached metered plan:
  *  - POST /track async=true → 202 { success: true }
  *  - Immediately after: zero persisted events for the customer, balance unchanged
  *  - After worker + event batch flush: one event WITH deductions, balance reduced
+ *
+ * Companion unit proof (no Stripe needed):
+ *  server/tests/unit/balances/track/handle-track.test.ts
+ *  "async=true queues only — does not insert/batch an event on the request path"
  */
 
 import { expect, test } from "bun:test";
