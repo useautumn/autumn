@@ -65,7 +65,7 @@ export const AutoTopupSchema = z.object({
 	enabled: z.boolean().default(false).meta({
 		description: "Whether auto top-up is enabled.",
 	}),
-	threshold: z.number().min(0).meta({
+	threshold: z.number().meta({
 		description:
 			"When the balance drops below this threshold, an auto top-up will be purchased.",
 	}),
