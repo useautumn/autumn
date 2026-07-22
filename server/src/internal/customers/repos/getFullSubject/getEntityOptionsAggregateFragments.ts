@@ -12,7 +12,7 @@ import { sql } from "drizzle-orm";
  */
 export const getEntityOptionsAggregateFragments = () => {
 	const ctes = sql`
-		entity_option_rows AS (
+		entity_option_rows AS MATERIALIZED (
 			SELECT
 				ecp.internal_customer_id,
 				ecp.id AS customer_product_id,
