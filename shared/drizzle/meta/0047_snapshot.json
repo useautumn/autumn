@@ -1,5 +1,5 @@
 {
-  "id": "0f8ff78e-c90d-4e74-81fb-8e0866c3c2aa",
+  "id": "5b85c15f-9355-4d1c-8ac3-1bff4b4b6f9c",
   "prevId": "c3041e96-b8d2-4e62-b2b1-430e4d6c8989",
   "version": "7",
   "dialect": "postgresql",
@@ -1583,6 +1583,18 @@
           "notNull": true,
           "default": false
         },
+        "pooled_balance_id": {
+          "name": "pooled_balance_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pooled_contribution_id": {
+          "name": "pooled_contribution_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "adjustment": {
           "name": "adjustment",
           "type": "numeric",
@@ -1864,6 +1876,22 @@
           ],
           "isUnique": false,
           "where": "\"customer_entitlements\".\"expired\" IS NOT TRUE AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
+          "concurrently": true,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_pooled_contribution": {
+          "name": "idx_customer_entitlements_pooled_contribution",
+          "columns": [
+            {
+              "expression": "pooled_contribution_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"pooled_contribution_id\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}
@@ -2366,7 +2394,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -2935,7 +2963,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
         "customer_products_internal_customer_id_fkey": {
@@ -7644,7 +7672,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         },
         "pooled_balance_contributions_customer_entitlement_fkey": {
@@ -7657,7 +7685,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
