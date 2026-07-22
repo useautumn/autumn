@@ -18,6 +18,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
+import { syncAutoTopupPurchaseLimitCounts } from "./syncAutoTopupPurchaseLimitCounts";
 
 export const updateCustomer = async ({
 	ctx,
@@ -136,8 +137,14 @@ export const updateCustomer = async ({
 	// Prepare update data — only include defined billing control fields
 	const billingControlUpdates: Partial<Customer> = {};
 	if (billing_controls) {
-		if (billing_controls.auto_topups !== undefined)
-			billingControlUpdates.auto_topups = billing_controls.auto_topups;
+		if (billing_controls.auto_topups !== undefined) {
+			billingControlUpdates.auto_topups =
+				await syncAutoTopupPurchaseLimitCounts({
+					ctx,
+					customer: originalCustomer,
+					autoTopups: billing_controls.auto_topups,
+				});
+		}
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
 		if (billing_controls.usage_limits !== undefined)
