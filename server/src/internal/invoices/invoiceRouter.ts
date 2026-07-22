@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetStripeInvoice } from "./handlers/handleGetStripeInvoice.js";
+import { handleInsertInvoices } from "./handlers/handleInsertInvoices.js";
 import { handleListInvoices } from "./handlers/handleListInvoices.js";
 import { handleRedirectToInvoice } from "./handlers/handleRedirectToInvoice.js";
 
@@ -32,4 +33,5 @@ invoiceRouter.get("/:stripe_invoice_id/stripe", ...handleGetStripeInvoice);
 
 export const invoiceRpcRouter = new Hono<HonoEnv>();
 
+invoiceRpcRouter.post("/invoices.insert", ...handleInsertInvoices);
 invoiceRpcRouter.post("/invoices.list", ...handleListInvoices);

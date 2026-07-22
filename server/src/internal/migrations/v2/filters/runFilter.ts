@@ -28,6 +28,9 @@ export const runFilter = async ({
 	dryRun,
 	kind,
 	controls,
+	includeCount = true,
+	afterInternalId,
+	batchSize,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -35,9 +38,12 @@ export const runFilter = async ({
 	dryRun: boolean;
 	kind: RunScopeKind;
 	controls?: MigrationRunControls;
+	includeCount?: boolean;
+	afterInternalId?: string;
+	batchSize?: number;
 }): Promise<{
 	kind: RunScopeKind;
-	count: number;
+	count: number | null;
 	iterate: () => AsyncGenerator<RunScopeItem[]>;
 }> => {
 	if (kind !== "customer")
@@ -56,12 +62,14 @@ export const runFilter = async ({
 		controls,
 	});
 	const limit = controls?.limit ?? undefined;
-	const count = await countCustomers({
-		ctx,
-		filter,
-		checkpoint,
-		limit,
-	});
+	const count = includeCount
+		? await countCustomers({
+				ctx,
+				filter,
+				checkpoint,
+				limit,
+			})
+		: null;
 
 	ctx.logger.info("runFilter: customer scope resolved", {
 		data: {
@@ -94,6 +102,8 @@ export const runFilter = async ({
 			filter,
 			checkpoint,
 			limit,
+			afterInternalId,
+			batchSize,
 		})) {
 			yield batch.map(
 				(row): RunScopeItem => ({

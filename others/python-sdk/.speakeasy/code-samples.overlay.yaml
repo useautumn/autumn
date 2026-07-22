@@ -787,6 +787,38 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/invoices.insert"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.invoices.insert(invoices=[
+                    {
+                        "customer_id": "cus_123",
+                        "plan_ids": [
+                            "pro",
+                        ],
+                        "stripe_id": "in_legacy_123",
+                        "status": "paid",
+                        "total": 29.99,
+                        "amount_paid": 29.99,
+                        "currency": "usd",
+                        "created_at": 1451606400000,
+                        "hosted_invoice_url": "https://billing.example.com/invoices/legacy-123",
+                    },
+                ])
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/invoices.list"]["post"]
     update:
       x-codeSamples:

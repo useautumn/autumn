@@ -11,7 +11,7 @@ const licensePlanIdOf = (customerLicense: FullCustomerLicense) =>
 	customerLicense.planLicense?.product.id ??
 	customerLicense.license_internal_product_id;
 
-/** Blocks ambiguous active assignment mappings; dropped pools release in compute. */
+/** Blocks ambiguous mappings; dropped pools inherit their parent's lifecycle. */
 export const handleDroppedLicenseErrors = ({
 	billingContext,
 }: {

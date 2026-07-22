@@ -1,5 +1,6 @@
 import { isSyncableEvent, processStripeSyncEvent } from "@autumn/stripe-sync";
 import type { Context, Next } from "hono";
+import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { isStripeSyncEnabled } from "@/internal/misc/stripeSync/stripeSyncStore.js";
 import type {
 	StripeWebhookContext,
@@ -29,7 +30,10 @@ export const stripeSyncMiddleware = async (
 	if (!isSyncableEvent({ eventType: stripeEvent.type })) return;
 
 	try {
-		const stripeAccountId = stripeEvent.account ?? undefined;
+		// Events from account-registered webhooks carry no `account` — resolve
+		// from org connect config so sync rows are never left tenant-unstamped.
+		const stripeAccountId =
+			stripeEvent.account ?? orgToAccountId({ org, env: ctx.env });
 
 		void processStripeSyncEvent({
 			event: stripeEvent,

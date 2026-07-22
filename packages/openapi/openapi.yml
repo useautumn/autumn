@@ -6813,13 +6813,6 @@ paths:
                         propertyNames:
                           type: string
                         additionalProperties: {}
-                      version:
-                        type: integer
-                        minimum: 1
-                        maximum: 9007199254740991
-                        description: Pin the link to a specific version of the license plan. Omitted, an
-                          existing link keeps its pinned version and a new link
-                          resolves to the latest.
                     required:
                       - license_plan_id
                   description: Plans offered as assignable licenses under this plan. The full set
@@ -11016,6 +11009,7 @@ paths:
         @param allVersions - Apply the update diff to all versions of this plan. Mutually exclusive with disable_version. (optional)
         @param forceVersion - Force versioning even when no customers exist. Mutually exclusive with disable_version. (optional)
         @param updateVariantIds - Variant plan IDs to apply this update to. Empty or omitted means no propagation. (optional)
+        @param updateLicenseParents - Parent plan versions that should receive this license-plan update. (optional)
         @param variants - Additive variant updates for this base plan. Missing variants are created when name is provided. (optional)
         @param isDefault - Whether this is the org's default plan. Cannot be true on a variant. (optional)
 
@@ -11594,13 +11588,6 @@ paths:
                         propertyNames:
                           type: string
                         additionalProperties: {}
-                      version:
-                        type: integer
-                        minimum: 1
-                        maximum: 9007199254740991
-                        description: Pin the link to a specific version of the license plan. Omitted, an
-                          existing link keeps its pinned version and a new link
-                          resolves to the latest.
                     required:
                       - license_plan_id
                   description: Plans offered as assignable licenses under this plan. The full set
@@ -11894,6 +11881,23 @@ paths:
                     type: string
                   description: Variant plan IDs to apply this update to. Empty or omitted means no
                     propagation.
+                update_license_parents:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      plan_id:
+                        type: string
+                        minLength: 1
+                        pattern: ^[a-zA-Z0-9_-]+$
+                      version:
+                        type: integer
+                        minimum: 1
+                        maximum: 9007199254740991
+                    required:
+                      - plan_id
+                      - version
+                  description: Parent plan versions that should receive this license-plan update.
                 variants:
                   type: array
                   items:
@@ -16379,7 +16383,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784299196316,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785508796316,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1784658936605,"plans":[{"planId":"trial_plan"}]},{"startsAt":1785868536605,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -30558,6 +30562,194 @@ paths:
                         count: 2
                         sum: 15
       x-speakeasy-name-override: aggregate
+      parameters:
+        - *a1
+  /v1/invoices.insert:
+    post:
+      operationId: insertInvoices
+      description: Inserts or updates up to 500 historical invoices without reading or
+        mutating the billing processor.
+      tags:
+        - invoices
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoices:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    properties:
+                      customer_id:
+                        type: string
+                        description: The customer this invoice belongs to.
+                      plan_ids:
+                        type: array
+                        items:
+                          type: string
+                        default: []
+                        description: Plan IDs represented by this invoice.
+                      stripe_id:
+                        type: string
+                        description: The processor's stable invoice ID.
+                      processor_type:
+                        enum:
+                          - stripe
+                          - revenuecat
+                        type: string
+                        default: stripe
+                        description: The billing processor that owns this invoice.
+                      status:
+                        enum:
+                          - draft
+                          - open
+                          - void
+                          - paid
+                          - uncollectible
+                        type: string
+                        description: The invoice status.
+                      total:
+                        type: number
+                        description: The invoice total in major currency units.
+                      amount_paid:
+                        anyOf:
+                          - type: number
+                          - type: "null"
+                        default: null
+                        description: The amount paid in major currency units.
+                      refunded_amount:
+                        type: number
+                        default: 0
+                        description: The refunded amount in major currency units.
+                      currency:
+                        type: string
+                        description: The currency code. Defaults to the organization's default currency.
+                      created_at:
+                        type: number
+                        description: The invoice creation timestamp in milliseconds.
+                      hosted_invoice_url:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        default: null
+                        description: The hosted invoice URL, when available.
+                    required:
+                      - customer_id
+                      - stripe_id
+                      - status
+                      - total
+                      - created_at
+                  description: Invoices to insert or update, in response order.
+              required:
+                - invoices
+              title: InsertInvoicesParams
+              examples:
+                - invoices:
+                    - customer_id: cus_123
+                      plan_ids:
+                        - pro
+                      stripe_id: in_legacy_123
+                      processor_type: stripe
+                      status: paid
+                      total: 29.99
+                      amount_paid: 29.99
+                      refunded_amount: 0
+                      currency: usd
+                      created_at: 1451606400000
+                      hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                        id:
+                          type: string
+                          description: The Autumn invoice ID.
+                        customer_id:
+                          type: string
+                          description: The customer this invoice belongs to.
+                        amount_paid:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: The amount paid in major currency units.
+                        refunded_amount:
+                          type: number
+                          description: The refunded amount in major currency units.
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                        - id
+                        - customer_id
+                        - amount_paid
+                        - refunded_amount
+                    description: Inserted or updated invoices in request order.
+                required:
+                  - invoices
+                examples:
+                  - invoices:
+                      - id: inv_2b3c4d5e6f7g8h
+                        customer_id: cus_123
+                        plan_ids:
+                          - pro
+                        stripe_id: in_legacy_123
+                        processor_type: stripe
+                        status: paid
+                        total: 29.99
+                        amount_paid: 29.99
+                        refunded_amount: 0
+                        currency: usd
+                        created_at: 1451606400000
+                        hosted_invoice_url: https://billing.example.com/invoices/legacy-123
+      x-speakeasy-name-override: insert
       parameters:
         - *a1
   /v1/invoices.list:
