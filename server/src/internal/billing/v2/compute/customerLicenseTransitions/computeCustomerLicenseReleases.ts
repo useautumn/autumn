@@ -1,9 +1,8 @@
-import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
+import type {
+	CustomerLicenseAssignmentRelease,
+	FullCusProduct,
+} from "@autumn/shared";
 import { matchCustomerLicenseSuccessors } from "./matchCustomerLicenseSuccessors.js";
-
-type CustomerLicenseAssignmentRelease = NonNullable<
-	AutumnBillingPlan["releaseCustomerLicenseAssignments"]
->;
 
 export const computeCustomerLicenseReleases = ({
 	outgoingCustomerProduct,

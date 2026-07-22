@@ -42,6 +42,17 @@ export type CustomerLicenseTransition = z.infer<
 	typeof CustomerLicenseTransitionSchema
 >;
 
+export const CustomerLicenseAssignmentReleaseSchema = z.object({
+	internalCustomerId: z.string(),
+	customerLicensePools: z.array(
+		z.object({ id: z.string(), linkId: z.string() }),
+	),
+	releasedAt: z.number(),
+});
+export type CustomerLicenseAssignmentRelease = z.infer<
+	typeof CustomerLicenseAssignmentReleaseSchema
+>;
+
 /** An atomic capacity move on a pool: negative consumes (guarded at zero),
  * positive releases (capped at granted). Takes key the pool row; releases key
  * the seat's link anchor, which survives plan transitions. */

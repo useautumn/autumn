@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
+	type CustomerLicenseAssignmentRelease,
 	type CustomerLicenseUpdate,
 	type Entitlement,
 	type FullCusProduct,
@@ -25,9 +26,7 @@ export type ImmediatePhaseResult = {
 	customEntitlements: Entitlement[];
 	insertPlanLicenses: InsertPlanLicenseSpec[];
 	customerLicenseUpdates: CustomerLicenseUpdate[];
-	releaseCustomerLicenseAssignments?: NonNullable<
-		AutumnBillingPlan["releaseCustomerLicenseAssignments"]
-	>;
+	releaseCustomerLicenseAssignments?: CustomerLicenseAssignmentRelease;
 };
 
 const expireCustomerProduct = ({
@@ -85,9 +84,8 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 	const insertPlanLicenses: InsertPlanLicenseSpec[] = [];
 	const customerLicenseUpdates: CustomerLicenseUpdate[] = [];
-	const droppedCustomerLicensePools: NonNullable<
-		AutumnBillingPlan["releaseCustomerLicenseAssignments"]
-	>["customerLicensePools"] = [];
+	const droppedCustomerLicensePools: CustomerLicenseAssignmentRelease["customerLicensePools"] =
+		[];
 
 	for (const productContext of immediatePhase.productContexts) {
 		const currentCustomerProduct = productContext.currentCustomerProduct;

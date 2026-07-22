@@ -24,6 +24,7 @@ import type { BillingContext } from "../context/billingContext";
 import { LineItemSchema } from "../lineItem/lineItem";
 import type { BillingPlan } from "./billingPlan";
 import {
+	CustomerLicenseAssignmentReleaseSchema,
 	CustomerLicenseTransitionSchema,
 	CustomerLicenseUpdateSchema,
 	InsertPlanLicenseSpecSchema,
@@ -119,15 +120,8 @@ export const AutumnBillingPlanSchema = z.object({
 	customerLicenseTransitions: z
 		.array(CustomerLicenseTransitionSchema)
 		.optional(),
-	releaseCustomerLicenseAssignments: z
-		.object({
-			internalCustomerId: z.string(),
-			customerLicensePools: z.array(
-				z.object({ id: z.string(), linkId: z.string() }),
-			),
-			releasedAt: z.number(),
-		})
-		.optional(),
+	releaseCustomerLicenseAssignments:
+		CustomerLicenseAssignmentReleaseSchema.optional(),
 
 	lineItems: z.array(LineItemSchema).optional(),
 	customLineItems: z.array(CustomLineItemSchema).optional(),

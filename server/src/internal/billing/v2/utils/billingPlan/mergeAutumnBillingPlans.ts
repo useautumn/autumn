@@ -1,4 +1,7 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	CustomerLicenseAssignmentRelease,
+} from "@autumn/shared";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -131,10 +134,6 @@ const mergeByKey = <T>({
 
 	return Array.from(itemByKey.values());
 };
-
-type CustomerLicenseAssignmentRelease = NonNullable<
-	AutumnBillingPlan["releaseCustomerLicenseAssignments"]
->;
 
 const mergeCustomerLicenseAssignmentReleases = ({
 	base,
