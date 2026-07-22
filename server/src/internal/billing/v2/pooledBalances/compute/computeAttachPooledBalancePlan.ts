@@ -4,10 +4,7 @@ import type {
 	PooledBalancePlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { applyIncomingPooledBalanceSources } from "./applyIncomingPooledBalanceSources/applyIncomingPooledBalanceSources";
-import { applyOutgoingPooledBalanceSources } from "./applyOutgoingPooledBalanceSources/applyOutgoingPooledBalanceSources";
-import { finalizePooledBalanceComputeContext } from "./context/finalizePooledBalanceComputeContext";
-import { setupPooledBalanceComputeContext } from "./context/setupPooledBalanceComputeContext";
+import { computePooledBalanceTransitionPlan } from "./computePooledBalanceTransitionPlan";
 
 export const computeAttachPooledBalancePlan = ({
 	ctx,
@@ -26,27 +23,20 @@ export const computeAttachPooledBalancePlan = ({
 		return { customerProduct };
 	}
 
-	const computeContext = setupPooledBalanceComputeContext({
-		pooledCustomerEntitlements:
-			attachBillingContext.fullCustomer.pooled_customer_entitlements ?? [],
-	});
-
-	applyOutgoingPooledBalanceSources({
-		computeContext,
-		customerProduct: attachBillingContext.currentCustomerProduct,
-	});
-
-	applyIncomingPooledBalanceSources({
-		ctx,
-		computeContext,
-		customerProduct,
-		stripeSubscriptionId: attachBillingContext.stripeSubscription?.id,
-		customerCreatedAt: attachBillingContext.fullCustomer.created_at,
-		now: attachBillingContext.currentEpochMs,
-	});
+	const { incomingCustomerProducts, pooledBalancePlan } =
+		computePooledBalanceTransitionPlan({
+			ctx,
+			fullCustomer: attachBillingContext.fullCustomer,
+			outgoingCustomerProducts: attachBillingContext.currentCustomerProduct
+				? [attachBillingContext.currentCustomerProduct]
+				: [],
+			incomingCustomerProducts: [customerProduct],
+			stripeSubscriptionId: attachBillingContext.stripeSubscription?.id,
+			now: attachBillingContext.currentEpochMs,
+		});
 
 	return {
-		customerProduct,
-		pooledBalancePlan: finalizePooledBalanceComputeContext({ computeContext }),
+		customerProduct: incomingCustomerProducts[0],
+		pooledBalancePlan,
 	};
 };

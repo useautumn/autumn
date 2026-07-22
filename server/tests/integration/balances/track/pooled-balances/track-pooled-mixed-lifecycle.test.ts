@@ -99,7 +99,6 @@ test.concurrent(
 			breakdownCount: 3,
 		});
 	},
-	60_000,
 );
 
 test.concurrent(
@@ -159,5 +158,4 @@ test.concurrent(
 			usage: 110,
 		});
 	},
-	60_000,
 );

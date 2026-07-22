@@ -100,5 +100,4 @@ test.concurrent(
 			breakdownCount: 3,
 		});
 	},
-	60_000,
 );

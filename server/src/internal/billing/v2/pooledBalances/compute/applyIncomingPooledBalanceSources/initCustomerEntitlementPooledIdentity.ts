@@ -2,6 +2,7 @@ import {
 	EntInterval,
 	type FullCustomerEntitlement,
 	type PooledBalanceIdentity,
+	rolloverConfigToSignature,
 } from "@autumn/shared";
 import type { PooledBalanceLifecycle } from "../types/pooledBalanceComputeTypes";
 
@@ -27,7 +28,7 @@ export const initCustomerEntitlementPooledIdentity = ({
 	resetMode: lifecycle.resetMode,
 	stripeSubscriptionId: lifecycle.stripeSubscriptionId,
 	customerLicenseLinkId: lifecycle.customerLicenseLinkId,
-	rolloverSignature: customerEntitlement.entitlement.rollover
-		? JSON.stringify(customerEntitlement.entitlement.rollover)
-		: "none",
+	rolloverSignature: rolloverConfigToSignature({
+		rollover: customerEntitlement.entitlement.rollover,
+	}),
 });

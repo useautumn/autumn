@@ -117,4 +117,4 @@ test(`${chalk.yellowBright("pooled usage alert: free-to-Pro aggregate fires at e
 		usage: 75,
 		breakdownCount: 2,
 	});
-}, 60_000);
+});

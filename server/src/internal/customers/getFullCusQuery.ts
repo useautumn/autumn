@@ -245,11 +245,8 @@ const buildOptimizedCusProductsCTE = ({
         FROM customer_entitlements ce
         LEFT JOIN pooled_balance_contributions pbc
           ON pbc.id = ce.pooled_contribution_id
-          AND ${
-						entityId
-							? sql`cp.internal_entity_id = (SELECT internal_id FROM entity_record)`
-							: sql`cp.internal_entity_id IS NULL`
-					}
+          AND pbc.source_customer_entitlement_id = ce.id
+          AND pbc.source_customer_product_id = cp.id
         WHERE ce.customer_product_id = cp.id
       ) ce_data ON true
       LEFT JOIN LATERAL (
@@ -848,9 +845,10 @@ export const getPaginatedFullCusQuery = ({
           '[]'::json
         ) AS customer_entitlements
         FROM customer_entitlements ce
-		LEFT JOIN pooled_balance_contributions pbc
-			ON pbc.id = ce.pooled_contribution_id
-			AND cp.internal_entity_id IS NULL
+        LEFT JOIN pooled_balance_contributions pbc
+          ON pbc.id = ce.pooled_contribution_id
+          AND pbc.source_customer_entitlement_id = ce.id
+          AND pbc.source_customer_product_id = cp.id
         WHERE ce.customer_product_id = cp.id
       ) ce_data ON true
       LEFT JOIN LATERAL (

@@ -1,4 +1,8 @@
-import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
+import {
+	ACTIVE_STATUSES,
+	type CusProductStatus,
+	RELEVANT_STATUSES,
+} from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { planetScaleTag } from "@/db/dbUtils.js";
 import { notLicenseAssignmentSql } from "@/internal/licenses/repos/licenseAssignmentRepo.js";
@@ -66,13 +70,17 @@ export const getFullSubjectRowsQuery = ({
 	entityScopedOnly?: boolean;
 	queryTag?: string;
 }) => {
-	const statusFilter =
+	const entityAggregationStatuses =
 		inStatuses.length > 0
+			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
+			: ACTIVE_STATUSES;
+	const entityAggregationStatusFilter =
+		entityAggregationStatuses.length > 0
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
+					entityAggregationStatuses.map((status) => sql`${status}`),
 					sql`, `,
 				)}])`
-			: sql``;
+			: sql`AND FALSE`;
 
 	// Seats own no lifecycle: their raw status column lags until the seat-sync
 	// cron converges it, so the candidate filter/rank must check the pool
@@ -84,11 +92,6 @@ export const getFullSubjectRowsQuery = ({
 					sql`, `,
 				)}])`
 			: sql``;
-
-	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
-		RELEVANT_STATUSES.map((status) => sql`${status}`),
-		sql`, `,
-	)}]) THEN 0 ELSE 1 END`;
 
 	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
 		RELEVANT_STATUSES.map((status) => sql`${status}`),
@@ -103,7 +106,7 @@ export const getFullSubjectRowsQuery = ({
 
 	const entityFragments = includeEntityAggregations
 		? getEntityAggregateFragments({
-				statusFilter,
+				statusFilter: entityAggregationStatusFilter,
 			})
 		: emptyEntityFragments;
 	const customerLevelProductPredicate = sql`

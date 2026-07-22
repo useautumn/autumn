@@ -5,6 +5,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
@@ -46,15 +47,26 @@ export const computeCreateSchedulePlan = ({
 		billingContext,
 		existingScheduledCustomerProducts,
 	});
+	const {
+		incomingCustomerProducts: immediateCustomerProducts,
+		pooledBalancePlan,
+	} = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: billingContext.fullCustomer,
+		outgoingCustomerProducts: currentRecurringCustomerProducts,
+		incomingCustomerProducts: immediate.insertCustomerProducts,
+		stripeSubscriptionId: billingContext.stripeSubscription?.id,
+		now: billingContext.currentEpochMs,
+	});
 
 	const allInsertCustomerProducts = [
-		...immediate.insertCustomerProducts,
+		...immediateCustomerProducts,
 		...scheduled.insertCustomerProducts,
 	];
 
 	const { allLineItems, updateCustomerEntitlements } = buildAutumnLineItems({
 		ctx,
-		newCustomerProducts: immediate.insertCustomerProducts,
+		newCustomerProducts: immediateCustomerProducts,
 		deletedCustomerProducts: currentRecurringCustomerProducts,
 		billingContext,
 		includeArrearLineItems: currentRecurringCustomerProducts.length > 0,
@@ -80,6 +92,7 @@ export const computeCreateSchedulePlan = ({
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
 		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
+		pooledBalancePlan,
 	};
 
 	autumnBillingPlan.lineItems = finalizeLineItems({
@@ -91,7 +104,7 @@ export const computeCreateSchedulePlan = ({
 
 	const immediatePhase: SchedulePhasePlan = {
 		startsAt: billingContext.immediatePhase.starts_at,
-		customerProductIds: immediate.insertCustomerProducts.map(
+		customerProductIds: immediateCustomerProducts.map(
 			(customerProduct) => customerProduct.id,
 		),
 	};

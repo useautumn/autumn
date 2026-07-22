@@ -224,7 +224,8 @@ export const getCursorPaginatedFullCusQuery = ({
 			JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
 			LEFT JOIN pooled_balance_contributions pbc
 				ON pbc.id = ce.pooled_contribution_id
-				AND cps_ranked.internal_entity_id IS NULL
+				AND pbc.source_customer_entitlement_id = ce.id
+				AND pbc.source_customer_product_id = cps_ranked.id
 		),
 		ces_loose AS MATERIALIZED (
 			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json

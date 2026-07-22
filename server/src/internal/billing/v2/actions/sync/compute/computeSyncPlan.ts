@@ -1,5 +1,11 @@
-import type { AutumnBillingPlan, SyncBillingContext } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	CusProductStatus,
+	type FullCusProduct,
+	type SyncBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/computePooledBalanceTransitionPlan";
 import { initSubscriptionFromStripe } from "@/internal/subscriptions/utils/initSubscriptionFromStripe";
 import { syncContextToCurrencyLock } from "../utils/syncContextUtils";
 import {
@@ -37,6 +43,25 @@ export const computeSyncPlan = ({
 }): ComputedSyncPlan => {
 	const immediate = computeSyncImmediatePhase({ ctx, syncContext });
 	const future = computeSyncFuturePhases({ ctx, syncContext });
+	const outgoingCustomerProducts: FullCusProduct[] = [];
+	for (const { customerProduct, updates } of [
+		...immediate.updateCustomerProducts,
+		...future.updateCustomerProducts,
+	]) {
+		if (updates.status === CusProductStatus.Expired) {
+			outgoingCustomerProducts.push(customerProduct);
+		}
+	}
+	const {
+		incomingCustomerProducts: preparedImmediateCustomerProducts,
+		pooledBalancePlan,
+	} = computePooledBalanceTransitionPlan({
+		ctx,
+		fullCustomer: syncContext.fullCustomer,
+		outgoingCustomerProducts,
+		incomingCustomerProducts: immediate.insertCustomerProducts,
+		now: syncContext.currentEpochMs,
+	});
 
 	const upsertSubscription = syncContext.stripeSubscription
 		? initSubscriptionFromStripe({
@@ -49,7 +74,7 @@ export const computeSyncPlan = ({
 		customerId:
 			syncContext.fullCustomer.id ?? syncContext.fullCustomer.internal_id,
 		insertCustomerProducts: [
-			...immediate.insertCustomerProducts,
+			...preparedImmediateCustomerProducts,
 			...future.insertCustomerProducts,
 		],
 		updateCustomerProducts:
@@ -75,6 +100,7 @@ export const computeSyncPlan = ({
 				: undefined,
 		lockCustomerCurrency: syncContextToCurrencyLock({ syncContext }),
 		upsertSubscription,
+		pooledBalancePlan,
 	};
 
 	// Single-phase sync (no schedule) → don't materialize any Autumn schedule.
@@ -87,7 +113,7 @@ export const computeSyncPlan = ({
 			? {
 					startsAt: syncContext.immediatePhase.startsAt,
 					endsAt: syncContext.immediatePhase.endsAt,
-					customerProductIds: immediate.insertCustomerProducts.map(
+					customerProductIds: preparedImmediateCustomerProducts.map(
 						(cp) => cp.id,
 					),
 				}
