@@ -52,5 +52,6 @@ export const setupCreateCustomer = async ({
 		currentEpochMs,
 		trialContext,
 		hasPaidProducts,
+		autoTopups: customerData?.billing_controls?.auto_topups,
 	};
 };

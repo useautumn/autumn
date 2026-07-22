@@ -24,11 +24,13 @@ export const ListInvoicesStatus = {
 } as const;
 export type ListInvoicesStatus = ClosedEnum<typeof ListInvoicesStatus>;
 
-export const ProcessorTypeRequest = {
+export const ListInvoicesProcessorTypeRequest = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
 } as const;
-export type ProcessorTypeRequest = ClosedEnum<typeof ProcessorTypeRequest>;
+export type ListInvoicesProcessorTypeRequest = ClosedEnum<
+  typeof ListInvoicesProcessorTypeRequest
+>;
 
 export type ListInvoicesParams = {
   /**
@@ -54,7 +56,7 @@ export type ListInvoicesParams = {
   /**
    * Filter by billing processor (stripe, revenuecat). Invoices recorded before processor tracking count as stripe.
    */
-  processorTypes?: Array<ProcessorTypeRequest> | undefined;
+  processorTypes?: Array<ListInvoicesProcessorTypeRequest> | undefined;
 };
 
 /**
@@ -146,9 +148,9 @@ export const ListInvoicesStatus$outboundSchema: z.ZodMiniEnum<
 > = z.enum(ListInvoicesStatus);
 
 /** @internal */
-export const ProcessorTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof ProcessorTypeRequest
-> = z.enum(ProcessorTypeRequest);
+export const ListInvoicesProcessorTypeRequest$outboundSchema: z.ZodMiniEnum<
+  typeof ListInvoicesProcessorTypeRequest
+> = z.enum(ListInvoicesProcessorTypeRequest);
 
 /** @internal */
 export type ListInvoicesParams$Outbound = {
@@ -171,7 +173,9 @@ export const ListInvoicesParams$outboundSchema: z.ZodMiniType<
     customerId: z.optional(z.string()),
     entityId: z.optional(z.string()),
     status: z.optional(z.array(ListInvoicesStatus$outboundSchema)),
-    processorTypes: z.optional(z.array(ProcessorTypeRequest$outboundSchema)),
+    processorTypes: z.optional(
+      z.array(ListInvoicesProcessorTypeRequest$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

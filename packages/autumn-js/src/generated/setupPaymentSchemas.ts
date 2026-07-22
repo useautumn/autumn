@@ -345,6 +345,7 @@ export const setupPaymentPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAutoTopupOutboundSchema = z.object({
@@ -829,6 +830,7 @@ export const setupPaymentPurchaseLimitSchema = z.object({
 	interval: setupPaymentPurchaseLimitIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAutoTopupSchema = z.object({
