@@ -51,7 +51,7 @@ const requireNumber = (min: number, message: string) =>
 const AutoTopupFormSchema = z
 	.object({
 		feature_id: z.string().min(1, "Please select a feature"),
-		threshold: requireNumber(0, "Please enter a valid threshold"),
+		threshold: z.number({ message: "Please enter a valid threshold" }),
 		quantity: requireNumber(1, "Please enter a valid quantity"),
 		has_purchase_limit: z.boolean(),
 		purchase_limit_limit: z.number().nullable(),
