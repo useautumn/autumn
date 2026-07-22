@@ -161,7 +161,7 @@ export function BillingAutoTopupSheet() {
 			return null;
 		}
 		const parsedThreshold = Number.parseFloat(threshold);
-		if (Number.isNaN(parsedThreshold) || parsedThreshold < 0) {
+		if (Number.isNaN(parsedThreshold)) {
 			toast.error("Please enter a valid threshold");
 			return null;
 		}
