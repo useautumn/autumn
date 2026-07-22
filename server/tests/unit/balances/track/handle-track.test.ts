@@ -1,8 +1,10 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { EventService } from "@/internal/api/events/EventService.js";
+import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
 const trackAsyncQueueUrl =
@@ -85,5 +87,32 @@ describe("handleTrack", () => {
 			QueueUrl: trackAsyncQueueUrl,
 			MessageDeduplicationId: "req_track_1",
 		});
+	});
+
+	test("async=true queues only — does not insert/batch an event on the request path", async () => {
+		const addEventSpy = spyOn(globalEventBatchingManager, "addEvent");
+		const insertSpy = spyOn(EventService, "insert");
+
+		try {
+			const response = await createApp({ ctx: createCtx() }).request("/track", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 7,
+					async: true,
+				}),
+			});
+
+			expect(response.status).toBe(202);
+			expect(await response.json()).toEqual({ success: true });
+			expect(mockState.queueCommands).toHaveLength(1);
+			expect(addEventSpy).not.toHaveBeenCalled();
+			expect(insertSpy).not.toHaveBeenCalled();
+		} finally {
+			addEventSpy.mockRestore();
+			insertSpy.mockRestore();
+		}
 	});
 });
