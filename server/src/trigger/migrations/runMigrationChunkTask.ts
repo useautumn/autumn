@@ -13,7 +13,8 @@ import {
 } from "@/trigger/migrations/migrationTaskPayload.js";
 import {
 	createMigrationChunkScheduler,
-	MIGRATION_CUSTOMER_CONCURRENCY,
+	MIGRATION_CHUNK_MAX_DURATION_SECONDS,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 	MIGRATION_TASK_RETRY,
 	migrationTaskQueue,
 } from "@/trigger/migrations/migrationTaskQueue.js";
@@ -69,7 +70,7 @@ export const executeRunMigrationChunk = async ({
 		dryRun: payload.dryRun,
 		controls: {
 			...(payload.controls ?? {}),
-			concurrency: MIGRATION_CUSTOMER_CONCURRENCY,
+			concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 			checkpointDryRun: true,
 		},
 		scheduler: createMigrationChunkScheduler(),
@@ -94,7 +95,7 @@ export const runMigrationChunkTask = task({
 	queue: migrationTaskQueue,
 	retry: MIGRATION_TASK_RETRY,
 	machine: "medium-1x",
-	maxDuration: 86400,
+	maxDuration: MIGRATION_CHUNK_MAX_DURATION_SECONDS,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
 		const payload = RunMigrationChunkPayloadSchema.parse(rawPayload);
 		const { ctx, logger } = await createTriggerContext({

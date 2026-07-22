@@ -9,7 +9,7 @@ import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import {
 	getMigrationTriggerOptions,
-	MIGRATION_CUSTOMER_CONCURRENCY,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 } from "@/trigger/migrations/migrationTaskQueue.js";
 import {
 	executeRunMigration,
@@ -24,12 +24,14 @@ const RunMigrationBody = z.object({
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
+	/** Accepted for backward compatibility; migration concurrency is fleet-managed. */
 	concurrency: z
 		.number()
 		.int()
 		.min(1)
 		.max(LEGACY_MAX_REQUESTED_CONCURRENCY)
-		.optional(),
+		.optional()
+		.describe("Deprecated: migration concurrency is fleet-managed"),
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
@@ -146,7 +148,7 @@ export const handleRunMigration = createRoute({
 			migration_id: id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
-			concurrency: MIGRATION_CUSTOMER_CONCURRENCY,
+			concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 			run_id: migrationRunId,
 			trigger_run_id: triggerRunId,
 			public_access_token: publicAccessToken,

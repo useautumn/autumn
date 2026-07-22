@@ -13,7 +13,10 @@ import {
 	RunMigrationPayloadSchema,
 	type RunMigrationPayload as RunMigrationPayloadType,
 } from "@/trigger/migrations/migrationTaskPayload.js";
-import { MIGRATION_TASK_RETRY } from "@/trigger/migrations/migrationTaskQueue.js";
+import {
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+	MIGRATION_TASK_RETRY,
+} from "@/trigger/migrations/migrationTaskQueue.js";
 import {
 	executeRunMigrationChunk,
 	runMigrationChunkTask,
@@ -89,7 +92,7 @@ export const executeRunMigration = async ({
 					data: {
 						migrationRunId,
 						noBillingChanges: migration.no_billing_changes === true,
-						concurrency: 1,
+						concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 					},
 				});
 
