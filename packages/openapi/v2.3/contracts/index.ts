@@ -48,7 +48,10 @@ import {
 	listFeaturesContract,
 	updateFeatureContract,
 } from "./featuresContract.js";
-import { listInvoicesContract } from "./invoicesContract.js";
+import {
+	insertInvoicesContract,
+	listInvoicesContract,
+} from "./invoicesContract.js";
 import {
 	keysMintContract,
 	keysRefreshContract,
@@ -132,6 +135,7 @@ export const v2_3ContractRouter = oc.router({
 	eventsAggregate: eventsAggregateContract,
 
 	// Invoices
+	invoicesInsert: insertInvoicesContract,
 	invoicesList: listInvoicesContract,
 
 	// Licenses
