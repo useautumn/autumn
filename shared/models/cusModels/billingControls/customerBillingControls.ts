@@ -269,6 +269,24 @@ export const CustomerBillingControlsParamsSchema =
 		}),
 	}).check((ctx) => {
 		const billingControls = ctx.value;
+		const autoTopupFeatureIds = new Set<string>();
+
+		for (const [index, autoTopup] of (
+			billingControls.auto_topups ?? []
+		).entries()) {
+			if (autoTopupFeatureIds.has(autoTopup.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one auto top-up entry is allowed per feature_id",
+					input: autoTopup.feature_id,
+					path: ["auto_topups", index, "feature_id"],
+				});
+				return;
+			}
+
+			autoTopupFeatureIds.add(autoTopup.feature_id);
+		}
+
 		const spendLimitFeatureIds = new Set<string>();
 
 		for (const [index, spendLimit] of (
