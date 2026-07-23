@@ -83,8 +83,8 @@ export const rateLimitFactory = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
-	// Over-limit "degrade": fail open instead of 429 — check routes get the
-	// allow-fallback via the ctx flag; establish routes shed a retryable 503.
+	// Check routes fail open; establish routes reject with a standard 429.
+	// Track routes use the degradation flag to preserve events through SQS.
 	const degradeHandler = async (
 		c: Context,
 		next: Next,
@@ -95,13 +95,14 @@ export const rateLimitFactory = ({
 
 		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
 			await queueRateLimitedCustomerCreation({ c: honoContext });
+			c.header("Retry-After", undefined);
 			return c.json(
 				{
-					message: "Service is temporarily unavailable, please retry shortly.",
-					code: "service_unavailable",
+					message: "Rate limit exceeded.",
+					code: "rate_limit_exceeded",
 					env: ctx?.env,
 				},
-				503,
+				429,
 			);
 		}
 

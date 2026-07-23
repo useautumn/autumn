@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { RESET_BATCH_SIZE } from "@/cron/resetCron/runResetBatch.js";
 import { runResetLoop } from "@/cron/resetCron/runResetLoop.js";
 import type { CronContext } from "@/cron/utils/CronContext.js";
+
+const BATCH_SIZE = 1_000;
 
 const ctx = {
 	db: {},
@@ -23,7 +24,12 @@ describe("reset loop", () => {
 			isActive: () => true,
 			runBatch: async () => {
 				batches++;
-				return { fetched: 0, upserted: 0, durationMs: 0 };
+				return {
+					batchSize: BATCH_SIZE,
+					fetched: 0,
+					upserted: 0,
+					durationMs: 0,
+				};
 			},
 			wait: async ({ delayMs }) => {
 				delays.push(delayMs);
@@ -54,7 +60,8 @@ describe("reset loop", () => {
 				await Promise.resolve();
 				activeBatches--;
 				return {
-					fetched: batches === 1 ? RESET_BATCH_SIZE : 1,
+					batchSize: BATCH_SIZE,
+					fetched: batches === 1 ? BATCH_SIZE : 1,
 					upserted: 0,
 					durationMs: 0,
 				};
@@ -81,7 +88,12 @@ describe("reset loop", () => {
 			isActive: () => false,
 			runBatch: async () => {
 				batches++;
-				return { fetched: 0, upserted: 0, durationMs: 0 };
+				return {
+					batchSize: BATCH_SIZE,
+					fetched: 0,
+					upserted: 0,
+					durationMs: 0,
+				};
 			},
 			wait: async () => controller.abort(),
 		});

@@ -10,6 +10,8 @@ export const ADMIN_RATE_LIMIT_REDIS_ALLOWLIST_CONFIG_KEY =
 	"admin/rate-limit-redis-allowlist-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
+export const ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY =
+	"admin/main-redis-cache-config.json";
 export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
 export const ADMIN_BATCH_RESET_CONFIG_KEY = "admin/batch-reset-config.json";
@@ -67,6 +69,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "redis-v2-cache",
 			label: "V2 Redis Instance",
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
+		},
+		{
+			id: "main-redis-cache",
+			label: "Main Redis Instance",
+			key: ADMIN_MAIN_REDIS_CACHE_CONFIG_KEY,
 		},
 		{
 			id: "cache-v2-ramp",
