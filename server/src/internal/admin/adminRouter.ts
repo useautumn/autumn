@@ -14,6 +14,7 @@ import {
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
 import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
+import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
 import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
@@ -46,6 +47,7 @@ import {
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
 import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
+import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
@@ -130,6 +132,11 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/async-balance-update-config",
 	...handleUpsertAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
+honoAdminRouter.put(
+	"/async-track-config",
+	...handleUpsertAdminAsyncTrackConfig,
 );
 honoAdminRouter.get(
 	"/full-subject-gate-config",

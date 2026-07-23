@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AsyncBalanceUpdateDialog } from "./AsyncBalanceUpdateDialog";
+import { AsyncTrackDialog } from "./AsyncTrackDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigCard } from "./EdgeConfigCard";
@@ -108,6 +109,11 @@ export function EdgeConfigTab() {
 
 			<AsyncBalanceUpdateDialog
 				open={openConfig === "async-balance-update"}
+				onOpenChange={closeDialog}
+			/>
+
+			<AsyncTrackDialog
+				open={openConfig === "async-track"}
 				onOpenChange={closeDialog}
 			/>
 
