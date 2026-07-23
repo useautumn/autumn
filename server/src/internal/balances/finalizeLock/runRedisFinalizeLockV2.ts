@@ -5,6 +5,7 @@ import type { FinalizeLockContextV2 } from "@/internal/balances/utils/lockV2/bui
 import { deductionUpdatesToModifiedIds } from "@/internal/balances/utils/sync/deductionUpdatesToModifiedIds.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import { RedisDeductionError } from "@/internal/balances/utils/types/redisDeductionError.js";
+import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { insertFinalizeLockEventV2 } from "./insertFinalizeLockEventV2.js";
 import { runPostgresFinalizeLockV2 } from "./runPostgresFinalizeLockV2.js";
 
@@ -65,6 +66,9 @@ export const runRedisFinalizeLockV2 = async ({
 			entityId: receipt.entity_id ?? undefined,
 			modifiedCusEntIdsByFeatureId,
 			usageWindowUpdates,
+			coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
+			// The drain resolves via worker ctx, so the mark must use the same routing.
+			coalesceRedis: ctx.redisV2,
 		});
 	}
 

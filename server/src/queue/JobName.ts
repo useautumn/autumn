@@ -19,6 +19,9 @@ export enum JobName {
 	SyncBalanceBatchV2 = "sync-balance-batch-v2",
 	SyncBalanceBatchV3 = "sync-balance-batch-v3",
 	SyncBalanceBatchV4 = "sync-balance-batch-v4",
+	/** Signal-only sync: payload identifies the customer; selectors and
+	 *  usage-window snapshots live in the Redis dirty state. */
+	SyncCustomerDirty = "sync-customer-dirty",
 	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
