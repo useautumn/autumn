@@ -150,7 +150,12 @@ BEGIN
         balance = COALESCE(ent_balance, ce.balance),
         adjustment = COALESCE(ent_adjustment, ce.adjustment),
         entities = COALESCE(ent_entities, ce.entities)
-      WHERE ce.id = ent_id;
+      WHERE ce.id = ent_id
+        AND (
+          ce.balance IS DISTINCT FROM COALESCE(ent_balance, ce.balance)
+          OR ce.adjustment IS DISTINCT FROM COALESCE(ent_adjustment, ce.adjustment)
+          OR ce.entities IS DISTINCT FROM COALESCE(ent_entities, ce.entities)
+        );
 
       IF FOUND THEN
         updates_json := jsonb_set(
