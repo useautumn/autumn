@@ -31,6 +31,7 @@ export type RequestContext = {
 	oauthResource?: string;
 	customerId?: string;
 	entityId?: string;
+	requestBody?: unknown;
 
 	// Objects
 	db: DrizzleCli;
