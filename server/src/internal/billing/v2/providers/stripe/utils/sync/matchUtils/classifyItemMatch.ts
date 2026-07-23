@@ -47,23 +47,18 @@ export const matchesOnBasePrice = (match: ItemMatch): boolean => {
 
 /* ── Composed classifiers: the role an item plays within its plan ────────── */
 
-const matchesMappedStripeProduct = (match: AutumnPriceMatch): boolean =>
-	"stripe_product_id" in match.matched_on &&
-	match.product.processor?.id === match.matched_on.stripe_product_id;
-
-/** Shape matches under the plan's mapped Stripe product select its catalog base. */
+/** Only a stored Stripe price identity selects the catalog base price. */
 export const isBasePriceMatch = (match: ItemMatch): match is AutumnPriceMatch =>
 	isAutumnPriceMatch(match) &&
 	matchesOnBasePrice(match) &&
-	(!matchesOnBasePriceShape(match) || matchesMappedStripeProduct(match));
+	!matchesOnBasePriceShape(match);
 
-/** Shape matches from another source preserve that Stripe price as custom. */
+/** Shape-only matches preserve the observed Stripe price as custom. */
 export const isCustomBaseMatch = (match: ItemMatch): boolean =>
 	isAutumnProductMatch(match) ||
 	(isAutumnPriceMatch(match) &&
 		matchesOnBasePrice(match) &&
-		matchesOnBasePriceShape(match) &&
-		!matchesMappedStripeProduct(match));
+		matchesOnBasePriceShape(match));
 
 /** Hit on one of the plan's feature prices — any price that isn't its base. */
 export const isFeaturePriceMatch = (
