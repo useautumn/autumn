@@ -46,6 +46,7 @@ const getConfiguredQueueUrls = () =>
 		process.env.TRACK_SQS_QUEUE_URL,
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL,
 		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
+		process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL,
 	].filter((url): url is string => Boolean(url));
 
 export const getBlueGreenQueueUrls = ({

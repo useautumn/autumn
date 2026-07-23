@@ -21,7 +21,7 @@ export const setStripeSubscriptionLock = async ({
 	);
 };
 
-type StripeSubscriptionLock = {
+export type StripeSubscriptionLock = {
 	lockedAtMs: number;
 };
 
@@ -37,3 +37,18 @@ export const getStripeSubscriptionLock = async ({
 		return JSON.parse(value) as StripeSubscriptionLock;
 	}, primaryRedis);
 };
+
+export const getStripeWebhookSubscriptionLock = async ({
+	stripeSubscriptionId,
+	ingressLock,
+}: {
+	stripeSubscriptionId: string;
+	ingressLock?: {
+		stripeSubscriptionId: string;
+		lock: StripeSubscriptionLock;
+	};
+}) =>
+	(await getStripeSubscriptionLock({ stripeSubscriptionId })) ??
+	(ingressLock?.stripeSubscriptionId === stripeSubscriptionId
+		? ingressLock.lock
+		: null);

@@ -4,6 +4,15 @@ import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
 describe("shouldRetrySqsJobError", () => {
+	test("retries Stripe webhook jobs on any processing error", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.StripeWebhook,
+				error: new Error("handler failed"),
+			}),
+		).toBe(true);
+	});
+
 	test("keeps customer creation recovery failures for retry and DLQ redrive", () => {
 		expect(
 			shouldRetrySqsJobError({

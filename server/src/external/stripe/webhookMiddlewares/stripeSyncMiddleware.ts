@@ -1,23 +1,13 @@
 import { isSyncableEvent, processStripeSyncEvent } from "@autumn/stripe-sync";
-import type { Context, Next } from "hono";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { isStripeSyncEnabled } from "@/internal/misc/stripeSync/stripeSyncStore.js";
-import type {
-	StripeWebhookContext,
-	StripeWebhookHonoEnv,
-} from "./stripeWebhookContext.js";
+import type { StripeWebhookContext } from "./stripeWebhookContext.js";
 
-/**
- * Post-handler middleware that syncs Stripe events to the sync DB.
- * Fire-and-forget -- errors are caught and logged, never propagated.
- */
-export const stripeSyncMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	await next();
-
-	const ctx = c.get("ctx") as StripeWebhookContext;
+export const syncStripeWebhookEvent = async ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { logger, org, stripeEvent } = ctx;
 
 	if (!org || !stripeEvent) return;
@@ -35,7 +25,7 @@ export const stripeSyncMiddleware = async (
 		const stripeAccountId =
 			stripeEvent.account ?? orgToAccountId({ org, env: ctx.env });
 
-		void processStripeSyncEvent({
+		await processStripeSyncEvent({
 			event: stripeEvent,
 			stripeAccountId,
 			orgId: org.id,

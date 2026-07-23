@@ -43,11 +43,17 @@ export const stripeConnectSeederMiddleware = async (
 	}
 
 	// Step 2: Get webhook secret
-	const webhookSecret = await getStripeWebhookSecret({
-		db,
-		orgId: c.req.query("org_id"),
-		env,
-	});
+	let webhookSecret: string;
+	try {
+		webhookSecret = await getStripeWebhookSecret({
+			db,
+			orgId: c.req.query("org_id"),
+			env,
+		});
+	} catch (error) {
+		logger.error(`Failed to resolve Stripe webhook secret: ${error}`);
+		return c.json({ error: "Failed to resolve Stripe webhook secret" }, 503);
+	}
 
 	// Step 3: Verify webhook signature
 	const rawBody = await c.req.text();
@@ -111,7 +117,7 @@ export const stripeConnectSeederMiddleware = async (
 			logger.error(
 				`Failed to resolve org for Stripe account ${accountId}, returning 500 for Stripe to retry: ${error}`,
 			);
-			return c.json({ error: "Failed to resolve org for Stripe webhook" }, 500);
+			return c.json({ error: "Failed to resolve org for Stripe webhook" }, 503);
 		}
 
 		if (process.env.NODE_ENV !== "development") {

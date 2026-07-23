@@ -14,6 +14,7 @@ export const createWorkerContext = async ({
 	payload,
 	logger,
 	skipCache = true,
+	throwOnOrgLookupError = false,
 }: {
 	db: DrizzleCli;
 	payload: {
@@ -24,6 +25,7 @@ export const createWorkerContext = async ({
 	};
 	logger: Logger;
 	skipCache?: boolean;
+	throwOnOrgLookupError?: boolean;
 }) => {
 	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
@@ -32,8 +34,14 @@ export const createWorkerContext = async ({
 	// deleted after the job was queued (common in tests) — skip, don't fail.
 	let orgData: Awaited<ReturnType<typeof OrgService.getWithFeatures>> | null;
 	try {
-		orgData = await OrgService.getWithFeatures({ db, orgId, env });
-	} catch {
+		orgData = await OrgService.getWithFeatures({
+			db,
+			orgId,
+			env,
+			allowNotFound: true,
+		});
+	} catch (error) {
+		if (throwOnOrgLookupError) throw error;
 		orgData = null;
 	}
 

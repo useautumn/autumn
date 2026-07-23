@@ -28,6 +28,7 @@ import {
 import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
+import { processFifoMessageGroups } from "./processFifoMessageGroups.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 
 // ============ Shared State ============
@@ -90,6 +91,8 @@ export const startPollingLoop = async ({
 	getSqsClientFn,
 	recreateSqsClientFn,
 	shouldPoll = () => true,
+	visibilityTimeoutSeconds = 30,
+	messageTimeoutMs = MESSAGE_TIMEOUT_MS,
 }: {
 	db: DrizzleCli;
 	queueUrl: string;
@@ -97,6 +100,8 @@ export const startPollingLoop = async ({
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
 	shouldPoll?: () => boolean;
+	visibilityTimeoutSeconds?: number;
+	messageTimeoutMs?: number;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -196,8 +201,12 @@ export const startPollingLoop = async ({
 			QueueUrl: queueUrl,
 			MaxNumberOfMessages: 10,
 			WaitTimeSeconds: 20,
-			VisibilityTimeout: 30,
-			MessageSystemAttributeNames: ["SentTimestamp", "ApproximateReceiveCount"],
+			VisibilityTimeout: visibilityTimeoutSeconds,
+			MessageSystemAttributeNames: [
+				"SentTimestamp",
+				"ApproximateReceiveCount",
+				"MessageGroupId",
+			],
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
@@ -241,8 +250,8 @@ export const startPollingLoop = async ({
 			await processMessage({ message, db });
 		} else {
 			await withTimeout({
-				timeoutMs: MESSAGE_TIMEOUT_MS,
-				timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+				timeoutMs: messageTimeoutMs,
+				timeoutMessage: `Processing timed out after ${messageTimeoutMs}ms`,
 				fn: () => processMessage({ message, db }),
 			});
 		}
@@ -372,24 +381,37 @@ export const startPollingLoop = async ({
 					}
 				}
 
-				const results = await Promise.allSettled(
-					regularMessages.map((message) =>
-						handleSingleMessage({ sqs, message, db }),
-					),
-				);
+				const processed = isFifo
+					? await processFifoMessageGroups({
+							messages: regularMessages,
+							processMessage: (message) =>
+								handleSingleMessage({ sqs, message, db }),
+						})
+					: (
+							await Promise.allSettled(
+								regularMessages.map((message) =>
+									handleSingleMessage({ sqs, message, db }),
+								),
+							)
+						)
+							.filter(
+								(
+									result,
+								): result is PromiseFulfilledResult<{
+									id: string;
+									receiptHandle: string;
+								} | null> => result.status === "fulfilled",
+							)
+							.map((result) => result.value);
 
-				const toDelete = results
+				const toDelete = processed
 					.filter(
-						(
-							r,
-						): r is PromiseFulfilledResult<{
-							id: string;
-							receiptHandle: string;
-						}> => r.status === "fulfilled" && r.value !== null,
+						(result): result is { id: string; receiptHandle: string } =>
+							result !== null,
 					)
-					.map((r) => ({
-						Id: r.value.id,
-						ReceiptHandle: r.value.receiptHandle,
+					.map((result) => ({
+						Id: result.id,
+						ReceiptHandle: result.receiptHandle,
 					}));
 
 				await batchDeleteMessages({ sqs, toDelete });
@@ -459,7 +481,13 @@ export const initWorkers = async ({
 	);
 	const pollingLoops = [];
 
-	for (const { queueId, queueUrl, defaultEnabled } of [
+	for (const {
+		queueId,
+		queueUrl,
+		defaultEnabled,
+		visibilityTimeoutSeconds,
+		messageTimeoutMs,
+	} of [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
@@ -480,6 +508,13 @@ export const initWorkers = async ({
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 			defaultEnabled: false,
 		},
+		{
+			queueId: JOB_QUEUE_IDS.stripeWebhook,
+			queueUrl: process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL,
+			defaultEnabled: true,
+			visibilityTimeoutSeconds: 300,
+			messageTimeoutMs: 270_000,
+		},
 	]) {
 		if (!queueUrl) continue;
 
@@ -490,6 +525,8 @@ export const initWorkers = async ({
 				isFifo: queueUrl.endsWith(".fifo"),
 				getSqsClientFn: () => getSqsClient({ queueUrl }),
 				recreateSqsClientFn: () => recreateSqsClient({ queueUrl }),
+				visibilityTimeoutSeconds,
+				messageTimeoutMs,
 				shouldPoll: () =>
 					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
