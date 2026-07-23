@@ -1,6 +1,12 @@
 import type { Redis } from "ioredis";
+import { getActiveMainRedisInstance } from "@/internal/misc/mainRedisCache/mainRedisCacheStore.js";
+import {
+	createMainRedisRouter,
+	selectMainRedisClient,
+} from "../mainRedisRouting.js";
 import { createDisabledRedis, createRedisClient } from "./createRedisClient.js";
 import {
+	cacheBackupUrl,
 	currentRegion,
 	getCacheUrlForRegion,
 	hasRedisConfig,
@@ -8,17 +14,19 @@ import {
 	primaryCacheUrl,
 } from "./redisConfig.js";
 
-if (process.env.CACHE_BACKUP_URL?.trim()) {
+if (cacheBackupUrl) {
 	console.log(
-		`[Redis] Using CACHE_BACKUP_URL for all regions (primary region: ${currentRegion})`,
+		`[Redis] CACHE_BACKUP_URL configured as fallback (primary region: ${currentRegion})`,
 	);
 } else if (!hasRedisConfig) {
-	console.warn("[Redis] No Redis URL configured. Running in Postgres-only mode.");
+	console.warn(
+		"[Redis] No Redis URL configured. Running in Postgres-only mode.",
+	);
 } else if (primaryCacheUrl && getCacheUrlForRegion({ region: currentRegion })) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const primaryRedis =
+const localPrimaryRedis =
 	hasRedisConfig && primaryCacheUrl
 		? createRedisClient({
 				cacheUrl: primaryCacheUrl,
@@ -26,22 +34,36 @@ const primaryRedis =
 			})
 		: createDisabledRedis();
 
-/**
- * The active Redis instance. All consumer code imports this.
- * Normally points to the primary (current region).
- */
-export const redis: Redis = primaryRedis;
+const fallbackRedis = !cacheBackupUrl
+	? null
+	: cacheBackupUrl === primaryCacheUrl
+		? localPrimaryRedis
+		: createRedisClient({
+				cacheUrl: cacheBackupUrl,
+				region: `${currentRegion}:fallback`,
+			});
+
+export const getFallbackRedis = (): Redis | null => fallbackRedis;
 
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
+let lastLoggedInstance: string | null = null;
+let missingFallbackWarned = false;
 
-/** Get Redis instance for a specific region (lazy-loaded) */
-export const getRegionalRedis = (region: string): Redis => {
+export const getRegionalRedisForInstance = ({
+	region,
+	instance,
+}: {
+	region: string;
+	instance: "primary" | "fallback";
+}): Redis => {
+	if (instance === "fallback" && fallbackRedis) return fallbackRedis;
+
 	if (!hasRedisConfig) {
-		return primaryRedis;
+		return localPrimaryRedis;
 	}
 	if (region === currentRegion) {
-		return primaryRedis;
+		return localPrimaryRedis;
 	}
 
 	const cacheUrl = getCacheUrlForRegion({ region });
@@ -50,11 +72,11 @@ export const getRegionalRedis = (region: string): Redis => {
 		console.warn(
 			`No cache URL configured for region ${region}, falling back to primary`,
 		);
-		return primaryRedis;
+		return localPrimaryRedis;
 	}
 
 	if (cacheUrl === primaryCacheUrl) {
-		return primaryRedis;
+		return localPrimaryRedis;
 	}
 
 	let regionalInstance = regionalRedisInstances.get(region);
@@ -68,6 +90,35 @@ export const getRegionalRedis = (region: string): Redis => {
 
 	return regionalInstance;
 };
+
+/** Get the active Redis instance for a region. */
+export const getRegionalRedis = (region: string): Redis => {
+	const activeInstance = getActiveMainRedisInstance();
+	if (activeInstance !== lastLoggedInstance) {
+		console.log(`[Redis] Active main instance: ${activeInstance}`);
+		lastLoggedInstance = activeInstance;
+	}
+	if (
+		activeInstance === "fallback" &&
+		!fallbackRedis &&
+		!missingFallbackWarned
+	) {
+		console.warn(
+			"[Redis] Fallback selected without CACHE_BACKUP_URL; using primary",
+		);
+		missingFallbackWarned = true;
+	}
+
+	return selectMainRedisClient({
+		activeInstance,
+		primary: () => getRegionalRedisForInstance({ region, instance: "primary" }),
+		fallback: fallbackRedis,
+	});
+};
+
+export const redis: Redis = createMainRedisRouter({
+	resolve: () => getRegionalRedis(currentRegion),
+});
 
 /** Get the primary Redis instance (us-west-2) to avoid replication lag issues */
 export const getPrimaryRedis = () => getRegionalRedis(PRIMARY_REGION);

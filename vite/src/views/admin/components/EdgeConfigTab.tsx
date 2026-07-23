@@ -9,6 +9,7 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
 import { JobQueuesDialog } from "./JobQueuesDialog";
+import { MainRedisCacheDialog } from "./MainRedisCacheDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
@@ -42,6 +43,7 @@ export function EdgeConfigTab() {
 	const [batchResetOpen, setBatchResetOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
+	const [mainRedisCacheOpen, setMainRedisCacheOpen] = useState(false);
 	const [cacheV2RampOpen, setCacheV2RampOpen] = useState(false);
 	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
 	const [fullSubjectGateOpen, setFullSubjectGateOpen] = useState(false);
@@ -310,6 +312,25 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							Main Redis Instance
+						</div>
+						<div className="text-pretty text-xs text-tertiary-foreground">
+							Globally switch auth, idempotency, rate-limit, lock, and legacy
+							cache traffic between CACHE_URL and CACHE_BACKUP_URL.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setMainRedisCacheOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							Cache V2 Ramp
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -416,6 +437,11 @@ export function EdgeConfigTab() {
 			<RedisV2CacheDialog
 				open={redisV2CacheOpen}
 				onOpenChange={setRedisV2CacheOpen}
+			/>
+
+			<MainRedisCacheDialog
+				open={mainRedisCacheOpen}
+				onOpenChange={setMainRedisCacheOpen}
 			/>
 
 			<CacheV2RampDialog
