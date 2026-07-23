@@ -11,6 +11,26 @@ import { normalizeWindowCounter } from "@/internal/balances/autoTopUp/helpers/li
 import { getOrCreateAutoTopupLimitState } from "@/internal/balances/autoTopUp/helpers/limits/getOrCreateAutoTopupLimitState.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 
+export const validateAutoTopupPurchaseLimitCounts = ({
+	autoTopups,
+}: {
+	autoTopups: AutoTopupParams[];
+}) => {
+	for (const topup of autoTopups) {
+		const purchaseLimit = topup.purchase_limit;
+		const count = purchaseLimit?.count;
+		if (purchaseLimit == null || count === undefined) continue;
+
+		if (count > purchaseLimit.limit) {
+			throw new RecaseError({
+				message: `purchase_limit.count (${count}) cannot exceed purchase_limit.limit (${purchaseLimit.limit}) for feature ${topup.feature_id}`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+	}
+};
+
 /**
  * When customers.update includes `purchase_limit.count`, sync that value into
  * `auto_topup_limit_states` and return auto_topups safe for JSONB storage
@@ -31,6 +51,8 @@ export const syncAutoTopupPurchaseLimitCounts = async ({
 	customer: Customer;
 	autoTopups: AutoTopupParams[];
 }): Promise<AutoTopup[]> => {
+	validateAutoTopupPurchaseLimitCounts({ autoTopups });
+
 	const now = Date.now();
 	const customerId = customer.id || customer.internal_id;
 
@@ -38,14 +60,6 @@ export const syncAutoTopupPurchaseLimitCounts = async ({
 		const purchaseLimit = topup.purchase_limit;
 		const count = purchaseLimit?.count;
 		if (purchaseLimit == null || count === undefined) continue;
-
-		if (count > purchaseLimit.limit) {
-			throw new RecaseError({
-				message: `purchase_limit.count (${count}) cannot exceed purchase_limit.limit (${purchaseLimit.limit}) for feature ${topup.feature_id}`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		const state = await getOrCreateAutoTopupLimitState({
 			ctx,
@@ -61,14 +75,22 @@ export const syncAutoTopupPurchaseLimitCounts = async ({
 			limit: purchaseLimit.limit,
 		};
 
+		const previousPurchaseLimit = customer.auto_topups?.find(
+			(existingTopup) => existingTopup.feature_id === topup.feature_id,
+		)?.purchase_limit;
+		const intervalChanged =
+			previousPurchaseLimit?.interval !== purchaseLimit.interval ||
+			(previousPurchaseLimit?.interval_count ?? 1) !==
+				(purchaseLimit.interval_count ?? 1);
+
 		let purchaseWindowEndsAt = state.purchase_window_ends_at;
-		if (now >= purchaseWindowEndsAt) {
+		if (intervalChanged || now >= purchaseWindowEndsAt) {
 			const normalized = normalizeWindowCounter({
 				now,
-				windowEndsAt: purchaseWindowEndsAt,
+				windowEndsAt: intervalChanged ? now : purchaseWindowEndsAt,
 				count: 0,
 				windowConfig,
-				from: purchaseWindowEndsAt,
+				from: intervalChanged ? now : purchaseWindowEndsAt,
 			});
 			if (!normalized) {
 				throw new RecaseError({

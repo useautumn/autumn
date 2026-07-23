@@ -1,5 +1,8 @@
 import type { Redis } from "ioredis";
-import { getRegionalRedis } from "./redisClientRegistry.js";
+import {
+	getFallbackRedis,
+	getRegionalRedisForInstance,
+} from "./redisClientRegistry.js";
 import { getConfiguredRegions } from "./redisConfig.js";
 
 /** Wait for a Redis instance to be ready */
@@ -40,13 +43,25 @@ export const warmupRegionalRedis = async (): Promise<void> => {
 
 	const warmupPromises = regions.map(async (region) => {
 		try {
-			const instance = getRegionalRedis(region);
+			const instance = getRegionalRedisForInstance({
+				region,
+				instance: "primary",
+			});
 			await waitForRedisReady(instance, region);
 		} catch (error) {
 			console.error(`[Redis] ${region}: warmup failed -`, error);
 			// Don't throw - allow startup to continue even if one region fails
 		}
 	});
+
+	const fallback = getFallbackRedis();
+	if (fallback) {
+		warmupPromises.push(
+			waitForRedisReady(fallback, "fallback").catch((error) => {
+				console.error("[Redis] fallback: warmup failed -", error);
+			}),
+		);
+	}
 
 	await Promise.all(warmupPromises);
 

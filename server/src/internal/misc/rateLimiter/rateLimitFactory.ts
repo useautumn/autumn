@@ -4,6 +4,7 @@ import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
+import { queueRateLimitedCustomerCreation } from "@/internal/customers/recovery/queueRateLimitedCustomerCreation.js";
 import {
 	isCheckFailOpenRoute,
 	RATE_LIMIT_CONFIGS,
@@ -82,8 +83,8 @@ export const rateLimitFactory = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
-	// Over-limit "degrade": fail open instead of 429 — check routes get the
-	// allow-fallback via the ctx flag; establish routes shed a retryable 503.
+	// Check routes fail open; establish routes reject with a standard 429.
+	// Track routes use the degradation flag to preserve events through SQS.
 	const degradeHandler = async (
 		c: Context,
 		next: Next,
@@ -93,13 +94,17 @@ export const rateLimitFactory = ({
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
 
 		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
+			// Clients fail open on this 429. Preserve valid customer creation
+			// requests for controlled, serialized replay after the incident.
+			await queueRateLimitedCustomerCreation({ c: honoContext });
+			c.header("Retry-After", undefined);
 			return c.json(
 				{
-					message: "Service is temporarily unavailable, please retry shortly.",
-					code: "service_unavailable",
+					message: "Rate limit exceeded.",
+					code: "rate_limit_exceeded",
 					env: ctx?.env,
 				},
-				503,
+				429,
 			);
 		}
 

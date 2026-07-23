@@ -124,6 +124,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		userId: undefined,
 		customerId,
 		entityId,
+		requestBody: body,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
 		scopes: [],

@@ -5,6 +5,8 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
+import { syncAutoTopupPurchaseLimitCounts } from "@/internal/customers/actions/update/syncAutoTopupPurchaseLimitCounts.js";
+import { setCustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { CusService } from "../../../CusService.js";
 
@@ -51,6 +53,12 @@ export const executeAutumnCreateCustomerPlan = async ({
 				return;
 			}
 
+			await syncAutoTopupPurchaseLimitCounts({
+				ctx: { ...ctx, db: txDb },
+				customer: fullCustomer,
+				autoTopups: context.autoTopups ?? [],
+			});
+
 			await executeAutumnBillingPlan({
 				ctx: { ...ctx, db: txDb },
 				autumnBillingPlan,
@@ -63,6 +71,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 			logger.info(
 				`Customer already exists, returning existing: ${fullCustomer.id || fullCustomer.email}`,
 			);
+			setCustomerCreationRecoveryStage({ ctx, stage: "existing" });
 			const existingCustomer = await CusService.getFull({
 				ctx,
 				idOrInternalId: fullCustomer.id || fullCustomer.internal_id,
@@ -80,6 +89,7 @@ export const executeAutumnCreateCustomerPlan = async ({
 		logger.info(
 			`Customer already exists (claimed or existing): ${fullCustomer.id || fullCustomer.internal_id}`,
 		);
+		setCustomerCreationRecoveryStage({ ctx, stage: "existing" });
 		const existingCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: fullCustomer.internal_id,
@@ -90,6 +100,8 @@ export const executeAutumnCreateCustomerPlan = async ({
 		context.fullCustomer = existingCustomer;
 		return { type: "existing" };
 	}
+
+	setCustomerCreationRecoveryStage({ ctx, stage: "autumn_committed" });
 
 	if (ctx.authType === AuthType.SecretKey) {
 		await captureOrgEvent({

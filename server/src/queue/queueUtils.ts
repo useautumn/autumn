@@ -11,6 +11,7 @@ import {
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -86,6 +87,7 @@ export interface Payloads {
 		region?: string;
 		timestamp: number;
 	};
+	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;

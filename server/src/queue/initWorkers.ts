@@ -459,18 +459,26 @@ export const initWorkers = async ({
 	);
 	const pollingLoops = [];
 
-	for (const { queueId, queueUrl } of [
+	for (const { queueId, queueUrl, defaultEnabled } of [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
+			defaultEnabled: true,
 		},
 		{
 			queueId: JOB_QUEUE_IDS.track,
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
+			defaultEnabled: true,
 		},
 		{
 			queueId: JOB_QUEUE_IDS.trackAsync,
 			queueUrl: process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+			defaultEnabled: true,
+		},
+		{
+			queueId: JOB_QUEUE_IDS.customerCreationRecovery,
+			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
+			defaultEnabled: false,
 		},
 	]) {
 		if (!queueUrl) continue;
@@ -483,7 +491,7 @@ export const initWorkers = async ({
 				getSqsClientFn: () => getSqsClient({ queueUrl }),
 				recreateSqsClientFn: () => recreateSqsClient({ queueUrl }),
 				shouldPoll: () =>
-					isJobQueueEnabled({ queue: queueId }) &&
+					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
 			}),
 		);
