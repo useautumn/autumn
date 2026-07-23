@@ -9,23 +9,24 @@ import * as Sentry from "@sentry/bun";
 import pLimit from "p-limit";
 import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectOrgEnvKey.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { getResetJobConfig } from "@/internal/misc/resetJob/resetJobStore.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { CronContext } from "../utils/CronContext";
 import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
 
-export const RESET_BATCH_SIZE = 500;
 const RESET_CONCURRENCY = 25;
 
 export const runResetBatch = async ({ ctx }: { ctx: CronContext }) => {
 	const { db, logger } = ctx;
 	const startedAt = Date.now();
+	const { batchSize } = getResetJobConfig();
 	const limitConcurrency = pLimit(RESET_CONCURRENCY);
 	const orgs = new Map<string, { org: Organization; features: Feature[] }>();
 	const cusEnts = await CusEntService.getActiveResetPassed({
 		db,
-		batchSize: RESET_BATCH_SIZE,
-		limit: RESET_BATCH_SIZE,
+		batchSize,
+		limit: batchSize,
 		includeSeparateIntervalResets: false,
 	});
 
@@ -87,6 +88,7 @@ export const runResetBatch = async ({ ctx }: { ctx: CronContext }) => {
 	await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
 
 	const result = {
+		batchSize,
 		fetched: cusEnts.length,
 		upserted: toUpsert.length,
 		durationMs: Date.now() - startedAt,

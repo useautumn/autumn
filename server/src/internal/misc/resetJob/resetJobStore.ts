@@ -9,12 +9,14 @@ import {
 const store = createEdgeConfigStore<ResetJobConfig>({
 	s3Key: ADMIN_RESET_JOB_CONFIG_KEY,
 	schema: ResetJobConfigSchema,
-	defaultValue: () => ({ enabled: false }),
+	defaultValue: () => ResetJobConfigSchema.parse({}),
 });
 
 registerEdgeConfig({ store });
 
-export const isResetJobEnabled = () => store.get().enabled;
+export const getResetJobConfig = () => store.get();
+
+export const isResetJobEnabled = () => getResetJobConfig().enabled;
 
 export const getResetJobConfigStatus = () => store.getStatus();
 
