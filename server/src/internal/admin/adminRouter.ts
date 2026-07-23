@@ -13,6 +13,7 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
@@ -41,6 +42,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
@@ -151,6 +153,11 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
+honoAdminRouter.get("/batch-reset-config", ...handleGetAdminBatchResetConfig);
+honoAdminRouter.put(
+	"/batch-reset-config",
+	...handleUpsertAdminBatchResetConfig,
+);
 honoAdminRouter.get("/reset-job-config", ...handleGetAdminResetJobConfig);
 honoAdminRouter.put("/reset-job-config", ...handleUpsertAdminResetJobConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
