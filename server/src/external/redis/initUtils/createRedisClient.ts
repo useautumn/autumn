@@ -22,11 +22,13 @@ const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	cacheCert = process.env.CACHE_CERT || null,
 	supportsUpstashShebang = false,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
+	cacheCert?: string | null;
 	supportsUpstashShebang?: boolean;
 	commandTimeout?: number;
 }): Redis => {
@@ -37,7 +39,11 @@ export const createRedisClient = ({
 	const usesTls = cacheUrl.startsWith("rediss:");
 
 	const instance = new Redis(cacheUrl, {
-		tls: usesTls ? { lookup: redisDnsLookup } : undefined,
+		tls: cacheCert
+			? { ca: cacheCert }
+			: usesTls
+				? { lookup: redisDnsLookup }
+				: undefined,
 		family: 4,
 		keepAlive: 10000,
 		commandTimeout,

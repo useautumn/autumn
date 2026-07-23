@@ -41,6 +41,7 @@ const fallbackRedis = !cacheBackupUrl
 		: createRedisClient({
 				cacheUrl: cacheBackupUrl,
 				region: `${currentRegion}:fallback`,
+				cacheCert: null,
 			});
 
 export const getFallbackRedis = (): Redis | null => fallbackRedis;
