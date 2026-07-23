@@ -7,10 +7,12 @@ export const shed503OnTransientError = async <T>({
 	ctx,
 	source,
 	run,
+	onTransientError,
 }: {
 	ctx: AutumnContext;
 	source: string;
 	run: () => T | Promise<T>;
+	onTransientError?: (error: unknown) => Promise<void>;
 }): Promise<T> => {
 	try {
 		return await run();
@@ -22,6 +24,14 @@ export const shed503OnTransientError = async <T>({
 			type: `${source}_fail_open`,
 			error,
 		});
+		try {
+			await onTransientError?.(error);
+		} catch (recoveryError) {
+			ctx.logger.error(
+				`[${source}] Failed to capture transient error for recovery`,
+				{ error: recoveryError },
+			);
+		}
 		throw new RecaseError({
 			message: "Service is temporarily unavailable, please retry shortly.",
 			code: "service_unavailable",

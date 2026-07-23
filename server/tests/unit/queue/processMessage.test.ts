@@ -4,6 +4,15 @@ import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
 describe("shouldRetrySqsJobError", () => {
+	test("keeps customer creation recovery failures for retry and DLQ redrive", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: new Error("requires manual billing review"),
+			}),
+		).toBe(true);
+	});
+
 	test("retries track jobs on transient Redis errors", () => {
 		expect(
 			shouldRetrySqsJobError({
