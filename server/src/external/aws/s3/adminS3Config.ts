@@ -16,6 +16,7 @@ export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
 export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 	"admin/full-subject-gate-config.json";
+export const ADMIN_ASYNC_TRACK_CONFIG_KEY = "admin/async-track-config.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -90,6 +91,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "stripe-sync",
 			label: "Stripe Sync",
 			key: "admin/stripe-sync-config.json",
+		},
+		{
+			id: "async-track",
+			label: "Async Track",
+			key: ADMIN_ASYNC_TRACK_CONFIG_KEY,
 		},
 	],
 });
