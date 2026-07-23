@@ -8,6 +8,7 @@ await warmupRegionalRedis();
 // so resolveRedisV2 picks the right instance on each ctx build).
 await import("./internal/misc/redisV2Cache/redisV2CacheStore.js");
 await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
+await import("./internal/misc/resetJob/resetJobStore.js");
 const { logger } = await import("./external/logtail/logtailUtils.js");
 const { startAllEdgeConfigPolling } = await import(
 	"./internal/misc/edgeConfig/edgeConfigRegistry.js"
