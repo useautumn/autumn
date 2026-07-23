@@ -17,7 +17,6 @@ import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
-import { runResetCron } from "./resetCron/runResetCron.js";
 import { runSeatSyncCron } from "./seatSyncCron/runSeatSyncCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
@@ -75,7 +74,7 @@ const main = async () => {
 	};
 	await Promise.all([
 		runProductCron({ ctx }),
-		runResetCron({ ctx }),
+		// runResetCron({ ctx }),
 		runInvoiceCron({ ctx }),
 		runOneOffExpiry({ ctx }),
 		// runClearExpiredResetCron({ ctx }),
