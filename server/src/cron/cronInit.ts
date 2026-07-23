@@ -4,6 +4,7 @@ import { initDrizzle } from "../db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
+import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
 import {
 	describeSlotGate,
 	isActiveSlot,
@@ -17,6 +18,7 @@ import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
+import { runResetLoop } from "./resetCron/runResetLoop.js";
 import { runSeatSyncCron } from "./seatSyncCron/runSeatSyncCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
@@ -28,6 +30,9 @@ const { db: probeDb, client: probeClient } = initDrizzle({
 });
 startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
+
+const ctx: CronContext = { db, logger };
+let shuttingDown = false;
 
 const logCronHeartbeat = (job = "main") => {
 	logger.info(
@@ -44,6 +49,8 @@ const logCronHeartbeat = (job = "main") => {
 };
 
 const shouldRunTick = () => {
+	if (shuttingDown) return false;
+
 	if (process.env.DISABLE_CRON === "true") {
 		console.log(`Cron disabled!`);
 		return false;
@@ -68,13 +75,8 @@ const main = async () => {
 
 	logCronHeartbeat();
 
-	const ctx: CronContext = {
-		db,
-		logger,
-	};
 	await Promise.all([
 		runProductCron({ ctx }),
-		// runResetCron({ ctx }),
 		runInvoiceCron({ ctx }),
 		runOneOffExpiry({ ctx }),
 		// runClearExpiredResetCron({ ctx }),
@@ -88,10 +90,6 @@ const oneOffCleanupTick = async () => {
 
 	logCronHeartbeat("one_off_cleanup");
 
-	const ctx: CronContext = {
-		db,
-		logger,
-	};
 	await Promise.all([runOneOffCleanup({ ctx }), runSeatSyncCron({ ctx })]);
 };
 
@@ -130,22 +128,26 @@ main();
 oneOffCleanupTick();
 dbProbesTick();
 
-process.on("SIGTERM", async () => {
-	console.log("Received SIGTERM signal, closing database connection...");
-	stopPgPoolMonitor();
-	stopBlueGreenHeartbeat({ serviceName: "cron" });
-	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
-	await client.end();
-	await probeClient.end();
-	process.exit(0);
+const resetLoopController = new AbortController();
+const resetLoopPromise = runResetLoop({
+	ctx,
+	signal: resetLoopController.signal,
 });
 
-process.on("SIGINT", async () => {
-	console.log("Received SIGINT signal, closing database connection...");
+const shutdown = async (signal: string) => {
+	if (shuttingDown) return;
+	shuttingDown = true;
+	console.log(`Received ${signal} signal, closing database connection...`);
+	resetLoopController.abort();
 	stopPgPoolMonitor();
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
+	stopAllEdgeConfigPolling();
+	await resetLoopPromise;
 	await client.end();
 	await probeClient.end();
 	process.exit(0);
-});
+};
+
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

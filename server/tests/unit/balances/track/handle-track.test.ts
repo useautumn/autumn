@@ -79,7 +79,11 @@ describe("handleTrack", () => {
 		});
 
 		expect(response.status).toBe(202);
-		expect(await response.json()).toEqual({ success: true });
+		expect(await response.json()).toEqual({
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		});
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
@@ -101,7 +105,11 @@ describe("handleTrack", () => {
 		});
 
 		expect(response.status).toBe(202);
-		expect(await response.json()).toEqual({ success: true });
+		expect(await response.json()).toEqual({
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		});
 		expect(mockState.queueCommands).toHaveLength(1);
 	});
 });
