@@ -190,8 +190,8 @@ export type RateLimitConfig = {
 	windowMs: number;
 	notInRedis: boolean;
 	scope: RateLimitScope;
-	// "degrade" = over-limit requests fail open (check -> allow, track -> SQS
-	// queue) instead of 429, so the cap sheds DB load without losing events.
+	// "degrade" preserves check/track traffic through fallback paths.
+	// Establish routes still reject with 429.
 	overLimit?: "reject" | "degrade";
 };
 
