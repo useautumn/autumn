@@ -24,7 +24,7 @@ export const handleTrack = createRoute({
 		const ctx = c.get("ctx");
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
-		if (body.async === true) {
+		if (body.async === true || ctx.org.slug === "firecrawl") {
 			await runAsyncTrack({ ctx, body });
 			return c.json(getQueuedTrackResponse({ ctx, body }), 202);
 		}
