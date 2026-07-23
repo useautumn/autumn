@@ -20,6 +20,7 @@ import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProduct
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
+import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
@@ -53,6 +54,8 @@ export const shouldRetrySqsJobError = ({
 	error: unknown;
 }) => {
 	switch (jobName) {
+		case JobName.CustomerCreationRecovery:
+			return true;
 		case JobName.SyncBalanceBatchV3:
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
@@ -143,6 +146,17 @@ export const processMessage = async ({
 				return;
 			}
 			await runMigrationTask({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.CustomerCreationRecovery) {
+			if (!ctx) {
+				throw new Error("No context found for customer creation recovery job");
+			}
+			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
 			return;
 		}
 

@@ -9,6 +9,7 @@ import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
+import { setCustomerCreationRecoveryStage } from "@/internal/customers/recovery/customerCreationRecoveryStage.js";
 import { computeCreateCustomerPlan } from "./compute/computeCreateCustomerPlan.js";
 import { executeAutumnCreateCustomerPlan } from "./execute/executeAutumnCreateCustomerPlan.js";
 import { finalizeCreateCustomer } from "./finalizeCreateCustomer.js";
@@ -43,6 +44,8 @@ export const createCustomerWithDefaults = async ({
 	customerId: string | null;
 	customerData?: CustomerData;
 }): Promise<FullCustomer> => {
+	setCustomerCreationRecoveryStage({ ctx, stage: "pre_commit" });
+
 	// ============ Phase 1: Create Autumn customer ============
 
 	// 1. Setup
@@ -67,7 +70,10 @@ export const createCustomerWithDefaults = async ({
 	logAutumnPlanResult({ ctx, result: autumnResult });
 
 	// Early return if customer already existed or no paid products
-	if (autumnResult.type === "existing") return context.fullCustomer;
+	if (autumnResult.type === "existing") {
+		setCustomerCreationRecoveryStage({ ctx, stage: "completed" });
+		return context.fullCustomer;
+	}
 
 	// ============ Phase 2: Create stripe customer / attach paid defaults ============
 
@@ -94,14 +100,20 @@ export const createCustomerWithDefaults = async ({
 				customerProducts: context.fullCustomer.customer_products,
 			});
 
-		if (!shouldCreateStripeCustomer) return context.fullCustomer;
+		if (!shouldCreateStripeCustomer) {
+			setCustomerCreationRecoveryStage({ ctx, stage: "completed" });
+			return context.fullCustomer;
+		}
 
 		const billingContext = await setupCreateCustomerBillingContext({
 			ctx,
 			context,
 		});
 
-		if (!shouldAttachPaidDefaults) return context.fullCustomer;
+		if (!shouldAttachPaidDefaults) {
+			setCustomerCreationRecoveryStage({ ctx, stage: "completed" });
+			return context.fullCustomer;
+		}
 
 		// 5. Evaluate Stripe billing plan
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
@@ -120,12 +132,14 @@ export const createCustomerWithDefaults = async ({
 		});
 
 		// 7. Finalize (link subscription back to Autumn)
-		return await finalizeCreateCustomer({
+		const fullCustomer = await finalizeCreateCustomer({
 			ctx,
 			context,
 			autumnBillingPlan,
 			stripeSubscription,
 		});
+		setCustomerCreationRecoveryStage({ ctx, stage: "completed" });
+		return fullCustomer;
 	} finally {
 		await billingPlanToSendProductsUpdated({
 			ctx,

@@ -10,6 +10,7 @@ export const JOB_QUEUE_IDS = {
 	primary: "primary",
 	track: "track",
 	trackAsync: "trackAsync",
+	customerCreationRecovery: "customerCreationRecovery",
 } as const;
 
 export const KNOWN_JOB_QUEUES = [
@@ -31,6 +32,13 @@ export const KNOWN_JOB_QUEUES = [
 		label: "Track Async Queue",
 		description: "Customer-driven async / batch track ingest.",
 		defaultEnabled: true,
+	},
+	{
+		id: JOB_QUEUE_IDS.customerCreationRecovery,
+		label: "Customer Creation Recovery Queue",
+		description:
+			"Serialized replay queue for transient customer get-or-create failures.",
+		defaultEnabled: false,
 	},
 ] as const;
 

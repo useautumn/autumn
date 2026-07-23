@@ -22,6 +22,7 @@ export enum JobName {
 	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
+	CustomerCreationRecovery = "customer-creation-recovery",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 
