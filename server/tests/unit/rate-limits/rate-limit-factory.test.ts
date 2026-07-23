@@ -1,4 +1,6 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { Hono } from "hono";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
 	shouldUseRedis: false,
@@ -59,6 +61,46 @@ describe("rateLimitFactory", () => {
 		expect(mockState.warnings).toEqual([
 			"[rate-limit] Redis unavailable; bypassing distributed rate limiting",
 		]);
+	});
+
+	test("returns 429 without Retry-After for an over-limit establish route", async () => {
+		const app = new Hono<HonoEnv>();
+		const middleware = rateLimitFactory({
+			type: RateLimitType.CheckOrg,
+			config: {
+				name: "test-check-org",
+				limit: 1,
+				windowMs: 60_000,
+				notInRedis: true,
+				scope: RateLimitScope.Org,
+				overLimit: "degrade",
+			},
+		});
+
+		app.use("*", async (c, next) => {
+			c.set("ctx", {
+				env: "live",
+				org: { id: "org_123", slug: "test-org" },
+			} as never);
+			return middleware(c as never, next);
+		});
+		app.post("/v1/customers", (c) => c.json({ success: true }));
+
+		const firstResponse = await app.request("/v1/customers", {
+			method: "POST",
+		});
+		const limitedResponse = await app.request("/v1/customers", {
+			method: "POST",
+		});
+
+		expect(firstResponse.status).toBe(200);
+		expect(limitedResponse.status).toBe(429);
+		expect(limitedResponse.headers.get("Retry-After")).toBeNull();
+		expect(await limitedResponse.json()).toEqual({
+			message: "Rate limit exceeded.",
+			code: "rate_limit_exceeded",
+			env: "live",
+		});
 	});
 });
 

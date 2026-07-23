@@ -3,7 +3,7 @@ import * as Sentry from "@sentry/bun";
 import { isResetJobEnabled } from "@/internal/misc/resetJob/resetJobStore.js";
 import { isActiveSlot } from "@/queue/blueGreen/blueGreenGate.js";
 import type { CronContext } from "../utils/CronContext.js";
-import { RESET_BATCH_SIZE, runResetBatch } from "./runResetBatch.js";
+import { runResetBatch } from "./runResetBatch.js";
 
 const ACTIVE_DELAY_MS = ms.seconds(1);
 const IDLE_DELAY_MS = ms.seconds(5);
@@ -50,7 +50,7 @@ export const runResetLoop = async ({
 		if (process.env.DISABLE_CRON !== "true" && isEnabled() && isActive()) {
 			try {
 				const result = await runBatch({ ctx });
-				if (result.fetched === RESET_BATCH_SIZE) {
+				if (result.fetched === result.batchSize) {
 					delayMs = ACTIVE_DELAY_MS;
 				}
 			} catch (error) {

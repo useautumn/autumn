@@ -19,6 +19,7 @@ import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSourc
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
+import { handleGetAdminMainRedisCacheConfig } from "./handleGetAdminMainRedisCacheConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
@@ -47,6 +48,7 @@ import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustome
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
+import { handleUpsertAdminMainRedisCacheConfig } from "./handleUpsertAdminMainRedisCacheConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
@@ -172,6 +174,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/redis-v2-cache-config",
 	...handleUpsertAdminRedisV2CacheConfig,
+);
+honoAdminRouter.get(
+	"/main-redis-cache-config",
+	...handleGetAdminMainRedisCacheConfig,
+);
+honoAdminRouter.put(
+	"/main-redis-cache-config",
+	...handleUpsertAdminMainRedisCacheConfig,
 );
 honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
 honoAdminRouter.patch("/cache-v2-ramp", ...handleUpsertAdminCacheV2Ramp);
