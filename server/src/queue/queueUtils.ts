@@ -79,6 +79,13 @@ export interface Payloads {
 		apiVersion: ApiVersion;
 		body: TrackParams;
 	};
+	[JobName.SyncCustomerDirty]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		timestamp: number;
+	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
