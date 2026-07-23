@@ -16,7 +16,7 @@ import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
 import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
-import { ResetJobToggle } from "./ResetJobToggle";
+import { ResetJobControls } from "./ResetJobControls";
 import { StripeSyncDialog } from "./StripeSyncDialog";
 
 type EdgeConfigSource = {
@@ -250,7 +250,7 @@ export function EdgeConfigTab() {
 							Continuously resets due balances in small, serialized batches.
 						</div>
 					</div>
-					<ResetJobToggle />
+					<ResetJobControls />
 				</div>
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">

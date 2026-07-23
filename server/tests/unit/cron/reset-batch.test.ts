@@ -15,6 +15,7 @@ const calls = {
 	reset: 0,
 	cleared: [] as ResetCusEnt[],
 };
+const batchSize = 1_000;
 
 mock.module(
 	"@/internal/customers/cusProducts/cusEnts/CusEntitlementService",
@@ -36,6 +37,9 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 		}),
 	},
 }));
+mock.module("@/internal/misc/resetJob/resetJobStore.js", () => ({
+	getResetJobConfig: () => ({ enabled: true, batchSize }),
+}));
 mock.module("@/cron/resetCron/resetCustomerEntitlement", () => ({
 	resetCustomerEntitlement: async ({
 		updatedCusEnts,
@@ -52,10 +56,7 @@ mock.module("@/cron/resetCron/clearCusEntsFromCache", () => ({
 	},
 }));
 
-import {
-	RESET_BATCH_SIZE,
-	runResetBatch,
-} from "@/cron/resetCron/runResetBatch.js";
+import { runResetBatch } from "@/cron/resetCron/runResetBatch.js";
 
 describe("reset batch", () => {
 	test("processes a partial page instead of waiting for a full batch", async () => {
@@ -67,11 +68,12 @@ describe("reset batch", () => {
 		});
 
 		expect(calls.fetchParams).toMatchObject({
-			batchSize: RESET_BATCH_SIZE,
-			limit: RESET_BATCH_SIZE,
+			batchSize,
+			limit: batchSize,
 		});
 		expect(calls.reset).toBe(1);
 		expect(calls.cleared).toEqual([cusEnt]);
+		expect(result.batchSize).toBe(batchSize);
 		expect(result.fetched).toBe(1);
 	});
 });

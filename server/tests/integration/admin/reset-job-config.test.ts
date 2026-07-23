@@ -5,7 +5,7 @@ import { errorMiddleware } from "@/honoMiddlewares/errorMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
-	config: { enabled: false },
+	config: { enabled: false, batchSize: 500 },
 	status: {
 		healthy: true,
 		configured: true,
@@ -44,7 +44,7 @@ const buildApp = () => {
 
 describe("admin reset job config", () => {
 	beforeEach(() => {
-		mockState.config = { enabled: false };
+		mockState.config = { enabled: false, batchSize: 500 };
 		mockState.status = {
 			healthy: true,
 			configured: true,
@@ -62,6 +62,7 @@ describe("admin reset job config", () => {
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
 			enabled: false,
+			batchSize: 500,
 			configHealthy: true,
 			configConfigured: true,
 			lastSuccessAt: "2026-07-23T10:00:00.000Z",
@@ -69,22 +70,24 @@ describe("admin reset job config", () => {
 		});
 	});
 
-	test("PUT saves the toggle", async () => {
+	test("PUT saves the config", async () => {
 		const response = await buildApp().request(
 			"http://localhost/admin/reset-job-config",
 			{
 				method: "PUT",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ enabled: true }),
+				body: JSON.stringify({ enabled: true, batchSize: 1_000 }),
 			},
 		);
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ success: true });
-		expect(mockState.updateCalls).toEqual([{ enabled: true }]);
+		expect(mockState.updateCalls).toEqual([
+			{ enabled: true, batchSize: 1_000 },
+		]);
 	});
 
-	test("PUT defaults a missing toggle to disabled", async () => {
+	test("PUT defaults missing values", async () => {
 		const response = await buildApp().request(
 			"http://localhost/admin/reset-job-config",
 			{
@@ -95,7 +98,7 @@ describe("admin reset job config", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(mockState.updateCalls).toEqual([{ enabled: false }]);
+		expect(mockState.updateCalls).toEqual([{ enabled: false, batchSize: 500 }]);
 	});
 
 	test("PUT rejects non-boolean values", async () => {
@@ -111,6 +114,20 @@ describe("admin reset job config", () => {
 
 		expect(response.status).toBe(400);
 		expect(body.code).toBe(ErrCode.InvalidInputs);
+		expect(mockState.updateCalls).toHaveLength(0);
+	});
+
+	test("PUT rejects an unsafe batch size", async () => {
+		const response = await buildApp().request(
+			"http://localhost/admin/reset-job-config",
+			{
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ enabled: true, batchSize: 2_001 }),
+			},
+		);
+
+		expect(response.status).toBe(400);
 		expect(mockState.updateCalls).toHaveLength(0);
 	});
 });
