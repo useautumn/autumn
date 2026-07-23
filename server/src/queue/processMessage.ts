@@ -24,6 +24,7 @@ import { runClearCreditSystemCacheTask } from "@/internal/features/featureAction
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
+import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -95,6 +96,13 @@ export const processMessage = async ({
 	let workerCtx: AutumnContext | undefined;
 
 	const executeJob = async () => {
+		if (job.name === JobName.BatchResetCusEnts && !isBatchResetEnabled()) {
+			workerLogger.info(
+				"Batch reset skipped because the edge config is disabled",
+			);
+			return;
+		}
+
 		if (job.name === JobName.DetectBaseVariant) {
 			await detectBaseVariant({
 				db,
