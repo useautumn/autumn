@@ -27,7 +27,7 @@ export const queueRateLimitedCustomerCreation = async ({
 	const ctx = c.get("ctx");
 
 	try {
-		const body = await c.req.raw.clone().json();
+		const body = ctx.requestBody;
 		if (path === GET_OR_CREATE_PATH) {
 			const parsed = CreateCustomerParamsV1Schema.safeParse(body);
 			if (!parsed.success) return false;

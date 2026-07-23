@@ -25,6 +25,7 @@ const { queueRateLimitedCustomerCreation } = await import(
 const buildApp = () => {
 	const app = new Hono<HonoEnv>();
 	app.use("*", async (c, next) => {
+		const requestBody = await c.req.json();
 		c.set("ctx", {
 			id: "req_rate_limited_123",
 			org: { id: "org_123" },
@@ -34,6 +35,7 @@ const buildApp = () => {
 			logger: {
 				error: mock(() => {}),
 			},
+			requestBody,
 		} as never);
 		await next();
 	});
