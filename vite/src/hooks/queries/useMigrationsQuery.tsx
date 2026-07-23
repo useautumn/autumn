@@ -103,7 +103,6 @@ export const useMigrationsQuery = () => {
 			dry_run?: boolean;
 			limit?: number;
 			only?: string[];
-			concurrency?: number;
 			lazy_run?: boolean;
 			retry_item_statuses?: RetryableMigrationItemRunStatus[];
 		}) => {
@@ -111,7 +110,7 @@ export const useMigrationsQuery = () => {
 				migration_id: string;
 				dry_run: boolean;
 				lazy_run: boolean;
-				concurrency?: number;
+				concurrency: number;
 				run_id: string;
 				trigger_run_id?: string;
 				public_access_token?: string;

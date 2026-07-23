@@ -5,7 +5,6 @@ type BuildRunMigrationRequestParams = {
 	dryRun: boolean;
 	limit?: number;
 	only?: string[];
-	concurrency?: number;
 	retryItemStatuses?: RetryableMigrationItemRunStatus[];
 };
 
@@ -15,7 +14,6 @@ type RunMigrationRequest = {
 	lazy_run: false;
 	limit?: number;
 	only?: string[];
-	concurrency?: number;
 	retry_item_statuses?: RetryableMigrationItemRunStatus[];
 };
 
@@ -24,7 +22,6 @@ export const buildRunMigrationRequest = ({
 	dryRun,
 	limit,
 	only,
-	concurrency,
 	retryItemStatuses,
 }: BuildRunMigrationRequestParams): RunMigrationRequest => {
 	const request: RunMigrationRequest = {
@@ -35,7 +32,6 @@ export const buildRunMigrationRequest = ({
 
 	if (limit !== undefined) request.limit = limit;
 	if (only !== undefined) request.only = only;
-	if (concurrency !== undefined) request.concurrency = concurrency;
 
 	if (retryItemStatuses && retryItemStatuses.length > 0) {
 		request.retry_item_statuses = retryItemStatuses;

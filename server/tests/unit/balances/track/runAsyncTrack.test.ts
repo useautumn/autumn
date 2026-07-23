@@ -75,9 +75,11 @@ describe("runAsyncTrack", () => {
 		expect(ctx.extraLogs.trackQueuedForReplay).toBeUndefined();
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: "req_async_1",
 		});
+		expect(mockState.queueCommands[0]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_123:none:shard-[0-7]$/,
+		);
 		expect(
 			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
 		).toMatchObject({
@@ -87,6 +89,19 @@ describe("runAsyncTrack", () => {
 				body,
 			},
 		});
+	});
+
+	test("uses a deterministic shard derived from the message deduplication ID", async () => {
+		const firstCtx = buildCtx();
+		const secondCtx = buildCtx();
+
+		await runAsyncTrack({ ctx: firstCtx, body });
+		await runAsyncTrack({ ctx: secondCtx, body });
+
+		expect(mockState.queueCommands).toHaveLength(2);
+		expect(mockState.queueCommands[0]?.MessageGroupId).toBe(
+			mockState.queueCommands[1]?.MessageGroupId,
+		);
 	});
 
 	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {

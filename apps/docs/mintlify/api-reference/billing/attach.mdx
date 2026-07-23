@@ -506,7 +506,7 @@ A customer who has paid is locked to their currency: passing a different one, or
             </DynamicParamField>
 
             <DynamicParamField body="purchase_limit" type="object">
-              Optional rate limit to cap how often auto top-ups occur.
+              Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
               <Expandable title="properties">
                 <DynamicParamField body="interval" type="'hour' | 'day' | 'week' | 'month'" required>
                   The time interval for the purchase limit window.
@@ -518,6 +518,10 @@ A customer who has paid is locked to their currency: passing a different one, or
 
                 <DynamicParamField body="limit" type="number" required>
                   Maximum number of auto top-ups allowed within the interval.
+                </DynamicParamField>
+
+                <DynamicParamField body="count" type="number">
+                  Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
                 </DynamicParamField>
 
               </Expandable>

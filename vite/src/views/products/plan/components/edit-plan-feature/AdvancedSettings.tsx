@@ -7,6 +7,7 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import { SheetAccordion, SheetAccordionItem } from "@autumn/ui";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	getFeatureCreditSystem,
@@ -22,6 +23,7 @@ import { UsageLimit } from "./advanced-settings/UsageLimit";
 export function AdvancedSettings() {
 	const { features } = useFeaturesQuery();
 	const { item } = useProductItemContext();
+	const { product } = useProduct();
 
 	if (!item) return null;
 
@@ -32,9 +34,12 @@ export function AdvancedSettings() {
 	// Determine what will show in Advanced section
 	const showUsageLimits = isPriced;
 	const showRollover = hasCreditSystem || usageType === FeatureUsageType.Single;
-	// Deprecated in favor of licenses. Only surface it for items that already
-	// have it set, so existing plans keep working.
-	const showEntityFeature = item.entity_feature_id != null;
+	// Deprecated in favor of licenses. Surface it whenever any item in the plan
+	// uses an entity feature, so all items in such plans keep working.
+	const showEntityFeature =
+		item.entity_feature_id != null ||
+		(product?.items?.some((planItem) => planItem?.entity_feature_id != null) ??
+			false);
 	// Proration shows for prepaid or continuous use features (not consumable + pay-per-use)
 	const showProration =
 		isPriced &&
