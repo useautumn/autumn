@@ -7,7 +7,7 @@
  *         -> { dirtyKey, claimKey, signalKey }
  *     - markSyncDirty.ts: markSyncDirty({redis, scope, cusEntIds, rolloverIds,
  *         modifiedCusEntIdsByFeatureId, usageWindowUpdates, entityId,
- *         signalTtlSeconds, timestamp})
+ *         signalTtlSeconds})
  *         -> { shouldSignal: boolean }
  *         Behaviors:
  *           - first mark on empty state -> shouldSignal=true, signal marker set
@@ -65,7 +65,6 @@ test(`${chalk.yellowBright("dirty-state: mark signals only on empty->dirty trans
 		modifiedCusEntIdsByFeatureId: { messages: ["ce_1"] },
 		usageWindowUpdates: [],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 	expect(first.shouldSignal).toBe(true);
 
@@ -77,7 +76,6 @@ test(`${chalk.yellowBright("dirty-state: mark signals only on empty->dirty trans
 		modifiedCusEntIdsByFeatureId: { messages: ["ce_2"] },
 		usageWindowUpdates: [],
 		signalTtlSeconds: 60,
-		timestamp: 2,
 	});
 	expect(second.shouldSignal).toBe(false);
 });
@@ -93,13 +91,15 @@ test(`${chalk.yellowBright("dirty-state: claim merges accumulated selectors and 
 		modifiedCusEntIdsByFeatureId: { messages: ["ce_1"] },
 		usageWindowUpdates: [
 			{
-				internal_customer_id: "ic_1",
-				feature_id: "messages",
-				usage_windows: [{ usage: 1 }],
-			} as any,
+				ts: 1,
+				update: {
+					internal_customer_id: "ic_1",
+					feature_id: "messages",
+					usage_windows: [{ usage: 1 }],
+				} as any,
+			},
 		],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 	await markSyncDirty({
 		redis,
@@ -109,13 +109,15 @@ test(`${chalk.yellowBright("dirty-state: claim merges accumulated selectors and 
 		modifiedCusEntIdsByFeatureId: { credits: ["ce_2"] },
 		usageWindowUpdates: [
 			{
-				internal_customer_id: "ic_1",
-				feature_id: "messages",
-				usage_windows: [{ usage: 2 }],
-			} as any,
+				ts: 2,
+				update: {
+					internal_customer_id: "ic_1",
+					feature_id: "messages",
+					usage_windows: [{ usage: 2 }],
+				} as any,
+			},
 		],
 		signalTtlSeconds: 60,
-		timestamp: 2,
 	});
 
 	const claimed = await claimSyncDirty({ redis, scope });
@@ -152,7 +154,6 @@ test(`${chalk.yellowBright("dirty-state: leftover claim from crashed worker merg
 		modifiedCusEntIdsByFeatureId: { messages: ["ce_old"] },
 		usageWindowUpdates: [],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 	const firstClaim = await claimSyncDirty({ redis, scope });
 	expect(firstClaim).not.toBeNull();
@@ -167,7 +168,6 @@ test(`${chalk.yellowBright("dirty-state: leftover claim from crashed worker merg
 		modifiedCusEntIdsByFeatureId: { messages: ["ce_new"] },
 		usageWindowUpdates: [],
 		signalTtlSeconds: 60,
-		timestamp: 2,
 	});
 	const secondClaim = await claimSyncDirty({ redis, scope });
 	expect(secondClaim).not.toBeNull();
@@ -188,13 +188,15 @@ test(`${chalk.yellowBright("dirty-state: older usage-window snapshot does not ov
 		modifiedCusEntIdsByFeatureId: {},
 		usageWindowUpdates: [
 			{
-				internal_customer_id: "ic_1",
-				feature_id: "messages",
-				usage_windows: [{ usage: 2 }],
-			} as any,
+				ts: 2,
+				update: {
+					internal_customer_id: "ic_1",
+					feature_id: "messages",
+					usage_windows: [{ usage: 2 }],
+				} as any,
+			},
 		],
 		signalTtlSeconds: 60,
-		timestamp: 2,
 	});
 	await markSyncDirty({
 		redis,
@@ -204,13 +206,15 @@ test(`${chalk.yellowBright("dirty-state: older usage-window snapshot does not ov
 		modifiedCusEntIdsByFeatureId: {},
 		usageWindowUpdates: [
 			{
-				internal_customer_id: "ic_1",
-				feature_id: "messages",
-				usage_windows: [{ usage: 1 }],
-			} as any,
+				ts: 1,
+				update: {
+					internal_customer_id: "ic_1",
+					feature_id: "messages",
+					usage_windows: [{ usage: 1 }],
+				} as any,
+			},
 		],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 
 	const claimed = await claimSyncDirty({ redis, scope });
@@ -231,7 +235,6 @@ test(`${chalk.yellowBright("dirty-state: stale generation cannot clear a newer c
 		modifiedCusEntIdsByFeatureId: {},
 		usageWindowUpdates: [],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 	const firstClaim = await claimSyncDirty({ redis, scope });
 	const secondClaim = await claimSyncDirty({ redis, scope });
@@ -261,13 +264,15 @@ test(`${chalk.yellowBright("dirty-state: colon-containing feature id roundtrips"
 		modifiedCusEntIdsByFeatureId: { "messages:email": ["ce:1"] },
 		usageWindowUpdates: [
 			{
-				internal_customer_id: "ic_1",
-				feature_id: "messages:email",
-				usage_windows: [{ usage: 1 }],
-			} as any,
+				ts: 1,
+				update: {
+					internal_customer_id: "ic_1",
+					feature_id: "messages:email",
+					usage_windows: [{ usage: 1 }],
+				} as any,
+			},
 		],
 		signalTtlSeconds: 60,
-		timestamp: 1,
 	});
 
 	const claimed = await claimSyncDirty({ redis, scope });

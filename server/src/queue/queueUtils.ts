@@ -85,6 +85,7 @@ export interface Payloads {
 		orgId: string;
 		env: AppEnv;
 		region?: string;
+		redisInstance: string;
 		timestamp: number;
 	};
 	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;

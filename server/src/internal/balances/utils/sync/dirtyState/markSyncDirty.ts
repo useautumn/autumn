@@ -38,17 +38,15 @@ export const markSyncDirty = async ({
 	usageWindowUpdates,
 	entityId,
 	signalTtlSeconds,
-	timestamp,
 }: {
 	redis: Redis;
 	scope: SyncDirtyScope;
 	cusEntIds: string[];
 	rolloverIds: string[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
-	usageWindowUpdates: UsageWindowUpdate[];
+	usageWindowUpdates: Array<{ ts: number; update: UsageWindowUpdate }>;
 	entityId?: string;
 	signalTtlSeconds: number;
-	timestamp: number;
 }): Promise<{ shouldSignal: boolean }> => {
 	const { dirtyKey, signalKey } = buildSyncDirtyKeys(scope);
 
@@ -69,10 +67,10 @@ export const markSyncDirty = async ({
 			);
 		}
 	}
-	for (const usageWindowUpdate of usageWindowUpdates) {
+	for (const { ts, update } of usageWindowUpdates) {
 		fieldArgs.push(
-			`${DIRTY_FIELD_PREFIXES.usageWindow}${encodeURIComponent(usageWindowUpdate.feature_id)}`,
-			JSON.stringify({ ts: timestamp, snapshot: usageWindowUpdate }),
+			`${DIRTY_FIELD_PREFIXES.usageWindow}${encodeURIComponent(update.feature_id)}`,
+			JSON.stringify({ ts, snapshot: update }),
 		);
 	}
 	if (entityId) {
