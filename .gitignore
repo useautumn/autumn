@@ -178,3 +178,11 @@ tmp/
 .neon
 scripts/ops/.duckdb_export.sql
 scripts/ops/.backfill_neon_done
+
+# design-sync
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+packages/ui/.ds-compiled/
