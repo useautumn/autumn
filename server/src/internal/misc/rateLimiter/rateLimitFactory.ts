@@ -94,6 +94,8 @@ export const rateLimitFactory = ({
 		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
 
 		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
+			// Clients fail open on this 429. Preserve valid customer creation
+			// requests for controlled, serialized replay after the incident.
 			await queueRateLimitedCustomerCreation({ c: honoContext });
 			c.header("Retry-After", undefined);
 			return c.json(

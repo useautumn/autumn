@@ -4,11 +4,34 @@ import { JobName } from "@/queue/JobName.js";
 import { shouldRetrySqsJobError } from "@/queue/processMessage.js";
 
 describe("shouldRetrySqsJobError", () => {
-	test("keeps customer creation recovery failures for retry and DLQ redrive", () => {
+	test("does not retry permanent customer creation recovery failures", () => {
 		expect(
 			shouldRetrySqsJobError({
 				jobName: JobName.CustomerCreationRecovery,
 				error: new Error("requires manual billing review"),
+			}),
+		).toBe(false);
+	});
+
+	test("retries customer creation recovery on transient database errors", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: Object.assign(new Error("connect timeout"), {
+					code: "CONNECT_TIMEOUT",
+				}),
+			}),
+		).toBe(true);
+	});
+
+	test("retries customer creation recovery on transient Redis errors", () => {
+		expect(
+			shouldRetrySqsJobError({
+				jobName: JobName.CustomerCreationRecovery,
+				error: new RedisUnavailableError({
+					source: "customerCreationRecovery",
+					reason: "timeout",
+				}),
 			}),
 		).toBe(true);
 	});
