@@ -27,12 +27,18 @@ export const stripeLegacySeederMiddleware = async (
 	const { orgId, env } = c.req.param() as { orgId: string; env: AppEnv };
 
 	// Step 1: Get org and features
-	const data = await OrgService.getWithFeatures({
-		db,
-		orgId,
-		env,
-		allowNotFound: true,
-	});
+	let data: Awaited<ReturnType<typeof OrgService.getWithFeatures>>;
+	try {
+		data = await OrgService.getWithFeatures({
+			db,
+			orgId,
+			env,
+			allowNotFound: true,
+		});
+	} catch (error) {
+		logger.error(`Failed to resolve org for Stripe webhook: ${error}`);
+		return c.json({ error: "Failed to resolve org for Stripe webhook" }, 503);
+	}
 
 	if (!data) {
 		return c.json({ message: `Org ${orgId} not found` }, 200);

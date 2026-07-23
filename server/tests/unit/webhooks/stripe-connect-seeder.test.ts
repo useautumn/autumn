@@ -94,7 +94,7 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		expect(didHandlerRun()).toBe(false);
 	});
 
-	test("returns 500 so Stripe retries when org lookup fails for any other reason", async () => {
+	test("returns 503 so Stripe retries when org lookup fails for any other reason", async () => {
 		mockState.getByAccountId = async () => {
 			throw new Error("no more connections allowed (max_client_conn)");
 		};
@@ -102,7 +102,7 @@ describe("stripeConnectSeederMiddleware org resolution", () => {
 		const { app, didHandlerRun } = createApp();
 		const response = await postEvent(app);
 
-		expect(response.status).toBe(500);
+		expect(response.status).toBe(503);
 		expect(didHandlerRun()).toBe(false);
 	});
 

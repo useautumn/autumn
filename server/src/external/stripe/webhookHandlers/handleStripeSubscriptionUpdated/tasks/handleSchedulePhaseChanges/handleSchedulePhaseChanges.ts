@@ -1,6 +1,6 @@
 import { formatMs, notNullish } from "@autumn/shared";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
-import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
+import { getStripeWebhookSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { reconcileLicenseStateForCustomer } from "@/internal/licenses/actions/reconcile/reconcileLicenseState";
 import { addBillingChangeTag } from "../../../common";
@@ -28,8 +28,9 @@ export const handleSchedulePhaseChanges = async ({
 	const { logger } = ctx;
 
 	// Check if subscription is locked (being modified by another process)
-	const lock = await getStripeSubscriptionLock({
+	const lock = await getStripeWebhookSubscriptionLock({
 		stripeSubscriptionId: stripeSubscription.id,
+		ingressLock: ctx.ingressSubscriptionLock,
 	});
 	if (lock) {
 		logger.info(`[handleSchedulePhaseChanges] SKIP: subscription is locked`);

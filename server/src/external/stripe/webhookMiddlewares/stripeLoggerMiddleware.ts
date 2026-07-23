@@ -1,23 +1,23 @@
 import { type AppEnv, AuthType } from "@autumn/shared";
 import chalk from "chalk";
-import type { Context, Next } from "hono";
 import {
 	addAppContextToLogs,
 	addStripeEventToLogs,
 } from "@/utils/logging/addContextToLogs";
-import type {
-	StripeWebhookContext,
-	StripeWebhookHonoEnv,
-} from "./stripeWebhookContext";
+import type { StripeWebhookContext } from "./stripeWebhookContext";
 
-const logStripeWebhookRequest = ({ ctx }: { ctx: StripeWebhookContext }) => {
+export const logStripeWebhookRequest = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { logger, org, stripeEvent } = ctx;
 	logger.info(
 		`${chalk.yellow("STRIPE").padEnd(18)} ${stripeEvent.type.padEnd(30)} ${org.slug} | ${stripeEvent.id}`,
 	);
 };
 
-const logStripeWebhookResponse = ({
+export const logStripeWebhookResponse = ({
 	ctx,
 	statusCode,
 }: {
@@ -38,11 +38,11 @@ const logStripeWebhookResponse = ({
 	}
 };
 
-export const stripeLoggerMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	const ctx = c.get("ctx");
+export const enrichStripeWebhookLogger = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { stripeEvent, org, env, fullCustomer } = ctx;
 
 	ctx.logger = addAppContextToLogs({
@@ -62,14 +62,8 @@ export const stripeLoggerMiddleware = async (
 		stripeEventContext: {
 			type: stripeEvent.type,
 			id: stripeEvent.id,
-			// @ts-expect-error
-			object_id: `${stripeEvent.data?.object?.id}` || "N/A",
+			object_id:
+				`${(stripeEvent.data?.object as { id?: string })?.id}` || "N/A",
 		},
 	});
-
-	logStripeWebhookRequest({ ctx });
-
-	await next();
-
-	logStripeWebhookResponse({ ctx, statusCode: c.res.status });
 };

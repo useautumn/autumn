@@ -1,9 +1,5 @@
-import type { Context, Next } from "hono";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import type {
-	StripeWebhookContext,
-	StripeWebhookHonoEnv,
-} from "./stripeWebhookContext.js";
+import type { StripeWebhookContext } from "./stripeWebhookContext.js";
 
 // sub.created included: auto-sync can insert customer products on first delivery.
 const updateProductEvents = [
@@ -50,23 +46,12 @@ export const shouldSkipWebhookRefresh = ({
 	}
 };
 
-/**
- * Middleware that refreshes customer cache after webhook handlers complete
- * Runs after the main handler (post-processing)
- */
-export const stripeWebhookRefreshMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	// Run the main handler first
-	await next();
-
-	// Post-processing: refresh cache
-	const ctx = c.get("ctx");
+export const refreshStripeWebhookCustomerCache = async ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { logger, stripeEvent } = ctx;
-
-	if (!stripeEvent) return;
-
 	const eventType = stripeEvent.type;
 	const data = stripeEvent.data;
 
@@ -82,18 +67,12 @@ export const stripeWebhookRefreshMiddleware = async (
 			if (!stripeCusId) {
 				logger.warn(
 					`stripe webhook cache refresh, object doesn't contain customer id`,
-					{
-						data: {
-							eventType,
-							object: data.object,
-						},
-					},
+					{ data: { eventType, object: data.object } },
 				);
 				return;
 			}
 
 			const customer = ctx.fullCustomer;
-
 			if (!customer) {
 				logger.warn(`Customer not found in context, skipping cache refresh`);
 				return;

@@ -6,6 +6,7 @@ import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import { processQueuedStripeWebhook } from "@/external/stripe/processQueuedStripeWebhook.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
@@ -55,6 +56,7 @@ export const shouldRetrySqsJobError = ({
 }) => {
 	switch (jobName) {
 		case JobName.CustomerCreationRecovery:
+		case JobName.StripeWebhook:
 			return true;
 		case JobName.SyncBalanceBatchV3:
 		case JobName.SyncBalanceBatchV4:
@@ -88,7 +90,15 @@ export const processMessage = async ({
 		workflowContext: {
 			id: workflowId,
 			name: job.name,
-			payload: job.data,
+			payload:
+				job.name === JobName.StripeWebhook
+					? {
+							orgId: job.data.orgId,
+							env: job.data.env,
+							eventId: job.data.event?.id,
+							eventType: job.data.event?.type,
+						}
+					: job.data,
 		},
 	});
 
@@ -130,6 +140,7 @@ export const processMessage = async ({
 			payload: job.data,
 			logger: workerLogger,
 			skipCache: job.name !== JobName.Track,
+			throwOnOrgLookupError: job.name === JobName.StripeWebhook,
 		});
 		workerCtx = ctx;
 
@@ -138,6 +149,12 @@ export const processMessage = async ({
 				ctx,
 				messageId: message.MessageId,
 			});
+		}
+
+		if (job.name === JobName.StripeWebhook) {
+			if (!ctx) return;
+			await processQueuedStripeWebhook({ ctx, payload: job.data });
+			return;
 		}
 
 		if (job.name === JobName.Migration) {

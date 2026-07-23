@@ -23,6 +23,7 @@ export enum JobName {
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
 	CustomerCreationRecovery = "customer-creation-recovery",
+	StripeWebhook = "stripe-webhook",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 

@@ -3366,7 +3366,7 @@ const ROUTES = [
 		isWebhookExempt: true,
 	},
 	{
-		handlerName: "handleStripeWebhookEvent",
+		handlerName: "queueStripeWebhook",
 		handlerFile: null,
 		method: "POST",
 		path: "/webhooks/connect/:env",
@@ -3392,7 +3392,7 @@ const ROUTES = [
 		isWebhookExempt: true,
 	},
 	{
-		handlerName: "handleStripeWebhookEvent",
+		handlerName: "queueStripeWebhook",
 		handlerFile: null,
 		method: "POST",
 		path: "/webhooks/stripe/:orgId/:env",

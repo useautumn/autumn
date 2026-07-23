@@ -1,5 +1,4 @@
 import * as Sentry from "@sentry/bun";
-import type { Context } from "hono";
 import { Stripe } from "stripe";
 
 import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
@@ -8,30 +7,24 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
-import { handleStripeCustomerUpdated } from "./webhookHandlers/handleStripeCustomerUpdated.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
 import { handleStripeCheckoutSessionExpired } from "./webhookHandlers/handleStripeCheckoutSessionExpired/handleStripeCheckoutSessionExpired.js";
+import { handleStripeCustomerUpdated } from "./webhookHandlers/handleStripeCustomerUpdated.js";
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
-import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
+import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
+import { handleStripeSubscriptionScheduleUpdated } from "./webhookHandlers/handleStripeSubscriptionScheduleUpdated/handleStripeSubscriptionScheduleUpdated.js";
 import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestClockReady.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { handleStripeSubscriptionScheduleUpdated } from "./webhookHandlers/handleStripeSubscriptionScheduleUpdated/handleStripeSubscriptionScheduleUpdated.js";
-import type {
-	StripeWebhookContext,
-	StripeWebhookHonoEnv,
-} from "./webhookMiddlewares/stripeWebhookContext.js";
+import type { StripeWebhookContext } from "./webhookMiddlewares/stripeWebhookContext.js";
 
-/**
- * Hono handler for Stripe webhook events
- * Context is set up by seeder middlewares (legacy or connect)
- */
-export const handleStripeWebhookEvent = async (
-	c: Context<StripeWebhookHonoEnv>,
-) => {
-	const ctx = c.get("ctx") as StripeWebhookContext;
+export const processStripeWebhookEvent = async ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { db, logger, org, env, stripeEvent } = ctx;
 	const event = stripeEvent;
 
@@ -119,7 +112,7 @@ export const handleStripeWebhookEvent = async (
 		if (error instanceof Stripe.errors.StripeError) {
 			if (error.message.includes("No such customer")) {
 				logger.warn(`stripe customer missing: ${error.message}`);
-				return c.json({ success: true }, 200);
+				return;
 			}
 
 			if (error.message.includes("Expired API Key provided")) {
@@ -129,7 +122,7 @@ export const handleStripeWebhookEvent = async (
 					env,
 				});
 
-				return c.json({ success: true }, 200);
+				return;
 			}
 		}
 
@@ -138,17 +131,13 @@ export const handleStripeWebhookEvent = async (
 			error instanceof Error &&
 			error.message.includes("No stripe account linked to organization")
 		) {
-			return c.json({ success: true }, 200);
+			return;
 		}
 
 		const shouldSkip = handleWebhookErrorSkip({ error, logger });
-		if (!shouldSkip) {
-			logger.error(`Stripe webhook error: ${error}`, { error });
-		}
-		return c.json({ message: "Webhook received, internal server error" }, 200);
+		if (shouldSkip) return;
+
+		logger.error(`Stripe webhook error: ${error}`, { error });
+		throw error;
 	}
-
-	// Note: Cache refresh is now handled by stripeWebhookRefreshMiddleware
-
-	return c.json({ success: true }, 200);
 };
