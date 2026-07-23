@@ -15,6 +15,7 @@ import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
@@ -60,6 +61,9 @@ export const shouldRetrySqsJobError = ({
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
+		// Signal jobs are meaningless without Redis: an unreachable Redis must
+		// leave the message in SQS for redelivery, not swallow-and-ack.
+		case JobName.SyncCustomerDirty:
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		default:
@@ -221,6 +225,16 @@ export const processMessage = async ({
 			}
 
 			await syncItemV4({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.SyncCustomerDirty) {
+			if (!ctx) {
+				workerLogger.error("No context found for sync customer dirty job");
+				return;
+			}
+
+			await syncItemV5({ ctx, payload: job.data });
 			return;
 		}
 

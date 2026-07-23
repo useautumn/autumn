@@ -80,6 +80,14 @@ export interface Payloads {
 		apiVersion: ApiVersion;
 		body: TrackParams;
 	};
+	[JobName.SyncCustomerDirty]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		redisInstance: string;
+		timestamp: number;
+	};
 	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
