@@ -30,7 +30,7 @@ export function ResetJobControls() {
 
 	return (
 		<ResetJobConfigControl
-			key={`${data.enabled}:${data.batchSize}:${data.lastSuccessAt ?? "never"}`}
+			key={`${data.enabled}:${data.batchSize}`}
 			config={data}
 		/>
 	);

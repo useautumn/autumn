@@ -99,40 +99,42 @@ export function ResetJobConfigControl({ config }: { config: ResetJobConfig }) {
 				})}
 			>
 				{({ batchSize, isSubmitting }) => (
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => form.handleSubmit()}
-						isLoading={isSubmitting}
-						disabled={
-							batchSize === null ||
-							batchSize === config.batchSize ||
-							mutation.isPending
-						}
-					>
-						Apply
-					</Button>
+					<>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => form.handleSubmit()}
+							isLoading={isSubmitting}
+							disabled={
+								batchSize === null ||
+								batchSize === config.batchSize ||
+								mutation.isPending
+							}
+						>
+							Apply
+						</Button>
+						<div className="flex h-8 items-center gap-2">
+							<span className="text-xs text-tertiary-foreground">
+								{getStatusLabel({
+									healthy: config.configHealthy,
+									enabled,
+								})}
+							</span>
+							<Switch
+								aria-label="Toggle reset job"
+								checked={enabled}
+								disabled={batchSize === null || mutation.isPending}
+								onCheckedChange={(checked) =>
+									mutation.mutate({
+										enabled: checked,
+										batchSize,
+									})
+								}
+							/>
+						</div>
+					</>
 				)}
 			</form.Subscribe>
-			<div className="flex h-8 items-center gap-2">
-				<span className="text-xs text-tertiary-foreground">
-					{getStatusLabel({
-						healthy: config.configHealthy,
-						enabled,
-					})}
-				</span>
-				<Switch
-					aria-label="Toggle reset job"
-					checked={enabled}
-					disabled={mutation.isPending}
-					onCheckedChange={(checked) =>
-						mutation.mutate({
-							enabled: checked,
-							batchSize: config.batchSize,
-						})
-					}
-				/>
-			</div>
 		</div>
 	);
 }
