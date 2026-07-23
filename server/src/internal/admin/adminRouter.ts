@@ -13,6 +13,7 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminAsyncTrackConfig } from "./handleGetAdminAsyncTrackConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
@@ -40,6 +41,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUpsertAdminAsyncTrackConfig } from "./handleUpsertAdminAsyncTrackConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
@@ -154,6 +156,11 @@ honoAdminRouter.put(
 	"/stripe-sync-config",
 	...handleUpsertAdminStripeSyncConfig,
 );
+honoAdminRouter.get("/async-track-config", ...handleGetAdminAsyncTrackConfig);
+honoAdminRouter.put(
+	"/async-track-config",
+	...handleUpsertAdminAsyncTrackConfig,
+);
 honoAdminRouter.get(
 	"/redis-v2-cache-config",
 	...handleGetAdminRedisV2CacheConfig,
@@ -171,7 +178,10 @@ honoAdminRouter.patch(
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
-honoAdminRouter.get("/default-stripe-account", ...handleGetDefaultStripeAccount);
+honoAdminRouter.get(
+	"/default-stripe-account",
+	...handleGetDefaultStripeAccount,
+);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
 honoAdminRouter.post(
 	"/oauth-clients/slack-mcp",

@@ -2,6 +2,7 @@ import { Button } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { AsyncTrackDialog } from "./AsyncTrackDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
@@ -38,6 +39,7 @@ export function EdgeConfigTab() {
 		useState(false);
 	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
+	const [asyncTrackOpen, setAsyncTrackOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 	const [cacheV2RampOpen, setCacheV2RampOpen] = useState(false);
 	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
@@ -259,6 +261,24 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							Async Track
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Force Track requests onto the async queue by org ID or slug.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setAsyncTrackOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							V2 Redis Instance
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -374,6 +394,11 @@ export function EdgeConfigTab() {
 			<StripeSyncDialog
 				open={stripeSyncOpen}
 				onOpenChange={setStripeSyncOpen}
+			/>
+
+			<AsyncTrackDialog
+				open={asyncTrackOpen}
+				onOpenChange={setAsyncTrackOpen}
 			/>
 
 			<RedisV2CacheDialog
