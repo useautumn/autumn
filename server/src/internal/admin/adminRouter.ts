@@ -26,6 +26,7 @@ import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimi
 import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
+import { handleGetAdminResetJobConfig } from "./handleGetAdminResetJobConfig";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetDefaultStripeAccount } from "./handleGetDefaultStripeAccount";
@@ -53,6 +54,7 @@ import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRa
 import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
+import { handleUpsertAdminResetJobConfig } from "./handleUpsertAdminResetJobConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
@@ -156,6 +158,8 @@ honoAdminRouter.put(
 	"/batch-reset-config",
 	...handleUpsertAdminBatchResetConfig,
 );
+honoAdminRouter.get("/reset-job-config", ...handleGetAdminResetJobConfig);
+honoAdminRouter.put("/reset-job-config", ...handleUpsertAdminResetJobConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
 honoAdminRouter.put(
 	"/stripe-sync-config",
@@ -178,7 +182,10 @@ honoAdminRouter.patch(
 honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
-honoAdminRouter.get("/default-stripe-account", ...handleGetDefaultStripeAccount);
+honoAdminRouter.get(
+	"/default-stripe-account",
+	...handleGetDefaultStripeAccount,
+);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
 honoAdminRouter.post(
 	"/oauth-clients/slack-mcp",

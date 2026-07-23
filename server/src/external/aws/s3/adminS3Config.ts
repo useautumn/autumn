@@ -13,6 +13,7 @@ export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
 export const ADMIN_BATCH_RESET_CONFIG_KEY = "admin/batch-reset-config.json";
+export const ADMIN_RESET_JOB_CONFIG_KEY = "admin/reset-job-config.json";
 export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
 export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
@@ -81,6 +82,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "batch-resets",
 			label: "Batch Resets",
 			key: ADMIN_BATCH_RESET_CONFIG_KEY,
+		},
+		{
+			id: "reset-job",
+			label: "Reset Job",
+			key: ADMIN_RESET_JOB_CONFIG_KEY,
 		},
 		{
 			id: "miscellaneous",
