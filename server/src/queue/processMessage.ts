@@ -55,7 +55,7 @@ export const shouldRetrySqsJobError = ({
 }) => {
 	switch (jobName) {
 		case JobName.CustomerCreationRecovery:
-			return true;
+			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		case JobName.SyncBalanceBatchV3:
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
