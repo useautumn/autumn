@@ -1,9 +1,5 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
-import {
-	getDeleteCustomerProducts,
-	getPatchCustomerProducts,
-	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { getCustomerProductPlanOperations } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { operationsOrUndefined } from "@/internal/billing/v2/utils/billingPlan/operationsOrUndefined";
 import {
 	getReplaceableRestorations,
@@ -28,10 +24,12 @@ export const computeRollbackOperations = ({
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 }): RollbackOperations => {
-	const originalInserts = autumnBillingPlan.insertCustomerProducts;
-	const originalDeletes = getDeleteCustomerProducts({ autumnBillingPlan });
-	const originalUpdates = getUpdateCustomerProducts({ autumnBillingPlan });
-	const originalPatches = getPatchCustomerProducts({ autumnBillingPlan });
+	const {
+		inserts: originalInserts,
+		updates: originalUpdates,
+		deletes: originalDeletes,
+		patches: originalPatches,
+	} = getCustomerProductPlanOperations({ autumnBillingPlan });
 
 	const insertedProductIds = new Set(originalInserts.map(({ id }) => id));
 	const deletedProductIds = new Set(originalDeletes.map(({ id }) => id));
