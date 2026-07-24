@@ -58,18 +58,28 @@ export const executeCustomerLicenseTransitions = async ({
 		};
 
 		if (process.env.TW_WORKER_MODE === "1") {
-			await batchTransition({ ctx, transition, executionScope });
-		} else {
-			await batchTransitionTask.trigger(
-				{
-					orgId: ctx.org.id,
-					env: ctx.env,
-					customerId: ctx.customerId,
-					transition,
-					executionScope,
+			void batchTransition({ ctx, transition, executionScope }).catch(
+				(error) => {
+					ctx.logger.error("[licenseTransitions] batch transition failed", {
+						data: {
+							customerLicenseLinkId: updates.linkId,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					});
 				},
-				{ concurrencyKey: updates.linkId },
 			);
+			continue;
 		}
+
+		await batchTransitionTask.trigger(
+			{
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: ctx.customerId,
+				transition,
+				executionScope,
+			},
+			{ concurrencyKey: updates.linkId },
+		);
 	}
 };
