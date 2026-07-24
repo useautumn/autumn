@@ -1,5 +1,5 @@
 /**
- * TDD unit contract for the sync dirty-state primitives (sync-v4 coalescing).
+ * TDD integration contract for the sync dirty-state primitives (sync-v4 coalescing).
  *
  * Contract under test:
  *   New modules (server/src/internal/balances/utils/sync/dirtyState/):
