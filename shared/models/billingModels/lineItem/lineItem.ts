@@ -16,6 +16,11 @@ export const LineItemSchema = z
 
 		discounts: z.array(LineItemDiscountSchema).default([]),
 		amountAfterDiscounts: z.number().optional(),
+		/**
+		 * `amountAfterDiscounts` comes from a finalized source, such as a stored
+		 * invoice row, and must not be recomputed. `discounts` remains provenance.
+		 */
+		amountAfterDiscountsFinalized: z.boolean().optional(),
 
 		description: z.string(),
 

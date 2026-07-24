@@ -7,6 +7,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCustomerLicenseQuantityChanges } from "@/internal/billing/v2/compute/computeCustomerLicenseQuantityChanges";
 import { convergeCustomerLicense } from "@/internal/billing/v2/utils/convergeCustomerLicense";
 import { customerLicenseToLineItems } from "@/internal/billing/v2/utils/lineItems/customerLicenseToLineItems";
+import { licenseInvoiceCreditFromStoredLineItems } from "@/internal/billing/v2/utils/lineItems/licenseInvoiceCreditFromStoredLineItems";
 
 /**
  * Converges pool paid counts onto the requested totals in place — the parent
@@ -32,12 +33,11 @@ export const computeUpdateLicenseQuantityPlan = ({
 
 	for (const { customerLicense, paidQuantity } of changes) {
 		lineItems.push(
-			...customerLicenseToLineItems({
+			...licenseInvoiceCreditFromStoredLineItems({
 				ctx,
 				billingContext: updateSubscriptionContext,
 				customerProduct,
 				customerLicense,
-				direction: "refund",
 			}),
 			...customerLicenseToLineItems({
 				ctx,

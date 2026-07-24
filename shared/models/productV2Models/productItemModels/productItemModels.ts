@@ -197,12 +197,19 @@ export const ProductItemSchema = z.object({
 	price_id: z.string().nullish().meta({
 		internal: true,
 	}),
+	/** Set only by producers that know the item corresponds to an existing
+	 * Stripe price of the same shape. Flows into Price.config when rebuilt. */
+	stripe_price_id: z.string().nullish().meta({
+		internal: true,
+	}),
 	price_interval: z.enum(ProductItemInterval).nullish().meta({
 		internal: true,
 	}),
 	price_interval_count: z.number().nullish().meta({
 		internal: true,
 	}),
+	/** One-way Price → ProductItem display context. Never read this back when
+	 * rebuilding a price because an edited item may carry stale Stripe IDs. */
 	price_config: z.any().nullish().meta({
 		internal: true,
 	}),

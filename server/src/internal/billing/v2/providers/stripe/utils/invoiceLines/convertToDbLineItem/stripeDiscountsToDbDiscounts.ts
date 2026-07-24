@@ -16,26 +16,36 @@ type ExpandedDiscountAmount = {
  */
 export const stripeDiscountsToDbDiscounts = ({
 	discountAmounts,
+	discounts,
 	currency,
 }: {
 	discountAmounts: ExpandedDiscountAmount[] | null;
+	discounts: Stripe.Discount[];
 	currency: string;
 }): InvoiceLineItemDiscount[] => {
 	if (!discountAmounts) return [];
+	const discountsById = new Map(
+		discounts.map((discount) => [discount.id, discount]),
+	);
 
 	return discountAmounts.map((da) => {
-		const discount = da.discount;
+		const discount = discountsById.get(da.discount.id) ?? da.discount;
+		const coupon = discount.source?.coupon;
 
 		// Get coupon ID from source.coupon (can be string or expanded Coupon object)
-		const couponId = discount.source?.coupon
-			? typeof discount.source.coupon === "string"
-				? discount.source.coupon
-				: discount.source.coupon.id
+		const couponId = coupon
+			? typeof coupon === "string"
+				? coupon
+				: coupon.id
 			: null;
+		const percentOff =
+			coupon && typeof coupon !== "string"
+				? (coupon.percent_off ?? undefined)
+				: undefined;
 
 		return {
 			amount_off: stripeToAtmnAmount({ amount: da.amount, currency }),
-			percent_off: undefined,
+			percent_off: percentOff,
 			stripe_discount_id: discount.id,
 			stripe_coupon_id: couponId ?? undefined,
 		};

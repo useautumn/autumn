@@ -83,6 +83,7 @@ const toPrice = ({
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
 		stripe_product_id: null,
+		stripe_price_id: item.stripe_price_id ?? null,
 		feature_id: null,
 		internal_feature_id: null,
 	};
@@ -276,6 +277,7 @@ const toFeatureAndPrice = ({
 				})) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
 		interval_count: itemToBillingIntervalCount({ item }),
+		stripe_price_id: item.stripe_price_id ?? null,
 	};
 
 	const currencies = buildUsagePriceCurrencies({
