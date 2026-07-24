@@ -30,6 +30,17 @@ export const getPatchCustomerProducts = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => autumnBillingPlan.patchCustomerProducts ?? [];
 
+export const getCustomerProductPlanOperations = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}) => ({
+	inserts: autumnBillingPlan.insertCustomerProducts,
+	updates: getUpdateCustomerProducts({ autumnBillingPlan }),
+	deletes: getDeleteCustomerProducts({ autumnBillingPlan }),
+	patches: getPatchCustomerProducts({ autumnBillingPlan }),
+});
+
 export const getPatchedCustomerProductUpdates = ({
 	autumnBillingPlan,
 }: {
