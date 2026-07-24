@@ -1,0 +1,2 @@
+ALTER TABLE "customer_entitlements" ADD COLUMN "reset_by_invoice" boolean;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_customer_entitlements_reset_scan" ON "customer_entitlements" USING btree ("next_reset_at","id" COLLATE "C") WHERE "customer_entitlements"."expired" IS NOT TRUE AND "customer_entitlements"."reset_by_invoice" IS NOT TRUE AND "customer_entitlements"."next_reset_at" IS NOT NULL;

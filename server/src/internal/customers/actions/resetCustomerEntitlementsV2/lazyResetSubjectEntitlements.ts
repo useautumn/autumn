@@ -63,8 +63,8 @@ export const lazyResetSubjectEntitlements = async ({
 
 		for (const customerEntitlement of customerEntitlementsNeedingReset) {
 			const result = await processReset({
-				cusEnt: customerEntitlement,
 				ctx,
+				cusEnt: customerEntitlement,
 			});
 			if (!result) continue;
 			computed.push({

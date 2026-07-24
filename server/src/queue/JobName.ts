@@ -19,13 +19,19 @@ export enum JobName {
 	SyncBalanceBatchV2 = "sync-balance-batch-v2",
 	SyncBalanceBatchV3 = "sync-balance-batch-v3",
 	SyncBalanceBatchV4 = "sync-balance-batch-v4",
+	/** Signal-only sync: payload identifies the customer; selectors and
+	 *  usage-window snapshots live in the Redis dirty state. */
+	SyncCustomerDirty = "sync-customer-dirty",
 	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
+	CustomerCreationRecovery = "customer-creation-recovery",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 
 	BatchResetCusEnts = "batch-reset-cus-ents",
+	/** ID-based reset worker (balances/batchReset); supersedes BatchResetCusEnts */
+	BatchResetCustomerEntitlementsV2 = "batch-reset-customer-entitlements-v2",
 
 	AutoTopUp = "auto-top-up",
 	/** Stores invoice line items from Stripe to DB (async to allow extra API calls) */
@@ -33,6 +39,9 @@ export enum JobName {
 
 	/** Stores deferred invoice line items (ProrateNextCycle pending items) before an invoice exists */
 	StoreDeferredInvoiceLineItems = "store-deferred-invoice-line-items",
+
+	/** Replays failed early-acked Stripe webhooks from the dedicated queue */
+	StripeWebhookReplay = "stripe-webhook-replay",
 
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",

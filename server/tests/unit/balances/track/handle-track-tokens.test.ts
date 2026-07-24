@@ -181,13 +181,20 @@ describe("handleTrackTokens", () => {
 		});
 
 		expect(response.status).toBe(202);
-		expect(await response.json()).toEqual({ success: true });
+		expect(await response.json()).toEqual({
+			customer_id: "cus_123",
+			entity_id: "ent_123",
+			value: 3.5,
+			balance: null,
+		});
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_track_tokens_1",
 		});
+		expect(mockState.queueCommands[0]?.MessageGroupId).toMatch(
+			/^org_123:sandbox:cus_123:ent_123:shard-[0-7]$/,
+		);
 		expect(
 			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
 		).toMatchObject({

@@ -1,5 +1,5 @@
 {
-  "id": "5b85c15f-9355-4d1c-8ac3-1bff4b4b6f9c",
+  "id": "7d0fd194-fc6f-4c5e-9c2e-949b1dd95959",
   "prevId": "c3041e96-b8d2-4e62-b2b1-430e4d6c8989",
   "version": "7",
   "dialect": "postgresql",
@@ -1576,25 +1576,6 @@
           "notNull": true,
           "default": false
         },
-        "is_pooled_balance": {
-          "name": "is_pooled_balance",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "pooled_balance_id": {
-          "name": "pooled_balance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pooled_contribution_id": {
-          "name": "pooled_contribution_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "adjustment": {
           "name": "adjustment",
           "type": "numeric",
@@ -1647,6 +1628,12 @@
         },
         "expired": {
           "name": "expired",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reset_by_invoice": {
+          "name": "reset_by_invoice",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
@@ -1880,18 +1867,24 @@
           "method": "btree",
           "with": {}
         },
-        "idx_customer_entitlements_pooled_contribution": {
-          "name": "idx_customer_entitlements_pooled_contribution",
+        "idx_customer_entitlements_reset_scan": {
+          "name": "idx_customer_entitlements_reset_scan",
           "columns": [
             {
-              "expression": "pooled_contribution_id",
+              "expression": "next_reset_at",
               "isExpression": false,
               "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
-          "where": "\"customer_entitlements\".\"pooled_contribution_id\" IS NOT NULL",
+          "where": "\"customer_entitlements\".\"expired\" IS NOT TRUE AND \"customer_entitlements\".\"reset_by_invoice\" IS NOT TRUE AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
           "concurrently": true,
           "method": "btree",
           "with": {}
@@ -3845,13 +3838,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": "null"
-        },
-        "pooled": {
-          "name": "pooled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "org_id": {
           "name": "org_id",
@@ -7551,461 +7537,6 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.pooled_balance_contributions": {
-      "name": "pooled_balance_contributions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "pooled_balance_id": {
-          "name": "pooled_balance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source_customer_product_id": {
-          "name": "source_customer_product_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "source_customer_entitlement_id": {
-          "name": "source_customer_entitlement_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "current_contribution": {
-          "name": "current_contribution",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "next_cycle_contribution": {
-          "name": "next_cycle_contribution",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "effective_at": {
-          "name": "effective_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {
-        "idx_pooled_balance_contributions_pool": {
-          "name": "idx_pooled_balance_contributions_pool",
-          "columns": [
-            {
-              "expression": "pooled_balance_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balance_contributions_source_customer_entitlement": {
-          "name": "idx_pooled_balance_contributions_source_customer_entitlement",
-          "columns": [
-            {
-              "expression": "source_customer_entitlement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "pooled_balance_contributions_pool_fkey": {
-          "name": "pooled_balance_contributions_pool_fkey",
-          "tableFrom": "pooled_balance_contributions",
-          "tableTo": "pooled_balances",
-          "columnsFrom": [
-            "pooled_balance_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "pooled_balance_contributions_customer_product_fkey": {
-          "name": "pooled_balance_contributions_customer_product_fkey",
-          "tableFrom": "pooled_balance_contributions",
-          "tableTo": "customer_products",
-          "columnsFrom": [
-            "source_customer_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "pooled_balance_contributions_customer_entitlement_fkey": {
-          "name": "pooled_balance_contributions_customer_entitlement_fkey",
-          "tableFrom": "pooled_balance_contributions",
-          "tableTo": "customer_entitlements",
-          "columnsFrom": [
-            "source_customer_entitlement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "unique_pooled_balance_contribution": {
-          "name": "unique_pooled_balance_contribution",
-          "nullsNotDistinct": false,
-          "columns": [
-            "source_customer_entitlement_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "pooled_balance_contributions_current_non_negative": {
-          "name": "pooled_balance_contributions_current_non_negative",
-          "value": "\"pooled_balance_contributions\".\"current_contribution\" >= 0"
-        },
-        "pooled_balance_contributions_next_non_negative": {
-          "name": "pooled_balance_contributions_next_non_negative",
-          "value": "\"pooled_balance_contributions\".\"next_cycle_contribution\" >= 0"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.pooled_balances": {
-      "name": "pooled_balances",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "internal_customer_id": {
-          "name": "internal_customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "internal_feature_id": {
-          "name": "internal_feature_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "granted": {
-          "name": "granted",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "interval": {
-          "name": "interval",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "interval_count": {
-          "name": "interval_count",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "reset_cycle_anchor": {
-          "name": "reset_cycle_anchor",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reset_mode": {
-          "name": "reset_mode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stripe_subscription_id": {
-          "name": "stripe_subscription_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "customer_license_link_id": {
-          "name": "customer_license_link_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rollover_signature": {
-          "name": "rollover_signature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'none'"
-        },
-        "customer_entitlement_id": {
-          "name": "customer_entitlement_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_applied_reset_at": {
-          "name": "last_applied_reset_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {
-        "idx_pooled_balances_org": {
-          "name": "idx_pooled_balances_org",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balances_reset_mode": {
-          "name": "idx_pooled_balances_reset_mode",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "reset_mode",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balances_feature": {
-          "name": "idx_pooled_balances_feature",
-          "columns": [
-            {
-              "expression": "internal_feature_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balances_stripe_subscription": {
-          "name": "idx_pooled_balances_stripe_subscription",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "stripe_subscription_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"pooled_balances\".\"stripe_subscription_id\" IS NOT NULL",
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_pooled_balances_customer_license": {
-          "name": "idx_pooled_balances_customer_license",
-          "columns": [
-            {
-              "expression": "internal_customer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "customer_license_link_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"pooled_balances\".\"customer_license_link_id\" IS NOT NULL",
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "pooled_balances_customer_fkey": {
-          "name": "pooled_balances_customer_fkey",
-          "tableFrom": "pooled_balances",
-          "tableTo": "customers",
-          "columnsFrom": [
-            "internal_customer_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "pooled_balances_feature_fkey": {
-          "name": "pooled_balances_feature_fkey",
-          "tableFrom": "pooled_balances",
-          "tableTo": "features",
-          "columnsFrom": [
-            "internal_feature_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "pooled_balances_customer_entitlement_fkey": {
-          "name": "pooled_balances_customer_entitlement_fkey",
-          "tableFrom": "pooled_balances",
-          "tableTo": "customer_entitlements",
-          "columnsFrom": [
-            "customer_entitlement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "unique_pooled_balance": {
-          "name": "unique_pooled_balance",
-          "nullsNotDistinct": true,
-          "columns": [
-            "internal_customer_id",
-            "internal_feature_id",
-            "interval",
-            "interval_count",
-            "reset_cycle_anchor",
-            "reset_mode",
-            "stripe_subscription_id",
-            "customer_license_link_id",
-            "rollover_signature"
-          ]
-        },
-        "unique_pooled_balance_customer_entitlement": {
-          "name": "unique_pooled_balance_customer_entitlement",
-          "nullsNotDistinct": false,
-          "columns": [
-            "customer_entitlement_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {
-        "pooled_balances_interval_count_positive": {
-          "name": "pooled_balances_interval_count_positive",
-          "value": "\"pooled_balances\".\"interval_count\" > 0"
-        },
-        "pooled_balances_granted_non_negative": {
-          "name": "pooled_balances_granted_non_negative",
-          "value": "\"pooled_balances\".\"granted\" >= 0"
-        },
-        "pooled_balances_reset_mode_valid": {
-          "name": "pooled_balances_reset_mode_valid",
-          "value": "\"pooled_balances\".\"reset_mode\" IN ('lazy', 'subscription', 'lifetime')"
-        },
-        "pooled_balances_lifecycle_ids_valid": {
-          "name": "pooled_balances_lifecycle_ids_valid",
-          "value": "(\n\t\t\t\t\"pooled_balances\".\"reset_mode\" = 'subscription'\n\t\t\t\tAND \"pooled_balances\".\"stripe_subscription_id\" IS NOT NULL\n\t\t\t\tAND \"pooled_balances\".\"customer_license_link_id\" IS NULL\n\t\t\t) OR (\n\t\t\t\t\"pooled_balances\".\"reset_mode\" = 'lazy'\n\t\t\t\tAND \"pooled_balances\".\"stripe_subscription_id\" IS NULL\n\t\t\t) OR (\n\t\t\t\t\"pooled_balances\".\"reset_mode\" = 'lifetime'\n\t\t\t\tAND \"pooled_balances\".\"stripe_subscription_id\" IS NULL\n\t\t\t\tAND \"pooled_balances\".\"customer_license_link_id\" IS NULL\n\t\t\t)"
-        }
-      },
       "isRLSEnabled": false
     },
     "public.prices": {

@@ -62,6 +62,11 @@ export const customerEntitlements = pgTable(
 		// Denormalized parent-product expiry; nullable tri-state so a manual `false`
 		// stays sticky and the backfill cron only flips NULL -> true.
 		expired: boolean("expired"),
+
+		// Denormalized "invoice.created owns this reset" (price-backed on a live
+		// subscription). Written lazily by the batch reset worker's verdicts;
+		// filters these rows out of the reset scan so they stop re-entering it.
+		reset_by_invoice: boolean("reset_by_invoice"),
 	},
 	(table) => [
 		foreignKey({
@@ -137,6 +142,14 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_pooled_contribution")
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
+			.concurrently(),
+		// The V2 reset scan index: matches resetEligibleFilterSql exactly (minus
+		// expires_at, filtered on the heap) and carries id for the keyset sort.
+		index("idx_customer_entitlements_reset_scan")
+			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
+			.where(
+				sql`${table.expired} IS NOT TRUE AND ${table.reset_by_invoice} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
+			)
 			.concurrently(),
 	],
 );

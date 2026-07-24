@@ -6,24 +6,32 @@ import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import {
+	runStripeWebhookReplay,
+	StripeWebhookReplayInFlightError,
+} from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
+import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import { syncItemV5 } from "@/internal/balances/utils/sync/syncItemV5.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
+import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
+import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
 import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/actions/triggerCheckoutReward.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -52,12 +60,23 @@ export const shouldRetrySqsJobError = ({
 	error: unknown;
 }) => {
 	switch (jobName) {
+		case JobName.CustomerCreationRecovery:
+			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		case JobName.SyncBalanceBatchV3:
 		case JobName.SyncBalanceBatchV4:
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
+		// Signal jobs are meaningless without Redis: an unreachable Redis must
+		// leave the message in SQS for redelivery, not swallow-and-ack.
+		case JobName.SyncCustomerDirty:
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		case JobName.StripeWebhookReplay:
+			return (
+				error instanceof StripeWebhookReplayInFlightError ||
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error })
+			);
 		default:
 			return false;
 	}
@@ -95,6 +114,23 @@ export const processMessage = async ({
 	let workerCtx: AutumnContext | undefined;
 
 	const executeJob = async () => {
+		if (job.name === JobName.BatchResetCusEnts && !isBatchResetEnabled()) {
+			workerLogger.info(
+				"Batch reset skipped because the edge config is disabled",
+			);
+			return;
+		}
+
+		// Reset-ID payload (no orgId/env): builds its own per-org contexts.
+		if (job.name === JobName.BatchResetCustomerEntitlementsV2) {
+			await batchResetCustomerEntitlementsV2({
+				db,
+				logger: workerLogger,
+				payload: job.data,
+			});
+			return;
+		}
+
 		if (job.name === JobName.DetectBaseVariant) {
 			await detectBaseVariant({
 				db,
@@ -135,6 +171,29 @@ export const processMessage = async ({
 				return;
 			}
 			await runMigrationTask({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.CustomerCreationRecovery) {
+			if (!ctx) {
+				throw new Error("No context found for customer creation recovery job");
+			}
+			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StripeWebhookReplay) {
+			if (!ctx) {
+				workerLogger.error("No context found for stripe webhook replay job");
+				return;
+			}
+			await runStripeWebhookReplay({
+				ctx,
+				payload: job.data,
+			});
 			return;
 		}
 
@@ -199,6 +258,16 @@ export const processMessage = async ({
 			}
 
 			await syncItemV4({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.SyncCustomerDirty) {
+			if (!ctx) {
+				workerLogger.error("No context found for sync customer dirty job");
+				return;
+			}
+
+			await syncItemV5({ ctx, payload: job.data });
 			return;
 		}
 

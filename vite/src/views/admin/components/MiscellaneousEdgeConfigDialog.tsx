@@ -7,6 +7,7 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
+	Switch,
 } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useEffect, useState } from "react";
@@ -16,6 +17,7 @@ import { getBackendErr } from "@/utils/genUtils";
 
 type MiscellaneousEdgeConfig = {
 	newFlatCusModel: string[];
+	syncCoalesce: boolean;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -24,6 +26,7 @@ type MiscellaneousEdgeConfig = {
 
 const DEFAULT_CONFIG: MiscellaneousEdgeConfig = {
 	newFlatCusModel: [],
+	syncCoalesce: false,
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
@@ -61,6 +64,7 @@ export function MiscellaneousEdgeConfigDialog({
 					...DEFAULT_CONFIG,
 					...data,
 					newFlatCusModel: data.newFlatCusModel ?? [],
+					syncCoalesce: data.syncCoalesce ?? false,
 				};
 				setConfig(merged);
 				const {
@@ -110,6 +114,7 @@ export function MiscellaneousEdgeConfigDialog({
 			setConfig((prev) => ({
 				...prev,
 				newFlatCusModel: parsed.newFlatCusModel ?? prev.newFlatCusModel,
+				syncCoalesce: parsed.syncCoalesce ?? prev.syncCoalesce,
 			}));
 			setJsonError(null);
 		} catch {
@@ -256,6 +261,25 @@ export function MiscellaneousEdgeConfigDialog({
 										Add
 									</Button>
 								</div>
+							</div>
+
+							<div className="rounded-lg border border-border p-3 flex items-center justify-between gap-2">
+								<div className="min-w-0">
+									<div className="text-xs font-medium text-foreground">
+										Sync Coalescing
+									</div>
+									<div className="text-[11px] text-tertiary-foreground">
+										Coalesce balance syncs via per-customer Redis dirty state;
+										SQS carries signal-only messages. Applies to all orgs.
+									</div>
+								</div>
+								<Switch
+									checked={config.syncCoalesce}
+									onCheckedChange={(syncCoalesce) => {
+										setSyncSource("form");
+										setConfig((prev) => ({ ...prev, syncCoalesce }));
+									}}
+								/>
 							</div>
 
 							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">

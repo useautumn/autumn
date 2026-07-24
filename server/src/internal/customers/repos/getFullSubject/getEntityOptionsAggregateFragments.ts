@@ -25,7 +25,7 @@ export const getEntityOptionsAggregateFragments = () => {
 			) AS option_row(option_value)
 		),
 
-		entity_option_prepaid_rows AS (
+		entity_option_prepaid_rows AS MATERIALIZED (
 			SELECT
 				ce.internal_feature_id,
 				ce.internal_customer_id,
@@ -68,7 +68,7 @@ export const getEntityOptionsAggregateFragments = () => {
 				)
 		),
 
-		entity_prepaid_grant_from_options AS (
+		entity_prepaid_grant_from_options AS MATERIALIZED (
 			SELECT
 				internal_feature_id,
 				internal_customer_id,

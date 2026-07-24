@@ -2,6 +2,8 @@ import type { TestGroup } from "./types";
 
 // Still failing after retry — under active triage.
 const activeTempPaths = [
+	"integration/billing/legacy/attach/update-quantity/legacy-update-quantity.test.ts",
+	"integration/billing/legacy/attach/upgrade/legacy-upgrade-merged.test.ts",
 	"integration/billing/setup-payment/setup-payment-with-customize.test.ts",
 	"integration/billing/stripe-webhooks/subscription-created/sub-created-auto-sync.test.ts",
 	"integration/billing/stripe-webhooks/subscription-deleted/subscription-deleted-invoice.test.ts",
@@ -24,6 +26,7 @@ const activeTempPaths = [
 	"integration/crud/plans/variants/interval-family.test.ts",
 	"integration/crud/plans/variants/lifecycle.test.ts",
 	"integration/crud/plans/variants/reset-tier-ladder.test.ts",
+	"integration/crud/plans/variants/stripe-resource-carryover.test.ts",
 	"integration/crud/plans/versioning/variant-independent-versioning.test.ts",
 	"integration/licenses/billing/attach/attach-customize-license.test.ts",
 	"integration/licenses/billing/attach/attach-license-parent-stripe-product.test.ts",
@@ -51,7 +54,7 @@ const activeTempPaths = [
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Still-failing suites from full-run retry — under triage",
+	description: "Still-failing suites from the low-concurrency rerun — triage",
 	tier: "domain",
 	paths: activeTempPaths,
 	maxConcurrency: 2,

@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
 import { logger } from "better-auth";
 import { createSchedule } from "@/external/aws/eventbridge/eventBridgeUtils.js";
+import { isBatchResetEnabled } from "@/internal/misc/batchReset/batchResetConfigStore.js";
 import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
 import { addTaskToQueue } from "./queueUtils.js";
@@ -231,7 +232,10 @@ export const workflows = {
 	triggerBatchResetCusEnts: (
 		payload: BatchResetCusEntsPayload,
 		options?: TriggerOptions,
-	) => triggerWorkflow({ name: "batchResetCusEnts", payload, options }),
+	) =>
+		isBatchResetEnabled()
+			? triggerWorkflow({ name: "batchResetCusEnts", payload, options })
+			: Promise.resolve(),
 
 	triggerAutoTopUp: (payload: AutoTopUpPayload, options?: TriggerOptions) =>
 		triggerWorkflow({ name: "autoTopUp", payload, options }),

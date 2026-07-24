@@ -361,6 +361,7 @@ const buildCustomerEntitlement = ({
 	feature_id: entitlement.feature_id ?? null,
 	external_id: `bal_${key}_${suffix}`,
 	expired: null,
+	reset_by_invoice: null,
 });
 
 const buildRollover = ({
