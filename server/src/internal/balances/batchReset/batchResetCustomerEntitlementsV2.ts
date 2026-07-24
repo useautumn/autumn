@@ -52,14 +52,34 @@ export const batchResetCustomerEntitlementsV2 = async ({
 	});
 
 	await executeVerdictMutations({ db, verdictMutations });
-	await executeResetMutations({ db, resetMutations });
+	const { appliedCustomerEntitlementIds, staleSkippedCount } =
+		await executeResetMutations({ db, resetMutations });
+
+	if (staleSkippedCount > 0) {
+		// A concurrent reset (usually a lazy reset racing this worker) won —
+		// the guarded UPDATE skipped those rows instead of double-applying.
+		logger.info("[batchReset] stale mutations skipped", {
+			jobName: "reset-cus-ents-v2",
+			data: { staleSkippedCount },
+		});
+	}
+
+	const appliedResetMutations = resetMutations.filter(
+		({ customerEntitlementId }) =>
+			appliedCustomerEntitlementIds.has(customerEntitlementId),
+	);
 
 	// Postgres is authoritative now — drop the stale Redis state so the next
 	// read rehydrates instead of serving pre-reset balances.
 	await invalidateResetCaches({
 		resetGroups: classifiedBatchResetContext.resetGroups,
-		resetMutations,
+		resetMutations: appliedResetMutations,
 	});
 
-	return { ...classifiedBatchResetContext, verdictMutations, resetMutations };
+	return {
+		...classifiedBatchResetContext,
+		verdictMutations,
+		resetMutations,
+		appliedResetMutations,
+	};
 };

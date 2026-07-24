@@ -33,6 +33,11 @@ export type ResetVerdict = {
 
 export type ResetMutation = {
 	customerEntitlementId: string;
+	/** next_reset_at the mutation was computed from. The execute UPDATE only
+	 * applies while the row still matches (optimistic guard), so a concurrent
+	 * duplicate — a lazy reset racing the worker, or an SQS redelivery —
+	 * no-ops instead of double-applying balances and rollovers. */
+	expectedNextResetAt: number;
 	updates: ResetUpdates;
 	rolloverInserts: Rollover[];
 	rolloverUpdates: Rollover[];

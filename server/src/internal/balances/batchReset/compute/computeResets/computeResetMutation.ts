@@ -11,6 +11,11 @@ export const computeResetMutation = async ({
 	ctx: AutumnContext;
 	customerEntitlement: ResetContextCustomerEntitlement;
 }): Promise<ResetMutation | null> => {
+	// Guaranteed non-null by the not_due classification; re-checked for the
+	// optimistic guard the execute UPDATE compares against.
+	const expectedNextResetAt = customerEntitlement.next_reset_at;
+	if (expectedNextResetAt == null) return null;
+
 	const result = await processReset({
 		ctx,
 		cusEnt: customerEntitlement,
@@ -22,6 +27,7 @@ export const computeResetMutation = async ({
 	if (newRollovers.length === 0) {
 		return {
 			customerEntitlementId: customerEntitlement.id,
+			expectedNextResetAt,
 			updates: result.updates,
 			rolloverInserts: [],
 			rolloverUpdates: [],
@@ -42,6 +48,7 @@ export const computeResetMutation = async ({
 
 	return {
 		customerEntitlementId: customerEntitlement.id,
+		expectedNextResetAt,
 		updates: result.updates,
 		rolloverInserts: newRollovers
 			.filter(({ id }) => !deletedRolloverIds.has(id))

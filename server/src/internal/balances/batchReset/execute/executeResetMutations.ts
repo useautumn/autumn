@@ -6,19 +6,28 @@ import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRol
 import { resetCronQueryTag } from "../resetCronQueryTag.js";
 import type { ResetMutation } from "../types.js";
 
+/**
+ * Applies the balance updates with an optimistic guard: a row only updates
+ * while its next_reset_at still matches what the mutation was computed from.
+ * A row that changed in between (a lazy reset racing the worker, or a
+ * duplicate delivery) is skipped. Returns the IDs that actually applied.
+ */
 const updateCustomerEntitlements = async ({
 	db,
 	resetMutations,
 }: {
 	db: DrizzleCli;
 	resetMutations: ResetMutation[];
-}) => {
-	const updates = resetMutations.map(({ customerEntitlementId, updates }) => ({
-		id: customerEntitlementId,
-		...updates,
-	}));
+}): Promise<Set<string>> => {
+	const updates = resetMutations.map(
+		({ customerEntitlementId, expectedNextResetAt, updates }) => ({
+			id: customerEntitlementId,
+			expected_next_reset_at: expectedNextResetAt,
+			...updates,
+		}),
+	);
 
-	await db.execute(sql`
+	const appliedRows = await db.execute<{ id: string }>(sql`
 		UPDATE ${customerEntitlements} AS customer_entitlement
 		SET
 			balance = COALESCE(reset_update.balance, customer_entitlement.balance),
@@ -32,6 +41,7 @@ const updateCustomerEntitlements = async ({
 			cache_version = COALESCE(customer_entitlement.cache_version, 0) + 1
 		FROM jsonb_to_recordset(${JSON.stringify(updates)}::jsonb) AS reset_update(
 			id text,
+			expected_next_reset_at numeric,
 			balance numeric,
 			additional_balance numeric,
 			adjustment numeric,
@@ -39,8 +49,12 @@ const updateCustomerEntitlements = async ({
 			next_reset_at numeric
 		)
 		WHERE customer_entitlement.id = reset_update.id
+			AND customer_entitlement.next_reset_at = reset_update.expected_next_reset_at
+		RETURNING customer_entitlement.id
 		${resetCronQueryTag("updateBalances")}
 	`);
+
+	return new Set(appliedRows.map((row) => row.id));
 };
 
 export const executeResetMutations = async ({
@@ -49,24 +63,40 @@ export const executeResetMutations = async ({
 }: {
 	db: DrizzleCli;
 	resetMutations: ResetMutation[];
-}) => {
-	if (resetMutations.length === 0) return;
+}): Promise<{
+	appliedCustomerEntitlementIds: Set<string>;
+	staleSkippedCount: number;
+}> => {
+	if (resetMutations.length === 0) {
+		return { appliedCustomerEntitlementIds: new Set(), staleSkippedCount: 0 };
+	}
 
-	const rolloverWrites = resetMutations.flatMap(
-		({ rolloverInserts, rolloverUpdates }) => [
-			...rolloverInserts,
-			...rolloverUpdates,
-		],
-	);
-	const rolloverDeleteIds = resetMutations.flatMap(
-		({ rolloverDeleteIds }) => rolloverDeleteIds,
-	);
+	let appliedCustomerEntitlementIds = new Set<string>();
 
 	await withStatementTimeout(db, async (transaction) => {
-		await updateCustomerEntitlements({
+		appliedCustomerEntitlementIds = await updateCustomerEntitlements({
 			db: transaction,
 			resetMutations,
 		});
+
+		// Rollover writes only for rows whose guarded UPDATE applied — a stale
+		// mutation's rollover would double-credit a row someone else already
+		// reset.
+		const appliedMutations = resetMutations.filter(
+			({ customerEntitlementId }) =>
+				appliedCustomerEntitlementIds.has(customerEntitlementId),
+		);
+
+		const rolloverWrites = appliedMutations.flatMap(
+			({ rolloverInserts, rolloverUpdates }) => [
+				...rolloverInserts,
+				...rolloverUpdates,
+			],
+		);
+		const rolloverDeleteIds = appliedMutations.flatMap(
+			({ rolloverDeleteIds }) => rolloverDeleteIds,
+		);
+
 		await RolloverService.upsert({
 			db: transaction,
 			rows: rolloverWrites,
@@ -78,4 +108,10 @@ export const executeResetMutations = async ({
 			queryTag: resetCronQueryTag("deleteRollovers"),
 		});
 	});
+
+	return {
+		appliedCustomerEntitlementIds,
+		staleSkippedCount:
+			resetMutations.length - appliedCustomerEntitlementIds.size,
+	};
 };
