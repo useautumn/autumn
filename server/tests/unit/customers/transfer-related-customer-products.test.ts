@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+	type FullCustomer,
+} from "@autumn/shared";
 import {
 	findTransferCustomerProduct,
 	getTransferCustomerProducts,
@@ -20,15 +25,18 @@ const createCustomerProduct = ({
 	id,
 	productId = product.id,
 	internalEntityId = sourceEntity.internal_id,
+	status = CusProductStatus.Active,
 }: {
 	id: string;
 	productId?: string;
 	internalEntityId?: string | null;
+	status?: CusProductStatus;
 }) =>
 	({
 		id,
 		internal_entity_id: internalEntityId,
 		product_id: productId,
+		status,
 		product: {
 			id: productId,
 			group: product.group,
@@ -39,7 +47,11 @@ const createCustomerProduct = ({
 const fullCustomer = {
 	customer_products: [
 		createCustomerProduct({ id: "cus_prod_target" }),
-		createCustomerProduct({ id: "cus_prod_related" }),
+		createCustomerProduct({
+			id: "cus_prod_related",
+			status: CusProductStatus.Scheduled,
+		}),
+		createCustomerProduct({ id: "cus_prod_other_active" }),
 		createCustomerProduct({
 			id: "cus_prod_other_scope",
 			internalEntityId: "entity_internal_2",
@@ -59,7 +71,7 @@ describe("transfer customer product selection", () => {
 		expect(result?.id).toBe("cus_prod_related");
 	});
 
-	test("targets only the selected customer product when an id is provided", () => {
+	test("targets the selected product and its scheduled successors", () => {
 		const results = getTransferCustomerProducts({
 			fullCustomer,
 			fromEntity: sourceEntity,
@@ -69,6 +81,7 @@ describe("transfer customer product selection", () => {
 
 		expect(results.map((customerProduct) => customerProduct.id)).toEqual([
 			"cus_prod_target",
+			"cus_prod_related",
 		]);
 	});
 
@@ -82,6 +95,7 @@ describe("transfer customer product selection", () => {
 		expect(results.map((customerProduct) => customerProduct.id)).toEqual([
 			"cus_prod_target",
 			"cus_prod_related",
+			"cus_prod_other_active",
 		]);
 	});
 });
