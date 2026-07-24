@@ -28,11 +28,11 @@
   "peerDependencies": {},
   "devDependencies": {
     "@eslint/js": "^9.26.0",
-    "eslint": "^9.26.0",
+    "eslint": "^10.7.0",
     "globals": "^15.14.0",
     "tshy": "^3.3.2",
     "typescript": "~5.8.3",
-    "typescript-eslint": "^8.26.0"
+    "typescript-eslint": "^8.65.0"
   },
   "dependencies": {
     "zod": "^3.25.65 || ^4.0.0"
