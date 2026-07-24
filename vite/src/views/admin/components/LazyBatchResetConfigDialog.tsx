@@ -1,15 +1,13 @@
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	Skeleton,
 } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { EdgeConfigDialogBody } from "./EdgeConfigDialogBody";
 import { LazyBatchResetConfigForm } from "./LazyBatchResetConfigForm";
 import {
 	LAZY_BATCH_RESET_QUERY_KEY,
@@ -43,34 +41,18 @@ export const LazyBatchResetConfigDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{configQuery.isLoading ? (
-					<div className="flex flex-col gap-3">
-						<Skeleton className="h-20" />
-						<Skeleton className="h-16" />
-					</div>
-				) : configQuery.isError || !configQuery.data ? (
-					<div className="flex flex-col items-start gap-3 rounded-lg border border-border p-4">
-						<p role="alert" className="text-pretty text-sm text-destructive">
-							{getBackendErr(
-								configQuery.error,
-								"Failed to load lazy batch reset config",
-							)}
-						</p>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => configQuery.refetch()}
-						>
-							Retry
-						</Button>
-					</div>
-				) : (
-					<LazyBatchResetConfigForm
-						key={`${configQuery.data.enabled}:${configQuery.data.lastSuccessAt ?? "never"}`}
-						config={configQuery.data}
-						onClose={() => onOpenChange(false)}
-					/>
-				)}
+				<EdgeConfigDialogBody
+					query={configQuery}
+					errorMessage="Failed to load lazy batch reset config"
+				>
+					{(config) => (
+						<LazyBatchResetConfigForm
+							key={`${config.enabled}:${config.lastSuccessAt ?? "never"}`}
+							config={config}
+							onClose={() => onOpenChange(false)}
+						/>
+					)}
+				</EdgeConfigDialogBody>
 			</DialogContent>
 		</Dialog>
 	);
