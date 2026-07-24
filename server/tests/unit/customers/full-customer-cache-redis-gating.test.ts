@@ -14,6 +14,22 @@ const mockState = {
 	updateDetailsCalls: 0,
 };
 
+// Real modules captured BEFORE mocking so afterAll can restore them — module
+// mocks leak across test files (mock.restore does not undo them).
+const MOCKED_MODULE_PATHS = [
+	"@/internal/customers/CusService.js",
+	"@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js",
+	"@/internal/customers/cusUtils/fullCustomerCacheUtils/setCachedFullCustomer.js",
+	"@/internal/customers/cusUtils/getFullCustomerSchedule.js",
+	"@/internal/customers/actions/index.js",
+	"@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js",
+	"@/internal/customers/cusUtils/cusUtils.js",
+] as const;
+const realModules = new Map<string, Record<string, unknown>>();
+for (const path of MOCKED_MODULE_PATHS) {
+	realModules.set(path, { ...(await import(path)) });
+}
+
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
 		getFull: async () => {
@@ -180,5 +196,8 @@ describe("full customer cache Redis gating", () => {
 });
 
 afterAll(() => {
+	for (const [path, realModule] of realModules) {
+		mock.module(path, () => realModule);
+	}
 	mock.restore();
 });

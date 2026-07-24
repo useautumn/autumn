@@ -96,11 +96,15 @@ export const stripeWebhookAckMiddleware = async (
 
 	const waitUntil = getWaitUntil(c);
 	if (waitUntil) {
+		let webhookRun: Promise<unknown> | undefined;
 		try {
-			waitUntil(runWebhook());
+			webhookRun = runWebhook();
+			waitUntil(webhookRun);
 		} catch (error) {
-			deferredSpan.end();
 			ctx.logger.error(`Stripe webhook waitUntil failed: ${error}`, { error });
+			// The chain settles the claim + span itself once started; only a
+			// failure BEFORE start needs rescheduling so the event isn't lost.
+			if (!webhookRun) setImmediate(() => void runWebhook());
 		}
 	} else {
 		setImmediate(() => void runWebhook());
