@@ -14,10 +14,12 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	Skeleton,
 } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import {
@@ -241,20 +243,24 @@ export function RateLimitOverridesDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[calc(100dvh-2rem)] max-w-5xl grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden bg-card">
 				<DialogHeader>
-					<DialogTitle>Rate Limit Overrides</DialogTitle>
-					<DialogDescription>
-						Override per-org rate limits. The org key accepts either an org ID
-						or an org slug. Leaving an entry unset falls back to the hardcoded
-						default for that bucket.
+					<DialogTitle className="text-balance">
+						Rate Limit Overrides
+					</DialogTitle>
+					<DialogDescription className="text-pretty">
+						Raise or lower one org's request limits. Anything you don't override
+						keeps its default.
 					</DialogDescription>
 				</DialogHeader>
 
 				<ScrollArea className="min-h-0">
-					{loading ? (
-						<div className="py-8 text-center text-sm text-tertiary-foreground">
-							Loading...
+					{loading && (
+						<div className="grid grid-cols-[360px_1fr] gap-6 pr-3">
+							<Skeleton className="h-96" />
+							<Skeleton className="h-96" />
 						</div>
-					) : (
+					)}
+
+					{!loading && (
 						<div className="grid grid-cols-[360px_1fr] gap-6 pr-3">
 							<div className="flex flex-col gap-4">
 								<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
@@ -264,6 +270,7 @@ export function RateLimitOverridesDialog({
 								<div className="rounded-lg border border-border p-3">
 									<div className="mb-3 flex flex-col gap-2">
 										<Input
+											aria-label="Org ID or slug"
 											placeholder="Org ID or slug (e.g. mintlify)"
 											value={newOrgId}
 											onChange={(event) => setNewOrgId(event.target.value)}
@@ -290,7 +297,8 @@ export function RateLimitOverridesDialog({
 											</SelectContent>
 										</Select>
 										<Input
-											placeholder="Limit (e.g. 200)"
+											aria-label="Requests allowed per window"
+											placeholder="Requests per window (e.g. 200)"
 											type="number"
 											min={0}
 											value={newLimit}
@@ -315,7 +323,7 @@ export function RateLimitOverridesDialog({
 									<div className="flex flex-col gap-2 border-t border-border pt-3">
 										{orgEntryGroups.length === 0 ? (
 											<div className="text-xs italic text-tertiary-foreground">
-												No overrides — all orgs use the hardcoded defaults.
+												No overrides. Every org is on its default limits.
 											</div>
 										) : (
 											orgEntryGroups.map(({ orgId, entries }) => (
@@ -330,33 +338,33 @@ export function RateLimitOverridesDialog({
 									</div>
 								</div>
 
-								<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-									<div className="mb-2 flex items-center gap-2">
+								<div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
+									<div className="flex flex-wrap items-center gap-2">
 										<Badge
 											variant="muted"
-											className={
+											className={cn(
 												config.configHealthy
 													? "border-emerald-200 bg-emerald-50 text-emerald-700"
-													: "border-amber-200 bg-amber-50 text-amber-700"
-											}
+													: "border-amber-200 bg-amber-50 text-amber-700",
+											)}
 										>
 											{config.configHealthy
 												? "Config healthy"
 												: "Config unavailable"}
 										</Badge>
 										{config.lastSuccessAt && (
-											<span>
+											<span className="tabular-nums">
 												Last refresh:{" "}
 												{new Date(config.lastSuccessAt).toLocaleString()}
 											</span>
 										)}
 									</div>
-									<div>
+									<p className="text-pretty">
 										{config.configConfigured === false
-											? "S3 rate-limit overrides config is not configured."
+											? "S3 rate limit overrides config is not set up, so defaults apply."
 											: config.error ||
-												"Overrides take effect on the next request after polling refresh (10s)."}
-									</div>
+												"Saving takes effect within 10 seconds. If refresh fails, defaults apply."}
+									</p>
 								</div>
 							</div>
 
@@ -383,7 +391,9 @@ export function RateLimitOverridesDialog({
 									/>
 								</div>
 								{jsonError && (
-									<div className="text-xs text-red-500">{jsonError}</div>
+									<p role="alert" className="text-xs text-destructive">
+										{jsonError}
+									</p>
 								)}
 							</div>
 						</div>
