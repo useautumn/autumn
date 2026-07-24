@@ -32,7 +32,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getNextResetAt } from "@/utils/timeUtils.js";
 import {
 	fetchCustomerEntitlementRow,
@@ -212,6 +212,47 @@ test.concurrent(
 				intervalCount: 1,
 			}),
 		);
+		expect(row.next_reset_at!).toBeGreaterThan(Date.now());
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 basic: legacy entities blob with null id still resets")}`,
+	async () => {
+		const customerId = "batch-reset-v2-basic-legacy-entities";
+		const { ctx, customerEntitlement } = await initBasicScenario({
+			customerId,
+		});
+
+		// Real prod shape: an old bug wrote an entity under the key "null" with
+		// a null id. Hydration is unvalidated by design, so the row must flow
+		// through and reset instead of erroring at the head of the scan.
+		await ctx.db.execute(sql`
+			UPDATE ${customerEntitlements}
+			SET entities = ${JSON.stringify({
+				null: { id: null, balance: 50, adjustment: 0 },
+			})}::jsonb
+			WHERE id = ${customerEntitlement.id}
+		`);
+
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			pastTimeMs: Date.now() - 1000,
+		});
+
+		const result = await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement.id],
+		});
+
+		expect(result.resetMutations.length).toBe(1);
+		const row = await fetchCustomerEntitlementRow({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement.id,
+		});
+		expect(row.balance).toBe(INCLUDED_USAGE);
 		expect(row.next_reset_at!).toBeGreaterThan(Date.now());
 	},
 );

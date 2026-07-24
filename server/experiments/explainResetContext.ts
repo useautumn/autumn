@@ -38,7 +38,7 @@ const main = async () => {
 	}
 	console.log(`Scanned ${page.length} eligible customer entitlement IDs\n`);
 
-	// Full repo call (query + zod parse), cold then warm.
+	// Full repo call, cold then warm.
 	for (const run of ["cold", "warm"]) {
 		const start = performance.now();
 		const result = await getResetContextByIds({
@@ -47,14 +47,11 @@ const main = async () => {
 		});
 		const elapsed = performance.now() - start;
 		console.log(
-			`[hydrate][${run}] rows=${result.customerEntitlements.length}, missing=${result.missingIds.length}, invalid=${result.invalidIds.length}, wall-clock=${elapsed.toFixed(0)}ms`,
+			`[hydrate][${run}] rows=${result.customerEntitlements.length}, missing=${result.missingIds.length}, wall-clock=${elapsed.toFixed(0)}ms`,
 		);
-		for (const invalid of result.invalidIds.slice(0, 3)) {
-			console.log(`  invalid ${invalid.id}: ${invalid.error.slice(0, 200)}`);
-		}
 	}
 
-	// Query-only timing (no zod parse), to separate DB cost from parse cost.
+	// Query-only timing, to separate row-mapping cost from DB cost.
 	{
 		const start = performance.now();
 		const rows = await db.execute(

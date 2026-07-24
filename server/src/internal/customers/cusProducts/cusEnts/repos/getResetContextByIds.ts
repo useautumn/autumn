@@ -1,10 +1,6 @@
-import {
-	CustomerSchema,
-	FullCusEntWithFullCusProductSchema,
-	RELEVANT_STATUSES,
-} from "@autumn/shared";
+import type { Customer, FullCusEntWithFullCusProduct } from "@autumn/shared";
+import { RELEVANT_STATUSES } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resetCronQueryTag } from "@/internal/balances/batchReset/resetCronQueryTag.js";
 
@@ -12,17 +8,17 @@ import { resetCronQueryTag } from "@/internal/balances/batchReset/resetCronQuery
  * A customer entitlement hydrated with everything batch reset needs:
  * the FullCusEntWithFullCusProduct shape processReset consumes, plus the
  * owning customer for org/env checks, cache invalidation and redis routing.
+ *
+ * Hydration is intentionally UNVALIDATED (same trust in the DB shape as the
+ * V1 cron and lazy-reset paths): legacy quirks like an entity balance keyed
+ * "null" with a null id must still reset — a validation reject would leave
+ * such rows permanently unreset at the head of the scan.
  */
-export const ResetContextCustomerEntitlementSchema =
-	FullCusEntWithFullCusProductSchema.extend({
-		customer: CustomerSchema,
-		// Reset-scan denormalization flag; not yet part of the shared API model.
-		expired: z.boolean().nullable().optional(),
-	});
-
-export type ResetContextCustomerEntitlement = z.infer<
-	typeof ResetContextCustomerEntitlementSchema
->;
+export type ResetContextCustomerEntitlement = FullCusEntWithFullCusProduct & {
+	customer: Customer;
+	// Reset-scan denormalization flag; not yet part of the shared API model.
+	expired?: boolean | null;
+};
 
 /**
  * Single-statement hydration query for an explicit set of customer entitlement
@@ -98,8 +94,9 @@ export const buildResetContextByIdsQuery = ({
 
 /**
  * Hydrates the requested customer entitlement IDs. IDs can legitimately be
- * missing if their rows were deleted between scan and execution. Every
- * returned row is zod-parsed; validation failures are surfaced to the caller.
+ * missing if their rows were deleted between scan and execution. Rows are
+ * returned as-is — see ResetContextCustomerEntitlement for why hydration is
+ * unvalidated.
  */
 export const getResetContextByIds = async ({
 	db,
@@ -109,42 +106,22 @@ export const getResetContextByIds = async ({
 	customerEntitlementIds: string[];
 }): Promise<{
 	customerEntitlements: ResetContextCustomerEntitlement[];
-	invalidIds: { id: string; error: string }[];
 	missingIds: string[];
 }> => {
 	const uniqueIds = [...new Set(customerEntitlementIds)];
 	if (uniqueIds.length === 0) {
-		return {
-			customerEntitlements: [],
-			invalidIds: [],
-			missingIds: [],
-		};
+		return { customerEntitlements: [], missingIds: [] };
 	}
 
-	const rows = await db.execute<{ id: string; reset_context: unknown }>(
-		buildResetContextByIdsQuery({ customerEntitlementIds: uniqueIds }),
-	);
+	const rows = await db.execute<{
+		id: string;
+		reset_context: ResetContextCustomerEntitlement;
+	}>(buildResetContextByIdsQuery({ customerEntitlementIds: uniqueIds }));
 
-	const resultCustomerEntitlements: ResetContextCustomerEntitlement[] = [];
-	const invalidIds: { id: string; error: string }[] = [];
-	const returnedIds = new Set<string>();
-
-	for (const row of rows) {
-		returnedIds.add(row.id);
-		const parsed = ResetContextCustomerEntitlementSchema.safeParse(
-			row.reset_context,
-		);
-		if (!parsed.success) {
-			invalidIds.push({ id: row.id, error: parsed.error.message });
-			continue;
-		}
-
-		resultCustomerEntitlements.push(parsed.data);
-	}
+	const returnedIds = new Set(rows.map((row) => row.id));
 
 	return {
-		customerEntitlements: resultCustomerEntitlements,
-		invalidIds,
+		customerEntitlements: rows.map((row) => row.reset_context),
 		missingIds: uniqueIds.filter((id) => !returnedIds.has(id)),
 	};
 };

@@ -103,6 +103,7 @@ export const startPollingLoop = async ({
 	getSqsClientFn,
 	recreateSqsClientFn,
 	shouldPoll = () => true,
+	visibilityTimeoutSeconds = 30,
 }: {
 	db: DrizzleCli;
 	queueId: string;
@@ -111,6 +112,10 @@ export const startPollingLoop = async ({
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
 	shouldPoll?: () => boolean;
+	/** Raise for queues whose jobs legitimately run long (e.g. batch resets) —
+	 * a message redelivered mid-processing means two workers mutating the same
+	 * rows concurrently. */
+	visibilityTimeoutSeconds?: number;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -214,7 +219,7 @@ export const startPollingLoop = async ({
 			QueueUrl: queueUrl,
 			MaxNumberOfMessages: maxNumberOfMessages,
 			WaitTimeSeconds: 20,
-			VisibilityTimeout: 30,
+			VisibilityTimeout: visibilityTimeoutSeconds,
 			MessageSystemAttributeNames: ["SentTimestamp", "ApproximateReceiveCount"],
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
@@ -515,7 +520,12 @@ export const initWorkers = async ({
 	);
 	const pollingLoops = [];
 
-	for (const { queueId, queueUrl, defaultEnabled } of [
+	for (const {
+		queueId,
+		queueUrl,
+		defaultEnabled,
+		visibilityTimeoutSeconds,
+	} of [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
@@ -539,7 +549,13 @@ export const initWorkers = async ({
 		{
 			queueId: JOB_QUEUE_IDS.batchReset,
 			queueUrl: process.env.BATCH_RESET_SQS_QUEUE_URL,
-			defaultEnabled: false,
+			defaultEnabled: true,
+			// Reset batches can legitimately run long (Stripe anchor checks on
+			// month-edge dates); a short window would redeliver mid-processing and
+			// have two workers resetting the same rows concurrently. SQS maximum
+			// (12h) — failed resets are re-found by the next scan, so redelivery
+			// latency doesn't matter.
+			visibilityTimeoutSeconds: 43_200,
 		},
 	]) {
 		if (!queueUrl) continue;
@@ -555,6 +571,7 @@ export const initWorkers = async ({
 				shouldPoll: () =>
 					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
+				visibilityTimeoutSeconds,
 			}),
 		);
 	}

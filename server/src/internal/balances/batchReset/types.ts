@@ -17,7 +17,6 @@ export type BatchResetContext = {
 	 * worker context (org + features loaded once per group). */
 	groups: BatchResetGroup[];
 	missingIds: string[];
-	invalidCount: number;
 };
 
 /** Every non-resettable candidate receives exactly one verdict. */

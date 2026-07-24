@@ -66,19 +66,11 @@ export const setupBatchResetContext = async ({
 	logger: Logger;
 	payload: BatchResetCustomerEntitlementsV2Payload;
 }): Promise<BatchResetContext> => {
-	const { customerEntitlements, invalidIds, missingIds } =
+	const { customerEntitlements, missingIds } =
 		await customerEntitlementsRepo.getResetContextByIds({
 			db,
 			customerEntitlementIds: payload.customerEntitlementIds,
 		});
-
-	// Rows that failed schema validation stay unreset (and will be re-picked
-	// by the scan) — surface them loudly so the data can be fixed.
-	for (const invalid of invalidIds) {
-		logger.error(
-			`[batchReset] cusEnt ${invalid.id} failed validation: ${invalid.error}`,
-		);
-	}
 
 	const orgContexts = await fetchUniqueOrgContexts({
 		db,
@@ -105,6 +97,5 @@ export const setupBatchResetContext = async ({
 	return {
 		groups: [...groupsByOrgEnv.values()],
 		missingIds,
-		invalidCount: invalidIds.length,
 	};
 };

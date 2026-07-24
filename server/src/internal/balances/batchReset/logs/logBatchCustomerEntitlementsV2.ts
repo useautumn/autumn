@@ -31,7 +31,6 @@ export const logBatchCustomerEntitlementsV2 = ({
 		data: {
 			requested: payload.customerEntitlementIds.length,
 			missing: batchResetContext.missingIds.length,
-			invalid: batchResetContext.invalidCount,
 			orgs: batchResetContext.groups.length,
 			resetOrgs: classifiedBatchResetContext.resetGroups.length,
 			resettable: resettableCount,
