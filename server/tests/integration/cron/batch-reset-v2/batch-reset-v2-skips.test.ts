@@ -37,6 +37,7 @@ import { getResetEligibleCustomerEntitlementsPage } from "@/internal/customers/c
 import {
 	fetchCustomerEntitlementRow,
 	runBatchResetV2,
+	waitForPostgresBalance,
 } from "./batchResetV2TestUtils.js";
 
 const INCLUDED_USAGE = 100;
@@ -221,6 +222,43 @@ test.concurrent(
 		});
 		expect(rowAfter.balance).toBe(INCLUDED_USAGE);
 		expect(rowAfter.next_reset_at!).toBeGreaterThan(Date.now());
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 skips: scheduled product gets no_action verdict (lazy-path parity)")}`,
+	async () => {
+		const { ctx, customerEntitlement, pastTime } = await initPastDueScenario({
+			customerId: "batch-reset-v2-skip-scheduled",
+			ignorePastDue: false,
+			productStatus: CusProductStatus.Scheduled,
+		});
+		await waitForPostgresBalance({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement.id,
+			expectedBalance: INCLUDED_USAGE - 25,
+		});
+
+		const result = await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement.id],
+		});
+
+		expect(result.resetMutations.length).toBe(0);
+		expect(result.verdicts).toEqual([
+			expect.objectContaining({
+				kind: "no_action",
+				reason: "product_not_active",
+				customerEntitlementId: customerEntitlement.id,
+			}),
+		]);
+
+		const rowAfter = await fetchCustomerEntitlementRow({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement.id,
+		});
+		expect(rowAfter.balance).toBe(INCLUDED_USAGE - 25);
+		expect(rowAfter.next_reset_at).toBe(pastTime);
 	},
 );
 

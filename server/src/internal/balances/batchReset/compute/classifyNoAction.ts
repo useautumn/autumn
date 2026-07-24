@@ -37,5 +37,20 @@ export const classifyNoAction = ({
 		};
 	}
 
+	// Parity with the lazy path (and the V1 cron): only Active and gated
+	// PastDue products reset. Scheduled/Trialing/Paused/etc. must not have
+	// their balances topped up or next_reset_at advanced. (Expired products
+	// are handled earlier by classifyShouldExpire.)
+	if (
+		customerProduct.status !== CusProductStatus.Active &&
+		customerProduct.status !== CusProductStatus.PastDue
+	) {
+		return {
+			kind: "no_action",
+			customerEntitlementId: customerEntitlement.id,
+			reason: "product_not_active",
+		};
+	}
+
 	return null;
 };

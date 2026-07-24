@@ -27,7 +27,7 @@ export type ResetVerdict = {
 		| "clear_next_reset"
 		| "no_action";
 	customerEntitlementId: string;
-	reason?: "product_past_due" | "not_due";
+	reason?: "product_past_due" | "product_not_active" | "not_due";
 	unlimited?: boolean;
 };
 
