@@ -1,6 +1,5 @@
 import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
 import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
-import { throwOnSimulatedWebhookFailure } from "./common/simulateTestWebhookFailure.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
@@ -27,7 +26,7 @@ export const runStripeWebhookHandlers = async ({
 	const { db, org, env, stripeEvent } = ctx;
 	const event = stripeEvent;
 
-	await throwOnSimulatedWebhookFailure({ ctx });
+	// await throwOnSimulatedWebhookFailure({ ctx });
 
 	switch (event.type) {
 		case "customer.updated":
