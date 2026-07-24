@@ -1,6 +1,7 @@
 import {
 	type DeferredAutumnBillingPlanData,
 	MetadataType,
+	notNullish,
 } from "@autumn/shared";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/createStripeScheduleFromCheckout";
@@ -12,6 +13,8 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
+import { withBillingLock } from "@/internal/billing/v2/utils/billingLock/withBillingLock";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -34,12 +37,28 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
 	);
 
-	await withClaimedCheckoutSessionMetadata({
-		ctx,
-		checkoutContext,
-		metadata,
-		execute: () =>
-			executeCheckoutSessionMetadataV2({ ctx, checkoutContext, metadata }),
+	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+	const fullCustomer = deferredData?.billingContext?.fullCustomer;
+
+	await withBillingLock({
+		// Route locks key on whichever identifier the API caller passed — hold both.
+		lockKeys: [fullCustomer?.id, fullCustomer?.internal_id]
+			.filter(notNullish)
+			.map((customerId) =>
+				buildBillingLockKey({ orgId: ctx.org.id, env: ctx.env, customerId }),
+			),
+		fn: () =>
+			withClaimedCheckoutSessionMetadata({
+				ctx,
+				checkoutContext,
+				metadata,
+				execute: () =>
+					executeCheckoutSessionMetadataV2({
+						ctx,
+						checkoutContext,
+						metadata,
+					}),
+			}),
 	});
 };
 
