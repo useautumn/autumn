@@ -1,6 +1,7 @@
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
@@ -53,6 +54,8 @@ export const executeStripeSubscriptionOperation = async ({
 		? { default_tax_rates: [billingContext.taxRateId] }
 		: {};
 
+	const idempotencySource = billingContext.actionSource;
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
@@ -66,6 +69,7 @@ export const executeStripeSubscriptionOperation = async ({
 					{
 						billing_mode: { type: "flexible" },
 					},
+					autumnStripeRequestOptions({ source: idempotencySource }),
 				);
 			}
 
@@ -85,6 +89,7 @@ export const executeStripeSubscriptionOperation = async ({
 						payment_behavior: "error_if_incomplete",
 						expand: ["latest_invoice"],
 					},
+					autumnStripeRequestOptions({ source: idempotencySource }),
 				);
 			}
 
@@ -104,27 +109,32 @@ export const executeStripeSubscriptionOperation = async ({
 					...taxRateParams,
 					expand: ["latest_invoice"],
 				},
+				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
 		}
 		case "create":
-			return await stripeClient.subscriptions.create({
-				...subscriptionAction.params,
-				...invoiceModeParams,
-				...fallbackPaymentMethodParams,
-				...(autumnMeta && { metadata: autumnMeta }),
-				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
-				...taxRateParams,
+			return await stripeClient.subscriptions.create(
+				{
+					...subscriptionAction.params,
+					...invoiceModeParams,
+					...fallbackPaymentMethodParams,
+					...(autumnMeta && { metadata: autumnMeta }),
+					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
+					...taxRateParams,
 
-				billing_mode: { type: "flexible" },
+					billing_mode: { type: "flexible" },
 
-				expand: ["latest_invoice"],
-			});
+					expand: ["latest_invoice"],
+				},
+				autumnStripeRequestOptions({ source: idempotencySource }),
+			);
 		case "cancel":
 			return await stripeClient.subscriptions.cancel(
 				subscriptionAction.stripeSubscriptionId,
 				{
 					expand: ["latest_invoice"],
 				},
+				autumnStripeRequestOptions({ source: idempotencySource }),
 			);
 
 		default:

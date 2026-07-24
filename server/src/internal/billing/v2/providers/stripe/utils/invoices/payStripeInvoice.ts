@@ -1,5 +1,6 @@
 import { type PaymentFailureCode, tryCatch } from "@autumn/shared";
 import type Stripe from "stripe";
+import { autumnStripeRequestOptions } from "@/external/stripe/common/autumnStripeIdempotency";
 import { handleInvoicePaymentFailure } from "./handleInvoicePaymentFailure";
 
 // ============================================
@@ -60,9 +61,13 @@ export const payStripeInvoice = async ({
 
 	// 4. Attempt payment
 	const { data: paidInvoice, error } = await tryCatch(
-		stripeCli.invoices.pay(invoice.id, {
-			payment_method: paymentMethod.id,
-		}),
+		stripeCli.invoices.pay(
+			invoice.id,
+			{
+				payment_method: paymentMethod.id,
+			},
+			autumnStripeRequestOptions({ source: "invoice.pay" }),
+		),
 	);
 
 	if (error) {
