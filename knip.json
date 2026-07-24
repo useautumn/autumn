@@ -99,8 +99,7 @@
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		},
 		"packages/render": {
-			"entry": ["tests/**/*.ts"],
-			"project": ["src/**/*.ts", "tests/**/*.ts"]
+			"project": ["src/**/*.ts"]
 		},
 		"apps/testbench": {
 			"entry": ["**/*.ts"],
