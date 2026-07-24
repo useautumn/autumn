@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import { EventEmitter } from "node:events";
 
 class FakeRedis extends EventEmitter {
@@ -20,6 +20,12 @@ const fakeLogger = {
 	child: mock(() => fakeLogger),
 };
 
+// Real logger captured BEFORE mocking so afterAll can restore it — module
+// mocks leak across test files (mock.restore does not undo them).
+const realLogtailUtils = {
+	...(await import("@/external/logtail/logtailUtils.js")),
+};
+
 mock.module("@/external/redis/initRedis.js", () => ({
 	redis: fakeRedis,
 	hasRedisConfig: true,
@@ -33,6 +39,15 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 const { handleHealthCheck } = await import("@/honoUtils/handleHealthCheck.js");
+
+afterAll(() => {
+	mock.module("@/external/logtail/logtailUtils.js", () => realLogtailUtils);
+	// Redis modules stay mocked (importing the real ones would open live
+	// connections, which unit tests must never do) — but reset the fakes so
+	// later files see "not ready" fail-open instead of this file's end state.
+	fakeRedis.status = "wait";
+	fakeRedisV2.status = "wait";
+});
 
 const callHealthCheck = async () => {
 	const responses: { status: number; body: string }[] = [];

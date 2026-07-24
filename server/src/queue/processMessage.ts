@@ -6,9 +6,14 @@ import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import {
+	runStripeWebhookReplay,
+	StripeWebhookReplayInFlightError,
+} from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
+import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
@@ -66,6 +71,12 @@ export const shouldRetrySqsJobError = ({
 		case JobName.SyncCustomerDirty:
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		case JobName.StripeWebhookReplay:
+			return (
+				error instanceof StripeWebhookReplayInFlightError ||
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error })
+			);
 		default:
 			return false;
 	}
@@ -107,6 +118,16 @@ export const processMessage = async ({
 			workerLogger.info(
 				"Batch reset skipped because the edge config is disabled",
 			);
+			return;
+		}
+
+		// Reset-ID payload (no orgId/env): builds its own per-org contexts.
+		if (job.name === JobName.BatchResetCustomerEntitlementsV2) {
+			await batchResetCustomerEntitlementsV2({
+				db,
+				logger: workerLogger,
+				payload: job.data,
+			});
 			return;
 		}
 
@@ -158,6 +179,18 @@ export const processMessage = async ({
 				throw new Error("No context found for customer creation recovery job");
 			}
 			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StripeWebhookReplay) {
+			if (!ctx) {
+				workerLogger.error("No context found for stripe webhook replay job");
+				return;
+			}
+			await runStripeWebhookReplay({
 				ctx,
 				payload: job.data,
 			});

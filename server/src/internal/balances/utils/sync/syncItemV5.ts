@@ -5,7 +5,12 @@ import { claimSyncDirty, clearSyncClaim } from "./dirtyState/claimSyncDirty.js";
 import { syncItemV4 } from "./syncItemV4.js";
 
 /** How long a signal waits before draining, so concurrent writes coalesce. */
-const COALESCE_WINDOW_MS = 3_000;
+const COALESCE_WINDOW_MS =
+	process.env.NODE_ENV === "dev" ||
+	process.env.NODE_ENV === "test" ||
+	process.env.NODE_ENV === "development"
+		? 500
+		: 3_000;
 
 export interface SyncCustomerDirtyPayload {
 	customerId: string;
@@ -48,8 +53,7 @@ export const syncItemV5 = async ({
 	// so the window is enforced here — writes landing between the signal and
 	// this claim merge into the same drain. Must stay well under the worker's
 	// 25s message timeout.
-	const windowRemainingMs =
-		payload.timestamp + COALESCE_WINDOW_MS - Date.now();
+	const windowRemainingMs = payload.timestamp + COALESCE_WINDOW_MS - Date.now();
 	if (windowRemainingMs > 0) {
 		await new Promise((resolve) =>
 			setTimeout(resolve, Math.min(windowRemainingMs, COALESCE_WINDOW_MS)),

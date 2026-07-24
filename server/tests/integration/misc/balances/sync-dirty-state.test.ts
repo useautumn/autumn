@@ -131,9 +131,9 @@ test(`${chalk.yellowBright("dirty-state: claim merges accumulated selectors and 
 	]);
 	// Usage windows: LAST snapshot wins per feature
 	expect(claimed!.usageWindowUpdates).toHaveLength(1);
-	expect(
-		(claimed!.usageWindowUpdates[0] as any).usage_windows[0].usage,
-	).toBe(2);
+	expect((claimed!.usageWindowUpdates[0] as any).usage_windows[0].usage).toBe(
+		2,
+	);
 
 	// Dirty key is empty after claim
 	const { dirtyKey } = buildSyncDirtyKeys(scope);
@@ -218,9 +218,9 @@ test(`${chalk.yellowBright("dirty-state: older usage-window snapshot does not ov
 	});
 
 	const claimed = await claimSyncDirty({ redis, scope });
-	expect(
-		(claimed!.usageWindowUpdates[0] as any).usage_windows[0].usage,
-	).toBe(2);
+	expect((claimed!.usageWindowUpdates[0] as any).usage_windows[0].usage).toBe(
+		2,
+	);
 	await clearSyncClaim({ redis, scope, generation: claimed!.generation });
 });
 

@@ -1,5 +1,12 @@
 import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 
+// Capture real modules BEFORE mocking — mock.module leaks across test files
+// (mock.restore does not undo it), so afterAll re-mocks with the real exports.
+const realEdgeConfigRegistry = {
+	...(await import("@/internal/misc/edgeConfig/edgeConfigRegistry.js")),
+};
+const realQueueUtils = { ...(await import("@/queue/queueUtils.js")) };
+
 mock.module("@/internal/misc/edgeConfig/edgeConfigRegistry.js", () => ({
 	registerEdgeConfig: () => undefined,
 }));
@@ -47,5 +54,10 @@ describe("batch reset workflow edge config", () => {
 });
 
 afterAll(() => {
+	mock.module(
+		"@/internal/misc/edgeConfig/edgeConfigRegistry.js",
+		() => realEdgeConfigRegistry,
+	);
+	mock.module("@/queue/queueUtils.js", () => realQueueUtils);
 	mock.restore();
 });

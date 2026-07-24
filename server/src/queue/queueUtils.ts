@@ -11,6 +11,8 @@ import {
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { StripeWebhookReplayPayload } from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
+import type { BatchResetCustomerEntitlementsV2Payload } from "@/internal/balances/batchReset/types.js";
 import type { CustomerCreationRecoveryPayload } from "@/internal/customers/recovery/customerCreationRecoveryTypes.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -89,10 +91,12 @@ export interface Payloads {
 		timestamp: number;
 	};
 	[JobName.CustomerCreationRecovery]: CustomerCreationRecoveryPayload;
+	[JobName.StripeWebhookReplay]: StripeWebhookReplayPayload;
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
 	[JobName.BatchResetCusEnts]: BatchResetCusEntsPayload;
+	[JobName.BatchResetCustomerEntitlementsV2]: BatchResetCustomerEntitlementsV2Payload;
 	[JobName.AutoTopUp]: {
 		orgId: string;
 		env: AppEnv;
