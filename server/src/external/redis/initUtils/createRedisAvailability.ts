@@ -7,7 +7,6 @@ import { waitForRedisReady } from "./redisWarmup.js";
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
 const REDIS_PROBE_TIMEOUT_MS = 1_000;
-const REDIS_STALE_RECONNECT_MS = 5_000;
 const REDIS_FAILURES_TO_DEGRADE = 5;
 const REDIS_SUCCESSES_TO_RECOVER = 3;
 const REDIS_LOOP_LAG_INCONCLUSIVE_MS = 500;
@@ -68,7 +67,6 @@ export const createRedisAvailability = ({
 	let consecutiveFailures = 0;
 	let consecutiveSuccesses = 0;
 	let consecutiveInconclusive = 0;
-	let reconnectStartedAt: number | null = null;
 	let lastEventLoopLagMs = 0;
 
 	const loopLagSampler = ((): { begin: () => void; end: () => number } => {
@@ -172,19 +170,6 @@ export const createRedisAvailability = ({
 		return redis.status === "ready" && pong === "PONG";
 	};
 
-	const reconnectRedis = async () => {
-		try {
-			redis.disconnect(false);
-			await withTimeout({
-				timeoutMs: REDIS_PROBE_TIMEOUT_MS,
-				fn: () => redis.connect(),
-			});
-			reconnectStartedAt = null;
-		} catch {
-			// Let the next probe decide whether we recovered.
-		}
-	};
-
 	const classifyPing = (pingOk: boolean): ProbeOutcome => {
 		if (pingOk) return "available";
 		return redis.status === "ready"
@@ -208,19 +193,12 @@ export const createRedisAvailability = ({
 			failedWhileReady && consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
 
 		if (shouldReconnectReadyClient) {
-			await reconnectRedis();
-		} else if (redis.status !== "ready") {
-			if (redis.status === "connecting" || redis.status === "reconnecting") {
-				reconnectStartedAt ??= Date.now();
-				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
-					return "connection_down";
-				}
-			}
-
-			await reconnectRedis();
+			// Let ioredis schedule recovery so its socket state remains authoritative.
+			redis.disconnect(true);
+			return "connection_down";
 		}
 
-		return classifyPing(await pingRedisClient().catch(() => false));
+		return classifyPing(false);
 	};
 
 	const probeAndClassify = async (): Promise<ProbeClassification> => {

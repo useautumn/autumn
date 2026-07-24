@@ -1,4 +1,8 @@
+/** TDD regression: pre-fix the monitor cancels ioredis recovery after a provider-side close.
+ * Post-fix ioredis retains reconnect ownership and becomes ready when the endpoint returns. */
 import { describe, expect, test } from "bun:test";
+import net from "node:net";
+import { Redis } from "ioredis";
 import {
 	classifyProbe,
 	createRedisAvailability,
@@ -63,11 +67,96 @@ const waitUntil = async (check: () => boolean, timeoutMs: number) => {
 	throw new Error(`Condition not met within ${timeoutMs}ms`);
 };
 
+const startPingRedisServer = async ({ port = 0 }: { port?: number } = {}) => {
+	const sockets = new Set<net.Socket>();
+	const server = net.createServer((socket) => {
+		sockets.add(socket);
+		socket.on("close", () => sockets.delete(socket));
+		socket.on("data", () => socket.write("+PONG\r\n"));
+	});
+
+	await new Promise<void>((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(port, "127.0.0.1", () => {
+			server.off("error", reject);
+			resolve();
+		});
+	});
+
+	const address = server.address();
+	if (!address || typeof address === "string") {
+		throw new Error("Failed to bind Redis test server");
+	}
+
+	return {
+		port: address.port,
+		stop: async () => {
+			for (const socket of sockets) socket.destroy();
+			await new Promise<void>((resolve, reject) => {
+				server.close((error) => (error ? reject(error) : resolve()));
+			});
+		},
+	};
+};
+
 describe("createRedisAvailability", () => {
+	test("recovers after the provider closes an established connection", async () => {
+		let endpoint = await startPingRedisServer();
+		const port = endpoint.port;
+		const redis = new Redis({
+			host: "127.0.0.1",
+			port,
+			connectTimeout: 250,
+			commandTimeout: 250,
+			disableClientInfo: true,
+			enableReadyCheck: false,
+			retryStrategy: () => 250,
+		});
+		redis.on("error", () => {});
+
+		const disconnectCalls: Array<boolean | undefined> = [];
+		const disconnect = redis.disconnect.bind(redis);
+		redis.disconnect = ((reconnect?: boolean) => {
+			disconnectCalls.push(reconnect);
+			disconnect(reconnect);
+		}) as Redis["disconnect"];
+
+		const availability = createRedisAvailability({
+			redis,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+			getEventLoopLagMs: () => 0,
+		});
+
+		try {
+			await waitUntil(() => redis.status === "ready", 2_000);
+			await availability.prime();
+			expect(availability.shouldUseRedis()).toBe(true);
+
+			await endpoint.stop();
+			await waitUntil(() => redis.status === "reconnecting", 2_000);
+			await availability._runTickForTesting();
+
+			await new Promise((resolve) => setTimeout(resolve, 5_100));
+			await waitUntil(() => redis.status === "reconnecting", 2_000);
+			await availability._runTickForTesting();
+
+			endpoint = await startPingRedisServer({ port });
+			await waitUntil(() => redis.status === "ready", 2_000);
+
+			expect(disconnectCalls).not.toContain(false);
+			expect(await redis.ping()).toBe("PONG");
+		} finally {
+			redis.disconnect();
+			await endpoint.stop().catch(() => {});
+		}
+	}, 15_000);
+
 	test("does not start monitoring when Redis is not configured", () => {
 		const originalSetInterval = globalThis.setInterval;
 		let intervalCalls = 0;
-		globalThis.setInterval = ((handler: TimerHandler) => {
+		globalThis.setInterval = ((_handler: TimerHandler) => {
 			intervalCalls++;
 			return 0 as unknown as ReturnType<typeof setInterval>;
 		}) as unknown as typeof setInterval;
@@ -135,7 +224,7 @@ describe("createRedisAvailability", () => {
 		expect(availability.shouldUseRedis()).toBe(true);
 	});
 
-	test("reconnects after repeated probe failures while the client still reports ready", async () => {
+	test("asks ioredis to reconnect after repeated failures while still ready", async () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
 			redis: redis as never,
@@ -145,10 +234,11 @@ describe("createRedisAvailability", () => {
 		});
 
 		availability.startMonitor();
-		await waitUntil(() => redis.connectCalls > 0, 22_000);
+		await waitUntil(() => redis.disconnectCalls.includes(true), 22_000);
 		availability.stopMonitor();
 
-		expect(redis.disconnectCalls).toContain(false);
+		expect(redis.disconnectCalls).not.toContain(false);
+		expect(redis.connectCalls).toBe(0);
 	}, 30_000);
 });
 
