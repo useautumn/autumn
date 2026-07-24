@@ -1,4 +1,7 @@
-import type { AttachPreviewResponse } from "@autumn/shared";
+import type {
+	AttachPreviewResponse,
+	BillingPreviewResponse,
+} from "@autumn/shared";
 import { addMinutes, format, isAfter } from "date-fns";
 
 const FUTURE_START_TOLERANCE_MINUTES = 1;
@@ -67,7 +70,7 @@ export function buildAttachPreviewTotals({
 	startDate,
 	now = Date.now(),
 }: {
-	previewData: AttachPreviewResponse | null | undefined;
+	previewData: BillingPreviewResponse | null | undefined;
 	startDate: number | null;
 	now?: number;
 }): AttachPreviewTotal[] {

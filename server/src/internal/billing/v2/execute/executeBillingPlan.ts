@@ -4,10 +4,12 @@ import type {
 	BillingResult,
 	StripeBillingPlanResult,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { discardStripeCheckoutSession } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/discardStripeCheckoutSession";
 import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { workflows } from "@/queue/workflows";
@@ -17,11 +19,19 @@ export const executeBillingPlan = async ({
 	billingContext,
 	billingPlan,
 	checkoutLockParamsHash,
+	onAutumnCommit,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 	checkoutLockParamsHash?: string;
+	onAutumnCommit?: ({
+		ctx,
+		stripeBillingResult,
+	}: {
+		ctx: AutumnContext;
+		stripeBillingResult: StripeBillingPlanResult;
+	}) => Promise<void>;
 }): Promise<BillingResult> => {
 	const stripeBillingResult: StripeBillingPlanResult =
 		billingContext.skipBillingChanges
@@ -71,13 +81,44 @@ export const executeBillingPlan = async ({
 		};
 	}
 
-	await executeAutumnBillingPlan({
-		ctx,
-		autumnBillingPlan: billingPlan.autumn,
-		stripeInvoice: stripeBillingResult.stripeInvoice,
-		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
-		autumnInvoice: stripeBillingResult.autumnInvoice,
-	});
+	const executeAutumn = async (autumnCtx: AutumnContext) => {
+		await executeAutumnBillingPlan({
+			ctx: autumnCtx,
+			autumnBillingPlan: billingPlan.autumn,
+			stripeInvoice: stripeBillingResult.stripeInvoice,
+			stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
+			autumnInvoice: stripeBillingResult.autumnInvoice,
+		});
+		await onAutumnCommit?.({
+			ctx: autumnCtx,
+			stripeBillingResult,
+		});
+	};
+
+	try {
+		if (onAutumnCommit) {
+			await ctx.db.transaction(async (tx) => {
+				await executeAutumn({
+					...ctx,
+					db: tx as unknown as DrizzleCli,
+				});
+			});
+		} else {
+			await executeAutumn(ctx);
+		}
+	} catch (error) {
+		if (onAutumnCommit && stripeBillingResult.stripeCheckoutSession) {
+			await discardStripeCheckoutSession({
+				ctx,
+				session: stripeBillingResult.stripeCheckoutSession,
+			}).catch((cleanupError) => {
+				ctx.logger.error(
+					`Failed to discard checkout session after rollback: ${cleanupError}`,
+				);
+			});
+		}
+		throw error;
+	}
 
 	// Queue webhooks after Autumn billing plan is executed
 	await billingPlanToSendProductsUpdated({

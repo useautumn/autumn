@@ -11,6 +11,7 @@ export enum MetadataType {
 	CheckoutSessionV2 = "checkout_session_v2",
 	CheckoutSessionV2Processing = "checkout_session_v2_processing",
 	CheckoutSessionEnabledImmediately = "checkout_session_enabled_immediately",
+	CheckoutSessionEnabledImmediatelyProcessing = "checkout_session_enabled_immediately_processing",
 	SetupPaymentV2 = "setup_payment_v2",
 }
 

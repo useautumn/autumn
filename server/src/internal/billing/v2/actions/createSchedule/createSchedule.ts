@@ -4,7 +4,7 @@ import type {
 	CreateScheduleParamsV0,
 	CreateScheduleResponse,
 } from "@autumn/shared";
-import { CheckoutAction } from "@autumn/shared";
+import { CheckoutAction, InternalError, ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
@@ -12,6 +12,7 @@ import { createAutumnCheckout } from "@/internal/billing/v2/common/createAutumnC
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
+import { checkoutRepo, setCheckoutCache } from "@/internal/checkouts";
 import { hashJson } from "@/utils/hash/hashJson";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
 import {
@@ -21,6 +22,8 @@ import {
 } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
+
+const LONG_LIVED_CHECKOUT_EXPIRY_MS = ms.days(90);
 
 const buildPendingCreateScheduleResponse = ({
 	billingContext,
@@ -51,10 +54,12 @@ export const createSchedule = async ({
 	ctx,
 	params,
 	skipAutumnCheckout = false,
+	longLivedCheckoutId,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 	skipAutumnCheckout?: boolean;
+	longLivedCheckoutId?: string;
 }): Promise<CreateScheduleResponse> => {
 	const checkoutReservation = !skipAutumnCheckout
 		? await checkoutSessionLock.get({ ctx, customerId: params.customer_id })
@@ -64,6 +69,7 @@ export const createSchedule = async ({
 		ctx,
 		params,
 	});
+	billingContext.longLivedCheckoutId = longLivedCheckoutId;
 
 	await handleCreateScheduleErrors({
 		billingContext,
@@ -89,6 +95,79 @@ export const createSchedule = async ({
 	};
 
 	handleCreateScheduleBillingPlanErrors({ ctx, billingContext, billingPlan });
+
+	if (
+		params.long_lived_checkout &&
+		billingContext.checkoutMode === "stripe_checkout" &&
+		!skipAutumnCheckout
+	) {
+		const { billingResult: checkoutBillingResult } = await createAutumnCheckout(
+			{
+				ctx,
+				action: CheckoutAction.CreateSchedule,
+				params,
+				billingContext,
+				billingPlan,
+				expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
+			},
+		);
+
+		const checkout = checkoutBillingResult?.autumn?.checkout;
+		if (!checkoutBillingResult || !checkout) {
+			throw new Error("createAutumnCheckout did not return a billing result");
+		}
+
+		if (!billingContext.enablePlanImmediately) {
+			return buildPendingCreateScheduleResponse({
+				billingContext,
+				billingResult: checkoutBillingResult,
+			});
+		}
+
+		billingContext.longLivedCheckoutId = checkout.id;
+		const billingResult = await executeBillingPlan({
+			ctx,
+			billingContext,
+			billingPlan,
+			onAutumnCommit: async ({ ctx: autumnCtx, stripeBillingResult }) => {
+				const updatedCheckout = await checkoutRepo.update({
+					db: autumnCtx.db,
+					id: checkout.id,
+					updates: {
+						response: billingResultToResponse({
+							billingContext,
+							billingResult: { stripe: stripeBillingResult },
+						}),
+					},
+				});
+				if (!updatedCheckout) {
+					throw new InternalError({
+						message: `Checkout ${checkout.id} disappeared during execution`,
+					});
+				}
+			},
+		});
+		const updatedCheckout = await checkoutRepo.get({
+			db: ctx.db,
+			id: checkout.id,
+		});
+		if (updatedCheckout) {
+			await setCheckoutCache({
+				checkoutId: checkout.id,
+				data: updatedCheckout,
+			}).catch((error) => {
+				ctx.logger.warn(`Failed to cache checkout ${checkout.id}: ${error}`);
+			});
+		}
+
+		return buildPendingCreateScheduleResponse({
+			billingContext,
+			billingResult: {
+				...billingResult,
+				autumn: checkoutBillingResult.autumn,
+			},
+		});
+	}
 
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({

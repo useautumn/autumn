@@ -61,10 +61,23 @@ export function useCreateScheduleMutation({
 		};
 	};
 
+	const handleCheckoutSubmit = async ({
+		longLivedCheckout,
+	}: {
+		longLivedCheckout?: boolean;
+	} = {}) => {
+		const result = await mutation.mutateAsync({
+			longLivedCheckout,
+			skipDefaultSuccess: true,
+		});
+		return { paymentUrl: result.data?.payment_url };
+	};
+
 	return {
 		mutation,
 		handleSubmit,
 		handleInvoiceSubmit,
+		handleCheckoutSubmit,
 		isPending: mutation.isPending,
 	};
 }

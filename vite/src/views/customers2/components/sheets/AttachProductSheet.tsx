@@ -23,11 +23,11 @@ import {
 	getAttachPreviewLineItems,
 	isFutureStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { DisabledTooltipButton } from "@/components/forms/shared";
 import {
 	GenerateCheckoutStageWithPreview,
 	SchedulePlanStageWithPreview,
 } from "@/components/forms/shared/GenerateCheckoutStage";
-import { DisabledTooltipButton } from "@/components/forms/shared";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -436,6 +436,7 @@ function SendInvoiceContent() {
 
 function CheckoutSessionContent() {
 	const {
+		form,
 		product,
 		previewQuery,
 		isPending,
@@ -444,6 +445,14 @@ function CheckoutSessionContent() {
 	} = useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
+	const enablePlanImmediately = useStore(
+		form.store,
+		(state) => state.values.enablePlanImmediately,
+	);
+	const longLivedCheckout = useStore(
+		form.store,
+		(state) => state.values.longLivedCheckout,
+	);
 
 	return (
 		<GenerateCheckoutStageWithPreview
@@ -453,12 +462,20 @@ function CheckoutSessionContent() {
 			onSubmit={handleCheckoutAttach}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
 			showLongLivedCheckout={!additionalPlans.isMultiPlan}
+			enablePlanImmediately={enablePlanImmediately}
+			onEnablePlanImmediatelyChange={(value) =>
+				form.setFieldValue("enablePlanImmediately", value)
+			}
+			longLivedCheckout={longLivedCheckout}
+			onLongLivedCheckoutChange={(value) =>
+				form.setFieldValue("longLivedCheckout", value)
+			}
 		/>
 	);
 }
 
 function SchedulePlanContent() {
-	const { product, formValues, previewQuery, isPending, handleConfirm } =
+	const { form, product, formValues, previewQuery, isPending, handleConfirm } =
 		useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
@@ -471,6 +488,10 @@ function SchedulePlanContent() {
 			isPending={isPending}
 			onSubmit={handleConfirm}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
+			enablePlanImmediately={formValues.enablePlanImmediately}
+			onEnablePlanImmediatelyChange={(value) =>
+				form.setFieldValue("enablePlanImmediately", value)
+			}
 		/>
 	);
 }

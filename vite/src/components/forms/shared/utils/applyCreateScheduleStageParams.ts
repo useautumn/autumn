@@ -8,6 +8,7 @@ export function applyCreateScheduleStageParams({
 	finalizeInvoice,
 	invoiceTemplateId,
 	netTermsDays,
+	longLivedCheckout,
 }: BillingStageParams & {
 	requestBody: CreateScheduleParamsV0 | null;
 }): CreateScheduleParamsV0 | null {
@@ -28,10 +29,11 @@ export function applyCreateScheduleStageParams({
 		};
 	}
 
-	if (enableProductImmediately === undefined) return requestBody;
-
 	return {
 		...requestBody,
-		enable_plan_immediately: enableProductImmediately,
+		...(enableProductImmediately !== undefined
+			? { enable_plan_immediately: enableProductImmediately }
+			: {}),
+		...(longLivedCheckout ? { long_lived_checkout: true } : {}),
 	};
 }

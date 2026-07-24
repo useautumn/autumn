@@ -33,6 +33,7 @@ export async function attach({
 	params,
 	preview = false,
 	skipAutumnCheckout = false,
+	longLivedCheckoutId,
 
 	contextOverride,
 }: {
@@ -40,6 +41,7 @@ export async function attach({
 	params: AttachParamsV1;
 	preview?: boolean;
 	skipAutumnCheckout?: boolean;
+	longLivedCheckoutId?: string;
 
 	contextOverride?: BillingContextOverride;
 }): Promise<CreateAutumnCheckoutResult<AttachBillingContext>> {
@@ -66,6 +68,7 @@ export async function attach({
 		preview,
 		contextOverride,
 	});
+	billingContext.longLivedCheckoutId = longLivedCheckoutId;
 
 	logAttachContext({ ctx, billingContext });
 

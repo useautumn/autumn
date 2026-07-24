@@ -112,7 +112,7 @@ function getConfirmLabel({
 		| undefined;
 }): string {
 	if (!preview) return "Create Schedule";
-	if (preview.redirect_to_checkout) return "Copy Checkout URL";
+	if (preview.redirect_to_checkout) return "Generate Checkout URL";
 	if (preview.total <= 0) return "Create Schedule";
 	return "Charge Customer";
 }
@@ -204,7 +204,11 @@ export function CreateScheduleReviewContent() {
 					<Button
 						variant="primary"
 						className="w-full"
-						onClick={() => handleSubmit()}
+						onClick={() =>
+							preview?.redirect_to_checkout
+								? setSheet({ type: "create-schedule-checkout-session" })
+								: handleSubmit()
+						}
 						isLoading={isPending}
 						disabled={isDisabled}
 					>

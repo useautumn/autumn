@@ -4,29 +4,27 @@ import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import {
 	canResetScheduleBillingCycle,
 	hasMultipleImmediateSchedulePlans,
 } from "../createScheduleFormSchema";
-import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function CreateScheduleAdvancedSection() {
 	const { form, formValues, preview } = useCreateScheduleFormContext();
 	const { billingBehavior, resetBillingCycle, enablePlanImmediately, phases } =
 		formValues;
-	const isCheckoutRedirect = preview?.redirect_to_checkout === true;
 
-	// Keep form state in sync with what the user can see: when the toggle hides
-	// (no checkout flow), reset the value so a stale `true` doesn't leak into
-	// the request body.
 	useEffect(() => {
-		if (!isCheckoutRedirect && enablePlanImmediately) {
+		if (!preview?.redirect_to_checkout && enablePlanImmediately) {
 			form.setFieldValue("enablePlanImmediately", false);
 		}
-	}, [isCheckoutRedirect, enablePlanImmediately, form]);
+	}, [preview?.redirect_to_checkout, enablePlanImmediately, form]);
 
 	const isProrate = billingBehavior !== "none";
-	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({ phases });
+	const hasMultipleImmediatePlans = hasMultipleImmediateSchedulePlans({
+		phases,
+	});
 	const prorateDisabledReason = hasMultipleImmediatePlans
 		? "Not yet supported for multi attach"
 		: null;
@@ -80,20 +78,6 @@ export function CreateScheduleAdvancedSection() {
 					disabledReason: resetDisabledReason,
 				})}
 			/>
-			{isCheckoutRedirect && (
-				<ConfigRow
-					title="Enable Plan Immediately"
-					description="Activate the plan as soon as the checkout URL is generated, before the customer pays."
-					action={
-						<Switch
-							checked={enablePlanImmediately}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("enablePlanImmediately", !!checked)
-							}
-						/>
-					}
-				/>
-			)}
 		</AdvancedSection>
 	);
 }

@@ -104,6 +104,7 @@ export function CustomerSheets() {
 			case "create-schedule":
 			case "create-schedule-review":
 			case "create-schedule-send-invoice":
+			case "create-schedule-checkout-session":
 				return <CreateScheduleSheet />;
 			default:
 				return null;

@@ -7,6 +7,7 @@ import {
 	type SchedulePhase,
 } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { buildCreateScheduleRequestBody } from "@/components/forms/create-schedule/hooks/useCreateScheduleRequestBody";
+import { applyCreateScheduleStageParams } from "@/components/forms/shared/utils/applyCreateScheduleStageParams";
 import {
 	buildCustomize,
 	buildCustomizeBasePrice,
@@ -112,6 +113,34 @@ const schedulePhase = ({
 	startsAt,
 	persistedStartsAt,
 	plans: productIds.map(schedulePlan),
+});
+
+describe("applyCreateScheduleStageParams", () => {
+	const requestBody = buildCreateScheduleRequestBody({
+		customerId: "cus_1",
+		entityId: undefined,
+		phases: [schedulePhase({})],
+		products: [makeProduct({ id: "prod_1" })],
+		features,
+	});
+	if (!requestBody) throw new Error("Expected a valid create schedule body");
+
+	test("adds long-lived and immediate flags for checkout generation", () => {
+		const result = applyCreateScheduleStageParams({
+			requestBody,
+			enableProductImmediately: true,
+			longLivedCheckout: true,
+		});
+
+		expect(result?.enable_plan_immediately).toBe(true);
+		expect(result?.long_lived_checkout).toBe(true);
+	});
+
+	test("omits long-lived checkout unless explicitly enabled", () => {
+		const result = applyCreateScheduleStageParams({ requestBody });
+
+		expect(result?.long_lived_checkout).toBeUndefined();
+	});
 });
 
 // ---------------------------------------------------------------------------

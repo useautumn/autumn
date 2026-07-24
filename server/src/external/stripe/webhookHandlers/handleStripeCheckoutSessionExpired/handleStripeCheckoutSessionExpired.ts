@@ -1,17 +1,15 @@
-import { CusProductStatus } from "@autumn/shared";
+import {
+	CheckoutStatus,
+	CusProductStatus,
+	type DeferredAutumnBillingPlanData,
+	MetadataType,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { checkoutRepo } from "@/internal/checkouts";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 
-/**
- * checkout.session.expired handler — cleans up cusProduct rows that were
- * pre-inserted under the enable_plan_immediately flow but never got their
- * subscription linked because the customer abandoned the checkout.
- *
- * Identifies rows by stripe_checkout_session_id. Skips any row that has
- * subscription_ids populated (already completed via the success path).
- */
 export const handleStripeCheckoutSessionExpired = async ({
 	ctx,
 	event,
@@ -20,6 +18,10 @@ export const handleStripeCheckoutSessionExpired = async ({
 	event: Stripe.CheckoutSessionExpiredEvent;
 }) => {
 	const session = event.data.object;
+	const metadataId = session.metadata?.autumn_metadata_id;
+	const metadata = metadataId
+		? await MetadataService.get({ db: ctx.db, id: metadataId })
+		: null;
 
 	const cusProducts = await CusProductService.getByStripeCheckoutSessionId({
 		db: ctx.db,
@@ -28,13 +30,33 @@ export const handleStripeCheckoutSessionExpired = async ({
 		env: ctx.env,
 	});
 
+	const deferredData = metadata?.data as
+		| DeferredAutumnBillingPlanData
+		| undefined;
+	const longLivedCheckoutId = deferredData?.billingContext.longLivedCheckoutId;
+	const longLivedCheckout = longLivedCheckoutId
+		? await checkoutRepo.get({ db: ctx.db, id: longLivedCheckoutId })
+		: null;
+	const preserveProducts =
+		(metadata?.type === MetadataType.CheckoutSessionEnabledImmediately ||
+			metadata?.type ===
+				MetadataType.CheckoutSessionEnabledImmediatelyProcessing) &&
+		longLivedCheckout?.status === CheckoutStatus.Pending &&
+		longLivedCheckout.expires_at > Date.now() &&
+		cusProducts.length > 0;
+
+	if (preserveProducts) {
+		ctx.logger.info(
+			`[checkout.session.expired] Preserved ${cusProducts.length} cusProduct(s) for long-lived checkout ${longLivedCheckoutId}`,
+		);
+		return;
+	}
+
 	if (cusProducts.length === 0) {
-		// Try to clean up the metadata row even if no cusProduct ever got created
-		// (e.g. a deferred-flow checkout that expired).
-		if (session.metadata?.autumn_metadata_id) {
+		if (metadataId) {
 			await MetadataService.delete({
 				db: ctx.db,
-				id: session.metadata.autumn_metadata_id,
+				id: metadataId,
 			});
 		}
 		return;
@@ -43,7 +65,6 @@ export const handleStripeCheckoutSessionExpired = async ({
 	const now = Date.now();
 
 	for (const cusProduct of cusProducts) {
-		// If the success-path webhook already linked a subscription, leave it.
 		if ((cusProduct.subscription_ids ?? []).length > 0) continue;
 
 		await CusProductService.update({
@@ -56,10 +77,10 @@ export const handleStripeCheckoutSessionExpired = async ({
 		});
 	}
 
-	if (session.metadata?.autumn_metadata_id) {
+	if (metadataId) {
 		await MetadataService.delete({
 			db: ctx.db,
-			id: session.metadata.autumn_metadata_id,
+			id: metadataId,
 		});
 	}
 
