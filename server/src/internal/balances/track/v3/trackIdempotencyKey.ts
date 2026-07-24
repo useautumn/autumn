@@ -1,7 +1,7 @@
 import { ms } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-export const TRACK_V3_IDEMPOTENCY_TTL_MS = ms.days(2);
+export const TRACK_V3_IDEMPOTENCY_TTL_MS = ms.days(1);
 
 export const getTrackIdempotencyKey = ({ ctx }: { ctx: AutumnContext }) =>
 	`track:${ctx.id}`;
