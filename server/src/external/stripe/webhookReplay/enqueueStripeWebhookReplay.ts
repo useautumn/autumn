@@ -20,6 +20,7 @@ export const enqueueStripeWebhookReplay = async ({
 	const { org, env, stripeEvent, logger } = ctx;
 
 	const queueUrl = getStripeWebhookReplayQueueUrl();
+	if (!org || !stripeEvent) return false;
 	if (!queueUrl) {
 		logger.warn(
 			`[stripeWebhookReplay] STRIPE_WEBHOOK_SQS_QUEUE_URL not set, cannot queue failed event ${stripeEvent.id} for replay`,

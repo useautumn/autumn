@@ -11,6 +11,7 @@ export const JOB_QUEUE_IDS = {
 	track: "track",
 	trackAsync: "trackAsync",
 	customerCreationRecovery: "customerCreationRecovery",
+	stripeWebhookReplay: "stripeWebhookReplay",
 } as const;
 
 export const KNOWN_JOB_QUEUES = [
@@ -38,6 +39,13 @@ export const KNOWN_JOB_QUEUES = [
 		label: "Customer Creation Recovery Queue",
 		description:
 			"Serialized replay queue for transient customer get-or-create failures.",
+		defaultEnabled: false,
+	},
+	{
+		id: JOB_QUEUE_IDS.stripeWebhookReplay,
+		label: "Stripe Webhook Replay Queue",
+		description:
+			"Replay queue for failed early-acked Stripe webhooks. Enable to drain after recovery.",
 		defaultEnabled: false,
 	},
 ] as const;

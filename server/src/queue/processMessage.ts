@@ -6,6 +6,10 @@ import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
+import {
+	runStripeWebhookReplay,
+	StripeWebhookReplayInFlightError,
+} from "@/external/stripe/webhookReplay/runStripeWebhookReplay.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
@@ -66,6 +70,12 @@ export const shouldRetrySqsJobError = ({
 		case JobName.SyncCustomerDirty:
 		case JobName.Track:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
+		case JobName.StripeWebhookReplay:
+			return (
+				error instanceof StripeWebhookReplayInFlightError ||
+				isTransientDbError({ error }) ||
+				isTransientRedisError({ error })
+			);
 		default:
 			return false;
 	}
@@ -158,6 +168,18 @@ export const processMessage = async ({
 				throw new Error("No context found for customer creation recovery job");
 			}
 			await replayFailedCustomerCreation({
+				ctx,
+				payload: job.data,
+			});
+			return;
+		}
+
+		if (job.name === JobName.StripeWebhookReplay) {
+			if (!ctx) {
+				workerLogger.error("No context found for stripe webhook replay job");
+				return;
+			}
+			await runStripeWebhookReplay({
 				ctx,
 				payload: job.data,
 			});
