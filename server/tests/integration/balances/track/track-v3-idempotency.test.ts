@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
-import { ApiVersion, ApiVersionClass, ErrCode } from "@autumn/shared";
+import { ApiVersion, ApiVersionClass, ErrCode, ms } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { Decimal } from "decimal.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
-import { getRedisTrackFeatureIdempotencyKey } from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
+import {
+	getRedisTrackFeatureIdempotencyKey,
+	TRACK_V3_IDEMPOTENCY_TTL_MS,
+} from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { buildCustomerMeteredScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../db/full-subject/utils/withInsertedScenario.js";
 
@@ -67,6 +70,9 @@ test("track-v3 idempotency is atomic for single-feature requests", async () => {
 				featureId: TestFeature.Messages,
 			});
 			expect(await ctx.redisV2.exists(redisKey)).toBe(1);
+			const ttlMs = await ctx.redisV2.pttl(redisKey);
+			expect(ttlMs).toBeGreaterThan(ms.hours(23));
+			expect(ttlMs).toBeLessThanOrEqual(TRACK_V3_IDEMPOTENCY_TTL_MS);
 		},
 	});
 });
