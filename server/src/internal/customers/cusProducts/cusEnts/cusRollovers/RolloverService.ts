@@ -3,7 +3,7 @@ import {
 	type Rollover,
 	rollovers,
 } from "@autumn/shared";
-import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, or, type SQL, sql } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -31,17 +31,33 @@ export class RolloverService {
 		return data;
 	}
 
-	static async upsert({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
+	static async upsert({
+		db,
+		rows,
+		queryTag,
+	}: {
+		db: DrizzleCli;
+		rows: Rollover[];
+		queryTag?: SQL;
+	}) {
 		if (Array.isArray(rows) && rows.length === 0) return;
 
 		const updateColumns = buildConflictUpdateColumns(rollovers, ["id"]);
-		await db
+		const query = db
 			.insert(rollovers)
 			.values(rows as any)
 			.onConflictDoUpdate({
 				target: rollovers.id,
 				set: updateColumns,
 			});
+
+		if (queryTag) {
+			// getSQL() splices verbatim — embedding the builder itself would
+			// parenthesize it, and `(INSERT ...)` is invalid SQL.
+			await db.execute(sql`${query.getSQL()} ${queryTag}`);
+		} else {
+			await query;
+		}
 	}
 
 	// static async bulkUpdate({ db, rows }: { db: DrizzleCli; rows: Rollover[] }) {
@@ -150,8 +166,24 @@ export class RolloverService {
 		};
 	}
 
-	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+	static async delete({
+		db,
+		ids,
+		queryTag,
+	}: {
+		db: DrizzleCli;
+		ids: string[];
+		queryTag?: SQL;
+	}) {
 		if (ids.length === 0) return;
-		const data = await db.delete(rollovers).where(inArray(rollovers.id, ids));
+		const query = db.delete(rollovers).where(inArray(rollovers.id, ids));
+
+		if (queryTag) {
+			// getSQL() splices verbatim — embedding the builder itself would
+			// parenthesize it, and `(DELETE ...)` is invalid SQL.
+			await db.execute(sql`${query.getSQL()} ${queryTag}`);
+		} else {
+			await query;
+		}
 	}
 }
