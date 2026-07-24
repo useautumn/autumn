@@ -1,8 +1,34 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
-import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
+import {
+	ErrCode,
+	InternalError,
+	isFixedPrice,
+	notNullish,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { validatePromotionCodeMinimums } from "@/internal/billing/v2/providers/stripe/errors/validatePromotionCodeMinimums";
-import { discountAppliesToLineItem } from "@/internal/billing/v2/providers/stripe/utils/discounts/discountAppliesToLineItem";
+import { lineItemToStripeProductId } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemToStripeProductId";
+
+const getPlannedStripeProductIds = ({
+	billingPlan,
+}: {
+	billingPlan: BillingPlan;
+}) =>
+	new Set(
+		[
+			...(billingPlan.autumn.lineItems ?? []).map((lineItem) =>
+				lineItemToStripeProductId({ lineItem }),
+			),
+			...billingPlan.autumn.insertCustomerProducts.flatMap((customerProduct) =>
+				customerProduct.customer_prices.map(({ price }) =>
+					isFixedPrice(price)
+						? customerProduct.product.processor?.id
+						: price.config.stripe_product_id,
+				),
+			),
+		].filter(notNullish),
+	);
 
 const validatePromotionCodeProducts = ({
 	billingContext,
@@ -11,16 +37,16 @@ const validatePromotionCodeProducts = ({
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
 }) => {
-	const lineItems = billingPlan.autumn.lineItems ?? [];
-	if (lineItems.length === 0) return;
+	const plannedStripeProductIds = getPlannedStripeProductIds({ billingPlan });
+	if (plannedStripeProductIds.size === 0) return;
 
 	const invalidPromotionCode = billingContext.stripeDiscounts?.find(
 		(discount) =>
 			!discount.id &&
 			discount.promotionCodeId &&
 			discount.source.coupon.applies_to?.products?.length &&
-			!lineItems.some((lineItem) =>
-				discountAppliesToLineItem({ discount, lineItem }),
+			!discount.source.coupon.applies_to.products.some((productId) =>
+				plannedStripeProductIds.has(productId),
 			),
 	);
 	if (!invalidPromotionCode) return;
