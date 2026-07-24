@@ -60,3 +60,51 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("attach discount: rejects unrelated promo for scheduled attach")}`,
+	async () => {
+		const customerId = "scheduled-promo-applies-to-other-product";
+		const pro = products.pro({
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+		const premium = products.premium({
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+
+		const { autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const otherProduct = await ctx.stripeCli.products.create({
+			name: customerId,
+		});
+		const coupon = await createPercentCoupon({
+			stripeCli: ctx.stripeCli,
+			percentOff: 50,
+			appliesToProducts: [otherProduct.id],
+		});
+		const promotionCode = await createPromotionCode({
+			stripeCli: ctx.stripeCli,
+			coupon,
+			code: "OTHER_SCHEDULED_PRODUCT",
+		});
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: premium.id,
+			plan_schedule: "end_of_cycle",
+			discounts: [{ promotion_code: promotionCode.code }],
+		};
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "does not apply to any products in this order",
+			func: () => autumnV2_2.billing.previewAttach<AttachParamsV1Input>(params),
+		});
+	},
+);
