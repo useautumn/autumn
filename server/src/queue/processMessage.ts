@@ -13,6 +13,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
+import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset/batchResetCustomerEntitlementsV2.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
@@ -117,6 +118,16 @@ export const processMessage = async ({
 			workerLogger.info(
 				"Batch reset skipped because the edge config is disabled",
 			);
+			return;
+		}
+
+		// Reset-ID payload (no orgId/env): builds its own per-org contexts.
+		if (job.name === JobName.BatchResetCustomerEntitlementsV2) {
+			await batchResetCustomerEntitlementsV2({
+				db,
+				logger: workerLogger,
+				payload: job.data,
+			});
 			return;
 		}
 

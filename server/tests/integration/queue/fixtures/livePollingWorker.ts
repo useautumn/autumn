@@ -23,6 +23,7 @@ let client = createClient();
 
 await startPollingLoop({
 	db: {} as never,
+	queueId: "primary",
 	queueUrl,
 	isFifo: queueUrl.endsWith(".fifo"),
 	getSqsClientFn: () => client,

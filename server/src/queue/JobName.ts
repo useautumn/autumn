@@ -30,6 +30,8 @@ export enum JobName {
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",
 
 	BatchResetCusEnts = "batch-reset-cus-ents",
+	/** ID-based reset worker (balances/batchReset); supersedes BatchResetCusEnts */
+	BatchResetCustomerEntitlementsV2 = "batch-reset-customer-entitlements-v2",
 
 	AutoTopUp = "auto-top-up",
 	/** Stores invoice line items from Stripe to DB (async to allow extra API calls) */

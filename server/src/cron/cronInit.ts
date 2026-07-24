@@ -4,6 +4,7 @@ import { initDrizzle } from "../db/initDrizzle.js";
 import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { runDbProbes } from "../db/probes/runDbProbes.js";
 import { logger } from "../external/logtail/logtailUtils.js";
+import { runResetLoopV2 } from "../internal/balances/batchReset/runResetLoopV2.js";
 import { stopAllEdgeConfigPolling } from "../internal/misc/edgeConfig/edgeConfigRegistry.js";
 import {
 	describeSlotGate,
@@ -128,8 +129,14 @@ main();
 oneOffCleanupTick();
 dbProbesTick();
 
+// V1 and V2 loops are fully independent, each gated by its own edge config
+// (reset-job / reset-job-v2), so either can be flipped without a deploy.
 const resetLoopController = new AbortController();
 const resetLoopPromise = runResetLoop({
+	ctx,
+	signal: resetLoopController.signal,
+});
+const resetLoopV2Promise = runResetLoopV2({
 	ctx,
 	signal: resetLoopController.signal,
 });
@@ -143,7 +150,7 @@ const shutdown = async (signal: string) => {
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	stopAllEdgeConfigPolling();
-	await resetLoopPromise;
+	await Promise.all([resetLoopPromise, resetLoopV2Promise]);
 	await client.end();
 	await probeClient.end();
 	process.exit(0);

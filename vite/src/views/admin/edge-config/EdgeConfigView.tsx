@@ -436,7 +436,7 @@ export const EdgeConfigView = () => {
 
 	if (isPending || isLoading) {
 		return (
-			<div className="h-screen w-screen">
+			<div className="h-dvh w-screen">
 				<LoadingScreen />
 			</div>
 		);
@@ -494,7 +494,7 @@ export const EdgeConfigView = () => {
 						<h1 className="text-lg font-semibold text-foreground">
 							Rollout Edge Config
 						</h1>
-						<p className="text-sm text-muted-foreground">
+						<p className="text-pretty text-sm text-muted-foreground">
 							Manage global rollout percentages and per-org overrides.
 						</p>
 					</div>

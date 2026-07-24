@@ -2,13 +2,11 @@ import { Button } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { BatchResetEdgeConfigDialog } from "./BatchResetEdgeConfigDialog";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
-import { JobQueuesDialog } from "./JobQueuesDialog";
 import { MainRedisCacheDialog } from "./MainRedisCacheDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
@@ -16,7 +14,6 @@ import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
 import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
-import { ResetJobControls } from "./ResetJobControls";
 import { StripeSyncDialog } from "./StripeSyncDialog";
 
 type EdgeConfigSource = {
@@ -39,8 +36,6 @@ export function EdgeConfigTab() {
 	const [rateLimitOverridesOpen, setRateLimitOverridesOpen] = useState(false);
 	const [rateLimitRedisAllowlistOpen, setRateLimitRedisAllowlistOpen] =
 		useState(false);
-	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
-	const [batchResetOpen, setBatchResetOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 	const [mainRedisCacheOpen, setMainRedisCacheOpen] = useState(false);
@@ -227,54 +222,6 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
-							Job Queues
-						</div>
-						<div className="text-xs text-tertiary-foreground">
-							Pause or resume worker consumption for shared and dedicated SQS
-							queues.
-						</div>
-					</div>
-					<Button
-						variant="primary"
-						size="sm"
-						onClick={() => setJobQueuesOpen(true)}
-					>
-						Edit
-					</Button>
-				</div>
-
-				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
-					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Reset Job</div>
-						<div className="text-xs text-tertiary-foreground">
-							Continuously resets due balances in small, serialized batches.
-						</div>
-					</div>
-					<ResetJobControls />
-				</div>
-
-				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
-					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">
-							Batch Resets
-						</div>
-						<div className="text-pretty text-xs text-tertiary-foreground">
-							Stop list requests from enqueueing batch entitlement resets and
-							make workers skip already queued reset jobs.
-						</div>
-					</div>
-					<Button
-						variant="primary"
-						size="sm"
-						onClick={() => setBatchResetOpen(true)}
-					>
-						Edit
-					</Button>
-				</div>
-
-				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
-					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">
 							Stripe Sync
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -420,13 +367,6 @@ export function EdgeConfigTab() {
 			<RateLimitRedisAllowlistDialog
 				open={rateLimitRedisAllowlistOpen}
 				onOpenChange={setRateLimitRedisAllowlistOpen}
-			/>
-
-			<JobQueuesDialog open={jobQueuesOpen} onOpenChange={setJobQueuesOpen} />
-
-			<BatchResetEdgeConfigDialog
-				open={batchResetOpen}
-				onOpenChange={setBatchResetOpen}
 			/>
 
 			<StripeSyncDialog

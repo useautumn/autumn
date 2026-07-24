@@ -10,6 +10,7 @@ await import("./internal/misc/redisV2Cache/redisV2CacheStore.js");
 await import("./internal/misc/mainRedisCache/mainRedisCacheStore.js");
 await import("./internal/misc/cacheV2Ramp/cacheV2RampStore.js");
 await import("./internal/misc/resetJob/resetJobStore.js");
+await import("./internal/misc/resetJobV2/resetJobV2Store.js");
 const { logger } = await import("./external/logtail/logtailUtils.js");
 const { startAllEdgeConfigPolling } = await import(
 	"./internal/misc/edgeConfig/edgeConfigRegistry.js"
