@@ -262,3 +262,55 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	"rejects duplicate deletes that rollback would reinsert",
+	() => {
+		const customerProduct = makeFullCusProduct({ planId: "duplicate" });
+		const customerEntitlement = makeCustomerEntitlement({
+			featureId: "duplicate",
+		});
+		customerEntitlement.customer_product_id = customerProduct.id;
+		const replaceable = {
+			id: "rep_duplicate",
+			cus_ent_id: customerEntitlement.id,
+			created_at: 1_700_000_000_000,
+			from_entity_id: null,
+			delete_next_cycle: false,
+		};
+
+		const plans = [
+			makeAutumnBillingPlan({
+				deleteOne: customerProduct,
+				deletes: [customerProduct],
+			}),
+			makeAutumnBillingPlan({
+				patches: [
+					makePatch({
+						customerProduct,
+						deleteEntitlements: [customerEntitlement, customerEntitlement],
+					}),
+				],
+			}),
+			{
+				...makeAutumnBillingPlan(),
+				updateCustomerEntitlements: [
+					{
+						customerEntitlement,
+						deletedReplaceables: [replaceable],
+					},
+					{
+						customerEntitlement,
+						deletedReplaceables: [replaceable],
+					},
+				],
+			},
+		] satisfies AutumnBillingPlan[];
+
+		for (const autumnBillingPlan of plans) {
+			expect(() => computeRollbackPlan({ autumnBillingPlan })).toThrow(
+				"duplicate",
+			);
+		}
+	},
+);

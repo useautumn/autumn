@@ -1,7 +1,7 @@
 import { type AutumnBillingPlan, ErrCode, RecaseError } from "@autumn/shared";
+import { getCustomerProductPlanOperations } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
-const ROLLBACK_FIELDS = new Set<keyof AutumnBillingPlan>([
-	"customerId",
+const ROLLBACK_OPERATION_FIELDS = [
 	"insertCustomerProducts",
 	"updateCustomerProduct",
 	"updateCustomerProducts",
@@ -9,10 +9,19 @@ const ROLLBACK_FIELDS = new Set<keyof AutumnBillingPlan>([
 	"deleteCustomerProducts",
 	"patchCustomerProducts",
 	"updateCustomerEntitlements",
+] satisfies (keyof AutumnBillingPlan)[];
+
+const ROLLBACK_INERT_FIELDS = [
+	"customerId",
 	"updateByStripeScheduleId",
 	"lineItems",
 	"customLineItems",
 	"refundPlan",
+] satisfies (keyof AutumnBillingPlan)[];
+
+const ROLLBACK_FIELDS = new Set<keyof AutumnBillingPlan>([
+	...ROLLBACK_OPERATION_FIELDS,
+	...ROLLBACK_INERT_FIELDS,
 ]);
 
 const throwRollbackError = (message: string): never => {
@@ -25,6 +34,22 @@ const throwRollbackError = (message: string): never => {
 
 const isPopulated = (value: unknown) =>
 	value !== undefined && (!Array.isArray(value) || value.length > 0);
+
+const validateUniqueIds = ({
+	ids,
+	operation,
+}: {
+	ids: string[];
+	operation: string;
+}) => {
+	const seen = new Set<string>();
+	for (const id of ids) {
+		if (seen.has(id)) {
+			throwRollbackError(`duplicate ${operation}: ${id}`);
+		}
+		seen.add(id);
+	}
+};
 
 export const handleRollbackPlanErrors = ({
 	autumnBillingPlan,
@@ -43,4 +68,31 @@ export const handleRollbackPlanErrors = ({
 			`unsupported operations: ${unsupportedFields.join(", ")}`,
 		);
 	}
+
+	const { deletes, patches } = getCustomerProductPlanOperations({
+		autumnBillingPlan,
+	});
+	validateUniqueIds({
+		ids: deletes.map(({ id }) => id),
+		operation: "customer product delete",
+	});
+	validateUniqueIds({
+		ids: patches.flatMap(({ deleteCustomerEntitlements }) =>
+			deleteCustomerEntitlements.map(({ id }) => id),
+		),
+		operation: "customer entitlement delete",
+	});
+	validateUniqueIds({
+		ids: patches.flatMap(({ deleteCustomerPrices }) =>
+			deleteCustomerPrices.map(({ id }) => id),
+		),
+		operation: "customer price delete",
+	});
+	validateUniqueIds({
+		ids: (autumnBillingPlan.updateCustomerEntitlements ?? []).flatMap(
+			({ deletedReplaceables }) =>
+				(deletedReplaceables ?? []).map(({ id }) => id),
+		),
+		operation: "replaceable delete",
+	});
 };
