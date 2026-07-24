@@ -148,7 +148,7 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("batch-reset-v2 rollovers: max cap clamps the rolled-over balance")}`,
 	async () => {
-		const { ctx, customerEntitlement } = await initRolloverScenario({
+		const { ctx, customerEntitlement, pastTime } = await initRolloverScenario({
 			customerId: "batch-reset-v2-rollover-max-cap",
 			rolloverConfig: {
 				max: 50,
@@ -172,13 +172,15 @@ test.concurrent(
 			0,
 		);
 		expect(totalRollover).toBe(50);
+		// Clamping must not disturb the expiry of the surviving row.
+		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
 	},
 );
 
 test.concurrent(
 	`${chalk.yellowBright("batch-reset-v2 rollovers: max_percentage clamps to pct of allowance")}`,
 	async () => {
-		const { ctx, customerEntitlement } = await initRolloverScenario({
+		const { ctx, customerEntitlement, pastTime } = await initRolloverScenario({
 			customerId: "batch-reset-v2-rollover-percentage",
 			rolloverConfig: {
 				max_percentage: 50,
@@ -202,6 +204,36 @@ test.concurrent(
 			0,
 		);
 		expect(totalRollover).toBe(50);
+		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 rollovers: multi-month length sets expires_at length months out")}`,
+	async () => {
+		const { ctx, customerEntitlement, pastTime } = await initRolloverScenario({
+			customerId: "batch-reset-v2-rollover-length-3",
+			rolloverConfig: {
+				max: 50,
+				length: 3,
+				duration: RolloverExpiryDurationType.Month,
+			},
+			trackValue: 70, // remaining 30 < max 50
+		});
+
+		await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement.id],
+		});
+
+		const rolloverRows = await fetchRollovers({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement.id,
+		});
+		expect(rolloverRows.length).toBe(1);
+		expect(rolloverRows[0].balance).toBe(30);
+		// ── Contract: expiry = old next_reset_at + `length` months ──────
+		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 3).getTime());
 	},
 );
 
@@ -293,14 +325,101 @@ test.concurrent(
 			(total, rolloverRow) => total + (rolloverRow.balance ?? 0),
 			0,
 		);
-		expect(totalRollover).toBeLessThanOrEqual(ROLLOVER_MAX);
-		expect(totalRollover).toBeGreaterThan(0);
+		// ── Contract: EXACT clearing math — 300, 600→450, 750→450 ───────
+		expect(totalRollover).toBe(ROLLOVER_MAX);
+		expect(rolloverRows.length).toBeLessThanOrEqual(RESET_CYCLES);
+		// Forever duration: every surviving row keeps a null expiry.
+		for (const rolloverRow of rolloverRows) {
+			expect(rolloverRow.expires_at).toBeNull();
+		}
 
 		const row = await fetchCustomerEntitlementRow({
 			db: ctx.db,
 			customerEntitlementId: customerEntitlement!.id,
 		});
 		expect(row.balance).toBe(INCLUDED);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("batch-reset-v2 rollovers: max clearing trims the earliest-expiring row first")}`,
+	async () => {
+		const customerId = "batch-reset-v2-rollover-clearing-order";
+		const ROLLOVER_MAX = 150;
+
+		const plan = products.base({
+			id: "rollover-clearing-order",
+			items: [
+				items.monthlyMessagesWithRollover({
+					includedUsage: INCLUDED_USAGE,
+					rolloverConfig: {
+						max: ROLLOVER_MAX,
+						length: 1,
+						duration: RolloverExpiryDurationType.Month,
+					},
+				}),
+			],
+		});
+
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false }), s.products({ list: [plan] })],
+			actions: [s.attach({ productId: plan.id })],
+		});
+
+		const customerEntitlement = await findCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		expect(customerEntitlement).toBeDefined();
+
+		// Cycle 1: rolls the full 100 with expiry = firstPastTime + 1 month.
+		const firstPastTime = Date.now() - 1000;
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			pastTimeMs: firstPastTime,
+		});
+		await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement!.id],
+		});
+
+		// Cycle 2: rolls another 100 (total 200) → clearing must trim the 50
+		// excess from the EARLIEST-expiring row (cycle 1's), not cycle 2's.
+		const secondPastTime = Date.now() - 1000;
+		await expireCusEntForReset({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+			pastTimeMs: secondPastTime,
+		});
+		await runBatchResetV2({
+			ctx,
+			customerEntitlementIds: [customerEntitlement!.id],
+		});
+
+		const rolloverRows = await fetchRollovers({
+			db: ctx.db,
+			customerEntitlementId: customerEntitlement!.id,
+		});
+		expect(rolloverRows.length).toBe(2);
+
+		const sortedRows = [...rolloverRows].sort(
+			(a, b) => (a.expires_at ?? 0) - (b.expires_at ?? 0),
+		);
+		// ── Contract: earliest-expiring row trimmed to absorb the excess ─
+		expect(sortedRows[0].balance).toBe(50);
+		expect(sortedRows[0].expires_at).toBe(
+			addMonths(firstPastTime, 1).getTime(),
+		);
+		// ── Contract: newest row untouched, expiry from its own cycle ───
+		expect(sortedRows[1].balance).toBe(INCLUDED_USAGE);
+		expect(sortedRows[1].expires_at).toBe(
+			addMonths(secondPastTime, 1).getTime(),
+		);
 	},
 );
 
@@ -368,11 +487,12 @@ test.concurrent(
 			await new Promise((resolve) => setTimeout(resolve, 500));
 		}
 
+		const pastTime = Date.now() - 1000;
 		await expireCusEntForReset({
 			ctx,
 			customerId,
 			featureId: TestFeature.Messages,
-			pastTimeMs: Date.now() - 1000,
+			pastTimeMs: pastTime,
 		});
 		await runBatchResetV2({
 			ctx,
@@ -404,5 +524,7 @@ test.concurrent(
 			.map((entity) => entity.balance)
 			.sort((a, b) => a - b);
 		expect(rolloverBalances).toEqual([INCLUDED_USAGE - 40, INCLUDED_USAGE]);
+		// ── Contract: entity rollover carries the Month expiry too ──────
+		expect(rolloverRows[0].expires_at).toBe(addMonths(pastTime, 1).getTime());
 	},
 );
