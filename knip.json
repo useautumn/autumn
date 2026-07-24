@@ -64,7 +64,7 @@
 		},
 		"apps/docs": {
 			"entry": ["**/*"],
-			"project": ["**/*.{ts,js,jsx,css,mdx}"]
+			"project": ["**/*.{ts,js,jsx}"]
 		},
 		"apps/sdk-test": {
 			"entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "*.ts"],
