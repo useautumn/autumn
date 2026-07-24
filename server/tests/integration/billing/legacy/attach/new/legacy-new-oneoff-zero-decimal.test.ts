@@ -11,8 +11,8 @@
  */
 
 import { test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
+import { waitForCustomerInvoiceStatus } from "@tests/integration/billing/utils/waitForCustomerInvoiceStatus.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -59,7 +59,11 @@ test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major un
 		options: [{ feature_id: TestFeature.Messages, quantity: 1 }],
 	});
 
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const customer = await waitForCustomerInvoiceStatus({
+		autumn: autumnV1,
+		customerId,
+		status: "paid",
+	});
 
 	// 23,188 RWF prepaid item + 10 RWF product base price
 	await expectCustomerInvoiceCorrect({
