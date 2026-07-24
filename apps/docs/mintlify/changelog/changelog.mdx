@@ -4,6 +4,53 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="July 24th 2026">
+  ## License plan customization & propagation
+
+  License plans are now fully customizable per parent. You can override items, prices, and included seat counts on individual license plans, and Autumn rebases those overrides automatically when the base license plan changes — Stripe items and subscription lifecycle stay in sync. [`plans.update`](/api-reference/plans/updatePlan) accepts a `licenses[].customize` block per parent, and responses now include the effective `customize` payload on each license link. Pair with the new `include_license_parents` on [`plans.preview_update`](/api-reference/plans/updatePlan) to see downstream impacts before saving.
+
+  ## Overflow tracking on usage
+
+  [`track`](/api-reference/core/track), [`track_tokens`](/api-reference/core/trackTokens), and [`batchTrack`](/api-reference/core/batchTrack) now accept `overage_behavior: "overflow"`, deducting the full amount past zero and letting balances go negative. Usage-window caps are bypassed, but customer and entity spend limits still clamp — useful when you want to record real usage even when a customer has run out of included balance.
+
+  ## Writable auto top-up purchase counter
+
+  You can now reset or set the runtime purchase counter for [auto top-ups](/documentation/modelling-pricing/auto-top-ups) directly through [`customers.update`](/api-reference/customers/updateCustomer). Pass `billing_controls.auto_topups[].purchase_limit.count` to nudge or reset a customer's purchase count without waiting for the interval to roll over. `count > limit` is rejected with a clean 400, and active windows are preserved.
+
+  ## Automatic recovery for failed customer creation
+
+  Customer create and get-or-create requests that hit rate limits or transient database/Redis errors are now automatically queued and replayed in the background, with globally serialized concurrency and deterministic dedupe. Requests come back with their original semantics and Autumn records whether the replay created or fetched the customer — no more one-off failures during traffic spikes.
+
+  ## License transitions & drop handling
+
+  Plan transitions that drop a license pool (e.g. Team → Pro) now release the affected seat assignments and restore pool capacity in a single atomic step, unblocking migrations that previously errored out. The Attach Product preview warns you when a transition will remove licenses and lists the entities that will be released. Assignments carried across matched successor pools stay intact.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - License catalog updates preview and apply cleanly across parent-plan versioning and in-place edits, preserving existing customer license definitions — [#2288](https://github.com/useautumn/autumn/pull/2288)
+      - Row-batched license transitions preserve quantities, billing state, and Stripe linkage across immediate and scheduled changes — [#2306](https://github.com/useautumn/autumn/pull/2306)
+      - Child license plan propagation now previews linked parent-plan impacts and supports explicit propagation targets — [#2295](https://github.com/useautumn/autumn/pull/2295)
+      - Auto top-up thresholds can now be negative, so you can trigger top-ups once a balance dips below zero — [#2354](https://github.com/useautumn/autumn/pull/2354)
+      - New Stripe customers imported via `stripe_id` on customer creation now pull in eligible subscriptions and schedules automatically — [#2308](https://github.com/useautumn/autumn/pull/2308)
+      - Customer dashboard plan filters now resolve in milliseconds instead of tens of seconds on large orgs — [#2362](https://github.com/useautumn/autumn/pull/2362)
+    </Accordion>
+    <Accordion title="Fixes">
+      - Create-schedule previews now show unavoidable immediate charges (initial subscription lines, automatic tax, invoice credits) so previews match the final invoice — [#2329](https://github.com/useautumn/autumn/pull/2329)
+      - Attach form plan-schedule preview now defaults to **immediate** when unset, matching the UI — [#2345](https://github.com/useautumn/autumn/pull/2345)
+      - Long checkout URLs in the dashboard truncate from the end with a proper ellipsis instead of clipping both sides — [#2344](https://github.com/useautumn/autumn/pull/2344)
+      - License assignments are now treated as active only when their pool link has an active parent, so dropped and matched pool transitions behave consistently — [#2353](https://github.com/useautumn/autumn/pull/2353)
+      - Same-batch customized license plan previews no longer crash on virtual catalog products (empty prices/entitlements) — [#2343](https://github.com/useautumn/autumn/pull/2343)
+      - Catalog sync tolerates partial product collections, missing entitlements, and missing prices without erroring — [#2317](https://github.com/useautumn/autumn/pull/2317), [#2319](https://github.com/useautumn/autumn/pull/2319), [#2322](https://github.com/useautumn/autumn/pull/2322), [#2324](https://github.com/useautumn/autumn/pull/2324)
+      - Versioned license schedules and matched plan versions are preserved through Stripe sync — [#2297](https://github.com/useautumn/autumn/pull/2297), [#2284](https://github.com/useautumn/autumn/pull/2284)
+      - OAuth organization list deduplicates when a user has multiple memberships in the same org — [#2346](https://github.com/useautumn/autumn/pull/2346)
+      - MCP `getCurrentOrganization` schema now matches the `organization/me` API response, adding `id` and tolerating a missing `user` — [#2140](https://github.com/useautumn/autumn/pull/2140)
+      - Rate limits on establish routes now return a standard `429` (no `Retry-After`); check and track routes still fail open — [#2384](https://github.com/useautumn/autumn/pull/2384)
+      - Concurrent migrations no longer duplicate customer plans — [#2282](https://github.com/useautumn/autumn/pull/2282)
+      - Versioned license pricing renders correctly in the plan dashboard — [#2291](https://github.com/useautumn/autumn/pull/2291)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="July 17th 2026">
   ## Multi-currency pricing and billing
 
