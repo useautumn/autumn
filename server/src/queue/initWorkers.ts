@@ -480,6 +480,11 @@ export const initWorkers = async ({
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 			defaultEnabled: false,
 		},
+		{
+			queueId: JOB_QUEUE_IDS.stripeWebhookReplay,
+			queueUrl: process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL,
+			defaultEnabled: false,
+		},
 	]) {
 		if (!queueUrl) continue;
 

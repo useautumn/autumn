@@ -1,5 +1,35 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import { OAuth2Tokens } from "arctic";
+
+// Real modules captured BEFORE mocking so afterAll can restore them — module
+// mocks leak across test files (mock.restore does not undo them).
+const MOCKED_MODULE_PATHS = [
+	"@/db/initDrizzle.js",
+	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
+	"@/external/revenueCat/misc/revenuecatOAuth.js",
+	"@/external/revenueCat/misc/initRevenuecatCli.js",
+	"@/external/revenueCat/misc/RCMappingService.js",
+	"@/internal/orgs/OrgService.js",
+	"@/internal/orgs/orgUtils/clearOrgCache.js",
+] as const;
+const realModules = new Map<string, Record<string, unknown>>();
+for (const path of MOCKED_MODULE_PATHS) {
+	realModules.set(path, { ...(await import(path)) });
+}
+
+afterAll(() => {
+	for (const [path, realModule] of realModules) {
+		mock.module(path, () => realModule);
+	}
+});
 
 type MockOAuthState = {
 	organization_slug: string;

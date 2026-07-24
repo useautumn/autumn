@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { stripeWebhookEarlyAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookEarlyAckMiddleware";
+import { stripeWebhookAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookAckMiddleware";
 
 const waitForImmediate = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -19,11 +19,11 @@ const createApp = () => {
 	return app;
 };
 
-describe("stripeWebhookEarlyAckMiddleware", () => {
+describe("stripeWebhookAckMiddleware", () => {
 	test("uses executionCtx.waitUntil when the runtime provides it", async () => {
 		const waits: Promise<unknown>[] = [];
 		let processed = false;
-		const response = await stripeWebhookEarlyAckMiddleware(
+		const response = await stripeWebhookAckMiddleware(
 			{
 				get: () => ({
 					logger: { error: () => {} },
@@ -39,6 +39,7 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 			},
 		);
 
+		if (!response) throw new Error("expected an early-ack response");
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ received: true });
 		expect(waits).toHaveLength(1);
@@ -50,10 +51,12 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 	test("does not run downstream twice when waitUntil throws", async () => {
 		const errors: unknown[] = [];
 		let runs = 0;
-		const response = await stripeWebhookEarlyAckMiddleware(
+		const response = await stripeWebhookAckMiddleware(
 			{
 				get: () => ({
-					logger: { error: (_message: string, meta: unknown) => errors.push(meta) },
+					logger: {
+						error: (_message: string, meta: unknown) => errors.push(meta),
+					},
 				}),
 				json: (body: unknown, status: number) =>
 					new Response(JSON.stringify(body), { status }),
@@ -68,6 +71,7 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 			},
 		);
 
+		if (!response) throw new Error("expected an early-ack response");
 		expect(response.status).toBe(200);
 		await Promise.resolve();
 		await waitForImmediate();
@@ -83,15 +87,11 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 			resolveProcessing = resolve;
 		});
 
-		app.post(
-			"/webhook",
-			stripeWebhookEarlyAckMiddleware as never,
-			async (c) => {
-				await processing;
-				processed = true;
-				return c.json({ processed: true }, 200);
-			},
-		);
+		app.post("/webhook", stripeWebhookAckMiddleware as never, async (c) => {
+			await processing;
+			processed = true;
+			return c.json({ processed: true }, 200);
+		});
 
 		const response = await app.request("/webhook", { method: "POST" });
 
@@ -108,7 +108,7 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 		const app = createApp();
 		let started = false;
 
-		app.post("/webhook", stripeWebhookEarlyAckMiddleware as never, (c) => {
+		app.post("/webhook", stripeWebhookAckMiddleware as never, (c) => {
 			started = true;
 			return c.json({ processed: true }, 200);
 		});

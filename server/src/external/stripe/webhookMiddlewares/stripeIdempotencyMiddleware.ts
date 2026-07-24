@@ -1,16 +1,72 @@
+import type { AppEnv } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { redis } from "@/external/redis/initRedis";
-import type { StripeWebhookHonoEnv } from "./stripeWebhookContext";
+import { classifyStripeWebhookAckMode } from "./classifyStripeWebhookAckMode.js";
+import type { StripeWebhookHonoEnv } from "./stripeWebhookContext.js";
 
-const IDEMPOTENCY_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const PROCESSING_TTL_MS = 5 * 60 * 1000;
+const COMPLETED_TTL_MS = 24 * 60 * 60 * 1000;
+const PROCESSING = "processing";
+const COMPLETED = "completed";
+
+export const buildStripeWebhookEventKey = ({
+	orgId,
+	env,
+	eventId,
+}: {
+	orgId: string;
+	env: AppEnv;
+	eventId: string;
+}) => `stripe:webhook:${orgId}:${env}:${eventId}`;
+
+export type StripeWebhookClaimResult =
+	| "claimed"
+	| "duplicate_completed"
+	| "in_flight"
+	| "unavailable";
+
+/** Atomically claims an event for processing. "unavailable" = Redis down (fail open). */
+export const claimStripeWebhookEvent = async ({
+	eventKey,
+}: {
+	eventKey: string;
+}): Promise<StripeWebhookClaimResult> => {
+	if (redis.status !== "ready") return "unavailable";
+
+	const { data: result, error } = await tryCatch(
+		redis.set(eventKey, PROCESSING, "PX", PROCESSING_TTL_MS, "NX"),
+	);
+	if (error) return "unavailable";
+	if (result !== null) return "claimed";
+
+	const { data: existing } = await tryCatch(redis.get(eventKey));
+	return existing === COMPLETED ? "duplicate_completed" : "in_flight";
+};
+
+export const completeStripeWebhookEvent = async ({
+	eventKey,
+}: {
+	eventKey: string;
+}) => {
+	await tryCatch(redis.set(eventKey, COMPLETED, "PX", COMPLETED_TTL_MS));
+};
+
+export const releaseStripeWebhookEvent = async ({
+	eventKey,
+}: {
+	eventKey: string;
+}) => {
+	await tryCatch(redis.del(eventKey));
+};
 
 /**
- * Middleware that prevents duplicate processing of Stripe webhook events.
- * Uses Redis SET NX PX to atomically check and set event ID with expiry,
- * ensuring only one instance processes each event even with concurrent deliveries.
+ * Two-state webhook idempotency: a processing lock is taken before handling,
+ * but the event only counts as a duplicate once marked COMPLETED (via the
+ * ctx.webhookIdempotency hooks). A failed run deletes the lock so Stripe's
+ * retry of the same event id reprocesses instead of being dropped.
  *
- * If Redis is unavailable or errors, the middleware allows the request through (fail-open).
+ * If Redis is unavailable or errors, the request is allowed through (fail-open).
  */
 export const stripeIdempotencyMiddleware = async (
 	c: Context<StripeWebhookHonoEnv>,
@@ -19,44 +75,47 @@ export const stripeIdempotencyMiddleware = async (
 	const ctx = c.get("ctx");
 	const { stripeEvent, org, env } = ctx;
 
-	const idempotencyKey = `stripe:webhook:${org.id}:${env}:${stripeEvent.id}`;
+	ctx.webhookAckMode = classifyStripeWebhookAckMode({ event: stripeEvent });
 
-	// Fail open if Redis not ready
-	if (redis.status !== "ready") {
-		await next();
-		return;
-	}
+	const eventKey = buildStripeWebhookEventKey({
+		orgId: org.id,
+		env,
+		eventId: stripeEvent.id,
+	});
 
-	// Atomically try to set the key with expiry
-	// NX = only set if key doesn't exist, PX = set expiry in milliseconds
-	// Returns "OK" if set, null if key already exists
-	const { data: result, error } = await tryCatch(
-		redis.set(
-			idempotencyKey,
-			Date.now().toString(),
-			"PX",
-			IDEMPOTENCY_TTL_MS,
-			"NX",
-		),
-	);
+	const claim = await claimStripeWebhookEvent({ eventKey });
 
-	if (error) {
-		// Redis error - fail open
+	if (claim === "unavailable") {
+		// Redis down or errored - fail open
 		ctx.logger.warn(
-			`[stripeIdempotencyMiddleware] Redis error, allowing through: ${error}`,
+			`[stripeIdempotencyMiddleware] Redis unavailable, allowing through: ${stripeEvent.id}`,
 		);
 		await next();
 		return;
 	}
 
-	if (result === null) {
-		// Key already exists - duplicate event
+	if (
+		claim === "duplicate_completed" ||
+		(claim === "in_flight" && ctx.webhookAckMode === "early")
+	) {
 		ctx.logger.info(
 			`[stripeIdempotencyMiddleware] Duplicate webhook event detected, skipping: ${stripeEvent.id}`,
 		);
 		return c.json({ received: true, duplicate: true }, 200);
 	}
 
-	// Lock acquired ("OK"), proceed with processing
+	if (claim === "in_flight") {
+		// Sync event still in flight — 500 keeps Stripe retrying until completed.
+		ctx.logger.info(
+			`[stripeIdempotencyMiddleware] Sync webhook event in flight, asking Stripe to retry: ${stripeEvent.id}`,
+		);
+		return c.json({ received: false, in_flight: true }, 500);
+	}
+
+	ctx.webhookIdempotency = {
+		markCompleted: () => completeStripeWebhookEvent({ eventKey }),
+		release: () => releaseStripeWebhookEvent({ eventKey }),
+	};
+
 	await next();
 };

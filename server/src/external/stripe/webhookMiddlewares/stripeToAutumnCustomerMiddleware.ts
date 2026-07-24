@@ -55,30 +55,44 @@ const getAutumnCustomerId = async ({ ctx }: { ctx: StripeWebhookContext }) => {
 	ctx.fullCustomer = fullCustomer;
 };
 
-export const stripeToAutumnCustomerMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	const ctx = c.get("ctx") as StripeWebhookContext;
+/**
+ * Resolves the event's Autumn customer onto ctx.fullCustomer and returns a
+ * ctx routed to that customer's Redis. Shared by the webhook route and the
+ * SQS replay worker.
+ */
+export const attachStripeEventCustomer = async ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}): Promise<StripeWebhookContext> => {
 	await getAutumnCustomerId({ ctx });
 
 	const customerId =
 		ctx.fullCustomer?.id || ctx.fullCustomer?.internal_id || undefined;
 
-	if (customerId) {
-		const { ctx: routedCtx } = getCtxWithCustomerRedis({
-			ctx: {
-				...ctx,
-				customerId,
-				rolloutSnapshot: computeRolloutSnapshot({
-					orgId: ctx.org.id,
-					customerId,
-				}),
-			},
+	if (!customerId) return ctx;
+
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({
+		ctx: {
+			...ctx,
 			customerId,
-		});
-		c.set("ctx", routedCtx);
-	}
+			rolloutSnapshot: computeRolloutSnapshot({
+				orgId: ctx.org.id,
+				customerId,
+			}),
+		},
+		customerId,
+	});
+	return routedCtx;
+};
+
+export const stripeToAutumnCustomerMiddleware = async (
+	c: Context<StripeWebhookHonoEnv>,
+	next: Next,
+) => {
+	const ctx = c.get("ctx") as StripeWebhookContext;
+	const routedCtx = await attachStripeEventCustomer({ ctx });
+	if (routedCtx !== ctx) c.set("ctx", routedCtx);
 
 	await next();
 };

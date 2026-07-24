@@ -38,6 +38,9 @@ export enum JobName {
 	/** Stores deferred invoice line items (ProrateNextCycle pending items) before an invoice exists */
 	StoreDeferredInvoiceLineItems = "store-deferred-invoice-line-items",
 
+	/** Replays failed early-acked Stripe webhooks from the dedicated queue */
+	StripeWebhookReplay = "stripe-webhook-replay",
+
 	// Hatchet workflows
 	VerifyCacheConsistency = "verify-cache-consistency",
 

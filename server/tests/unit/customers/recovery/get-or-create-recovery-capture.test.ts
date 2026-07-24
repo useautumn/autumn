@@ -7,7 +7,7 @@
  * - Recovery workers can explicitly disable capture to prevent recursive enqueue.
  */
 
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -18,6 +18,28 @@ const transientError = Object.assign(new Error("connect timeout"), {
 const mockState = {
 	queueCalls: [] as Record<string, unknown>[],
 };
+
+// Real modules captured BEFORE mocking so afterAll can restore them — module
+// mocks leak across test files (mock.restore does not undo them).
+const MOCKED_MODULE_PATHS = [
+	"@/internal/misc/rollouts/fullSubjectRolloutUtils.js",
+	"@/internal/customers/cache/fullSubject/index.js",
+	"@/internal/customers/recovery/queueFailedCustomerCreation.js",
+	"@/internal/customers/actions/ensureStripeCustomerFromCustomerData.js",
+	"@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js",
+	"@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js",
+	"@/internal/customers/cusUtils/getApiCustomerV2/index.js",
+] as const;
+const realModules = new Map<string, Record<string, unknown>>();
+for (const path of MOCKED_MODULE_PATHS) {
+	realModules.set(path, { ...(await import(path)) });
+}
+
+afterAll(() => {
+	for (const [path, realModule] of realModules) {
+		mock.module(path, () => realModule);
+	}
+});
 
 mock.module("@/internal/misc/rollouts/fullSubjectRolloutUtils.js", () => ({
 	isFullSubjectRolloutEnabled: () => true,
