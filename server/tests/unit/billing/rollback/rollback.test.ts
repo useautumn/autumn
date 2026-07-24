@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { type AutumnBillingPlan, CusProductStatus } from "@autumn/shared";
-import { computeRollbackPlan } from "@/internal/billing/v2/actions/rollback/computeRollbackPlan";
+import { computeRollbackPlan } from "@/internal/billing/v2/actions/rollback/compute/computeRollbackPlan";
 import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import {
 	makeAutumnBillingPlan,
@@ -52,6 +52,10 @@ test.concurrent(
 				],
 			}),
 			updateCustomerEntitlements: [
+				{
+					customerEntitlement: oldEntitlement,
+					balanceChange: 10,
+				},
 				{
 					customerEntitlement: newEntitlement,
 					balanceChange: 20,
@@ -120,6 +124,66 @@ test.concurrent("restores only fields touched by absolute updates", () => {
 });
 
 test.concurrent(
+	"reverses entitlement deltas and replaceables in reverse order",
+	() => {
+		const customerProduct = makeFullCusProduct({ planId: "updated" });
+		const first = makeCustomerEntitlement({ featureId: "first" });
+		const second = makeCustomerEntitlement({ featureId: "second" });
+		first.customer_product_id = customerProduct.id;
+		second.customer_product_id = customerProduct.id;
+		const insertedReplaceable = {
+			id: "rep_inserted",
+			cus_ent_id: first.id,
+			created_at: 1_700_000_000_000,
+		};
+		const deletedReplaceable = {
+			...insertedReplaceable,
+			id: "rep_deleted",
+			from_entity_id: null,
+			delete_next_cycle: false,
+		};
+		const autumnBillingPlan: AutumnBillingPlan = {
+			...makeAutumnBillingPlan(),
+			updateCustomerEntitlements: [
+				{
+					customerEntitlement: first,
+					balanceChange: 20,
+					insertReplaceables: [insertedReplaceable],
+					deletedReplaceables: [deletedReplaceable],
+				},
+				{
+					customerEntitlement: second,
+					balanceChange: -5,
+				},
+			],
+		};
+
+		expect(
+			computeRollbackPlan({ autumnBillingPlan }).updateCustomerEntitlements,
+		).toEqual([
+			{
+				customerEntitlement: second,
+				balanceChange: 5,
+				insertReplaceables: undefined,
+				deletedReplaceables: undefined,
+			},
+			{
+				customerEntitlement: first,
+				balanceChange: -20,
+				insertReplaceables: [deletedReplaceable],
+				deletedReplaceables: [
+					{
+						...insertedReplaceable,
+						from_entity_id: null,
+						delete_next_cycle: false,
+					},
+				],
+			},
+		]);
+	},
+);
+
+test.concurrent(
 	"ignores inert fields and rejects populated unsupported operations",
 	() => {
 		const inertPlan = {
@@ -165,6 +229,36 @@ test.concurrent(
 		).toEqual({
 			customerId: "cus_test",
 			insertCustomerProducts: [],
+		});
+	},
+);
+
+test.concurrent(
+	"omits operations dominated by product lifecycle changes",
+	() => {
+		const customerProduct = makeFullCusProduct({ planId: "transient" });
+		const customerEntitlement = makeCustomerEntitlement({
+			featureId: "transient",
+		});
+		customerEntitlement.customer_product_id = customerProduct.id;
+		const autumnBillingPlan: AutumnBillingPlan = {
+			...makeAutumnBillingPlan({
+				inserts: [customerProduct],
+				updates: [
+					makeUpdate({
+						customerProduct,
+						updates: { status: CusProductStatus.Expired },
+					}),
+				],
+				patches: [makePatch({ customerProduct })],
+			}),
+			updateCustomerEntitlements: [{ customerEntitlement, balanceChange: 1 }],
+		};
+
+		expect(computeRollbackPlan({ autumnBillingPlan })).toEqual({
+			customerId: autumnBillingPlan.customerId,
+			insertCustomerProducts: [],
+			deleteCustomerProducts: [customerProduct],
 		});
 	},
 );

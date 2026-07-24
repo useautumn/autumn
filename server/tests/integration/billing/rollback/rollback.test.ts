@@ -1,4 +1,4 @@
-/** A committed Autumn plan rolls back once, invalidates cached state, and creates no Stripe resources. */
+/** A committed Autumn plan rolls back without touching Stripe. */
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5, AttachParamsV1 } from "@autumn/shared";
