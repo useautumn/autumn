@@ -26,6 +26,10 @@ import {
 	recordPollAttempt,
 } from "./blueGreen/blueGreenHeartbeat.js";
 import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
+import {
+	type QueueCapacityLease,
+	reserveQueueCapacity,
+} from "./concurrency/queueCapacityLease.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
@@ -44,24 +48,32 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
+const SQS_RECEIVE_BATCH_LIMIT = 10;
+const QUEUE_CAPACITY_RETRY_MS = 1_000;
 
 type JobOverride = {
-	ackUpfront: true;
+	ack: "upfront" | "always-after-processing";
 	dispatch: "inline" | "background";
 };
 
-// Jobs whose handlers can exceed the 30s VisibilityTimeout. ACK upfront to
-// avoid redelivery loops; dispatch mode controls whether the poll loop awaits
-// them (inline → preserves backpressure) or fires in background (→ no
-// backpressure; only safe for genuinely rare, low-volume jobs).
+// Jobs with nonstandard acknowledgement or dispatch behavior. Inline dispatch
+// preserves backpressure; background dispatch is only safe for rare,
+// low-volume work that does not use a shared concurrency limit.
 const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 	// Rare (handful per day); fire-and-forget is safe.
-	[JobName.Migration]: { ackUpfront: true, dispatch: "background" },
+	[JobName.Migration]: { ack: "upfront", dispatch: "background" },
 	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
 	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
 	// stays capped at the receive batch size.
 	[JobName.ClearCreditSystemCustomerCache]: {
-		ackUpfront: true,
+		ack: "upfront",
+		dispatch: "inline",
+	},
+	// A failed reset remains overdue and will be rediscovered by the next scan.
+	// Keep it in flight until processing finishes so queue depth and concurrency
+	// remain accurate, then ACK failures too so SQS cannot retry indefinitely.
+	[JobName.BatchResetCustomerEntitlementsV2]: {
+		ack: "always-after-processing",
 		dispatch: "inline",
 	},
 };
@@ -85,18 +97,25 @@ const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 
 export const startPollingLoop = async ({
 	db,
+	queueId,
 	queueUrl,
 	isFifo,
 	getSqsClientFn,
 	recreateSqsClientFn,
 	shouldPoll = () => true,
+	visibilityTimeoutSeconds = 30,
 }: {
 	db: DrizzleCli;
+	queueId: string;
 	queueUrl: string;
 	isFifo: boolean;
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
 	shouldPoll?: () => boolean;
+	/** Raise for queues whose jobs legitimately run long (e.g. batch resets) —
+	 * a message redelivered mid-processing means two workers mutating the same
+	 * rows concurrently. */
+	visibilityTimeoutSeconds?: number;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -191,12 +210,16 @@ export const startPollingLoop = async ({
 		lastStatsTime = Date.now();
 	};
 
-	const createReceiveCommand = () =>
+	const createReceiveCommand = ({
+		maxNumberOfMessages,
+	}: {
+		maxNumberOfMessages: number;
+	}) =>
 		new ReceiveMessageCommand({
 			QueueUrl: queueUrl,
-			MaxNumberOfMessages: 10,
+			MaxNumberOfMessages: maxNumberOfMessages,
 			WaitTimeSeconds: 20,
-			VisibilityTimeout: 30,
+			VisibilityTimeout: visibilityTimeoutSeconds,
 			MessageSystemAttributeNames: ["SentTimestamp", "ApproximateReceiveCount"],
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
@@ -233,24 +256,34 @@ export const startPollingLoop = async ({
 		const job: SqsJob = JSON.parse(message.Body);
 		const override = getJobOverride(job.name);
 
-		if (override?.ackUpfront) {
+		if (override?.ack === "upfront") {
 			await ackMessageUpfront({ sqs, message, job });
 		}
 
-		if (override) {
-			await processMessage({ message, db });
-		} else {
-			await withTimeout({
-				timeoutMs: MESSAGE_TIMEOUT_MS,
-				timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
-				fn: () => processMessage({ message, db }),
-			});
+		try {
+			if (override) {
+				await processMessage({ message, db });
+			} else {
+				await withTimeout({
+					timeoutMs: MESSAGE_TIMEOUT_MS,
+					timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+					fn: () => processMessage({ message, db }),
+				});
+			}
+		} catch (error) {
+			if (override?.ack !== "always-after-processing") throw error;
+
+			console.error(
+				`${prefix} ${job.name} failed; ACKing after processing so the next scan can retry it:`,
+				error instanceof Error ? error.message : error,
+			);
+			Sentry.captureException(error);
 		}
 
 		messagesProcessed++;
 		totalMessagesProcessed++;
 
-		if (message.ReceiptHandle && !override?.ackUpfront) {
+		if (message.ReceiptHandle && override?.ack !== "upfront") {
 			return { id: message.MessageId!, receiptHandle: message.ReceiptHandle };
 		}
 		return null;
@@ -333,6 +366,7 @@ export const startPollingLoop = async ({
 	let sqs = getSqsClientFn();
 
 	while (isRunning) {
+		let capacityLease: QueueCapacityLease | null = null;
 		try {
 			if (!shouldPoll()) {
 				consecutiveEmptyPolls = 0;
@@ -340,23 +374,43 @@ export const startPollingLoop = async ({
 				continue;
 			}
 
-			recordPollAttempt({ queueUrl });
-			const response = await sqs.send(createReceiveCommand(), {
-				abortSignal: abortController.signal,
+			capacityLease = await reserveQueueCapacity({
+				queueId,
+				requested: SQS_RECEIVE_BATCH_LIMIT,
 			});
+			if (!capacityLease) {
+				await new Promise((resolve) =>
+					setTimeout(resolve, QUEUE_CAPACITY_RETRY_MS),
+				);
+				continue;
+			}
+
+			recordPollAttempt({ queueUrl });
+			const response = await sqs.send(
+				createReceiveCommand({
+					maxNumberOfMessages: capacityLease.capacity,
+				}),
+				{
+					abortSignal: abortController.signal,
+				},
+			);
 
 			const messages = response.Messages ?? [];
+			const leasedMessages = await capacityLease.assign(messages);
 
 			if (messages.length > 0) {
 				recordMessagesReceived({ queueUrl, count: messages.length });
 				consecutiveEmptyPolls = 0;
 
-				const regularMessages: Message[] = [];
-				for (const message of messages) {
+				const regularMessages: {
+					message: Message;
+					releaseCapacity: () => Promise<void>;
+				}[] = [];
+				for (const { item: message, release } of leasedMessages) {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
 					const override = getJobOverride(job.name);
-					if (override?.dispatch === "background") {
+					if (override?.dispatch === "background" && !capacityLease.isLimited) {
 						activeMigrationJobs++;
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
@@ -368,13 +422,18 @@ export const startPollingLoop = async ({
 							})
 							.finally(() => activeMigrationJobs--);
 					} else {
-						regularMessages.push(message);
+						regularMessages.push({
+							message,
+							releaseCapacity: release,
+						});
 					}
 				}
 
 				const results = await Promise.allSettled(
-					regularMessages.map((message) =>
-						handleSingleMessage({ sqs, message, db }),
+					regularMessages.map(({ message, releaseCapacity }) =>
+						handleSingleMessage({ sqs, message, db }).finally(() =>
+							releaseCapacity(),
+						),
 					),
 				);
 
@@ -404,6 +463,8 @@ export const startPollingLoop = async ({
 			const newClient = await handlePollingError(error);
 			if (newClient) sqs = newClient;
 			else if ((error as { name?: string }).name === "AbortError") break;
+		} finally {
+			await capacityLease?.release();
 		}
 	}
 
@@ -459,7 +520,12 @@ export const initWorkers = async ({
 	);
 	const pollingLoops = [];
 
-	for (const { queueId, queueUrl, defaultEnabled } of [
+	for (const {
+		queueId,
+		queueUrl,
+		defaultEnabled,
+		visibilityTimeoutSeconds,
+	} of [
 		{
 			queueId: JOB_QUEUE_IDS.primary,
 			queueUrl: QUEUE_URL,
@@ -480,12 +546,24 @@ export const initWorkers = async ({
 			queueUrl: process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 			defaultEnabled: false,
 		},
+		{
+			queueId: JOB_QUEUE_IDS.batchReset,
+			queueUrl: process.env.BATCH_RESET_SQS_QUEUE_URL,
+			defaultEnabled: true,
+			// Reset batches can legitimately run long (Stripe anchor checks on
+			// month-edge dates); a short window would redeliver mid-processing and
+			// have two workers resetting the same rows concurrently. SQS maximum
+			// (12h) — failed resets are re-found by the next scan, so redelivery
+			// latency doesn't matter.
+			visibilityTimeoutSeconds: 43_200,
+		},
 	]) {
 		if (!queueUrl) continue;
 
 		pollingLoops.push(
 			startPollingLoop({
 				db,
+				queueId,
 				queueUrl,
 				isFifo: queueUrl.endsWith(".fifo"),
 				getSqsClientFn: () => getSqsClient({ queueUrl }),
@@ -493,6 +571,7 @@ export const initWorkers = async ({
 				shouldPoll: () =>
 					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
+				visibilityTimeoutSeconds,
 			}),
 		);
 	}
