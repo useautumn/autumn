@@ -21,6 +21,9 @@ export const ApiPlanItemV0Schema = z
 
 		granted_balance: z.number(),
 		unlimited: z.boolean(),
+		pooled: z.boolean().default(false).optional().meta({
+			internal: true,
+		}),
 
 		reset: z
 			.object({
