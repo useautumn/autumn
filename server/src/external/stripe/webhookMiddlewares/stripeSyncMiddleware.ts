@@ -8,16 +8,15 @@ import type {
 } from "./stripeWebhookContext.js";
 
 /**
- * Post-handler middleware that syncs Stripe events to the sync DB.
- * Fire-and-forget -- errors are caught and logged, never propagated.
+ * Mirrors a Stripe event into the sync DB. Fire-and-forget — errors are
+ * caught and logged, never propagated. Shared by the webhook route and the
+ * SQS replay worker.
  */
-export const stripeSyncMiddleware = async (
-	c: Context<StripeWebhookHonoEnv>,
-	next: Next,
-) => {
-	await next();
-
-	const ctx = c.get("ctx") as StripeWebhookContext;
+export const syncStripeEventToSyncDb = ({
+	ctx,
+}: {
+	ctx: StripeWebhookContext;
+}) => {
 	const { logger, org, stripeEvent } = ctx;
 
 	if (!org || !stripeEvent) return;
@@ -55,4 +54,17 @@ export const stripeSyncMiddleware = async (
 	} catch (error) {
 		logger.error(`Stripe sync middleware error: ${error}`);
 	}
+};
+
+/**
+ * Post-handler middleware that syncs Stripe events to the sync DB.
+ */
+export const stripeSyncMiddleware = async (
+	c: Context<StripeWebhookHonoEnv>,
+	next: Next,
+) => {
+	await next();
+
+	const ctx = c.get("ctx") as StripeWebhookContext;
+	syncStripeEventToSyncDb({ ctx });
 };

@@ -547,6 +547,11 @@ export const initWorkers = async ({
 			defaultEnabled: false,
 		},
 		{
+			queueId: JOB_QUEUE_IDS.stripeWebhookReplay,
+			queueUrl: process.env.STRIPE_WEBHOOK_SQS_QUEUE_URL,
+			defaultEnabled: false,
+		},
+		{
 			queueId: JOB_QUEUE_IDS.batchReset,
 			queueUrl: process.env.BATCH_RESET_SQS_QUEUE_URL,
 			defaultEnabled: true,
