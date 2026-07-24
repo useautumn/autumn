@@ -1,5 +1,6 @@
 import type { CustomerLicenseTransition } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { batchTransition } from "@/internal/billing/v2/actions/batchTransition/batchTransition";
 import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
@@ -51,18 +52,24 @@ export const executeCustomerLicenseTransitions = async ({
 			});
 		}
 
-		await batchTransitionTask.trigger(
-			{
-				orgId: ctx.org.id,
-				env: ctx.env,
-				customerId: ctx.customerId,
-				transition,
-				executionScope: {
-					batchTransitionId: generateId("batch_transition"),
-					assignmentCutoffMs: Date.now(),
+		const executionScope = {
+			batchTransitionId: generateId("batch_transition"),
+			assignmentCutoffMs: Date.now(),
+		};
+
+		if (process.env.TW_WORKER_MODE === "1") {
+			await batchTransition({ ctx, transition, executionScope });
+		} else {
+			await batchTransitionTask.trigger(
+				{
+					orgId: ctx.org.id,
+					env: ctx.env,
+					customerId: ctx.customerId,
+					transition,
+					executionScope,
 				},
-			},
-			{ concurrencyKey: updates.linkId },
-		);
+				{ concurrencyKey: updates.linkId },
+			);
+		}
 	}
 };
