@@ -162,7 +162,7 @@ export const subjectQueryRowToNormalized = ({
 	};
 
 	const partitionCustomerEntitlement = (
-		customerEntitlement: DbCustomerEntitlement,
+		customerEntitlement: SubjectQueryRow["customer_entitlements"][number],
 	) => {
 		const catalogEntitlement = entitlementsByEntitlementId.get(
 			customerEntitlement.entitlement_id,
@@ -206,6 +206,7 @@ export const subjectQueryRowToNormalized = ({
 				adjustment: customerEntitlement.adjustment ?? 0,
 				additional_balance: customerEntitlement.additional_balance ?? 0,
 				cache_version: customerEntitlement.cache_version ?? 0,
+				pooled_balance: customerEntitlement.pooled_balance ?? undefined,
 				entities: customerEntitlement.entities ?? null,
 				entitlement: catalogEntitlement as EntitlementWithFeature,
 				replaceables: replaceablesByCusEntId.get(customerEntitlement.id) ?? [],

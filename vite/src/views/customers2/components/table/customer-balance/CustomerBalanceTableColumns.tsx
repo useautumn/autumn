@@ -10,6 +10,7 @@ import {
 	getRolloverFields,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
 	nullish,
 } from "@autumn/shared";
 import {
@@ -582,14 +583,18 @@ export const CustomerBalanceTableColumns = ({
 			const isSubRow = row.depth > 0;
 
 			if (isSubRow) {
+				const isPooledBalance = isSyntheticPooledBalanceCustomerEntitlement({
+					customerEntitlement: ent,
+				});
 				const { productName, intervalLabel, entityName } =
 					getCustomerBalanceSourceParts({ balance: ent, entities });
+				const sourceName = isPooledBalance ? "Pooled" : productName;
 				const hasPlan = !!ent.customer_product;
 				const metaParts = [intervalLabel, entityName]
 					.filter(Boolean)
 					.join(" · ");
 
-				if (!hasPlan) {
+				if (!hasPlan && !isPooledBalance) {
 					return (
 						<div className="flex items-center gap-2 min-w-0">
 							<BalanceBillingIcon balance={ent} />
@@ -618,7 +623,7 @@ export const CustomerBalanceTableColumns = ({
 								})}
 							>
 								<span className="text-foreground text-xs font-medium truncate">
-									{productName}
+									{sourceName}
 								</span>
 							</AdminHover>
 						</div>

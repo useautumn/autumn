@@ -91,4 +91,17 @@ export const applyDeductionUpdateToFullSubject = ({
 		});
 		return;
 	}
+
+	const pooledCustomerEntitlements =
+		fullSubject.pooled_customer_entitlements ?? [];
+	for (let index = 0; index < pooledCustomerEntitlements.length; index++) {
+		const customerEntitlement = pooledCustomerEntitlements[index];
+		if (customerEntitlement.id !== customerEntitlementId) continue;
+
+		fullSubject.pooled_customer_entitlements[index] = applyUpdate({
+			customerEntitlement,
+			update,
+		});
+		return;
+	}
 };

@@ -31,8 +31,15 @@ export const invoiceCheckout = async ({
 	// Try to find the iframe via #payment-element first (embedded Payment Element)
 	// Use a specific selector to avoid matching the bank search results iframe
 	try {
-		await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
-		paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
+		await page.waitForSelector(
+			'#payment-element iframe[title="Secure payment input frame"]',
+			{ timeout: 10000 },
+		);
+		paymentFrame = page
+			.frameLocator(
+				'#payment-element iframe[title="Secure payment input frame"]',
+			)
+			.first();
 		console.log("[invoiceCheckout] Found #payment-element iframe");
 	} catch {
 		// Fallback: try first iframe in #payment-element
@@ -105,15 +112,24 @@ export const invoiceCheckout = async ({
 
 		// Now try to find the payment frame again
 		try {
-			await page.waitForSelector('#payment-element iframe[title="Secure payment input frame"]', { timeout: 10000 });
-			paymentFrame = page.frameLocator('#payment-element iframe[title="Secure payment input frame"]');
+			await page.waitForSelector(
+				'#payment-element iframe[title="Secure payment input frame"]',
+				{ timeout: 10000 },
+			);
+			paymentFrame = page
+				.frameLocator(
+					'#payment-element iframe[title="Secure payment input frame"]',
+				)
+				.first();
 			console.log(
 				"[invoiceCheckout] Found #payment-element iframe after card click",
 			);
 		} catch {
 			// Fallback: first iframe
 			try {
-				await page.waitForSelector("#payment-element iframe", { timeout: 5000 });
+				await page.waitForSelector("#payment-element iframe", {
+					timeout: 5000,
+				});
 				paymentFrame = page.frameLocator("#payment-element iframe").first();
 				console.log(
 					"[invoiceCheckout] Found #payment-element iframe after card click (first)",

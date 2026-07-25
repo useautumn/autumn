@@ -7,6 +7,7 @@ import {
 	type Feature,
 	type FullCustomerEntitlement,
 	type FullSubject,
+	fullSubjectToCustomerEntitlements,
 	type Organization,
 	SubjectType,
 } from "@autumn/shared";
@@ -162,6 +163,7 @@ const buildFullSubject = ({
 				entities,
 			}),
 		],
+		pooled_customer_entitlements: [],
 		subscriptions: [],
 		invoices: [],
 		aggregated_customer_products: undefined,
@@ -202,6 +204,38 @@ const buildFeatureDeduction = (): FeatureDeduction =>
 	}) as FeatureDeduction;
 
 describe("track v3 helpers", () => {
+	test("fullSubjectToCustomerEntitlements excludes pooled source entitlements", () => {
+		const fullSubject = buildFullSubject({
+			subjectType: "customer",
+			balance: 10,
+		});
+		const sourceCustomerEntitlement = buildExtraCustomerEntitlement({
+			balance: 0,
+		});
+		sourceCustomerEntitlement.entitlement.pooled = true;
+		const pooledCustomerEntitlement = buildExtraCustomerEntitlement({
+			balance: 10,
+		});
+		pooledCustomerEntitlement.id = "cus_ent_pool";
+		pooledCustomerEntitlement.is_pooled_balance = true;
+		pooledCustomerEntitlement.entitlement.pooled = true;
+		fullSubject.customer_products = [
+			{
+				status: "active",
+				customer_entitlements: [sourceCustomerEntitlement],
+			} as FullSubject["customer_products"][number],
+		];
+		fullSubject.extra_customer_entitlements = [];
+		fullSubject.pooled_customer_entitlements = [pooledCustomerEntitlement];
+
+		const customerEntitlements = fullSubjectToCustomerEntitlements({
+			fullSubject,
+		});
+
+		expect(customerEntitlements).toHaveLength(1);
+		expect(customerEntitlements[0].id).toBe("cus_ent_pool");
+	});
+
 	test("applyDeductionUpdateToFullSubject updates extra customer entitlements", () => {
 		const fullSubject = buildFullSubject({
 			subjectType: "customer",
@@ -223,6 +257,34 @@ describe("track v3 helpers", () => {
 
 		expect(fullSubject.extra_customer_entitlements[0].balance).toBe(6);
 		expect(fullSubject.extra_customer_entitlements[0].adjustment).toBe(2);
+	});
+
+	test("applyDeductionUpdateToFullSubject updates pooled customer entitlements", () => {
+		const fullSubject = buildFullSubject({
+			subjectType: "customer",
+			balance: 10,
+		});
+		const pooledCustomerEntitlement = buildExtraCustomerEntitlement({
+			balance: 10,
+		});
+		pooledCustomerEntitlement.id = "cus_ent_pool";
+		fullSubject.extra_customer_entitlements = [];
+		fullSubject.pooled_customer_entitlements = [pooledCustomerEntitlement];
+
+		applyDeductionUpdateToFullSubject({
+			fullSubject,
+			customerEntitlementId: "cus_ent_pool",
+			update: {
+				balance: 6,
+				additional_balance: 0,
+				entities: {},
+				adjustment: 2,
+				deducted: 4,
+			},
+		});
+
+		expect(fullSubject.pooled_customer_entitlements[0].balance).toBe(6);
+		expect(fullSubject.pooled_customer_entitlements[0].adjustment).toBe(2);
 	});
 
 	test("applyRolloverUpdatesToFullSubject updates nested rollovers", () => {
@@ -247,6 +309,36 @@ describe("track v3 helpers", () => {
 			fullSubject.extra_customer_entitlements[0].rollovers[0].balance,
 		).toBe(1);
 		expect(fullSubject.extra_customer_entitlements[0].rollovers[0].usage).toBe(
+			3,
+		);
+	});
+
+	test("applyRolloverUpdatesToFullSubject updates pooled rollovers", () => {
+		const fullSubject = buildFullSubject({
+			subjectType: "customer",
+			balance: 10,
+		});
+		const pooledCustomerEntitlement = buildExtraCustomerEntitlement({
+			balance: 10,
+		});
+		fullSubject.extra_customer_entitlements = [];
+		fullSubject.pooled_customer_entitlements = [pooledCustomerEntitlement];
+
+		applyRolloverUpdatesToFullSubject({
+			fullSubject,
+			rolloverUpdates: {
+				roll_1: {
+					balance: 1,
+					usage: 3,
+					entities: {},
+				},
+			},
+		});
+
+		expect(
+			fullSubject.pooled_customer_entitlements[0].rollovers[0].balance,
+		).toBe(1);
+		expect(fullSubject.pooled_customer_entitlements[0].rollovers[0].usage).toBe(
 			3,
 		);
 	});

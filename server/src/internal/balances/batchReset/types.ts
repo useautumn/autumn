@@ -27,12 +27,22 @@ export type ResetVerdict = {
 		| "clear_next_reset"
 		| "no_action";
 	customerEntitlementId: string;
-	reason?: "product_past_due" | "product_not_active" | "not_due";
+	reason?:
+		| "product_past_due"
+		| "product_not_active"
+		| "not_due"
+		| "pooled_balance_source"
+		| "pooled_balance_missing";
 	unlimited?: boolean;
 };
 
 export type ResetMutation = {
 	customerEntitlementId: string;
+	/** next_reset_at the mutation was computed from. The execute UPDATE only
+	 * applies while the row still matches (optimistic guard), so a concurrent
+	 * duplicate — a lazy reset racing the worker, or an SQS redelivery —
+	 * no-ops instead of double-applying balances and rollovers. */
+	expectedNextResetAt: number;
 	updates: ResetUpdates;
 	rolloverInserts: Rollover[];
 	rolloverUpdates: Rollover[];

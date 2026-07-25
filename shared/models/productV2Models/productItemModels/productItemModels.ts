@@ -125,6 +125,10 @@ export const ProductItemSchema = z.object({
 		description:
 			"The feature ID of the entity (like seats) to track sub-balances for.",
 	}),
+	pooled: z.boolean().default(false).optional().meta({
+		description:
+			"Whether entity-level grants contribute to a shared customer balance.",
+	}),
 
 	// Price config
 	usage_model: z.enum(UsageModel).nullish().meta({

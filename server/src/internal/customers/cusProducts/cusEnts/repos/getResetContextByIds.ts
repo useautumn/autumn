@@ -49,6 +49,7 @@ export const buildResetContextByIdsQuery = ({
 				'replaceables', '[]'::jsonb,
 				'rollovers', COALESCE(rollovers_agg.rollovers, '[]'::jsonb),
 				'customer', to_jsonb(c),
+				'pooled_balance', to_jsonb(pb),
 				'customer_product', CASE
 					WHEN cp.id IS NULL THEN NULL
 					ELSE to_jsonb(cp) || jsonb_build_object(
@@ -66,6 +67,7 @@ export const buildResetContextByIdsQuery = ({
 	JOIN customers c ON ce.internal_customer_id = c.internal_id
 	LEFT JOIN customer_products cp ON cp.id = ce.customer_product_id
 	LEFT JOIN products p ON cp.internal_product_id = p.internal_id
+	LEFT JOIN pooled_balances pb ON pb.id = ce.pooled_balance_id
 	LEFT JOIN LATERAL (
 		SELECT pcp.status AS parent_status, pcp.subscription_ids AS parent_subscription_ids
 		FROM customer_licenses pcl

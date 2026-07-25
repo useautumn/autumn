@@ -314,3 +314,158 @@ test.concurrent(
 		}
 	},
 );
+
+const makePooledCustomerEntitlement = ({
+	featureId,
+	stripeSubscriptionId,
+}: {
+	featureId: string;
+	stripeSubscriptionId: string;
+}) => {
+	const pooledCustomerEntitlement = makeCustomerEntitlement({ featureId });
+	pooledCustomerEntitlement.is_pooled_balance = true;
+	pooledCustomerEntitlement.pooled_balance = {
+		id: `pool_${featureId}`,
+		org_id: "org_test",
+		env: "sandbox",
+		internal_customer_id: "internal_cus_test",
+		internal_feature_id: `internal_${featureId}`,
+		granted: 10_000,
+		interval: "month",
+		interval_count: 1,
+		reset_cycle_anchor: 1_700_000_000_000,
+		reset_mode: "subscription",
+		stripe_subscription_id: stripeSubscriptionId,
+		customer_license_link_id: null,
+		rollover_signature: "none",
+		customer_entitlement_id: pooledCustomerEntitlement.id,
+		last_applied_reset_at: null,
+		created_at: 1_700_000_000_000,
+		updated_at: 1_700_000_000_000,
+	} as NonNullable<typeof pooledCustomerEntitlement.pooled_balance>;
+	return pooledCustomerEntitlement;
+};
+
+const makePoolContribution = ({ poolId }: { poolId: string }) => ({
+	id: `pool_contribution_${poolId}`,
+	pooled_balance_id: poolId,
+	source_customer_product_id: "cus_prod_source",
+	source_customer_entitlement_id: "cus_ent_source",
+	current_contribution: 10_000,
+	next_cycle_contribution: 10_000,
+	effective_at: null,
+	created_at: 1_700_000_000_000,
+	updated_at: 1_700_000_000_000,
+});
+
+test.concurrent("inverts pooled balance inserts and delta updates", () => {
+	const insertedPool = makePooledCustomerEntitlement({
+		featureId: "pooled_new",
+		stripeSubscriptionId: "sub_new",
+	});
+	const existingPool = makePooledCustomerEntitlement({
+		featureId: "pooled_existing",
+		stripeSubscriptionId: "sub_existing",
+	});
+	const contribution = makePoolContribution({
+		poolId: insertedPool.pooled_balance?.id ?? "",
+	});
+	const autumnBillingPlan: AutumnBillingPlan = {
+		...makeAutumnBillingPlan(),
+		pooledBalancePlan: {
+			insertPoolBalances: [insertedPool],
+			updatePoolBalances: [
+				{
+					pooledCustomerEntitlement: insertedPool,
+					balanceDelta: 10_000,
+					grantedDelta: 10_000,
+				},
+				{
+					pooledCustomerEntitlement: existingPool,
+					balanceDelta: 250,
+					grantedDelta: 500,
+				},
+			],
+			expirePoolBalanceCandidates: [],
+			insertPoolRollovers: [],
+			insertPoolContributions: [contribution],
+			updatePoolContributions: [],
+			deletePoolContributions: [],
+		},
+	};
+
+	expect(computeRollbackPlan({ autumnBillingPlan }).pooledBalancePlan).toEqual({
+		insertPoolBalances: [],
+		// The update targeting the same-plan-inserted pool is dominated by its delete.
+		updatePoolBalances: [
+			{
+				pooledCustomerEntitlement: existingPool,
+				balanceDelta: -250,
+				grantedDelta: -500,
+			},
+		],
+		expirePoolBalanceCandidates: [],
+		insertPoolRollovers: [],
+		insertPoolContributions: [],
+		updatePoolContributions: [],
+		deletePoolContributions: [contribution],
+		deletePoolBalances: [insertedPool],
+	});
+
+	const emptyPooledPlan: AutumnBillingPlan = {
+		...makeAutumnBillingPlan(),
+		pooledBalancePlan: {
+			insertPoolBalances: [],
+			updatePoolBalances: [],
+			expirePoolBalanceCandidates: [],
+			insertPoolRollovers: [],
+			insertPoolContributions: [],
+			updatePoolContributions: [],
+			deletePoolContributions: [],
+		},
+	};
+	expect(
+		computeRollbackPlan({ autumnBillingPlan: emptyPooledPlan })
+			.pooledBalancePlan,
+	).toBeUndefined();
+});
+
+test.concurrent(
+	"rejects pooled operations that destroyed unrecorded state",
+	() => {
+		const pool = makePooledCustomerEntitlement({
+			featureId: "pooled_reject",
+			stripeSubscriptionId: "sub_reject",
+		});
+		const contribution = makePoolContribution({
+			poolId: pool.pooled_balance?.id ?? "",
+		});
+		const uninvertibleSections = {
+			updatePoolContributions: [contribution],
+			deletePoolContributions: [contribution],
+			deletePoolBalances: [pool],
+			expirePoolBalanceCandidates: [
+				{ pooledCustomerEntitlement: pool, expiresAt: 1_700_000_000_000 },
+			],
+			insertPoolRollovers: [{ id: "rollover_reject" }],
+		};
+
+		for (const [section, value] of Object.entries(uninvertibleSections)) {
+			const autumnBillingPlan = {
+				...makeAutumnBillingPlan(),
+				pooledBalancePlan: {
+					insertPoolBalances: [],
+					updatePoolBalances: [],
+					expirePoolBalanceCandidates: [],
+					insertPoolRollovers: [],
+					insertPoolContributions: [],
+					updatePoolContributions: [],
+					deletePoolContributions: [],
+					[section]: value,
+				},
+			} as AutumnBillingPlan;
+
+			expect(() => computeRollbackPlan({ autumnBillingPlan })).toThrow(section);
+		}
+	},
+);
