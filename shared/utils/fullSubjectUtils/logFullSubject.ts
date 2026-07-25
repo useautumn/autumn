@@ -48,8 +48,9 @@ export const logFullSubject = ({
 		customer_products: fullSubject.customer_products.map(summarizeProduct),
 		extra_customer_entitlements:
 			fullSubject.extra_customer_entitlements.map(summarizeCusEnt),
-		pooled_customer_entitlements:
-			fullSubject.pooled_customer_entitlements.map(summarizeCusEnt),
+		pooled_customer_entitlements: (
+			fullSubject.pooled_customer_entitlements ?? []
+		).map(summarizeCusEnt),
 		subscriptions: fullSubject.subscriptions?.length ?? 0,
 		invoices: fullSubject.invoices?.length ?? 0,
 		aggregated_customer_products:

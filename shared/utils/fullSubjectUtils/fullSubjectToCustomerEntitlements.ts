@@ -41,7 +41,10 @@ export const fullSubjectToCustomerEntitlements = ({
 		});
 	}
 
-	for (const customerEntitlement of fullSubject.pooled_customer_entitlements) {
+	// Guarded for subjects built without going through the schema, which fills
+	// this in via .default([]).
+	for (const customerEntitlement of fullSubject.pooled_customer_entitlements ??
+		[]) {
 		customerEntitlements.push({
 			...customerEntitlement,
 			customer_product: null,

@@ -92,12 +92,10 @@ export const applyDeductionUpdateToFullSubject = ({
 		return;
 	}
 
-	for (
-		let index = 0;
-		index < fullSubject.pooled_customer_entitlements.length;
-		index++
-	) {
-		const customerEntitlement = fullSubject.pooled_customer_entitlements[index];
+	const pooledCustomerEntitlements =
+		fullSubject.pooled_customer_entitlements ?? [];
+	for (let index = 0; index < pooledCustomerEntitlements.length; index++) {
+		const customerEntitlement = pooledCustomerEntitlements[index];
 		if (customerEntitlement.id !== customerEntitlementId) continue;
 
 		fullSubject.pooled_customer_entitlements[index] = applyUpdate({

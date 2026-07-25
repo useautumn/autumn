@@ -301,6 +301,7 @@ export const getFullSubjectRowsQuery = ({
 					AND ce.customer_product_id IS NULL
 					AND ce.pooled_balance_id IS NOT NULL
 					AND ce.pooled_contribution_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 					${customerEntitlementSubjectPredicate}
 				ORDER BY subject_entity_priority ASC, ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}

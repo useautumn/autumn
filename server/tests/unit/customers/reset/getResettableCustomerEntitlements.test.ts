@@ -134,6 +134,7 @@ const buildSyntheticPooledCustomerEntitlement = ({
 		rollover_signature: "none",
 		customer_entitlement_id: customerEntitlement.id,
 		last_applied_reset_at: null,
+		expires_at: null,
 		created_at: PAST,
 		updated_at: PAST,
 	} satisfies DbPooledBalance;

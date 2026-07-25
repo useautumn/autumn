@@ -2,7 +2,6 @@ import {
 	customerProductHasActiveStatus,
 	type FullCusProduct,
 	filterCustomerEntitlementsByPooledBalanceSource,
-	isCustomerProductEntityScoped,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
@@ -28,10 +27,7 @@ export const applyIncomingPooledBalanceSources = ({
 	customerCreatedAt: number;
 	now: number;
 }) => {
-	if (
-		!isCustomerProductEntityScoped(customerProduct) ||
-		!customerProductHasActiveStatus(customerProduct)
-	) {
+	if (!customerProductHasActiveStatus(customerProduct)) {
 		return;
 	}
 

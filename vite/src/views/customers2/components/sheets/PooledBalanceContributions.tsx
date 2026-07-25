@@ -15,7 +15,7 @@ import {
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGoToEntity } from "../../customer/hooks/useGoToEntity";
 
-/** The plans feeding a pooled balance, labelled by entity and plan. */
+/** The plans feeding a pooled balance, labelled by source (entity or customer) and plan. */
 export function PooledBalanceContributions({
 	pooledBalance,
 }: {
@@ -37,11 +37,12 @@ export function PooledBalanceContributions({
 	const pageStart = page * CONTRIBUTIONS_PAGE_SIZE;
 	const pageCount = Math.ceil(totalFilteredCount / CONTRIBUTIONS_PAGE_SIZE);
 
+	/** Customer-scoped contributions have no entity to name. */
 	const sourceLabel = (contribution: ApiPooledBalanceContributionV0) =>
-		contribution.entity_name ??
-		contribution.entity_id ??
-		contribution.plan_name ??
-		contribution.plan_id;
+		contribution.entity_name ?? contribution.entity_id ?? "Customer";
+
+	const planLabel = (contribution: ApiPooledBalanceContributionV0) =>
+		contribution.plan_name ?? contribution.plan_id;
 
 	return (
 		<>
@@ -97,11 +98,9 @@ export function PooledBalanceContributions({
 										</span>
 									)}
 									<div className="flex items-center gap-3 shrink-0">
-										{entityId && (
-											<span className="text-tertiary-foreground truncate max-w-[140px]">
-												{contribution.plan_name ?? contribution.plan_id}
-											</span>
-										)}
+										<span className="text-tertiary-foreground truncate max-w-[140px]">
+											{planLabel(contribution)}
+										</span>
 										<span className="text-foreground font-medium tabular-nums">
 											+{numberWithCommas(contribution.current_contribution)}
 										</span>

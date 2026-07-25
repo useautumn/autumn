@@ -2,9 +2,11 @@ import { expect, test } from "bun:test";
 import type {
 	DbPooledBalanceContribution,
 	InsertPooledBalanceContribution,
-	PooledBalancePlan,
 } from "@autumn/shared";
 import { finalizePooledBalanceTransitionPlan } from "@/internal/billing/v2/pooledBalances/compute/finalizePooledBalanceTransitionPlan";
+import type { PooledBalanceComputeContext } from "@/internal/billing/v2/pooledBalances/compute/types/pooledBalanceComputeTypes";
+
+const NOW = 1_700_000_000_000;
 
 const currentContribution = ({
 	id = "current",
@@ -54,26 +56,34 @@ const insertedContribution = ({
 	updated_at: 2,
 });
 
-const transitionPlan = ({
+const transitionContext = ({
 	current,
 	incoming,
 }: {
 	current: DbPooledBalanceContribution;
 	incoming: InsertPooledBalanceContribution;
-}): PooledBalancePlan => ({
-	insertPoolBalances: [],
-	updatePoolBalances: [],
-	insertPoolContributions: [incoming],
-	updatePoolContributions: [],
-	deletePoolContributions: [current],
+}): PooledBalanceComputeContext => ({
+	plan: {
+		insertPoolBalances: [],
+		updatePoolBalances: [],
+		expirePoolBalanceCandidates: [],
+		insertPoolContributions: [incoming],
+		updatePoolContributions: [],
+		deletePoolContributions: [current],
+	},
+	pooledCustomerEntitlements: [],
+	pooledCustomerEntitlementByPoolId: new Map(),
+	pooledCustomerEntitlementByIdentity: new Map(),
+	pooledBalanceIdsWithRemovedContributions: new Set(),
 });
 
 test("identical contribution replacement finalizes to a no-op", () => {
 	const result = finalizePooledBalanceTransitionPlan({
-		pooledBalancePlan: transitionPlan({
+		computeContext: transitionContext({
 			current: currentContribution(),
 			incoming: insertedContribution(),
 		}),
+		now: NOW,
 	});
 
 	expect(result).toBeUndefined();
@@ -81,7 +91,7 @@ test("identical contribution replacement finalizes to a no-op", () => {
 
 test("changed contribution replacement preserves the existing row", () => {
 	const result = finalizePooledBalanceTransitionPlan({
-		pooledBalancePlan: transitionPlan({
+		computeContext: transitionContext({
 			current: currentContribution(),
 			incoming: insertedContribution({
 				poolId: "new-pool",
@@ -89,6 +99,7 @@ test("changed contribution replacement preserves the existing row", () => {
 				next: 200,
 			}),
 		}),
+		now: NOW,
 	});
 
 	expect(result?.insertPoolContributions).toEqual([]);
@@ -106,10 +117,11 @@ test("changed contribution replacement preserves the existing row", () => {
 
 test("different sources remain independent insert and delete operations", () => {
 	const result = finalizePooledBalanceTransitionPlan({
-		pooledBalancePlan: transitionPlan({
+		computeContext: transitionContext({
 			current: currentContribution({ sourceEntitlementId: "outgoing" }),
 			incoming: insertedContribution({ sourceEntitlementId: "incoming" }),
 		}),
+		now: NOW,
 	});
 
 	expect(result?.insertPoolContributions).toHaveLength(1);

@@ -38,7 +38,7 @@ export const reassembleFlattenedCustomer = (
 	}
 
 	const pooledCesByCusId = new Map<string, unknown[]>();
-	for (const ce of flat.pooled_customer_entitlements) {
+	for (const ce of flat.pooled_customer_entitlements ?? []) {
 		const hydrated = hydrateCustomerEntitlement(ce, maps, { normalize: false });
 		const list = pooledCesByCusId.get(ce.internal_customer_id);
 		if (list) list.push(hydrated);

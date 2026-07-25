@@ -22,6 +22,7 @@ test("normalizes incoming pooled source entitlements from the finalized plan", (
 	const pooledBalancePlan = {
 		insertPoolBalances: [],
 		updatePoolBalances: [],
+		expirePoolBalanceCandidates: [],
 		insertPoolContributions: [
 			{
 				id: "contribution",

@@ -61,7 +61,8 @@ export const computePooledBalanceTransitionPlan = ({
 	}
 
 	const pooledBalancePlan = finalizePooledBalanceTransitionPlan({
-		pooledBalancePlan: computeContext.plan,
+		computeContext,
+		now,
 	});
 	applyPooledBalancePlanToIncomingCustomerProducts({
 		customerProducts: incomingCustomerProducts,

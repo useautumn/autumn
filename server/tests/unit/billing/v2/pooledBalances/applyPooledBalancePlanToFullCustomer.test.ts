@@ -47,6 +47,7 @@ test("projects pooled balance and contribution operations onto the final custome
 		pooledBalancePlan: {
 			insertPoolBalances: [pooledCustomerEntitlement],
 			updatePoolBalances: [],
+			expirePoolBalanceCandidates: [],
 			insertPoolContributions: [contribution],
 			updatePoolContributions: [],
 			deletePoolContributions: [],

@@ -24,6 +24,35 @@ test("rollover signatures ignore object shape and nullish optional fields", () =
 	expect(rolloverConfigToSignature({ rollover: undefined })).toBe("none");
 });
 
+test("explicit undefined caps match explicit null caps", () => {
+	// In-memory construction can set these to undefined rather than omitting them.
+	const undefinedCaps = rolloverConfigToSignature({
+		rollover: {
+			max: undefined,
+			max_percentage: undefined,
+			duration: RolloverExpiryDurationType.Month,
+			length: 1,
+		},
+	});
+	const nullCaps = rolloverConfigToSignature({
+		rollover: {
+			max: null,
+			max_percentage: null,
+			duration: RolloverExpiryDurationType.Month,
+			length: 1,
+		},
+	});
+	const omittedCaps = rolloverConfigToSignature({
+		rollover: {
+			duration: RolloverExpiryDurationType.Month,
+			length: 1,
+		},
+	});
+
+	expect(undefinedCaps).toBe(nullCaps);
+	expect(undefinedCaps).toBe(omittedCaps);
+});
+
 test("rollover signatures preserve valid zero values", () => {
 	const zeroMax = rolloverConfigToSignature({
 		rollover: {

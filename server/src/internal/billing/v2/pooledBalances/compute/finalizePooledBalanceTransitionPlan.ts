@@ -4,6 +4,8 @@ import type {
 	PooledBalancePlan,
 } from "@autumn/shared";
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
+import type { PooledBalanceComputeContext } from "./types/pooledBalanceComputeTypes";
+import { addToExpirePoolBalanceCandidates } from "./utils/pooledBalancePlanUtils";
 
 const contributionValuesMatch = ({
 	current,
@@ -32,11 +34,43 @@ const toContributionUpdate = ({
 	updated_at: incoming.updated_at ?? current.updated_at,
 });
 
-export const finalizePooledBalanceTransitionPlan = ({
-	pooledBalancePlan,
+/** Flags pools that lost a contribution. Whether they are actually empty is
+ * decided at execution — the remaining count is unbounded, so only the DB knows. */
+const collectExpiryCandidates = ({
+	computeContext,
+	finalizedPlan,
+	now,
 }: {
-	pooledBalancePlan: PooledBalancePlan;
+	computeContext: PooledBalanceComputeContext;
+	finalizedPlan: PooledBalancePlan;
+	now: number;
+}) => {
+	for (const poolId of computeContext.pooledBalanceIdsWithRemovedContributions) {
+		const pooledCustomerEntitlement =
+			computeContext.pooledCustomerEntitlementByPoolId.get(poolId);
+		if (!pooledCustomerEntitlement) continue;
+
+		const isNewlyInserted = finalizedPlan.insertPoolBalances.some(
+			(inserted) => inserted.id === pooledCustomerEntitlement.id,
+		);
+		if (isNewlyInserted) continue;
+
+		addToExpirePoolBalanceCandidates({
+			pooledBalancePlan: finalizedPlan,
+			pooledCustomerEntitlement,
+			expiresAt: now,
+		});
+	}
+};
+
+export const finalizePooledBalanceTransitionPlan = ({
+	computeContext,
+	now,
+}: {
+	computeContext: PooledBalanceComputeContext;
+	now: number;
 }): PooledBalancePlan | undefined => {
+	const pooledBalancePlan = computeContext.plan;
 	const deletedContributionBySourceEntitlementId = new Map(
 		pooledBalancePlan.deletePoolContributions.map((contribution) => [
 			contribution.source_customer_entitlement_id,
@@ -81,6 +115,8 @@ export const finalizePooledBalanceTransitionPlan = ({
 			(contribution) => !reconciledDeletedContributionIds.has(contribution.id),
 		),
 	};
+
+	collectExpiryCandidates({ computeContext, finalizedPlan, now });
 
 	return pooledBalancePlanHasChanges({ pooledBalancePlan: finalizedPlan })
 		? finalizedPlan

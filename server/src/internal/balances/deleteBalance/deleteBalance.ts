@@ -3,6 +3,8 @@ import {
 	type DeleteBalanceParamsV0,
 	fullCustomerToCustomerEntitlements,
 	isPaidCustomerEntitlement,
+	isPooledBalanceSourceCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -61,6 +63,20 @@ export const deleteBalance = async ({
 		if (isPaidCustomerEntitlement(cusEnt)) {
 			throw new RecaseError({
 				message: `Cannot delete paid balance for feature ${feature_id} and customer ${customer_id}`,
+				statusCode: 409,
+			});
+		}
+
+		// Deleting either half orphans the other: the pool would keep granted for a
+		// source that no longer exists, or contributions would point at nothing.
+		if (
+			isSyntheticPooledBalanceCustomerEntitlement({
+				customerEntitlement: cusEnt,
+			}) ||
+			isPooledBalanceSourceCustomerEntitlement({ customerEntitlement: cusEnt })
+		) {
+			throw new RecaseError({
+				message: `Cannot delete pooled balance for feature ${feature_id} and customer ${customer_id}. Remove the contributing plans instead.`,
 				statusCode: 409,
 			});
 		}

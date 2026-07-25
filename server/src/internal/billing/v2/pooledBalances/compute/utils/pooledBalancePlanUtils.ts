@@ -81,3 +81,24 @@ export const addToDeletePoolContributions = ({
 }) => {
 	pooledBalancePlan.deletePoolContributions.push(contribution);
 };
+
+export const addToExpirePoolBalanceCandidates = ({
+	pooledBalancePlan,
+	pooledCustomerEntitlement,
+	expiresAt,
+}: {
+	pooledBalancePlan: PooledBalancePlan;
+	pooledCustomerEntitlement: MutablePooledCustomerEntitlement;
+	expiresAt: number;
+}) => {
+	const alreadyCandidate = pooledBalancePlan.expirePoolBalanceCandidates.some(
+		(candidate) =>
+			candidate.pooledCustomerEntitlement.id === pooledCustomerEntitlement.id,
+	);
+	if (alreadyCandidate) return;
+
+	pooledBalancePlan.expirePoolBalanceCandidates.push({
+		pooledCustomerEntitlement,
+		expiresAt,
+	});
+};

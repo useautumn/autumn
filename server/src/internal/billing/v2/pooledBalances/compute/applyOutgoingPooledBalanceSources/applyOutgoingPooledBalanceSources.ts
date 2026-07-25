@@ -2,7 +2,6 @@ import {
 	type FullCusProduct,
 	filterCustomerEntitlementsByPooledBalanceSource,
 	InternalError,
-	isCustomerProductEntityScoped,
 	subtractSafe,
 } from "@autumn/shared";
 import type { PooledBalanceComputeContext } from "../types/pooledBalanceComputeTypes";
@@ -18,8 +17,7 @@ export const applyOutgoingPooledBalanceSources = ({
 	computeContext: PooledBalanceComputeContext;
 	customerProduct?: FullCusProduct;
 }) => {
-	if (!customerProduct || !isCustomerProductEntityScoped(customerProduct))
-		return;
+	if (!customerProduct) return;
 
 	const contributionCustomerEntitlements =
 		filterCustomerEntitlementsByPooledBalanceSource({

@@ -8,11 +8,12 @@ import {
 	pooledBalanceContributions,
 	pooledBalances,
 } from "@autumn/shared";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, notExists, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { pooledBalancePlanHasChanges } from "@/internal/billing/v2/utils/billingPlan/pooledBalancePlan";
 
-/** Persists a fully computed pooled-balance plan without reading or recomputing state. */
+/** Persists a computed pooled-balance plan. The one exception to "no reads" is
+ * pool expiry, which must check the unbounded contribution count in the DB. */
 export const executePooledBalancePlan = async ({
 	ctx,
 	pooledBalancePlan,
@@ -143,6 +144,42 @@ export const executePooledBalancePlan = async ({
 			await tx
 				.delete(pooledBalanceContributions)
 				.where(inArray(pooledBalanceContributions.id, contributionIds));
+		}
+
+		// Runs last: contributions are already deleted, so "no rows left" inside
+		// this transaction is the authoritative answer.
+		for (const {
+			pooledCustomerEntitlement,
+			expiresAt,
+		} of pooledBalancePlan.expirePoolBalanceCandidates) {
+			const poolId = pooledCustomerEntitlement.pooled_balance_id;
+			if (!poolId) continue;
+
+			const hasNoContributions = notExists(
+				tx
+					.select({ exists: sql`1` })
+					.from(pooledBalanceContributions)
+					.where(eq(pooledBalanceContributions.pooled_balance_id, poolId)),
+			);
+
+			await tx
+				.update(customerEntitlements)
+				.set({
+					expires_at: expiresAt,
+					cache_version: sql`${customerEntitlements.cache_version} + 1`,
+				})
+				.where(
+					and(
+						eq(customerEntitlements.id, pooledCustomerEntitlement.id),
+						hasNoContributions,
+					),
+				);
+
+			// Frees the identity for a future attach — uniqueness covers live pools only.
+			await tx
+				.update(pooledBalances)
+				.set({ expires_at: expiresAt, updated_at: expiresAt })
+				.where(and(eq(pooledBalances.id, poolId), hasNoContributions));
 		}
 	});
 };

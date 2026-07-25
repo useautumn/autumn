@@ -429,6 +429,7 @@ const buildPooledCustomerEntitlementsCTE = () => sql`
 				AND ce.customer_product_id IS NULL
 				AND ce.pooled_balance_id IS NOT NULL
 				AND ce.pooled_contribution_id IS NULL
+				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 			ORDER BY ce.id DESC
 			LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
 		) ce
@@ -787,6 +788,7 @@ export const getPaginatedFullCusQuery = ({
 				AND ce.customer_product_id IS NULL
 				AND ce.pooled_balance_id IS NOT NULL
 				AND ce.pooled_contribution_id IS NULL
+				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 			ORDER BY ce.id DESC
 			LIMIT ${POOLED_CUSTOMER_ENTITLEMENT_LIMIT}
 		) ce ON true

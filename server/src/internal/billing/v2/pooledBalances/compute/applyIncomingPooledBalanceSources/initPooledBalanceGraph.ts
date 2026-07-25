@@ -82,6 +82,7 @@ export const initPooledBalanceGraph = ({
 			rollover_signature: identity.rolloverSignature,
 			customer_entitlement_id: customerEntitlementId,
 			last_applied_reset_at: null,
+			expires_at: null,
 			created_at: now,
 			updated_at: now,
 		},
