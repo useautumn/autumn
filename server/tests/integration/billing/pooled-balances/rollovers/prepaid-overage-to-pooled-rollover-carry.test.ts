@@ -41,6 +41,7 @@ const BILLING_UNITS = 100;
 const PREPAID_GRANT = 200;
 const USAGE = 40;
 const POOLED_GRANT = 10_000;
+const POOLED_GRANT_INCREASED = 20_000;
 
 // 50% of the 200 prepaid grant = 100, BELOW the 160 left after usage, so the
 // outgoing cap binds first and only 100 is ever minted.
@@ -52,6 +53,18 @@ const rolloverConfig = {
 	duration: RolloverExpiryDurationType.Month,
 };
 
+const pooledCreditsItem = ({ included }: { included: number }) => ({
+	feature_id: TestFeature.Credits,
+	included,
+	pooled: true,
+	reset: { interval: ResetInterval.Month },
+	rollover: {
+		max_percentage: 50,
+		expiry_duration_type: RolloverExpiryDurationType.Month,
+		expiry_duration_length: 1,
+	},
+});
+
 /** Drop both same-feature credit items, add one pooled included item. */
 const customization = {
 	remove_items: [
@@ -61,19 +74,13 @@ const customization = {
 			billing_method: BillingMethod.UsageBased,
 		},
 	],
-	add_items: [
-		{
-			feature_id: TestFeature.Credits,
-			included: POOLED_GRANT,
-			pooled: true,
-			reset: { interval: ResetInterval.Month },
-			rollover: {
-				max_percentage: 50,
-				expiry_duration_type: RolloverExpiryDurationType.Month,
-				expiry_duration_length: 1,
-			},
-		},
-	],
+	add_items: [pooledCreditsItem({ included: POOLED_GRANT })],
+};
+
+/** Regrant the already-pooled item, changing nothing else. */
+const regrantCustomization = {
+	remove_items: [{ feature_id: TestFeature.Credits }],
+	add_items: [pooledCreditsItem({ included: POOLED_GRANT_INCREASED })],
 };
 
 /** Pro plan on a prepaid credit bucket with a rollover, plus an overage bucket. */
@@ -188,6 +195,64 @@ test(
 		);
 
 		await expectRolloverCarriedToPool({ scenario });
+	},
+);
+
+/**
+ * Regression: the carry must be a MOVE, not a copy.
+ *
+ * Red-failure mode (before fix): the pooled SOURCE cusEnt kept its own copy of
+ * the carried rollover. On the next update applyExistingRollovers re-carried
+ * that copy onto the new source, and carrySourceRolloversToPool copied it onto
+ * the pool again — which is updated in place, so its rows accumulated. A
+ * 10k -> 20k regrant turned one 100 row into two (UI: "+200 rollover").
+ *
+ * Green-success criteria: the pool holds exactly one rollover row no matter how
+ * many times the plan is updated afterwards.
+ */
+test(
+	chalk.yellowBright(
+		"pooled rollover carry (repeat update): regranting the pooled item does not re-carry the rollover",
+	),
+	async () => {
+		const scenario = await setupPrepaidOverageCredits({
+			customerId: "prepaid-overage-to-pooled-repeat",
+		});
+		const { ctx, customerId, autumnV2_3 } = scenario;
+
+		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: scenario.plan.id,
+			customize: customization,
+		});
+		await expectRolloverCarriedToPool({ scenario });
+
+		// Only the grant changes — there is nothing new to carry.
+		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+			customer_id: customerId,
+			plan_id: scenario.plan.id,
+			customize: regrantCustomization,
+		});
+
+		const afterRegrant = await getPooledBalanceDbState({
+			db: ctx.db,
+			customerId,
+		});
+		expect(afterRegrant.pools).toHaveLength(1);
+		expect(afterRegrant.pools[0].granted).toBe(POOLED_GRANT_INCREASED);
+
+		const pooledRollovers =
+			afterRegrant.poolCustomerEntitlements[0].rollovers ?? [];
+		expect(pooledRollovers).toHaveLength(1);
+		expect(pooledRollovers[0].balance).toBe(CARRIED);
+
+		const customerAfterRegrant = await autumnV2_3.customers.get<ApiCustomerV5>(
+			customerId,
+			{ skip_cache: "true" },
+		);
+		expect(
+			customerAfterRegrant.balances?.[TestFeature.Credits]?.remaining,
+		).toBe(POOLED_GRANT_INCREASED + CARRIED);
 	},
 );
 
