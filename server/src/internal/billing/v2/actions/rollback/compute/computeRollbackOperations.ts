@@ -9,6 +9,7 @@ import {
 	invertCustomerProductPatch,
 	invertCustomerProductUpdate,
 } from "./invertCustomerProductOperations";
+import { invertPooledBalancePlan } from "./invertPooledBalancePlan";
 
 type RollbackOperations = Pick<
 	AutumnBillingPlan,
@@ -17,6 +18,7 @@ type RollbackOperations = Pick<
 	| "deleteCustomerProducts"
 	| "patchCustomerProducts"
 	| "updateCustomerEntitlements"
+	| "pooledBalancePlan"
 >;
 
 export const computeRollbackOperations = ({
@@ -100,5 +102,8 @@ export const computeRollbackOperations = ({
 		updateCustomerEntitlements: operationsOrUndefined(
 			updateCustomerEntitlements,
 		),
+		pooledBalancePlan: invertPooledBalancePlan({
+			pooledBalancePlan: autumnBillingPlan.pooledBalancePlan,
+		}),
 	};
 };

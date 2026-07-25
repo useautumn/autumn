@@ -9,7 +9,18 @@ const ROLLBACK_OPERATION_FIELDS = [
 	"deleteCustomerProducts",
 	"patchCustomerProducts",
 	"updateCustomerEntitlements",
+	"pooledBalancePlan",
 ] satisfies (keyof AutumnBillingPlan)[];
+
+// These destroy or create state the plan does not capture (cascaded
+// contributions, zeroed source balances, expiry decisions) — not invertible.
+const UNINVERTIBLE_POOLED_FIELDS = [
+	"updatePoolContributions",
+	"deletePoolContributions",
+	"deletePoolBalances",
+	"expirePoolBalanceCandidates",
+	"insertPoolRollovers",
+] as const;
 
 const ROLLBACK_INERT_FIELDS = [
 	"customerId",
@@ -67,6 +78,18 @@ export const handleRollbackPlanErrors = ({
 		throwRollbackError(
 			`unsupported operations: ${unsupportedFields.join(", ")}`,
 		);
+	}
+
+	const { pooledBalancePlan } = autumnBillingPlan;
+	if (pooledBalancePlan) {
+		const uninvertibleFields = UNINVERTIBLE_POOLED_FIELDS.filter(
+			(field) => (pooledBalancePlan[field]?.length ?? 0) > 0,
+		);
+		if (uninvertibleFields.length > 0) {
+			throwRollbackError(
+				`unsupported pooled operations: ${uninvertibleFields.join(", ")}`,
+			);
+		}
 	}
 
 	const { deletes, patches } = getCustomerProductPlanOperations({

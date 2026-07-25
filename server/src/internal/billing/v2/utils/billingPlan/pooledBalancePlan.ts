@@ -23,7 +23,8 @@ export const pooledBalancePlanHasChanges = ({
 				pooledBalancePlan.insertPoolRollovers.length > 0 ||
 				pooledBalancePlan.insertPoolContributions.length > 0 ||
 				pooledBalancePlan.updatePoolContributions.length > 0 ||
-				pooledBalancePlan.deletePoolContributions.length > 0),
+				pooledBalancePlan.deletePoolContributions.length > 0 ||
+				(pooledBalancePlan.deletePoolBalances?.length ?? 0) > 0),
 	);
 
 export const getChangedPooledBalances = ({

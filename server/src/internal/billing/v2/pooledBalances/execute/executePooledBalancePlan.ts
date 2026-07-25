@@ -189,5 +189,43 @@ export const executePooledBalancePlan = async ({
 				.set({ expires_at: expiresAt, updated_at: expiresAt })
 				.where(and(eq(pooledBalances.id, poolId), hasNoContributions));
 		}
+
+		for (const fullCustomerEntitlement of pooledBalancePlan.deletePoolBalances ??
+			[]) {
+			const pooledBalance = fullCustomerEntitlement.pooled_balance;
+			if (!pooledBalance) {
+				throw new InternalError({
+					message: `Synthetic customer entitlement '${fullCustomerEntitlement.id}' is missing its pooled balance.`,
+				});
+			}
+
+			const poolContributionIds = tx
+				.select({ id: pooledBalanceContributions.id })
+				.from(pooledBalanceContributions)
+				.where(
+					eq(pooledBalanceContributions.pooled_balance_id, pooledBalance.id),
+				);
+			await tx
+				.update(customerEntitlements)
+				.set({ pooled_contribution_id: null })
+				.where(
+					inArray(
+						customerEntitlements.pooled_contribution_id,
+						poolContributionIds,
+					),
+				);
+
+			// Contributions cascade with the pool row; the synthetic cusEnt is
+			// restrict-protected until the pool row is gone, so this order is required.
+			await tx
+				.delete(pooledBalances)
+				.where(eq(pooledBalances.id, pooledBalance.id));
+			await tx
+				.delete(customerEntitlements)
+				.where(eq(customerEntitlements.id, fullCustomerEntitlement.id));
+			await tx
+				.delete(entitlements)
+				.where(eq(entitlements.id, fullCustomerEntitlement.entitlement_id));
+		}
 	});
 };

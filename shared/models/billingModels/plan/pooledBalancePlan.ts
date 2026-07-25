@@ -30,6 +30,8 @@ export const PooledBalancePlanSchema = z.object({
 	insertPoolContributions: z.array(z.custom<InsertPooledBalanceContribution>()),
 	updatePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),
 	deletePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),
+	// Removes the pool graph (pooled_balances row, synthetic cusEnt + entitlement).
+	deletePoolBalances: z.array(z.custom<FullCustomerEntitlement>()).optional(),
 });
 
 export type PooledBalanceUpdate = z.infer<typeof PooledBalanceUpdateSchema>;
