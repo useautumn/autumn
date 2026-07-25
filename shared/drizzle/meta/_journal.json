@@ -344,6 +344,13 @@
       "when": 1784909275551,
       "tag": "0048_lucky_loa",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1784987089139,
+      "tag": "0049_round_speed",
+      "breakpoints": true
     }
   ]
 }

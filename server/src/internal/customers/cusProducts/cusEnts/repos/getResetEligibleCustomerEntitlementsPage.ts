@@ -13,7 +13,7 @@ export type ResetEligibleCustomerEntitlementRow = {
 	nextResetAt: number;
 };
 
-/** The partial index covers the stable predicate; expiry and pooled sources remain heap filters. */
+/** The partial index covers every leg except expiry, which remains a heap filter. */
 export const resetEligibleFilterSql = ({ dueBefore }: { dueBefore: number }) =>
 	sql`${customerEntitlements.next_reset_at} < ${dueBefore}
 		AND ${customerEntitlements.expired} IS NOT TRUE

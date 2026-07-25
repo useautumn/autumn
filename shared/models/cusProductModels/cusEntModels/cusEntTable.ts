@@ -143,11 +143,12 @@ export const customerEntitlements = pgTable(
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
 			.concurrently(),
-		// Covers the stable reset predicate; expiry and pooled sources are heap-filtered.
+		// Every reset predicate leg except expiry, which stays a heap filter. Legs
+		// live here so the planner drops them instead of costing their selectivity.
 		index("idx_customer_entitlements_reset_scan")
 			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
 			.where(
-				sql`${table.expired} IS NOT TRUE AND ${table.reset_by_invoice} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
+				sql`${table.expired} IS NOT TRUE AND ${table.reset_by_invoice} IS NOT TRUE AND ${table.pooled_contribution_id} IS NULL AND ${table.next_reset_at} IS NOT NULL`,
 			)
 			.concurrently(),
 	],
