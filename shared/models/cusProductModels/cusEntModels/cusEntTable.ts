@@ -143,8 +143,7 @@ export const customerEntitlements = pgTable(
 			.on(table.pooled_contribution_id)
 			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
 			.concurrently(),
-		// The V2 reset scan index: matches resetEligibleFilterSql exactly (minus
-		// expires_at, filtered on the heap) and carries id for the keyset sort.
+		// Covers the stable reset predicate; expiry and pooled sources are heap-filtered.
 		index("idx_customer_entitlements_reset_scan")
 			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
 			.where(

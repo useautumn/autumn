@@ -48,6 +48,7 @@ export const CustomerEntitlementSchema = z.object({
 	is_pooled_balance: z.boolean().optional(),
 	pooled_balance_id: z.string().nullable().optional(),
 	pooled_contribution_id: z.string().nullable().optional(),
+	reset_by_invoice: z.boolean().nullable().optional(),
 	reset_cycle_anchor: z.number().nullable().optional(),
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),

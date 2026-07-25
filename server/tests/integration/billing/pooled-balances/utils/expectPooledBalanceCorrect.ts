@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { EntInterval, PooledBalanceResetMode } from "@autumn/shared";
+import { type EntInterval, PooledBalanceResetMode } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getPooledBalanceDbState } from "./getPooledBalanceDbState.js";
 
@@ -62,6 +62,9 @@ export const expectPooledBalanceCorrect = async ({
 			expect(pooledCustomerEntitlement.next_reset_at).not.toBeNull();
 		} else {
 			expect(pooledCustomerEntitlement.next_reset_at).toBeNull();
+		}
+		if (pool.resetMode === PooledBalanceResetMode.Subscription) {
+			expect(pooledCustomerEntitlement.reset_by_invoice).toBe(true);
 		}
 		if (pool.rollovers) {
 			expect(pooledCustomerEntitlement.rollovers).toHaveLength(

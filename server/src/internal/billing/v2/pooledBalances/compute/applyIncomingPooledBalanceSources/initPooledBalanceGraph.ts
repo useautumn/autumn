@@ -1,7 +1,8 @@
-import type {
-	FullCusProduct,
-	FullCustomerEntitlement,
-	PooledBalanceIdentity,
+import {
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+	type PooledBalanceIdentity,
+	PooledBalanceResetMode,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
@@ -57,6 +58,8 @@ export const initPooledBalanceGraph = ({
 		next_reset_at: nextResetAt,
 		cache_version: 0,
 		external_id: null,
+		reset_by_invoice:
+			identity.resetMode === PooledBalanceResetMode.Subscription,
 		is_pooled_balance: true,
 		pooled_balance_id: pooledBalanceId,
 		pooled_contribution_id: null,
