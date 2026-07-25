@@ -59,7 +59,16 @@ export const executeCustomerLicenseTransitions = async ({
 		};
 
 		if (shouldRunTriggerTasksInline()) {
-			await batchTransition({ ctx, transition, executionScope });
+			void batchTransition({ ctx, transition, executionScope }).catch(
+				(error) => {
+					ctx.logger.error("[licenseTransitions] batch transition failed", {
+						data: {
+							customerLicenseLinkId: updates.linkId,
+							error: error instanceof Error ? error.message : String(error),
+						},
+					});
+				},
+			);
 			continue;
 		}
 

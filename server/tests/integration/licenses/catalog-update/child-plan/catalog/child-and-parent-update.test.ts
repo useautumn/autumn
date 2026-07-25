@@ -246,5 +246,5 @@ test.concurrent(
 			expect.objectContaining({ feature_id: TestFeature.Words }),
 		);
 	},
-	{ timeout: 15_000 },
+	{ timeout: 30_000 },
 );

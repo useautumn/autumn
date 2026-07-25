@@ -28,23 +28,24 @@ export const invoiceCheckout = async ({
 	// We need to wait for it to appear — it may take a few seconds after page load.
 	let paymentFrame = null;
 
-	// Stripe renders more than one "Secure payment input frame" iframe on some
-	// invoice pages, so every lookup below must be .first() — never strict.
-	const SECURE_FRAME =
-		'#payment-element iframe[title="Secure payment input frame"]';
-	const ANY_PAYMENT_FRAME = "#payment-element iframe";
-
 	// Try to find the iframe via #payment-element first (embedded Payment Element)
 	// Use a specific selector to avoid matching the bank search results iframe
 	try {
-		await page.locator(SECURE_FRAME).first().waitFor({ timeout: 10000 });
-		paymentFrame = page.frameLocator(SECURE_FRAME).first();
+		await page.waitForSelector(
+			'#payment-element iframe[title="Secure payment input frame"]',
+			{ timeout: 10000 },
+		);
+		paymentFrame = page
+			.frameLocator(
+				'#payment-element iframe[title="Secure payment input frame"]',
+			)
+			.first();
 		console.log("[invoiceCheckout] Found #payment-element iframe");
 	} catch {
 		// Fallback: try first iframe in #payment-element
 		try {
-			await page.locator(ANY_PAYMENT_FRAME).first().waitFor({ timeout: 5000 });
-			paymentFrame = page.frameLocator(ANY_PAYMENT_FRAME).first();
+			await page.waitForSelector("#payment-element iframe", { timeout: 5000 });
+			paymentFrame = page.frameLocator("#payment-element iframe").first();
 			console.log("[invoiceCheckout] Found #payment-element iframe (first)");
 		} catch {
 			console.log(
@@ -111,19 +112,25 @@ export const invoiceCheckout = async ({
 
 		// Now try to find the payment frame again
 		try {
-			await page.locator(SECURE_FRAME).first().waitFor({ timeout: 10000 });
-			paymentFrame = page.frameLocator(SECURE_FRAME).first();
+			await page.waitForSelector(
+				'#payment-element iframe[title="Secure payment input frame"]',
+				{ timeout: 10000 },
+			);
+			paymentFrame = page
+				.frameLocator(
+					'#payment-element iframe[title="Secure payment input frame"]',
+				)
+				.first();
 			console.log(
 				"[invoiceCheckout] Found #payment-element iframe after card click",
 			);
 		} catch {
 			// Fallback: first iframe
 			try {
-				await page
-					.locator(ANY_PAYMENT_FRAME)
-					.first()
-					.waitFor({ timeout: 5000 });
-				paymentFrame = page.frameLocator(ANY_PAYMENT_FRAME).first();
+				await page.waitForSelector("#payment-element iframe", {
+					timeout: 5000,
+				});
+				paymentFrame = page.frameLocator("#payment-element iframe").first();
 				console.log(
 					"[invoiceCheckout] Found #payment-element iframe after card click (first)",
 				);

@@ -62,7 +62,7 @@ const checkSecrets = (): PreflightProblem | undefined => {
 };
 
 const checkGit = (ref: string): PreflightProblem | undefined => {
-	const dirty = git("status", "--porcelain");
+	const dirty = git("status", "--porcelain", "--", ".", ":(exclude)ai");
 	if (dirty) {
 		return {
 			what: "uncommitted changes — workers clone origin/<ref>, so they won't see them",

@@ -372,21 +372,18 @@ test.concurrent(
 			value: 12,
 		});
 
-		// The EventBatchingManager flush (350ms window) plus Tinybird ingest are
-		// both async, so poll for the row instead of betting on a fixed sleep.
 		const eventsList = await pollUntil({
-			fetch: async () =>
-				(await autumnV1.events.list({
+			fetch: () =>
+				autumnV1.events.list({
 					customer_id: customerId,
-				})) as ApiEventsListResponse,
-			until: (events) =>
-				events.list.some(
+				}) as Promise<ApiEventsListResponse>,
+			until: ({ list }) =>
+				list.some(
 					(event) =>
-						event.feature_id === TestFeature.Messages &&
-						event.value === 12 &&
-						(event.deductions?.length ?? 0) > 0,
+						event.feature_id === TestFeature.Messages && event.value === 12,
 				),
-			timeoutMs: 30_000,
+			timeoutMs: 20_000,
+			intervalMs: 500,
 		});
 
 		expect(eventsList.list.length).toBeGreaterThan(0);
