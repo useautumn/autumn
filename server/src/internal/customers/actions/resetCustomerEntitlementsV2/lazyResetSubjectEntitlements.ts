@@ -7,39 +7,16 @@ import {
 import * as Sentry from "@sentry/bun";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	type ResetCusEntParam,
-	resetCusEnts,
-} from "@/internal/balances/utils/sql/client.js";
+import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
+import { processResetResultToResetCusEntParam } from "../resetCustomerEntitlements/processResetResultToResetCusEntParam.js";
 import {
 	applyResetResultsToFullSubject,
 	applyResetResultsToNormalized,
 } from "./applyResetResultsToFullSubject.js";
 import { getResettableCustomerEntitlements } from "./getResettableCustomerEntitlements.js";
 import { resetSubjectCache } from "./resetSubjectCache.js";
-
-const toResetParam = ({
-	customerEntitlementId,
-	result,
-}: {
-	customerEntitlementId: string;
-	result: ProcessResetResult;
-}): ResetCusEntParam => {
-	const { updates } = result;
-	const firstRollover = result.rolloverInsert?.rows[0] ?? null;
-
-	return {
-		cus_ent_id: customerEntitlementId,
-		balance: updates.balance,
-		additional_balance: updates.additional_balance,
-		adjustment: updates.adjustment,
-		entities: updates.entities,
-		next_reset_at: updates.next_reset_at,
-		rollover_insert: firstRollover,
-	};
-};
 
 /**
  * Lazily resets overdue customer entitlements from a FullSubject.
@@ -99,7 +76,10 @@ export const lazyResetSubjectEntitlements = async ({
 		if (computed.length === 0) return false;
 
 		const resets = computed.map(({ customerEntitlementId, result }) =>
-			toResetParam({ customerEntitlementId, result }),
+			processResetResultToResetCusEntParam({
+				customerEntitlementId,
+				result,
+			}),
 		);
 
 		const { applied, skipped } = await resetCusEnts({ ctx, resets });

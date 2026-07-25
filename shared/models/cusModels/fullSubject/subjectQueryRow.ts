@@ -9,6 +9,7 @@ import type { DbFeature } from "../../featureModels/featureTable.js";
 import type { DbCustomerLicense } from "../../licenseModels/customerLicenseTable.js";
 import type { DbPlanLicense } from "../../licenseModels/planLicenseTable.js";
 import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
+import type { DbPooledBalance } from "../../pooledBalanceModels/pooledBalanceTable.js";
 import type { DbEntitlement } from "../../productModels/entModels/entTable.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
 import type { DbPrice } from "../../productModels/priceModels/priceTable.js";
@@ -21,6 +22,10 @@ import type { Invoice } from "../invoiceModels/invoiceModels.js";
 
 type EntitlementWithFeatureRow = DbEntitlement & {
 	feature: DbFeature;
+};
+
+type SubjectCustomerEntitlementRow = DbCustomerEntitlement & {
+	pooled_balance?: DbPooledBalance | null;
 };
 
 /** One customer license bundle: the row, its effective plan license
@@ -49,10 +54,10 @@ export type CustomerProductRow = DbCustomerProduct & {
 export type SubjectQueryRow = {
 	customer: DbCustomer;
 	customer_products: CustomerProductRow[];
-	customer_entitlements: DbCustomerEntitlement[];
+	customer_entitlements: SubjectCustomerEntitlementRow[];
 	customer_prices: DbCustomerPrice[];
 	customer_licenses: SubjectCustomerLicenseRow[];
-	extra_customer_entitlements: DbCustomerEntitlement[];
+	extra_customer_entitlements: SubjectCustomerEntitlementRow[];
 	replaceables: Replaceable[];
 	rollovers: DbRollover[];
 	usage_windows: DbUsageWindow[];

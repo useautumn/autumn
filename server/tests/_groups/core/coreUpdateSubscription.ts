@@ -17,6 +17,7 @@ export const coreUpdateSubscription: TestGroup = {
 		"billing/update-subscription/custom-plan/update-free-to-paid.test.ts",
 		"billing/update-subscription/custom-plan/update-paid-prepaid.test.ts",
 		"billing/update-subscription/custom-plan/update-paid-features.test.ts",
+		"billing/update-subscription/custom-plan/update-paid-intervals.test.ts",
 		"billing/update-subscription/free-trial/update-remove-trial.test.ts",
 		"billing/update-subscription/free-trial/update-paid-trials.test.ts",
 		"billing/update-subscription/free-trial/update-quantity-with-trial.test.ts",

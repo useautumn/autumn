@@ -4,6 +4,7 @@ import { batchTransition } from "@/internal/billing/v2/actions/batchTransition/b
 import { batchTransitionTask } from "@/internal/billing/v2/actions/batchTransition/tasks/batchTransitionTask";
 import { isSameRowTransition } from "@/internal/billing/v2/compute/customerLicenseTransitions/isSameRowTransition";
 import { customerLicenseRepo } from "@/internal/licenses/repos/customerLicenseRepo";
+import { shouldRunTriggerTasksInline } from "@/trigger/utils/shouldRunTriggerTasksInline";
 import { generateId } from "@/utils/genUtils";
 
 /** Converges license pools and their assigned seat definitions.
@@ -57,7 +58,7 @@ export const executeCustomerLicenseTransitions = async ({
 			assignmentCutoffMs: Date.now(),
 		};
 
-		if (process.env.TW_WORKER_MODE === "1") {
+		if (shouldRunTriggerTasksInline()) {
 			void batchTransition({ ctx, transition, executionScope }).catch(
 				(error) => {
 					ctx.logger.error("[licenseTransitions] batch transition failed", {

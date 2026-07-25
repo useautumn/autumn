@@ -19,6 +19,7 @@ const fullSubject = {
 	customer: {} as never,
 	customer_products: [],
 	extra_customer_entitlements: [],
+	pooled_customer_entitlements: [],
 	invoices: [],
 	subjectType: "customer",
 } as FullSubject;

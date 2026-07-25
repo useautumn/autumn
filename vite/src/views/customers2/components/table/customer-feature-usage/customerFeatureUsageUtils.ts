@@ -24,6 +24,17 @@ export function flattenCustomerEntitlements({
 	);
 }
 
+export function flattenStandaloneCustomerEntitlements({
+	customerEntitlements,
+}: {
+	customerEntitlements: FullCustomerEntitlement[];
+}): FullCusEntWithFullCusProduct[] {
+	return customerEntitlements.map((customerEntitlement) => ({
+		...customerEntitlement,
+		customer_product: null,
+	}));
+}
+
 /**
  * Creates a features lookup map
  */

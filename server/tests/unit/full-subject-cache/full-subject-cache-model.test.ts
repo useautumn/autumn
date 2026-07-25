@@ -255,6 +255,35 @@ describe("fullSubject cache model", () => {
 		expect(reconstructed.customer_prices).toEqual([]);
 	});
 
+	test("reconstructs pooled customer entitlements from a legacy cached subject", () => {
+		const normalized = buildNormalized();
+		const pooledCustomerEntitlement = {
+			...normalized.customer_entitlements[0],
+			id: "cus_ent_pooled",
+			customer_product_id: null,
+			is_pooled_balance: true,
+			pooled_balance_id: "pool_1",
+		};
+		normalized.customer_entitlements = [pooledCustomerEntitlement];
+
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: normalized.customer_entitlements,
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+
+		expect(fullSubject.extra_customer_entitlements).toEqual([]);
+		expect(
+			fullSubject.pooled_customer_entitlements?.map(
+				(customerEntitlement) => customerEntitlement.id,
+			),
+		).toEqual(["cus_ent_pooled"]);
+	});
+
 	test("preserves fixed prices without entitlements across cache roundtrip", () => {
 		const normalized = buildMixedIntervalNormalized();
 		const cached = normalizedToCachedFullSubject({
@@ -270,8 +299,8 @@ describe("fullSubject cache model", () => {
 
 		expect(customerProduct).toBeDefined();
 		expect(
-			customerProduct!.customer_prices.map((customerPrice) =>
-				customerPrice.price_id,
+			customerProduct!.customer_prices.map(
+				(customerPrice) => customerPrice.price_id,
 			),
 		).toEqual(["price_fixed", "price_usage"]);
 		expect(isCustomerProductOneOff(customerProduct)).toBe(false);

@@ -34,6 +34,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
+import { PooledBalanceContributions } from "./PooledBalanceContributions";
 import {
 	type BalanceEditFormInstance,
 	useBalanceEditForm,
@@ -155,6 +156,9 @@ function UnlimitedBalanceInfo({
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
+			/>
 		</div>
 	);
 }
@@ -213,6 +217,10 @@ function BalanceEditForm({
 				entityId={entityId}
 				selectedCusEnt={selectedCusEnt}
 				cusPrice={cusPrice}
+			/>
+
+			<PooledBalanceContributions
+				pooledBalance={selectedCusEnt.pooled_balance}
 			/>
 		</div>
 	);

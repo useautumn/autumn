@@ -4,12 +4,15 @@ import {
 	type FullCusProduct,
 	type FullProduct,
 	isCustomizePlanPatchStyle,
+	mapToProductItems,
+	orgMultiCurrencyEnabled,
 	type PatchContext,
 	type SharedContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { isFixedPrice } from "@shared/utils/productUtils/priceUtils/classifyPriceUtils";
 import { duplicateCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/duplicateCustomerProduct";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems";
 import { generateId } from "@/utils/genUtils";
 import { handleCustomizeAddItems } from "./handleCustomizeAddItems";
 import { handleCustomizeDeleteItems } from "./handleCustomizeDeleteItems";
@@ -153,6 +156,20 @@ export const setupPatchContext = ({
 		features: ctx.features,
 	});
 
+	const {
+		customerPrices: deletePriceCustomerPrices,
+		prices: customPricePrices,
+	} = handleCustomizePrice({
+		ctx,
+		customize,
+		targetCustomerProduct: finalCustomerProduct,
+		orgId: finalCustomerProduct.product.org_id,
+		internalProductId: finalCustomerProduct.product.internal_id,
+		reusePricesAndEntitlements,
+	});
+
+	// Snapshot only after every handler that mutates finalCustomerProduct, so it
+	// can't drift from the customer product it's derived from.
 	const patchFullProduct = cusProductToProduct({
 		cusProduct: finalCustomerProduct,
 	});
@@ -167,18 +184,7 @@ export const setupPatchContext = ({
 		if (!feature) continue;
 		patchFullProduct.entitlements.push({ ...newEnt, feature });
 	}
-	patchFullProduct.prices.push(...updateNewPrices);
-
-	const {
-		customerPrices: deletePriceCustomerPrices,
-		prices: customPricePrices,
-	} = handleCustomizePrice({
-		ctx,
-		customize,
-		targetCustomerProduct: finalCustomerProduct,
-		fullProduct: patchFullProduct,
-		reusePricesAndEntitlements,
-	});
+	patchFullProduct.prices.push(...updateNewPrices, ...customPricePrices);
 
 	const { addItems: nonNoopAddItems } = handleCustomizeNoopItems({
 		customize,
@@ -193,6 +199,18 @@ export const setupPatchContext = ({
 			fullProduct: patchFullProduct,
 			reusePricesAndEntitlements,
 		});
+
+	validateProductItems({
+		newItems: mapToProductItems({
+			prices: patchFullProduct.prices,
+			entitlements: patchFullProduct.entitlements,
+			features: ctx.features,
+		}),
+		features: ctx.features,
+		orgId: patchFullProduct.org_id,
+		env: patchFullProduct.env,
+		multiCurrencyEnabled: orgMultiCurrencyEnabled({ org: ctx.org }),
+	});
 
 	const patchContext: PatchContext = {
 		originalCustomerProduct: customerProduct,

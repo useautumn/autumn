@@ -49,6 +49,29 @@ const validateProductItem = ({
 		});
 	}
 
+	if (
+		item.pooled &&
+		(feature?.type === FeatureType.Boolean || item.included_usage === Infinite)
+	) {
+		throw new RecaseError({
+			message: "Pooled items are only supported for finite metered features",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (
+		item.pooled &&
+		isFeaturePriceItem(item) &&
+		item.usage_model === UsageModel.PayPerUse
+	) {
+		throw new RecaseError({
+			message: "Pooled items cannot use usage-based pricing",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	// 1. Check if amount and tiers are not null
 	if (notNullish(item.price) && notNullish(item.tiers)) {
 		throw new RecaseError({

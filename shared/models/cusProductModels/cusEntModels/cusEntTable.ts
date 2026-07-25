@@ -33,6 +33,11 @@ export const customerEntitlements = pgTable(
 		next_reset_at: numeric({ mode: "number" }),
 		usage_allowed: boolean("usage_allowed").default(false),
 		separate_interval: boolean("separate_interval").notNull().default(false),
+		is_pooled_balance: boolean("is_pooled_balance").notNull().default(false),
+		/** Denormalized reverse link; pooled_balances.customer_entitlement_id is canonical. */
+		pooled_balance_id: text("pooled_balance_id"),
+		/** Denormalized reverse link; source_customer_entitlement_id is canonical. */
+		pooled_contribution_id: text("pooled_contribution_id"),
 
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
@@ -134,8 +139,11 @@ export const customerEntitlements = pgTable(
 				sql`${table.expired} IS NOT TRUE AND ${table.next_reset_at} IS NOT NULL`,
 			)
 			.concurrently(),
-		// The V2 reset scan index: matches resetEligibleFilterSql exactly (minus
-		// expires_at, filtered on the heap) and carries id for the keyset sort.
+		index("idx_customer_entitlements_pooled_contribution")
+			.on(table.pooled_contribution_id)
+			.where(sql`${table.pooled_contribution_id} IS NOT NULL`)
+			.concurrently(),
+		// Covers the stable reset predicate; expiry and pooled sources are heap-filtered.
 		index("idx_customer_entitlements_reset_scan")
 			.on(table.next_reset_at, sql`${table.id} COLLATE "C"`)
 			.where(

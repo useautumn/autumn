@@ -13,17 +13,12 @@ export type ResetEligibleCustomerEntitlementRow = {
 	nextResetAt: number;
 };
 
-/**
- * The reset-eligibility predicate: overdue, not expired, not owned by
- * invoice.created, not past a loose expiry. Shared by the scan page query and
- * the backlog count so the two can never drift. Keep in sync with the
- * idx_customer_entitlements_reset_scan partial index predicate (which covers
- * everything except expires_at).
- */
+/** The partial index covers the stable predicate; expiry and pooled sources remain heap filters. */
 export const resetEligibleFilterSql = ({ dueBefore }: { dueBefore: number }) =>
 	sql`${customerEntitlements.next_reset_at} < ${dueBefore}
 		AND ${customerEntitlements.expired} IS NOT TRUE
 		AND ${customerEntitlements.reset_by_invoice} IS NOT TRUE
+		AND ${customerEntitlements.pooled_contribution_id} IS NULL
 		AND (${customerEntitlements.expires_at} IS NULL OR ${customerEntitlements.expires_at} > ${dueBefore})`;
 
 /** The exact scan page statement (tagged). Exported so experiments can

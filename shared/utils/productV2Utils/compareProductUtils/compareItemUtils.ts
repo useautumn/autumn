@@ -190,6 +190,10 @@ export const featureItemsAreSame = ({
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
 		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
+		},
 		reset_usage_when_enabled: {
 			condition:
 				item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,
@@ -357,6 +361,10 @@ export const featurePriceItemsAreSame = ({
 		entity_feature_id: {
 			condition: item1.entity_feature_id == item2.entity_feature_id,
 			message: `Entity feature ID different: ${item1.entity_feature_id} != ${item2.entity_feature_id}`,
+		},
+		pooled: {
+			condition: (item1.pooled ?? false) === (item2.pooled ?? false),
+			message: `Pooled different: ${item1.pooled} != ${item2.pooled}`,
 		},
 
 		// config: {

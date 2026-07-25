@@ -1,4 +1,4 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import { type AutumnBillingPlan, addSafe } from "@autumn/shared";
 
 export const mergeAutumnBillingPlans = ({
 	base,
@@ -75,6 +75,37 @@ export const mergeAutumnBillingPlans = ({
 		incoming: incoming.updateCustomerEntitlements,
 		getKey: (update) => update.customerEntitlement.id,
 	}),
+	pooledBalancePlan:
+		base.pooledBalancePlan || incoming.pooledBalancePlan
+			? {
+					insertPoolBalances:
+						mergeByKey({
+							base: base.pooledBalancePlan?.insertPoolBalances,
+							incoming: incoming.pooledBalancePlan?.insertPoolBalances,
+							getKey: (pooledCustomerEntitlement) =>
+								pooledCustomerEntitlement.id,
+						}) ?? [],
+					updatePoolBalances: mergePooledBalanceUpdates({
+						base: base.pooledBalancePlan?.updatePoolBalances,
+						incoming: incoming.pooledBalancePlan?.updatePoolBalances,
+					}),
+					insertPoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.insertPoolContributions,
+							incoming: incoming.pooledBalancePlan?.insertPoolContributions,
+						}) ?? [],
+					updatePoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.updatePoolContributions,
+							incoming: incoming.pooledBalancePlan?.updatePoolContributions,
+						}) ?? [],
+					deletePoolContributions:
+						mergeById({
+							base: base.pooledBalancePlan?.deletePoolContributions,
+							incoming: incoming.pooledBalancePlan?.deletePoolContributions,
+						}) ?? [],
+				}
+			: undefined,
 	autoTopupRebalance:
 		base.autoTopupRebalance || incoming.autoTopupRebalance
 			? {
@@ -126,6 +157,43 @@ const mergeByKey = <T>({
 	for (const item of incoming ?? []) itemByKey.set(getKey(item), item);
 
 	return Array.from(itemByKey.values());
+};
+
+type PooledBalanceUpdate = NonNullable<
+	AutumnBillingPlan["pooledBalancePlan"]
+>["updatePoolBalances"][number];
+
+const mergePooledBalanceUpdates = ({
+	base,
+	incoming,
+}: {
+	base?: PooledBalanceUpdate[];
+	incoming?: PooledBalanceUpdate[];
+}): PooledBalanceUpdate[] => {
+	const updatesByPoolId = new Map<string, PooledBalanceUpdate>();
+
+	for (const update of [...(base ?? []), ...(incoming ?? [])]) {
+		const poolId = update.pooledCustomerEntitlement.id;
+		const existing = updatesByPoolId.get(poolId);
+		updatesByPoolId.set(
+			poolId,
+			existing
+				? {
+						pooledCustomerEntitlement: update.pooledCustomerEntitlement,
+						balanceDelta: addSafe({
+							left: existing.balanceDelta,
+							right: update.balanceDelta,
+						}),
+						grantedDelta: addSafe({
+							left: existing.grantedDelta,
+							right: update.grantedDelta,
+						}),
+					}
+				: update,
+		);
+	}
+
+	return Array.from(updatesByPoolId.values());
 };
 
 type PatchCustomerProduct = NonNullable<

@@ -1,4 +1,9 @@
-import { CusProductStatus } from "@autumn/shared";
+import {
+	CusProductStatus,
+	isPooledBalanceSourceCustomerEntitlement,
+	isSyntheticPooledBalanceCustomerEntitlement,
+	PooledBalanceResetMode,
+} from "@autumn/shared";
 import type { ResetContextCustomerEntitlement } from "@/internal/customers/cusProducts/cusEnts/repos/getResetContextByIds.js";
 import type { ResetVerdict } from "../types.js";
 
@@ -21,6 +26,38 @@ export const classifyNoAction = ({
 			customerEntitlementId: customerEntitlement.id,
 			reason: "not_due",
 		};
+	}
+
+	if (
+		isPooledBalanceSourceCustomerEntitlement({ customerEntitlement })
+	) {
+		return {
+			kind: "no_action",
+			customerEntitlementId: customerEntitlement.id,
+			reason: "pooled_balance_source",
+		};
+	}
+
+	if (
+		isSyntheticPooledBalanceCustomerEntitlement({ customerEntitlement })
+	) {
+		if (!customerEntitlement.pooled_balance) {
+			return {
+				kind: "no_action",
+				customerEntitlementId: customerEntitlement.id,
+				reason: "pooled_balance_missing",
+			};
+		}
+
+		if (
+			customerEntitlement.pooled_balance.reset_mode ===
+			PooledBalanceResetMode.Subscription
+		) {
+			return {
+				kind: "resets_via_invoice",
+				customerEntitlementId: customerEntitlement.id,
+			};
+		}
 	}
 
 	const customerProduct = customerEntitlement.customer_product;

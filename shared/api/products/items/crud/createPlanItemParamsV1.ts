@@ -27,6 +27,10 @@ export const CreatePlanItemParamsV1Schema = z
 		unlimited: z.boolean().optional().meta({
 			description: "If true, customer has unlimited access to this feature.",
 		}),
+		pooled: z.boolean().default(false).optional().meta({
+			description:
+				"Whether entity-level grants contribute to a shared customer balance.",
+		}),
 
 		reset: z
 			.object({

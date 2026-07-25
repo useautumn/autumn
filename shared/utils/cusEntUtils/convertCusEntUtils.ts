@@ -64,33 +64,34 @@ export const cusEntToIncludedUsage = ({
 	entityId?: string;
 	withRollovers?: boolean;
 }) => {
-	if (!cusEnt.customer_product) return 0;
-
 	const rollover = getRolloverFields({
 		cusEnt,
 		entityId,
 	});
 
-	const { count: entityCount } = getCusEntBalance({
-		cusEnt,
-		entityId,
-	});
+	let total = cusEnt.pooled_balance?.granted;
+	if (total === undefined) {
+		if (!cusEnt.customer_product) return 0;
 
-	const cusProduct = cusEnt.customer_product;
-	const options = entToOptions({
-		ent: cusEnt.entitlement,
-		options: cusProduct?.options ?? [],
-	});
+		const { count: entityCount } = getCusEntBalance({
+			cusEnt,
+			entityId,
+		});
+		const cusProduct = cusEnt.customer_product;
+		const options = entToOptions({
+			ent: cusEnt.entitlement,
+			options: cusProduct.options ?? [],
+		});
+		const cusPrice = cusEntToCusPrice({ cusEnt });
+		const startingBalance = getStartingBalance({
+			entitlement: cusEnt.entitlement,
+			options: options || undefined,
+			relatedPrice: cusPrice?.price,
+			productQuantity: cusProduct.quantity ?? 1,
+		});
 
-	const cusPrice = cusEntToCusPrice({ cusEnt });
-	const startingBalance = getStartingBalance({
-		entitlement: cusEnt.entitlement,
-		options: options || undefined,
-		relatedPrice: cusPrice?.price,
-		productQuantity: cusProduct?.quantity ?? 1,
-	});
-
-	const total = new Decimal(startingBalance).mul(entityCount).toNumber();
+		total = new Decimal(startingBalance).mul(entityCount).toNumber();
+	}
 
 	if (withRollovers && rollover) {
 		return new Decimal(total)
@@ -122,5 +123,4 @@ export const cusEntToInternalProductId = ({
 	cusEnt,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
-}): string | null =>
-	cusEnt.customer_product?.internal_product_id ?? null;
+}): string | null => cusEnt.customer_product?.internal_product_id ?? null;
