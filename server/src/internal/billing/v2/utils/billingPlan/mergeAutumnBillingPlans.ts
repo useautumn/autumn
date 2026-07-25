@@ -95,6 +95,11 @@ export const mergeAutumnBillingPlans = ({
 							incoming: incoming.pooledBalancePlan?.expirePoolBalanceCandidates,
 							getKey: (expiry) => expiry.pooledCustomerEntitlement.id,
 						}) ?? [],
+					insertPoolRollovers:
+						mergeById({
+							base: base.pooledBalancePlan?.insertPoolRollovers,
+							incoming: incoming.pooledBalancePlan?.insertPoolRollovers,
+						}) ?? [],
 					insertPoolContributions:
 						mergeById({
 							base: base.pooledBalancePlan?.insertPoolContributions,

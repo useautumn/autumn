@@ -22,6 +22,11 @@ export const PooledBalancePlanSchema = z.object({
 	insertPoolBalances: z.array(z.custom<FullCustomerEntitlement>()),
 	updatePoolBalances: z.array(PooledBalanceUpdateSchema),
 	expirePoolBalanceCandidates: z.array(PooledBalanceExpiryCandidateSchema),
+	/** Rollovers copied off a contributing source onto the pool, the same way the
+	 * source's balance is carried. The source's own rows are left to expire. */
+	insertPoolRollovers: z.array(
+		z.custom<FullCustomerEntitlement["rollovers"][number]>(),
+	),
 	insertPoolContributions: z.array(z.custom<InsertPooledBalanceContribution>()),
 	updatePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),
 	deletePoolContributions: z.array(z.custom<DbPooledBalanceContribution>()),

@@ -12,7 +12,10 @@ import type {
 	PooledBalanceComputeContext,
 	PooledBalanceContributionAmounts,
 } from "../types/pooledBalanceComputeTypes";
-import { addToUpdatePoolBalances } from "../utils/pooledBalancePlanUtils";
+import {
+	addToUpdatePoolBalances,
+	carrySourceRolloversToPool,
+} from "../utils/pooledBalancePlanUtils";
 import { initPooledBalanceGraph } from "./initPooledBalanceGraph";
 
 export const upsertPooledBalance = ({
@@ -63,6 +66,11 @@ export const upsertPooledBalance = ({
 			computeContext,
 			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
 		});
+		carrySourceRolloversToPool({
+			pooledBalancePlan: computeContext.plan,
+			contributionCustomerEntitlement,
+			pooledCustomerEntitlement: insertedPooledCustomerEntitlement,
+		});
 
 		return insertedPooledCustomerEntitlement;
 	}
@@ -78,6 +86,11 @@ export const upsertPooledBalance = ({
 			left: existingPooledCustomerEntitlement.pooled_balance.granted,
 			right: contributionAmounts.currentContribution,
 		}),
+	});
+	carrySourceRolloversToPool({
+		pooledBalancePlan: computeContext.plan,
+		contributionCustomerEntitlement,
+		pooledCustomerEntitlement: existingPooledCustomerEntitlement,
 	});
 
 	return existingPooledCustomerEntitlement;

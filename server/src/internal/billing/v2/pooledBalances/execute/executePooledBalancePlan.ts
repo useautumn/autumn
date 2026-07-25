@@ -7,6 +7,7 @@ import {
 	type PooledBalancePlan,
 	pooledBalanceContributions,
 	pooledBalances,
+	rollovers,
 } from "@autumn/shared";
 import { and, eq, inArray, notExists, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -115,6 +116,13 @@ export const executePooledBalancePlan = async ({
 						),
 					);
 			}
+		}
+
+		if (pooledBalancePlan.insertPoolRollovers.length > 0) {
+			await tx
+				.insert(rollovers)
+				.values(pooledBalancePlan.insertPoolRollovers)
+				.onConflictDoNothing();
 		}
 
 		for (const contribution of pooledBalancePlan.updatePoolContributions) {

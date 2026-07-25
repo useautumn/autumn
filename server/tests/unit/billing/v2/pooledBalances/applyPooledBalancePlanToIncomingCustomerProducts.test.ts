@@ -23,6 +23,7 @@ test("normalizes incoming pooled source entitlements from the finalized plan", (
 		insertPoolBalances: [],
 		updatePoolBalances: [],
 		expirePoolBalanceCandidates: [],
+		insertPoolRollovers: [],
 		insertPoolContributions: [
 			{
 				id: "contribution",

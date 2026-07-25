@@ -4,6 +4,7 @@ export const emptyPooledBalancePlan = (): PooledBalancePlan => ({
 	insertPoolBalances: [],
 	updatePoolBalances: [],
 	expirePoolBalanceCandidates: [],
+	insertPoolRollovers: [],
 	insertPoolContributions: [],
 	updatePoolContributions: [],
 	deletePoolContributions: [],
@@ -19,6 +20,7 @@ export const pooledBalancePlanHasChanges = ({
 			(pooledBalancePlan.insertPoolBalances.length > 0 ||
 				pooledBalancePlan.updatePoolBalances.length > 0 ||
 				pooledBalancePlan.expirePoolBalanceCandidates.length > 0 ||
+				pooledBalancePlan.insertPoolRollovers.length > 0 ||
 				pooledBalancePlan.insertPoolContributions.length > 0 ||
 				pooledBalancePlan.updatePoolContributions.length > 0 ||
 				pooledBalancePlan.deletePoolContributions.length > 0),

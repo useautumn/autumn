@@ -1,9 +1,11 @@
 import type {
 	DbPooledBalanceContribution,
+	FullCustomerEntitlement,
 	InsertPooledBalanceContribution,
 	PooledBalancePlan,
 } from "@autumn/shared";
 import { addSafe, subtractSafe } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 import type { MutablePooledCustomerEntitlement } from "../types/pooledBalanceComputeTypes";
 
 export const addToUpdatePoolBalances = ({
@@ -80,6 +82,28 @@ export const addToDeletePoolContributions = ({
 	contribution: DbPooledBalanceContribution;
 }) => {
 	pooledBalancePlan.deletePoolContributions.push(contribution);
+};
+
+/** Rollovers ride the same path as the source's balance: the pool absorbs them,
+ * and the source's own rows are left behind to expire with its cusProduct. */
+export const carrySourceRolloversToPool = ({
+	pooledBalancePlan,
+	contributionCustomerEntitlement,
+	pooledCustomerEntitlement,
+}: {
+	pooledBalancePlan: PooledBalancePlan;
+	contributionCustomerEntitlement: FullCustomerEntitlement;
+	pooledCustomerEntitlement: MutablePooledCustomerEntitlement;
+}) => {
+	for (const rollover of contributionCustomerEntitlement.rollovers ?? []) {
+		const carried = {
+			...rollover,
+			id: generateId("roll"),
+			cus_ent_id: pooledCustomerEntitlement.id,
+		};
+		pooledCustomerEntitlement.rollovers.push(carried);
+		pooledBalancePlan.insertPoolRollovers.push(carried);
+	}
 };
 
 export const addToExpirePoolBalanceCandidates = ({

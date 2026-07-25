@@ -67,6 +67,7 @@ const transitionContext = ({
 		insertPoolBalances: [],
 		updatePoolBalances: [],
 		expirePoolBalanceCandidates: [],
+		insertPoolRollovers: [],
 		insertPoolContributions: [incoming],
 		updatePoolContributions: [],
 		deletePoolContributions: [current],
