@@ -49,7 +49,7 @@ if (!response.allowed) {
 ```
 
 ```python Python
-response = await autumn.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="ai-tokens",
     required_balance=1000,
@@ -69,7 +69,7 @@ if not response.allowed:
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -121,7 +121,7 @@ await autumn.balances.finalize({
 ```
 
 ```python Python
-await autumn.balances.finalize(
+autumn.balances.finalize(
     lock_id="completion_abc123",
     action="confirm",
 )
@@ -153,7 +153,7 @@ await autumn.balances.finalize({
 ```
 
 ```python Python
-await autumn.balances.finalize(
+autumn.balances.finalize(
     lock_id="completion_abc123",
     action="release",
 )
@@ -188,7 +188,7 @@ await autumn.balances.finalize({
 
 ```python Python
 # Reserved 1000 tokens, but only used 743
-await autumn.balances.finalize(
+autumn.balances.finalize(
     lock_id="completion_abc123",
     action="confirm",
     override_value=743,

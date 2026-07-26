@@ -8,7 +8,7 @@ import LearnHooksTip from '/snippets/learn-hooks-tip.mdx';
 
 The `useAggregateEvents` hook provides access to usage analytics and reporting data. 
 
-It fetches data from the [/events/aggregate](/api-reference/events/aggregate-events) endpoint, that can be displayed in a chart (typically via a library like Recharts).
+It fetches data from the [`events.aggregate`](/api-reference/events/aggregateEvents) endpoint, which can be displayed in a chart (typically via a library like Recharts).
 
 <LearnHooksTip />
 
@@ -18,17 +18,20 @@ It fetches data from the [/events/aggregate](/api-reference/events/aggregate-eve
   The feature ID or array of feature IDs to query usage data for.
 </ParamField>
 
+<ParamField body="entityId" type="string">
+  Filter events to an entity.
+</ParamField>
+
 <ParamField body="groupBy" type="string">
-Aggregate data by an event properties paramater. This property is metadata passed in the event endpoint. Should be formatted as `properties.<event_property>`
+  Group by an event property (`properties.<name>`) or by `$customer_id`, `$entity_id`, or `$plan_id`.
 </ParamField>
 
 <ParamField body="range" type="string">
-  Time range for the analytics query. Available options: "24h", "7d", "30d", "90d", "last_cycle", "1bc", "3bc". "bc" refers to billing cycle. Defaults to "30d" if not provided.
-
+  `"24h"` | `"7d"` | `"30d"` | `"90d"` | `"last_cycle"` | `"1bc"` | `"3bc"`. Defaults to `"1bc"` when neither `range` nor `customRange` is provided.
 </ParamField>
 
 <ParamField body="binSize" type="string">
-  Granularity of the time bins for the data points. Available options: "day", "hour". Defaults to "day".
+  `"hour"` | `"day"` | `"week"` | `"month"`. Defaults to `"hour"` for a `24h` range and `"day"` otherwise.
 </ParamField>
 
 <ParamField body="customRange" type="object">
@@ -45,6 +48,14 @@ Aggregate data by an event properties paramater. This property is metadata passe
   </Expandable>
 </ParamField>
 
+<ParamField body="filterBy" type="Record<string, string>">
+  Filter events by up to five property values.
+</ParamField>
+
+<ParamField body="maxGroups" type="number">
+  Maximum distinct group values per time bin when using `groupBy`. Defaults to 9.
+</ParamField>
+
 <QueryOptionsParam />
 
 ## Returns
@@ -53,7 +64,8 @@ Aggregate data by an event properties paramater. This property is metadata passe
 
 Array of aggregated event data points for each time period. Each `AggregatedEventRow` includes:
 - `period`: Unix timestamp in milliseconds representing the start of the time period
-- Dynamic properties for each queried `featureId` with their usage amounts
+- `values`: Usage amounts keyed by feature ID
+- `groupedValues`: Values keyed by feature ID and group value when `groupBy` is used
 
 <Expandable title="list example">
 
@@ -61,14 +73,18 @@ Array of aggregated event data points for each time period. Each `AggregatedEven
 [
     {
         "period": 1765411200000,
-        "basic_messages": 3,
-        "premium_messages": 5
+        "values": {
+          "basic_messages": 3,
+          "premium_messages": 5
+        }
     },
     {
         "period": 1765497600000,
-        "basic_messages": 1,
-        "premium_messages": 2
-    },
+        "values": {
+          "basic_messages": 1,
+          "premium_messages": 2
+        }
+    }
 ]
 ```
 

@@ -12,7 +12,7 @@ The `check` method returns the `allowed` field in real-time to check if a custom
 The `allowed` field will return `true` for a given feature if:
 - The customer has an active plan with this feature
 - The customer has an active plan with a `credit_system` that grants this feature
-- The plan feature is <Badge>included</Badge> or <Badge>prepaid</Badge>, and the current balance is greater than the `required_balance` parameter
+- The plan feature is <Badge>included</Badge> or <Badge>prepaid</Badge>, and the current balance is at least the `required_balance` parameter
 - The plan feature is <Badge>usage-based</Badge>, and the user has not exceeded their max spend limit
 - The plan feature is <Badge>unlimited</Badge> or a <Badge>boolean</Badge> feature
 
@@ -50,7 +50,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "messages",
 });
@@ -63,7 +63,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="messages",
 )
@@ -71,7 +71,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -127,7 +127,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "messages",
   requiredBalance: 3,
@@ -141,7 +141,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="messages",
     required_balance=3,
@@ -150,7 +150,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -173,7 +173,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "api_calls",
   requiredBalance: 3,
@@ -188,7 +188,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="api_calls",
     required_balance=3,
@@ -198,7 +198,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -220,7 +220,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "api_calls",
   value: -3,
@@ -232,7 +232,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+autumn.track(
     customer_id="user_123",
     feature_id="api_calls",
     value=-3,
@@ -240,7 +240,7 @@ await autumn.customers.track(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -303,7 +303,7 @@ if (customer.flags?.["premiumDashboard"]) {
 ```
 
 ```python Python
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123",
     expand=["flags.feature"],
 )

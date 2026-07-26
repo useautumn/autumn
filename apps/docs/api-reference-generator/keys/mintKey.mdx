@@ -10,7 +10,7 @@ openapi: "openapi POST /v1/keys.mint"
 ### How it works
 
 1. Your backend calls `keys.mint` with your secret key to issue a token pair for a customer.
-2. Hand the **access token** to that customer's app. It can call `check`, `track`, `customers.get` and `entities.get` — always scoped to that customer, even if a different `customer_id` is sent.
+2. Hand the **access token** to that customer's app. It can call `check`, `track`, `customers.get`, `entities.get`, `events.list`, and `events.aggregate` — always scoped to that customer, even if a different `customer_id` is sent.
 3. Before the access token expires, the app calls [`keys.refresh`](/api-reference/keys/refreshKey) with its **refresh token** to rotate a fresh pair — no secret key required.
 
 <CodeGroup>

@@ -80,7 +80,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     name="Mr New Name",
     email="newemail@example.com",
@@ -88,7 +88,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{

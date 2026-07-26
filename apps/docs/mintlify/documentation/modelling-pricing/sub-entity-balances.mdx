@@ -98,7 +98,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-await autumn.entities.create(
+autumn.entities.create(
     customer_id="org_123",
     entity_id="user_alice",
     feature_id="seats",
@@ -107,7 +107,7 @@ await autumn.entities.create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities" \
+curl -X POST "https://api.useautumn.com/v1/entities.create" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -129,29 +129,29 @@ Pass the `entity_id` to `check` and `track` to operate on a specific entity's ba
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.check({
-  customer_id: "org_123",
-  feature_id: "summaries",
-  entity_id: "user_alice",
+const data = await autumn.check({
+  customerId: "org_123",
+  featureId: "summaries",
+  entityId: "user_alice",
 });
 
 console.log(data.allowed);
-console.log(data.balance);
+console.log(data.balance?.remaining);
 ```
 
 ```python Python
-response = await autumn.check(
+response = autumn.check(
     customer_id="org_123",
     feature_id="summaries",
     entity_id="user_alice",
 )
 
 print(response.allowed)
-print(response.balance)
+print(response.balance.remaining)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -169,15 +169,15 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 ```typescript TypeScript
 await autumn.track({
-  customer_id: "org_123",
-  feature_id: "summaries",
-  entity_id: "user_alice",
+  customerId: "org_123",
+  featureId: "summaries",
+  entityId: "user_alice",
   value: 1,
 });
 ```
 
 ```python Python
-await autumn.track(
+autumn.track(
     customer_id="org_123",
     feature_id="summaries",
     entity_id="user_alice",
@@ -186,7 +186,7 @@ await autumn.track(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -199,15 +199,8 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-## Customer-level vs entity-level
-
-| Level | How to use | Behavior |
-|-------|-----------|----------|
-| **Entity-level** | Pass `entity_id` in check/track | Checks/deducts from that entity's individual balance |
-| **Customer-level** | Omit `entity_id` | Returns the total balance across all entities |
-
 <Note>
-When tracking at the customer level (without `entity_id`), usage is deducted from the first-created entity to keep entity-level totals in sync with the customer-level total.
+Customer-level checks and usage do not aggregate entity-level balances. Include `entity_id` for a per-entity balance; model a separate customer-level balance when usage should be shared.
 </Note>
 
 ## Deleting entities
@@ -224,17 +217,17 @@ await autumn.entities.delete({
 ```
 
 ```python Python
-await autumn.entities.delete(
+autumn.entities.delete(
     customer_id="org_123",
     entity_id="user_alice",
 )
 ```
 
 ```bash cURL
-curl -X DELETE "https://api.useautumn.com/v1/entities/user_alice" \
+curl -X POST "https://api.useautumn.com/v1/entities.delete" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
-  -d '{ "customer_id": "org_123" }'
+  -d '{ "customer_id": "org_123", "entity_id": "user_alice" }'
 ```
 
 </CodeGroup>

@@ -73,7 +73,7 @@ When your user signs up, create an Autumn customer. This will automatically assi
 import { useCustomer } from "autumn-js/react";
 
 const App = () => {
-  const { customer } = useCustomer();
+  const { data: customer } = useCustomer();
 
   console.log("Autumn customer:", customer);
 
@@ -88,8 +88,8 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data, error } = await autumn.customers.create({
-  id: "user_or_org_id_from_auth",
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_or_org_id_from_auth",
   name: "John Yeo",
   email: "john@example.com",
 });
@@ -97,13 +97,13 @@ const { data, error } = await autumn.customers.create({
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-    customer = await autumn.customers.create(
-        id="user_or_org_id_from_auth",
+    customer = autumn.customers.get_or_create(
+        customer_id="user_or_org_id_from_auth",
         name="John Yeo",
         email="john@example.com",
     )
@@ -113,11 +113,11 @@ asyncio.run(main())
 
 ```bash cURL
 curl --request POST \
-  --url https://api.useautumn.com/customers \
+  --url https://api.useautumn.com/v1/customers.get_or_create \
   --header 'Authorization: Bearer am_sk_42424242' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": "user_or_org_id_from_auth",
+    "customer_id": "user_or_org_id_from_auth",
     "name": "John Yeo",
     "email": "john@example.com"
   }'
@@ -140,9 +140,9 @@ export function CheckPremiumMessage() {
   const { check, refetch } = useCustomer();
 
   const handleCheckAccess = async () => {
-    const { data } = await check({ featureId: "messages" });
+    const { allowed } = check({ featureId: "messages" });
 
-    if (!data?.allowed) {
+    if (!allowed) {
       alert("You've run out of messages");
     } else {
       // proceed with sending message
@@ -159,9 +159,9 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "messages",
+const data = await autumn.check({
+  customerId: "user_or_org_id_from_auth",
+  featureId: "messages",
 });
 
 if (!data.allowed) {
@@ -172,12 +172,12 @@ if (!data.allowed) {
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_1234567890")
 
 async def main():
-    response = await autumn.check(
+    response = autumn.check(
         customer_id="user_or_org_id_from_auth",
         feature_id="messages",
     )
@@ -190,7 +190,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_1234567890" \
   -H "Content-Type: application/json" \
   -d '{
@@ -201,24 +201,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response">
-```json
-{
-  "customer_id": "user_or_org_id_from_auth",
-  "feature_id": "messages",
-  "code": "feature_found",
-  "allowed": true,
-  "balance": 10,
-  "usage": 0,
-  "included_usage": 10,
-  "unlimited": false,
-  "interval": null,
-  "interval_count": 1,
-  "next_reset_at": 2803498203,
-  "overage_allowed": false
-}
-```
-</Expandable>
 </Step>
 
 <Step>
@@ -236,20 +218,20 @@ const autumn = new Autumn({
 });
 
 await autumn.track({
-  customer_id: "user_or_org_id_from_auth",
-  feature_id: "messages",
+  customerId: "user_or_org_id_from_auth",
+  featureId: "messages",
   value: 5,
 });
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    await autumn.track(
+    autumn.track(
         customer_id="user_or_org_id_from_auth",
         feature_id="messages",
         value=5,
@@ -259,7 +241,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
@@ -271,15 +253,6 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 
 </CodeGroup>
 
-<Expandable title="track response">
-```json
-{
-  "code": "event_received",
-  "customer_id": "user_or_org_id_from_auth",
-  "feature_id": "messages"
-}
-```
-</Expandable>
 </Step>
 
 <Step>
@@ -290,18 +263,17 @@ When users run out of messages, they can purchase additional messages using our 
 <CodeGroup>
 
 ```jsx React
-import { useCustomer, CheckoutDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
 export default function TopUpButton() {
-  const { checkout } = useCustomer();
+  const { attach } = useCustomer();
 
   return (
     <button
       onClick={async () => {
-        await checkout({
-          productId: "top_up",
-          dialog: CheckoutDialog,
-          options: [{
+        await attach({
+          planId: "top_up",
+          featureQuantities: [{
             featureId: "messages",
             quantity: 200,
           }],
@@ -321,16 +293,16 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_or_org_id_from_auth",
-  product_id: "top_up",
-  options: [{
-    feature_id: "messages",
+const data = await autumn.billing.attach({
+  customerId: "user_or_org_id_from_auth",
+  planId: "top_up",
+  featureQuantities: [{
+    featureId: "messages",
     quantity: 200,
   }],
 });
 
-if (data.url) {
+if (data.paymentUrl) {
   // Redirect user to Stripe checkout URL
 } else {
   // Show purchase preview to user
@@ -339,21 +311,21 @@ if (data.url) {
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    response = await autumn.checkout(
+    response = autumn.billing.attach(
         customer_id="user_or_org_id_from_auth",
-        product_id="top-up",
-        options=[{
+        plan_id="top-up",
+        feature_quantities=[{
           "feature_id": "messages",
           "quantity": 200,
         }],
     )
     
-    if response.url:
+    if response.payment_url:
         # Redirect user to Stripe checkout URL
         pass
     else:
@@ -364,13 +336,13 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_or_org_id_from_auth",
-    "product_id": "top-up",
-    "options": [{
+    "plan_id": "top-up",
+    "feature_quantities": [{
       "feature_id": "messages",
       "quantity": 200
     }]
@@ -379,116 +351,37 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 
 </CodeGroup>
 
-<Expandable title="checkout response">
-```json
-{
-  "customer_id": "user_or_org_id_from_auth",
-  "lines": [
-    {
-      "description": "Top-up - 200 premium messages",
-      "amount": 20,
-      "item": {
-        "type": "feature",
-        "feature_id": "premium-messages",
-        "feature_type": "prepaid",
-        "feature": {
-          "id": "premium-messages",
-          "name": "Premium messages",
-          "type": "metered",
-          "display": {
-            "singular": "premium message",
-            "plural": "premium messages"
-          }
-        },
-        "quantity": 200,
-        "price": 10,
-        "price_per": 100,
-        "display": {
-          "primary_text": "200 premium messages",
-          "secondary_text": "$10 per 100 messages"
-        }
-      }
-    }
-  ],
-  "product": {
-    "id": "top-up",
-    "name": "Top-up",
-    "group": null,
-    "env": "sandbox",
-    "is_add_on": false,
-    "is_default": false,
-    "archived": false,
-    "version": 1,
-    "created_at": 1766428038264,
-    "items": [
-      {
-        "type": "feature",
-        "feature_id": "premium-messages",
-        "feature_type": "prepaid",
-        "feature": {
-          "id": "premium-messages",
-          "name": "Premium messages",
-          "type": "metered",
-          "display": {
-            "singular": "premium message",
-            "plural": "premium messages"
-          }
-        },
-        "price": 10,
-        "price_per": 100,
-        "display": {
-          "primary_text": "$10 per 100 messages"
-        }
-      }
-    ],
-    "free_trial": null,
-    "base_variant_id": null,
-    "scenario": "attach",
-    "properties": {
-      "is_free": false,
-      "is_one_off": true,
-      "has_trial": false,
-      "updateable": false
-    }
-  },
-  "total": 20,
-  "currency": "usd",
-  "url": "https://checkout.stripe.com/c/pay/.......",
-  "has_prorations": false
-}
-```
-</Expandable>
 
 Once the customer completes the payment, they will have an additional 200 premium messages available to use.
 
 </Step>
 <Step>
 #### Displaying balances to the user
-You can display to the user by getting balances from the `customer` method. Under the `customer.features` record, you'll be able to retrieve a current balance, total granted, and a `breakdown` of their monthly vs top-up messages.
+The customer response exposes each feature balance under `balances`, including a `breakdown` of its monthly and top-up sources.
 
 <CodeGroup>
 
 ```jsx React [expandable]
 import { useCustomer } from "autumn-js/react";
 
-const { customer } = useCustomer();
+const { data: customer } = useCustomer();
 
-const messages = customer?.features?.messages;
+const messages = customer?.balances?.messages;
 
 // Get breakdown of monthly vs prepaid balances
 const monthlyBalance = messages?.breakdown?.find(
-  (b) => b.interval === "month"
+  (b) => b.reset?.interval === "month"
 );
 const prepaidBalance = messages?.breakdown?.find(
-  (b) => b.interval === "lifetime"
+  (b) => b.reset?.interval === "one_off"
 );
 
 // Display both balances to the user
 return (
   <div>
-    <p>Monthly: {monthlyBalance?.balance ?? 0} remaining</p>
-    <p>Prepaid: {prepaidBalance?.balance ?? 0} remaining</p>
-    <p>Total: {messages?.balance ?? 0} messages available</p>
+    <p>Monthly: {monthlyBalance?.remaining ?? 0} remaining</p>
+    <p>Prepaid: {prepaidBalance?.remaining ?? 0} remaining</p>
+    <p>Total: {messages?.remaining ?? 0} messages available</p>
   </div>
 );
 ```
@@ -500,100 +393,60 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.customer({
-  customer_id: "user_or_org_id_from_auth",
+const data = await autumn.customers.get({
+  customerId: "user_or_org_id_from_auth",
 });
 
-const messages = data?.features?.messages;
+const messages = data.balances?.messages;
 
 // Extract monthly vs prepaid balances from the breakdown
 const monthlyBalance = messages?.breakdown?.find(
-  (b) => b.interval === "month"
+  (b) => b.reset?.interval === "month"
 );
 const prepaidBalance = messages?.breakdown?.find(
-  (b) => b.interval === "lifetime"
+  (b) => b.reset?.interval === "one_off"
 );
 
-console.log(`Monthly: ${monthlyBalance?.balance ?? 0} remaining`);
-console.log(`Prepaid: ${prepaidBalance?.balance ?? 0} remaining`);
-console.log(`Total: ${messages?.balance ?? 0} messages available`);
+console.log(`Monthly: ${monthlyBalance?.remaining ?? 0} remaining`);
+console.log(`Prepaid: ${prepaidBalance?.remaining ?? 0} remaining`);
+console.log(`Total: ${messages?.remaining ?? 0} messages available`);
 ```
 
 ```python Python [expandable]
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    response = await autumn.customer(
+    response = autumn.customers.get(
         customer_id="user_or_org_id_from_auth",
     )
     
-    messages = response.features.get("messages", {})
-    breakdown = messages.get("breakdown", [])
+    messages = response.balances.get("messages")
+    breakdown = messages.breakdown if messages else []
     
     # Extract monthly vs prepaid balances
-    monthly = next((b for b in breakdown if b.get("interval") == "month"), None)
-    prepaid = next((b for b in breakdown if b.get("interval") == "lifetime"), None)
+    monthly = next((b for b in breakdown if b.reset and b.reset.interval == "month"), None)
+    prepaid = next((b for b in breakdown if b.reset and b.reset.interval == "one_off"), None)
     
-    print(f"Monthly: {monthly['balance'] if monthly else 0} remaining")
-    print(f"Prepaid: {prepaid['balance'] if prepaid else 0} remaining")
-    print(f"Total: {messages.get('balance', 0)} messages available")
+    print(f"Monthly: {monthly.remaining if monthly else 0} remaining")
+    print(f"Prepaid: {prepaid.remaining if prepaid else 0} remaining")
+    print(f"Total: {messages.remaining if messages else 0} messages available")
 
 asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X GET "https://api.useautumn.com/v1/customers/user_or_org_id_from_auth" \
+curl -X POST "https://api.useautumn.com/v1/customers.get" \
   -H "Authorization: Bearer am_sk_42424242" \
-  -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "user_or_org_id_from_auth" }'
 
-  # get features usage object from customer.features.[feature_id]
+  # Read the feature from customer.balances.[feature_id]
 ```
 
 </CodeGroup>
 
-<Expandable title="customer response">
-```json
-{
-"features": {
-    "messages": {
-      "id": "messages",
-      "type": "single_use",
-      "name": "Messages",
-      "interval": "multiple",
-      "interval_count": null,
-      "unlimited": false,
-      "balance": 205,
-      "usage": 5,
-      "included_usage": 210,
-      "next_reset_at": null,
-      "overage_allowed": false,
-      "breakdown": [
-        {
-          "interval": "month",
-          "interval_count": 1,
-          "balance": 5,
-          "usage": 5,
-          "included_usage": 10,
-          "next_reset_at": 1772191445539,
-          "overage_allowed": false
-        },
-        {
-          "interval": "lifetime",
-          "interval_count": 1,
-          "balance": 200,
-          "usage": 0,
-          "included_usage": 200,
-          "next_reset_at": null,
-          "overage_allowed": false
-        }
-      ]
-    }
-  },
-}
-```
-</Expandable>
 </Step>
 </Steps>

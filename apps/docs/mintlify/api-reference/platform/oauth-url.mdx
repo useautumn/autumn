@@ -15,9 +15,7 @@ After generating the OAuth URL:
 2. User authorizes their Stripe account
 3. Stripe redirects to Autumn's callback URL
 4. Autumn processes the authorization and redirects to your `redirect_url`
-5. Your `redirect_url` will receive query parameters:
-   - `success=true` or `success=false`
-   - `message=...` (if error occurred)
+5. Your `redirect_url` receives `success=true`, or an `error` parameter if the connection fails.
 
 <Note>
   OAuth state is stored in Upstash with a 10-minute expiry. The organization must have been created via the platform API before generating an OAuth URL.

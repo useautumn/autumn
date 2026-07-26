@@ -11,10 +11,15 @@ Autumn enforces rate limits to ensure reliable performance for all users. Limits
 |---|---|---|---|
 | **Check / Entitled / Get Customer** | 10,000 requests | 1 second | Per customer |
 | **Track / Usage / Balance updates** | 10,000 requests | 1 second | Per customer |
+| **Batch track** | 10 requests | 1 second | Per organization |
 | **Attach / Cancel / Billing operations** | 30 requests | 1 minute | Per customer |
 | **Events (list / aggregate / query)** | 5 requests | 1 second | Per customer |
-| **List Customers** | 5 requests | 1 second | Per organization |
+| **Get entity** | 50 requests | 1 second | Per customer |
+| **List customers / entities** | 50 requests | 1 second | Per organization on API v2.3 (5 on older versions) |
+| **Logs (search / query)** | 10 requests | 1 second | Per organization |
 | **All other endpoints** | 25 requests | 1 second | Per organization |
+
+Check, track, and entity-get traffic also has organization-wide caps of 240,000, 120,000, and 90,000 requests per minute respectively. When those caps are reached, `check` fails open and `track` is queued when possible; customer-establishment requests return `429`.
 
 ## Scopes
 
@@ -29,9 +34,9 @@ When a rate limit is exceeded, the API returns a `429 Too Many Requests` respons
 
 Under heavy load, customer-state endpoints (`/customers.get_or_create`, `/customers.get`, `/entities.get`) may briefly return a `503` with code `service_unavailable` and a `Retry-After` header (seconds). This is transient and unrelated to your request volume -- retry after the indicated delay. `check` and `track` are never shed this way (see [Fail-Open Defaults](/documentation/fail-open)).
 
-## Preview endpoints are not rate limited
+## Preview endpoints
 
-Preview endpoints like `/v1/attach/preview`, `/v1/billing.preview_attach`, and `/v1/billing.preview_update` are **not** subject to rate limits. You can call these freely to display pricing previews to your users.
+Preview endpoints such as `/v1/billing.preview_attach` and `/v1/billing.preview_update` use the general organization limit rather than the stricter 30-per-minute billing-operation limit.
 
 ## Requesting higher limits
 

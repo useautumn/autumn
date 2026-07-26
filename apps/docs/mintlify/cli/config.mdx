@@ -29,7 +29,7 @@ Features define what can be gated, metered, or billed in your app.
 </ParamField>
 
 <ParamField body="type" type="enum" required>
-  `"boolean"` | `"metered"` | `"credit_system"`
+  `"boolean"` | `"metered"` | `"credit_system"` | `"ai_credit_system"`
 </ParamField>
 
 <ParamField body="consumable" type="boolean">
@@ -127,7 +127,7 @@ Plans combine features with pricing to create your subscription tiers, add-ons, 
 <ParamField body="price" type="object">
   Base subscription price:
   - `amount: number` -- price amount (eg, `20` for $20)
-  - `interval: string` -- `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`
+  - `interval: string` -- `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"` | `"one_off"`
   - `additionalCurrencies?: array` -- amounts in [other currencies](/documentation/concepts/plans#multiple-currencies), eg `[{ currency: 'eur', amount: 18 }]`
 </ParamField>
 
@@ -174,7 +174,7 @@ Plan items define what each plan includes -- usage limits, pricing, and billing 
 
 <ParamField body="reset" type="object">
   How often the included amount resets:
-  - `interval: string` -- `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`
+  - `interval: string` -- `"one_off"` | `"minute"` | `"hour"` | `"day"` | `"week"` | `"month"` | `"quarter"` | `"semi_annual"` | `"year"`
   - `intervalCount: number` -- defaults to `1`
 </ParamField>
 
@@ -238,6 +238,7 @@ item({
       { to: 10000, amount: 0.008 },
       { to: 'inf', amount: 0.005 },
     ],
+    tierBehavior: 'graduated',
     billingMethod: 'usage_based',
     interval: 'month',
   },
@@ -252,6 +253,10 @@ item({
 
 <ParamField body="tiers" type="array">
   Tiered pricing. Each entry: `{ to: number | "inf", amount: number }`. Mutually exclusive with `amount`.
+</ParamField>
+
+<ParamField body="tierBehavior" type="enum">
+  Required with `tiers`: `"graduated"` | `"volume"`.
 </ParamField>
 
 <ParamField body="additionalCurrencies" type="array">

@@ -116,7 +116,7 @@ A ready-to-run query that applies all of this and reproduces the dashboard's ove
 
 ## Deduction order (why monthly drains before lifetime)
 
-When usage is recorded, Autumn deducts from entitlements **shortest-reset-interval-first** (a daily grant drains before a monthly, which drains before a lifetime/`one_off`), after a few higher-priority rules — entity-scoped before pooled when tracking an entity, unlimited first, prepaid before pay-per-use. This is why, when a customer has both a monthly grant and a lifetime grant for the same feature, the monthly empties first and overage lands on whichever pool is drained last. It matters for analytics because it determines **which** breakdown row shows the overage, not just the total.
+When usage is recorded, Autumn first prioritizes the tracked scope (entity-scoped before pooled when tracking an entity), boolean features, non-credit features, and unlimited grants. It then deducts **shortest-reset-interval-first** (a daily grant drains before a monthly, which drains before a lifetime/`one_off`). Among otherwise equal grants, main-plan items precede add-ons and prepaid precedes pay-per-use. This is why, when a customer has both a monthly grant and a lifetime grant for the same feature, the monthly empties first and overage lands on whichever pool is drained last. It matters for analytics because it determines **which** breakdown row shows the overage, not just the total.
 
 ## Footgun: `IS NULL` throws on these tables
 

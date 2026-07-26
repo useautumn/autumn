@@ -104,9 +104,9 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_123",
-  plan_id: "storage_add_on",
+const data = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "storage_add_on",
 });
 ```
 
@@ -115,14 +115,14 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-response = await autumn.checkout(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="storage_add_on",
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -136,11 +136,11 @@ curl -X POST "https://api.useautumn.com/v1/checkout" \
 For prepaid add-ons (like a credit top-up), pass the quantity:
 
 ```typescript TypeScript
-const { data } = await autumn.checkout({
-  customer_id: "user_123",
-  plan_id: "credit_top_up",
-  options: [{
-    feature_id: "credits",
+const data = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "credit_top_up",
+  featureQuantities: [{
+    featureId: "credits",
     quantity: 1000,
   }],
 });
@@ -153,26 +153,29 @@ Cancel an add-on using the same [cancel](/documentation/customers/subscription-l
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.cancel({
-  customer_id: "user_123",
-  plan_id: "storage_add_on",
+await autumn.billing.update({
+  customerId: "user_123",
+  planId: "storage_add_on",
+  cancelAction: "cancel_end_of_cycle",
 });
 ```
 
 ```python Python
-await autumn.cancel(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="storage_add_on",
+    cancel_action="cancel_end_of_cycle",
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/cancel" \
+curl -X POST "https://api.useautumn.com/v1/billing.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_123",
-    "plan_id": "storage_add_on"
+    "plan_id": "storage_add_on",
+    "cancel_action": "cancel_end_of_cycle"
   }'
 ```
 

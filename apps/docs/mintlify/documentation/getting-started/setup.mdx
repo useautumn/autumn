@@ -437,7 +437,7 @@ from autumn_sdk import Autumn
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-    customer = await autumn.customers.get_or_create(
+    customer = autumn.customers.get_or_create(
         customer_id="user_or_org_id_from_auth",
         name="John Doe",
         email="john@example.com",
@@ -448,7 +448,7 @@ asyncio.run(main())
 
 ```bash cURL
 curl --request POST \
-  --url https://api.useautumn.com/v1/customers \
+  --url https://api.useautumn.com/v1/customers.get_or_create \
   --header 'Authorization: Bearer am_sk_42424242' \
   --header 'Content-Type: application/json' \
   --data '{
@@ -501,7 +501,7 @@ from autumn_sdk import Autumn
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-  response = await autumn.billing.attach(
+  response = autumn.billing.attach(
       customer_id='user_or_org_id_from_auth',
       plan_id='pro',
       redirect_mode='always',
@@ -511,7 +511,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST 'https://api.useautumn.com/v1/attach' \
+curl -X POST 'https://api.useautumn.com/v1/billing.attach' \
 -H 'Authorization: Bearer am_sk_42424242' \
 -H 'Content-Type: application/json' \
 -d '{

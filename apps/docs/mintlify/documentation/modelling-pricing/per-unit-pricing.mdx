@@ -83,7 +83,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-const { data } = await autumn.billing.attach({
+const data = await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
   featureQuantities: [{
@@ -98,7 +98,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     feature_quantities=[{
@@ -109,7 +109,7 @@ response = await autumn.billing.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/billing/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -143,15 +143,15 @@ const autumn = new Autumn({ secretKey: "am_sk_..." });
 
 // Add a seat
 await autumn.track({
-  customer_id: "user_123",
-  feature_id: "seats",
+  customerId: "user_123",
+  featureId: "seats",
   value: 1,
 });
 
 // Remove a seat
 await autumn.track({
-  customer_id: "user_123",
-  feature_id: "seats",
+  customerId: "user_123",
+  featureId: "seats",
   value: -1,
 });
 ```
@@ -162,14 +162,14 @@ from autumn_sdk import Autumn
 autumn = Autumn("am_sk_...")
 
 # Add a seat
-await autumn.track(
+autumn.track(
     customer_id="user_123",
     feature_id="seats",
     value=1,
 )
 
 # Remove a seat
-await autumn.track(
+autumn.track(
     customer_id="user_123",
     feature_id="seats",
     value=-1,
@@ -178,7 +178,7 @@ await autumn.track(
 
 ```bash cURL
 # Add a seat
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -233,9 +233,9 @@ Before allowing a user to add a new seat, check if they have capacity:
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.check({
-  customer_id: "user_123",
-  feature_id: "seats",
+const data = await autumn.check({
+  customerId: "user_123",
+  featureId: "seats",
 });
 
 if (!data.allowed) {
@@ -244,7 +244,7 @@ if (!data.allowed) {
 ```
 
 ```python Python
-response = await autumn.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="seats",
 )
@@ -254,7 +254,7 @@ if not response.allowed:
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

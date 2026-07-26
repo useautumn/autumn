@@ -23,8 +23,8 @@ Each balance has the following key fields:
 
 | Field | Description |
 |-------|-------------|
-| `included_usage` | The amount granted by the plan, or a purchased quantity |
-| `balance` | The remaining amount available |
+| `granted` | Total amount granted by included and prepaid quantities |
+| `remaining` | The remaining amount available |
 | `usage` | The amount that has been consumed |
 
 When you retrieve a customer, their balances will be included in the response. 
@@ -38,8 +38,9 @@ For the complete balance schema including reset configuration, overage settings,
 {
   "balances": {
     "messages": {
-      "granted_balance": 1000,
-      "current_balance": 750,
+      "feature_id": "messages",
+      "granted": 1000,
+      "remaining": 750,
       "usage": 250,
       "unlimited": false,
       "reset": {
@@ -89,15 +90,12 @@ When you track usage for a feature in a credit system, Autumn:
 For example, if you have a credit system with a credit cost of 2 credits per API request, and a customer uses 10 API requests, Autumn will deduct 20 credits from the balance.
 
 
-## Positive and Negative Balances
+## Allowance and Overage
 
-A balance can be positive or negative:
-
-- **Positive balance**: Customer has unused allowance remaining
-- **Negative balance**: Customer has used more than their allowance (only possible if [overage](/documentation/concepts/plan-items#priced-features) is enabled)
+A positive `remaining` value means the customer has unused allowance. `remaining` stops at zero; when overage is enabled, `usage` can exceed `granted`.
 
 <Note>
-Features can only have a negative balance if they have a usage-based price that allows overage. Otherwise, tracking stops when balance reaches 0.
+Without overage, tracking is capped when the remaining balance reaches zero.
 </Note>
 
 ## Balance Stacking
@@ -121,27 +119,33 @@ Each balance source is tracked separately in the `breakdown` array. This lets yo
 {
   "balances": {
     "messages": {
-      "included_usage": 700,
-      "balance": 700,
+      "granted": 700,
+      "remaining": 700,
       "usage": 0,
       "breakdown": [
         {
           "id": "ent_abc123",
-          "product_id": "pro",
-          "included_usage": 500,
-          "balance": 500,
+          "plan_id": "pro",
+          "included_grant": 500,
+          "prepaid_grant": 0,
+          "remaining": 500,
           "usage": 0,
-          "interval": "month",
-          "next_reset_at": 1745193600000
+          "reset": {
+            "interval": "month",
+            "resets_at": 1745193600000
+          }
         },
         {
           "id": "ent_def456",
-          "product_id": "top-up",
-          "included_usage": 200,
-          "balance": 200,
+          "plan_id": "top-up",
+          "included_grant": 0,
+          "prepaid_grant": 200,
+          "remaining": 200,
           "usage": 0,
-          "interval": "one_off",
-          "next_reset_at": null
+          "reset": {
+            "interval": "one_off",
+            "resets_at": null
+          }
         }
       ]
     }

@@ -48,8 +48,8 @@ export const { GET, POST } = autumnHandler({
   Function that receives the incoming request and returns customer identification data.
   
   <Expandable title="AuthResult">
-    <ParamField body="customerId" type="string" required>
-      The unique identifier for the customer.
+    <ParamField body="customerId" type="string | null">
+      The unique identifier for the customer. Return `null` when the request is unauthenticated.
     </ParamField>
 
     <ParamField body="customerData" type="CustomerData">
@@ -68,8 +68,4 @@ export const { GET, POST } = autumnHandler({
 
 <ParamField body="pathPrefix" type="string">
   Path prefix for routes. Defaults to `/api/autumn`.
-</ParamField>
-
-<ParamField body="suppressLogs" type="boolean">
-  If true, suppresses console warnings and logs.
 </ParamField>

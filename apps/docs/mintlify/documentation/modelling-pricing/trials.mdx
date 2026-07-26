@@ -74,9 +74,9 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-const { data } = await autumn.checkout({
-  customer_id: "user_123",
-  plan_id: "pro",
+const data = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
 });
 
 // Returns Stripe Checkout URL — customer adds card and starts trial
@@ -87,7 +87,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-response = await autumn.checkout(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
@@ -95,7 +95,7 @@ response = await autumn.checkout(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/checkout" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -115,21 +115,21 @@ When `cardRequired` is `false`, no checkout is needed. You can attach the plan d
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.attach({
-  customer_id: "user_123",
-  plan_id: "pro",
+const data = await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "pro",
 });
 ```
 
 ```python Python
-response = await autumn.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -157,7 +157,7 @@ The customer's subscription includes a `trial_ends_at` timestamp when a trial is
 <CodeGroup>
 
 ```typescript TypeScript
-const { data } = await autumn.customers.get("user_123");
+const data = await autumn.customers.get({ customerId: "user_123" });
 
 for (const sub of data.subscriptions) {
   if (sub.trialEndsAt) {
@@ -167,7 +167,7 @@ for (const sub of data.subscriptions) {
 ```
 
 ```python Python
-response = await autumn.customers.get("user_123")
+response = autumn.customers.get(customer_id="user_123")
 
 for sub in response.subscriptions:
     if sub.trial_ends_at:
@@ -194,8 +194,8 @@ To prevent trial abuse across multiple accounts, set a `fingerprint` when creati
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.customers.create({
-  id: "user_456",
+await autumn.customers.getOrCreate({
+  customerId: "user_456",
   name: "Jane Doe",
   email: "jane@example.com",
   fingerprint: "device_abc123",
@@ -203,8 +203,8 @@ await autumn.customers.create({
 ```
 
 ```python Python
-await autumn.customers.create(
-    id="user_456",
+autumn.customers.get_or_create(
+    customer_id="user_456",
     name="Jane Doe",
     email="jane@example.com",
     fingerprint="device_abc123",
@@ -212,11 +212,11 @@ await autumn.customers.create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "user_456",
+    "customer_id": "user_456",
     "name": "Jane Doe",
     "email": "jane@example.com",
     "fingerprint": "device_abc123"
@@ -242,7 +242,7 @@ const customer = await autumn.customers.getOrCreate({
 ```
 
 ```python Python
-customer = await autumn.customers.get_or_create(
+customer = autumn.customers.get_or_create(
     customer_id="user_123",
     expand=["trials_used"],
 )
@@ -250,11 +250,11 @@ customer = await autumn.customers.get_or_create(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers" \
+curl -X POST "https://api.useautumn.com/v1/customers.get_or_create" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "id": "user_123",
+    "customer_id": "user_123",
     "expand": ["trials_used"]
   }'
 ```
@@ -285,7 +285,7 @@ You can override any of these behaviors by passing `customize.freeTrial` on the 
 
 ## Overriding trial behavior
 
-You can override the default trial behavior on any `/attach` or `/update-subscription` call by passing `customize.freeTrial`:
+You can override the default trial behavior on `billing.attach` or `billing.update` by passing `customize.freeTrial`:
 
 <Tabs>
 <Tab title="Custom trial">
@@ -295,7 +295,7 @@ Pass a `freeTrial` object to start a trial with a custom duration. This **bypass
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.attach({
+await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
   customize: {
@@ -309,7 +309,7 @@ await autumn.attach({
 ```
 
 ```python Python
-await autumn.attach(
+autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     customize={
@@ -323,7 +323,7 @@ await autumn.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -349,7 +349,7 @@ Pass `freeTrial: null` to skip the trial entirely and begin billing immediately 
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.attach({
+await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
   customize: {
@@ -360,7 +360,7 @@ await autumn.attach({
 ```
 
 ```python Python
-await autumn.attach(
+autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     customize={"free_trial": None},
@@ -368,7 +368,7 @@ await autumn.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -380,19 +380,19 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 
 </CodeGroup>
 
-You can also pass `freeTrial: null` on `/update-subscription` to end an active trial early and start billing right away.
+You can also pass `freeTrial: null` to `billing.update` to end an active trial early and start billing right away.
 
 </Tab>
 <Tab title="Extend trial">
 
-To extend a trial, call `/update-subscription` with a new `customize.freeTrial`. The new trial duration is computed **from now** — it replaces the current trial end date rather than adding to it.
+To extend a trial, call `billing.update` with a new `customize.freeTrial`. The new trial duration is computed **from now** — it replaces the current trial end date rather than adding to it.
 
 <CodeGroup>
 
 ```typescript TypeScript
 // Customer is 5 days into a 14-day trial.
 // This gives them a fresh 14 days from now (not 14 + 9 remaining).
-await autumn.updateSubscription({
+await autumn.billing.update({
   customerId: "user_123",
   planId: "pro",
   customize: {
@@ -405,7 +405,7 @@ await autumn.updateSubscription({
 ```
 
 ```python Python
-await autumn.update_subscription(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     customize={
@@ -476,7 +476,7 @@ By default, feature usage during a trial carries over into the paid period. If y
 <CodeGroup>
 
 ```typescript TypeScript
-await autumn.attach({
+await autumn.billing.attach({
   customerId: "user_123",
   planId: "pro",
   transitionRules: {
@@ -486,7 +486,7 @@ await autumn.attach({
 ```
 
 ```python Python
-await autumn.attach(
+autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     transition_rules={
@@ -496,7 +496,7 @@ await autumn.attach(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -511,6 +511,5 @@ curl -X POST "https://api.useautumn.com/v1/attach" \
 </CodeGroup>
 
 This sets the feature's reset cycle to begin when the trial ends rather than when the trial starts, so the customer gets a full fresh allowance once they start paying.
-
 
 

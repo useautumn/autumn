@@ -23,7 +23,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "overage_allowed": [{"feature_id": "api_calls", "enabled": True}],
@@ -36,7 +36,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -88,7 +88,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "overage_allowed": [{
@@ -100,7 +100,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -164,7 +164,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "spend_limits": [{
@@ -177,7 +177,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -241,7 +241,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "usage_limits": [{
@@ -254,7 +254,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -333,7 +333,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "usage_alerts": [
@@ -357,7 +357,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -425,7 +425,7 @@ await autumn.customers.update({
 ```
 
 ```python Python
-await autumn.customers.update(
+autumn.customers.update(
     customer_id="user_123",
     billing_controls={
         "auto_topups": [{
@@ -439,7 +439,7 @@ await autumn.customers.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/customers/update" \
+curl -X POST "https://api.useautumn.com/v1/customers.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
@@ -532,7 +532,7 @@ await autumn.entities.update({
 ```
 
 ```python Python
-await autumn.entities.update(
+autumn.entities.update(
     customer_id="org_123",
     entity_id="workspace_a",
     billing_controls={
@@ -561,7 +561,7 @@ await autumn.entities.update(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/entities/update" \
+curl -X POST "https://api.useautumn.com/v1/entities.update" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

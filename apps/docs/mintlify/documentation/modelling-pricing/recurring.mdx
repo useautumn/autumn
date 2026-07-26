@@ -90,7 +90,7 @@ from autumn_sdk import Autumn
 autumn = Autumn("am_sk_...")
 
 async def main():
-    response = await autumn.billing.attach(
+    response = autumn.billing.attach(
         customer_id="user_123",
         plan_id="pro",
         redirect_mode="always",
@@ -102,7 +102,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

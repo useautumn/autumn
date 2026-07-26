@@ -18,7 +18,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <CodeGroup>
 
 ```typescript Batch many customers
-await autumn.balances.batchTrack([
+await autumn.batchTrack([
   { customerId: "cus_alice", featureId: "ai_messages", value: 1 },
   { customerId: "cus_bob",   featureId: "ai_messages", value: 1 },
   { customerId: "cus_carol", featureId: "ai_messages", value: 3 },
@@ -26,7 +26,7 @@ await autumn.balances.batchTrack([
 ```
 
 ```typescript Mixed features and entities
-await autumn.balances.batchTrack([
+await autumn.batchTrack([
   { customerId: "cus_123", featureId: "ai_messages", value: 5 },
   { customerId: "cus_123", featureId: "api_calls",   value: 12 },
   { customerId: "cus_123", featureId: "seats",       entityId: "team_a", value: 1 },

@@ -44,10 +44,6 @@ export default function RootLayout({ children }) {
   Include credentials (cookies) in cross-origin requests. Defaults to true if `useBetterAuth` is true.
 </ParamField>
 
-<ParamField body="queryClient" type="QueryClient">
-  Custom TanStack Query client. Uses a default client if not provided.
-</ParamField>
-
-<ParamField body="suppressLogs" type="boolean">
-  If true, suppresses console warnings and logs.
+<ParamField body="headers" type="Record<string, string>">
+  Additional headers to include with every request to your backend.
 </ParamField>

@@ -110,7 +110,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const response = await autumn.customers.check({
+const response = await autumn.check({
   customerId: "user_123",
   featureId: "premium_request",
   requiredBalance: 6,
@@ -124,7 +124,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.customers.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="premium_request",
     required_balance=6,
@@ -133,7 +133,7 @@ print(response.allowed)
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -184,7 +184,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.customers.track({
+await autumn.track({
   customerId: "user_123",
   featureId: "premium_request",
   value: 6,
@@ -196,7 +196,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.customers.track(
+autumn.track(
     customer_id="user_123",
     feature_id="premium_request",
     value=6,
@@ -204,7 +204,7 @@ await autumn.customers.track(
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -369,7 +369,7 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-await autumn.balances.trackTokens({
+await autumn.trackTokens({
   customerId: "user_123",
   modelId: "anthropic/claude-opus-4-5",
   inputTokens: 1500,
@@ -382,7 +382,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-await autumn.balances.track_tokens(
+autumn.track_tokens(
     customer_id="user_123",
     model_id="anthropic/claude-opus-4-5",
     input_tokens=1500,

@@ -65,7 +65,7 @@ When your user signs up, create an Autumn customer. This will automatically assi
 import { useCustomer } from "autumn-js/react";
 
 const App = () => {
-  const { customer } = useCustomer();
+  const { data: customer } = useCustomer();
 
   console.log("Autumn customer:", customer);
 
@@ -80,8 +80,8 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data, error } = await autumn.customers.create({
-  id: "user_123",
+const customer = await autumn.customers.getOrCreate({
+  customerId: "user_123",
   name: "Jane Doe",
   email: "jane@example.com",
 });
@@ -89,13 +89,13 @@ const { data, error } = await autumn.customers.create({
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn('am_sk_42424242')
 
 async def main():
-    customer = await autumn.customers.create(
-        id="user_123",
+    customer = autumn.customers.get_or_create(
+        customer_id="user_123",
         name="Jane Doe",
         email="jane@example.com",
     )
@@ -105,11 +105,11 @@ asyncio.run(main())
 
 ```bash cURL
 curl --request POST \
-  --url https://api.useautumn.com/customers \
+  --url https://api.useautumn.com/v1/customers.get_or_create \
   --header 'Authorization: Bearer am_sk_42424242' \
   --header 'Content-Type: application/json' \
   --data '{
-    "id": "user_123",
+    "customer_id": "user_123",
     "name": "Jane Doe",
     "email": "jane@example.com"
   }'
@@ -132,7 +132,7 @@ export function SendNotification() {
   const { check } = useCustomer();
 
   const handleSendNotification = async () => {
-    const { data } = await check({ featureId: "notifications" });
+    const data = check({ featureId: "notifications" });
 
     if (!data?.allowed) {
       // User is over limit on Free plan
@@ -153,9 +153,9 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.check({
-  customer_id: "user_123",
-  feature_id: "notifications",
+const data = await autumn.check({
+  customerId: "user_123",
+  featureId: "notifications",
 });
 
 if (!data.allowed) {
@@ -166,12 +166,12 @@ if (!data.allowed) {
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    response = await autumn.check(
+    response = autumn.check(
         customer_id="user_123",
         feature_id="notifications",
     )
@@ -184,7 +184,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
@@ -195,21 +195,6 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 </CodeGroup>
 
-<Expandable title="check response (Free plan user)">
-```json
-{
-  "allowed": true,
-  "customer_id": "user_123",
-  "feature_id": "notifications",
-  "balance": 870,
-  "usage": 130,
-  "included_usage": 1000,
-  "unlimited": false,
-  "overage_allowed": false
-}
-```
-When `balance` reaches 0 and `overage_allowed` is `false`, the user will be blocked.
-</Expandable>
 
 </Step>
 
@@ -228,20 +213,20 @@ const autumn = new Autumn({
 });
 
 await autumn.track({
-  customer_id: "user_123",
-  feature_id: "notifications",
+  customerId: "user_123",
+  featureId: "notifications",
   value: 1,
 });
 ```
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    await autumn.track(
+    autumn.track(
         customer_id="user_123",
         feature_id="notifications",
         value=1,
@@ -251,7 +236,7 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/track" \
+curl -X POST "https://api.useautumn.com/v1/balances.track" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
@@ -268,7 +253,7 @@ curl -X POST "https://api.useautumn.com/v1/track" \
 <Step>
 #### Switch to Pay-as-you-go
 
-When the user is approaching or has exceeded their limit, prompt them to switch to the Pay-as-you-go plan. Use `attach` with `setup_payment: true` to collect their card without charging upfront.
+When the user is approaching or has exceeded their limit, use `setupPayment` to collect their card and attach the Pay-as-you-go plan after setup.
 
 <Tip>
 You can retrieve the user's notification balance from the `check` or `customer` method, and use this to conditionally prompt them to add a payment method.
@@ -281,19 +266,14 @@ You can retrieve the user's notification balance from the `check` or `customer` 
 import { useCustomer } from "autumn-js/react";
 
 export default function EnableOveragesButton() {
-  const { attach } = useCustomer();
+  const { setupPayment } = useCustomer();
 
   return (
     <button
       onClick={async () => {
-        const { data } = await attach({
-          productId: "pay_as_you_go",
-          setupPayment: true,
+        await setupPayment({
+          planId: "pay_as_you_go",
         });
-
-        if (data?.url) {
-          window.location.href = data.url;
-        }
       }}
     >
       Enable Pay-as-you-go
@@ -309,11 +289,10 @@ const autumn = new Autumn({
   secretKey: 'am_sk_42424242',
 });
 
-const { data } = await autumn.attach({
-  customer_id: "user_123",
-  product_id: "pay_as_you_go",
-  setup_payment: true,
-  success_url: "https://your-app.com/settings",
+const data = await autumn.billing.setupPayment({
+  customerId: "user_123",
+  planId: "pay_as_you_go",
+  successUrl: "https://your-app.com/settings",
 });
 
 if (data.url) {
@@ -323,15 +302,14 @@ if (data.url) {
 
 ```python Python
 import asyncio
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_42424242")
 
 async def main():
-    response = await autumn.attach(
+    response = autumn.billing.setup_payment(
         customer_id="user_123",
-        product_id="pay_as_you_go",
-        setup_payment=True,
+        plan_id="pay_as_you_go",
         success_url="https://your-app.com/settings",
     )
     
@@ -343,13 +321,12 @@ asyncio.run(main())
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.setup_payment" \
   -H "Authorization: Bearer am_sk_42424242" \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_123",
-    "product_id": "pay_as_you_go",
-    "setup_payment": true,
+    "plan_id": "pay_as_you_go",
     "success_url": "https://your-app.com/settings"
   }'
 ```
@@ -367,21 +344,6 @@ Once the user completes the setup, they'll be switched from the Free plan to the
 
 After switching to Pay-as-you-go, the user's `check` response will show `overage_allowed: true`. They can continue using the feature beyond their included limit.
 
-<Expandable title="check response (Pay-as-you-go user)">
-```json
-{
-  "allowed": true,
-  "customer_id": "user_123",
-  "feature_id": "notifications",
-  "balance": -200,
-  "usage": 1200,
-  "included_usage": 1000,
-  "unlimited": false,
-  "overage_allowed": true
-}
-```
-The user has sent 1,200 notifications (200 over the limit). They will be billed $0.20 at the end of the billing period.
-</Expandable>
 
 </Step>
 </Steps>

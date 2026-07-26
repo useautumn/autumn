@@ -25,7 +25,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateOrganizationRequest'
       responses:
-        '201':
+        '200':
           description: Organization created successfully
           content:
             application/json:
@@ -279,13 +279,17 @@ components:
     CreateOrganizationResponse:
       type: object
       properties:
+        org_id:
+          type: string
+          description: Internal organization ID.
+        org_slug:
+          type: string
+          description: Organization slug, including its internal master organization suffix.
         test_secret_key:
           type: string
-          nullable: true
           description: Autumn test API key for the organization (if env is 'test' or 'both').
         live_secret_key:
           type: string
-          nullable: true
           description: Autumn live API key for the organization (if env is 'live' or 'both').
 
     GenerateOAuthURLRequest:

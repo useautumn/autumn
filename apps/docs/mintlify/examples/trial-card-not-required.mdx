@@ -82,14 +82,14 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
 )
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -140,7 +140,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_test_1234")
 
-response = await autumn.billing.setup_payment(
+response = autumn.billing.setup_payment(
     customer_id="user_123",
     success_url="https://your-app.com/success",
 )
@@ -234,14 +234,14 @@ from autumn_sdk import Autumn
 autumn = Autumn("am_sk_test_1234")
 
 # Cancel the trial immediately
-await autumn.billing.update(
+autumn.billing.update(
     customer_id="user_123",
     plan_id="pro",
     cancel_action="cancel_immediately",
 )
 
 # Attach the plan again with a reward
-response = await autumn.billing.attach(
+response = autumn.billing.attach(
     customer_id="user_123",
     plan_id="pro",
     reward="early_end",
@@ -252,7 +252,7 @@ print("Trial ended early")
 
 ```bash cURL
 # Cancel the trial immediately
-curl -X POST "https://api.useautumn.com/v1/billing/update" \
+curl -X POST "https://api.useautumn.com/v1/billing.update" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{
@@ -262,7 +262,7 @@ curl -X POST "https://api.useautumn.com/v1/billing/update" \
   }'
 
 # Attach the plan again with a reward
-curl -X POST "https://api.useautumn.com/v1/attach" \
+curl -X POST "https://api.useautumn.com/v1/billing.attach" \
   -H "Authorization: Bearer am_sk_test_1234" \
   -H "Content-Type: application/json" \
   -d '{

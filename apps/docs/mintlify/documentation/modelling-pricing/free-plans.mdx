@@ -83,9 +83,9 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-const { data } = await autumn.check({
-  customer_id: "user_123",
-  feature_id: "api_requests",
+const data = await autumn.check({
+  customerId: "user_123",
+  featureId: "api_requests",
 });
 
 if (!data.allowed) {
@@ -98,7 +98,7 @@ from autumn_sdk import Autumn
 
 autumn = Autumn("am_sk_...")
 
-response = await autumn.check(
+response = autumn.check(
     customer_id="user_123",
     feature_id="api_requests",
 )
@@ -108,7 +108,7 @@ if not response.allowed:
 ```
 
 ```bash cURL
-curl -X POST "https://api.useautumn.com/v1/check" \
+curl -X POST "https://api.useautumn.com/v1/balances.check" \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

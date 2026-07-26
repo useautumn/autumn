@@ -24,7 +24,7 @@ To set or add to a feature's balance:
 
 ## Creating Standalone Balances (API)
 
-You can use the `/balances/create` endpoint to grant balances independent of any plan, for example to issue one-time promotional credits, referral rewards, or make manual customer adjustments.
+You can use the `balances.create` endpoint to grant balances independent of any plan, for example to issue one-time promotional credits, referral rewards, or make manual customer adjustments.
 
 You can also set expiration dates for promotional usage grants and configure reset intervals.
 
@@ -36,9 +36,9 @@ import { Autumn } from "autumn-js";
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
 await autumn.balances.create({
-  customer_id: "user_123",
-  feature_id: "credits",
-  granted_balance: 500,
+  customerId: "user_123",
+  featureId: "credits",
+  includedGrant: 500,
   reset: {
     interval: "one_off"
   }
@@ -46,14 +46,14 @@ await autumn.balances.create({
 ```
 
 ```python Python
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn(secret_key="am_sk_...")
 
 autumn.balances.create(
     customer_id="user_123",
     feature_id="credits",
-    granted_balance=500,
+    included_grant=500,
     reset={
         "interval": "one_off"
     }
@@ -61,13 +61,13 @@ autumn.balances.create(
 ```
 
 ```bash cURL
-curl -X POST https://api.useautumn.com/v1/balances/create \
+curl -X POST https://api.useautumn.com/v1/balances.create \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
     "customer_id": "user_123",
     "feature_id": "credits",
-    "granted_balance": 500,
+    "included_grant": 500,
     "reset": {
       "interval": "one_off"
     }
@@ -80,7 +80,7 @@ See the [Create Balance API reference](/api-reference/balances/createBalance) fo
 
 ## Updating Balances (API)
 
-Use the `/customers/{customer_id}/balances` endpoint to set balances for a customer.
+Use the `balances.update` endpoint to set a feature's remaining balance.
 
 <CodeGroup>
 
@@ -89,28 +89,33 @@ import { Autumn } from "autumn-js";
 
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
-await autumn.customers.updateBalances("user_123", {
-  balances: [{ feature_id: "credits", balance: 750 }]
+await autumn.balances.update({
+  customerId: "user_123",
+  featureId: "credits",
+  remaining: 750,
 });
 ```
 
 ```python Python
-from autumn import Autumn
+from autumn_sdk import Autumn
 
 autumn = Autumn(secret_key="am_sk_...")
 
-autumn.customers.update_balances(
-    "user_123",
-    balances=[{"feature_id": "credits", "balance": 750}]
+autumn.balances.update(
+    customer_id="user_123",
+    feature_id="credits",
+    remaining=750,
 )
 ```
 
 ```bash cURL
-curl -X POST https://api.useautumn.com/v1/customers/user_123/balances \
+curl -X POST https://api.useautumn.com/v1/balances.update \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{
-    "balances": [{ "feature_id": "credits", "balance": 750 }]
+    "customer_id": "user_123",
+    "feature_id": "credits",
+    "remaining": 750
   }'
 ```
 
@@ -127,18 +132,20 @@ Retrieve all balances for a customer:
 <CodeGroup>
 
 ```typescript Node.js
-const customer = await autumn.customers.get("user_123");
+const customer = await autumn.customers.get({ customerId: "user_123" });
 console.log(customer.balances);
 ```
 
 ```python Python
-customer = autumn.customers.get("user_123")
+customer = autumn.customers.get(customer_id="user_123")
 print(customer.balances)
 ```
 
 ```bash cURL
-curl https://api.useautumn.com/v1/customers/user_123 \
-  -H "Authorization: Bearer am_sk_..."
+curl -X POST https://api.useautumn.com/v1/customers.get \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "user_123" }'
 ```
 
 </CodeGroup>
@@ -153,8 +160,8 @@ Check access and get the current balance for a specific feature:
 
 ```typescript Node.js
 const result = await autumn.check({
-  customer_id: "user_123",
-  feature_id: "credits"
+  customerId: "user_123",
+  featureId: "credits"
 });
 
 console.log(result.allowed);
@@ -172,7 +179,7 @@ print(result.balance)
 ```
 
 ```bash cURL
-curl -X POST https://api.useautumn.com/v1/check \
+curl -X POST https://api.useautumn.com/v1/balances.check \
   -H "Authorization: Bearer am_sk_..." \
   -H "Content-Type: application/json" \
   -d '{

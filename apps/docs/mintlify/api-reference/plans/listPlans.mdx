@@ -18,11 +18,11 @@ Lists all plans in the current environment.
 <CodeGroup>
 
 ```typescript List all plans
-const plans = await autumn.plans.list();
+const { list: plans } = await autumn.plans.list();
 ```
 
 ```typescript List plans with customer eligibility
-const plans = await autumn.plans.list({
+const { list: plans } = await autumn.plans.list({
   customerId: "cus_123"
 });
 
@@ -32,7 +32,7 @@ const plans = await autumn.plans.list({
 ```
 
 ```typescript Include archived plans
-const plans = await autumn.plans.list({
+const { list: plans } = await autumn.plans.list({
   includeArchived: true
 });
 ```

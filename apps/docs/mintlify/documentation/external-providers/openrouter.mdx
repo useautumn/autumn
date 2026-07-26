@@ -81,13 +81,13 @@ for await (const chunk of stream) {
 
 The wrapper normalizes OpenRouter's usage accounting into the exclusive token pools that [trackTokens](/api-reference/balances/trackTokens) expects: text input (excluding cached and audio tokens), text output (excluding reasoning tokens), cache reads, cache writes, audio input, and reasoning tokens. Each pool is billed at the model's published rate.
 
-The model is reported to Autumn as `openrouter/<slug>` (e.g. `openrouter/openai/gpt-4o`), using the resolved model from the response — so router aliases like `openrouter/auto` bill against the model that actually served the request. Autumn prices usage with OpenRouter's rates from [Models.dev](https://models.dev), and OpenRouter's own reported cost is attached to each event as the `openrouter_cost` property for reconciliation.
+The model is reported as `openrouter/<slug>` (for example, `openrouter/openai/gpt-4o`). The wrapper normally uses the requested model slug; for router aliases such as `openrouter/auto`, it uses the model that served the response. Autumn prices usage with OpenRouter's rates from [Models.dev](https://models.dev), and attaches OpenRouter's reported cost to the event as `openrouter_cost`.
 
 ## Options
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `autumn` | `Autumn` | Yes | Your Autumn SDK client instance |
+| `autumn` | `Autumn` | No | Autumn SDK client. If omitted, the wrapper uses `AUTUMN_API_KEY` or `AUTUMN_SECRET_KEY` |
 | `openRouter` | `OpenRouter` | Yes | The OpenRouter SDK client to wrap |
 | `customerId` | `string` | Yes | The Autumn customer ID to attribute usage to |
 | `featureId` | `string` | No | Target a specific AI credit system feature. Auto-detected if you only have one |
