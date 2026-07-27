@@ -150,7 +150,12 @@ export const updateBalanceV2 = async ({
 	params: UpdateBalanceParamsV0;
 	targetBalance?: number;
 }) => {
-	if (ASYNC_UPDATE_BALANCE_ORG_IDS.includes(ctx.org.id)) {
+	const asyncBalanceUpdateEnabled =
+		ASYNC_UPDATE_BALANCE_ORG_IDS.includes(ctx.org.id) ||
+		(process.env.NODE_ENV !== "production" &&
+			ctx.testOptions?.asyncBalanceUpdate);
+
+	if (asyncBalanceUpdateEnabled) {
 		return queueUpdateBalanceV2({ ctx, params, targetBalance });
 	}
 

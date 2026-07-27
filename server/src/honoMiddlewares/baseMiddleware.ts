@@ -139,6 +139,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		extraLogs: {},
 
 		testOptions: {
+			asyncBalanceUpdate:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-async-balance-update") === "true",
 			eventId: c.req.header("x-event-id"),
 			skipCacheDeletion: c.req.header("x-skip-cache-deletion") === "true",
 			skipWebhooks: c.req.header("x-skip-webhooks") === "true",

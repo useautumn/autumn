@@ -23,11 +23,14 @@ test.concurrent(
 			actions: [s.attach({ productId: product.id })],
 		});
 
-		const response = await autumnV2.balances.update({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			current_balance: 40,
-		});
+		const response = await autumnV2.balances.update(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				current_balance: 40,
+			},
+			{ headers: { "x-async-balance-update": "true" } },
+		);
 		expect(response).toEqual({ success: true });
 
 		await timeout(5_000);

@@ -165,6 +165,17 @@ describe("updateBalanceV2 async routing", () => {
 		expect(ctx.testOptions?.skipCacheDeletion).toBeUndefined();
 	});
 
+	test("allows a non-production async balance update test option", async () => {
+		const ctx = createCtx();
+		ctx.testOptions = { asyncBalanceUpdate: true };
+
+		await updateBalanceV2({ ctx, params, targetBalance: 40 });
+
+		expect(state.queueCommands).toHaveLength(1);
+		expect(state.getFullSubjectCalls).toHaveLength(0);
+		expect(state.updateRemainingCalls).toHaveLength(0);
+	});
+
 	test("rejects before mutation when the async queue is unavailable", async () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
 
