@@ -10,12 +10,13 @@ import {
 } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { AsyncBalanceUpdateConfigSchema } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateSchemas.js";
+import { _setAsyncBalanceUpdateConfigForTesting } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 import { JobName } from "@/queue/JobName.js";
 
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
-const asyncUpdateOrgId = "8x76vTcrXbKIn401yYObDynzqNsOKFrt";
 
 const state = {
 	queueCommands: [] as Record<string, unknown>[],
@@ -70,10 +71,10 @@ const { updateBalanceV2 } = await import(
 	"@/internal/balances/updateBalance/v2/updateBalanceV2.js?asyncUpdate"
 );
 
-const createCtx = ({ orgId = "org_123" }: { orgId?: string } = {}) =>
+const createCtx = () =>
 	({
 		id: "req_update_balance_123",
-		org: { id: orgId, slug: "test-org" },
+		org: { id: "org_123", slug: "test-org" },
 		env: AppEnv.Sandbox,
 		customerId: "cus_123",
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
@@ -102,6 +103,9 @@ describe("updateBalanceV2 async routing", () => {
 		state.queueCommands = [];
 		state.getFullSubjectCalls = [];
 		state.updateRemainingCalls = [];
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: AsyncBalanceUpdateConfigSchema.parse({}),
+		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
@@ -118,18 +122,24 @@ describe("updateBalanceV2 async routing", () => {
 			sqsClient.send = state.originalSend;
 			state.originalSend = null;
 		}
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: AsyncBalanceUpdateConfigSchema.parse({}),
+		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalQueueUrl;
 	});
 
 	test("enqueues configured async updates without running synchronous mutation helpers", async () => {
-		const ctx = createCtx({ orgId: asyncUpdateOrgId });
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: { enabledOrgIds: ["test-org"] },
+		});
+		const ctx = createCtx();
 
 		await updateBalanceV2({ ctx, params, targetBalance: 40 });
 
 		expect(state.queueCommands).toHaveLength(1);
 		expect(state.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
-			MessageGroupId: `${asyncUpdateOrgId}:sandbox:cus_123:none`,
+			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: ctx.id,
 		});
 		const message = JSON.parse(
@@ -138,7 +148,7 @@ describe("updateBalanceV2 async routing", () => {
 		expect(message).toMatchObject({
 			name: JobName.UpdateBalance,
 			data: {
-				orgId: asyncUpdateOrgId,
+				orgId: "org_123",
 				env: AppEnv.Sandbox,
 				customerId: "cus_123",
 				requestId: ctx.id,
@@ -177,11 +187,14 @@ describe("updateBalanceV2 async routing", () => {
 	});
 
 	test("rejects before mutation when the async queue is unavailable", async () => {
+		_setAsyncBalanceUpdateConfigForTesting({
+			config: { enabledOrgIds: ["org_123"] },
+		});
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
 
 		await expect(
 			updateBalanceV2({
-				ctx: createCtx({ orgId: asyncUpdateOrgId }),
+				ctx: createCtx(),
 				params,
 				targetBalance: 40,
 			}),
