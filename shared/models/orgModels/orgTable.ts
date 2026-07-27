@@ -127,6 +127,20 @@ export const organizations = pgTable(
 			sql`${table.createdAt} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Stripe Connect webhooks resolve an org by external account id. Without
+		// these, the three OR'd ->> predicates in OrgService.getByAccountId force a
+		// seq scan; Postgres turns them into a BitmapOr instead. The table is only
+		// ~531 rows but its wide jsonb columns bloat it to ~37MB, so a scan cost
+		// ~20ms per webhook.
+		index("idx_orgs_test_connect_default_account")
+			.on(sql`(${table.test_stripe_connect}->>'default_account_id')`)
+			.concurrently(),
+		index("idx_orgs_test_connect_account")
+			.on(sql`(${table.test_stripe_connect}->>'account_id')`)
+			.concurrently(),
+		index("idx_orgs_live_connect_account")
+			.on(sql`(${table.live_stripe_connect}->>'account_id')`)
+			.concurrently(),
 		unique("organizations_test_pkey_key").on(table.test_pkey),
 		unique("organizations_live_pkey_key").on(table.live_pkey),
 	],

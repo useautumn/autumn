@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionOrgResources } from "@/utils/authUtils/afterOrgCreated.js";
+import { clearOrgWithFeaturesCache } from "./cacheOrgWithFeatures.js";
 
 /**
  * Insert a sub-org row (created_by = master), optionally a membership, and run
@@ -82,6 +83,7 @@ export const provisionSubOrg = async ({
 		// drop the local rows so a failed provision leaves nothing behind.
 		await db.delete(member).where(eq(member.organizationId, orgId));
 		await db.delete(organizations).where(eq(organizations.id, orgId));
+		await clearOrgWithFeaturesCache({ orgId });
 		throw error;
 	}
 

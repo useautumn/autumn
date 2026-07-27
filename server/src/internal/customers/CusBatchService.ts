@@ -360,6 +360,8 @@ export class CusBatchService {
 			withSubs: true,
 			withEntities: true,
 			includeInvoices: true,
+			// Only the dashboard renders products_page / products_total_count.
+			withProductsPage: true,
 			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
 			cursor:
