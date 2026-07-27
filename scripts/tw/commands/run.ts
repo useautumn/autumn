@@ -673,6 +673,12 @@ const buildWorkerEnv = ({
 		// Workers have no trigger.dev key: migrations run inline in-process
 		// (shouldRunMigrationInline) instead of via the durable layer.
 		TW_WORKER_MODE: "1",
+		// Stripe budget for the TEST process (the server/workers/cron get a
+		// smaller slice in boot.ts). Stripe sheds per key on both concurrent
+		// width and request rate, and one key serves one worker — so the whole
+		// worker has to stay under ~25 req/s and modest concurrency.
+		TW_STRIPE_MAX_RPS: "14",
+		TW_STRIPE_MAX_INFLIGHT: "8",
 		// The µVM is isolated and has NO AWS creds, so the S3-backed edge configs
 		// (rollout, cache-v2-ramp, redis-v2-cache, blue-green, …) can't be read —
 		// they'd poll S3 every 1s and spam CredentialsProviderError, AND the

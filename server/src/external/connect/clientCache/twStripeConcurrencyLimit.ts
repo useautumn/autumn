@@ -23,7 +23,35 @@ import type Stripe from "stripe";
  * injects into every worker sandbox. App request paths are untouched.
  */
 
-const MAX_IN_FLIGHT = 20;
+/**
+ * Two ceilings, because Stripe sheds on both and fixing one exposes the other.
+ * Measured against a single healthy key with the semaphore alone at 20 in
+ * flight: 60 calls all succeed, 120 sheds 4, 240 sheds 116 — capping width lets
+ * throughput climb past the ~25 req/s test-mode rate limit instead.
+ *
+ * Budgets are PER PROCESS, and a worker runs four that share one key (server,
+ * queue workers, cron, and the `bun test` process itself), so the defaults are
+ * deliberately about a quarter of what one process could get away with alone.
+ */
+const readBudget = ({
+	envVar,
+	fallback,
+}: {
+	envVar: string;
+	fallback: number;
+}): number => {
+	const parsed = Number.parseInt(process.env[envVar] ?? "", 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const MAX_IN_FLIGHT = readBudget({
+	envVar: "TW_STRIPE_MAX_INFLIGHT",
+	fallback: 8,
+});
+const MAX_REQUESTS_PER_SECOND = readBudget({
+	envVar: "TW_STRIPE_MAX_RPS",
+	fallback: 6,
+});
 const MAX_RETRIES = 3;
 const BASE_BACKOFF_MS = 250;
 
@@ -62,20 +90,49 @@ const createSemaphore = ({ limit }: { limit: number }) => {
 	return { acquire };
 };
 
-/** Semaphores are per cache key, so each pool key gets its own bucket. */
-const semaphores = new Map<string, ReturnType<typeof createSemaphore>>();
-
-const semaphoreFor = ({ cacheKey }: { cacheKey: string }) => {
-	const existing = semaphores.get(cacheKey);
-	if (existing) return existing;
-
-	const created = createSemaphore({ limit: MAX_IN_FLIGHT });
-	semaphores.set(cacheKey, created);
-	return created;
-};
-
 const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Token bucket refilled continuously at `perSecond`. Callers await a token, so
+ * a burst drains the bucket and then paces at the refill rate rather than
+ * failing — the same trade the semaphore makes for width.
+ */
+const createRateLimiter = ({ perSecond }: { perSecond: number }) => {
+	const intervalMs = 1000 / perSecond;
+	let nextSlotAt = 0;
+
+	const take = async (): Promise<void> => {
+		const now = Date.now();
+		const slot = Math.max(now, nextSlotAt);
+		nextSlotAt = slot + intervalMs;
+
+		const waitMs = slot - now;
+		if (waitMs > 0) await sleep(waitMs);
+	};
+
+	return { take };
+};
+
+/** Budgets are per cache key, so each pool key gets its own pair. */
+type KeyBudget = {
+	semaphore: ReturnType<typeof createSemaphore>;
+	rateLimiter: ReturnType<typeof createRateLimiter>;
+};
+
+const budgets = new Map<string, KeyBudget>();
+
+const budgetFor = ({ cacheKey }: { cacheKey: string }): KeyBudget => {
+	const existing = budgets.get(cacheKey);
+	if (existing) return existing;
+
+	const created: KeyBudget = {
+		semaphore: createSemaphore({ limit: MAX_IN_FLIGHT }),
+		rateLimiter: createRateLimiter({ perSecond: MAX_REQUESTS_PER_SECOND }),
+	};
+	budgets.set(cacheKey, created);
+	return created;
+};
 
 const isConcurrencyShed = ({
 	response,
@@ -115,13 +172,14 @@ export const applyTwStripeConcurrencyLimit = ({
 	if (!httpClient || PATCHED.has(httpClient)) return client;
 	PATCHED.add(httpClient);
 
-	const semaphore = semaphoreFor({ cacheKey });
+	const { semaphore, rateLimiter } = budgetFor({ cacheKey });
 	const originalMakeRequest = httpClient.makeRequest.bind(httpClient);
 
 	httpClient.makeRequest = async function limitedMakeRequest(
 		...args: MakeRequestArgs
 	) {
 		for (let attempt = 0; ; attempt++) {
+			await rateLimiter.take();
 			const release = await semaphore.acquire();
 
 			let response: StripeResponse;
