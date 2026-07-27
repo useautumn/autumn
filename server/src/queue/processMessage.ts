@@ -18,6 +18,7 @@ import { batchResetCustomerEntitlementsV2 } from "@/internal/balances/batchReset
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
 import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
+import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
@@ -27,6 +28,7 @@ import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProduct
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -71,13 +73,14 @@ export const shouldRetrySqsJobError = ({
 		// leave the message in SQS for redelivery, not swallow-and-ack.
 		case JobName.SyncCustomerDirty:
 		case JobName.Track:
+		case JobName.UpdateBalance:
 			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		// Top-up shares the customer billing lock — retry instead of dropping the job
 		// when it collides with an attach or checkout materialization.
 		case JobName.AutoTopUp:
 			return (
 				error instanceof RecaseError && error.code === ErrCode.LockAlreadyExists
-      );
+			);
 		case JobName.StripeWebhookReplay:
 			return (
 				error instanceof StripeWebhookReplayInFlightError ||
@@ -157,11 +160,13 @@ export const processMessage = async ({
 		}
 
 		// Jobs below need worker context
+		const usesCustomerCache =
+			job.name === JobName.Track || job.name === JobName.UpdateBalance;
 		const ctx = await createWorkerContext({
 			db,
 			payload: job.data,
 			logger: workerLogger,
-			skipCache: job.name !== JobName.Track,
+			skipCache: !usesCustomerCache,
 		});
 		workerCtx = ctx;
 
@@ -288,6 +293,27 @@ export const processMessage = async ({
 				ctx,
 				body: job.data.body,
 				apiVersion: job.data.apiVersion,
+			});
+			return;
+		}
+
+		if (job.name === JobName.UpdateBalance) {
+			if (!ctx) {
+				workerLogger.error("No context found for update balance job");
+				return;
+			}
+
+			await runUpdateBalanceV2({
+				ctx,
+				params: job.data.params,
+				targetBalance: job.data.targetBalance,
+			});
+			await deleteCachedFullCustomer({
+				ctx,
+				customerId: job.data.customerId,
+				entityId: job.data.entityId,
+				source: "updateBalanceV2Worker",
+				flushBalances: false,
 			});
 			return;
 		}
