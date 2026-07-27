@@ -21,6 +21,8 @@ export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
 export const ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY =
 	"admin/full-subject-gate-config.json";
+export const ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY =
+	"admin/async-balance-update-config.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -110,6 +112,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "full-subject-gate",
 			label: "FullSubject Concurrency Gate",
 			key: ADMIN_FULL_SUBJECT_GATE_CONFIG_KEY,
+		},
+		{
+			id: "async-balance-update",
+			label: "Async Balance Update",
+			key: ADMIN_ASYNC_BALANCE_UPDATE_CONFIG_KEY,
 		},
 		{
 			id: "stripe-sync",

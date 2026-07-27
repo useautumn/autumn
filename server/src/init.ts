@@ -32,6 +32,7 @@ import "./internal/misc/jobQueues/jobQueueStore.js";
 import "./internal/misc/batchReset/batchResetConfigStore.js";
 import "./internal/misc/resetJob/resetJobStore.js";
 import "./internal/misc/resetJobV2/resetJobV2Store.js";
+import "./internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";

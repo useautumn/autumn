@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
+import { isAsyncBalanceUpdateEnabled } from "@/internal/misc/asyncBalanceUpdate/asyncBalanceUpdateStore.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
@@ -15,9 +16,6 @@ import { updateNextResetAtV2 } from "./updateNextResetAtV2.js";
 import { updateRemainingV2 } from "./updateRemainingV2.js";
 import { updateUsageV2 } from "./updateUsageV2.js";
 
-const ASYNC_UPDATE_BALANCE_ORG_IDS: readonly string[] = [
-	"8x76vTcrXbKIn401yYObDynzqNsOKFrt",
-];
 const ASYNC_UPDATE_BALANCE_UNAVAILABLE_MESSAGE =
 	"Async balance update is not available right now";
 
@@ -151,7 +149,10 @@ export const updateBalanceV2 = async ({
 	targetBalance?: number;
 }) => {
 	const asyncBalanceUpdateEnabled =
-		ASYNC_UPDATE_BALANCE_ORG_IDS.includes(ctx.org.id) ||
+		isAsyncBalanceUpdateEnabled({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		}) ||
 		(process.env.NODE_ENV !== "production" &&
 			ctx.testOptions?.asyncBalanceUpdate);
 

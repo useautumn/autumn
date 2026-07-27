@@ -13,6 +13,7 @@ import {
 	handleUpdateAdminOrgRedisPublicUrl,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminAsyncBalanceUpdateConfig } from "./handleGetAdminAsyncBalanceUpdateConfig";
 import { handleGetAdminBatchResetConfig } from "./handleGetAdminBatchResetConfig";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
@@ -44,6 +45,7 @@ import {
 	handleGetSlackAdminInstall,
 	handleUpdateSlackAdminTarget,
 } from "./handleSlackAdminChat";
+import { handleUpsertAdminAsyncBalanceUpdateConfig } from "./handleUpsertAdminAsyncBalanceUpdateConfig";
 import { handleUpsertAdminBatchResetConfig } from "./handleUpsertAdminBatchResetConfig";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
@@ -120,6 +122,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/miscellaneous-edge-config",
 	...handleUpsertAdminMiscellaneousEdgeConfig,
+);
+honoAdminRouter.get(
+	"/async-balance-update-config",
+	...handleGetAdminAsyncBalanceUpdateConfig,
+);
+honoAdminRouter.put(
+	"/async-balance-update-config",
+	...handleUpsertAdminAsyncBalanceUpdateConfig,
 );
 honoAdminRouter.get(
 	"/full-subject-gate-config",
