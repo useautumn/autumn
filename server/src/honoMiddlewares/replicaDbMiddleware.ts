@@ -9,7 +9,13 @@ export const replicaDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return;
 	}
 
-	if (shouldUseReplicaDb(c)) {
+	const useReplica = await shouldUseReplicaDb({
+		method: c.req.method,
+		path: c.req.path,
+		readBody: () => c.req.json(),
+	});
+
+	if (useReplica) {
 		const ctx = c.get("ctx");
 		ctx.db = dbReplica;
 		ctx.useReplicaDb = true;
