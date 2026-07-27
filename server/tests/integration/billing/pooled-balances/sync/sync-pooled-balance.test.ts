@@ -1,5 +1,6 @@
 /** TDD contract: sync_v2 restores a pooled source and expire_previous replaces it. */
-// The pool stays unique while outgoing contribution links are removed and incoming links are inserted.
+// Cancelling the sole contributor expires the pool, so sync-back mints a FRESH one.
+// expire_previous then swaps the contribution in place, reusing that same pool.
 
 import { expect, test } from "bun:test";
 import {
@@ -16,7 +17,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { expectPooledBalanceCorrect } from "../utils/expectPooledBalanceCorrect";
-import { getPooledSourceCustomerProduct } from "../utils/getPooledBalanceDbState";
+import {
+	getPooledBalanceDbState,
+	getPooledSourceCustomerProduct,
+} from "../utils/getPooledBalanceDbState";
 
 const GRANT = 100;
 const MONTHLY_POOL_LIFECYCLE = {
@@ -77,6 +81,7 @@ test(
 		if (!initialContribution) {
 			throw new Error("Expected the initial pooled contribution");
 		}
+		const initialPoolId = initialState.pools[0].id;
 		const stripeSubscriptionId = initialSource.subscription_ids?.[0];
 		if (!stripeSubscriptionId) {
 			throw new Error("Expected the pooled source to have a subscription");
@@ -90,21 +95,18 @@ test(
 			no_billing_changes: true,
 		});
 
-		await expectPooledBalanceCorrect({
+		// Cancelling the only contributor expires the pool: the row survives for
+		// audit, but nothing live is left behind.
+		const afterCancel = await getPooledBalanceDbState({
 			db: ctx.db,
 			customerId,
-			pool: {
-				balance: 0,
-				adjustment: 0,
-				granted: 0,
-				...MONTHLY_POOL_LIFECYCLE,
-			},
-			contributions: {
-				count: 0,
-				excludedSourceCustomerProductIds: [initialSource.id],
-			},
-			sources: { count: 1, balance: 0, adjustment: 0 },
 		});
+		expect(afterCancel.contributions).toHaveLength(0);
+		expect(afterCancel.pools).toHaveLength(1);
+		expect(afterCancel.pools[0].id).toBe(initialPoolId);
+		expect(afterCancel.pools[0].expires_at).not.toBeNull();
+		expect(afterCancel.poolCustomerEntitlements[0].expires_at).not.toBeNull();
+
 		const canceledSource = await ctx.db.query.customerEntitlements.findFirst({
 			where: eq(
 				customerEntitlements.id,
@@ -147,6 +149,10 @@ test(
 			},
 			sources: { count: 2, balance: 0, adjustment: 0 },
 		});
+		// The expired pool freed its identity slot, so sync-back mints a new one.
+		const syncedPoolId = syncedState.pools[0].id;
+		expect(syncedPoolId).not.toBe(initialPoolId);
+
 		const syncedSourceId =
 			syncedState.contributions[0]?.source_customer_product_id;
 		const syncedSourceEntitlementId =
@@ -195,6 +201,9 @@ test(
 			},
 			sources: { count: 3, balance: 0, adjustment: 0 },
 		});
+		// Swapping the contribution never drops it to zero, so the pool is reused.
+		expect(replacedState.pools[0].id).toBe(syncedPoolId);
+
 		const replacementSourceId =
 			replacedState.contributions[0]?.source_customer_product_id;
 		const replacementSourceEntitlementId =

@@ -43,8 +43,24 @@ export const expectPooledBalanceCorrect = async ({
 	contributions: ContributionExpectation;
 	sources: SourceExpectation;
 }) => {
-	const state = await getPooledBalanceDbState({ db, customerId });
+	const fullState = await getPooledBalanceDbState({ db, customerId });
 	const poolCount = pool.count ?? 1;
+
+	// Expired pools are historical rows kept for audit: a cancel expires the pool
+	// and a later re-attach mints a fresh one, so both linger. "The pool" here
+	// always means the live one — use getPooledBalanceDbState for the history.
+	const isLive = (expiresAt: number | null) =>
+		expiresAt === null || expiresAt > Date.now();
+	const pools = fullState.pools.filter((candidate) =>
+		isLive(candidate.expires_at),
+	);
+	const livePoolIds = new Set(pools.map((candidate) => candidate.id));
+	const poolCustomerEntitlements = fullState.poolCustomerEntitlements.filter(
+		(candidate) =>
+			candidate.pooled_balance_id !== null &&
+			livePoolIds.has(candidate.pooled_balance_id),
+	);
+	const state = { ...fullState, pools, poolCustomerEntitlements };
 
 	expect(state.pools).toHaveLength(poolCount);
 	expect(state.poolCustomerEntitlements).toHaveLength(poolCount);

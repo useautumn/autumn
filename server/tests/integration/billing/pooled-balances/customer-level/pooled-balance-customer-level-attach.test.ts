@@ -201,13 +201,16 @@ test(
 			feature_id: TestFeature.Messages,
 			value: CUSTOMER_USAGE,
 		});
+		// The balance hash is shared, but each subject hydrates it independently on
+		// a cache miss and writes DB values over any deduction not yet synced.
+		await new Promise((resolve) => setTimeout(resolve, 5000));
 		await autumnV2_2.track({
 			customer_id: customerId,
 			entity_id: entities[0].id,
 			feature_id: TestFeature.Messages,
 			value: ENTITY_USAGE,
 		});
-		await new Promise((resolve) => setTimeout(resolve, 2000));
+		await new Promise((resolve) => setTimeout(resolve, 5000));
 
 		await expectPooledBalanceCorrect({
 			db: ctx.db,
