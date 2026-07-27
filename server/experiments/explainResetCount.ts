@@ -10,17 +10,11 @@ const { buildCountResetEligibleQuery, countResetEligibleCustomerEntitlements } =
 		"../src/internal/customers/cusProducts/cusEnts/repos/countResetEligibleCustomerEntitlements"
 	);
 
-// Benchmarks the backlog-gauge count (countResetEligibleCustomerEntitlements)
-// that the V2 reset cron logs every few minutes — verifies the capped count
-// stays cheap against a large overdue backlog.
-//
-// Run with:
-//   bun run experiments/explainResetCount.ts
-// Options (env vars):
-//   RESET_COUNT_CAP=1000000   count cap (default 1,000,000, same as the cron)
+// Benchmarks the diagnostic capped count; the runtime reset gauge does not use it.
+// Run with `bun run experiments/explainResetCount.ts`; RESET_COUNT_CAP defaults to 10k.
 
 const main = async () => {
-	const cap = Number(process.env.RESET_COUNT_CAP ?? 1_000_000);
+	const cap = Number(process.env.RESET_COUNT_CAP ?? 10_000);
 	const dueBefore = Date.now();
 	const { db } = initDrizzle();
 
