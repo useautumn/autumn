@@ -1,5 +1,4 @@
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -9,7 +8,7 @@ import {
 } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { EdgeConfigDialogBody } from "./EdgeConfigDialogBody";
 import { ResetJobV2ConfigForm } from "./ResetJobV2ConfigForm";
 import {
 	RESET_JOB_V2_QUERY_KEY,
@@ -43,36 +42,26 @@ export const ResetJobV2ConfigDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{configQuery.isLoading ? (
-					<div className="grid gap-4 md:grid-cols-2">
-						<Skeleton className="h-20" />
-						<Skeleton className="h-20" />
-						<Skeleton className="h-20" />
-						<Skeleton className="h-20" />
-					</div>
-				) : configQuery.isError || !configQuery.data ? (
-					<div className="flex flex-col items-start gap-3 rounded-lg border border-border p-4">
-						<p role="alert" className="text-pretty text-sm text-destructive">
-							{getBackendErr(
-								configQuery.error,
-								"Failed to load Batch Reset V2 config",
-							)}
-						</p>
-						<Button
-							variant="secondary"
-							size="sm"
-							onClick={() => configQuery.refetch()}
-						>
-							Retry
-						</Button>
-					</div>
-				) : (
-					<ResetJobV2ConfigForm
-						key={`${configQuery.data.enabled}:${configQuery.data.scanBatchSize}:${configQuery.data.workerBatchSize}:${configQuery.data.maxConcurrentJobs}:${configQuery.data.scanIntervalMs}`}
-						config={configQuery.data}
-						onClose={() => onOpenChange(false)}
-					/>
-				)}
+				<EdgeConfigDialogBody
+					query={configQuery}
+					errorMessage="Failed to load Batch Reset V2 config"
+					skeleton={
+						<div className="grid gap-4 md:grid-cols-2">
+							<Skeleton className="h-20" />
+							<Skeleton className="h-20" />
+							<Skeleton className="h-20" />
+							<Skeleton className="h-20" />
+						</div>
+					}
+				>
+					{(config) => (
+						<ResetJobV2ConfigForm
+							key={`${config.enabled}:${config.scanBatchSize}:${config.workerBatchSize}:${config.maxConcurrentJobs}:${config.scanIntervalMs}`}
+							config={config}
+							onClose={() => onOpenChange(false)}
+						/>
+					)}
+				</EdgeConfigDialogBody>
 			</DialogContent>
 		</Dialog>
 	);

@@ -8,10 +8,12 @@ import {
 	DialogHeader,
 	DialogTitle,
 	Input,
+	Skeleton,
 } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -181,7 +183,7 @@ export function CustomerBlockDialog({
 		}
 	};
 
-	const addEntry = async () => {
+	const addEntry = () => {
 		const orgIdOrSlug = newOrgId.trim();
 		const customerId = newCustomerId.trim();
 
@@ -260,18 +262,21 @@ export function CustomerBlockDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-5xl bg-card">
 				<DialogHeader>
-					<DialogTitle>Customer Blocking</DialogTitle>
-					<DialogDescription>
-						Block API traffic for a specific org, environment, and customer
-						combination.
+					<DialogTitle className="text-balance">Customer Blocking</DialogTitle>
+					<DialogDescription className="text-pretty">
+						Rejects a customer's API requests with a 403. Blocks apply to one
+						org and one environment only.
 					</DialogDescription>
 				</DialogHeader>
 
-				{loading ? (
-					<div className="py-8 text-center text-sm text-tertiary-foreground">
-						Loading...
+				{loading && (
+					<div className="grid grid-cols-[320px_1fr] gap-6">
+						<Skeleton className="h-96" />
+						<Skeleton className="h-96" />
 					</div>
-				) : (
+				)}
+
+				{!loading && (
 					<div className="grid grid-cols-[320px_1fr] gap-6">
 						<div className="flex flex-col gap-4">
 							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
@@ -281,11 +286,13 @@ export function CustomerBlockDialog({
 							<div className="rounded-lg border border-border p-3">
 								<div className="mb-3 flex flex-col gap-2">
 									<Input
+										aria-label="Org ID or slug"
 										placeholder="Org ID or slug"
 										value={newOrgId}
 										onChange={(event) => setNewOrgId(event.target.value)}
 									/>
 									<select
+										aria-label="Environment"
 										value={newEnv}
 										onChange={(event) =>
 											setNewEnv(event.target.value as CustomerBlockEnv)
@@ -299,6 +306,7 @@ export function CustomerBlockDialog({
 										))}
 									</select>
 									<Input
+										aria-label="Customer ID"
 										placeholder="Customer ID"
 										value={newCustomerId}
 										onChange={(event) => setNewCustomerId(event.target.value)}
@@ -306,10 +314,10 @@ export function CustomerBlockDialog({
 									<Button
 										variant="secondary"
 										size="sm"
-										onClick={() => void addEntry()}
+										onClick={addEntry}
 										disabled={!newOrgId.trim() || !newCustomerId.trim()}
 									>
-										Add blocked customer
+										Block customer
 									</Button>
 								</div>
 
@@ -351,32 +359,33 @@ export function CustomerBlockDialog({
 								</div>
 							</div>
 
-							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-								<div className="mb-2 flex items-center gap-2">
+							<div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
+								<div className="flex flex-wrap items-center gap-2">
 									<Badge
 										variant="muted"
-										className={
+										className={cn(
 											config.configHealthy
 												? "border-emerald-200 bg-emerald-50 text-emerald-700"
-												: "border-amber-200 bg-amber-50 text-amber-700"
-										}
+												: "border-amber-200 bg-amber-50 text-amber-700",
+										)}
 									>
 										{config.configHealthy
 											? "Config healthy"
 											: "Config unavailable"}
 									</Badge>
 									{config.lastSuccessAt && (
-										<span>
+										<span className="tabular-nums">
 											Last refresh:{" "}
 											{new Date(config.lastSuccessAt).toLocaleString()}
 										</span>
 									)}
 								</div>
-								<div>
+								<p className="text-pretty">
 									{config.configConfigured === false
-										? "S3 customer block config is not configured."
-										: config.error || "Blocks update within 30s of saving."}
-								</div>
+										? "S3 customer block config is not set up, so nothing is blocked."
+										: config.error ||
+											"Saving takes effect within 10 seconds. If refresh fails, nothing is blocked."}
+								</p>
 							</div>
 						</div>
 
@@ -403,7 +412,9 @@ export function CustomerBlockDialog({
 								/>
 							</div>
 							{jsonError && (
-								<div className="text-xs text-red-500">{jsonError}</div>
+								<p role="alert" className="text-xs text-destructive">
+									{jsonError}
+								</p>
 							)}
 						</div>
 					</div>

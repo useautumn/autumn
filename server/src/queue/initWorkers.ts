@@ -1,4 +1,4 @@
-await import("../sentry.js");
+import "../sentry.js";
 
 import { ms } from "@autumn/shared";
 import {
@@ -53,6 +53,7 @@ const MESSAGE_TIMEOUT_MS = 25_000;
 const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
+const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
 type JobOverride = {
 	ack: "upfront" | "always-after-processing";
@@ -315,18 +316,44 @@ export const startPollingLoop = async ({
 		sqs: SQSClient;
 		toDelete: { Id: string; ReceiptHandle: string }[];
 	}) => {
-		if (toDelete.length === 0) return;
+		let pending = toDelete;
 
-		try {
-			await sqs.send(
-				new DeleteMessageBatchCommand({
-					QueueUrl: queueUrl,
-					Entries: toDelete,
-				}),
-			);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			console.error(`${prefix} Batch delete failed: ${message}`);
+		for (let attempt = 0; pending.length > 0; attempt++) {
+			try {
+				const response = await sqs.send(
+					new DeleteMessageBatchCommand({
+						QueueUrl: queueUrl,
+						Entries: pending,
+					}),
+				);
+				const failed = response.Failed ?? [];
+				const senderFailures = failed.filter((failure) => failure.SenderFault);
+				if (senderFailures.length > 0) {
+					const message = `${prefix} SQS rejected ${senderFailures.length} message deletion(s): ${senderFailures.map((failure) => `${failure.Id}:${failure.Code}`).join(", ")}`;
+					console.error(message);
+					Sentry.captureMessage(message, "error");
+				}
+				const retryIds = new Set(
+					failed
+						.filter((failure) => !failure.SenderFault)
+						.map((failure) => failure.Id),
+				);
+				pending = pending.filter((entry) => retryIds.has(entry.Id));
+			} catch (error) {
+				const message =
+					error instanceof Error ? error.message : "Unknown error";
+				console.error(`${prefix} Batch delete failed: ${message}`);
+			}
+
+			const retryDelay = DELETE_RETRY_DELAYS_MS[attempt];
+			if (pending.length === 0 || retryDelay === undefined) break;
+			await new Promise((resolve) => setTimeout(resolve, retryDelay));
+		}
+
+		if (pending.length > 0) {
+			const message = `${prefix} Failed to delete ${pending.length} message(s) after ${DELETE_RETRY_DELAYS_MS.length + 1} attempts`;
+			console.error(message);
+			Sentry.captureMessage(message, "error");
 		}
 	};
 

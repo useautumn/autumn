@@ -8,11 +8,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 	Input,
+	Skeleton,
 } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -172,7 +174,7 @@ export function EdgeConfigDialog({
 					setRules(parsed.blockedEndpoints);
 				} else {
 					setJsonError(
-						`Invalid rules: each rule must have a valid method (${METHODS.join(", ")}) and a pattern string`,
+						`Each rule needs a pattern and a method (${METHODS.join(", ")}).`,
 					);
 					return;
 				}
@@ -228,14 +230,14 @@ export function EdgeConfigDialog({
 					<DialogTitle>
 						Request Blocking — {orgId ? `Org: ${orgId}` : "Select Organization"}
 					</DialogTitle>
-					<DialogDescription>
+					<DialogDescription className="text-pretty">
 						{step === "select-org"
-							? "Enter the org ID to manage request blocking for."
-							: `Managing /v1 request blocking for org ${orgId}.`}
+							? "Pick an org, then reject its API requests with a 403."
+							: `Rejects ${orgId}'s /v1 API requests with a 403, in both sandbox and live.`}
 					</DialogDescription>
 				</DialogHeader>
 
-				{step === "select-org" ? (
+				{step === "select-org" && (
 					<div className="flex flex-col gap-4 py-2">
 						<div className="flex flex-col gap-2">
 							<label
@@ -261,11 +263,16 @@ export function EdgeConfigDialog({
 							</div>
 						</div>
 					</div>
-				) : loading ? (
-					<div className="py-8 text-sm text-tertiary-foreground text-center">
-						Loading...
+				)}
+
+				{step === "edit" && loading && (
+					<div className="grid grid-cols-2 gap-6">
+						<Skeleton className="h-80" />
+						<Skeleton className="h-80" />
 					</div>
-				) : (
+				)}
+
+				{step === "edit" && !loading && (
 					<div className="grid grid-cols-2 gap-6">
 						{/* Left: structured editor */}
 						<div className="flex flex-col gap-4">
@@ -277,10 +284,10 @@ export function EdgeConfigDialog({
 							<div className="flex items-center justify-between rounded-lg border border-border p-3">
 								<div className="flex flex-col gap-1">
 									<div className="text-sm font-medium text-foreground">
-										Block all `/v1` requests
+										Block all /v1 requests
 									</div>
 									<div className="text-xs text-tertiary-foreground">
-										Use this as the org-wide kill switch.
+										Kill switch. Every /v1 call from this org gets a 403.
 									</div>
 								</div>
 								<label
@@ -302,10 +309,10 @@ export function EdgeConfigDialog({
 								<div className="mb-3 flex items-center justify-between">
 									<div>
 										<div className="text-sm font-medium text-foreground">
-											Selective endpoint rules
+											Blocked endpoints
 										</div>
 										<div className="text-xs text-tertiary-foreground">
-											Method + pattern rules use exact route matching.
+											Block one route at a time. Patterns must start with /v1/.
 										</div>
 									</div>
 									<Button variant="secondary" size="sm" onClick={addRule}>
@@ -316,7 +323,7 @@ export function EdgeConfigDialog({
 								<div className="flex flex-col gap-2">
 									{rules.length === 0 ? (
 										<div className="text-xs text-tertiary-foreground">
-											No selective rules configured.
+											No endpoints blocked.
 										</div>
 									) : (
 										rules.map((rule, index) => (
@@ -361,33 +368,33 @@ export function EdgeConfigDialog({
 							</div>
 
 							{/* Config health */}
-							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-								<div className="mb-2 flex items-center gap-2">
+							<div className="flex flex-col gap-3 rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
+								<div className="flex flex-wrap items-center gap-2">
 									<Badge
 										variant="muted"
-										className={
+										className={cn(
 											status?.configHealthy
-												? "bg-emerald-50 text-emerald-700 border-emerald-200"
-												: "bg-amber-50 text-amber-700 border-amber-200"
-										}
+												? "border-emerald-200 bg-emerald-50 text-emerald-700"
+												: "border-amber-200 bg-amber-50 text-amber-700",
+										)}
 									>
 										{status?.configHealthy
 											? "Config healthy"
 											: "Config unavailable"}
 									</Badge>
 									{status?.lastSuccessAt && (
-										<span>
+										<span className="tabular-nums">
 											Last refresh:{" "}
 											{new Date(status.lastSuccessAt).toLocaleString()}
 										</span>
 									)}
 								</div>
-								<div>
+								<p className="text-pretty">
 									{status?.configConfigured === false
-										? "S3 request block config is not configured."
+										? "S3 request block config is not set up, so nothing is blocked."
 										: status?.error ||
-											"Blocking is disabled if config refresh fails."}
-								</div>
+											"Saving takes effect within 10 seconds. If refresh fails, nothing is blocked."}
+								</p>
 							</div>
 						</div>
 
@@ -415,7 +422,9 @@ export function EdgeConfigDialog({
 								/>
 							</div>
 							{jsonError && (
-								<div className="text-xs text-red-500">{jsonError}</div>
+								<p role="alert" className="text-xs text-destructive">
+									{jsonError}
+								</p>
 							)}
 						</div>
 					</div>

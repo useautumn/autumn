@@ -1,4 +1,4 @@
-import { Badge, Button, DialogFooter, Switch } from "@autumn/ui";
+import { Badge, Button, DialogFooter, Separator, Switch } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -52,17 +52,16 @@ export const ResetJobConfigForm = ({
 
 	return (
 		<>
-			<div className="flex flex-col gap-4">
+			<div className="flex flex-col gap-6">
 				<form.AppField name="enabled">
 					{(field) => (
-						<div className="flex items-center justify-between rounded-lg border border-border p-4">
-							<div className="flex flex-col gap-0.5 pr-4">
+						<div className="flex items-center justify-between gap-6">
+							<div className="flex flex-col gap-1">
 								<div className="text-sm font-medium text-foreground">
 									Reset Job enabled
 								</div>
 								<div className="text-pretty text-xs text-tertiary-foreground">
-									When disabled, the legacy reset cron stops processing due
-									balances.
+									When off, the legacy cron stops resetting due balances.
 								</div>
 							</div>
 							<Switch
@@ -78,7 +77,7 @@ export const ResetJobConfigForm = ({
 					{(field) => (
 						<field.NumberField
 							label="Batch size"
-							description="Customer entitlements processed per reset batch."
+							description="Entitlements reset per batch."
 							min={1}
 							max={MAX_BATCH_SIZE}
 							inputClassName="tabular-nums"
@@ -86,8 +85,9 @@ export const ResetJobConfigForm = ({
 					)}
 				</form.AppField>
 
-				<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-					<div className="mb-2 flex items-center gap-2">
+				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
+					<Separator />
+					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant="muted">
 							{config.configHealthy ? "Config healthy" : "Config unavailable"}
 						</Badge>
@@ -97,16 +97,16 @@ export const ResetJobConfigForm = ({
 							</span>
 						)}
 					</div>
-					<div className="text-pretty">
+					<p className="text-pretty">
 						{config.configConfigured === false
-							? "S3 Reset Job config is not configured. The job defaults to disabled."
+							? "S3 config is missing, so the job defaults to off."
 							: config.error ||
-								"Changes propagate to cron instances within 10 seconds."}
-					</div>
+								"Changes reach cron instances within 10 seconds."}
+					</p>
 				</div>
 			</div>
 
-			<DialogFooter className="flex-wrap">
+			<DialogFooter className="flex-wrap pt-2">
 				{mutation.error && (
 					<span role="alert" className="mr-auto text-xs text-destructive">
 						{getBackendErr(mutation.error, "Failed to save config")}
