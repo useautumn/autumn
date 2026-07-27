@@ -2,6 +2,10 @@ import type Stripe from "stripe";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { buildCheckoutSessionMetadata } from "./buildCheckoutSessionMetadata";
 
+// A payable session blocks conflicting billing for its whole lifetime — keep it
+// 1h (Stripe min 30m, default 24h) unless the caller asks for more.
+const DEFAULT_SESSION_LIFETIME_SECONDS = 60 * 60;
+
 /**
  * Deep-merges subscription_data so user-provided fields (e.g. metadata)
  * are preserved alongside Autumn-internal fields (e.g. trial_end).
@@ -59,6 +63,9 @@ export const buildCheckoutSessionParams = ({
 
 	return {
 		...mergedParams,
+		expires_at:
+			mergedParams.expires_at ??
+			Math.floor(Date.now() / 1000) + DEFAULT_SESSION_LIFETIME_SECONDS,
 		...(currency
 			? {
 					currency,
@@ -85,10 +92,9 @@ export const buildCheckoutSessionParams = ({
 						paramsSubscriptionData: params.subscription_data as
 							| Stripe.Checkout.SessionCreateParams.SubscriptionData
 							| undefined,
-						userSubscriptionData:
-							checkoutSessionParams?.subscription_data as
-								| Stripe.Checkout.SessionCreateParams.SubscriptionData
-								| undefined,
+						userSubscriptionData: checkoutSessionParams?.subscription_data as
+							| Stripe.Checkout.SessionCreateParams.SubscriptionData
+							| undefined,
 					}),
 	};
 };

@@ -110,6 +110,10 @@ export const setupAttachLicenseContext = async ({
 		fullCustomer,
 		licensePlanId: params.plan_id,
 	});
+	const entitySplit = splitRequestedEntities({
+		fullCustomer,
+		entityParams: params.entities,
+	});
 
 	// The assignment's cycles anchor to the parent's billing state — same
 	// derivation as attach, minus any billing changes.
@@ -127,6 +131,16 @@ export const setupAttachLicenseContext = async ({
 				limit: params.entities.length,
 			}),
 		]);
+	const activeAssignments =
+		await licenseAssignmentRepo.listAssignmentsWithEntityAndProductByCustomer({
+			db: ctx.db,
+			internalCustomerId: fullCustomer.internal_id,
+			licenseInternalProductId:
+				target.customerLicense.license_internal_product_id,
+		});
+	const assignedEntityIds = new Set(
+		activeAssignments.map((assignment) => assignment.entity_id),
+	);
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
@@ -146,6 +160,9 @@ export const setupAttachLicenseContext = async ({
 		resetCycleAnchorMs,
 		entityParams: params.entities,
 		unusedAssignments,
-		...splitRequestedEntities({ fullCustomer, entityParams: params.entities }),
+		existingEntities: entitySplit.existingEntities.filter(
+			(entity) => !assignedEntityIds.has(entity.id),
+		),
+		newEntityParams: entitySplit.newEntityParams,
 	};
 };

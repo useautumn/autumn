@@ -1,4 +1,4 @@
-await import("../sentry.js");
+import "../sentry.js";
 
 import { ms } from "@autumn/shared";
 import {
@@ -48,12 +48,19 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
+// Batch resets legitimately outrun the default bound (up to 1k rows plus Stripe
+// anchor checks), so they get a longer one — never an unbounded one.
+const BATCH_RESET_MESSAGE_TIMEOUT_MS = ms.minutes(1);
 const SQS_RECEIVE_BATCH_LIMIT = 10;
 const QUEUE_CAPACITY_RETRY_MS = 1_000;
+const DELETE_RETRY_DELAYS_MS = [100, 250, 500] as const;
 
 type JobOverride = {
 	ack: "upfront" | "always-after-processing";
 	dispatch: "inline" | "background";
+	/** Per-message bound. Omit for MESSAGE_TIMEOUT_MS; `null` runs unbounded,
+	 * which is only safe when the message is ACKed upfront. */
+	timeoutMs?: number | null;
 };
 
 // Jobs with nonstandard acknowledgement or dispatch behavior. Inline dispatch
@@ -61,13 +68,18 @@ type JobOverride = {
 // low-volume work that does not use a shared concurrency limit.
 const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 	// Rare (handful per day); fire-and-forget is safe.
-	[JobName.Migration]: { ack: "upfront", dispatch: "background" },
+	[JobName.Migration]: {
+		ack: "upfront",
+		dispatch: "background",
+		timeoutMs: null,
+	},
 	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
 	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
 	// stays capped at the receive batch size.
 	[JobName.ClearCreditSystemCustomerCache]: {
 		ack: "upfront",
 		dispatch: "inline",
+		timeoutMs: null,
 	},
 	// A failed reset remains overdue and will be rediscovered by the next scan.
 	// Keep it in flight until processing finishes so queue depth and concurrency
@@ -75,6 +87,7 @@ const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
 	[JobName.BatchResetCustomerEntitlementsV2]: {
 		ack: "always-after-processing",
 		dispatch: "inline",
+		timeoutMs: BATCH_RESET_MESSAGE_TIMEOUT_MS,
 	},
 };
 
@@ -260,13 +273,20 @@ export const startPollingLoop = async ({
 			await ackMessageUpfront({ sqs, message, job });
 		}
 
+		// Unbounded only when a job opts in explicitly — being in JOB_OVERRIDES
+		// at all used to be enough, which let one hung handler wedge the loop.
+		const timeoutMs =
+			override?.timeoutMs === undefined
+				? MESSAGE_TIMEOUT_MS
+				: override.timeoutMs;
+
 		try {
-			if (override) {
+			if (timeoutMs === null) {
 				await processMessage({ message, db });
 			} else {
 				await withTimeout({
-					timeoutMs: MESSAGE_TIMEOUT_MS,
-					timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+					timeoutMs,
+					timeoutMessage: `Processing timed out after ${timeoutMs}ms`,
 					fn: () => processMessage({ message, db }),
 				});
 			}
@@ -296,18 +316,44 @@ export const startPollingLoop = async ({
 		sqs: SQSClient;
 		toDelete: { Id: string; ReceiptHandle: string }[];
 	}) => {
-		if (toDelete.length === 0) return;
+		let pending = toDelete;
 
-		try {
-			await sqs.send(
-				new DeleteMessageBatchCommand({
-					QueueUrl: queueUrl,
-					Entries: toDelete,
-				}),
-			);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			console.error(`${prefix} Batch delete failed: ${message}`);
+		for (let attempt = 0; pending.length > 0; attempt++) {
+			try {
+				const response = await sqs.send(
+					new DeleteMessageBatchCommand({
+						QueueUrl: queueUrl,
+						Entries: pending,
+					}),
+				);
+				const failed = response.Failed ?? [];
+				const senderFailures = failed.filter((failure) => failure.SenderFault);
+				if (senderFailures.length > 0) {
+					const message = `${prefix} SQS rejected ${senderFailures.length} message deletion(s): ${senderFailures.map((failure) => `${failure.Id}:${failure.Code}`).join(", ")}`;
+					console.error(message);
+					Sentry.captureMessage(message, "error");
+				}
+				const retryIds = new Set(
+					failed
+						.filter((failure) => !failure.SenderFault)
+						.map((failure) => failure.Id),
+				);
+				pending = pending.filter((entry) => retryIds.has(entry.Id));
+			} catch (error) {
+				const message =
+					error instanceof Error ? error.message : "Unknown error";
+				console.error(`${prefix} Batch delete failed: ${message}`);
+			}
+
+			const retryDelay = DELETE_RETRY_DELAYS_MS[attempt];
+			if (pending.length === 0 || retryDelay === undefined) break;
+			await new Promise((resolve) => setTimeout(resolve, retryDelay));
+		}
+
+		if (pending.length > 0) {
+			const message = `${prefix} Failed to delete ${pending.length} message(s) after ${DELETE_RETRY_DELAYS_MS.length + 1} attempts`;
+			console.error(message);
+			Sentry.captureMessage(message, "error");
 		}
 	};
 
@@ -555,12 +601,11 @@ export const initWorkers = async ({
 			queueId: JOB_QUEUE_IDS.batchReset,
 			queueUrl: process.env.BATCH_RESET_SQS_QUEUE_URL,
 			defaultEnabled: true,
-			// Reset batches can legitimately run long (Stripe anchor checks on
-			// month-edge dates); a short window would redeliver mid-processing and
-			// have two workers resetting the same rows concurrently. SQS maximum
-			// (12h) — failed resets are re-found by the next scan, so redelivery
-			// latency doesn't matter.
-			visibilityTimeoutSeconds: 43_200,
+			// Comfortably above BATCH_RESET_MESSAGE_TIMEOUT_MS so a redelivery can
+			// never overlap live processing, and low enough that a wedged handler
+			// frees its message in minutes — the scan gates block on in-flight
+			// depth, so a long window stalls the whole sweep.
+			visibilityTimeoutSeconds: 900,
 		},
 	]) {
 		if (!queueUrl) continue;
