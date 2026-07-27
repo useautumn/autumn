@@ -14,6 +14,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { clearOrgWithFeaturesCache } from "@/internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 import { createProduct } from "@/internal/product/actions/createProduct.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { invalidateProductsCache } from "@/internal/products/productCacheUtils.js";
@@ -36,7 +37,9 @@ const SyncPreviewPricingSchema = z.object({
  * - Pushes new config from the request body
  */
 export const handleSyncPreviewPricing = createRoute({
-	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
+	scopes: {
+		ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write],
+	},
 	body: SyncPreviewPricingSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -89,6 +92,14 @@ export const handleSyncPreviewPricing = createRoute({
 			db,
 			orgId: previewOrg.id,
 			env: AppEnv.Sandbox,
+		});
+
+		// Workers read features through the org cache; drop it so they don't
+		// serve the nuked feature list for the rest of the TTL.
+		await clearOrgWithFeaturesCache({
+			orgId: previewOrg.id,
+			env: AppEnv.Sandbox,
+			logger: ctx.logger,
 		});
 
 		// Step 2: Push new config
