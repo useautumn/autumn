@@ -44,6 +44,8 @@ export type CursorPaginatedFullCusQueryArgs = {
 	intervalFilters?: DashboardIntervalFilter[];
 	cusProductLimit: number;
 	customerId?: string;
+	/** Emit products_page / products_total_count. Dashboard only. */
+	withProductsPage?: boolean;
 };
 
 /**
@@ -72,13 +74,23 @@ export const getCursorPaginatedFullCusQuery = ({
 	intervalFilters,
 	cusProductLimit,
 	customerId,
+	withProductsPage = false,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
 
-	const productsSeedCte = customerProductsSeedCte({
-		inStatuses: RELEVANT_STATUSES,
-		limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
-	});
+	// products_page / products_total_count are only rendered by the dashboard.
+	// The public API path never reads them, and building them costs two extra
+	// CTEs over customer_products plus ~12MB of the response on a 500-row page.
+	const productsSeedCte = withProductsPage
+		? sql`, ${customerProductsSeedCte({
+				inStatuses: RELEVANT_STATUSES,
+				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+			})}`
+		: sql``;
+
+	const productsSeedSelect = withProductsPage
+		? sql`, ${customerProductsSeedSelect}`
+		: sql``;
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
@@ -270,14 +282,14 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT id, entitlement_id FROM ces_loose
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_pooled
-		),
+		)
 		${productsSeedCte}
 		${entitiesCte}
 		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
-			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts,
-			${customerProductsSeedSelect},
+			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts
+			${productsSeedSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
