@@ -5,6 +5,7 @@ import {
 	getRegionalRedis,
 	redis,
 } from "@/external/redis/initRedis.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { OrgService } from "../OrgService.js";
 
@@ -103,9 +104,27 @@ export const clearOrgWithFeaturesCache = async ({
  * second against Postgres — 3.08M lookups in 45 minutes, 8.4% of database time —
  * for a row that barely changes.
  *
- * `tryRedisRead`/`tryRedisWrite` fail open to null, so a Redis outage degrades
- * to exactly the previous behaviour rather than erroring the job.
+ * Redis is strictly an accelerator here: `tryRedisRead`/`tryRedisWrite` RETHROW
+ * `RedisUnavailableError` on a genuine outage rather than returning null, so both
+ * cache operations are wrapped to swallow transient failures and fall through to
+ * Postgres. Without that, `createWorkerContext` catches the error, treats the org
+ * as missing, and silently acknowledges queued jobs without recording usage.
  */
+const withCacheFailOpen = async <T>({
+	run,
+	fallback,
+}: {
+	run: () => Promise<T>;
+	fallback: T;
+}): Promise<T> => {
+	try {
+		return await run();
+	} catch (error) {
+		if (isTransientRedisError({ error })) return fallback;
+		throw error;
+	}
+};
+
 export const getOrgWithFeaturesCached = async ({
 	db,
 	orgId,
@@ -118,13 +137,20 @@ export const getOrgWithFeaturesCached = async ({
 	skipCache?: boolean;
 }): Promise<OrgWithFeatures | null> => {
 	if (!skipCache) {
-		const cached = await getCachedOrgWithFeatures({ orgId, env });
+		const cached = await withCacheFailOpen({
+			run: () => getCachedOrgWithFeatures({ orgId, env }),
+			fallback: null,
+		});
 		if (cached) return cached;
 	}
 
 	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
 	if (!fresh) return null;
 
-	await setCachedOrgWithFeatures({ orgId, env, data: fresh });
+	// A failed write must never lose the row we already fetched.
+	await withCacheFailOpen({
+		run: () => setCachedOrgWithFeatures({ orgId, env, data: fresh }),
+		fallback: undefined,
+	});
 	return fresh;
 };
