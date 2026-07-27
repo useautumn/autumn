@@ -1,4 +1,4 @@
-/** Deferred update-balance jobs execute through the V2 core, then invalidate its cached subject.
+/** Deferred update-balance jobs execute through the V2 core without invalidating its cached subject.
  * Transient database and Redis failures keep the SQS message available for retry. */
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
@@ -130,15 +130,7 @@ describe("processMessage update-balance jobs", () => {
 		});
 		expect(state.updateRemainingCalls).toHaveLength(1);
 		expect(state.updateRemainingCalls[0]).toMatchObject({ params });
-		expect(state.deleteCachedFullCustomerCalls).toEqual([
-			{
-				ctx: expect.any(Object),
-				customerId: "cus_123",
-				entityId: undefined,
-				source: "updateBalanceV2Worker",
-				flushBalances: false,
-			},
-		]);
+		expect(state.deleteCachedFullCustomerCalls).toEqual([]);
 	});
 
 	test("retries transient infrastructure failures", () => {
