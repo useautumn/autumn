@@ -4,6 +4,7 @@ import type {
 	EventInsert,
 	Price,
 	TrackParams,
+	UpdateBalanceParamsV0,
 } from "@autumn/shared";
 import {
 	SendMessageBatchCommand,
@@ -81,6 +82,15 @@ export interface Payloads {
 		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
+	};
+	[JobName.UpdateBalance]: {
+		orgId: string;
+		env: AppEnv;
+		customerId: string;
+		entityId?: string;
+		requestId: string;
+		params: UpdateBalanceParamsV0;
+		targetBalance?: number;
 	};
 	[JobName.SyncCustomerDirty]: {
 		customerId: string;

@@ -1192,8 +1192,11 @@ export class AutumnInt {
 			);
 			return data;
 		},
-		update: async (params: UpdateBalanceParamsV0) => {
-			const data = await this.post(`/balances/update`, params);
+		update: async (
+			params: UpdateBalanceParamsV0,
+			{ headers }: { headers?: Record<string, string> } = {},
+		) => {
+			const data = await this.post(`/balances/update`, params, headers);
 			return data;
 		},
 		delete: async (params: DeleteBalanceParamsV0) => {

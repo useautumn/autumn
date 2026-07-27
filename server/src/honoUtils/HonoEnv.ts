@@ -92,6 +92,7 @@ export type RequestContext = {
 	orgRateLimitDegraded?: boolean;
 
 	testOptions?: {
+		asyncBalanceUpdate?: boolean;
 		skipCacheDeletion?: boolean;
 		skipWebhooks?: boolean;
 		/** Per-request sync-coalesce gate override (non-prod only); undefined

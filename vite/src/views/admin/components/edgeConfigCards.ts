@@ -27,6 +27,7 @@ export type EdgeConfigStatus = {
 
 export type EdgeConfigCardId =
 	| "feature-flags"
+	| "async-balance-update"
 	| "request-block"
 	| "customer-block"
 	| "org-limits"
@@ -274,6 +275,25 @@ export const EDGE_CONFIG_SECTIONS: EdgeConfigSectionDef[] = [
 		title: "Rollouts & Flags",
 		description: "Global gates and incremental feature enablement.",
 		cards: [
+			{
+				id: "async-balance-update",
+				title: "Async Balance Updates",
+				description:
+					"Enqueue balances.update calls for background processing by org.",
+				icon: Clock,
+				endpoint: "/admin/async-balance-update-config",
+				deriveStatus: (data) => {
+					const ids = asRecord(data).enabledOrgIds;
+					const count = Array.isArray(ids) ? ids.length : 0;
+
+					return count === 0
+						? { label: "No orgs enabled", tone: "neutral" }
+						: {
+								label: `${pluralize({ count, noun: "org" })} enabled`,
+								tone: "active",
+							};
+				},
+			},
 			{
 				id: "feature-flags",
 				title: "Feature Flags",
