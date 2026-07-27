@@ -6,13 +6,16 @@ import {
 	normalizedToFullSubject,
 	type SubjectQueryRow,
 } from "@autumn/shared";
+import { dbReplica } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { runWithFullSubjectGate } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
+import { selectFullSubjectDatabase } from "./selectFullSubjectDatabase.js";
 import {
 	resultToFullSubject,
 	subjectQueryRowToNormalized,
@@ -32,15 +35,21 @@ export async function getFullSubject({
 	inStatuses?: CusProductStatus[];
 	allowMissingEntity?: boolean;
 }): Promise<FullSubject | undefined> {
-	const { db, org, env } = ctx;
+	const { org, env } = ctx;
+	const databaseSelection = selectFullSubjectDatabase({
+		ctx,
+		configuredTarget: getRuntimeFullSubjectGateConfig().database_target,
+		replicaDatabase: dbReplica,
+	});
 
 	const result = await runWithFullSubjectGate({
 		customerId,
 		orgId: org.id,
 		env,
+		databaseTarget: databaseSelection.actualTarget,
 		logger: ctx.logger,
 		queryFn: () =>
-			db.execute(
+			databaseSelection.database.execute(
 				getFullSubjectQuery({
 					orgId: org.id,
 					env,
@@ -85,15 +94,21 @@ export async function getFullSubjectNormalized({
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
-	const { db, org, env } = ctx;
+	const { org, env } = ctx;
+	const databaseSelection = selectFullSubjectDatabase({
+		ctx,
+		configuredTarget: getRuntimeFullSubjectGateConfig().database_target,
+		replicaDatabase: dbReplica,
+	});
 
 	const result = await runWithFullSubjectGate({
 		customerId,
 		orgId: org.id,
 		env,
+		databaseTarget: databaseSelection.actualTarget,
 		logger: ctx.logger,
 		queryFn: () =>
-			db.execute(
+			databaseSelection.database.execute(
 				getFullSubjectQuery({
 					orgId: org.id,
 					env,

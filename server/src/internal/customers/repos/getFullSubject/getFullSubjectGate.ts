@@ -4,6 +4,7 @@ import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import type { FullSubjectDatabaseTarget } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigSchemas.js";
 import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 const GATE_LOG_WAIT_MS_THRESHOLD = 50;
@@ -94,9 +95,18 @@ const rejectedCounter = meter.createCounter(
 	{ description: "FullSubject hydrations rejected (queue full or timed out)" },
 );
 
-const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
+const attrs = ({
+	orgId,
+	env,
+	databaseTarget,
+}: {
+	orgId: string;
+	env: AppEnv;
+	databaseTarget: FullSubjectDatabaseTarget;
+}) => ({
 	org_id: orgId,
 	env,
+	database_target: databaseTarget,
 });
 
 const GATE_REJECTION_REASONS = [
@@ -152,12 +162,14 @@ export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
 	env,
+	databaseTarget = "primary",
 	logger,
 	queryFn,
 }: {
 	customerId: string | undefined;
 	orgId: string;
 	env: AppEnv;
+	databaseTarget?: FullSubjectDatabaseTarget;
 	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
@@ -170,7 +182,7 @@ export const runWithFullSubjectGate = async <T>({
 		fleet_process_count,
 	} = getRuntimeFullSubjectGateConfig();
 	const enqueuedAt = Date.now();
-	const labels = attrs({ orgId, env });
+	const labels = attrs({ orgId, env, databaseTarget });
 
 	const perProcessOrgLimit = toPerProcessLimit(
 		per_org_limit,

@@ -1,9 +1,18 @@
 import { z } from "zod/v4";
 
+export const FullSubjectDatabaseTargetSchema = z.enum(["primary", "replica"]);
+
+export type FullSubjectDatabaseTarget = z.infer<
+	typeof FullSubjectDatabaseTargetSchema
+>;
+
 // Defaults are deliberately loose — initial deploy is effectively a no-op
 // for normal traffic. Tighten to target values (15 / 30) via the admin API
 // after observing real load via OTel metrics. See runbook in PR description.
 export const FullSubjectGateEdgeConfigSchema = z.object({
+	// Routes only the FullSubject hydration read. Lazy resets, migrations, and
+	// all other request work continue using ctx.db.
+	database_target: FullSubjectDatabaseTargetSchema.default("primary"),
 	per_customer_limit: z.number().int().min(1).max(10_000).default(200),
 	per_org_limit: z.number().int().min(1).max(10_000).default(500),
 	// Max time a request can wait at the gate before being rejected with 429.
