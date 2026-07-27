@@ -47,14 +47,11 @@ export const getEntityAggregateFragments = ({
 	statusFilter: SQL;
 	internalFeatureIds?: string[];
 }) => {
+	// Single array parameter, not one placeholder per id — keeps the SQL text
+	// stable across callers so the statement stays preparable.
 	const featureFilter =
 		internalFeatureIds && internalFeatureIds.length > 0
-			? sql`AND ce.internal_feature_id = ANY(ARRAY[${sql.join(
-					internalFeatureIds.map(
-						(internalFeatureId) => sql`${internalFeatureId}`,
-					),
-					sql`, `,
-				)}])`
+			? sql`AND ce.internal_feature_id = ANY(${sql.param(internalFeatureIds)}::text[])`
 			: sql``;
 
 	if (entityId) {

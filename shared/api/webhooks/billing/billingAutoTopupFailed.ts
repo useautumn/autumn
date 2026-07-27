@@ -6,6 +6,7 @@ export const BillingAutoTopupFailureReasonSchema = z
 		"purchase_limit_reached",
 		"attempt_limit_reached",
 		"failed_attempt_limit_reached",
+		"suspended_after_failures",
 		"customer_unavailable",
 		"configuration_unavailable",
 		"missing_payment_method",
@@ -33,7 +34,8 @@ export const BillingAutoTopupFailedErrorSchema = z.object({
 		description: "Provider error type when one is available.",
 	}),
 	decline_code: z.string().nullish().meta({
-		description: "Stripe decline code when the failure came from a card decline.",
+		description:
+			"Stripe decline code when the failure came from a card decline.",
 	}),
 });
 

@@ -85,6 +85,13 @@ export const usageWindows = pgTable(
 		index("idx_usage_windows_internal_customer_id").on(
 			table.internal_customer_id,
 		),
+		// customers.internal_id is COLLATE "C" but this column is the database
+		// default, so joins resolve to "C" and the plain index above can never be
+		// used — it has 0 scans in prod. getFullSubject was sequentially scanning
+		// the whole table on every call as a result. See [[postgres-collation-index-trap]].
+		index("idx_usage_windows_internal_customer_id_c")
+			.on(sql`${table.internal_customer_id} COLLATE "C"`)
+			.concurrently(),
 		index("idx_uw_internal_feature_id")
 			.on(table.internal_feature_id)
 			.concurrently(),

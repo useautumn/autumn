@@ -7,24 +7,34 @@ import {
 	normalizeWindowCounter,
 } from "./autoTopupLimitWindowUtils.js";
 import { getAutoTopupRateLimitConfigs } from "./autoTopupRateLimitConfigs.js";
+import { paymentMethodToFingerprint } from "./paymentMethodFingerprint.js";
+
+/**
+ * Consecutive failed top-ups before auto top-ups are suspended for the
+ * customer + feature. Suspension is durable — see preflightAutoTopupLimits.
+ */
+export const MAX_CONSECUTIVE_AUTO_TOPUP_FAILURES = 3;
 
 export const recordAutoTopupAttempt = async ({
 	ctx,
 	autoTopupContext,
 	billingResult,
+	forceFailure = false,
 }: {
 	ctx: AutumnContext;
 	autoTopupContext: AutoTopupContext;
-	billingResult: BillingResult;
+	billingResult?: BillingResult;
+	/** Records a failure when execution threw before producing a result. */
+	forceFailure?: boolean;
 }) => {
 	const now = Date.now();
 	const { limitState: state, autoTopupConfig } = autoTopupContext;
-	const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+	const invoiceStatus = billingResult?.stripe?.stripeInvoice?.status;
 	const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
-	const outcome =
-		invoiceStatus === "paid" || (isInvoiceMode && invoiceStatus === "open")
-			? "success"
-			: "failure";
+	const succeeded =
+		!forceFailure &&
+		(invoiceStatus === "paid" || (isInvoiceMode && invoiceStatus === "open"));
+	const outcome = succeeded ? "success" : "failure";
 
 	const { purchaseLimit, attemptLimit, failedAttemptLimit } =
 		getAutoTopupRateLimitConfigs({ autoTopupConfig });
@@ -76,6 +86,29 @@ export const recordAutoTopupAttempt = async ({
 		if (state.last_failed_attempt_at !== now) {
 			updates.last_failed_attempt_at = now;
 		}
+
+		const consecutiveFailures = state.consecutive_failure_count + 1;
+		updates.consecutive_failure_count = consecutiveFailures;
+
+		if (
+			consecutiveFailures >= MAX_CONSECUTIVE_AUTO_TOPUP_FAILURES &&
+			!state.suspended_at
+		) {
+			updates.suspended_at = now;
+			updates.suspended_reason = "consecutive_failures";
+			updates.suspended_payment_method_fingerprint =
+				paymentMethodToFingerprint({
+					paymentMethod: autoTopupContext.paymentMethod,
+				}) ?? null;
+
+			ctx.logger.warn(
+				`[recordAutoTopupAttempt] Suspending auto top-ups for customer ${autoTopupContext.fullCustomer.id} and feature ${autoTopupConfig.feature_id} after ${consecutiveFailures} consecutive failures`,
+			);
+		}
+	}
+
+	if (outcome === "success" && state.consecutive_failure_count !== 0) {
+		updates.consecutive_failure_count = 0;
 	}
 
 	if (outcome === "success" && purchaseLimit && normalizedPurchase) {

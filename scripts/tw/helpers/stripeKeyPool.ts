@@ -29,14 +29,51 @@
 // `stripe` dep, so we re-export it rather than `import Stripe from "stripe"` here.
 export { stripeClientForKey } from "@server/external/connect/stripeFromKey.js";
 
+/**
+ * Env vars the pool is assembled from, in order. `_OLD` holds an earlier
+ * generation of platform keys that was retired when the swarm kept hitting
+ * mysterious `rate_limit` errors. That turned out to be Stripe's
+ * `endpoint-concurrency` shedding rather than anything wrong with the keys (see
+ * server/src/external/connect/clientCache/twStripeConcurrencyLimit.ts), so they
+ * are healthy and folded back in — every extra key is another bucket.
+ */
+export const STRIPE_POOL_ENV_VARS = [
+	"STRIPE_TEST_KEY_POOL",
+	"STRIPE_TEST_KEY_POOL_OLD",
+] as const;
+
+const splitKeys = (raw: string | undefined): string[] =>
+	raw
+		?.split(",")
+		.map((key) => key.trim())
+		.filter(Boolean) ?? [];
+
+/**
+ * The single source of truth for which Stripe platform keys exist. Both the
+ * swarm (`bun tw`) and the key probe (`bun tw:pk`) read the pool through here,
+ * so they can never disagree about pool size or ordering.
+ *
+ * Keys are de-duplicated while preserving first-seen order, so a key present in
+ * both env vars occupies one slot rather than two — round-robin assignment
+ * assumes distinct rate-limit buckets.
+ */
+export const collectPoolKeys = (): string[] => {
+	const seen = new Set<string>();
+	const keys: string[] = [];
+
+	for (const envVar of STRIPE_POOL_ENV_VARS) {
+		for (const key of splitKeys(process.env[envVar])) {
+			if (seen.has(key)) continue;
+			seen.add(key);
+			keys.push(key);
+		}
+	}
+
+	return keys;
+};
+
 const parsePool = (): string[] => {
-	const raw = process.env.STRIPE_TEST_KEY_POOL?.trim();
-	const fromPool = raw
-		? raw
-				.split(",")
-				.map((key) => key.trim())
-				.filter(Boolean)
-		: [];
+	const fromPool = collectPoolKeys();
 	if (fromPool.length > 0) {
 		return fromPool;
 	}
@@ -45,7 +82,7 @@ const parsePool = (): string[] => {
 		return [single];
 	}
 	throw new Error(
-		"no Stripe key: set STRIPE_TEST_KEY_POOL (comma-separated) or STRIPE_SANDBOX_SECRET_KEY",
+		`no Stripe key: set one of ${STRIPE_POOL_ENV_VARS.join(" / ")} (comma-separated) or STRIPE_SANDBOX_SECRET_KEY`,
 	);
 };
 
