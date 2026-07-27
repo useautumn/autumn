@@ -6,7 +6,7 @@ import { getCtxWithCustomerRedis } from "../external/redis/customerRedisRouting.
 import { resolveRedisV2 } from "../external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "../internal/misc/rollouts/rolloutUtils.js";
-import { OrgService } from "../internal/orgs/OrgService.js";
+import { getOrgWithFeaturesCached } from "../internal/orgs/orgUtils/cacheOrgWithFeatures.js";
 import { generateId } from "../utils/genUtils.js";
 
 export const createWorkerContext = async ({
@@ -30,9 +30,12 @@ export const createWorkerContext = async ({
 
 	// Fetch org with features once for all items. A missing org means it was
 	// deleted after the job was queued (common in tests) — skip, don't fail.
-	let orgData: Awaited<ReturnType<typeof OrgService.getWithFeatures>> | null;
+	// Deliberately not gated on `skipCache` — that flag governs the customer
+	// cache (workers want fresh balances), whereas this is org config that
+	// changes rarely and is invalidated by clearOrgCache.
+	let orgData: Awaited<ReturnType<typeof getOrgWithFeaturesCached>>;
 	try {
-		orgData = await OrgService.getWithFeatures({ db, orgId, env });
+		orgData = await getOrgWithFeaturesCached({ db, orgId, env });
 	} catch {
 		orgData = null;
 	}
