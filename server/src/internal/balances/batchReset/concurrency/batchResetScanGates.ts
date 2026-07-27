@@ -7,6 +7,7 @@ import { sleepWithAbort } from "./sleepWithAbort.js";
 // SQS counts are approximate — only trust "empty" after consecutive reads.
 const CONSECUTIVE_EMPTY_READS_REQUIRED = 2;
 const BARRIER_STUCK_WARN_MS = ms.minutes(30);
+const BARRIER_GIVE_UP_MS = ms.minutes(45);
 
 /**
  * Gate A — in-sweep backpressure. Blocks while the batch reset queue holds
@@ -54,9 +55,10 @@ export const waitForQueueBelowHighWater = async ({
  * fully drained (zero visible AND zero in-flight, on consecutive reads), so
  * a new sweep can never re-enqueue rows the workers are still processing.
  *
- * Never force-restarts: if workers are wedged, restarting would only
- * manufacture duplicate work — after BARRIER_STUCK_WARN_MS it logs loudly
- * and keeps waiting. Fails open on SQS errors or when no dedicated queue is
+ * Warns at BARRIER_STUCK_WARN_MS, then gives up at BARRIER_GIVE_UP_MS rather
+ * than stalling resets indefinitely behind one wedged message: re-enqueueing a
+ * still-queued row is a no-op, since classifyNoAction rejects rows that are no
+ * longer due. Fails open on SQS errors or when no dedicated queue is
  * configured.
  */
 export const waitForQueueDrained = async ({
@@ -90,7 +92,9 @@ export const waitForQueueDrained = async ({
 			consecutiveEmptyReads = 0;
 		}
 
-		if (!warnedStuck && Date.now() - startedAt > BARRIER_STUCK_WARN_MS) {
+		const waitedMs = Date.now() - startedAt;
+
+		if (!warnedStuck && waitedMs > BARRIER_STUCK_WARN_MS) {
 			warnedStuck = true;
 			logger.error(
 				"[reset-cus-ents-v2] sweep barrier stuck — workers not draining the batch reset queue",
@@ -99,10 +103,25 @@ export const waitForQueueDrained = async ({
 					data: {
 						queueVisible: depth.visible,
 						queueInFlight: depth.inFlight,
-						waitedMs: Date.now() - startedAt,
+						waitedMs,
 					},
 				},
 			);
+		}
+
+		if (waitedMs > BARRIER_GIVE_UP_MS) {
+			logger.error(
+				"[reset-cus-ents-v2] sweep barrier abandoned — restarting sweep with messages still in flight",
+				{
+					jobName: "reset-cus-ents-v2",
+					data: {
+						queueVisible: depth.visible,
+						queueInFlight: depth.inFlight,
+						waitedMs,
+					},
+				},
+			);
+			return;
 		}
 
 		await sleepWithAbort({

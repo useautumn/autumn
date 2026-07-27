@@ -1,4 +1,0 @@
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_orgs_test_connect_default_account" ON "organizations" USING btree (("test_stripe_connect"->>'default_account_id'));--> statement-breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_orgs_test_connect_account" ON "organizations" USING btree (("test_stripe_connect"->>'account_id'));--> statement-breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_orgs_live_connect_account" ON "organizations" USING btree (("live_stripe_connect"->>'account_id'));--> statement-breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "idx_usage_windows_internal_customer_id_c" ON "usage_windows" USING btree ("internal_customer_id" COLLATE "C");

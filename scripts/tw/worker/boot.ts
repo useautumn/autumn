@@ -51,6 +51,17 @@ import {
 /** The READY sentinel the orchestrator scans stdout for. Plan §9 step 5. */
 export const READY_SENTINEL = "TW_WORKER_READY";
 
+/**
+ * Stripe's test-mode ceiling (~25 req/s) is per KEY, and a worker runs four
+ * processes on one key: the test process plus the server, queue workers and
+ * cron. Each enforces its own budget in-process (there is no shared counter
+ * between them), so the budget is split rather than duplicated: the test
+ * process keeps the orchestrator-injected share (it makes the overwhelming
+ * majority of the calls) and the three background processes take a small slice
+ * each, leaving the total under the ceiling.
+ */
+const BACKGROUND_STRIPE_RPS = 3;
+
 const SERVICE_HEALTH_TIMEOUT_MS = 60_000;
 const SERVER_HEALTH_TIMEOUT_MS = 120_000;
 const POLL_INTERVAL_MS = 500;
@@ -233,6 +244,9 @@ export const startServer = (repoRoot: string, port: number): Subprocess => {
 			...process.env,
 			NODE_ENV: "development",
 			SERVER_PORT: String(port),
+			// Background share of the worker's Stripe budget — see
+			// BACKGROUND_STRIPE_RPS for why the split exists.
+			TW_STRIPE_MAX_RPS: String(BACKGROUND_STRIPE_RPS),
 		} as Record<string, string>,
 	});
 };
@@ -255,6 +269,7 @@ export const startBackgroundProcs = (
 	const env = {
 		...process.env,
 		NODE_ENV: "development",
+		TW_STRIPE_MAX_RPS: String(BACKGROUND_STRIPE_RPS),
 	} as Record<string, string>;
 
 	log("starting SQS queue workers (bun src/workers.ts)");

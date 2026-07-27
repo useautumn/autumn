@@ -1,5 +1,5 @@
 {
-  "id": "0b9e4fb7-516e-4b40-9ade-4aa6480b47dd",
+  "id": "d9c7af45-1231-483e-be69-a096dce9e32f",
   "prevId": "d405eaba-9aca-41c4-9a1f-728f01daa3ab",
   "version": "7",
   "dialect": "postgresql",
@@ -548,6 +548,31 @@
         "last_failed_attempt_at": {
           "name": "last_failed_attempt_at",
           "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consecutive_failure_count": {
+          "name": "consecutive_failure_count",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "suspended_at": {
+          "name": "suspended_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_reason": {
+          "name": "suspended_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_payment_method_fingerprint": {
+          "name": "suspended_payment_method_fingerprint",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -7258,51 +7283,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "idx_orgs_test_connect_default_account": {
-          "name": "idx_orgs_test_connect_default_account",
-          "columns": [
-            {
-              "expression": "(\"test_stripe_connect\"->>'default_account_id')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_orgs_test_connect_account": {
-          "name": "idx_orgs_test_connect_account",
-          "columns": [
-            {
-              "expression": "(\"test_stripe_connect\"->>'account_id')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_orgs_live_connect_account": {
-          "name": "idx_orgs_live_connect_account",
-          "columns": [
-            {
-              "expression": "(\"live_stripe_connect\"->>'account_id')",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {},
@@ -9972,21 +9952,6 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_usage_windows_internal_customer_id_c": {
-          "name": "idx_usage_windows_internal_customer_id_c",
-          "columns": [
-            {
-              "expression": "\"internal_customer_id\" COLLATE \"C\"",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": true,
           "method": "btree",
           "with": {}
         },

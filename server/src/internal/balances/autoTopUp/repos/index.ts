@@ -1,3 +1,4 @@
+import { clearAutoTopupSuspensions } from "./clearAutoTopupSuspensions";
 import { findAutoTopupLimitByScope } from "./findAutoTopupLimitByScope";
 import { findAutoTopupLimitsByCustomer } from "./findAutoTopupLimitsByCustomer";
 import { insertAutoTopupLimit } from "./insertAutoTopupLimit";
@@ -8,4 +9,5 @@ export const autoTopupLimitRepo = {
 	findAllByCustomer: findAutoTopupLimitsByCustomer,
 	insert: insertAutoTopupLimit,
 	updateById: updateAutoTopupLimitById,
+	clearSuspensions: clearAutoTopupSuspensions,
 } as const;

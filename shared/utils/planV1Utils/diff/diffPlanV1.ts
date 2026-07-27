@@ -87,7 +87,9 @@ export const toCreatePlanItemParams = (
 	const out: CreatePlanItemParamsV1 = { feature_id: item.feature_id };
 	if (item.entity_feature_id !== undefined)
 		out.entity_feature_id = item.entity_feature_id;
-	if (item.pooled !== undefined) out.pooled = item.pooled;
+	// Only when true: false is the schema default, so emitting it would leak a
+	// no-op field into every migration diff.
+	if (item.pooled) out.pooled = item.pooled;
 	if (includeInternalIds && item.entitlement_id !== undefined)
 		out.entitlement_id = item.entitlement_id;
 	if (includeInternalIds && item.price_id !== undefined)
