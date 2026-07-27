@@ -45,6 +45,7 @@ const getConfiguredQueueUrls = () =>
 		QUEUE_URL,
 		process.env.TRACK_SQS_QUEUE_URL,
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+		process.env.CUSTOMER_CREATION_RECOVERY_SQS_QUEUE_URL,
 	].filter((url): url is string => Boolean(url));
 
 export const getBlueGreenQueueUrls = ({
@@ -61,8 +62,7 @@ export const getBlueGreenQueueUrls = ({
 // the SDK falls back to (the queue URL's host).
 const sqsClientsByRegion = new Map<string, SQSClient>();
 const getSqsClientForQueue = (queueUrl: string): SQSClient => {
-	const region =
-		extractRegionFromQueueUrl({ queueUrl }) ?? DEFAULT_AWS_REGION;
+	const region = extractRegionFromQueueUrl({ queueUrl }) ?? DEFAULT_AWS_REGION;
 	const cached = sqsClientsByRegion.get(region);
 	if (cached) return cached;
 	const client = new SQSClient({ region });

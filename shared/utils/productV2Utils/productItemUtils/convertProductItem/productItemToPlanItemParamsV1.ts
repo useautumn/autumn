@@ -71,6 +71,7 @@ export const productItemToPlanItemParamsV1 = ({
 		feature_id: planItemV1.feature_id,
 		included: planItemV1.included,
 		unlimited: planItemV1.unlimited,
+		pooled: planItemV1.pooled ?? false,
 		reset: planItemV1.reset ?? undefined,
 		price: planItemV1.price
 			? {

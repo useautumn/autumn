@@ -157,6 +157,7 @@ server/.turbo
 notes.txt
 server/experiments/results/*
 !server/experiments/results/.gitkeep
+server/experiments/out/getFullSubject-*
 
 # Leaf contract fixtures are synced from private S3.
 apps/leaf/contracts/

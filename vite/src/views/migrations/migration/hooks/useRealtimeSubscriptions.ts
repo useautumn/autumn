@@ -40,13 +40,11 @@ export function useRealtimeSubscriptions({
 		dryRun,
 		limit,
 		only,
-		concurrency,
 		retryItemStatuses,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
-		concurrency?: number;
 		retryItemStatuses?: RetryableMigrationItemRunStatus[];
 	}) => {
 		try {
@@ -56,7 +54,6 @@ export function useRealtimeSubscriptions({
 					dryRun,
 					limit,
 					only,
-					concurrency,
 					retryItemStatuses,
 				}),
 			);

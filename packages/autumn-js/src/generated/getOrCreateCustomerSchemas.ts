@@ -32,6 +32,7 @@ export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
@@ -157,6 +158,7 @@ export const getOrCreateCustomerPurchaseLimitSchema = z.object({
 	interval: getOrCreateCustomerPurchaseLimitIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerAutoTopupSchema = z.object({

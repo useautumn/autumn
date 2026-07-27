@@ -33,6 +33,10 @@ const findCusEnt = ({
 		if (cusEnt.id === cusEntId)
 			return Object.assign(cusEnt, { customer_product: null });
 	}
+	for (const cusEnt of fullCus.pooled_customer_entitlements || []) {
+		if (cusEnt.id === cusEntId)
+			return Object.assign(cusEnt, { customer_product: null });
+	}
 	return null;
 };
 

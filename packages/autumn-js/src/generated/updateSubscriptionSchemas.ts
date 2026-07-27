@@ -348,6 +348,7 @@ export const billingUpdatePurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const billingUpdateAutoTopupOutboundSchema = z.object({
@@ -832,6 +833,7 @@ export const billingUpdatePurchaseLimitSchema = z.object({
 	interval: billingUpdatePurchaseLimitIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const billingUpdateAutoTopupSchema = z.object({

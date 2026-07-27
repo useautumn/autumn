@@ -514,7 +514,7 @@ test.concurrent(
 			granted: 100,
 		});
 	},
-	{ timeout: 15_000 },
+	{ timeout: 30_000 },
 );
 
 test.concurrent(

@@ -26,6 +26,7 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./classifyCusEnt/cusEntsHaveUnlimited";
 export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
+export * from "./classifyCusEnt/isPooledBalanceCustomerEntitlement";
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel
@@ -46,6 +47,7 @@ export * from "./convertCusEntUtils/resolveSpendLimitOverageLimit";
 // Core utils
 export * from "./cusEntUtils";
 export * from "./filterCusEntUtils";
+export * from "./filterCustomerEntitlements/filterCustomerEntitlementsByPooledBalanceSource";
 export * from "./findCustomerEntitlement/findCustomerEntitlementByFeature";
 // Find utils
 export * from "./findCustomerEntitlement/findCustomerEntitlementById";

@@ -18,6 +18,7 @@ import {
 	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { isSyncCoalesceEnabled } from "@/internal/misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
@@ -59,6 +60,8 @@ const queueSyncItem = ({
 		entityId: fullSubject.entityId,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
+		coalesce: ctx.testOptions?.syncCoalesce ?? isSyncCoalesceEnabled(),
+		coalesceRedis: ctx.redisV2,
 	});
 };
 

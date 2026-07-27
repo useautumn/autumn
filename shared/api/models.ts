@@ -28,6 +28,8 @@ export * from "./licenses/index.js";
 // Others
 export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
+// Pooled balances
+export * from "./pooledBalances/index.js";
 // Product
 export * from "./products/index.js";
 // Referrals
@@ -96,6 +98,8 @@ export * from "./features/prevVersions/featureV0OpModels.js";
 export * from "./others/apiInvoice/apiInvoiceItem.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 export * from "./others/apiInvoice/apiListInvoiceV1.js";
+export * from "./others/apiInvoice/insertInvoicesParams.js";
+export * from "./others/apiInvoice/insertInvoicesResponse.js";
 export * from "./others/apiInvoice/listInvoicesParams.js";
 // Models
 export * from "./platform/platformModels.js";

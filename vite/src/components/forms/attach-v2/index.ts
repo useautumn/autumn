@@ -5,6 +5,7 @@ export * from "./attachFormSchema";
 export * from "./components/AttachAdvancedSection";
 export * from "./components/AttachFooter";
 export * from "./components/AttachFooterV3";
+export * from "./components/AttachLicenseLossWarning";
 export * from "./components/AttachPlanOptions";
 export * from "./components/AttachPlanSection";
 export * from "./components/AttachPreviewSection";
@@ -21,6 +22,7 @@ export * from "./hooks/useAttachMutation";
 export * from "./hooks/useAttachPreview";
 export * from "./hooks/useAttachRequestBody";
 export * from "./hooks/useGrantFree";
+export * from "./hooks/useLicenseLossEntities";
 export * from "./hooks/usePreviewDiff";
 
 // Utils

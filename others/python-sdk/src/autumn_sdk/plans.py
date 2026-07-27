@@ -789,6 +789,12 @@ class Plans(BaseSDK):
         migration: Optional[Union[models.Migration, models.MigrationTypedDict]] = None,
         force_version: Optional[bool] = None,
         update_variant_ids: Optional[List[str]] = None,
+        update_license_parents: Optional[
+            Union[
+                List[models.UpdateLicenseParent],
+                List[models.UpdateLicenseParentTypedDict],
+            ]
+        ] = None,
         variants: Optional[
             Union[List[models.Variant], List[models.VariantTypedDict]]
         ] = None,
@@ -827,6 +833,7 @@ class Plans(BaseSDK):
         :param migration:
         :param force_version: Force versioning even when no customers exist. Mutually exclusive with disable_version.
         :param update_variant_ids: Variant plan IDs to apply this update to. Empty or omitted means no propagation.
+        :param update_license_parents: Parent plan versions that should receive this license-plan update.
         :param variants: Additive variant updates for this base plan. Missing variants are created when name is provided.
         :param is_default: Whether this is the org's default plan. Cannot be true on a variant.
         :param retries: Override the default retry configuration for this method
@@ -880,6 +887,9 @@ class Plans(BaseSDK):
             migration=utils.get_pydantic_model(migration, Optional[models.Migration]),
             force_version=force_version,
             update_variant_ids=update_variant_ids,
+            update_license_parents=utils.get_pydantic_model(
+                update_license_parents, Optional[List[models.UpdateLicenseParent]]
+            ),
             variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
             is_default=is_default,
         )
@@ -997,6 +1007,12 @@ class Plans(BaseSDK):
         migration: Optional[Union[models.Migration, models.MigrationTypedDict]] = None,
         force_version: Optional[bool] = None,
         update_variant_ids: Optional[List[str]] = None,
+        update_license_parents: Optional[
+            Union[
+                List[models.UpdateLicenseParent],
+                List[models.UpdateLicenseParentTypedDict],
+            ]
+        ] = None,
         variants: Optional[
             Union[List[models.Variant], List[models.VariantTypedDict]]
         ] = None,
@@ -1035,6 +1051,7 @@ class Plans(BaseSDK):
         :param migration:
         :param force_version: Force versioning even when no customers exist. Mutually exclusive with disable_version.
         :param update_variant_ids: Variant plan IDs to apply this update to. Empty or omitted means no propagation.
+        :param update_license_parents: Parent plan versions that should receive this license-plan update.
         :param variants: Additive variant updates for this base plan. Missing variants are created when name is provided.
         :param is_default: Whether this is the org's default plan. Cannot be true on a variant.
         :param retries: Override the default retry configuration for this method
@@ -1088,6 +1105,9 @@ class Plans(BaseSDK):
             migration=utils.get_pydantic_model(migration, Optional[models.Migration]),
             force_version=force_version,
             update_variant_ids=update_variant_ids,
+            update_license_parents=utils.get_pydantic_model(
+                update_license_parents, Optional[List[models.UpdateLicenseParent]]
+            ),
             variants=utils.get_pydantic_model(variants, Optional[List[models.Variant]]),
             is_default=is_default,
         )

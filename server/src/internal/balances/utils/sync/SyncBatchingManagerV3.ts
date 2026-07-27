@@ -1,16 +1,22 @@
 import type { AppEnv } from "@autumn/shared";
+import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
+import { getCurrentRedisV2InstanceName } from "@/external/redis/resolveRedisV2.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { markSyncDirty } from "./dirtyState/markSyncDirty.js";
+import { buildSyncDirtyKeys } from "./dirtyState/syncDirtyKeys.js";
 import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
+
+/** Signal marker TTL: an enqueue that silently fails re-signals after this. */
+const SIGNAL_TTL_SECONDS = 60;
 
 interface CustomerBatchContext {
 	customerId: string;
 	orgId: string;
 	env: AppEnv;
 	region: string;
-	timestamp: number;
 	cusEntIds: Set<string>;
 	rolloverIds: Set<string>;
 	entityId?: string;
@@ -18,7 +24,14 @@ interface CustomerBatchContext {
 	// Counter SNAPSHOTS keyed by capped feature: each deduction returns the
 	// complete post-deduction array, so merging across batched items is
 	// last-write-wins (unlike cusEnt/rollover ids, which accumulate).
-	usageWindowUpdatesByFeatureId: Record<string, UsageWindowUpdate>;
+	usageWindowUpdatesByFeatureId: Record<
+		string,
+		{ ts: number; update: UsageWindowUpdate }
+	>;
+	/** Coalescing flushes into Redis dirty state instead of enqueueing a full payload. */
+	coalesce: boolean;
+	coalesceRedis?: Redis;
+	redisInstance?: string;
 }
 
 interface CustomerBatch {
@@ -85,6 +98,8 @@ export class SyncBatchingManagerV3 {
 		entityId,
 		modifiedCusEntIdsByFeatureId,
 		usageWindowUpdates,
+		coalesce,
+		coalesceRedis,
 	}: {
 		customerId: string;
 		orgId: string;
@@ -95,6 +110,10 @@ export class SyncBatchingManagerV3 {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 		usageWindowUpdates?: UsageWindowUpdate[];
+		/** Route this batch through the globally gated dirty state. */
+		coalesce?: boolean;
+		/** The Redis instance the deduction ran on (dirty state must co-locate) */
+		coalesceRedis?: Redis;
 	}): void {
 		const batchKey = this.buildBatchKey({ orgId, env, customerId });
 		let batch = this.customerBatches.get(batchKey);
@@ -110,6 +129,13 @@ export class SyncBatchingManagerV3 {
 
 		if (region) batch.context.region = region;
 		if (entityId) batch.context.entityId = entityId;
+		if (coalesce && coalesceRedis) {
+			batch.context.coalesce = true;
+			batch.context.coalesceRedis = coalesceRedis;
+			batch.context.redisInstance = getCurrentRedisV2InstanceName({
+				customerId,
+			});
+		}
 
 		for (const [featureId, ids] of Object.entries(
 			modifiedCusEntIdsByFeatureId,
@@ -121,9 +147,19 @@ export class SyncBatchingManagerV3 {
 		}
 
 		for (const usageWindowUpdate of usageWindowUpdates ?? []) {
-			batch.context.usageWindowUpdatesByFeatureId[
-				usageWindowUpdate.feature_id
-			] = usageWindowUpdate;
+			const timestampedUpdate = {
+				ts: Date.now(),
+				update: usageWindowUpdate,
+			};
+			const existing =
+				batch.context.usageWindowUpdatesByFeatureId[
+					usageWindowUpdate.feature_id
+				];
+			if (!existing || timestampedUpdate.ts >= existing.ts) {
+				batch.context.usageWindowUpdatesByFeatureId[
+					usageWindowUpdate.feature_id
+				] = timestampedUpdate;
+			}
 		}
 
 		const totalSize =
@@ -187,11 +223,11 @@ export class SyncBatchingManagerV3 {
 				orgId,
 				env,
 				region: region || currentRegion,
-				timestamp: Date.now(),
 				cusEntIds: new Set(),
 				rolloverIds: new Set(),
 				modifiedCusEntIdsByFeatureId: {},
 				usageWindowUpdatesByFeatureId: {},
+				coalesce: false,
 			},
 			timer: null,
 		};
@@ -293,16 +329,80 @@ export class SyncBatchingManagerV3 {
 		return Bun.hash(dedupKey).toString();
 	}
 
+	/** Merge into Redis dirty state and signal on the empty->dirty transition.
+	 *  An enqueue failure clears the marker before the legacy fallback. */
+	private async queueCoalescedSync({
+		context,
+	}: {
+		context: CustomerBatchContext;
+	}): Promise<void> {
+		const scope = {
+			orgId: context.orgId,
+			env: context.env,
+			customerId: context.customerId,
+		};
+
+		const { shouldSignal } = await markSyncDirty({
+			redis: context.coalesceRedis!,
+			scope,
+			cusEntIds: Array.from(context.cusEntIds),
+			rolloverIds: Array.from(context.rolloverIds),
+			modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
+			usageWindowUpdates: Object.values(context.usageWindowUpdatesByFeatureId),
+			entityId: context.entityId,
+			signalTtlSeconds: SIGNAL_TTL_SECONDS,
+		});
+
+		if (!shouldSignal) return;
+
+		// No DelaySeconds: FIFO queues reject per-message delay. The coalescing
+		// window is enforced by the drain handler, which waits out the window
+		// from `timestamp` before claiming.
+		try {
+			await addTaskToQueue({
+				jobName: JobName.SyncCustomerDirty,
+				payload: {
+					customerId: context.customerId,
+					orgId: context.orgId,
+					env: context.env,
+					region: context.region,
+					redisInstance: context.redisInstance!,
+					timestamp: Date.now(),
+				},
+				// Serializes drains per customer: two workers can never race on the
+				// same claim.
+				messageGroupId: `sync-dirty:${Bun.hash(
+					`${context.orgId}:${context.env}:${context.customerId}`,
+				)}`,
+			});
+		} catch (error) {
+			const { signalKey } = buildSyncDirtyKeys(scope);
+			await context.coalesceRedis!.del(signalKey);
+			throw error;
+		}
+	}
+
 	private async queueSyncJob({
 		context,
 	}: {
 		context: CustomerBatchContext;
 	}): Promise<void> {
+		if (context.coalesce && context.coalesceRedis) {
+			try {
+				await this.queueCoalescedSync({ context });
+				return;
+			} catch (error) {
+				logger.error(
+					`[SyncDirty] Failed to mark/signal for ${context.customerId}: ${error}`,
+				);
+			}
+		}
+
 		const cusEntIds = Array.from(context.cusEntIds).sort();
 		const rolloverIds = Array.from(context.rolloverIds).sort();
 		const usageWindowUpdates = Object.values(
 			context.usageWindowUpdatesByFeatureId,
-		);
+		).map(({ update }) => update);
 		const messageDeduplicationId = this.buildDeduplicationId({
 			context,
 			cusEntIds,

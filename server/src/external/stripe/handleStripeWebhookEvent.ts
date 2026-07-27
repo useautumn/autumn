@@ -2,23 +2,10 @@ import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import { Stripe } from "stripe";
 
-import { handleStripeInvoicePaid } from "@/external/stripe/webhookHandlers/handleStripeInvoicePaid/handleStripeInvoicePaid.js";
-import { handleStripeSubscriptionUpdated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/handleStripeSubscriptionUpdated.js";
 import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
-import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
-import { handleStripeCustomerUpdated } from "./webhookHandlers/handleStripeCustomerUpdated.js";
-import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
-import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
-import { handleStripeCheckoutSessionExpired } from "./webhookHandlers/handleStripeCheckoutSessionExpired/handleStripeCheckoutSessionExpired.js";
-import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
-import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
-import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
-import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
-import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestClockReady.js";
-import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { handleStripeSubscriptionScheduleUpdated } from "./webhookHandlers/handleStripeSubscriptionScheduleUpdated/handleStripeSubscriptionScheduleUpdated.js";
+import { runStripeWebhookHandlers } from "./runStripeWebhookHandlers.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -36,78 +23,7 @@ export const handleStripeWebhookEvent = async (
 	const event = stripeEvent;
 
 	try {
-		switch (event.type) {
-			case "customer.updated":
-				await handleStripeCustomerUpdated({ ctx, event });
-				break;
-
-			case "customer.subscription.created":
-				await handleStripeSubscriptionCreated({ ctx });
-				break;
-
-			case "customer.subscription.updated":
-				await handleStripeSubscriptionUpdated({ ctx, event });
-				break;
-
-			case "customer.subscription.deleted":
-				await handleStripeSubscriptionDeleted({ ctx, event });
-				break;
-
-			case "invoice.paid":
-				await handleStripeInvoicePaid({ ctx, event });
-				break;
-
-			case "invoice.updated":
-				await handleInvoiceUpdated({
-					ctx,
-					event,
-				});
-				break;
-
-			case "invoice.created":
-				await handleStripeInvoiceCreated({ ctx, event });
-				break;
-
-			case "invoice.finalized": {
-				await handleStripeInvoiceFinalized({ ctx, event });
-				break;
-			}
-
-			case "subscription_schedule.updated": {
-				await handleStripeSubscriptionScheduleUpdated({ ctx, event });
-				break;
-			}
-
-			case "subscription_schedule.canceled": {
-				const canceledSchedule = event.data.object;
-				await handleSubscriptionScheduleCanceled({
-					db,
-					org,
-					env,
-					schedule: canceledSchedule,
-				});
-				break;
-			}
-
-			case "customer.discount.deleted":
-				await handleCusDiscountDeleted({ ctx });
-				break;
-
-			case "checkout.session.completed": {
-				await handleStripeCheckoutSessionCompleted({ ctx, event });
-				break;
-			}
-
-			case "checkout.session.expired": {
-				await handleStripeCheckoutSessionExpired({ ctx, event });
-				break;
-			}
-
-			case "test_helpers.test_clock.ready": {
-				await handleStripeTestClockReady({ ctx, event });
-				break;
-			}
-		}
+		await runStripeWebhookHandlers({ ctx });
 	} catch (error) {
 		Sentry.captureException(error, {
 			tags: getSentryTags({
@@ -142,10 +58,14 @@ export const handleStripeWebhookEvent = async (
 		}
 
 		const shouldSkip = handleWebhookErrorSkip({ error, logger });
-		if (!shouldSkip) {
-			logger.error(`Stripe webhook error: ${error}`, { error });
+		if (shouldSkip) {
+			return c.json({ message: "Webhook received, skipped known error" }, 200);
 		}
-		return c.json({ message: "Webhook received, internal server error" }, 200);
+
+		logger.error(`Stripe webhook error: ${error}`, { error });
+		// Rethrow so the ack middleware owns the outcome: sync events 500 (Stripe
+		// retries), early events release the idempotency lock for manual replay.
+		throw error;
 	}
 
 	// Note: Cache refresh is now handled by stripeWebhookRefreshMiddleware

@@ -96,6 +96,22 @@ export const customerEntitlementAllowsRollovers = (
 	return notNullish(customerEntitlement.entitlement.rollover);
 };
 
+const INVOICE_PERIOD_END_TOLERANCE_MS = ms.days(1);
+
+export const isCustomerEntitlementDueAtInvoice = ({
+	customerEntitlement,
+	invoicePeriodEndMs,
+}: {
+	customerEntitlement: Pick<FullCustomerEntitlement, "next_reset_at">;
+	invoicePeriodEndMs: number;
+}) => {
+	return (
+		customerEntitlement.next_reset_at !== null &&
+		customerEntitlement.next_reset_at <=
+			invoicePeriodEndMs + INVOICE_PERIOD_END_TOLERANCE_MS
+	);
+};
+
 /**
  *
  * Only applicable for paid customer entitlements
@@ -115,8 +131,6 @@ export const customerEntitlementShouldBeBilled = ({
 		});
 	}
 
-	const TOLERANCE_MS = ms.days(1);
-
 	const nextResetAt = cusEnt.next_reset_at;
 	if (!nextResetAt) {
 		// Allocated v2 (continuous-use) cusEnts never reset so they carry no
@@ -134,13 +148,19 @@ export const customerEntitlementShouldBeBilled = ({
 			anchor: billingCycleAnchorMs,
 			interval: priceConfig.interval,
 			intervalCount: priceConfig.interval_count ?? 1,
-			now: invoicePeriodEndMs - TOLERANCE_MS,
+			now: invoicePeriodEndMs - INVOICE_PERIOD_END_TOLERANCE_MS,
 		});
 
-		return Math.abs(cycleEnd - invoicePeriodEndMs) <= TOLERANCE_MS;
+		return (
+			Math.abs(cycleEnd - invoicePeriodEndMs) <=
+			INVOICE_PERIOD_END_TOLERANCE_MS
+		);
 	}
 
-	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
+	return isCustomerEntitlementDueAtInvoice({
+		customerEntitlement: cusEnt,
+		invoicePeriodEndMs,
+	});
 };
 
 export const isVolumeBasedCusEnt = (cusEnt: FullCusEntWithFullCusProduct) => {

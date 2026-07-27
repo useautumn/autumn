@@ -9,43 +9,60 @@ const lines = content.split("\n");
 const MULTILINE_LOOKAHEAD = 5;
 
 const escapeRegex = (raw: string) => raw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const templateToRegex = (raw: string) =>
+	raw
+		.split(/\$\{.*?\}/)
+		.map(escapeRegex)
+		.join(".*");
 
-const CHALK_PATTERN =
-	/(?:describe|test(?:\.concurrent)?)\s*\(\s*`\$\{chalk\.\w+\(["'](.*?)["']\)\}`/;
-const BLOCK_NAME = String.raw`(?:describe|test(?:\.concurrent)?|Eval(?:<[^>]+>)?)`;
-const SIMPLE_PATTERN = new RegExp(`${BLOCK_NAME}\\s*\\(\\s*["'\`](.*?)["'\`]`);
-const OPEN_PATTERN = new RegExp(`${BLOCK_NAME}\\s*\\(\\s*$`);
+const BLOCK_NAME = String.raw`\b(?:describe|test(?:\.concurrent)?|Eval(?:<[^>]+>)?)`;
+const BLOCK_OPEN = new RegExp(`${BLOCK_NAME}\\s*\\(`);
 
-// Walk backwards from cursor to find enclosing describe, test, or test.concurrent.
-// Each candidate also gets a multi-line lookahead so name args wrapped onto the
-// next line(s) — `test.concurrent(\n\t\`${chalk.yellowBright("name")}\`,` — are matched.
+// Chalk forms must precede the plain-string form: it would otherwise capture the
+// `${` prefix of a template-wrapped name and stop at the quote inside it.
+const MATCHERS: Array<[RegExp, (raw: string) => string]> = [
+	// test(`${chalk.x(`name`)}`
+	[
+		new RegExp(
+			`${BLOCK_NAME}\\s*\\(\\s*\`\\$\\{chalk\\.\\w+\\(\`([\\s\\S]*?)\`\\)\\}\``,
+		),
+		templateToRegex,
+	],
+	// test(`${chalk.x("name")}`
+	[
+		new RegExp(
+			`${BLOCK_NAME}\\s*\\(\\s*\`\\$\\{chalk\\.\\w+\\(["'](.*?)["']\\)\\}\``,
+		),
+		escapeRegex,
+	],
+	// test(chalk.x(`name`)
+	[
+		new RegExp(`${BLOCK_NAME}\\s*\\(\\s*chalk\\.\\w+\\(\\s*\`([\\s\\S]*?)\``),
+		templateToRegex,
+	],
+	// test(chalk.x("name")
+	[
+		new RegExp(`${BLOCK_NAME}\\s*\\(\\s*chalk\\.\\w+\\(\\s*["'](.*?)["']`),
+		escapeRegex,
+	],
+	// test("name")
+	[new RegExp(`${BLOCK_NAME}\\s*\\(\\s*["'\`](.*?)["'\`]`), escapeRegex],
+];
+
+// Walk backwards from the cursor to the nearest enclosing block opener. Each
+// candidate is matched over a short multi-line window, so a name argument
+// wrapped onto following lines is still found.
 for (let i = lineNum - 1; i >= 0; i--) {
-	const line = lines[i];
+	if (!BLOCK_OPEN.test(lines[i])) continue;
 
-	const chalkMatch = line.match(CHALK_PATTERN);
-	if (chalkMatch) {
-		console.log(escapeRegex(chalkMatch[1]));
-		process.exit(0);
-	}
+	const joined = lines
+		.slice(i, Math.min(lines.length, i + 1 + MULTILINE_LOOKAHEAD))
+		.join("\n");
 
-	const simpleMatch = line.match(SIMPLE_PATTERN);
-	if (simpleMatch) {
-		console.log(escapeRegex(simpleMatch[1]));
-		process.exit(0);
-	}
-
-	if (OPEN_PATTERN.test(line)) {
-		const joined = lines
-			.slice(i, Math.min(lines.length, i + 1 + MULTILINE_LOOKAHEAD))
-			.join("\n");
-		const chalkMulti = joined.match(CHALK_PATTERN);
-		if (chalkMulti) {
-			console.log(escapeRegex(chalkMulti[1]));
-			process.exit(0);
-		}
-		const simpleMulti = joined.match(SIMPLE_PATTERN);
-		if (simpleMulti) {
-			console.log(escapeRegex(simpleMulti[1]));
+	for (const [pattern, transform] of MATCHERS) {
+		const match = joined.match(pattern);
+		if (match) {
+			console.log(transform(match[1]));
 			process.exit(0);
 		}
 	}

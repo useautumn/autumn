@@ -439,6 +439,7 @@ export const previewAttachPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachAutoTopupOutboundSchema = z.object({
@@ -951,6 +952,7 @@ export const previewAttachPurchaseLimitSchema = z.object({
 	interval: previewAttachPurchaseLimitIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
+	count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachAutoTopupSchema = z.object({

@@ -1,6 +1,7 @@
 import {
 	CusProductStatus,
 	type FullCusEntWithFullCusProduct,
+	isPooledBalanceSourceCustomerEntitlement,
 } from "@autumn/shared";
 
 export function filterCustomerFeatureUsage({
@@ -12,6 +13,13 @@ export function filterCustomerFeatureUsage({
 }): FullCusEntWithFullCusProduct[] {
 	return entitlements
 		.filter((ent: FullCusEntWithFullCusProduct) => {
+			if (
+				isPooledBalanceSourceCustomerEntitlement({
+					customerEntitlement: ent,
+				})
+			) {
+				return false;
+			}
 			if (showExpired) {
 				return true;
 			}

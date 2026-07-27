@@ -2,6 +2,7 @@ import { type BatchTrackParams, ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTasksToQueueBatch } from "@/queue/queueUtils.js";
+import { getAsyncTrackMessageGroupId } from "./utils/getAsyncTrackMessageGroupId.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
 
 const ASYNC_TRACK_UNAVAILABLE_MESSAGE =
@@ -31,19 +32,29 @@ export const runBatchTrack = async ({
 		getTrackFeatureDeductionsForBody({ ctx, body: item });
 	}
 
-	const entries = body.map((item, index) => ({
-		payload: {
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId: item.customer_id,
-			entityId: item.entity_id,
-			requestId: ctx.id,
-			apiVersion: ctx.apiVersion.value,
-			body: item,
-		},
-		messageGroupId: `${ctx.org.id}:${ctx.env}:${item.customer_id}:${item.entity_id ?? "none"}`,
-		messageDeduplicationId: `${ctx.id}-${index}`,
-	}));
+	const entries = body.map((item, index) => {
+		const messageDeduplicationId = `${ctx.id}-${index}`;
+
+		return {
+			payload: {
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: item.customer_id,
+				entityId: item.entity_id,
+				requestId: ctx.id,
+				apiVersion: ctx.apiVersion.value,
+				body: item,
+			},
+			messageGroupId: getAsyncTrackMessageGroupId({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				customerId: item.customer_id,
+				entityId: item.entity_id,
+				messageDeduplicationId,
+			}),
+			messageDeduplicationId,
+		};
+	});
 
 	const { successCount, failures } = await addTasksToQueueBatch({
 		jobName: JobName.Track,

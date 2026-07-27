@@ -6,9 +6,11 @@ import {
 	ProcessorType,
 	RecaseError,
 	shouldForwardCustomerMetadata,
+	stripAutoTopupCountsForStorage,
 	type UpdateCustomerParamsV1,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import {
 	autumnToStripeCustomerMetadata,
@@ -18,6 +20,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
+import {
+	syncAutoTopupPurchaseLimitCounts,
+	validateAutoTopupPurchaseLimitCounts,
+} from "./syncAutoTopupPurchaseLimitCounts";
 
 export const updateCustomer = async ({
 	ctx,
@@ -48,6 +54,10 @@ export const updateCustomer = async ({
 	if (!originalCustomer) {
 		throw new CustomerNotFoundError({ customerId });
 	}
+
+	validateAutoTopupPurchaseLimitCounts({
+		autoTopups: billing_controls?.auto_topups ?? [],
+	});
 
 	if (newCustomerId === null) {
 		throw new RecaseError({
@@ -136,8 +146,10 @@ export const updateCustomer = async ({
 	// Prepare update data — only include defined billing control fields
 	const billingControlUpdates: Partial<Customer> = {};
 	if (billing_controls) {
-		if (billing_controls.auto_topups !== undefined)
-			billingControlUpdates.auto_topups = billing_controls.auto_topups;
+		if (billing_controls.auto_topups !== undefined) {
+			billingControlUpdates.auto_topups =
+				stripAutoTopupCountsForStorage(billing_controls.auto_topups) ?? [];
+		}
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
 		if (billing_controls.usage_limits !== undefined)
@@ -181,10 +193,22 @@ export const updateCustomer = async ({
 		delete updateData.id;
 	}
 
-	await CusService.update({
-		ctx,
-		idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
-		update: updateData,
+	await db.transaction(async (tx) => {
+		const txCtx = { ...ctx, db: tx as unknown as DrizzleCli };
+
+		if (billing_controls?.auto_topups !== undefined) {
+			await syncAutoTopupPurchaseLimitCounts({
+				ctx: txCtx,
+				customer: originalCustomer,
+				autoTopups: billing_controls.auto_topups,
+			});
+		}
+
+		await CusService.update({
+			ctx: txCtx,
+			idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
+			update: updateData,
+		});
 	});
 
 	ctx.skipCache = true;

@@ -742,10 +742,6 @@ export type UpdatePlanLicense = {
   prepaidOnly?: boolean | undefined;
   customize?: UpdatePlanLicenseCustomize | null | undefined;
   metadata?: { [k: string]: any } | undefined;
-  /**
-   * Pin the link to a specific version of the license plan. Omitted, an existing link keeps its pinned version and a new link resolves to the latest.
-   */
-  version?: number | undefined;
 };
 
 /**
@@ -824,7 +820,7 @@ export type UpdatePlanPurchaseLimitIntervalRequestBody = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type UpdatePlanPurchaseLimitRequest = {
   /**
@@ -839,6 +835,10 @@ export type UpdatePlanPurchaseLimitRequest = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type UpdatePlanAutoTopupRequest = {
@@ -859,7 +859,7 @@ export type UpdatePlanAutoTopupRequest = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: UpdatePlanPurchaseLimitRequest | undefined;
   /**
@@ -1032,6 +1032,11 @@ export type UpdatePlanBillingControlsRequest = {
 export type Migration = {
   draft?: boolean | undefined;
   includeCustom?: boolean | undefined;
+};
+
+export type UpdateLicenseParent = {
+  planId: string;
+  version: number;
 };
 
 /**
@@ -1472,7 +1477,7 @@ export type VariantPurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type VariantPurchaseLimit = {
   /**
@@ -1487,6 +1492,10 @@ export type VariantPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type VariantAutoTopup = {
@@ -1507,7 +1516,7 @@ export type VariantAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: VariantPurchaseLimit | undefined;
   /**
@@ -1806,6 +1815,10 @@ export type UpdatePlanParams = {
    * Variant plan IDs to apply this update to. Empty or omitted means no propagation.
    */
   updateVariantIds?: Array<string> | undefined;
+  /**
+   * Parent plan versions that should receive this license-plan update.
+   */
+  updateLicenseParents?: Array<UpdateLicenseParent> | undefined;
   /**
    * Additive variant updates for this base plan. Missing variants are created when name is provided.
    */
@@ -2703,7 +2716,7 @@ export type UpdatePlanVariantDetailsPurchaseLimitInterval = OpenEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type UpdatePlanVariantDetailsPurchaseLimit = {
   /**
@@ -2718,6 +2731,10 @@ export type UpdatePlanVariantDetailsPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type UpdatePlanVariantDetailsAutoTopup = {
@@ -2738,7 +2755,7 @@ export type UpdatePlanVariantDetailsAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: UpdatePlanVariantDetailsPurchaseLimit | undefined;
   /**
@@ -4298,7 +4315,6 @@ export type UpdatePlanLicense$Outbound = {
   prepaid_only?: boolean | undefined;
   customize?: UpdatePlanLicenseCustomize$Outbound | null | undefined;
   metadata?: { [k: string]: any } | undefined;
-  version?: number | undefined;
 };
 
 /** @internal */
@@ -4314,7 +4330,6 @@ export const UpdatePlanLicense$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => UpdatePlanLicenseCustomize$outboundSchema)),
     ),
     metadata: z.optional(z.record(z.string(), z.any())),
-    version: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4423,6 +4438,7 @@ export type UpdatePlanPurchaseLimitRequest$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -4434,6 +4450,7 @@ export const UpdatePlanPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
     interval: UpdatePlanPurchaseLimitIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -4777,6 +4794,36 @@ export const Migration$outboundSchema: z.ZodMiniType<
 
 export function migrationToJSON(migration: Migration): string {
   return JSON.stringify(Migration$outboundSchema.parse(migration));
+}
+
+/** @internal */
+export type UpdateLicenseParent$Outbound = {
+  plan_id: string;
+  version: number;
+};
+
+/** @internal */
+export const UpdateLicenseParent$outboundSchema: z.ZodMiniType<
+  UpdateLicenseParent$Outbound,
+  UpdateLicenseParent
+> = z.pipe(
+  z.object({
+    planId: z.string(),
+    version: z.int(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      planId: "plan_id",
+    });
+  }),
+);
+
+export function updateLicenseParentToJSON(
+  updateLicenseParent: UpdateLicenseParent,
+): string {
+  return JSON.stringify(
+    UpdateLicenseParent$outboundSchema.parse(updateLicenseParent),
+  );
 }
 
 /** @internal */
@@ -5296,6 +5343,7 @@ export type VariantPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -5307,6 +5355,7 @@ export const VariantPurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: VariantPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -5745,6 +5794,7 @@ export type UpdatePlanParams$Outbound = {
   migration?: Migration$Outbound | undefined;
   force_version?: boolean | undefined;
   update_variant_ids?: Array<string> | undefined;
+  update_license_parents?: Array<UpdateLicenseParent$Outbound> | undefined;
   variants?: Array<Variant$Outbound> | undefined;
   is_default?: boolean | undefined;
 };
@@ -5788,6 +5838,9 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     migration: z.optional(z.lazy(() => Migration$outboundSchema)),
     forceVersion: z.optional(z.boolean()),
     updateVariantIds: z.optional(z.array(z.string())),
+    updateLicenseParents: z.optional(
+      z.array(z.lazy(() => UpdateLicenseParent$outboundSchema)),
+    ),
     variants: z.optional(z.array(z.lazy(() => Variant$outboundSchema))),
     isDefault: z.optional(z.boolean()),
   }),
@@ -5805,6 +5858,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       allVersions: "all_versions",
       forceVersion: "force_version",
       updateVariantIds: "update_variant_ids",
+      updateLicenseParents: "update_license_parents",
       isDefault: "is_default",
     });
   }),
@@ -6837,6 +6891,7 @@ export const UpdatePlanVariantDetailsPurchaseLimit$inboundSchema: z.ZodMiniType<
     interval: UpdatePlanVariantDetailsPurchaseLimitInterval$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
+    count: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

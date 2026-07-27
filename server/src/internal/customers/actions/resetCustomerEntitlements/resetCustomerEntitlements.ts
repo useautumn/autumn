@@ -1,37 +1,13 @@
 import type { FullCustomer } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	type ResetCusEntParam,
-	resetCusEnts,
-} from "@/internal/balances/utils/sql/client.js";
+import { resetCusEnts } from "@/internal/balances/utils/sql/client.js";
 import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
 import { executeResetCache } from "./executeResetCache.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
 import { type ProcessResetResult, processReset } from "./processReset.js";
-
-/** Maps a processReset result into the JSONB shape for the SQL function. */
-const toResetParam = ({
-	cusEntId,
-	result,
-}: {
-	cusEntId: string;
-	result: ProcessResetResult;
-}): ResetCusEntParam => {
-	const { updates } = result;
-	const firstRollover = result.rolloverInsert?.rows[0] ?? null;
-
-	return {
-		cus_ent_id: cusEntId,
-		balance: updates.balance,
-		additional_balance: updates.additional_balance,
-		adjustment: updates.adjustment,
-		entities: updates.entities,
-		next_reset_at: updates.next_reset_at,
-		rollover_insert: firstRollover,
-	};
-};
+import { processResetResultToResetCusEntParam } from "./processResetResultToResetCusEntParam.js";
 
 /**
  * Lazily resets customer entitlements that have passed their next_reset_at.
@@ -78,7 +54,10 @@ export const resetCustomerEntitlements = async ({
 
 		// 2. Execute atomic DB writes via Postgres function
 		const resets = computed.map(({ cusEntId, result }) =>
-			toResetParam({ cusEntId, result }),
+			processResetResultToResetCusEntParam({
+				customerEntitlementId: cusEntId,
+				result,
+			}),
 		);
 
 		const { applied, skipped } = await resetCusEnts({ ctx, resets });

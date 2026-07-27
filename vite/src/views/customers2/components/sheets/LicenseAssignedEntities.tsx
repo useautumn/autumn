@@ -1,15 +1,11 @@
-import { Button, IconButton, Input } from "@autumn/ui";
-import {
-	CaretLeftIcon,
-	CaretRightIcon,
-	MagnifyingGlassIcon,
-} from "@phosphor-icons/react";
+import { Button, Input } from "@autumn/ui";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { SheetPaginationControls } from "@/components/v2/sheets/SheetPaginationControls";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { useGoToEntity } from "../../customer/hooks/useGoToEntity";
 import { useCustomerLicenseBalances } from "../customer-licenses/useCustomerLicenseBalances";
 
 const ASSIGNMENTS_PAGE_SIZE = 10;
@@ -24,9 +20,8 @@ export function LicenseAssignedEntities({
 	licensePlanId: string;
 	excludeEntityId?: string;
 }) {
-	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const { customer } = useCustomerContext();
-	const { setEntityId } = useEntity();
+	const goToEntity = useGoToEntity();
 	const { assignments, cancelLicenseAssignment } = useCustomerLicenseBalances({
 		enabled: true,
 	});
@@ -68,15 +63,6 @@ export function LicenseAssignedEntities({
 		pageStart,
 		pageStart + ASSIGNMENTS_PAGE_SIZE,
 	);
-
-	const goToEntity = (entityId: string) => {
-		const entity = customer.entities?.find(
-			(candidate) => candidate.id === entityId,
-		);
-		if (!entity) return;
-		closeSheet();
-		setEntityId(entity.internal_id);
-	};
 
 	return (
 		<SheetSection withSeparator={true}>
@@ -148,32 +134,15 @@ export function LicenseAssignedEntities({
 						</div>
 					))}
 					{pageCount > 1 && (
-						<div className="flex items-center justify-between pt-3">
-							<span className="text-xs text-tertiary-foreground tabular-nums">
-								{pageStart + 1}–{pageStart + pagedAssignments.length} of{" "}
-								{filteredAssignments.length}
-							</span>
-							<div className="flex items-center gap-1">
-								<IconButton
-									aria-label="Previous page"
-									icon={<CaretLeftIcon size={14} />}
-									iconOrientation="center"
-									variant="secondary"
-									size="sm"
-									disabled={safePage === 0}
-									onClick={() => setPage(safePage - 1)}
-								/>
-								<IconButton
-									aria-label="Next page"
-									icon={<CaretRightIcon size={14} />}
-									iconOrientation="center"
-									variant="secondary"
-									size="sm"
-									disabled={safePage >= pageCount - 1}
-									onClick={() => setPage(safePage + 1)}
-								/>
-							</div>
-						</div>
+						<SheetPaginationControls
+							rangeStart={pageStart + 1}
+							rangeEnd={pageStart + pagedAssignments.length}
+							total={filteredAssignments.length}
+							canPrev={safePage > 0}
+							canNext={safePage < pageCount - 1}
+							onPrev={() => setPage(safePage - 1)}
+							onNext={() => setPage(safePage + 1)}
+						/>
 					)}
 				</div>
 			)}

@@ -242,6 +242,7 @@
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer",
+							"api-reference/invoices/insertInvoices",
 							"api-reference/invoices/listInvoices"
 						]
 					},

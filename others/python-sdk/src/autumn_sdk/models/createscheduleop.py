@@ -1148,7 +1148,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class CreateSchedulePurchaseLimit2TypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreateSchedulePurchaseLimitInterval2
     r"""The time interval for the purchase limit window."""
@@ -1156,10 +1156,12 @@ class CreateSchedulePurchaseLimit2TypedDict(TypedDict):
     r"""Maximum number of auto top-ups allowed within the interval."""
     interval_count: NotRequired[float]
     r"""Number of intervals in the purchase limit window."""
+    count: NotRequired[float]
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
 
 
 class CreateSchedulePurchaseLimit2(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     interval: CreateSchedulePurchaseLimitInterval2
     r"""The time interval for the purchase limit window."""
@@ -1170,9 +1172,12 @@ class CreateSchedulePurchaseLimit2(BaseModel):
     interval_count: Optional[float] = 1
     r"""Number of intervals in the purchase limit window."""
 
+    count: Optional[float] = None
+    r"""Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["interval_count"])
+        optional_fields = set(["interval_count", "count"])
         serialized = handler(self)
         m = {}
 
@@ -1197,7 +1202,7 @@ class CreateScheduleAutoTopup2TypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[CreateSchedulePurchaseLimit2TypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -1216,7 +1221,7 @@ class CreateScheduleAutoTopup2(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[CreateSchedulePurchaseLimit2] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""

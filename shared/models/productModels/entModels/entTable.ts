@@ -31,6 +31,7 @@ export const entitlements = pgTable(
 
 		carry_from_previous: boolean("carry_from_previous").default(false),
 		entity_feature_id: text("entity_feature_id").default(sql`null`),
+		pooled: boolean().notNull().default(false),
 
 		// Optional fields
 		org_id: text("org_id"),

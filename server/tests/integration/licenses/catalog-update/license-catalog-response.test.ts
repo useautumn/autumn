@@ -3,11 +3,14 @@ import type {
 	CatalogPreviewUpdateResponse,
 	CheckResponseV3,
 } from "@autumn/shared";
+import { CatalogUpdateParamsSchema } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { previewUpdateCatalog } from "@/internal/catalog/actions/previewUpdateCatalog/previewUpdateCatalog.js";
 import { listLicenseLinks, listLicensePools } from "../licenseTestUtils.js";
 
 const makeLicenseProduct = () => ({
@@ -63,6 +66,102 @@ test.concurrent(
 				{ plan_id: childId, licenses: [{ license_plan_id: parentId }] },
 			],
 		});
+	},
+);
+
+/** Fresh license plans must be complete FullProducts before customization. */
+test.concurrent(
+	`${chalk.yellowBright("licenses: catalog previews a customized same-batch license plan")}`,
+	async () => {
+		const suffix = Math.random().toString(36).slice(2, 9);
+		const seatId = `license_catalog_seat_${suffix}`;
+		const parentId = `license_catalog_parent_${suffix}`;
+		const standardId = `license_catalog_standard_${suffix}`;
+		const deepId = `license_catalog_deep_${suffix}`;
+		const creditsId = `license_catalog_credits_${suffix}`;
+
+		const params = CatalogUpdateParamsSchema.parse({
+			expand: ["plan_changes.plan"],
+			features: [
+				{
+					feature_id: standardId,
+					name: "Standard Search",
+					type: "metered",
+					consumable: true,
+				},
+				{
+					feature_id: deepId,
+					name: "Deep Search",
+					type: "metered",
+					consumable: true,
+				},
+				{
+					feature_id: creditsId,
+					name: "AI Credits",
+					type: "credit_system",
+					credit_schema: [
+						{ metered_feature_id: standardId, credit_cost: 1 },
+						{ metered_feature_id: deepId, credit_cost: 10 },
+					],
+				},
+			],
+			plans: [
+				{
+					plan_id: seatId,
+					version: 1,
+					name: "Team Seat",
+					licenses: [],
+					group: "",
+					add_on: false,
+					auto_enable: false,
+					items: [
+						{
+							feature_id: creditsId,
+							included: 600,
+							reset: { interval: "month" },
+						},
+					],
+					price: null,
+					free_trial: null,
+				},
+				{
+					plan_id: parentId,
+					version: 1,
+					name: "Team Quarterly",
+					licenses: [
+						{
+							license_plan_id: seatId,
+							included: 0,
+							prepaid_only: true,
+							customize: {
+								price: {
+									amount: 72,
+									interval: "quarter",
+									additional_currencies: [{ currency: "eur", amount: 72 }],
+								},
+							},
+						},
+					],
+					group: "",
+					add_on: false,
+					auto_enable: false,
+					price: null,
+					items: [],
+					free_trial: null,
+				},
+			],
+		});
+		const preview = await previewUpdateCatalog({ ctx: defaultCtx, params });
+
+		expect(preview.plan_changes).toHaveLength(2);
+		expect(preview.plan_changes[1]?.plan?.licenses).toEqual([
+			{
+				license_plan_id: seatId,
+				version: 1,
+				included: 0,
+				prepaid_only: true,
+			},
+		]);
 	},
 );
 

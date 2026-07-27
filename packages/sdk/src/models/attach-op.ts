@@ -752,7 +752,7 @@ export type AttachPurchaseLimitInterval = ClosedEnum<
 >;
 
 /**
- * Optional rate limit to cap how often auto top-ups occur.
+ * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
  */
 export type AttachPurchaseLimit = {
   /**
@@ -767,6 +767,10 @@ export type AttachPurchaseLimit = {
    * Maximum number of auto top-ups allowed within the interval.
    */
   limit: number;
+  /**
+   * Set the current window's consumed auto top-up count. Omit to leave runtime state unchanged.
+   */
+  count?: number | undefined;
 };
 
 export type AttachAutoTopup = {
@@ -787,7 +791,7 @@ export type AttachAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Pass count to set the current window's consumed top-ups.
    */
   purchaseLimit?: AttachPurchaseLimit | undefined;
   /**
@@ -2602,6 +2606,7 @@ export type AttachPurchaseLimit$Outbound = {
   interval: string;
   interval_count: number;
   limit: number;
+  count?: number | undefined;
 };
 
 /** @internal */
@@ -2613,6 +2618,7 @@ export const AttachPurchaseLimit$outboundSchema: z.ZodMiniType<
     interval: AttachPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
+    count: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {

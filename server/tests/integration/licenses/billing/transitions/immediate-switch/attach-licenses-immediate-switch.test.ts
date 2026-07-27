@@ -566,3 +566,118 @@ test.concurrent(
 		});
 	},
 );
+
+test.concurrent(
+	`${chalk.yellowBright("license transitions: dropped pools have no active assignments")}`,
+	async () => {
+		const customerId = "license-transition-dropped-pool";
+		const team = products.base({
+			id: "lic-dropped-team",
+			items: [items.dashboard()],
+		});
+		const pro = products.base({
+			id: "lic-dropped-pro",
+			items: [items.dashboard()],
+		});
+		const teamSeat = products.base({
+			id: "lic-dropped-team-seat",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [team, pro, teamSeat] }),
+			],
+			actions: [
+				s.licenses.link({
+					parentProductId: team.id,
+					licenseProductId: teamSeat.id,
+					included: 2,
+				}),
+				s.billing.attach({ productId: team.id }),
+				s.licenses.assign({
+					licenseProductId: teamSeat.id,
+					entityIndexes: [0, 1],
+				}),
+			],
+		});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			redirect_mode: "if_required",
+		});
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		expectCustomerLicenses({ customer, licenses: [], count: 0 });
+		const access = await autumnV2_3.check<CheckResponseV3>({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+		});
+		expect(access.allowed).toBe(false);
+		const assignments = await listLicenseAssignments({
+			autumn: autumnV2_3,
+			customerId,
+			licensePlanId: teamSeat.id,
+			active: true,
+		});
+		expect(assignments).toHaveLength(0);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("license transitions: matched pools keep assignments active")}`,
+	async () => {
+		const customerId = "license-transition-matched-pool";
+		const planA = products.base({
+			id: "lic-matched-plan-a",
+			items: [items.dashboard()],
+		});
+		const planB = products.base({
+			id: "lic-matched-plan-b",
+			items: [items.dashboard()],
+		});
+		const seat = products.base({
+			id: "lic-matched-seat",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const { autumnV2_3, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+				s.products({ list: [planA, planB, seat] }),
+			],
+			actions: [
+				...[planA, planB].map((parent) =>
+					s.licenses.link({
+						parentProductId: parent.id,
+						licenseProductId: seat.id,
+						included: 2,
+					}),
+				),
+				s.billing.attach({ productId: planA.id }),
+				s.licenses.assign({
+					licenseProductId: seat.id,
+					entityIndexes: [0, 1],
+				}),
+			],
+		});
+
+		await autumnV2_3.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: planB.id,
+			redirect_mode: "if_required",
+		});
+		const assignments = await listLicenseAssignments({
+			autumn: autumnV2_3,
+			customerId,
+			licensePlanId: seat.id,
+			active: true,
+		});
+		expect(assignments).toHaveLength(entities.length);
+	},
+);

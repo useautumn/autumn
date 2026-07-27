@@ -12,6 +12,7 @@ import {
 	type MigrationRuntimeWithEventId,
 } from "../../types/migrationDefinition.js";
 import { migrateCustomer } from "../migrateCustomer/index.js";
+import type { MigrationRunScheduler } from "../types/migrationRunScheduler.js";
 import type { RunScopeItem, RunScopeKind } from "../types/runScope.js";
 import { isMigrationCancelRequested } from "../utils/migrationCancelToken.js";
 import { iterateScope } from "./iterateScope.js";
@@ -26,6 +27,9 @@ export const runScopeIteration = async ({
 	batch,
 	controls,
 	hooks,
+	scheduler,
+	includeFilterCount,
+	afterInternalId,
 }: {
 	ctx: AutumnContext;
 	migration: MigrationRuntimeWithEventId;
@@ -35,6 +39,9 @@ export const runScopeIteration = async ({
 	batch?: MigrationBatchFn;
 	controls?: MigrationRunControls;
 	hooks?: MigrationHooks;
+	scheduler?: MigrationRunScheduler;
+	includeFilterCount?: boolean;
+	afterInternalId?: string;
 }) => {
 	const { count, iterate } = await runFilter({
 		ctx,
@@ -43,6 +50,9 @@ export const runScopeIteration = async ({
 		dryRun,
 		kind,
 		controls,
+		includeCount: includeFilterCount,
+		afterInternalId,
+		batchSize: scheduler?.batchSize,
 	});
 	ctx.logger.info(`run-migration: iterating scope`, {
 		data: { kind, count, dryRun },
@@ -67,7 +77,10 @@ export const runScopeIteration = async ({
 				`runMigration: per-item handler missing for kind "${item.kind}"`,
 			);
 
-		if (!cancelRequested && (await isMigrationCancelRequested({ migrationRunId })))
+		if (
+			!cancelRequested &&
+			(await isMigrationCancelRequested({ migrationRunId }))
+		)
 			cancelRequested = true;
 		if (cancelRequested) {
 			itemCtx.logger.info("run-migration: skipping item, cancel requested", {
@@ -117,6 +130,8 @@ export const runScopeIteration = async ({
 			iterate,
 			perItem: (item) => perItem({ item, itemCtx: ctx }),
 			concurrency: controls?.concurrency,
+			scheduler,
+			shouldStop: () => cancelRequested,
 		});
 	}
 
@@ -124,7 +139,7 @@ export const runScopeIteration = async ({
 		batch,
 		iterate,
 		kind,
-		controls,
+		controls: scheduler ? { ...controls, concurrency: 1 } : controls,
 		perItem,
 	});
 };

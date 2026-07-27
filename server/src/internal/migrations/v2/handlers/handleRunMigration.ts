@@ -1,4 +1,4 @@
-import { ErrCode, makeScopeChecker, RecaseError, Scopes } from "@autumn/shared";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -8,46 +8,36 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { shouldRunMigrationInline } from "@/internal/migrations/v2/utils/shouldRunMigrationInline.js";
 import {
+	getMigrationTriggerOptions,
+	MIGRATION_RUN_CUSTOMER_CONCURRENCY,
+} from "@/trigger/migrations/migrationTaskQueue.js";
+import {
 	executeRunMigration,
 	type RunMigrationPayload,
 	runMigrationTask,
 } from "@/trigger/migrations/runMigrationTask.js";
 
-const MAX_CONCURRENCY = 5;
-const SUPERUSER_MAX_CONCURRENCY = 100;
+const LEGACY_MAX_REQUESTED_CONCURRENCY = 100;
 
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
+	/** Accepted for backward compatibility; migration concurrency is fleet-managed. */
 	concurrency: z
 		.number()
 		.int()
 		.min(1)
-		.max(SUPERUSER_MAX_CONCURRENCY)
-		.optional(),
+		.max(LEGACY_MAX_REQUESTED_CONCURRENCY)
+		.optional()
+		.describe("Deprecated: migration concurrency is fleet-managed"),
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
-	/** When true, claim a lazy run alongside the background sweeper. Customers
-	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
-	 *  before the sweeper reaches them. Background and lazy run on the same
-	 *  migration_run row — the claim is shared. */
+	/** Lazy runs share one run row with the sweeper and enqueue request-path customer work.
+	 * Targeted `only` is incompatible because lazy matching happens on customer reads. */
 	lazy_run: z.boolean().default(false),
-});
-
-const getRunMigrationTriggerOptions = ({
-	orgId,
-	migrationId,
-	isDev,
-}: {
-	orgId: string;
-	migrationId: string;
-	isDev: boolean;
-}) => ({
-	...(isDev ? { region: "eu-central-1" } : {}),
-	concurrencyKey: `${orgId}:${migrationId}`,
 });
 
 export const handleRunMigration = createRoute({
@@ -60,22 +50,9 @@ export const handleRunMigration = createRoute({
 			dry_run: dryRun,
 			limit,
 			only,
-			concurrency,
 			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
-
-		const { isSuperuser } = makeScopeChecker(ctx.scopes);
-		const maxConcurrency = isSuperuser
-			? SUPERUSER_MAX_CONCURRENCY
-			: MAX_CONCURRENCY;
-		if (concurrency !== undefined && concurrency > maxConcurrency) {
-			throw new RecaseError({
-				message: `Migration concurrency cannot exceed ${maxConcurrency}`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -119,7 +96,6 @@ export const handleRunMigration = createRoute({
 					controls: {
 						limit,
 						only,
-						concurrency,
 						retryItemStatuses,
 					},
 				};
@@ -129,11 +105,7 @@ export const handleRunMigration = createRoute({
 				}
 				const handle = await runMigrationTask.trigger(
 					payload,
-					getRunMigrationTriggerOptions({
-						orgId: ctx.org.id,
-						migrationId: id,
-						isDev,
-					}),
+					getMigrationTriggerOptions({ isDev }),
 				);
 				return { triggerRunId: handle.id };
 			},
@@ -176,7 +148,7 @@ export const handleRunMigration = createRoute({
 			migration_id: id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
-			concurrency,
+			concurrency: MIGRATION_RUN_CUSTOMER_CONCURRENCY,
 			run_id: migrationRunId,
 			trigger_run_id: triggerRunId,
 			public_access_token: publicAccessToken,

@@ -52,3 +52,6 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 }): void => {
 	store._setRuntimeConfigForTesting(config);
 };
+
+/** Global sync-coalescing gate (balance syncs via Redis dirty state). */
+export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
