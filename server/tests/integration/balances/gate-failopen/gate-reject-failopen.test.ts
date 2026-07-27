@@ -101,6 +101,10 @@ test.concurrent(
 		});
 
 		await invalidateCachedFullSubject({ ctx, customerId, source: "test" });
+		// This test deliberately exercises gate rejection. Identical cached
+		// partial reads now coalesce before reaching the gate, so bypass cache
+		// single-flight here to preserve the gate-specific test setup.
+		ctx.skipCache = true;
 
 		const results = await Promise.allSettled(
 			Array.from({ length: CONCURRENCY }, () =>
