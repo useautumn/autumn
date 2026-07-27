@@ -1,16 +1,13 @@
 import {
-	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	Skeleton,
 } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { EdgeConfigDialogBody } from "./EdgeConfigDialogBody";
 import { ResetJobConfigForm } from "./ResetJobConfigForm";
 import {
 	RESET_JOB_QUERY_KEY,
@@ -44,36 +41,18 @@ export const ResetJobConfigDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 
-				{configQuery.isLoading ? (
-					<div className="flex flex-col gap-3">
-						<Skeleton className="h-20" />
-						<Skeleton className="h-16" />
-					</div>
-				) : configQuery.isError || !configQuery.data ? (
-					<>
-						<p role="alert" className="text-pretty text-sm text-destructive">
-							{getBackendErr(
-								configQuery.error,
-								"Failed to load Reset Job config",
-							)}
-						</p>
-						<DialogFooter>
-							<Button
-								variant="secondary"
-								size="sm"
-								onClick={() => configQuery.refetch()}
-							>
-								Retry
-							</Button>
-						</DialogFooter>
-					</>
-				) : (
-					<ResetJobConfigForm
-						key={`${configQuery.data.enabled}:${configQuery.data.batchSize}`}
-						config={configQuery.data}
-						onClose={() => onOpenChange(false)}
-					/>
-				)}
+				<EdgeConfigDialogBody
+					query={configQuery}
+					errorMessage="Failed to load Reset Job config"
+				>
+					{(config) => (
+						<ResetJobConfigForm
+							key={`${config.enabled}:${config.batchSize}`}
+							config={config}
+							onClose={() => onOpenChange(false)}
+						/>
+					)}
+				</EdgeConfigDialogBody>
 			</DialogContent>
 		</Dialog>
 	);

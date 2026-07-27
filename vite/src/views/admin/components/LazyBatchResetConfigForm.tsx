@@ -4,6 +4,7 @@ import {
 	Badge,
 	Button,
 	DialogFooter,
+	Separator,
 	Switch,
 } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
@@ -54,15 +55,14 @@ export const LazyBatchResetConfigForm = ({
 
 	return (
 		<>
-			<div className="flex flex-col gap-4">
-				<div className="flex items-center justify-between rounded-lg border border-border p-4">
-					<div className="flex flex-col gap-0.5 pr-4">
+			<div className="flex flex-col gap-6">
+				<div className="flex items-center justify-between gap-6">
+					<div className="flex flex-col gap-1">
 						<div className="text-sm font-medium text-foreground">
 							Lazy batch resets enabled
 						</div>
 						<div className="text-pretty text-xs text-tertiary-foreground">
-							When disabled, producers stop enqueueing lazy entitlement repairs
-							and workers skip queued jobs.
+							Repairs stale entitlement balances in the background.
 						</div>
 					</div>
 					<form.AppField name="enabled">
@@ -79,15 +79,15 @@ export const LazyBatchResetConfigForm = ({
 				{!enabled && (
 					<Alert>
 						<AlertDescription className="text-pretty">
-							Customer and entity list requests will stop scheduling background
-							entitlement repairs. Already queued jobs will be acknowledged
-							without running.
+							No new repairs are scheduled, and jobs already queued are dropped
+							instead of run.
 						</AlertDescription>
 					</Alert>
 				)}
 
-				<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
-					<div className="mb-2 flex items-center gap-2">
+				<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
+					<Separator />
+					<div className="flex flex-wrap items-center gap-2">
 						<Badge variant="muted">
 							{config.configHealthy ? "Config healthy" : "Config unavailable"}
 						</Badge>
@@ -97,16 +97,16 @@ export const LazyBatchResetConfigForm = ({
 							</span>
 						)}
 					</div>
-					<div className="text-pretty">
+					<p className="text-pretty">
 						{config.configConfigured === false
-							? "S3 lazy batch reset config is not configured. Lazy resets default to enabled."
+							? "S3 config is missing, so lazy resets default to on."
 							: config.error ||
-								"Changes propagate to servers and workers within 10 seconds."}
-					</div>
+								"Changes reach servers and workers within 10 seconds."}
+					</p>
 				</div>
 			</div>
 
-			<DialogFooter className="flex-wrap">
+			<DialogFooter className="flex-wrap pt-2">
 				{mutation.error && (
 					<span role="alert" className="mr-auto text-xs text-destructive">
 						{getBackendErr(mutation.error, "Failed to save config")}
