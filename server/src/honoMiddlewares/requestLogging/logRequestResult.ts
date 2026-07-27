@@ -7,14 +7,6 @@ import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 import { buildRequestResultRecords } from "./buildRequestResultRecords.js";
 import { redactRequestBody } from "./redactRequestBody.js";
 
-const SUCCESS_RESPONSE_BODY_SAMPLE_RATE = Number.parseFloat(
-	process.env.AXIOM_SUCCESS_RESPONSE_BODY_SAMPLE_RATE ?? "0",
-);
-
-const shouldSampleSuccessResponseBody = () =>
-	SUCCESS_RESPONSE_BODY_SAMPLE_RATE > 0 &&
-	Math.random() < Math.min(SUCCESS_RESPONSE_BODY_SAMPLE_RATE, 1);
-
 const isRequestLogArchiveDeployment = () =>
 	process.env.FLIGHTCONTROL === "true" &&
 	(process.env.FC_GIT_BRANCH === "dev" || process.env.FC_GIT_BRANCH === "main");
@@ -75,7 +67,6 @@ export const logRequestResult = async ({
 				isSuccess &&
 				c.req.path.startsWith("/v1") &&
 				isRequestLogArchiveDeployment(),
-			includeSuccessBodyInAxiom: shouldSampleSuccessResponseBody(),
 		});
 
 		if (records.archive) {

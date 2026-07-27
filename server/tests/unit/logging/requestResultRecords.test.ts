@@ -24,7 +24,6 @@ describe("buildRequestResultRecords", () => {
 				allowed: true,
 				balance: { remaining: 999 },
 			},
-			includeSuccessBodyInAxiom: false,
 		});
 
 		expect(records.axiom).toEqual({
@@ -32,7 +31,6 @@ describe("buildRequestResultRecords", () => {
 			durationMs: 12,
 			responseBodyBytes: 44,
 			responseArchiveRouted: true,
-			responseBodySampled: false,
 			res: {
 				allowed: true,
 				balance: { remaining: 999 },
@@ -63,27 +61,11 @@ describe("buildRequestResultRecords", () => {
 			statusCode: 400,
 			durationMs: 9,
 			responseBody,
-			includeSuccessBodyInAxiom: false,
 		});
 
 		expect(records.axiom.res).toEqual(responseBody);
 		expect(records.axiom.responseArchiveRouted).toBe(false);
 		expect(records.archive).toBeNull();
-	});
-
-	test("can retain a sampled success body in both stores", () => {
-		const responseBody = { allowed: true };
-		const records = buildRequestResultRecords({
-			...request,
-			statusCode: 200,
-			durationMs: 7,
-			responseBody,
-			includeSuccessBodyInAxiom: true,
-		});
-
-		expect(records.axiom.res).toEqual(responseBody);
-		expect(records.axiom.responseBodySampled).toBe(true);
-		expect(records.archive?.response_body).toBe('{"allowed":true}');
 	});
 
 	test("keeps queryable response signals but drops high-cardinality success data", () => {
@@ -104,7 +86,6 @@ describe("buildRequestResultRecords", () => {
 					messages: { breakdown: [{ id: "grant_1", remaining: 0 }] },
 				},
 			},
-			includeSuccessBodyInAxiom: false,
 		});
 
 		expect(records.axiom.res).toEqual({
@@ -128,7 +109,6 @@ describe("buildRequestResultRecords", () => {
 			durationMs: 7,
 			responseBody,
 			archiveSuccessResponse: false,
-			includeSuccessBodyInAxiom: false,
 		});
 
 		expect(records.axiom.res).toEqual(responseBody);

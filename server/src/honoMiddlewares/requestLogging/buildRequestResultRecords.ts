@@ -12,7 +12,6 @@ type RequestResultRecordParams = {
 	durationMs: number;
 	responseBody: unknown;
 	archiveSuccessResponse: boolean;
-	includeSuccessBodyInAxiom: boolean;
 };
 
 type AxiomRequestResultRecord = {
@@ -20,7 +19,6 @@ type AxiomRequestResultRecord = {
 	durationMs: number;
 	responseBodyBytes: number;
 	responseArchiveRouted: boolean;
-	responseBodySampled: boolean;
 	res: unknown;
 };
 
@@ -117,7 +115,6 @@ export const buildRequestResultRecords = ({
 	durationMs,
 	responseBody,
 	archiveSuccessResponse,
-	includeSuccessBodyInAxiom,
 }: RequestResultRecordParams): {
 	axiom: AxiomRequestResultRecord;
 	archive: ArchivedRequestResultRecord | null;
@@ -126,8 +123,6 @@ export const buildRequestResultRecords = ({
 	const responseBodyBytes = Buffer.byteLength(serializedResponseBody);
 	const isSuccess = statusCode >= 200 && statusCode < 300;
 	const responseArchiveRouted = isSuccess && archiveSuccessResponse;
-	const responseBodySampled =
-		isSuccess && responseArchiveRouted && includeSuccessBodyInAxiom;
 
 	return {
 		axiom: {
@@ -135,9 +130,8 @@ export const buildRequestResultRecords = ({
 			durationMs,
 			responseBodyBytes,
 			responseArchiveRouted,
-			responseBodySampled,
 			res:
-				!isSuccess || !responseArchiveRouted || responseBodySampled
+				!isSuccess || !responseArchiveRouted
 					? (responseBody ?? null)
 					: buildResponseSummary({ responseBody }),
 		},
