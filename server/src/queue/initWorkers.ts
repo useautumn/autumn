@@ -1,4 +1,4 @@
-await import("../sentry.js");
+import "../sentry.js";
 
 import { ms } from "@autumn/shared";
 import {
