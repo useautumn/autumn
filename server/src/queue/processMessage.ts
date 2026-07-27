@@ -28,7 +28,6 @@ import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProduct
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
 import { storeInvoiceLineItems } from "@/internal/billing/v2/workflows/storeInvoiceLineItems/storeInvoiceLineItems.js";
 import { batchResetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/batchResetCustomerEntitlements.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { replayFailedCustomerCreation } from "@/internal/customers/recovery/replayFailedCustomerCreation.js";
 import { runClearCreditSystemCacheTask } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -308,13 +307,7 @@ export const processMessage = async ({
 				params: job.data.params,
 				targetBalance: job.data.targetBalance,
 			});
-			await deleteCachedFullCustomer({
-				ctx,
-				customerId: job.data.customerId,
-				entityId: job.data.entityId,
-				source: "updateBalanceV2Worker",
-				flushBalances: false,
-			});
+
 			return;
 		}
 
