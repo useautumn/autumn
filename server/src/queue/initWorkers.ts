@@ -33,10 +33,6 @@ import {
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
-import {
-	createWorkerActivityTracker,
-	type WorkerActivityTracker,
-} from "./workerActivityTracker.js";
 
 // ============ Shared State ============
 let isRunning = true;
@@ -46,7 +42,8 @@ export const getAbortControllerCountForTesting = () => abortControllers.size;
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
 
-const IDLE_SELF_KILL_MS = ms.minutes(5);
+// Idle self-kill — exit if worker processes 0 messages for this many consecutive intervals
+const IDLE_SELF_KILL_THRESHOLD = 5; // ~5 min of 0 messages (5 * 60s)
 const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
@@ -120,9 +117,6 @@ export const startPollingLoop = async ({
 	recreateSqsClientFn,
 	shouldPoll = () => true,
 	visibilityTimeoutSeconds = 30,
-	workerActivity = createWorkerActivityTracker({
-		idleAfterMs: IDLE_SELF_KILL_MS,
-	}),
 }: {
 	db: DrizzleCli;
 	queueId: string;
@@ -135,7 +129,6 @@ export const startPollingLoop = async ({
 	 * a message redelivered mid-processing means two workers mutating the same
 	 * rows concurrently. */
 	visibilityTimeoutSeconds?: number;
-	workerActivity?: WorkerActivityTracker;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -205,10 +198,15 @@ export const startPollingLoop = async ({
 		if (messagesProcessed === 0) {
 			consecutiveZeroMessageIntervals++;
 
-			const idleStatus = workerActivity.getIdleStatus();
-			if (shouldIdleSelfKill && idleStatus.shouldRecycle) {
+			if (
+				shouldIdleSelfKill &&
+				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
+				totalMessagesProcessed > 0 &&
+				activeMigrationJobs === 0 &&
+				process.env.NODE_ENV !== "development"
+			) {
 				console.log(
-					`[SQS Worker ${process.pid}] Idle self-kill: no messages received across any queue for ${Math.floor(idleStatus.idleForMs / 60_000)} minutes after receiving ${idleStatus.totalMessagesReceived} total. Exiting for cluster respawn.`,
+					`${prefix} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
 				);
 				process.exit(0);
 			}
@@ -415,7 +413,6 @@ export const startPollingLoop = async ({
 
 	while (isRunning) {
 		let capacityLease: QueueCapacityLease | null = null;
-		let batchWorkStarted = false;
 		try {
 			if (!shouldPoll()) {
 				consecutiveEmptyPolls = 0;
@@ -445,11 +442,6 @@ export const startPollingLoop = async ({
 			);
 
 			const messages = response.Messages ?? [];
-			if (messages.length > 0) {
-				workerActivity.recordMessagesReceived({ count: messages.length });
-				workerActivity.startWork();
-				batchWorkStarted = true;
-			}
 			const leasedMessages = await capacityLease.assign(messages);
 
 			if (messages.length > 0) {
@@ -466,7 +458,6 @@ export const startPollingLoop = async ({
 					const override = getJobOverride(job.name);
 					if (override?.dispatch === "background" && !capacityLease.isLimited) {
 						activeMigrationJobs++;
-						workerActivity.startWork();
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
@@ -475,10 +466,7 @@ export const startPollingLoop = async ({
 								);
 								Sentry.captureException(error);
 							})
-							.finally(() => {
-								activeMigrationJobs--;
-								workerActivity.finishWork();
-							});
+							.finally(() => activeMigrationJobs--);
 					} else {
 						regularMessages.push({
 							message,
@@ -522,7 +510,6 @@ export const startPollingLoop = async ({
 			if (newClient) sqs = newClient;
 			else if ((error as { name?: string }).name === "AbortError") break;
 		} finally {
-			if (batchWorkStarted) workerActivity.finishWork();
 			await capacityLease?.release();
 		}
 	}
@@ -578,9 +565,6 @@ export const initWorkers = async ({
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
 	const pollingLoops = [];
-	const workerActivity = createWorkerActivityTracker({
-		idleAfterMs: IDLE_SELF_KILL_MS,
-	});
 
 	for (const {
 		queueId,
@@ -638,7 +622,6 @@ export const initWorkers = async ({
 					isJobQueueEnabled({ queue: queueId, defaultEnabled }) &&
 					isActiveSlot({ serviceName: "workers" }),
 				visibilityTimeoutSeconds,
-				workerActivity,
 			}),
 		);
 	}
