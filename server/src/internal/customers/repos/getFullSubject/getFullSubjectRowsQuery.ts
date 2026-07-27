@@ -74,12 +74,13 @@ export const getFullSubjectRowsQuery = ({
 		inStatuses.length > 0
 			? ACTIVE_STATUSES.filter((status) => inStatuses.includes(status))
 			: ACTIVE_STATUSES;
+	// Status lists bind as a single array parameter rather than one placeholder
+	// per element. This keeps the generated SQL text identical regardless of how
+	// many statuses a caller passes, which is what lets the statement be reused
+	// as a named prepared statement instead of re-planned on every execution.
 	const entityAggregationStatusFilter =
 		entityAggregationStatuses.length > 0
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					entityAggregationStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
+			? sql`AND cp.status = ANY(${sql.param(entityAggregationStatuses)}::text[])`
 			: sql`AND FALSE`;
 
 	// Seats own no lifecycle: their raw status column lags until the seat-sync
@@ -87,16 +88,10 @@ export const getFullSubjectRowsQuery = ({
 	// parent's LIVE status (via pcp_early) instead of cp.status for those rows.
 	const effectiveStatusFilter =
 		inStatuses.length > 0
-			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
+			? sql`AND COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(inStatuses)}::text[])`
 			: sql``;
 
-	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(ARRAY[${sql.join(
-		RELEVANT_STATUSES.map((status) => sql`${status}`),
-		sql`, `,
-	)}]) THEN 0 ELSE 1 END`;
+	const effectiveRelevantStatusFirst = sql`CASE WHEN COALESCE(pcp_early.status, cp.status) = ANY(${sql.param(RELEVANT_STATUSES)}::text[]) THEN 0 ELSE 1 END`;
 
 	const hasCustomerPrices = sql`EXISTS (
 		SELECT 1
