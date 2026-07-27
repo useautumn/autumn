@@ -109,6 +109,7 @@
 		"atmn-test": "cd server && ENV_FILE=.env infisical run --env=dev --recursive -- bun ../packages/atmn/test/integration/cli.ts",
 		"atest": "cd server && ENV_FILE=.env infisical run --env=dev --recursive -- bun ../packages/atmn/test/integration/cli.ts",
 		"tw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts",
+		"tw:pk": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/probe-stripe-keys.ts",
 		"tw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts list",
 		"tw:kill": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill",
 		"tw:kill-all": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill-all",

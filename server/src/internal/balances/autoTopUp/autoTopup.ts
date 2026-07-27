@@ -103,11 +103,23 @@ export const autoTopup = async ({
 		}
 
 		let billingResult: Awaited<ReturnType<typeof executeBillingPlan>>;
-		billingResult = await executeBillingPlan({
-			ctx,
-			billingContext: autoTopupContext,
-			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
-		});
+		try {
+			billingResult = await executeBillingPlan({
+				ctx,
+				billingContext: autoTopupContext,
+				billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
+			});
+		} catch (error) {
+			// A throw here means the attempt still reached Stripe (and may have
+			// left an invoice behind), so it has to count against the limits —
+			// otherwise queue retries loop with no accounting at all.
+			await recordAutoTopupAttempt({
+				ctx,
+				autoTopupContext,
+				forceFailure: true,
+			});
+			throw error;
+		}
 
 		logStripeBillingResult({ ctx, result: billingResult.stripe });
 

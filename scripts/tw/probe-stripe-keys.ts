@@ -1,15 +1,21 @@
 #!/usr/bin/env bun
 /**
- * Probe every Stripe key in STRIPE_TEST_KEY_POOL (+ STRIPE_SANDBOX_SECRET_KEY):
- * for each, fetch the platform account's id + display name and test whether
+ * Probe every Stripe key the swarm would use (the pool env vars listed in
+ * STRIPE_POOL_ENV_VARS, plus STRIPE_SANDBOX_SECRET_KEY as a fallback): for each,
+ * fetch the platform account's id + display name and test whether
  * `v2.core.accounts.list` works (the gate the swarm needs to create sub-accounts).
  * Prints a table + a usable count.
  *
+ * Keys come from `collectPoolKeys`, the same loader `bun tw` uses, so the
+ * `pool[i]` labels here are the exact slots workers are assigned.
+ *
  * Run:
- *   ENV_FILE=.env infisical run --env=dev --recursive -- \
- *     bun scripts/tw/probe-stripe-keys.ts
+ *   bun tw:pk
  */
-import { stripeClientForKey } from "./helpers/stripeKeyPool.ts";
+import {
+	collectPoolKeys,
+	stripeClientForKey,
+} from "./helpers/stripeKeyPool.ts";
 
 // Stripe's v2 `list()` leaves a dangling internal auto-pager promise that rejects
 // on a 404 ("API method cannot be found") even though we already await + catch the
@@ -20,13 +26,17 @@ process.on("unhandledRejection", () => {
 
 type KeyRef = { key: string; label: string };
 
+/**
+ * Reads the pool through the same collector the swarm uses, so probe indexes
+ * line up exactly with the `pool[i]` slots `stripeKeyForWorker` assigns.
+ */
 const collectKeys = (): KeyRef[] => {
-	const refs: KeyRef[] = [];
-	const pool =
-		process.env.STRIPE_TEST_KEY_POOL?.split(",")
-			.map((k) => k.trim())
-			.filter(Boolean) ?? [];
-	pool.forEach((key, index) => refs.push({ key, label: `pool[${index}]` }));
+	const pool = collectPoolKeys();
+	const refs: KeyRef[] = pool.map((key, index) => ({
+		key,
+		label: `pool[${index}]`,
+	}));
+
 	const single = process.env.STRIPE_SANDBOX_SECRET_KEY?.trim();
 	if (single && !pool.includes(single)) {
 		refs.push({ key: single, label: "SANDBOX" });

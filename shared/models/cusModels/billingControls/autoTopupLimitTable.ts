@@ -32,6 +32,14 @@ export const autoTopupLimitStates = pgTable(
 		last_attempt_at: numeric({ mode: "number" }),
 		last_failed_attempt_at: numeric({ mode: "number" }),
 
+		// Durable circuit breaker. Unlike the counters above, these fields are
+		// never rolled over by a time window — once suspended, auto top-ups stay
+		// off until a payment succeeds or different payment info is provided.
+		consecutive_failure_count: numeric({ mode: "number" }).notNull().default(0),
+		suspended_at: numeric({ mode: "number" }),
+		suspended_reason: text(),
+		suspended_payment_method_fingerprint: text(),
+
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	},
