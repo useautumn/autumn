@@ -42,7 +42,7 @@ export const ShortcutButton = ({
 	const keystrokeContainer = (keyStroke: string, isEnter = false) => {
 		const isSingleChar = keyStroke.length === 1;
 		const sizeClasses = isSingleChar ? "w-4" : "px-1";
-		const baseClasses = `flex items-center justify-center ${sizeClasses} h-4 rounded-md text-tiny font-medium`;
+		const baseClasses = `flex items-center justify-center ${sizeClasses} h-4 rounded-lg text-tiny font-medium`;
 		const variantClasses =
 			variant === "secondary"
 				? "bg-muted text-body-secondary"

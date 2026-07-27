@@ -51,7 +51,7 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 				case "muted":
 					return "text-subtle";
 				case "default":
-					return "text-zinc-50";
+					return "text-mauve-1";
 				default:
 					return "text-subtle"; // Default fallback
 			}

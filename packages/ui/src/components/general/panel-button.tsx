@@ -71,7 +71,7 @@ export function PanelButton({
 			{/* Centered icon */}
 			<div
 				className={cn(
-					"size-9 rounded-xl flex items-center justify-center relative bg-interactive-secondary-hover border",
+					"size-9 rounded-lg flex items-center justify-center relative bg-interactive-secondary-hover border",
 					// isSelected ? "bg-interactive-secondary-hover" : " border-input",
 				)}
 			>

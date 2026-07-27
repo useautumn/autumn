@@ -13,9 +13,9 @@ const pickWidth = (widths: string[], rowIndex: number): string =>
 export const nameWithIconSkeleton: ColumnSkeletonMeta = {
 	skeleton: (rowIndex: number) => (
 		<div className="flex items-center gap-2">
-			<Skeleton className="size-4 rounded-sm shrink-0" />
+			<Skeleton className="size-4 rounded-lg shrink-0" />
 			<Skeleton
-				className={cn("h-3.5 rounded-sm", pickWidth(NAME_WIDTHS, rowIndex))}
+				className={cn("h-3.5 rounded-lg", pickWidth(NAME_WIDTHS, rowIndex))}
 			/>
 		</div>
 	),
@@ -25,7 +25,7 @@ export const statusSkeleton: ColumnSkeletonMeta = {
 	skeleton: (rowIndex: number) => (
 		<div className="flex items-center gap-1.5">
 			<Skeleton
-				className={cn("h-3.5 rounded-sm", pickWidth(LABEL_WIDTHS, rowIndex))}
+				className={cn("h-3.5 rounded-lg", pickWidth(LABEL_WIDTHS, rowIndex))}
 			/>
 			<Skeleton className="size-3.5 rounded-full shrink-0" />
 		</div>
@@ -35,7 +35,7 @@ export const statusSkeleton: ColumnSkeletonMeta = {
 export const dateSkeleton: ColumnSkeletonMeta = {
 	skeleton: (rowIndex: number) => (
 		<Skeleton
-			className={cn("h-3.5 rounded-sm", pickWidth(DATE_WIDTHS, rowIndex))}
+			className={cn("h-3.5 rounded-lg", pickWidth(DATE_WIDTHS, rowIndex))}
 		/>
 	),
 };
@@ -43,7 +43,7 @@ export const dateSkeleton: ColumnSkeletonMeta = {
 export const idSkeleton: ColumnSkeletonMeta = {
 	skeleton: (rowIndex: number) => (
 		<Skeleton
-			className={cn("h-3.5 rounded-sm", pickWidth(ID_WIDTHS, rowIndex))}
+			className={cn("h-3.5 rounded-lg", pickWidth(ID_WIDTHS, rowIndex))}
 		/>
 	),
 };

@@ -7,8 +7,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 
 const buttonVariants = cva(
-	`relative inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer
-  rounded-lg group/btn transition-colors  w-fit transform-gpu
+	`relative inline-flex h-8 w-max items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-b-2 px-3 text-sm font-medium disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer transition-[background-color,border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] enabled:active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-violet-8 focus-visible:outline-offset-2 motion-reduce:transform-none
+	  group/btn transform-gpu
   `,
 	{
 		variants: {

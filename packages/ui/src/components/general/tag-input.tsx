@@ -126,7 +126,7 @@ function TagInput({
 				return (
 					<div
 						key={index}
-						className="flex items-center gap-1 border border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800 rounded-lg pl-3 pr-2 py-1 text-xs"
+						className="flex items-center gap-1 border border-mauve-6 dark:border-mauve-7 bg-mauve-2 dark:bg-mauve-3 rounded-lg pl-3 pr-2 py-1 text-xs"
 					>
 						<span className="text-tiny">{displayValue}</span>
 						<button

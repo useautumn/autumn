@@ -32,7 +32,7 @@ export function CopyTextButton({
 			variant={variant as ButtonProps["variant"]}
 			size="icon"
 			className={cn(
-				"h-6 px-2 text-muted-foreground w-fit font-mono rounded-md truncate justify-start",
+				"h-6 px-2 text-muted-foreground w-fit font-mono rounded-lg truncate justify-start",
 				className,
 			)}
 			onClick={(e) => {

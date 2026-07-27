@@ -61,7 +61,7 @@ function ColumnGroupSubmenu<T>({
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer text-sm">
 				{group.label}
 				{visibleCount > 0 && (
-					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
+					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-lg">
 						{visibleCount}
 					</span>
 				)}

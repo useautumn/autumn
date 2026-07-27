@@ -1,0 +1,54 @@
+/* Chord surface tokens: Radix purple accent with mauve grayscale. */
+@theme inline {
+	--color-grayscale-0: #fff;
+	--color-grayscale-1: var(--mauve-1);
+	--color-grayscale-2: var(--mauve-2);
+	--color-grayscale-3: var(--mauve-3);
+	--color-grayscale-4: var(--mauve-4);
+	--color-grayscale-5: var(--mauve-5);
+	--color-grayscale-6: var(--mauve-6);
+	--color-grayscale-7: var(--mauve-7);
+	--color-grayscale-8: var(--mauve-8);
+	--color-grayscale-9: var(--mauve-9);
+	--color-grayscale-10: var(--mauve-10);
+	--color-grayscale-11: var(--mauve-11);
+	--color-grayscale-12: var(--mauve-12);
+	--color-accent-1: var(--violet-1);
+	--color-accent-2: var(--violet-2);
+	--color-accent-3: var(--violet-3);
+	--color-accent-4: var(--violet-4);
+	--color-accent-5: var(--violet-5);
+	--color-accent-6: var(--violet-6);
+	--color-accent-7: var(--violet-7);
+	--color-accent-8: var(--violet-8);
+	--color-accent-9: var(--violet-9);
+	--color-accent-10: var(--violet-10);
+	--color-accent-11: var(--violet-11);
+	--color-accent-12: var(--violet-12);
+	--shadow-chord-sm: 2px 2px 4px rgb(0 0 0 / 0.02), 0 1px 2px rgb(0 0 0 / 0.03);
+	--shadow-chord-md:
+		0 4px 16px rgb(0 0 0 / 0.06), 0 1.5px 6px rgb(0 0 0 / 0.04);
+}
+
+.small-shadow {
+	box-shadow: var(--shadow-chord-sm);
+}
+.medium-shadow {
+	box-shadow: var(--shadow-chord-md);
+}
+
+[data-slot="button"],
+[data-slot="input"],
+[data-slot="select-trigger"] {
+	transition-property:
+		background-color, border-color, color, box-shadow, transform;
+	transition-duration: 150ms;
+	transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+[data-slot="button"]:focus-visible,
+[data-slot="input"]:focus-visible,
+[data-slot="select-trigger"]:focus-visible {
+	outline: 2px solid var(--violet-8);
+	outline-offset: 2px;
+}

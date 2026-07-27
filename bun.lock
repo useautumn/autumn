@@ -488,6 +488,7 @@
       "dependencies": {
         "@base-ui/react": "^1.4.1",
         "@phosphor-icons/react": "^2.1.10",
+        "@radix-ui/colors": "^3.0.0",
         "@squircle/tailwindcss": "^1.0.6",
         "@tanstack/react-table": "^8.21.3",
         "@tanstack/react-virtual": "^3.13.18",
@@ -500,7 +501,7 @@
         "embla-carousel-react": "^8.6.0",
         "input-otp": "^1.4.2",
         "lucide-react": "^0.562.0",
-        "motion": "^12.26.1",
+        "motion": "^12.42.2",
         "nanoid": "^5.1.6",
         "react-day-picker": "^8.10.1",
         "react-hotkeys-hook": "^4.6.1",
@@ -2104,6 +2105,8 @@
     "@puppeteer/browsers": ["@puppeteer/browsers@2.13.2", "", { "dependencies": { "debug": "^4.4.3", "extract-zip": "^2.0.1", "progress": "^2.0.3", "proxy-agent": "^6.5.0", "semver": "^7.7.4", "tar-fs": "^3.1.1", "yargs": "^17.7.2" }, "bin": { "browsers": "lib/cjs/main-cli.js" } }, "sha512-5EUZSUIc37H6aIXyWO0Z4y8NlF8NnjgmqeQgOGiswAU7pY0HOo16ho4+alIWmSfdZnjqBRawMsP3I5YqLSn6kw=="],
 
     "@puzzmo/revenue-cat-webhook-types": ["@puzzmo/revenue-cat-webhook-types@1.1.0", "", {}, "sha512-ChEa8v4dHUlZyQ7mt5i8x2lBcZ7STRSe3D+YO+DhXicJI0Thjcy23Ehbn9l071bxgmbeH7OErOphJrCLpq/SEg=="],
+
+    "@radix-ui/colors": ["@radix-ui/colors@3.0.0", "", {}, "sha512-FUOsGBkHrYJwCSEtWRCIfQbZG7q1e6DgxCIOe1SUQzDe/7rXXeA47s8yCn6fuTNQAj1Zq4oTFi9Yjp3wzElcxg=="],
 
     "@radix-ui/number": ["@radix-ui/number@1.1.2", "", {}, "sha512-ceTwaxc4I5IOi97DgCotl3pqiyRGvffcc0oOsE2dQYaJOFIDsDt4VWG6xEbg1QePv9QWausCEIppud/tJ1wNig=="],
 

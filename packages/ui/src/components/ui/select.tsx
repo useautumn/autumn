@@ -100,7 +100,7 @@ function SelectContent({
 				<SelectPrimitive.Popup
 					data-slot="select-content"
 					className={cn(
-						"bg-interactive-secondary text-muted-foreground relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto rounded-lg shadow-md ring-1 ring-foreground/10 p-1",
+						"bg-interactive-secondary text-muted-foreground relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto rounded-lg shadow-chord-md ring-1 ring-foreground/10 p-1",
 						className,
 					)}
 					{...props}
@@ -134,7 +134,7 @@ function SelectItem({
 		<SelectPrimitive.Item
 			data-slot="select-item"
 			className={cn(
-				"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+				"data-highlighted:bg-accent data-highlighted:text-accent-foreground data-highlighted:**:text-accent-foreground focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-1.5 rounded-lg py-1 pr-8 pl-1.5 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
 				className,
 			)}
 			{...props}

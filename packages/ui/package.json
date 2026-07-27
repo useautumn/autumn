@@ -36,6 +36,7 @@
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
 		"@phosphor-icons/react": "^2.1.10",
+		"@radix-ui/colors": "^3.0.0",
 		"@squircle/tailwindcss": "^1.0.6",
 		"@tanstack/react-table": "^8.21.3",
 		"@tanstack/react-virtual": "^3.13.18",
@@ -48,7 +49,7 @@
 		"embla-carousel-react": "^8.6.0",
 		"input-otp": "^1.4.2",
 		"lucide-react": "^0.562.0",
-		"motion": "^12.26.1",
+		"motion": "^12.42.2",
 		"nanoid": "^5.1.6",
 		"react-day-picker": "^8.10.1",
 		"react-hotkeys-hook": "^4.6.1",

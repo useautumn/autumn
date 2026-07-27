@@ -50,7 +50,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<"tfoot">) {
 		<tfoot
 			data-slot="table-footer"
 			className={cn(
-				"border-t bg-zinc-100/50 font-medium [&>tr]:last:border-b-0 dark:bg-zinc-800/50",
+				"border-t bg-mauve-3/50 font-medium [&>tr]:last:border-b-0 dark:bg-mauve-3/50",
 				className,
 			)}
 			{...props}
@@ -63,7 +63,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 		<tr
 			data-slot="table-row"
 			className={cn(
-				"data-[state=selected]:bg-zinc-100 dark:data-[state=selected]:bg-zinc-800",
+				"data-[state=selected]:bg-mauve-3 dark:data-[state=selected]:bg-mauve-3",
 				className,
 			)}
 			{...props}
@@ -76,7 +76,7 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
 		<th
 			data-slot="table-head"
 			className={cn(
-				"h-6 text-muted-foreground text-left align-middle font-normal text-xs [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] dark:text-zinc-400",
+				"h-6 text-muted-foreground text-left align-middle font-normal text-xs [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px] dark:text-mauve-10",
 				className,
 			)}
 			{...props}
@@ -104,7 +104,7 @@ function TableCaption({
 	return (
 		<caption
 			data-slot="table-caption"
-			className={cn("mt-4 text-sm text-zinc-500 dark:text-zinc-400", className)}
+			className={cn("mt-4 text-sm text-mauve-11 dark:text-mauve-10", className)}
 			{...props}
 		/>
 	);

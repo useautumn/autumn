@@ -16,7 +16,7 @@ export const Image = ({
 		{...props}
 		alt={props.alt}
 		className={cn(
-			"h-auto max-w-full overflow-hidden rounded-md",
+			"h-auto max-w-full overflow-hidden rounded-lg",
 			props.className,
 		)}
 		src={`data:${mediaType};base64,${base64}`}

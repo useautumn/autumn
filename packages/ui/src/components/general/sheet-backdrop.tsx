@@ -25,7 +25,7 @@ export function SheetBackdrop({
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
-					className="fixed inset-0 bg-white/70 dark:bg-black/70"
+					className="fixed inset-0 bg-mauve-1/70 dark:bg-black/60"
 					style={{ zIndex }}
 					onMouseDown={onClose}
 				/>

@@ -36,7 +36,7 @@ export function StackBadge({
 			onClick={handleClick}
 			data-state={isSelected ? "selected" : "unselected"}
 			className={cn(
-				"pr-2 rounded-md shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)] shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline outline-1 outline-offset-[-1px] inline-flex justify-start items-center gap-1.5 transition-none",
+				"pr-2 rounded-lg shadow-[0px_4px_4px_0px_rgba(0,0,0,0.02)] shadow-[inset_0px_-3px_4px_0px_rgba(0,0,0,0.04)] outline outline-1 outline-offset-[-1px] inline-flex justify-start items-center gap-1.5 transition-none",
 				isSelected
 					? "bg-interactive-secondary outline-primary"
 					: "bg-interactive-secondary outline-border",

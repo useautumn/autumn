@@ -22,7 +22,7 @@ const DropdownMenuContext = React.createContext<{
 });
 
 const dropdownMenuItemVariants = cva(
-	"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm text-muted-foreground outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+	"group/dropdown-menu-item relative flex cursor-default select-none items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm text-muted-foreground outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 	{
 		variants: {
 			variant: {
@@ -124,7 +124,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
 			ref={ref}
 			data-slot="dropdown-menu-sub-trigger"
 			className={cn(
-				"flex cursor-default gap-1.5 select-none items-center rounded-md px-1.5 py-1 text-sm text-muted-foreground outline-hidden focus:bg-accent focus:text-accent-foreground data-popup-open:bg-accent data-popup-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"flex cursor-default gap-1.5 select-none items-center rounded-lg px-1.5 py-1 text-sm text-muted-foreground outline-hidden focus:bg-accent focus:text-accent-foreground data-popup-open:bg-accent data-popup-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				inset && "pl-7",
 				className,
 			)}
@@ -158,7 +158,7 @@ const DropdownMenuSubContent = React.forwardRef<
 					ref={ref}
 					data-slot="dropdown-menu-sub-content"
 					className={cn(
-						"min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-lg ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
+						"min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-chord-md ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
 						"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
 						className,
 					)}
@@ -203,7 +203,7 @@ const DropdownMenuContent = React.forwardRef<
 					ref={ref}
 					data-slot="dropdown-menu-content"
 					className={cn(
-						"max-h-(--available-height) min-w-32 overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-md ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
+						"max-h-(--available-height) min-w-32 overflow-x-hidden overflow-y-auto rounded-lg bg-interactive-secondary p-1 text-muted-foreground shadow-chord-md ring-1 ring-foreground/10 duration-100 origin-(--transform-origin)",
 						"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
 						className,
 					)}
@@ -313,7 +313,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
 			data-inset={inset}
 			closeOnClick={false}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"relative flex cursor-default select-none items-center gap-1.5 rounded-lg py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...rest}
@@ -339,7 +339,7 @@ const DropdownMenuRadioItem = React.forwardRef<
 			data-slot="dropdown-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default select-none items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"relative flex cursor-default select-none items-center gap-1.5 rounded-lg py-1 pr-8 pl-1.5 text-sm outline-hidden focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 				className,
 			)}
 			{...rest}

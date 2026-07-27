@@ -13,7 +13,7 @@ const TabsList = React.forwardRef<HTMLDivElement, TabsPrimitive.List.Props>(
 		<TabsPrimitive.List
 			ref={ref}
 			className={cn(
-				"inline-flex h-9 items-center justify-center rounded-lg bg-transparent text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400 px-1",
+				"inline-flex h-9 items-center justify-center rounded-lg bg-transparent text-mauve-11 dark:bg-mauve-3 dark:text-mauve-10 px-1",
 				className,
 			)}
 			{...props}
@@ -31,7 +31,7 @@ const TabsTrigger = React.forwardRef<
 	<TabsPrimitive.Tab
 		ref={ref}
 		className={cn(
-			"inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 py-1 text-sm font-medium ring-offset-background transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[active]:text-primary hover:bg-interactive-secondary-hover dark:focus-visible:ring-zinc-300 dark:data-[active]:bg-zinc-950 dark:data-[active]:text-zinc-50",
+			"inline-flex items-center justify-center whitespace-nowrap rounded-lg px-2 py-1 text-sm font-medium ring-offset-background transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-8 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[active]:text-primary hover:bg-interactive-secondary-hover dark:focus-visible:ring-violet-8 dark:data-[active]:bg-mauve-12 dark:data-[active]:text-mauve-1",
 			className,
 			variant === "onboarding" &&
 				"data-[active]:bg-stone-200 data-[active]:text-muted-foreground data-[active]:font-medium",

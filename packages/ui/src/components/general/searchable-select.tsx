@@ -126,7 +126,7 @@ export function SearchableSelect<T>({
 					<PopoverContent
 						align="start"
 						className={cn(
-							"w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden",
+							"w-(--anchor-width) p-0 z-200 rounded-lg overflow-hidden",
 							contentClassName,
 						)}
 						asChild

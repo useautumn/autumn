@@ -36,7 +36,7 @@ export function CompactPromptInput({
 
 	return (
 		<form onSubmit={handleSubmit} className={cn("w-full", className)}>
-			<div className="flex items-center gap-2 rounded-xl border bg-white dark:bg-card px-3 py-2 dark:border-white/15 shadow-lg">
+			<div className="flex items-center gap-2 rounded-lg border bg-white dark:bg-card px-3 py-2 dark:border-white/15 shadow-lg">
 				<input
 					type="text"
 					value={value}

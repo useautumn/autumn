@@ -34,12 +34,12 @@ export function TableMobileCards() {
 				{Array.from({ length: SKELETON_CARD_COUNT }).map((_, cardIndex) => (
 					<div
 						key={`skeleton-card-${cardIndex}`}
-						className="rounded-xl border bg-interactive-secondary p-4 flex flex-col gap-3"
+						className="rounded-lg border bg-interactive-secondary p-4 flex flex-col gap-3"
 					>
-						<Skeleton className="h-4 w-28 rounded-sm" />
+						<Skeleton className="h-4 w-28 rounded-lg" />
 						<div className="flex flex-col gap-2">
-							<Skeleton className="h-3 w-40 rounded-sm" />
-							<Skeleton className="h-3 w-32 rounded-sm" />
+							<Skeleton className="h-3 w-40 rounded-lg" />
+							<Skeleton className="h-3 w-32 rounded-lg" />
 						</div>
 					</div>
 				))}
@@ -49,7 +49,7 @@ export function TableMobileCards() {
 
 	if (!rows.length) {
 		return (
-			<div className="rounded-xl border border-dashed bg-interactive-secondary dark:bg-transparent p-6 text-center text-subtle text-xs">
+			<div className="rounded-lg border border-dashed bg-interactive-secondary dark:bg-transparent p-6 text-center text-subtle text-xs">
 				{emptyStateChildren || emptyStateText}
 			</div>
 		);
@@ -98,7 +98,7 @@ function MobileCard<T>({
 
 	const interactive = Boolean(rowHref || onRowClick);
 	const cardClassName = cn(
-		"rounded-xl border bg-interactive-secondary p-4 flex flex-col gap-3 transition-colors",
+		"rounded-lg border bg-interactive-secondary p-4 flex flex-col gap-3 transition-colors",
 		isSelected ? "border-primary" : "active:bg-interactive-secondary-hover",
 		interactive && "cursor-pointer",
 	);

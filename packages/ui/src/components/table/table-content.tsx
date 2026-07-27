@@ -37,7 +37,7 @@ export function TableContent({
 			)}
 		>
 			{(isLoading || isTransitioning) && (
-				<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+				<div className="bg-mauve-1/40 dark:bg-black/30 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 			)}
 			{enableColumnVisibility && (
 				<div className="absolute right-2 top-1 z-45 h-fit">
