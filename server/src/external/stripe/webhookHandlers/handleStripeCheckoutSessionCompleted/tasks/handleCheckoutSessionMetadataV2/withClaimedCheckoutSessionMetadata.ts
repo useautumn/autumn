@@ -47,12 +47,13 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	});
 
 	if (!claimed) {
-		// A peer still mid-execute clears the reservation in its own finally; a
-		// deleted row means materialization already finished and nobody will.
+		// Only a deleted row proves materialization finished with nobody left to
+		// clear. Any surviving row is still owned — by a peer mid-execute, or by
+		// a webhook retry once that peer reverts its claim.
 		const current = await MetadataService.get({ db: ctx.db, id: metadata.id });
-		if (current?.type === MetadataType.CheckoutSessionV2Processing) {
+		if (current) {
 			ctx.logger.info(
-				`[checkout.completed] Metadata ${metadata.id} claimed by an in-flight executor, skipping`,
+				`[checkout.completed] Metadata ${metadata.id} still owned by another executor, skipping`,
 			);
 			return;
 		}
