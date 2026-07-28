@@ -1,7 +1,7 @@
 import { type AppEnv, apiKeys } from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
+import { clearSecretKeyCache } from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
 
 type OAuthApiKeyRecord = {
 	id: string;

@@ -1,5 +1,5 @@
-import { verifyApiKey } from "./verifyApiKey.js";
+import { getApiKeyVerificationData } from "./getApiKeyVerificationData.js";
 
 export const apiKeyRepo = {
-	verify: verifyApiKey,
+	getVerificationData: getApiKeyVerificationData,
 };

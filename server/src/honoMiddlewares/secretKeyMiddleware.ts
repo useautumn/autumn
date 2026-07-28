@@ -8,7 +8,7 @@ import {
 import { AuthType, ErrCode, RecaseError, sortFeatures } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { verifyKey } from "@/internal/dev/apiKeys/actions/verifyKey.js";
 import { handleOAuthMiddleware } from "./authMiddlewares/handleOAuthMiddleware.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
 import { customerJwtMiddleware } from "./customerJwtMiddleware.js";
@@ -89,7 +89,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
-	const scopes = (data as { scopes?: string[] | null }).scopes ?? [];
+	const scopes = data.scopes ?? [];
 
 	sortFeatures({ features });
 

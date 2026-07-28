@@ -7,6 +7,7 @@ import {
 	tryRedisRead,
 	tryRedisWrite,
 } from "../../../utils/cacheUtils/cacheUtils.js";
+import type { ApiKeyVerificationData } from "../repos/getApiKeyVerificationData.js";
 
 export const SECRET_KEY_CACHE_TTL_SECONDS = 3600;
 
@@ -14,11 +15,11 @@ export const buildSecretKeyCacheKey = (key: string) => {
 	return `secret_key:${key}`;
 };
 
-export const getCachedSecretKeyVerification = async <T>({
+export const getCachedSecretKeyVerification = async ({
 	hashedKey,
 }: {
 	hashedKey: string;
-}) => {
+}): Promise<ApiKeyVerificationData | null> => {
 	const cacheKey = buildSecretKeyCacheKey(hashedKey);
 	const cached = await tryRedisRead(() => redis.get(cacheKey));
 
@@ -26,7 +27,7 @@ export const getCachedSecretKeyVerification = async <T>({
 		return null;
 	}
 
-	return JSON.parse(cached) as T;
+	return JSON.parse(cached) as ApiKeyVerificationData;
 };
 
 export const setCachedSecretKeyVerification = async ({

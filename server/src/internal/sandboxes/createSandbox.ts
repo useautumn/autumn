@@ -16,7 +16,7 @@ import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";

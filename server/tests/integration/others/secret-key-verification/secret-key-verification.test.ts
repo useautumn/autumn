@@ -2,8 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { MigrationRunStatus, migrationRuns } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq } from "drizzle-orm";
-import { hashApiKey, verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
+import { verifyKey } from "@/internal/dev/apiKeys/actions/verifyKey.js";
+import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
+import { clearSecretKeyCache } from "@/internal/dev/apiKeys/cacheApiKeyUtils.js";
 import {
 	migrationRepo,
 	migrationRunRepo,

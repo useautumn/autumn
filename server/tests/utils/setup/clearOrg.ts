@@ -11,7 +11,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { hashApiKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
