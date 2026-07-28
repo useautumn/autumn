@@ -1,5 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type { ApiKeyVerificationData } from "../../repos/getApiKeyVerificationData.js";
 import { apiKeyRepo } from "../../repos/index.js";
 import { ApiKeyPrefix, hashApiKey } from "../apiKeyUtils.js";
 import {
@@ -13,7 +14,7 @@ export const verifyKey = async ({
 }: {
 	db: DrizzleCli;
 	key: string;
-}) => {
+}): Promise<ApiKeyVerificationData | null> => {
 	const hashedKey = hashApiKey(key);
 
 	const env = key.startsWith(ApiKeyPrefix.Sandbox)
@@ -27,32 +28,15 @@ export const verifyKey = async ({
 		// existed — guarantees consumers can rely on the shape.
 		const pendingMigrations = cached.pendingMigrations ?? [];
 		return {
-			valid: true,
-			data: {
-				...cached,
-				pendingMigrations,
-				org: { ...cached.org, pendingMigrations },
-			},
+			...cached,
+			pendingMigrations,
+			org: { ...cached.org, pendingMigrations },
 		};
 	}
 
-	const data = await apiKeyRepo.getVerificationData({
-		db,
-		hashedKey,
-		env,
-	});
-
-	if (!data) {
-		return {
-			valid: false,
-			data: null,
-		};
-	}
+	const data = await apiKeyRepo.getVerificationData({ db, hashedKey, env });
+	if (!data) return null;
 
 	await setCachedSecretKeyVerification({ hashedKey, data });
-
-	return {
-		valid: true,
-		data: data,
-	};
+	return data;
 };

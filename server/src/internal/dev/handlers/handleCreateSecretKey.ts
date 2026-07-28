@@ -63,9 +63,7 @@ export const handleCreateSecretKey = createRoute({
 			prefix,
 			meta,
 			scopes:
-				requestedScopes && requestedScopes.length > 0
-					? requestedScopes
-					: null,
+				requestedScopes && requestedScopes.length > 0 ? requestedScopes : null,
 		});
 
 		await captureOrgEvent({

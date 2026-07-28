@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import type { ApiKey, AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
-import { ApiKeyService } from "../ApiKeyService.js";
+import { apiKeyRepo } from "../repos/index.js";
 
 export enum ApiKeyPrefix {
 	Sandbox = "am_sk_test",
@@ -72,7 +72,7 @@ export const createKey = async ({
 		scopes: scopes ?? null,
 	};
 
-	await ApiKeyService.insert({ db, apiKey: apiKeyData });
+	await apiKeyRepo.insert({ db, apiKey: apiKeyData });
 
 	return apiKey;
 };
@@ -101,7 +101,7 @@ export const createHardcodedKey = async ({
 	const hashedKey = hashApiKey(hardcodedKey);
 
 	// Check if key already exists
-	const existing = await ApiKeyService.verifyAndFetch({
+	const existing = await apiKeyRepo.getVerificationData({
 		db,
 		hashedKey,
 		env,
@@ -124,7 +124,7 @@ export const createHardcodedKey = async ({
 		scopes: scopes ?? null,
 	};
 
-	await ApiKeyService.insert({ db, apiKey: apiKeyData });
+	await apiKeyRepo.insert({ db, apiKey: apiKeyData });
 
 	return { key: hardcodedKey, alreadyExists: false };
 };

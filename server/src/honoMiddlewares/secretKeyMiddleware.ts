@@ -73,12 +73,12 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	// Step 4: Verify the API key
-	const { valid, data } = await verifyKey({
+	const data = await verifyKey({
 		db: ctx.db,
 		key: bearerToken,
 	});
 
-	if (!valid || !data) {
+	if (!data) {
 		const maskedKey = maskApiKey(bearerToken);
 		throw new RecaseError({
 			message: `Invalid secret key: ${maskedKey}`,
@@ -99,7 +99,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.userId = userId ?? undefined;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = scopes;
-	if (data?.user) {
+	if (data.user) {
 		ctx.user = data.user;
 	}
 

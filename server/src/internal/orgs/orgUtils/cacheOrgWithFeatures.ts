@@ -5,8 +5,7 @@ import {
 	getRegionalRedis,
 	redis,
 } from "@/external/redis/initRedis.js";
-import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
-import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { OrgService } from "../OrgService.js";
 
 /** Short by design: org config changes are also pushed through clearOrgCache, so
@@ -31,9 +30,13 @@ export const getCachedOrgWithFeatures = async ({
 }: {
 	orgId: string;
 	env: AppEnv;
-}) => {
+}): Promise<OrgWithFeatures | null> => {
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
-	const cached = await tryRedisRead(() => redis.get(cacheKey));
+
+	const cached = await tryRedisOp({
+		operation: () => redis.get(cacheKey),
+		source: "org-features-cache:get",
+	});
 
 	if (!cached) return null;
 
@@ -53,9 +56,10 @@ export const setCachedOrgWithFeatures = async ({
 }) => {
 	const cacheKey = buildOrgWithFeaturesCacheKey({ orgId, env });
 
-	await tryRedisWrite(() =>
-		redis.set(cacheKey, JSON.stringify(data), "EX", ttl),
-	);
+	await tryRedisOp({
+		operation: () => redis.set(cacheKey, JSON.stringify(data), "EX", ttl),
+		source: "org-features-cache:set",
+	});
 };
 
 export const clearOrgWithFeaturesCache = async ({
@@ -72,25 +76,20 @@ export const clearOrgWithFeaturesCache = async ({
 
 	await Promise.all(
 		getConfiguredRegions().flatMap((region) =>
-			envs.map(async (targetEnv) => {
+			envs.map((targetEnv) => {
 				const regionalRedis = getRegionalRedis(region);
 
-				if (regionalRedis.status !== "ready") {
-					logger.warn(`[clearOrgWithFeaturesCache] ${region}: not_ready`);
-					return;
-				}
-
-				const deleted = await tryRedisWrite(
-					() =>
+				return tryRedisOp({
+					operation: () =>
 						regionalRedis.del(
 							buildOrgWithFeaturesCacheKey({ orgId, env: targetEnv }),
 						),
-					regionalRedis,
-				);
-
-				if (deleted === null) {
-					logger.warn(`[clearOrgWithFeaturesCache] ${region}: delete_failed`);
-				}
+					source: `org-features-cache:clear:${region}`,
+					redisInstance: regionalRedis,
+					onError: () => {
+						logger.warn(`[clearOrgWithFeaturesCache] ${region}: delete_failed`);
+					},
+				});
 			}),
 		),
 	);
@@ -104,27 +103,12 @@ export const clearOrgWithFeaturesCache = async ({
  * second against Postgres — 3.08M lookups in 45 minutes, 8.4% of database time —
  * for a row that barely changes.
  *
- * Redis is strictly an accelerator here: `tryRedisRead`/`tryRedisWrite` RETHROW
- * `RedisUnavailableError` on a genuine outage rather than returning null, so both
- * cache operations are wrapped to swallow transient failures and fall through to
- * Postgres. Without that, `createWorkerContext` catches the error, treats the org
- * as missing, and silently acknowledges queued jobs without recording usage.
+ * Redis is strictly an accelerator: every op goes through `tryRedisOp`, which
+ * swallows failures, so an outage reads as a cache miss and falls through to
+ * Postgres. That must hold — if a Redis error escaped here,
+ * `createWorkerContext` would catch it, treat the org as missing, and silently
+ * acknowledge queued jobs without recording usage.
  */
-const withCacheFailOpen = async <T>({
-	run,
-	fallback,
-}: {
-	run: () => Promise<T>;
-	fallback: T;
-}): Promise<T> => {
-	try {
-		return await run();
-	} catch (error) {
-		if (isTransientRedisError({ error })) return fallback;
-		throw error;
-	}
-};
-
 export const getOrgWithFeaturesCached = async ({
 	db,
 	orgId,
@@ -137,20 +121,13 @@ export const getOrgWithFeaturesCached = async ({
 	skipCache?: boolean;
 }): Promise<OrgWithFeatures | null> => {
 	if (!skipCache) {
-		const cached = await withCacheFailOpen({
-			run: () => getCachedOrgWithFeatures({ orgId, env }),
-			fallback: null,
-		});
+		const cached = await getCachedOrgWithFeatures({ orgId, env });
 		if (cached) return cached;
 	}
 
 	const fresh = await OrgService.getWithFeatures({ db, orgId, env });
 	if (!fresh) return null;
 
-	// A failed write must never lose the row we already fetched.
-	await withCacheFailOpen({
-		run: () => setCachedOrgWithFeatures({ orgId, env, data: fresh }),
-		fallback: undefined,
-	});
+	await setCachedOrgWithFeatures({ orgId, env, data: fresh });
 	return fresh;
 };
