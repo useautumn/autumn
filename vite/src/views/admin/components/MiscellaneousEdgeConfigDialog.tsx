@@ -35,6 +35,7 @@ export function MiscellaneousEdgeConfigDialog({
 				...data,
 				newFlatCusModel: data.newFlatCusModel ?? [],
 				syncCoalesce: data.syncCoalesce ?? false,
+				subjectLookupDbOnly: data.subjectLookupDbOnly ?? false,
 			};
 		},
 		enabled: open,

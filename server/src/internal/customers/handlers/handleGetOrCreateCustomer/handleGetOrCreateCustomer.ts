@@ -12,6 +12,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 
 export const handlePostCustomer = createRoute({
 	scopes: [Scopes.Customers.Write],
@@ -49,6 +50,8 @@ export const handlePostCustomer = createRoute({
 				],
 			});
 		}
+
+		applySubjectLookupDbOnly({ ctx });
 
 		const start = Date.now();
 

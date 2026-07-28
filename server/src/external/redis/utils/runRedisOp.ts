@@ -55,17 +55,34 @@ export type UnavailableReason =
  * Callers that want to fail open catch at the request boundary (see
  * `withRedisFallback`). Callers distinguishing "null value" from "missing"
  * still inspect the return value — this helper does not interpret nullish.
+ *
+ * When the client is not ready this throws immediately rather than letting
+ * the command sit in ioredis's offline queue until `commandTimeout` (10s in
+ * prod on the primary client) stalls the request.
+ *
+ * `queueIfNotReady` opts back into the offline queue: the command waits out a
+ * reconnect (bounded by `commandTimeout`) instead of failing instantly. For
+ * ops with no fallback — invalidations, where a dropped command means silent
+ * cache staleness — riding out a sub-second blip beats dropping the op.
  */
 export const runRedisOp = async <T>({
 	operation,
 	source,
 	redisInstance,
+	queueIfNotReady = false,
 }: {
 	operation: () => Promise<T>;
 	source: string;
 	redisInstance?: Redis;
+	queueIfNotReady?: boolean;
 }): Promise<T> => {
 	const targetRedis = redisInstance ?? redis;
+
+	if (!queueIfNotReady && targetRedis.status !== "ready") {
+		const reason: UnavailableReason = "not_ready";
+		warnRedisUnavailable({ source, reason });
+		throw new RedisUnavailableError({ source, reason });
+	}
 
 	try {
 		const value = await operation();
@@ -87,15 +104,22 @@ export const tryRedisOp = async <T>({
 	operation,
 	source,
 	redisInstance,
+	queueIfNotReady,
 	onError,
 }: {
 	operation: () => Promise<T>;
 	source: string;
 	redisInstance?: Redis;
+	queueIfNotReady?: boolean;
 	onError?: (error: unknown) => void;
 }): Promise<T | undefined> => {
 	try {
-		return await runRedisOp({ operation, source, redisInstance });
+		return await runRedisOp({
+			operation,
+			source,
+			redisInstance,
+			queueIfNotReady,
+		});
 	} catch (error) {
 		onError?.(error);
 		return undefined;

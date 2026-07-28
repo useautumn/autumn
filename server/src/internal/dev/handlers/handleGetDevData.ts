@@ -1,14 +1,14 @@
-import { getSvixDashboardUrl } from "../../../external/svix/svixHelpers";
 import { Scopes } from "@autumn/shared";
+import { getSvixDashboardUrl } from "../../../external/svix/svixHelpers";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { ApiKeyService } from "../ApiKeyService";
+import { apiKeyRepo } from "../repos/index.js";
 
 export const handleGetDevData = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, env, org } = ctx;
-		const apiKeys = await ApiKeyService.getByOrg({
+		const apiKeys = await apiKeyRepo.listByOrg({
 			db,
 			orgId: org.id,
 			env,

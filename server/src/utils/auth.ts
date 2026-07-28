@@ -1,14 +1,9 @@
 import "dotenv/config";
-import {
-	ALL_SCOPES,
-	ac,
-	invitation,
-	roles,
-	schemas,
-} from "@autumn/shared";
+import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
 import { getScopesForUserInOrg } from "@autumn/shared/utils/auth/getScopesForUserInOrg";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
+import { sso } from "@better-auth/sso";
 import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -25,6 +20,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { SSO_VERIFICATION_PREFIX } from "@/internal/auth/sso/ssoDomainUtils.js";
+import { getTrustedSsoOrigins } from "@/internal/auth/sso/ssoTrustedOrigins.js";
 import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
@@ -74,7 +71,8 @@ const emulateGoogleUrl =
 const isProductionAuth = process.env.NODE_ENV === "production";
 const configuredAuthBaseUrl = process.env.BETTER_AUTH_URL?.trim() || undefined;
 const authBaseUrl =
-	configuredAuthBaseUrl ?? (isProductionAuth ? undefined : "http://localhost:8080");
+	configuredAuthBaseUrl ??
+	(isProductionAuth ? undefined : "http://localhost:8080");
 const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
@@ -102,11 +100,9 @@ const chatServerUrl =
 	(isProductionAuth ? "https://chat.useautumn.com" : "http://localhost:3099");
 
 const mcpResourcePaths = ["/mcp"];
-const mcpResourceBases = [
-	authBaseUrl,
-	mcpServerUrl,
-	chatServerUrl,
-].filter((base): base is string => Boolean(base));
+const mcpResourceBases = [authBaseUrl, mcpServerUrl, chatServerUrl].filter(
+	(base): base is string => Boolean(base),
+);
 
 const mcpResourceUrls = [
 	...new Set([
@@ -219,6 +215,7 @@ const options = {
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
 		];
+		origins.push(...getTrustedSsoOrigins());
 		if (process.env.NODE_ENV === "production") return origins;
 
 		// Worktree ports follow worktreeOffset = (N-1)*100; accept any localhost
@@ -365,6 +362,19 @@ const options = {
 					await afterOrgCreated({ org: organization, user });
 				},
 			},
+		}),
+		sso({
+			domainVerification: {
+				enabled: true,
+				tokenPrefix: SSO_VERIFICATION_PREFIX,
+			},
+			// Otherwise SSO users are stored emailVerified:false and the
+			// account-linking guard locks them out of their own provider.
+			trustEmailVerified: true,
+			organizationProvisioning: {
+				disabled: true,
+			},
+			providersLimit: 100,
 		}),
 	],
 } satisfies BetterAuthOptions;

@@ -4,7 +4,7 @@ import {
 	ApiKeyPrefix,
 	createKey,
 	hashApiKey,
-} from "@/internal/dev/api-keys/apiKeyUtils.js";
+} from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import type { ResourceAccessTokenRecord } from "@/internal/dev/cli/oauthApiKeyUtils.js";
 import {
 	type OAuthConsentApiKeyRecord,

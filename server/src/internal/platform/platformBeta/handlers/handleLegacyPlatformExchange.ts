@@ -13,7 +13,7 @@ import { generateId } from "better-auth";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { createKey } from "@/internal/dev/apiKeys/apiKeyUtils.js";
 import { handleStripeSecretKey } from "@/internal/orgs/orgUtils/handleStripeSecretKey.js";
 import { shouldReconnectStripe } from "@/internal/orgs/orgUtils.js";
 import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";

@@ -288,6 +288,63 @@ export const passkey = pgTable(
 	],
 ).enableRLS();
 
+export const ssoProvider = pgTable(
+	"sso_provider",
+	{
+		id: text("id").primaryKey(),
+		issuer: text("issuer").notNull(),
+		domain: text("domain").notNull().unique(),
+		oidcConfig: text("oidc_config"),
+		samlConfig: text("saml_config"),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		providerId: text("provider_id").notNull().unique(),
+		organizationId: text("organization_id").references(() => organizations.id, {
+			onDelete: "cascade",
+		}),
+		domainVerified: boolean("domain_verified").default(false).notNull(),
+	},
+	(table) => [
+		index("sso_provider_user_id_idx").on(table.userId).concurrently(),
+		index("sso_provider_organization_id_idx")
+			.on(table.organizationId)
+			.concurrently(),
+		index("sso_provider_domain_idx").on(table.domain).concurrently(),
+	],
+).enableRLS();
+
+export const ssoConnection = pgTable(
+	"sso_connection",
+	{
+		id: text("id").primaryKey(),
+		providerId: text("provider_id")
+			.notNull()
+			.unique()
+			.references(() => ssoProvider.providerId, { onDelete: "cascade" }),
+		organizationId: text("organization_id")
+			.notNull()
+			.unique()
+			.references(() => organizations.id, { onDelete: "cascade" }),
+		status: text("status")
+			.$type<"pending_domain_verification" | "validating" | "active">()
+			.default("pending_domain_verification")
+			.notNull(),
+		activatedAt: timestamp("activated_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true })
+			.$defaultFn(() => new Date())
+			.notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.$defaultFn(() => new Date())
+			.notNull(),
+	},
+	(table) => [
+		index("sso_connection_organization_id_idx")
+			.on(table.organizationId)
+			.concurrently(),
+	],
+).enableRLS();
+
 export const bannedUser = pgTable("banned_user", {
 	id: text("id").primaryKey(),
 	userId: text("user_id")
@@ -316,12 +373,16 @@ export const authSchema = {
 	oauthAccessToken,
 	oauthConsent,
 	passkey,
+	ssoProvider,
+	ssoConnection,
 };
 
 export type User = typeof user.$inferSelect;
 export type Member = typeof member.$inferSelect;
 export type Invite = typeof invitation.$inferSelect;
 export type BannedUser = typeof bannedUser.$inferSelect;
+export type SsoProvider = typeof ssoProvider.$inferSelect;
+export type SsoConnection = typeof ssoConnection.$inferSelect;
 
 export type FullInvite = Invite & {
 	inviter: User;
