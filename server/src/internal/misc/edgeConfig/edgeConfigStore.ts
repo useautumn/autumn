@@ -53,12 +53,13 @@ const getEdgeConfigOverride = (): Record<string, unknown> | null => {
 
 /**
  * Factory that creates a typed, poll-based edge config backed by S3.
- * Fail-open: any S3 error resets the in-memory config to `defaultValue()`.
+ * Defaults to fail-open; stores may retain their last valid config on errors.
  */
 export const createEdgeConfigStore = <T>({
 	s3Key,
 	schema,
 	defaultValue,
+	retainOnError = false,
 	pollIntervalMs = process.env.NODE_ENV === "development"
 		? ms.seconds(1)
 		: ms.seconds(10),
@@ -67,6 +68,7 @@ export const createEdgeConfigStore = <T>({
 	s3Key: string;
 	schema: z.ZodType<T>;
 	defaultValue: () => T;
+	retainOnError?: boolean;
 	pollIntervalMs?: number;
 	s3Client?: S3Client;
 }) => {
@@ -223,7 +225,7 @@ export const createEdgeConfigStore = <T>({
 			const previouslyHealthy = runtimeStatus.healthy;
 			const sameError = runtimeStatus.error === errMsg;
 
-			runtimeConfig = defaultValue();
+			if (!retainOnError) runtimeConfig = defaultValue();
 			runtimeStatus = {
 				configured: true,
 				healthy: false,
