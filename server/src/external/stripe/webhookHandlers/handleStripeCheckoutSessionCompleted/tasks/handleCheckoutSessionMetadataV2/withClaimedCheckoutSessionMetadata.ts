@@ -25,6 +25,20 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	metadata: NonNullable<CheckoutSessionCompletedContext["metadata"]>;
 	execute: () => Promise<void>;
 }): Promise<void> => {
+	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
+	const lockCustomerId =
+		deferredData?.billingContext?.fullCustomer?.id ??
+		deferredData?.billingContext?.fullCustomer?.internal_id;
+
+	const clearCheckoutReservation = async () => {
+		if (!lockCustomerId) return;
+		await checkoutSessionLock.clearIfOwned({
+			ctx,
+			customerId: lockCustomerId,
+			checkoutSessionId: checkoutContext.stripeCheckoutSession.id,
+		});
+	};
+
 	const claimed = await MetadataService.claim({
 		db: ctx.db,
 		id: metadata.id,
@@ -33,16 +47,22 @@ export const withClaimedCheckoutSessionMetadata = async ({
 	});
 
 	if (!claimed) {
+		// A peer still mid-execute clears the reservation in its own finally; a
+		// deleted row means materialization already finished and nobody will.
+		const current = await MetadataService.get({ db: ctx.db, id: metadata.id });
+		if (current?.type === MetadataType.CheckoutSessionV2Processing) {
+			ctx.logger.info(
+				`[checkout.completed] Metadata ${metadata.id} claimed by an in-flight executor, skipping`,
+			);
+			return;
+		}
+
 		ctx.logger.info(
-			`[checkout.completed] Metadata ${metadata.id} already claimed by another executor, skipping`,
+			`[checkout.completed] Metadata ${metadata.id} already materialized, releasing checkout reservation`,
 		);
+		await clearCheckoutReservation();
 		return;
 	}
-
-	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
-	const lockCustomerId =
-		deferredData?.billingContext?.fullCustomer?.id ??
-		deferredData?.billingContext?.fullCustomer?.internal_id;
 
 	try {
 		if (checkoutContext.stripeSubscription) {
@@ -57,13 +77,7 @@ export const withClaimedCheckoutSessionMetadata = async ({
 		await revertMetadataClaim({ ctx, metadataId: metadata.id });
 		throw error;
 	} finally {
-		if (lockCustomerId) {
-			await checkoutSessionLock.clearIfOwned({
-				ctx,
-				customerId: lockCustomerId,
-				checkoutSessionId: checkoutContext.stripeCheckoutSession.id,
-			});
-		}
+		await clearCheckoutReservation();
 	}
 };
 
