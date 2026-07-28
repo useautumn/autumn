@@ -168,6 +168,7 @@ export const createStripeSub2 = async ({
 				env: customer.env,
 				current_period_start: currentPeriodStart,
 				current_period_end: earliestPeriodEnd,
+				billing_cycle_anchor_seconds: subscription.billing_cycle_anchor,
 			},
 		});
 
