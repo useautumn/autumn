@@ -9,6 +9,9 @@ import type { HookParams } from "./types";
 
 export type UseListPlansParams = HookParams<ListPlansParams, ListPlansList[]>;
 
+/**
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
+ */
 export const useListPlans = (params: UseListPlansParams = {}) => {
 	const client = useAutumnClient({ caller: "useListPlans" });
 	const { queryOptions, ...listPlansParams } = params;

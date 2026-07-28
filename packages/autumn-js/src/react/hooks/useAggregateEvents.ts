@@ -13,6 +13,9 @@ export type UseAggregateEventsParams = HookParams<
 	AggregateEventsResponse
 >;
 
+/**
+ * @deprecated Autumn's React hooks are deprecated, as they don't scale well over time. Please use our backend SDK instead.
+ */
 export const useAggregateEvents = (params: UseAggregateEventsParams) => {
 	const client = useAutumnClient({ caller: "useAggregateEvents" });
 	const { queryOptions, customRange, ...restParams } = params;

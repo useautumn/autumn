@@ -1,5 +1,14 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
 
+const orderStripeDiscounts = (
+	stripeDiscounts: StripeDiscountWithCoupon[],
+): StripeDiscountWithCoupon[] =>
+	[...stripeDiscounts].sort((a, b) => {
+		const aIsPercent = a.source.coupon.percent_off != null;
+		const bIsPercent = b.source.coupon.percent_off != null;
+		return Number(bIsPercent) - Number(aIsPercent);
+	});
+
 /**
  * Maps internal discount objects to Stripe API `discounts` param format for subscription updates.
  * Uses { discount: id } for existing discounts (preserving original start/end),
@@ -15,7 +24,7 @@ export const stripeDiscountsToParams = ({
 	| { coupon: string }
 	| { promotion_code: string }
 )[] => {
-	return stripeDiscounts.map((d) => {
+	return orderStripeDiscounts(stripeDiscounts).map((d) => {
 		if (d.id) return { discount: d.id };
 		if (d.promotionCodeId) return { promotion_code: d.promotionCodeId };
 		return { coupon: d.source.coupon.id };
@@ -31,7 +40,7 @@ export const stripeDiscountsToCheckoutParams = ({
 }: {
 	stripeDiscounts: StripeDiscountWithCoupon[];
 }): ({ coupon: string } | { promotion_code: string })[] => {
-	return stripeDiscounts.map((d) =>
+	return orderStripeDiscounts(stripeDiscounts).map((d) =>
 		d.promotionCodeId
 			? { promotion_code: d.promotionCodeId }
 			: { coupon: d.source.coupon.id },
