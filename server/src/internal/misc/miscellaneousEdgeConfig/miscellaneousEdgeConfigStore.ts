@@ -55,3 +55,7 @@ export const _setMiscellaneousEdgeConfigForTesting = ({
 
 /** Global sync-coalescing gate (balance syncs via Redis dirty state). */
 export const isSyncCoalesceEnabled = (): boolean => store.get().syncCoalesce;
+
+/** Global gate: serve subject lookups from Postgres instead of the cache. */
+export const isSubjectLookupDbOnlyEnabled = (): boolean =>
+	store.get().subjectLookupDbOnly;

@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
+import { applySubjectLookupDbOnly } from "@/internal/misc/miscellaneousEdgeConfig/applySubjectLookupDbOnly.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleGetOrCreateCustomerV2 = createRoute({
@@ -15,6 +16,8 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const createCusParams = c.req.valid("json");
+
+		applySubjectLookupDbOnly({ ctx });
 
 		const start = Date.now();
 

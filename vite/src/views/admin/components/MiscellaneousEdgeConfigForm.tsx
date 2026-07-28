@@ -1,17 +1,11 @@
-import {
-	Badge,
-	Button,
-	DialogFooter,
-	Input,
-	Separator,
-	Switch,
-} from "@autumn/ui";
+import { Badge, Button, DialogFooter, Input, Separator } from "@autumn/ui";
 import Editor from "@monaco-editor/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { MiscellaneousEdgeConfigSwitch } from "./MiscellaneousEdgeConfigSwitch";
 import {
 	buildMiscellaneousJsonText,
 	getStatusMessage,
@@ -71,6 +65,8 @@ export const MiscellaneousEdgeConfigForm = ({
 				...prev,
 				newFlatCusModel: parsed.newFlatCusModel ?? prev.newFlatCusModel,
 				syncCoalesce: parsed.syncCoalesce ?? prev.syncCoalesce,
+				subjectLookupDbOnly:
+					parsed.subjectLookupDbOnly ?? prev.subjectLookupDbOnly,
 			}));
 			setJsonError(null);
 		} catch {
@@ -182,25 +178,27 @@ export const MiscellaneousEdgeConfigForm = ({
 						</div>
 					</div>
 
-					<div className="rounded-lg border border-border p-3 flex items-center justify-between gap-6">
-						<div className="flex min-w-0 flex-col gap-1">
-							<div className="text-sm font-medium text-foreground">
-								Sync coalescing
-							</div>
-							<div className="text-pretty text-xs text-tertiary-foreground">
-								Batches balance syncs per customer instead of one per change.
-								Affects every org at once.
-							</div>
-						</div>
-						<Switch
-							aria-label="Enable sync coalescing"
-							checked={config.syncCoalesce}
-							onCheckedChange={(syncCoalesce) => {
-								setSyncSource("form");
-								setConfig((prev) => ({ ...prev, syncCoalesce }));
-							}}
-						/>
-					</div>
+					<MiscellaneousEdgeConfigSwitch
+						title="Sync coalescing"
+						description="Batches balance syncs per customer instead of one per change. Affects every org at once."
+						ariaLabel="Enable sync coalescing"
+						checked={config.syncCoalesce}
+						onCheckedChange={(syncCoalesce) => {
+							setSyncSource("form");
+							setConfig((prev) => ({ ...prev, syncCoalesce }));
+						}}
+					/>
+
+					<MiscellaneousEdgeConfigSwitch
+						title="Subject lookups bypass Redis"
+						description="customers.get_or_create and entities.get read the subject straight from Postgres and skip the cache write-back. Affects every org at once."
+						ariaLabel="Enable db-only subject lookups"
+						checked={config.subjectLookupDbOnly}
+						onCheckedChange={(subjectLookupDbOnly) => {
+							setSyncSource("form");
+							setConfig((prev) => ({ ...prev, subjectLookupDbOnly }));
+						}}
+					/>
 
 					<div className="flex flex-col gap-3 text-xs text-tertiary-foreground">
 						<Separator />
