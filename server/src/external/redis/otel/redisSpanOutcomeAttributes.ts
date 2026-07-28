@@ -9,6 +9,10 @@ export const buildRedisSpanOutcomeAttributes = ({
 }): Attributes =>
 	durationMs > slowMs
 		? {
+				"db.redis.duration_ms": durationMs,
 				"db.redis.slow": true,
+				"db.redis.breach_ratio": slowMs > 0 ? durationMs / slowMs : 0,
 			}
-		: {};
+		: {
+				"db.redis.duration_ms": durationMs,
+			};

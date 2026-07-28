@@ -2,26 +2,28 @@ import { describe, expect, test } from "bun:test";
 import { buildRedisSpanOutcomeAttributes } from "@/external/redis/otel/redisSpanOutcomeAttributes.js";
 
 describe("Redis span outcome attributes", () => {
-	test("marks slow spans without duplicating duration or derived breach ratio", () => {
+	test("preserves duration and breach ratio for existing Axiom queries", () => {
 		const attributes = buildRedisSpanOutcomeAttributes({
 			durationMs: 30,
 			slowMs: 15,
 		});
 
 		expect(attributes).toEqual({
+			"db.redis.duration_ms": 30,
 			"db.redis.slow": true,
+			"db.redis.breach_ratio": 2,
 		});
-		expect(attributes["db.redis.duration_ms"]).toBeUndefined();
-		expect(attributes["db.redis.breach_ratio"]).toBeUndefined();
 	});
 
-	test("does not add outcome attributes to successful non-slow spans", () => {
+	test("preserves duration without marking successful non-slow spans as slow", () => {
 		expect(
 			buildRedisSpanOutcomeAttributes({
 				durationMs: 10,
 				slowMs: 15,
 			}),
-		).toEqual({});
+		).toEqual({
+			"db.redis.duration_ms": 10,
+		});
 	});
 
 	test("does not classify a span exactly at the slow threshold as slow", () => {
@@ -30,15 +32,21 @@ describe("Redis span outcome attributes", () => {
 				durationMs: 15,
 				slowMs: 15,
 			}),
-		).toEqual({});
+		).toEqual({
+			"db.redis.duration_ms": 15,
+		});
 	});
 
-	test("classifies any positive duration as slow when the threshold is zero", () => {
+	test("retains the original zero-threshold breach-ratio fallback", () => {
 		expect(
 			buildRedisSpanOutcomeAttributes({
 				durationMs: 0.01,
 				slowMs: 0,
 			}),
-		).toEqual({ "db.redis.slow": true });
+		).toEqual({
+			"db.redis.duration_ms": 0.01,
+			"db.redis.slow": true,
+			"db.redis.breach_ratio": 0,
+		});
 	});
 });
