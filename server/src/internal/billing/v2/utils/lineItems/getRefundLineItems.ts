@@ -1,8 +1,8 @@
 import type { BillingContext, FullCusProduct, LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { customerLicenseToLineItems } from "./customerLicenseToLineItems";
 import { customerProductToLineItems } from "./customerProductToLineItems";
 import { invoiceCreditFromStoredLineItems } from "./invoiceCreditFromStoredLineItems";
+import { licenseInvoiceCreditFromStoredLineItems } from "./licenseInvoiceCreditFromStoredLineItems";
 
 export const getRefundLineItems = ({
 	ctx,
@@ -29,16 +29,13 @@ export const getRefundLineItems = ({
 		billingContext,
 	});
 
-	// License charges have no stored-row attribution yet, so their refunds
-	// always synthesize from catalog state — even when parent prices resolve.
 	const licenseCredits = (customerProduct.customer_licenses ?? []).flatMap(
 		(customerLicense) =>
-			customerLicenseToLineItems({
+			licenseInvoiceCreditFromStoredLineItems({
 				ctx,
 				billingContext,
 				customerProduct,
 				customerLicense,
-				direction: "refund",
 			}),
 	);
 

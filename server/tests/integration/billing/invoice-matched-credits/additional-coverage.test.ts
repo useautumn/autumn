@@ -99,7 +99,8 @@ test.concurrent(
 
 		expect(preview.total).toBeLessThan(0);
 		expect(Math.abs(preview.total)).toBeLessThan(10);
-		expect(Math.abs(preview.total)).toBeGreaterThan(5);
+		// Stored $15 renewal charge, with 4d invoice finalization + 15d elapsed.
+		expect(Math.abs(preview.total)).toBeGreaterThan(4.5);
 
 		await autumnV1.subscriptions.update(cancelParams);
 
@@ -276,7 +277,8 @@ test.concurrent(
 
 		for (const creditLine of creditLines) {
 			const discounts = creditLine.discounts ?? [];
-			expect(discounts.length).toBe(0);
+			// Stored coupon is metadata; it is not applied again to the net credit.
+			expect(discounts.length).toBe(1);
 		}
 
 		const result = await autumnV2_2.billing.attach({

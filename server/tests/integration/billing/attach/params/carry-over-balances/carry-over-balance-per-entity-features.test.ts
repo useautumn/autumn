@@ -1,37 +1,18 @@
-/**
- * Carry Over Balances — Per-Entity Feature Tests
- *
- * Products with entityFeatureId — balances distributed per entity from a single
- * customer-level product. carry_over_balances creates one loose entitlement per
- * entity that has a positive remaining balance.
- *
- * Key behaviors:
- * - Each entity's remaining balance is carried independently as a loose entitlement
- * - Entities with zero/negative balance produce no loose entitlement
- */
+/** Regression: carry_over_balances must preserve each entity's non-zero balance independently.
+ * Negative balances remain debts on their originating entity. */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
+import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { updateCusEntDbAndCache } from "@/internal/customers/cusProducts/cusEnts/actions/updateCusEntDbAndCache";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Per-entity feature — balance carry over per entity
-//
-// Pro with per-entity messages (200 each):
-//   e1: 150 used → balance=50 remaining
-//   e2: 100 used → balance=100 remaining
-// Upgrade to Premium (300 per entity) with carry_over_balances: { enabled: true }
-// Expected:
-//   e1: 300 + 50 = 350
-//   e2: 300 + 100 = 400
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-entity remaining balances carried independently as loose entitlements")}`, async () => {
+test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: positive and negative balances carry independently")}`, async () => {
 	const proMessages = items.monthlyMessages({
 		includedUsage: 200,
 		entityFeatureId: TestFeature.Users,
@@ -44,27 +25,34 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 	const pro = products.pro({ id: "pro", items: [proMessages] });
 	const premium = products.premium({ id: "premium", items: [premiumMessages] });
 
-	const { customerId, autumnV2_1, autumnV1, entities } = await initScenario({
+	const { customerId, autumnV2_1, autumnV1, entities, ctx } = await initScenario({
 		customerId: "carry-over-balance-per-entity1",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro, premium] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
 		],
-		actions: [
-			// Attach per-entity product to customer (not to each entity)
-			s.billing.attach({ productId: pro.id, timeout: 4000 }),
-			s.track({ featureId: TestFeature.Messages, value: 150, entityIndex: 0 }),
-			s.track({
-				featureId: TestFeature.Messages,
-				value: 100,
-				entityIndex: 1,
-				timeout: 2000,
-			}),
-		],
+		actions: [s.billing.attach({ productId: pro.id, timeout: 4000 })],
 	});
 
-	// Verify pre-upgrade balances per entity
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEnt).toBeDefined();
+
+	const entityBalances = structuredClone(cusEnt!.entities!);
+	entityBalances[entities[0].id].balance = -50;
+	await updateCusEntDbAndCache({
+		ctx,
+		customerId,
+		cusEntId: cusEnt!.id,
+		featureId: TestFeature.Messages,
+		updates: { entities: entityBalances },
+		incrementCacheVersion: false,
+	});
+
 	const e1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -72,8 +60,8 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 	expectCustomerFeatureCorrect({
 		customer: e1Before,
 		featureId: TestFeature.Messages,
-		balance: 50,
-		usage: 150,
+		balance: -50,
+		usage: 250,
 	});
 
 	const e2Before = await autumnV1.entities.get<ApiEntityV0>(
@@ -83,11 +71,10 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 	expectCustomerFeatureCorrect({
 		customer: e2Before,
 		featureId: TestFeature.Messages,
-		balance: 100,
-		usage: 100,
+		balance: 200,
+		usage: 0,
 	});
 
-	// Upgrade the whole customer product, carrying over per-entity balances
 	await autumnV2_1.billing.attach({
 		customer_id: customerId,
 		plan_id: premium.id,
@@ -96,7 +83,6 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
-	// e1: 300 (Premium grant per entity) + 50 (loose carried) = 350
 	const e1After = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
@@ -104,11 +90,10 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 	expectCustomerFeatureCorrect({
 		customer: e1After,
 		featureId: TestFeature.Messages,
-		balance: 350,
+		balance: 250,
 		usage: 0,
 	});
 
-	// e2: 300 + 100 = 400
 	const e2After = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[1].id,
@@ -116,11 +101,10 @@ test.concurrent(`${chalk.yellowBright("carry-over-balance-per-entity 1: per-enti
 	expectCustomerFeatureCorrect({
 		customer: e2After,
 		featureId: TestFeature.Messages,
-		balance: 400,
+		balance: 500,
 		usage: 0,
 	});
 
-	// Customer-level totals: (350 + 400) = 750
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expectCustomerFeatureCorrect({
 		customer,
