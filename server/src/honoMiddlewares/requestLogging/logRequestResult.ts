@@ -1,9 +1,9 @@
 import chalk from "chalk";
 import type { Context } from "hono";
-import { logger as rootLogger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import { writeFireLensRecord } from "@/utils/logging/writeFireLensRecord.js";
 import { buildRequestResultRecords } from "./buildRequestResultRecords.js";
 import { redactRequestBody } from "./redactRequestBody.js";
 
@@ -70,7 +70,7 @@ export const logRequestResult = async ({
 		});
 
 		if (records.archive) {
-			rootLogger.info("request_log_archive", records.archive);
+			writeFireLensRecord({ record: records.archive });
 		}
 
 		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
