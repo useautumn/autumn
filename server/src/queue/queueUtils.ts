@@ -31,28 +31,6 @@ export interface Payloads {
 		orgId: string;
 		env: AppEnv;
 	};
-	[JobName.SyncBalanceBatch]: {
-		orgId: string;
-		env: AppEnv;
-		item: {
-			customerId: string;
-			featureId: string;
-			orgId: string;
-			env: string;
-			entityId?: string;
-			timestamp: number;
-		};
-	};
-	[JobName.SyncBalanceBatchV3]: {
-		customerId: string;
-		orgId: string;
-		env: AppEnv;
-		region?: string;
-		timestamp: number;
-		cusEntIds: string[];
-		rolloverIds?: string[];
-		entityId?: string;
-	};
 	[JobName.SyncBalanceBatchV4]: {
 		customerId: string;
 		orgId: string;
@@ -112,12 +90,6 @@ export interface Payloads {
 		env: AppEnv;
 		customerId: string;
 		featureId: string;
-	};
-	[JobName.VerifyCacheConsistency]: {
-		customerId: string;
-		orgId: string;
-		env: string;
-		source: string;
 	};
 	[JobName.ExpireLockReceipt]: {
 		orgId: string;

@@ -16,7 +16,6 @@ const mockState = {
 	queueCommands: [] as Record<string, unknown>[],
 	queueError: null as Error | null,
 	originalSend: null as ReturnType<typeof getSqsClient>["send"] | null,
-	runTrackV2Calls: [] as Record<string, unknown>[],
 	runTrackV3Calls: [] as Record<string, unknown>[],
 	checkCalls: [] as Record<string, unknown>[],
 	releaseCalls: [] as Record<string, unknown>[],
@@ -24,13 +23,6 @@ const mockState = {
 };
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
-
-mock.module("@/internal/balances/track/runTrackV2.js", () => ({
-	runTrackV2: async (args: Record<string, unknown>) => {
-		mockState.runTrackV2Calls.push(args);
-		return { ok: true };
-	},
-}));
 
 mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
 	runTrackV3: async (args: Record<string, unknown>) => {
@@ -83,7 +75,6 @@ describe("track queue fallback", () => {
 	beforeEach(() => {
 		mockState.queueCommands = [];
 		mockState.queueError = null;
-		mockState.runTrackV2Calls = [];
 		mockState.runTrackV3Calls = [];
 		mockState.checkCalls = [];
 		mockState.releaseCalls = [];
@@ -115,7 +106,6 @@ describe("track queue fallback", () => {
 		});
 
 		expect(mockState.runTrackV3Calls).toHaveLength(1);
-		expect(mockState.runTrackV2Calls).toHaveLength(0);
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackQueueUrl,

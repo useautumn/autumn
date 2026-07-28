@@ -10,7 +10,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addSeconds } from "date-fns";
-import { redis } from "@/external/redis/initRedis";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt";
@@ -202,8 +201,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 	});
 
 	const fetchedReceipt = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance =
-		fetchedReceipt.source === "redis_v2" ? fetchedReceipt.redisInstance : redis;
+	const redisInstance = fetchedReceipt.redisInstance;
 
 	const expireAt = await redisInstance.expiretime(
 		fetchedReceipt.lockReceiptKey,
@@ -242,8 +240,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 	});
 
 	const fetchedReceipt = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance =
-		fetchedReceipt.source === "redis_v2" ? fetchedReceipt.redisInstance : redis;
+	const redisInstance = fetchedReceipt.redisInstance;
 
 	const expireAt = await redisInstance.expiretime(
 		fetchedReceipt.lockReceiptKey,

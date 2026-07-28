@@ -9,8 +9,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { CusService } from "@/internal/customers/CusService";
-import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer";
-import { setCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/setCachedFullCustomer";
 
 test.concurrent(
 	`${chalk.yellowBright("billing.rollback: restores Autumn without creating Stripe resources")}`,
@@ -55,22 +53,7 @@ test.concurrent(
 			ctx,
 			idOrInternalId: customerId,
 		});
-		await setCachedFullCustomer({
-			ctx,
-			fullCustomer: attachedCustomer,
-			customerId,
-			fetchTimeMs: Date.now(),
-			source: "billing.rollback.test",
-			overwrite: true,
-		});
-		expect(
-			(
-				await getCachedFullCustomer({
-					ctx,
-					customerId,
-				})
-			)?.customer_products,
-		).toHaveLength(1);
+		expect(attachedCustomer.customer_products).toHaveLength(1);
 		await expectNoStripeSubscription({
 			db: ctx.db,
 			customerId,
@@ -86,7 +69,6 @@ test.concurrent(
 		expect(rollbackPlan.deleteCustomerProducts).toEqual(
 			autumnBillingPlan.insertCustomerProducts,
 		);
-		expect(await getCachedFullCustomer({ ctx, customerId })).toBeUndefined();
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		await expectCustomerProducts({ customer, notPresent: [pro.id] });
 		expect(
