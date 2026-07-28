@@ -7,6 +7,7 @@ export const pooledBalanceIdentityToKey = ({
 }) =>
 	JSON.stringify([
 		identity.internalFeatureId,
+		identity.unlimited,
 		identity.interval,
 		identity.intervalCount,
 		identity.resetCycleAnchor,

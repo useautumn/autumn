@@ -1,4 +1,5 @@
 import {
+	AllowanceType,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type PooledBalanceIdentity,
@@ -30,6 +31,20 @@ export const initPooledBalanceGraph = ({
 	const entitlementId = generateId("ent");
 	const customerEntitlementId = generateId("cus_ent");
 	const pooledBalanceId = generateId("pool");
+	const pooledEntitlementConfig = identity.unlimited
+		? {
+				allowance: null,
+				allowance_type: AllowanceType.Unlimited,
+				rollover: null,
+			}
+		: {
+				allowance: 0,
+				allowance_type: AllowanceType.Fixed,
+				rollover: contributionCustomerEntitlement.entitlement.rollover,
+			};
+	const resetsViaInvoice =
+		!identity.unlimited &&
+		identity.resetMode === PooledBalanceResetMode.Subscription;
 
 	return {
 		...structuredClone(contributionCustomerEntitlement),
@@ -42,7 +57,7 @@ export const initPooledBalanceGraph = ({
 			internal_product_id: null,
 			internal_reward_id: null,
 			is_custom: true,
-			allowance: 0,
+			...pooledEntitlementConfig,
 			org_id: ctx.org.id,
 			feature_id: contributionCustomerEntitlement.entitlement.feature.id,
 			pooled: true,
@@ -58,8 +73,7 @@ export const initPooledBalanceGraph = ({
 		next_reset_at: nextResetAt,
 		cache_version: 0,
 		external_id: null,
-		reset_by_invoice:
-			identity.resetMode === PooledBalanceResetMode.Subscription,
+		reset_by_invoice: resetsViaInvoice,
 		is_pooled_balance: true,
 		pooled_balance_id: pooledBalanceId,
 		pooled_contribution_id: null,
@@ -72,6 +86,7 @@ export const initPooledBalanceGraph = ({
 			env: ctx.env,
 			internal_customer_id: customerProduct.internal_customer_id,
 			internal_feature_id: identity.internalFeatureId,
+			unlimited: identity.unlimited,
 			granted,
 			interval: identity.interval,
 			interval_count: identity.intervalCount,

@@ -1,6 +1,7 @@
 import {
 	EntInterval,
 	type FullCustomerEntitlement,
+	isUnlimitedEntitlement,
 	type PooledBalanceIdentity,
 	rolloverConfigToSignature,
 } from "@autumn/shared";
@@ -20,15 +21,24 @@ export const initCustomerEntitlementPooledIdentity = ({
 }: {
 	customerEntitlement: FullCustomerEntitlement;
 	lifecycle: PooledBalanceIdentityLifecycle;
-}): PooledBalanceIdentity => ({
-	internalFeatureId: customerEntitlement.internal_feature_id,
-	interval: customerEntitlement.entitlement.interval ?? EntInterval.Lifetime,
-	intervalCount: customerEntitlement.entitlement.interval_count ?? 1,
-	resetCycleAnchor: lifecycle.resetCycleAnchor,
-	resetMode: lifecycle.resetMode,
-	stripeSubscriptionId: lifecycle.stripeSubscriptionId,
-	customerLicenseLinkId: lifecycle.customerLicenseLinkId,
-	rolloverSignature: rolloverConfigToSignature({
-		rollover: customerEntitlement.entitlement.rollover,
-	}),
-});
+}): PooledBalanceIdentity => {
+	const unlimited = isUnlimitedEntitlement({
+		entitlement: customerEntitlement.entitlement,
+	});
+
+	return {
+		internalFeatureId: customerEntitlement.internal_feature_id,
+		unlimited,
+		interval: customerEntitlement.entitlement.interval ?? EntInterval.Lifetime,
+		intervalCount: customerEntitlement.entitlement.interval_count ?? 1,
+		resetCycleAnchor: lifecycle.resetCycleAnchor,
+		resetMode: lifecycle.resetMode,
+		stripeSubscriptionId: lifecycle.stripeSubscriptionId,
+		customerLicenseLinkId: lifecycle.customerLicenseLinkId,
+		rolloverSignature: unlimited
+			? "none"
+			: rolloverConfigToSignature({
+					rollover: customerEntitlement.entitlement.rollover,
+				}),
+	};
+};
