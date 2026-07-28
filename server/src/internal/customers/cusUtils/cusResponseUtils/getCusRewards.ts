@@ -6,6 +6,7 @@ import {
 	notNullish,
 	type Organization,
 	RewardType,
+	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -88,7 +89,12 @@ export const getCusRewards = async ({
 					type: coupon.amount_off
 						? RewardType.FixedDiscount
 						: RewardType.PercentageDiscount,
-					discount_value: coupon.amount_off || coupon.percent_off || 0,
+					discount_value: coupon.amount_off
+						? stripeToAtmnAmount({
+								amount: coupon.amount_off,
+								currency: coupon.currency ?? undefined,
+							})
+						: (coupon.percent_off ?? 0),
 					currency: coupon.currency ?? null,
 					start: d.start ?? null,
 					end: d.end ?? null,

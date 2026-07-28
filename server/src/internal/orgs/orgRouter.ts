@@ -11,6 +11,7 @@ import { handlePreflightRevenueCatSync } from "@/external/revenueCat/handlers/ha
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import { handleSyncRevenueCatProducts } from "@/external/revenueCat/handlers/handleSyncRevenueCatProducts.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { organizationSsoRouter } from "@/internal/auth/sso/ssoRouter.js";
 import { handleDisconnectRevenueCat } from "@/internal/orgs/handlers/revenueCatHandlers/handleDisconnectRevenueCat.js";
 import {
 	handleGetRevenueCatWebhook,
@@ -70,6 +71,7 @@ internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
 internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
+internalOrgRouter.route("/sso", organizationSsoRouter);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);

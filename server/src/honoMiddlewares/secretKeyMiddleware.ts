@@ -8,7 +8,7 @@ import {
 import { AuthType, ErrCode, RecaseError, sortFeatures } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { verifyKey } from "@/internal/dev/apiKeys/actions/verifyKey.js";
 import { handleOAuthMiddleware } from "./authMiddlewares/handleOAuthMiddleware.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
 import { customerJwtMiddleware } from "./customerJwtMiddleware.js";
@@ -73,12 +73,12 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	}
 
 	// Step 4: Verify the API key
-	const { valid, data } = await verifyKey({
+	const data = await verifyKey({
 		db: ctx.db,
 		key: bearerToken,
 	});
 
-	if (!valid || !data) {
+	if (!data) {
 		const maskedKey = maskApiKey(bearerToken);
 		throw new RecaseError({
 			message: `Invalid secret key: ${maskedKey}`,
@@ -89,7 +89,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
-	const scopes = (data as { scopes?: string[] | null }).scopes ?? [];
+	const scopes = data.scopes ?? [];
 
 	sortFeatures({ features });
 
@@ -99,7 +99,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.userId = userId ?? undefined;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = scopes;
-	if (data?.user) {
+	if (data.user) {
 		ctx.user = data.user;
 	}
 

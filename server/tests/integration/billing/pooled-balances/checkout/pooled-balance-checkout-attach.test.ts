@@ -32,6 +32,7 @@ import {
 	type AttachParamsV1Input,
 	EntInterval,
 	PooledBalanceResetMode,
+	ProductItemInterval,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -239,6 +240,75 @@ test(
 			usage: USAGE,
 			breakdownCount: 1,
 			breakdownId: pooledCustomerEntitlement.id,
+		});
+	},
+);
+
+test.concurrent(
+	chalk.yellowBright("pooled checkout: unlimited creates a zero-valued pool"),
+	async () => {
+		const customerId = "pooled-checkout-unlimited";
+		const pooledPlan = products.pro({
+			id: "pooled-checkout-unlimited-plan",
+			items: [
+				{
+					...items.unlimitedMessages(),
+					interval: ProductItemInterval.Month,
+					pooled: true,
+				},
+			],
+		});
+		const { autumnV2_2, ctx, entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+				s.products({ list: [pooledPlan] }),
+			],
+			actions: [],
+		});
+
+		const checkoutResult = await autumnV2_2.billing.attach<AttachParamsV1Input>(
+			{
+				customer_id: customerId,
+				entity_id: entities[0].id,
+				plan_id: pooledPlan.id,
+			},
+			{ timeout: 0 },
+		);
+		expect(checkoutResult.payment_url).toContain("checkout.stripe.com");
+		await completeStripeCheckoutFormV2({ url: checkoutResult.payment_url! });
+		await timeout(CHECKOUT_WEBHOOK_MS);
+
+		await expectPooledBalanceCorrect({
+			db: ctx.db,
+			customerId,
+			pool: {
+				balance: 0,
+				adjustment: 0,
+				granted: 0,
+				unlimited: true,
+				interval: EntInterval.Month,
+				nextResetAt: null,
+				resetCycleAnchor: null,
+				resetMode: PooledBalanceResetMode.Subscription,
+				stripeSubscriptionId: "stripe_subscription",
+			},
+			contributions: {
+				count: 1,
+				currentContribution: 0,
+				nextCycleContribution: 0,
+			},
+			sources: { count: 1, balance: 0, adjustment: 0 },
+		});
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+			skip_cache: "true",
+		});
+		expect(customer.balances[TestFeature.Messages]).toMatchObject({
+			unlimited: true,
+			granted: 0,
+			remaining: 0,
+			usage: 0,
 		});
 	},
 );

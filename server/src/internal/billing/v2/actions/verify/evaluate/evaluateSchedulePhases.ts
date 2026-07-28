@@ -48,22 +48,30 @@ export const evaluateSchedulePhases = async ({
 		});
 	}
 
+	const currentPhaseStart =
+		schedule.current_phase?.start_date ?? schedule.phases[0]?.start_date;
 	for (let i = 0; i < scheduledPhases.length; i++) {
 		const expectedPhase = scheduledPhases[i];
 		const expectedStartSeconds = expectedPhase.start_date as number;
 
 		const actualPhase = schedule.phases.find((phase) =>
-			similarUnix({
-				unix1: expectedStartSeconds * 1000,
-				unix2: phase.start_date * 1000,
-			}),
+			i === 0 && currentPhaseStart
+				? phase.start_date === currentPhaseStart
+				: similarUnix({
+						unix1: expectedStartSeconds * 1000,
+						unix2: phase.start_date * 1000,
+					}),
 		);
+		const phaseStartsAt =
+			i === 0
+				? (currentPhaseStart ?? expectedStartSeconds)
+				: expectedStartSeconds;
 
 		if (!actualPhase) {
 			mismatches.push({
 				type: "schedule_mismatch",
 				reason: "phase_start_mismatch",
-				phase_starts_at: expectedStartSeconds,
+				phase_starts_at: phaseStartsAt,
 			});
 			continue;
 		}
@@ -75,7 +83,7 @@ export const evaluateSchedulePhases = async ({
 			mismatches.push({
 				type: "schedule_mismatch",
 				reason: "billing_cycle_anchor_mismatch",
-				phase_starts_at: expectedStartSeconds,
+				phase_starts_at: phaseStartsAt,
 			});
 		}
 
@@ -88,7 +96,7 @@ export const evaluateSchedulePhases = async ({
 				actualPhaseItems: actualPhase.items,
 				storedPriceCatalog,
 				cusPriceCatalog,
-				phaseStartsAt: expectedStartSeconds,
+				phaseStartsAt,
 			}),
 		);
 	}

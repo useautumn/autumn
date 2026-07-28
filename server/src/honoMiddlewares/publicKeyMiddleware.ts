@@ -1,7 +1,7 @@
 import { AppEnv, AuthType, ErrCode } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { verifyPublicKey } from "@/internal/dev/api-keys/publicKeyUtils.js";
+import { verifyPublicKey } from "@/internal/dev/apiKeys/publicKeyUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 const allowedEndpoints = [

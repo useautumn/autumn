@@ -7,7 +7,7 @@ import {
 	oauthConsentRepo,
 	oauthRefreshTokenRepo,
 } from "@/internal/auth/repos/index.js";
-import { clearSecretKeyCache } from "../../../dev/api-keys/cacheApiKeyUtils.js";
+import { clearSecretKeyCache } from "../../../dev/apiKeys/cacheApiKeyUtils.js";
 
 /**
  * Revoke an OAuth consent and delete all linked resources:

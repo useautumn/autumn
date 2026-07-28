@@ -49,12 +49,9 @@ const validateProductItem = ({
 		});
 	}
 
-	if (
-		item.pooled &&
-		(feature?.type === FeatureType.Boolean || item.included_usage === Infinite)
-	) {
+	if (item.pooled && feature?.type === FeatureType.Boolean) {
 		throw new RecaseError({
-			message: "Pooled items are only supported for finite metered features",
+			message: "Pooled items are only supported for metered features",
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

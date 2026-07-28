@@ -8,7 +8,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import {
 	createHardcodedKey,
 	hashApiKey,
-} from "../../../../../server/src/internal/dev/api-keys/apiKeyUtils.js";
+} from "../../../../../server/src/internal/dev/apiKeys/apiKeyUtils.js";
 import { FeatureService } from "../../../../../server/src/internal/features/FeatureService.js";
 import { invalidateProductsCache } from "../../../../../server/src/internal/products/productCacheUtils.js";
 import { CacheManager } from "../../../../../server/src/utils/cacheUtils/CacheManager.js";
