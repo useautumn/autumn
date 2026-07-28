@@ -13,6 +13,7 @@ export const setupLicenseUpdateScenario = async ({
 	seatItems,
 	includedSeats,
 	attachedSeats,
+	testClock = false,
 }: {
 	customerId: string;
 	idPrefix: string;
@@ -22,6 +23,7 @@ export const setupLicenseUpdateScenario = async ({
 	seatItems?: ProductItem[];
 	includedSeats: number;
 	attachedSeats: number;
+	testClock?: boolean;
 }) => {
 	const parent = products.base({
 		id: `${idPrefix}-pro`,
@@ -41,7 +43,7 @@ export const setupLicenseUpdateScenario = async ({
 	const scenario = await initScenario({
 		customerId,
 		setup: [
-			s.customer({ paymentMethod: "success", testClock: false }),
+			s.customer({ paymentMethod: "success", testClock }),
 			s.products({ list: [parent, devSeat] }),
 		],
 		actions: [
