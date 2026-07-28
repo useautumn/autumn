@@ -47,6 +47,9 @@ export const SubjectFlagSchema = z.object({
 	internalEntityId: z.string().nullable(),
 	expiresAt: z.number().nullable(),
 	externalId: z.string().nullable(),
+	isPooledBalance: z.boolean().optional(),
+	pooledBalanceId: z.string().nullable().optional(),
+	pooledBalance: z.custom<DbPooledBalance>().optional(),
 });
 
 export type SubjectFlag = {
@@ -59,6 +62,9 @@ export type SubjectFlag = {
 	internalEntityId: string | null;
 	expiresAt: number | null;
 	externalId: string | null;
+	isPooledBalance?: boolean;
+	pooledBalanceId?: string | null;
+	pooledBalance?: DbPooledBalance;
 };
 
 /**

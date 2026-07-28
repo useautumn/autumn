@@ -1,6 +1,8 @@
 import { test } from "bun:test";
 import {
 	ApiVersion,
+	BillingInterval,
+	BillingMethod,
 	type CreatePlanParamsV2Input,
 	ErrCode,
 } from "@autumn/shared";
@@ -35,11 +37,51 @@ const expectPooledItemRejected = async ({
 };
 
 test.concurrent(
-	"pooled item validation: rejects boolean features",
+	"pooled item validation: accepts unpriced boolean features",
+	async () => {
+		const planId = `pooled-boolean-${crypto.randomUUID()}`;
+		await autumnRpc.plans.create<unknown, CreatePlanParamsV2Input>({
+			plan_id: planId,
+			name: planId,
+			group: `group-${planId}`,
+			auto_enable: false,
+			items: [{ ...itemsV2.dashboard(), pooled: true }],
+		});
+	},
+);
+
+test.concurrent(
+	"pooled item validation: rejects priced boolean features",
 	async () => {
 		await expectPooledItemRejected({
-			planId: `pooled-boolean-${crypto.randomUUID()}`,
-			item: { ...itemsV2.dashboard(), pooled: true },
+			planId: `pooled-priced-boolean-${crypto.randomUUID()}`,
+			item: {
+				...itemsV2.dashboard(),
+				pooled: true,
+				price: {
+					amount: 10,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			errMessage:
+				"Pooled boolean items cannot include balance or pricing fields",
+		});
+	},
+);
+
+test.concurrent(
+	"pooled item validation: rejects boolean balance configuration",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `pooled-configured-boolean-${crypto.randomUUID()}`,
+			item: {
+				...itemsV2.dashboard(),
+				pooled: true,
+				included: 1,
+			},
+			errMessage:
+				"Pooled boolean items cannot include balance or pricing fields",
 		});
 	},
 );
@@ -60,6 +102,26 @@ test.concurrent(
 					pooled: true,
 				},
 			],
+		});
+	},
+);
+
+test.concurrent(
+	"pooled item validation: rejects priced unlimited features",
+	async () => {
+		await expectPooledItemRejected({
+			planId: `pooled-priced-unlimited-${crypto.randomUUID()}`,
+			item: {
+				feature_id: TestFeature.Messages,
+				unlimited: true,
+				pooled: true,
+				price: {
+					amount: 10,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.Prepaid,
+				},
+			},
+			errMessage: "Pooled unlimited items cannot include pricing",
 		});
 	},
 );

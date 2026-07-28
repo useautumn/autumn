@@ -4,6 +4,7 @@ import {
 	type FullCustomerEntitlement,
 	getCycleEnd,
 	InternalError,
+	isBooleanEntitlement,
 	isCustomerProductFree,
 	isCustomerProductPaidRecurring,
 	isUnlimitedEntitlement,
@@ -175,6 +176,9 @@ export const computePooledBalanceLifecycle = ({
 	const unlimited = isUnlimitedEntitlement({
 		entitlement: customerEntitlement.entitlement,
 	});
+	const isBoolean = isBooleanEntitlement({
+		entitlement: customerEntitlement.entitlement,
+	});
 
 	const resetMode = getResetMode({ customerProduct, interval });
 	const { stripeSubscriptionId, customerLicenseLinkId } =
@@ -184,7 +188,7 @@ export const computePooledBalanceLifecycle = ({
 			stripeSubscriptionId: existingStripeSubscriptionId,
 		});
 
-	if (unlimited) {
+	if (unlimited || isBoolean) {
 		return {
 			resetMode,
 			resetCycleAnchor: null,

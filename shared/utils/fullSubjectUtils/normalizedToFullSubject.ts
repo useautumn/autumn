@@ -112,6 +112,9 @@ const subjectFlagToFullCustomerEntitlement = ({
 		additional_balance: 0,
 		usage_allowed: null,
 		separate_interval: false,
+		is_pooled_balance: subjectFlag.isPooledBalance,
+		pooled_balance_id: subjectFlag.pooledBalanceId,
+		pooled_balance: subjectFlag.pooledBalance,
 		reset_cycle_anchor: null,
 		next_reset_at: null,
 		adjustment: 0,
@@ -291,6 +294,7 @@ export const normalizedToFullSubject = ({
 		FullCustomerEntitlement[]
 	>();
 	const extraBooleanCes: FullCustomerEntitlement[] = [];
+	const pooledBooleanCes: FullCustomerEntitlement[] = [];
 
 	for (const flag of Object.values(flags)) {
 		const entitlement = entitlementsById.get(flag.entitlementId);
@@ -308,7 +312,11 @@ export const normalizedToFullSubject = ({
 		});
 
 		if (!flag.customerProductId) {
-			extraBooleanCes.push(fullCustomerEntitlement);
+			if (fullCustomerEntitlement.is_pooled_balance) {
+				pooledBooleanCes.push(fullCustomerEntitlement);
+			} else {
+				extraBooleanCes.push(fullCustomerEntitlement);
+			}
 		} else {
 			const existing =
 				booleanCesByCustomerProductId.get(flag.customerProductId) ?? [];
@@ -422,7 +430,7 @@ export const normalizedToFullSubject = ({
 		customer: normalized.customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
-		pooled_customer_entitlements: pooledMeteredCes,
+		pooled_customer_entitlements: [...pooledMeteredCes, ...pooledBooleanCes],
 		// Normalized carries ALL scopes (the balance-hash field must stay
 		// complete); the subject view narrows to the rows that can gate it --
 		// an entity sees its own rows plus the inheritable customer-scope ones.

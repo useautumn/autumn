@@ -187,6 +187,9 @@ export const subjectQueryRowToNormalized = ({
 				internalEntityId: customerEntitlement.internal_entity_id,
 				expiresAt: customerEntitlement.expires_at,
 				externalId: customerEntitlement.external_id,
+				isPooledBalance: customerEntitlement.is_pooled_balance,
+				pooledBalanceId: customerEntitlement.pooled_balance_id,
+				pooledBalance: customerEntitlement.pooled_balance ?? undefined,
 			};
 		} else {
 			const customerProduct = customerEntitlement.customer_product_id

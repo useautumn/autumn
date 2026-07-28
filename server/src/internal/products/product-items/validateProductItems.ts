@@ -49,9 +49,29 @@ const validateProductItem = ({
 		});
 	}
 
-	if (item.pooled && feature?.type === FeatureType.Boolean) {
+	if (
+		item.pooled &&
+		feature?.type === FeatureType.Boolean &&
+		(isFeaturePriceItem(item) ||
+			item.included_usage === Infinite ||
+			(typeof item.included_usage === "number" && item.included_usage !== 0) ||
+			notNullish(item.interval) ||
+			notNullish(item.config?.rollover))
+	) {
 		throw new RecaseError({
-			message: "Pooled items are only supported for metered features",
+			message: "Pooled boolean items cannot include balance or pricing fields",
+			code: ErrCode.InvalidProductItem,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (
+		item.pooled &&
+		isFeaturePriceItem(item) &&
+		item.included_usage === Infinite
+	) {
+		throw new RecaseError({
+			message: "Pooled unlimited items cannot include pricing",
 			code: ErrCode.InvalidProductItem,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

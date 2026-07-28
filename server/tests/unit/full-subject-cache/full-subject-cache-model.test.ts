@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	BillingInterval,
+	EntInterval,
+	FeatureType,
 	isCustomerProductOneOff,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
+	PooledBalanceResetMode,
 	PriceType,
 	SubjectType,
 } from "@autumn/shared";
@@ -282,6 +285,82 @@ describe("fullSubject cache model", () => {
 				(customerEntitlement) => customerEntitlement.id,
 			),
 		).toEqual(["cus_ent_pooled"]);
+	});
+
+	test("preserves pooled boolean metadata across cache roundtrip", () => {
+		const normalized = buildNormalized();
+		const entitlement = {
+			...normalized.customer_entitlements[0].entitlement,
+			id: "ent_boolean",
+			internal_product_id: null,
+			allowance: null,
+			allowance_type: null,
+			interval: null,
+			pooled: true,
+			feature: {
+				...normalized.customer_entitlements[0].entitlement.feature,
+				id: "dashboard",
+				internal_id: "feat_boolean",
+				type: FeatureType.Boolean,
+			},
+		};
+		normalized.customer_entitlements = [];
+		normalized.entitlements = [entitlement];
+		normalized.flags = {
+			dashboard: {
+				featureId: "dashboard",
+				internalFeatureId: "feat_boolean",
+				entitlementId: entitlement.id,
+				customerEntitlementId: "cus_ent_boolean",
+				customerProductId: null,
+				internalCustomerId: "cus_int_1",
+				internalEntityId: null,
+				expiresAt: null,
+				externalId: null,
+				isPooledBalance: true,
+				pooledBalanceId: "pool_boolean",
+				pooledBalance: {
+					id: "pool_boolean",
+					org_id: "org_1",
+					env: AppEnv.Live,
+					internal_customer_id: "cus_int_1",
+					internal_feature_id: "feat_boolean",
+					unlimited: false,
+					granted: 0,
+					interval: EntInterval.Lifetime,
+					interval_count: 1,
+					reset_cycle_anchor: null,
+					reset_mode: PooledBalanceResetMode.Lifetime,
+					stripe_subscription_id: null,
+					customer_license_link_id: null,
+					rollover_signature: "none",
+					customer_entitlement_id: "cus_ent_boolean",
+					last_applied_reset_at: null,
+					expires_at: null,
+					created_at: 1,
+					updated_at: 1,
+				},
+			},
+		};
+
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: [],
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+
+		expect(fullSubject.extra_customer_entitlements).toEqual([]);
+		expect(fullSubject.pooled_customer_entitlements).toHaveLength(1);
+		expect(fullSubject.pooled_customer_entitlements?.[0]).toMatchObject({
+			id: "cus_ent_boolean",
+			is_pooled_balance: true,
+			pooled_balance_id: "pool_boolean",
+			pooled_balance: { id: "pool_boolean" },
+		});
 	});
 
 	test("preserves fixed prices without entitlements across cache roundtrip", () => {
