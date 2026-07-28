@@ -4,6 +4,7 @@ import type {
 	Span,
 	SpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
+import { SpanIngestCompactor } from "./SpanIngestCompactor.js";
 import { recordSpanDurationMetric } from "./spanMetrics.js";
 
 const REDIS_SUCCESS_SAMPLE_RATE = Number.parseFloat(
@@ -44,6 +45,8 @@ const shouldDropSuccessfulRedisSpan = (span: ReadableSpan): boolean => {
 };
 
 export class FilteringSpanProcessor implements SpanProcessor {
+	private readonly spanIngestCompactor = new SpanIngestCompactor();
+
 	constructor(private readonly delegate: SpanProcessor) {}
 
 	onStart(span: Span, parentContext: Context): void {
@@ -54,7 +57,7 @@ export class FilteringSpanProcessor implements SpanProcessor {
 		recordSpanDurationMetric(span);
 
 		if (shouldDropSuccessfulRedisSpan(span)) return;
-		this.delegate.onEnd(span);
+		this.delegate.onEnd(this.spanIngestCompactor.compact({ span }));
 	}
 
 	forceFlush(): Promise<void> {

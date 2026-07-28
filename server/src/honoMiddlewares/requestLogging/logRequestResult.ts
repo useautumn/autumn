@@ -1,7 +1,10 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { addExtrasToLogs } from "@/utils/logging/addContextToLogs";
+import {
+	addExtrasToLogs,
+	addRequestToLogs,
+} from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
 const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
@@ -47,6 +50,13 @@ export const logRequestResult = async ({
 
 		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
 			return;
+		}
+
+		if (ctx.requestLogContext) {
+			ctx.logger = addRequestToLogs({
+				logger: ctx.logger,
+				requestContext: ctx.requestLogContext,
+			});
 		}
 
 		ctx.logger = addExtrasToLogs({
