@@ -6,9 +6,11 @@ import { SpanIngestCompactor } from "@/utils/otel/SpanIngestCompactor.js";
 const createSpan = ({
 	name,
 	attributes,
+	durationMs = 0.000001,
 }: {
 	name: string;
 	attributes: ReadableSpan["attributes"];
+	durationMs?: number;
 }): ReadableSpan =>
 	({
 		name,
@@ -21,7 +23,7 @@ const createSpan = ({
 		links: [],
 		startTime: [0, 0],
 		endTime: [0, 1],
-		duration: [0, 1],
+		duration: [Math.floor(durationMs / 1000), (durationMs % 1000) * 1_000_000],
 		ended: true,
 		droppedAttributesCount: 0,
 		droppedEventsCount: 0,
@@ -137,6 +139,39 @@ describe("SpanIngestCompactor", () => {
 		expect(compacted.duration).toBe(source.duration);
 		expect(compacted.resource).toBe(source.resource);
 		expect(compacted.spanContext()).toEqual(source.spanContext());
+	});
+
+	test("retains SQL on repeated slow spans for Axiom slow-query investigations", () => {
+		const compactor = new SpanIngestCompactor();
+		const statement = "select * from customers where id = $1";
+		const first = compactor.compact({
+			span: createSpan({
+				name: "drizzle.select",
+				attributes: { "db.statement": statement },
+			}),
+		});
+		const repeatedSlow = compactor.compact({
+			span: createSpan({
+				name: "drizzle.select",
+				attributes: { "db.statement": statement },
+				durationMs: 100,
+			}),
+		});
+		const repeatedFast = compactor.compact({
+			span: createSpan({
+				name: "drizzle.select",
+				attributes: { "db.statement": statement },
+				durationMs: 99,
+			}),
+		});
+
+		expect(first.attributes["db.query_definition"]).toBe(true);
+		expect(repeatedSlow.attributes["db.statement"]).toBe(statement);
+		expect(repeatedSlow.attributes["db.query_definition"]).toBeUndefined();
+		expect(repeatedSlow.attributes["db.query_id"]).toBe(
+			first.attributes["db.query_id"],
+		);
+		expect(repeatedFast.attributes["db.statement"]).toBeUndefined();
 	});
 
 	test("leaves spans without a usable SQL statement unchanged", () => {

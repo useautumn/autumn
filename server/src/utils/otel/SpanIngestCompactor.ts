@@ -3,9 +3,13 @@ import type { Attributes } from "@opentelemetry/api";
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base";
 
 const MAX_TRACKED_QUERY_IDS = 4096;
+const SLOW_QUERY_STATEMENT_THRESHOLD_MS = 100;
 
 const getQueryId = ({ statement }: { statement: string }) =>
 	createHash("sha256").update(statement).digest("hex").slice(0, 16);
+
+const getDurationMs = ({ span }: { span: ReadableSpan }) =>
+	span.duration[0] * 1000 + span.duration[1] / 1_000_000;
 
 const withAttributes = ({
 	span,
@@ -52,7 +56,9 @@ export class SpanIngestCompactor {
 			return withAttributes({ span, attributes });
 		}
 
-		delete attributes["db.statement"];
+		if (getDurationMs({ span }) < SLOW_QUERY_STATEMENT_THRESHOLD_MS) {
+			delete attributes["db.statement"];
+		}
 		return withAttributes({ span, attributes });
 	}
 }

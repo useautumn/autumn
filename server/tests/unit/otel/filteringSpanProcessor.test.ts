@@ -11,10 +11,12 @@ const createSpan = ({
 	name,
 	attributes,
 	statusCode = SpanStatusCode.OK,
+	durationMs = 0.000001,
 }: {
 	name: string;
 	attributes: ReadableSpan["attributes"];
 	statusCode?: SpanStatusCode;
+	durationMs?: number;
 }): ReadableSpan =>
 	({
 		name,
@@ -27,7 +29,7 @@ const createSpan = ({
 		links: [],
 		startTime: [0, 0],
 		endTime: [0, 1],
-		duration: [0, 1],
+		duration: [Math.floor(durationMs / 1000), (durationMs % 1000) * 1_000_000],
 		ended: true,
 		droppedAttributesCount: 0,
 		droppedEventsCount: 0,
@@ -110,6 +112,31 @@ describe("FilteringSpanProcessor", () => {
 		processor.onEnd(source);
 
 		expect(delegate.ended).toEqual([source]);
+	});
+
+	test("keeps SQL on repeated slow Drizzle spans at export", () => {
+		const delegate = new CapturingSpanProcessor();
+		const processor = new FilteringSpanProcessor(delegate);
+		const statement = "update customers set updated_at = now() where id = $1";
+
+		processor.onEnd(
+			createSpan({
+				name: "drizzle.update",
+				attributes: { "db.statement": statement },
+			}),
+		);
+		processor.onEnd(
+			createSpan({
+				name: "drizzle.update",
+				attributes: { "db.statement": statement },
+				durationMs: 100,
+			}),
+		);
+
+		expect(delegate.ended[1]?.attributes["db.statement"]).toBe(statement);
+		expect(
+			delegate.ended[1]?.attributes["db.query_definition"],
+		).toBeUndefined();
 	});
 
 	test("always exports successful slow Redis spans", () => {
