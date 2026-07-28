@@ -12,7 +12,7 @@ export const SsoActiveCard = ({
 	callbackUrl: string | null;
 	onDelete: React.ReactNode;
 }) => (
-	<div className="flex flex-col gap-4 rounded-lg border bg-background p-4">
+	<div className="flex flex-col gap-3 rounded-lg border bg-card p-4">
 		<div className="flex flex-col gap-1">
 			<div className="flex items-center gap-2">
 				<CheckCircleIcon

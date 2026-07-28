@@ -1,4 +1,4 @@
-import { Button, IconButton } from "@autumn/ui";
+import { IconButton } from "@autumn/ui";
 import { LockKeyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -6,6 +6,9 @@ import { isSafeSsoRedirectUrl } from "@/lib/sso/ssoCallback";
 import { clearSsoHint } from "@/lib/sso/ssoHint";
 import { resolveSso } from "@/lib/sso/ssoResolve";
 import type { SsoOrgHint } from "@/lib/sso/ssoTypes";
+
+const linkClassName =
+	"text-sm text-muted-foreground underline-offset-4 hover:underline hover:text-primary cursor-pointer";
 
 /**
  * Shown only when a previous successful SSO sign-in left a hint behind. Nothing
@@ -54,21 +57,13 @@ export const RememberedSsoSignIn = ({
 				icon={<LockKeyIcon weight="fill" />}
 				className="w-full gap-2"
 			>
-				Continue with {hint.organizationName} SSO
+				Continue with {hint.organizationName}&apos;s SSO
 			</IconButton>
 
-			<div className="flex flex-col items-center gap-1">
-				<Button
-					variant="skeleton"
-					className="text-sm underline-offset-4 hover:underline text-primary"
-					onClick={onUseAnotherEmail}
-					disabled={isLoading}
-				>
-					Use another email
-				</Button>
-				<Button
-					variant="skeleton"
-					className="text-sm underline-offset-4 hover:underline text-tertiary-foreground"
+			<div className="flex flex-row items-center justify-center gap-1">
+				<button
+					type="button"
+					className={linkClassName}
 					onClick={() => {
 						clearSsoHint();
 						onForget();
@@ -76,7 +71,16 @@ export const RememberedSsoSignIn = ({
 					disabled={isLoading}
 				>
 					Forget this organization
-				</Button>
+				</button>
+				<span className="text-muted-foreground select-none">・</span>
+				<button
+					type="button"
+					className={linkClassName}
+					onClick={onUseAnotherEmail}
+					disabled={isLoading}
+				>
+					Try another email
+				</button>
 			</div>
 		</div>
 	);

@@ -1,4 +1,4 @@
-import { Badge, Button } from "@autumn/ui";
+import { Badge, Button, StepBadge } from "@autumn/ui";
 import { toast } from "sonner";
 import {
 	buildSsoCallbackUrl,
@@ -40,18 +40,19 @@ export const SsoValidatingCard = ({
 	};
 
 	return (
-		<div className="flex flex-col gap-4 rounded-lg border bg-background p-4">
+		<div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center gap-2">
+					<StepBadge>3</StepBadge>
 					<span className="text-sm font-medium text-foreground">
 						{connection.domain}
 					</span>
-					<Badge variant="muted">Validating</Badge>
+					<Badge variant="muted">Last step: test sign-in</Badge>
 				</div>
 				<p className="text-sm text-tertiary-foreground">
-					Domain ownership is verified. Add the callback URL below to your OIDC
-					application, then run one test sign-in as an owner or admin to turn
-					SSO on for everyone at {connection.domain}.
+					Domain verified. One test sign-in left — sign in through your provider
+					as an owner or admin, and SSO turns on for everyone at{" "}
+					{connection.domain}.
 				</p>
 			</div>
 

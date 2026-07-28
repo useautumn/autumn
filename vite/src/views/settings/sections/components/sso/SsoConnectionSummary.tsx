@@ -13,7 +13,7 @@ const DetailRow = ({
 	copyText?: string;
 	mono?: boolean;
 }) => (
-	<div className="flex items-start gap-3 py-1.5">
+	<div className="flex items-start gap-3 py-1.5 last:pb-0">
 		<span className="w-32 shrink-0 text-sm text-tertiary-foreground">
 			{label}
 		</span>

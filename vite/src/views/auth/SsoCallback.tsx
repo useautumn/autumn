@@ -1,10 +1,12 @@
-import { Button, SmallSpinner } from "@autumn/ui";
+import { Button } from "@autumn/ui";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useSession } from "@/lib/auth-client";
 import {
 	clearPendingSsoProviderId,
+	describeSsoCallbackError,
 	getPendingSsoProviderId,
+	parseSsoCallbackQuery,
 	resolveCallbackProviderId,
 } from "@/lib/sso/ssoCallback";
 import { setSsoHint } from "@/lib/sso/ssoHint";
@@ -20,15 +22,22 @@ import { AutumnWordmark } from "./components/AutumnWordmark";
  * persist the presentation hint it hands back.
  */
 export const SsoCallback = () => {
-	const [searchParams] = useSearchParams();
+	const { search } = useLocation();
+	const searchParams = parseSsoCallbackQuery(search);
 	const { data: session, isPending: sessionLoading } = useSession();
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
 	const startedRef = useRef(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// The provider round trip reports failure as a redirect param, not an
+	// exception, so this is the only place the real reason surfaces.
+	const providerError = searchParams.get("error");
+	const providerErrorDescription = searchParams.get("error_description");
+	const queryProviderId = searchParams.get("providerId");
+
 	useEffect(() => {
-		if (startedRef.current || sessionLoading) return;
+		if (startedRef.current || sessionLoading || providerError) return;
 
 		if (!session) {
 			setError(
@@ -38,7 +47,7 @@ export const SsoCallback = () => {
 		}
 
 		const providerId = resolveCallbackProviderId({
-			queryProviderId: searchParams.get("providerId"),
+			queryProviderId,
 			rememberedProviderId: getPendingSsoProviderId(),
 		});
 
@@ -66,16 +75,30 @@ export const SsoCallback = () => {
 				);
 			}
 		})();
-	}, [axiosInstance, navigate, searchParams, session, sessionLoading]);
+	}, [
+		axiosInstance,
+		navigate,
+		providerError,
+		queryProviderId,
+		session,
+		sessionLoading,
+	]);
+
+	const displayedError = providerError
+		? describeSsoCallbackError({
+				error: providerError,
+				description: providerErrorDescription,
+			})
+		: error;
 
 	return (
 		<AuthBackground>
 			<div className="flex flex-col items-center gap-6 text-center">
 				<AutumnWordmark className="h-7 w-auto text-foreground" />
-				{error ? (
+				{displayedError ? (
 					<div className="flex flex-col items-center gap-4">
 						<p role="alert" className="text-sm text-muted-foreground">
-							{error}
+							{displayedError}
 						</p>
 						<Button
 							variant="secondary"
@@ -85,16 +108,13 @@ export const SsoCallback = () => {
 						</Button>
 					</div>
 				) : (
-					<div
-						className="flex flex-col items-center gap-3"
-						aria-live="polite"
+					<p
 						aria-busy="true"
+						aria-live="polite"
+						className="animate-pulse text-sm text-muted-foreground"
 					>
-						<SmallSpinner className="text-tertiary-foreground" />
-						<p className="text-sm text-muted-foreground">
-							Finishing single sign-on…
-						</p>
-					</div>
+						Finishing single sign-on…
+					</p>
 				)}
 			</div>
 		</AuthBackground>

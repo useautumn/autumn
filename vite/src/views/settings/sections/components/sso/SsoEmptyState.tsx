@@ -1,42 +1,55 @@
-import { Button } from "@autumn/ui";
-import { LockKeyIcon } from "@phosphor-icons/react";
-import { SsoCallbackUrlField } from "./SsoCallbackUrlField";
+import { Button, StepBadge } from "@autumn/ui";
 
-export const SsoEmptyState = ({
-	onStart,
-	callbackUrl,
-}: {
-	onStart: () => void;
-	callbackUrl: string | null;
-}) => (
-	<div className="flex flex-col items-start gap-4 rounded-lg border border-dashed bg-background p-6">
-		<div className="flex items-center gap-2">
-			<LockKeyIcon
-				size={16}
-				weight="fill"
-				className="text-subtle shrink-0"
-				aria-hidden="true"
-			/>
+const SETUP_STEPS = [
+	{
+		title: "Create an app in your identity provider",
+		description:
+			"In Okta, Entra ID, Auth0 or Google Workspace, add an OIDC app, give it the callback URL we show you, then paste back the issuer and client credentials it issues.",
+	},
+	{
+		title: "Verify your domain",
+		description:
+			"Add one TXT record to your DNS. This proves you control the domain before anyone at it is routed to your provider.",
+	},
+	{
+		title: "Run a test sign-in",
+		description:
+			"Sign in once through your provider. When that works, SSO turns on for everyone with an email at your domain.",
+	},
+];
+
+export const SsoEmptyState = ({ onStart }: { onStart: () => void }) => (
+	<div className="flex flex-col items-start gap-6 rounded-lg border bg-card p-6">
+		<div className="flex flex-col gap-1.5">
 			<span className="text-sm font-medium text-foreground">
-				Single sign-on is not set up
+				Let your team sign in with company credentials
 			</span>
+			<p className="max-w-xl text-sm text-tertiary-foreground">
+				Three steps, around ten minutes. You can stop after any step and pick
+				setup back up later.
+			</p>
 		</div>
-		<p className="max-w-xl text-sm text-tertiary-foreground">
-			Connect your identity provider so your team signs in to Autumn with your
-			company credentials instead of an email code. Once SSO is active, everyone
-			with an email at your verified domain signs in through your provider, so
-			access follows the accounts you already manage.
-		</p>
-		<p className="max-w-xl text-sm text-tertiary-foreground">
-			Setup takes three steps: register the callback URL below with your
-			provider and add the OIDC details it issues, verify your domain with a DNS
-			record, then run one test sign-in to turn it on.
-		</p>
-		<div className="w-full max-w-xl">
-			<SsoCallbackUrlField callbackUrl={callbackUrl} />
-		</div>
+
+		<ol className="flex flex-col gap-5">
+			{SETUP_STEPS.map((step, index) => (
+				<li className="flex items-start gap-3" key={step.title}>
+					<div className="shrink-0">
+						<StepBadge>{index + 1}</StepBadge>
+					</div>
+					<div className="flex flex-col gap-1">
+						<span className="text-sm font-medium text-foreground">
+							{step.title}
+						</span>
+						<p className="max-w-xl text-sm text-tertiary-foreground">
+							{step.description}
+						</p>
+					</div>
+				</li>
+			))}
+		</ol>
+
 		<Button variant="primary" onClick={onStart}>
-			Set up SSO
+			Start setup
 		</Button>
 	</div>
 );

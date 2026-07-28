@@ -2,6 +2,7 @@ import {
 	account,
 	invitation,
 	member,
+	organizations,
 	ssoConnection,
 	ssoProvider,
 	user,
@@ -83,6 +84,22 @@ export const ensureInvitedSsoMembership = async ({
 		organizationId: provider.organizationId,
 		role,
 	};
+};
+
+export const getSsoProviderOrganizationName = async ({
+	db,
+	providerId,
+}: {
+	db: DrizzleCli;
+	providerId: string;
+}) => {
+	const [record] = await db
+		.select({ name: organizations.name })
+		.from(ssoProvider)
+		.innerJoin(organizations, eq(ssoProvider.organizationId, organizations.id))
+		.where(eq(ssoProvider.providerId, providerId))
+		.limit(1);
+	return record?.name ?? null;
 };
 
 export const userRequiresSso = async ({

@@ -7,6 +7,7 @@ import { db } from "@/db/initDrizzle.js";
 import {
 	ensureInvitedSsoMembership,
 	getSsoProviderIdFromCallbackPath,
+	getSsoProviderOrganizationName,
 	removeRejectedSsoAccount,
 	userRequiresSso,
 } from "@/internal/auth/sso/ssoInvitationProvisioning.js";
@@ -40,8 +41,15 @@ export const beforeSessionCreated = async (
 					userId: session.userId,
 					providerId,
 				});
+				const orgName = await getSsoProviderOrganizationName({
+					db,
+					providerId,
+				});
+				// better-auth only redirects the callback when `code` is set;
+				// without it the raw APIError body is served as JSON.
 				throw new APIError("FORBIDDEN", {
-					message: "An active organization invitation is required for SSO",
+					code: "SSO_INVITATION_REQUIRED",
+					message: `Ask your Autumn admin to invite you to ${orgName ?? "this organization"} before signing in with SSO.`,
 				});
 			}
 			return {

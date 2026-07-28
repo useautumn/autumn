@@ -1,3 +1,5 @@
+import { z } from "zod/v4";
+
 export interface SsoFormValues {
 	domain: string;
 	issuer: string;
@@ -21,37 +23,59 @@ export const normalizeSsoDomain = (raw: string) => {
 export const normalizeSsoIssuer = (raw: string) =>
 	raw.trim().replace(/\/$/, "");
 
-/** Returns the first validation problem, or null when the form can be saved. */
-export const validateSsoForm = (
-	values: SsoFormValues,
-	{ allowInsecureLocalhost = false } = {},
-): string | null => {
-	const domain = normalizeSsoDomain(values.domain);
+export const validateSsoDomain = (raw: string): string | null => {
+	const domain = normalizeSsoDomain(raw);
 	if (!domain) return "Enter your company domain.";
 	if (!DOMAIN_REGEX.test(domain))
 		return "Enter a valid company domain, like acme.com.";
+	return null;
+};
 
-	const issuer = normalizeSsoIssuer(values.issuer);
+export const validateSsoIssuer = (
+	raw: string,
+	{ allowInsecureLocalhost = false } = {},
+): string | null => {
+	const issuer = normalizeSsoIssuer(raw);
 	if (!issuer) return "Enter the OIDC issuer URL.";
-	let issuerUrl: URL;
+
+	let url: URL;
 	try {
-		issuerUrl = new URL(issuer);
+		url = new URL(issuer);
 	} catch {
 		return "Enter a valid issuer URL, like https://login.acme.com.";
 	}
+
 	const isLocalhost =
-		issuerUrl.hostname === "localhost" || issuerUrl.hostname === "127.0.0.1";
-	if (
-		issuerUrl.protocol !== "https:" &&
-		!(allowInsecureLocalhost && isLocalhost)
-	)
+		url.hostname === "localhost" || url.hostname === "127.0.0.1";
+	if (url.protocol !== "https:" && !(allowInsecureLocalhost && isLocalhost))
 		return "The issuer URL must use https://.";
-
-	if (!values.clientId.trim()) return "Enter the OIDC client ID.";
-	if (!values.clientSecret.trim()) return "Enter the OIDC client secret.";
-
 	return null;
 };
+
+const requiredField = (message: string) => (raw: string) =>
+	raw.trim() ? null : message;
+
+export const validateSsoClientId = requiredField("Enter the OIDC client ID.");
+export const validateSsoClientSecret = requiredField(
+	"Enter the OIDC client secret.",
+);
+
+/** Reports at most one issue per field so the inline error stays a single line. */
+const fieldSchema = (validate: (value: string) => string | null) =>
+	z.string().superRefine((value, ctx) => {
+		const message = validate(value);
+		if (message) ctx.addIssue({ code: "custom", message });
+	});
+
+export const createSsoFormSchema = ({ allowInsecureLocalhost = false } = {}) =>
+	z.object({
+		domain: fieldSchema(validateSsoDomain),
+		issuer: fieldSchema((value) =>
+			validateSsoIssuer(value, { allowInsecureLocalhost }),
+		),
+		clientId: fieldSchema(validateSsoClientId),
+		clientSecret: fieldSchema(validateSsoClientSecret),
+	});
 
 export const buildSsoConnectionPayload = (values: SsoFormValues) => ({
 	domain: normalizeSsoDomain(values.domain),
@@ -62,5 +86,5 @@ export const buildSsoConnectionPayload = (values: SsoFormValues) => ({
 
 export const maskClientId = (lastFour: string) => {
 	const suffix = lastFour.trim();
-	return suffix ? `${"\u2022".repeat(8)}${suffix}` : "\u2022".repeat(12);
+	return suffix ? `${"•".repeat(8)}${suffix}` : "•".repeat(12);
 };

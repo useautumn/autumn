@@ -368,6 +368,9 @@ const options = {
 				enabled: true,
 				tokenPrefix: SSO_VERIFICATION_PREFIX,
 			},
+			// Otherwise SSO users are stored emailVerified:false and the
+			// account-linking guard locks them out of their own provider.
+			trustEmailVerified: true,
 			organizationProvisioning: {
 				disabled: true,
 			},

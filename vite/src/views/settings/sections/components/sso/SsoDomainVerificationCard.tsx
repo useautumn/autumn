@@ -1,4 +1,4 @@
-import { Badge, Button, CopyButton } from "@autumn/ui";
+import { Badge, Button, CopyButton, StepBadge } from "@autumn/ui";
 import { toast } from "sonner";
 import {
 	formatCooldown,
@@ -23,7 +23,7 @@ const TxtRecordField = ({ label, value }: { label: string; value: string }) => (
 			{label}
 		</span>
 		<div className="flex items-center gap-2 min-w-0">
-			<code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1 font-mono text-xs text-foreground">
+			<code className="min-w-0 flex-1 truncate rounded-md border bg-interactive-secondary px-2 py-1.5 font-mono text-xs text-foreground">
 				{value}
 			</code>
 			<CopyButton
@@ -67,7 +67,7 @@ export const SsoDomainVerificationCard = ({
 				);
 				return;
 			}
-			toast.success("Domain verified");
+			toast.success("Domain verified — one test sign-in left to turn SSO on");
 		} catch (error) {
 			const retryAfter = getSsoRetryAfterSeconds(error);
 			if (retryAfter !== null) {
@@ -86,9 +86,10 @@ export const SsoDomainVerificationCard = ({
 	const onCooldown = secondsLeft > 0;
 
 	return (
-		<div className="flex flex-col gap-4 rounded-lg border bg-background p-4">
+		<div className="flex flex-col gap-4 rounded-lg border bg-card p-4">
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center gap-2">
+					<StepBadge>2</StepBadge>
 					<span className="text-sm font-medium text-foreground">
 						Verify {connection.domain}
 					</span>

@@ -62,7 +62,7 @@ export const SsoSection = () => {
 			return (
 				<div
 					role="alert"
-					className="flex flex-col items-start gap-3 rounded-lg border bg-background p-4"
+					className="flex flex-col items-start gap-3 rounded-lg border bg-card p-4"
 				>
 					<p className="text-sm text-tertiary-foreground">
 						We couldn't load your SSO connection.
@@ -82,10 +82,7 @@ export const SsoSection = () => {
 					onCancel={() => setShowForm(false)}
 				/>
 			) : (
-				<SsoEmptyState
-					callbackUrl={callbackUrl}
-					onStart={() => setShowForm(true)}
-				/>
+				<SsoEmptyState onStart={() => setShowForm(true)} />
 			);
 		}
 
